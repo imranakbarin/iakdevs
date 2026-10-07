@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#f6efe0">
+  <meta name="description" content="Explore an endless living landscape inspired by Gond, Warli, Madhubani and Kangra art. An interactive canvas with an optional Indian-inspired soundscape, by iadevTools.">
+  <title>Indian Scrolls · iadevTools</title>
+  <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="assets/styles.css">
+  <script src="assets/audio.js" defer></script>
+  <script src="assets/landscape.js" defer></script>
+</head>
+<body>
+  <main aria-label="Indian Scrolls interactive landscape">
+    <canvas id="c" tabindex="0" aria-label="An endless landscape inspired by Indian painting traditions. Drag, scroll, or use the left and right arrow keys to explore." aria-describedby="canvas-help">Your browser does not support canvas. Try a current version of Chrome, Firefox, Safari, or Edge to explore the landscape.</canvas>
+    <header class="masthead">
+      <div class="brand"><h1>Indian Scrolls</h1><p>by iadevTools</p></div>
+      <nav aria-label="Experience settings">
+        <button id="about" class="pill" aria-haspopup="dialog"><svg aria-hidden="true"><use href="#i-info"/></svg><span>About</span></button>
+        <button id="sound" class="pill" aria-pressed="false" aria-label="Enable soundscape"><svg aria-hidden="true"><use id="sound-icon" href="#i-muted"/></svg><span id="sound-label">Sound off</span></button>
+      </nav>
+    </header>
+    <footer class="experience-footer" id="controls">
+      <div class="caption"><h2 id="style-name">Gond</h2><p id="style-caption">Central India · Rhythm in every line</p></div>
+      <div class="toolbar" role="group" aria-label="Landscape controls">
+        <select id="sty" aria-label="Art style"><option value="gond">Gond</option><option value="warli">Warli</option><option value="madhubani">Madhubani</option><option value="kangra">Kangra miniature</option></select>
+        <span class="divider" aria-hidden="true"></span>
+        <button id="play" class="primary" aria-pressed="true"><svg aria-hidden="true"><use id="play-icon" href="#i-pause"/></svg><span id="play-label">Pause</span></button>
+        <label class="speed" for="spd">Speed <input id="spd" type="range" min="0" max="120" step="5" value="30" aria-valuetext="30 units per second"></label>
+        <button id="new">New landscape</button>
+        <span class="divider last-divider" aria-hidden="true"></span>
+        <button id="download" class="icon-button" aria-label="Save landscape as PNG" title="Save landscape as PNG"><svg aria-hidden="true"><use href="#i-download"/></svg></button>
+        <button id="hide" class="icon-button" aria-label="Hide controls" title="Hide controls (H)"><svg aria-hidden="true"><use href="#i-hide"/></svg></button>
+      </div>
+      <p class="hint" id="canvas-help"><svg aria-hidden="true"><use href="#i-hand"/></svg>Drag to explore</p>
+    </footer>
+    <button id="show" class="show-controls icon-button" hidden aria-label="Show controls" title="Show controls (H)"><svg aria-hidden="true"><use href="#i-sliders"/></svg></button>
+    <p id="status" class="toast" role="status" aria-live="polite" hidden></p>
+  </main>
+  <dialog id="about-dialog" aria-labelledby="about-title">
+    <div class="dialog-top"><span>iadevTools</span><button id="close-about" class="icon-button" aria-label="Close about"><svg aria-hidden="true"><use href="#i-close"/></svg></button></div>
+    <h2 id="about-title">A little room to wander.</h2>
+    <p>Four painting traditions. An endless, living landscape. Slow down, follow the river, and see what appears around the next bend.</p>
+    <dl class="traditions">
+      <div><dt>Gond</dt><dd>Central India. Trees and animals brought to life through rhythmic dots and lines.</dd></div>
+      <div><dt>Warli</dt><dd>Maharashtra. Village life told through spare, earth-toned geometry.</dd></div>
+      <div><dt>Madhubani</dt><dd>Mithila, in Bihar and Nepal. Intricate borders, natural motifs, and vivid color.</dd></div>
+      <div><dt>Kangra</dt><dd>Himachal Pradesh. Lyrical hills, quiet rivers, and miniature landscapes.</dd></div>
+    </dl>
+    <p class="small">This is generative artwork inspired by these traditions, not a reproduction of an artist’s work. The optional, original synthesized soundscape uses a tanpura-inspired drone, a flute-like melody, and soft percussion; it is not a traditional recording.</p>
+    <label class="volume" for="volume">Music volume <input id="volume" type="range" min="0" max="100" value="35"><output id="volume-value" for="volume">35%</output></label>
+    <p class="small shortcuts">Drag or use ← → to explore. Space pauses. H hides controls.<br>Motion respects your device’s reduced-motion setting. Sound starts only when you choose it.</p>
+    <div class="dialog-actions"><button id="share">Copy landscape link</button><span id="seed" class="small"></span></div>
+  </dialog>
+  <noscript><div class="no-script">Indian Scrolls needs JavaScript to paint the landscape. Enable JavaScript and reload this page.</div></noscript>
+  <svg class="svg-defs" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><defs>
+    <symbol id="i-pause" viewBox="0 0 24 24"><path d="M8 5v14M16 5v14" stroke-width="3"/></symbol>
+    <symbol id="i-play" viewBox="0 0 24 24"><path d="m8 5 11 7-11 7Z"/></symbol>
+    <symbol id="i-info" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 11v6M12 7v.2"/></symbol>
+    <symbol id="i-muted" viewBox="0 0 24 24"><path d="M11 4 6 8H3v8h3l5 4ZM16 9l5 6m0-6-5 6"/></symbol>
+    <symbol id="i-sound" viewBox="0 0 24 24"><path d="M11 4 6 8H3v8h3l5 4ZM15 8a6 6 0 0 1 0 8m3-11a10 10 0 0 1 0 14"/></symbol>
+    <symbol id="i-download" viewBox="0 0 24 24"><path d="M12 3v12m-5-5 5 5 5-5M4 16v5h16v-5"/></symbol>
+    <symbol id="i-hide" viewBox="0 0 24 24"><path d="m3 3 18 18M10 5a11 11 0 0 1 11 7 16 16 0 0 1-3 4M6 6a16 16 0 0 0-3 6c4 9 12 9 16 4M10 10a3 3 0 0 0 4 4"/></symbol>
+    <symbol id="i-hand" viewBox="0 0 24 24"><path d="M8 12V5a2 2 0 0 1 4 0v6-7a2 2 0 0 1 4 0v7-4a2 2 0 0 1 4 0v7c0 5-2 8-6 8-3 0-5-2-7-5l-3-4a2 2 0 0 1 3-2l1 1"/></symbol>
+    <symbol id="i-sliders" viewBox="0 0 24 24"><path d="M4 7h4m4 0h8M4 17h8m4 0h4"/><circle cx="10" cy="7" r="2"/><circle cx="14" cy="17" r="2"/></symbol>
+    <symbol id="i-close" viewBox="0 0 24 24"><path d="m6 6 12 12M18 6 6 18"/></symbol>
+  </defs></svg>
+</body>
+</html>
