@@ -1247,13 +1247,15 @@ function roadFrame(t,dt){
  if(ix===3){const ocean=c.createLinearGradient(0,horizon,0,h);ocean.addColorStop(0,'#75b9c6');ocean.addColorStop(1,'#248da8');c.fillStyle=ocean;c.beginPath();c.moveTo(0,horizon);c.lineTo(w*.27,horizon);for(let i=0;i<=40;i++){const z=i/40;c.lineTo(w*(.27+.025*Math.sin(z*6+journey*.014)),horizon+(h-horizon)*z);}c.lineTo(0,h);c.closePath();c.fill();c.strokeStyle='rgba(244,247,225,.55)';for(let i=0;i<15;i++){const y=horizon+(h-horizon)*i/15;c.beginPath();c.moveTo(0,y);c.quadraticCurveTo(w*.12,y+Math.sin(journey+i)*4,w*.27,y);c.stroke();}}
  const {rx,hw,yy}=roadProjection(journey,w,h,horizon);
  const strip=(a,b,color)=>{c.fillStyle=color;c.beginPath();for(let i=0;i<=70;i++){const z=i/70;c.lineTo(rx(z)+hw(z)*a,yy(z));}for(let i=70;i>=0;i--){const z=i/70;c.lineTo(rx(z)+hw(z)*b,yy(z));}c.closePath();c.fill();};
- strip(-1.09,1.09,snow?'#cbd7d6':'#a99677');strip(-1,1,wet?'#36505b':night?'#24333e':'#384b51');strip(-.99,-.96,'#e4e4cf');strip(.96,.99,'#e4e4cf');
+ strip(-1.09,1.09,snow?'#cbd7d6':'#a99677');
+ const asphalt=c.createLinearGradient(0,horizon,0,h);asphalt.addColorStop(0,night?'#536069':wet?'#69828a':'#788486');asphalt.addColorStop(1,night?'#1a2933':wet?'#2c4854':'#2f4247');strip(-1,1,asphalt);strip(-.99,-.96,'#e4e4cf');strip(.96,.99,'#e4e4cf');
  // Markings are spaced in world distance, and grow as the camera approaches.
  for(let i=0;i<70;i++){const d=38+i*22-((journey*42)%22),z=36/d-.025,z2=36/(d+9)-.025;if(z<0||z>1.1)continue;c.fillStyle='#e9dfb3';poly(c,[[rx(z)-w*.0022*z,yy(z)],[rx(z)+w*.0022*z,yy(z)],[rx(z2)+w*.0022*z2,yy(z2)],[rx(z2)-w*.0022*z2,yy(z2)]]);c.fill();}
  roadDetails(c,rx,hw,yy,w,h,ix,journey,night,snow);
  // Roadside objects move in depth, not sideways across the screen.
- for(let side of [-1,1])for(let i=0;i<20;i++){
-  const distance=38+((i*70-journey*42)%1400+1400)%1400,z=Math.max(0,36/distance-.025),s=.015+z,xx=rx(z)+side*hw(z)*(1.22+(i%3)*.26),y=yy(z),r=mulberry32(seed+i+side*91);
+ const propCount=ix===2?80:32;
+ for(let side of [-1,1])for(let i=0;i<propCount;i++){
+  const distance=38+((i*1400/propCount-journey*42)%1400+1400)%1400,z=Math.max(0,36/distance-.025),s=.015+z,xx=rx(z)+side*hw(z)*(1.22+(i%5)*.48),y=yy(z),r=mulberry32(seed+i+side*91);
   c.save();c.translate(xx,y);c.scale(s*DPR,s*DPR);
   if(i%7===0){c.fillStyle='#a8aaa0';c.fillRect(-3,-85,6,85);c.fillStyle='#447969';c.beginPath();c.roundRect(-35,-100,70,30,3);c.fill();c.strokeStyle='#ecebd2';c.lineWidth=2;c.beginPath();c.moveTo(-24,-87);c.lineTo(22,-87);c.lineTo(15,-93);c.stroke();}
   else if(ix===4){const bh=70+r()*120;c.fillStyle=i%2?'#d2b99c':'#75928e';c.fillRect(-30,-bh,60,bh);c.fillStyle=night?'#ffd796':'#c5e0de';for(let y=-bh+15;y<-10;y+=20)for(let x=-20;x<25;x+=22)c.fillRect(x,y,10,10);}
@@ -1308,7 +1310,7 @@ function roadProjection(j,w,h,horizon){
  const slope=180/650*Math.cos(camera/650)+95/1700*Math.cos(camera/1700);
  const origin=route(camera);
  const rx=z=>{const d=36/(z+.025);return w*.5+w*.65*(route(camera+d)-origin-d*slope)/d;};
- const hw=z=>w*.44*(z+.008);
+ const hw=z=>w*.34*(z+.008);
  const yy=z=>horizon+(h-horizon)*z;
  return {rx,hw,yy};
 }
