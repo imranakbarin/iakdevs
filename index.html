@@ -1289,9 +1289,11 @@ function roadFrame(t,dt){
 
 const mexicanPanorama=new Image();
 mexicanPanorama.src='assets/mexican-amate-panorama.webp';
-function renderMexicanPanorama(){
- if(!mexicanPanorama.complete||!mexicanPanorama.naturalWidth)return false;
- const c=ctx,w=cv.width,h=cv.height,pw=h*mexicanPanorama.naturalWidth/mexicanPanorama.naturalHeight;
+const chinesePanorama=new Image();
+chinesePanorama.src='assets/chinese-ink-panorama.webp';
+function renderPaintedPanorama(panorama){
+ if(!panorama.complete||!panorama.naturalWidth)return false;
+ const c=ctx,w=cv.width,h=cv.height,pw=h*panorama.naturalWidth/panorama.naturalHeight;
  const offset=camX*S*DPR+((seed%997)/997)*pw*.7;
  const first=Math.floor(offset/pw);
  c.setTransform(1,0,0,1,0,0);c.imageSmoothingEnabled=true;c.imageSmoothingQuality='high';
@@ -1299,8 +1301,8 @@ function renderMexicanPanorama(){
   const x=i*pw-offset;
   c.save();
   // Alternating orientation gives a continuous colour and motif match at every edge.
-  if(((i%2)+2)%2){c.translate(x+pw,0);c.scale(-1,1);c.drawImage(mexicanPanorama,0,0,pw+1,h);}
-  else c.drawImage(mexicanPanorama,x,0,pw+1,h);
+  if(((i%2)+2)%2){c.translate(x+pw,0);c.scale(-1,1);c.drawImage(panorama,0,0,pw+1,h);}
+  else c.drawImage(panorama,x,0,pw+1,h);
   c.restore();
  }
  return true;
@@ -1380,7 +1382,7 @@ function frame(t){
   if(modeBtn.value==='road'){roadFrame(t,dt);requestAnimationFrame(frame);return;}
   const target=playing&&!drag?speed:0;vel+=(target-vel)*(1-Math.exp(-dt*(Math.abs(vel)>speed*1.5?1.6:2.6)));
   if(!drag)camX+=vel*dt;
-  if(ST===STYLES.mexico&&renderMexicanPanorama()){requestAnimationFrame(frame);return;}
+  if((ST===STYLES.mexico&&renderPaintedPanorama(mexicanPanorama))||(ST===STYLES.china&&renderPaintedPanorama(chinesePanorama))){requestAnimationFrame(frame);return;}
   const k=S*DPR,vw=cv.clientWidth/S,camPx=Math.round(camX*k),cam=camPx/k;
   const a=Math.floor(cam/CW),b=Math.floor((cam+vw)/CW);
   ctx.setTransform(1,0,0,1,0,0);ctx.fillStyle=T.bg;ctx.fillRect(0,0,cv.width,cv.height);
