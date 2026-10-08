@@ -6,4 +6,4 @@ The original Gond, Warli, Madhubani and Kangra art is preserved. Japanese and Ch
 
 Road trip uses distance-based perspective for road curves, markings, scenery and traffic placement. It includes weather, five environments, a foreground touring car, and at most one other vehicle. Opposing traffic appears outside the automatic overtaking phase. This is an animated drive, not a traffic physics simulator.
 
-Run locally with python3 -m http.server 4174 --bind 0.0.0.0. No build or package installation is needed. GitHub Pages publishes master.
+
