@@ -35,7 +35,7 @@ input[type=range]{width:80px;accent-color:#E63B2E}
 </style>
 </head>
 <body>
-<canvas id="c" aria-label="Endlessly scrolling landscape in a traditional Indian painting style"></canvas>
+<canvas id="c" aria-label="Endlessly scrolling art landscape inspired by traditional painting"></canvas>
 <div class="ui"><div class="bar">
   <h1>Infinite scroll</h1>
 <select id="mode" aria-label="Experience"><option value="art">World art</option><option value="road">Road trip</option></select>
@@ -1016,11 +1016,11 @@ function woodWaves(c,xa,xb,ink,bg){
 }
 STYLES.japan={name:'Japanese woodblock inspired',theme:()=>({bg:'#ede4cb',ink:'#273e49',mark:'#273e49',light:'#f6edda'}),init(){},
  sky(c,xa,xb){artPaper(c,xa,xb,'#ede4cb');},
- ground(c,xa,xb){c.fillStyle='#b9bb92';c.fillRect(xa,485,xb-xa,60);for(let y=490;y<545;y+=7){c.beginPath();c.moveTo(xa,y);c.bezierCurveTo(xa+150,y-6,xb-170,y+6,xb,y);artStroke(c,'#78897a',.65);}woodWaves(c,xa,xb,'#273e49','#a9c4c1');},
+ ground(c,xa,xb){c.fillStyle='#b9bb92';c.fillRect(xa,485,xb-xa,60);for(let y=490;y<545;y+=7){c.beginPath();for(let x=xa;x<=xb;x+=5)c.lineTo(x,y+Math.sin(x*.007+y)*1.5);artStroke(c,'#78897a',.65);}woodWaves(c,xa,xb,'#273e49','#a9c4c1');},
  chunk(r,x0,add,z,act){
   const variant=r()*3|0;
   add(1,(c,q)=>{printMountain(c,x0+280,495,720,190,q,'#a2b4aa','#657b78');printMountain(c,x0+340,485,490,300,q,'#648ba0','#273e49',true);
-   c.fillStyle='#c46a4d';c.beginPath();c.arc(x0+70,125,32,0,TAU);c.fill();
+   if(Math.abs(Math.floor(x0/CW))%3===0){c.fillStyle='#c46a4d';c.beginPath();c.arc(x0+70,125,32,0,TAU);c.fill();}
    for(let k=0;k<3;k++){const yy=165+k*25;c.beginPath();c.moveTo(x0-50,yy);c.bezierCurveTo(x0+80,yy-20,x0+170,yy+15,x0+260,yy);artStroke(c,'#baa98b',1);}
   });
   add(3,(c,q)=>{printPine(c,x0+100,515,q,'#3d463f','#526e59',variant!==1);printPine(c,x0+530,510,q,'#3d463f','#526e59',false);});
@@ -1030,7 +1030,7 @@ STYLES.japan={name:'Japanese woodblock inspired',theme:()=>({bg:'#ede4cb',ink:'#
  }};
 STYLES.china={name:'Chinese ink landscape inspired',theme:()=>({bg:'#eee9da',ink:'#34443d',mark:'#34443d',light:'#f8f2e5'}),init(){},
  sky(c,xa,xb){artPaper(c,xa,xb,'#eee9da');},
- ground(c,xa,xb){c.fillStyle='#c5d1c3';c.fillRect(xa,492,xb-xa,148);for(let y=515;y<640;y+=13){c.beginPath();c.moveTo(xa,y);c.bezierCurveTo(xa+160,y-8,xb-160,y+8,xb,y);artStroke(c,'#93a99d',.7);}},
+ ground(c,xa,xb){c.fillStyle='#c5d1c3';c.fillRect(xa,492,xb-xa,148);for(let y=515;y<640;y+=13){c.beginPath();for(let x=xa;x<=xb;x+=5)c.lineTo(x,y+Math.sin(x*.008+y)*2);artStroke(c,'#93a99d',.7);}},
  chunk(r,x0,add,z,act){
   add(1,(c,q)=>{for(let k=0;k<5;k++){const x=x0-40+k*150,h=170+q()*210,w=140+q()*100;
    printMountain(c,x,508,w,h,q,k%2?'#91a99b':'#b3c1b0','#667f70');
