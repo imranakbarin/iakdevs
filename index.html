@@ -1215,8 +1215,8 @@ function roadDetails(c,rx,hw,yy,w,h,ix,j,night,snow){
  for(let side of [-1,1]){
   for(let band=0;band<9;band++){const z=.08+band*.085;c.beginPath();c.moveTo(rx(z)+side*hw(z)*1.25,yy(z));c.quadraticCurveTo(rx(z)+side*w*.34,yy(z)-h*.025,side<0?0:w,yy(z)+h*.02);artStroke(c,night?'rgba(134,164,148,.12)':'rgba(107,121,83,.25)',(1+z*2)*DPR);}
   c.beginPath();for(let i=0;i<=55;i++){const z=i/55;c.lineTo(rx(z)+side*hw(z)*1.13,yy(z)-h*.026*z*z);}artStroke(c,night?'#6e7e78':'#b6b8a1',3*DPR);
-  for(let k=0;k<14;k++){const z=(k/14+j*.023)%1,xx=rx(z)+side*hw(z)*1.14,y=yy(z);c.beginPath();c.moveTo(xx,y);c.lineTo(xx,y-h*.04*z*z);artStroke(c,'#747d71',(1+z*2)*DPR);}
-  for(let k=0;k<5;k++){const z=(k/5+j*.009)%1,s=.04+z*z,xx=rx(z)+side*hw(z)*(2.1+(k%2)*.8),y=yy(z);
+  for(let k=0;k<14;k++){const d=38+((k*98-j*42)%1372+1372)%1372,z=Math.max(0,36/d-.025),xx=rx(z)+side*hw(z)*1.14,y=yy(z);c.beginPath();c.moveTo(xx,y);c.lineTo(xx,y-h*.04*z*z);artStroke(c,'#747d71',(1+z*2)*DPR);}
+  for(let k=0;k<5;k++){const d=40+((k*220-j*42)%1100+1100)%1100,z=Math.max(0,36/d-.025),s=.025+z,xx=rx(z)+side*hw(z)*(2.1+(k%2)*.8),y=yy(z);
    c.save();c.translate(xx,y);c.scale(s*DPR,s*DPR);
    if(ix===3&&side<0){c.fillStyle='#ece5cc';c.fillRect(-12,-95,24,95);c.fillStyle='#a75643';c.fillRect(-12,-60,24,10);c.fillRect(-16,-98,32,10);poly(c,[[-18,-99],[0,-113],[18,-99]]);c.fill();c.fillStyle='#325a69';c.fillRect(-5,-86,10,12);}
    else if(ix!==1){c.fillStyle=night?'#58695f':'#d7c6a2';c.fillRect(-40,-47,80,47);poly(c,[[-49,-46],[0,-77],[49,-46]]);c.fillStyle='#7e6650';c.fill();c.fillStyle=night?'#edc883':'#5a817b';c.fillRect(-25,-33,14,17);c.fillRect(11,-33,14,17);c.fillStyle='#74634f';c.fillRect(-6,-23,12,23);}
@@ -1245,15 +1245,15 @@ function roadFrame(t,dt){
  for(let layer=0;layer<4;layer++){c.fillStyle=mixColor(mount,night?'#23374b':'#c5d9d1',.72-layer*.19);c.beginPath();c.moveTo(0,horizon+10);for(let x=-30;x<=w+30;x+=30){const v=x/w*9+ix+journey*.008*(layer+1),y=horizon-h*(.035+Math.abs(Math.sin(v*.75)+Math.sin(v*1.9)*.32)*(.12-layer*.019));c.lineTo(x,y);}c.lineTo(w,horizon+12);c.closePath();c.fill();}
  c.fillStyle=snow?'#e4edec':night?'#263e40':land;c.fillRect(0,horizon,w,h-horizon);
  if(ix===3){const ocean=c.createLinearGradient(0,horizon,0,h);ocean.addColorStop(0,'#75b9c6');ocean.addColorStop(1,'#248da8');c.fillStyle=ocean;c.beginPath();c.moveTo(0,horizon);c.lineTo(w*.27,horizon);for(let i=0;i<=40;i++){const z=i/40;c.lineTo(w*(.27+.025*Math.sin(z*6+journey*.014)),horizon+(h-horizon)*z);}c.lineTo(0,h);c.closePath();c.fill();c.strokeStyle='rgba(244,247,225,.55)';for(let i=0;i<15;i++){const y=horizon+(h-horizon)*i/15;c.beginPath();c.moveTo(0,y);c.quadraticCurveTo(w*.12,y+Math.sin(journey+i)*4,w*.27,y);c.stroke();}}
- const bend=Math.sin(journey*.035)*w*.16+Math.sin(journey*.017)*w*.09;
- const rx=z=>w*.5+bend*(1-z)**2,hw=z=>w*(.012+.41*z*z),yy=z=>horizon+(h-horizon)*z;
+ const {rx,hw,yy}=roadProjection(journey,w,h,horizon);
  const strip=(a,b,color)=>{c.fillStyle=color;c.beginPath();for(let i=0;i<=70;i++){const z=i/70;c.lineTo(rx(z)+hw(z)*a,yy(z));}for(let i=70;i>=0;i--){const z=i/70;c.lineTo(rx(z)+hw(z)*b,yy(z));}c.closePath();c.fill();};
  strip(-1.09,1.09,snow?'#cbd7d6':'#a99677');strip(-1,1,wet?'#36505b':night?'#24333e':'#384b51');strip(-.99,-.96,'#e4e4cf');strip(.96,.99,'#e4e4cf');
- for(let i=0;i<23;i++){const z=(i/23+journey*.045)%1,z2=Math.min(1,z+.021);c.fillStyle='#e9dfb3';poly(c,[[rx(z)-w*.002*z,yy(z)],[rx(z)+w*.002*z,yy(z)],[rx(z2)+w*.002*z2,yy(z2)],[rx(z2)-w*.002*z2,yy(z2)]]);c.fill();}
+ // Markings are spaced in world distance, and grow as the camera approaches.
+ for(let i=0;i<70;i++){const d=38+i*22-((journey*42)%22),z=36/d-.025,z2=36/(d+9)-.025;if(z<0||z>1.1)continue;c.fillStyle='#e9dfb3';poly(c,[[rx(z)-w*.0022*z,yy(z)],[rx(z)+w*.0022*z,yy(z)],[rx(z2)+w*.0022*z2,yy(z2)],[rx(z2)-w*.0022*z2,yy(z2)]]);c.fill();}
  roadDetails(c,rx,hw,yy,w,h,ix,journey,night,snow);
  // Roadside objects move in depth, not sideways across the screen.
  for(let side of [-1,1])for(let i=0;i<20;i++){
-  const z=(i/20+journey*.021)%1,s=.025+z*z,xx=rx(z)+side*hw(z)*(1.22+(i%3)*.26),y=yy(z),r=mulberry32(seed+i+side*91);
+  const distance=38+((i*70-journey*42)%1400+1400)%1400,z=Math.max(0,36/distance-.025),s=.015+z,xx=rx(z)+side*hw(z)*(1.22+(i%3)*.26),y=yy(z),r=mulberry32(seed+i+side*91);
   c.save();c.translate(xx,y);c.scale(s*DPR,s*DPR);
   if(i%7===0){c.fillStyle='#a8aaa0';c.fillRect(-3,-85,6,85);c.fillStyle='#447969';c.beginPath();c.roundRect(-35,-100,70,30,3);c.fill();c.strokeStyle='#ecebd2';c.lineWidth=2;c.beginPath();c.moveTo(-24,-87);c.lineTo(22,-87);c.lineTo(15,-93);c.stroke();}
   else if(ix===4){const bh=70+r()*120;c.fillStyle=i%2?'#d2b99c':'#75928e';c.fillRect(-30,-bh,60,bh);c.fillStyle=night?'#ffd796':'#c5e0de';for(let y=-bh+15;y<-10;y+=20)for(let x=-20;x<25;x+=22)c.fillRect(x,y,10,10);}
@@ -1277,12 +1277,40 @@ function roadFrame(t,dt){
  const heroZ=.88,heroSize=Math.min(w*.00105,h*.00155),heroX=rx(heroZ)+hw(heroZ)*lane;
  vehicles.push({z:heroZ,hero:true});
  vehicles.sort((a,b)=>a.z-b.z);
- for(const car of vehicles){if(car.hero){drawTourCar(c,heroX,yy(heroZ),heroSize,'#c65d43',false,-Math.sin(journey*.035)*.014+pass*.018);}else{const size=(.035+car.z**2)*Math.min(w*.00107,h*.00165);drawTourCar(c,rx(car.z)+hw(car.z)*car.lane,yy(car.z),size,car.col,car.front);}}
+ for(const car of vehicles){if(car.hero){drawTourCar(c,heroX,yy(heroZ),heroSize,'#c65d43',false,-Math.sin(journey*.035)*.014+pass*.018);}else{const size=(.025+car.z)*Math.min(w*.00107,h*.00165);drawTourCar(c,rx(car.z)+hw(car.z)*car.lane,yy(car.z),size,car.col,car.front);}}
  if(wet){c.strokeStyle='rgba(227,241,247,.5)';c.lineWidth=DPR;for(let i=0;i<180;i++){const r=mulberry32(seed+i),x=r()*w,y=(r()*h+journey*450)%h;c.beginPath();c.moveTo(x,y);c.lineTo(x-5*DPR,y+17*DPR);c.stroke();}}
  if(snow){c.fillStyle='#f4faf7';for(let i=0;i<130;i++){const r=mulberry32(seed+i);c.beginPath();c.arc(r()*w+Math.sin(journey*.6+i)*15,(r()*h+journey*45)%h,(1+r()*2)*DPR,0,TAU);c.fill();}}
  if(we==='fog'){const fog=c.createLinearGradient(0,horizon*.6,0,h);fog.addColorStop(0,'rgba(228,235,227,.8)');fog.addColorStop(.6,'rgba(228,235,227,.2)');fog.addColorStop(1,'rgba(228,235,227,0)');c.fillStyle=fog;c.fillRect(0,0,w,h);}
  if(night){c.fillStyle='rgba(254,236,172,.12)';poly(c,[[heroX-heroSize*35,yy(heroZ)-heroSize*50],[rx(.3)-hw(.3)*.65,yy(.3)],[rx(.3)+hw(.3)*.8,yy(.3)],[heroX+heroSize*35,yy(heroZ)-heroSize*50]]);c.fill();}
  document.getElementById('trip-status').textContent=p.name+(blend>.1?' → '+pn.name:'')+' · '+({sun:'Sunny',sunset:'Sunset',rain:'Rain',fog:'Fog',snow:'Snow',night:'Night'})[we]+' · '+tripCue;
+}
+
+const mexicanPanorama=new Image();
+mexicanPanorama.src='assets/mexican-amate-panorama.webp';
+function renderMexicanPanorama(){
+ if(!mexicanPanorama.complete||!mexicanPanorama.naturalWidth)return false;
+ const c=ctx,w=cv.width,h=cv.height,pw=h*mexicanPanorama.naturalWidth/mexicanPanorama.naturalHeight;
+ const offset=camX*S*DPR+((seed%997)/997)*pw*.7;
+ const first=Math.floor(offset/pw);
+ c.setTransform(1,0,0,1,0,0);c.imageSmoothingEnabled=true;c.imageSmoothingQuality='high';
+ for(let i=first;i*pw-offset<w;i++){
+  const x=i*pw-offset;
+  c.save();
+  // Alternating orientation gives a continuous colour and motif match at every edge.
+  if(((i%2)+2)%2){c.translate(x+pw,0);c.scale(-1,1);c.drawImage(mexicanPanorama,0,0,pw+1,h);}
+  else c.drawImage(mexicanPanorama,x,0,pw+1,h);
+  c.restore();
+ }
+ return true;
+}
+function roadProjection(j,w,h,horizon){
+ const camera=j*42,route=s=>180*Math.sin(s/650)+95*Math.sin(s/1700);
+ const slope=180/650*Math.cos(camera/650)+95/1700*Math.cos(camera/1700);
+ const origin=route(camera);
+ const rx=z=>{const d=36/(z+.025);return w*.5+w*.65*(route(camera+d)-origin-d*slope)/d;};
+ const hw=z=>w*.44*(z+.008);
+ const yy=z=>horizon+(h-horizon)*z;
+ return {rx,hw,yy};
 }
 
 /* rendering */
@@ -1350,6 +1378,7 @@ function frame(t){
   if(modeBtn.value==='road'){roadFrame(t,dt);requestAnimationFrame(frame);return;}
   const target=playing&&!drag?speed:0;vel+=(target-vel)*(1-Math.exp(-dt*(Math.abs(vel)>speed*1.5?1.6:2.6)));
   if(!drag)camX+=vel*dt;
+  if(ST===STYLES.mexico&&renderMexicanPanorama()){requestAnimationFrame(frame);return;}
   const k=S*DPR,vw=cv.clientWidth/S,camPx=Math.round(camX*k),cam=camPx/k;
   const a=Math.floor(cam/CW),b=Math.floor((cam+vw)/CW);
   ctx.setTransform(1,0,0,1,0,0);ctx.fillStyle=T.bg;ctx.fillRect(0,0,cv.width,cv.height);

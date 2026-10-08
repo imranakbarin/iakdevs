@@ -2,8 +2,8 @@
 
 A standalone canvas experience at https://imranakbarin.github.io/iakdevs/.
 
-World art retains the original Gond, Warli, Madhubani and Kangra landscapes. Japanese-inspired art includes seeded washi-style grain across the printed surfaces, branching pines and blossoms, contoured mountains, waves, lanterns, bridges and occasional villages or sailboats. Chinese-inspired art includes ink washes, mist, bamboo, pavilions and boats. Mexican-inspired art includes decorated animal silhouettes, stitch-like patterns, flowers and ornamental borders. These are original procedural interpretations.
+The original Gond, Warli, Madhubani and Kangra art is preserved. Japanese and Chinese inspired landscapes use procedural linework and paper grain. The Mexican inspired view uses an original AI-generated, richly detailed folk-art panorama with patterned wildlife, foliage, a river, hills and villages. Adjacent sections alternate orientation for continuous image edges. Seeds vary the starting view; they do not regenerate the painted panorama. Pause, speed and drag apply to the art scroll. The optimized WebP asset is stored under assets/.
 
-Road trip is a two-lane animated touring drive with a sculpted car, scenic farms, fences, a coastal lighthouse, birds and weather. Traffic is intentionally sparse: at most one other car is visible, with a slower car ahead and an oncoming car appearing in separate phases. Automatic overtakes take place during a clear opposing-lane interval. Traffic can be switched off. Places change every 32 journey seconds and weather every 27 journey seconds. Manual place and weather selectors hold a state. Pause, speed and New landscape apply to the journey. The drive is a visual animation, not a traffic physics simulator.
+Road trip uses distance-based perspective for road curves, markings, scenery and traffic placement. It includes weather, five environments, a foreground touring car, and at most one other vehicle. Opposing traffic appears outside the automatic overtaking phase. This is an animated drive, not a traffic physics simulator.
 
-Run locally with `python3 -m http.server 4174 --bind 0.0.0.0`. No build or package installation is needed. GitHub Pages publishes master.
+Run locally with python3 -m http.server 4174 --bind 0.0.0.0. No build or package installation is needed. GitHub Pages publishes master.
