@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Infinite Indian Scrolls</title>
+<title>Infinite World Scrolls</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Yatra+One&display=swap" rel="stylesheet">
@@ -38,13 +38,17 @@ input[type=range]{width:80px;accent-color:#E63B2E}
 <canvas id="c" aria-label="Endlessly scrolling landscape in a traditional Indian painting style"></canvas>
 <div class="ui"><div class="bar">
   <h1>Infinite scroll</h1>
-  <select id="sty" aria-label="Art style"><option value="gond">Gond</option><option value="warli">Warli</option><option value="madhubani">Madhubani</option><option value="kangra">Kangra miniature</option></select>
+<select id="mode" aria-label="Experience"><option value="art">World art</option><option value="road">Road trip</option></select>
+  <select id="sty" aria-label="Art style"><option value="gond">India · Gond</option><option value="warli">Warli</option><option value="madhubani">Madhubani</option><option value="kangra">Kangra miniature</option><option value="japan">Japan · Woodblock inspired</option><option value="china">China · Ink landscape</option><option value="mexico">Mexico · Folk inspired</option></select>
+  <select id="place" aria-label="Road trip place" hidden><option value="auto">Places · Auto</option><option value="0">Mountain pass</option><option value="1">Desert highway</option><option value="2">Forest trail</option><option value="3">Coastal drive</option><option value="4">City outskirts</option></select>
+<select id="weather" aria-label="Road trip weather" hidden><option value="auto">Weather · Auto</option><option value="sun">Sunny</option><option value="rain">Rain</option><option value="sunset">Sunset</option><option value="snow">Snow</option><option value="fog">Fog</option><option value="night">Night</option></select>
   <span id="seed"></span>
   <button id="play">Pause</button>
   <label>Speed <input id="spd" type="range" min="0" max="200" value="40"></label>
   <button id="new">New landscape</button>
   <button id="hide" aria-label="Hide controls" title="Hide controls (H)">Hide</button>
 </div><button id="show" class="fab" hidden aria-label="Show controls" title="Show controls (H)">☰</button></div>
+<div id="trip-status" hidden role="status" style="position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:var(--panel);padding:8px 18px;border-radius:30px;white-space:nowrap;pointer-events:none"></div>
 <script>
 const H=640,CW=600,RIVER=585,TAU=Math.PI*2,PI=Math.PI;
 function mulberry32(a){return()=>{a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296;};}
@@ -953,6 +957,83 @@ function kCow(c,x,q,A){
   c.restore();
 }
 
+/* World landscapes are original procedural interpretations, not reproductions. */
+const worldPalettes={
+ japan:{bg:'#eee5ce',ink:'#24394c',land:'#78948b',far:'#a9b6b0',accent:'#c74e45'},
+ china:{bg:'#eeeae0',ink:'#394342',land:'#81918b',far:'#bcc5bd',accent:'#a9473a'},
+ mexico:{bg:'#f7e3c3',ink:'#57382d',land:'#d68942',far:'#e8b267',accent:'#de4a68'}
+};
+for(const key of Object.keys(worldPalettes)){
+ const p=worldPalettes[key];
+ STYLES[key]={name:key,theme:()=>({...p,mark:p.ink,light:p.bg}),init(){},
+ ground(c,xa,xb){c.fillStyle=p.land;c.fillRect(xa,505,xb-xa,135);c.strokeStyle=p.ink;c.lineWidth=1.3;for(let y=525;y<640;y+=18){c.beginPath();c.moveTo(xa,y);c.bezierCurveTo(xa+180,y-12,xb-180,y+12,xb,y);c.stroke();}},
+ chunk(r,x0,add){add(1,c=>{
+  c.fillStyle=p.far;poly(c,[[x0-180,505],[x0+80,200+r()*90],[x0+190,340],[x0+350,140+r()*70],[x0+780,505]]);c.fill();
+  c.fillStyle=p.ink;poly(c,[[x0,505],[x0+300,220],[x0+640,505]]);c.fill();
+  if(key==='japan'){c.fillStyle=p.bg;poly(c,[[x0+214,302],[x0+300,220],[x0+398,305],[x0+332,286],[x0+300,303],[x0+265,286]]);c.fill();}
+  c.beginPath();c.arc(x0+90,110,37,0,TAU);c.fillStyle=p.accent;c.fill();
+ });
+ add(3,c=>{c.lineCap='round';
+  if(key==='mexico'){
+   for(let k=0;k<5;k++){const x=x0+50+k*120,y=505,h=65+r()*60;c.strokeStyle='#326c56';c.lineWidth=15;c.beginPath();c.moveTo(x,y);c.lineTo(x,y-h);c.moveTo(x,y-35);c.lineTo(x-24,y-35);c.lineTo(x-24,y-65);c.moveTo(x,y-50);c.lineTo(x+24,y-50);c.lineTo(x+24,y-85);c.stroke();}
+   for(let k=0;k<9;k++){const x=x0+k*75;c.beginPath();c.arc(x,545,10,0,TAU);c.fillStyle=k%2?p.accent:'#edbd34';c.fill();}
+  }else{
+   for(let k=0;k<3;k++){const x=x0+80+k*210;c.strokeStyle=p.ink;c.lineWidth=key==='china'?4:7;c.beginPath();c.moveTo(x,510);c.lineTo(x+10,330);c.moveTo(x+5,400);c.lineTo(x-45,365);c.moveTo(x+8,375);c.lineTo(x+60,335);c.stroke();
+    for(let j=0;j<22;j++){const xx=x+(r()-.5)*130,yy=320+r()*85;c.fillStyle=key==='japan'?(j%3?'#dba8a1':'#f4c7ba'):p.ink;c.globalAlpha=key==='china'?.35:1;c.beginPath();c.ellipse(xx,yy,key==='china'?25:12,7,0,0,TAU);c.fill();}c.globalAlpha=1;
+   }
+  }
+ });
+ }};
+}
+let journey=0;
+const places=[
+ {name:'Mountain pass',sky:'#54bac2',earth:'#e3a845',mount:'#126c7c'},
+ {name:'Desert highway',sky:'#f4c48a',earth:'#e99c45',mount:'#bb6545'},
+ {name:'Forest trail',sky:'#9bcac1',earth:'#60946c',mount:'#386c63'},
+ {name:'Coastal drive',sky:'#80cddd',earth:'#ecd7a5',mount:'#3e98ac'},
+ {name:'City outskirts',sky:'#a1b4d5',earth:'#91a6a2',mount:'#697f97'}
+];
+function roadFrame(t,dt){
+ if(playing&&!drag)journey+=dt*speed/40;
+ const w=cv.width,h=cv.height,c=ctx;
+ c.setTransform(1,0,0,1,0,0);
+ const selected=document.getElementById('place').value;
+ const ix=selected==='auto'?Math.floor(journey/24)%places.length:+selected,p=places[ix];
+ const weather=document.getElementById('weather').value;
+ const we=weather==='auto'?['sun','rain','sunset','snow','fog','night'][Math.floor(journey/18)%6]:weather;
+ const horizon=h*.43,night=we==='night',sunset=we==='sunset';
+ document.getElementById('trip-status').textContent=p.name+' · '+({sun:'Sunny',rain:'Rain',sunset:'Sunset',snow:'Snow',fog:'Fog',night:'Night'})[we];
+ const sky=c.createLinearGradient(0,0,0,horizon);
+ sky.addColorStop(0,night?'#14253f':sunset?'#ac6687':we==='rain'?'#7f9baf':p.sky);
+ sky.addColorStop(1,night?'#526985':sunset?'#f8be84':'#daede4');c.fillStyle=sky;c.fillRect(0,0,w,h);
+ c.fillStyle=night?'#fff6dc':'#ffe6a6';c.beginPath();c.arc(w*.76,h*.17,h*.055,0,TAU);c.fill();
+ if(night){c.fillStyle='#fff8de';for(let i=0;i<55;i++){const r=mulberry32(i+seed);c.fillRect(r()*w,r()*horizon,2*DPR,2*DPR);}}
+ for(let layer=0;layer<3;layer++){c.fillStyle=layer===2?p.mount:layer===1?'#569ca6':'#86bac0';c.globalAlpha=night?.45:1;
+  c.beginPath();c.moveTo(0,horizon+20);for(let x=0;x<=w+80;x+=80){const y=horizon-(.05+.12*(1+Math.sin(x*.007+ix*2+layer)))*h/(layer+1);c.lineTo(x,y);}c.lineTo(w,horizon+30);c.closePath();c.fill();}c.globalAlpha=1;
+ c.fillStyle=we==='snow'?'#e8eeee':night?'#34494d':p.earth;c.fillRect(0,horizon,w,h);
+ if(ix===3){c.fillStyle='#389eaf';c.fillRect(0,horizon,w*.27,h);}
+ const curve=Math.sin(journey*.07)*w*.12;
+ const roadX=z=>w*.5+curve*(1-z)*(1-z),roadW=z=>w*(.012+.48*z*z);
+ c.beginPath();c.moveTo(roadX(0)-roadW(0),horizon);for(let i=1;i<=40;i++){let z=i/40;c.lineTo(roadX(z)-roadW(z),horizon+(h-horizon)*z);}for(let i=40;i>=0;i--){let z=i/40;c.lineTo(roadX(z)+roadW(z),horizon+(h-horizon)*z);}c.closePath();c.fillStyle='#ead6a1';c.fill();
+ c.beginPath();for(let i=0;i<=40;i++){let z=i/40;c.lineTo(roadX(z)-roadW(z)*.91,horizon+(h-horizon)*z);}for(let i=40;i>=0;i--){let z=i/40;c.lineTo(roadX(z)+roadW(z)*.91,horizon+(h-horizon)*z);}c.closePath();c.fillStyle=we==='rain'?'#405e69':'#244752';c.fill();
+ for(let i=0;i<14;i++){const z=((i/14+journey*.09)%1),z2=Math.min(1,z+.025);c.fillStyle='#fff6d9';poly(c,[[roadX(z)-w*.004*z,horizon+(h-horizon)*z],[roadX(z)+w*.004*z,horizon+(h-horizon)*z],[roadX(z2)+w*.004*z2,horizon+(h-horizon)*z2],[roadX(z2)-w*.004*z2,horizon+(h-horizon)*z2]]);c.fill();}
+ for(let side of [-1,1])for(let i=0;i<14;i++){const z=((i/14+journey*.035)%1),s=.08+z*z,xx=roadX(z)+side*(roadW(z)+w*.09*s),yy=horizon+(h-horizon)*z;
+  c.save();c.translate(xx,yy);c.scale(s,s);
+  if(ix===4){c.fillStyle=i%2?'#d6c6b4':'#768997';c.fillRect(-30,-150,60,150);c.fillStyle='#f4e4af';for(let j=0;j<4;j++)c.fillRect(-18,-130+j*30,12,12);}
+  else if(ix===1){c.strokeStyle='#48795d';c.lineWidth=12;c.beginPath();c.moveTo(0,0);c.lineTo(0,-95);c.moveTo(0,-40);c.lineTo(-22,-40);c.lineTo(-22,-70);c.stroke();}
+  else {c.fillStyle='#6c6150';c.fillRect(-5,-60,10,60);c.fillStyle=we==='snow'?'#e4f0ed':ix===2?'#255d4c':'#4b9d72';c.beginPath();c.ellipse(0,-80,30,55,0,0,TAU);c.fill();}
+  c.restore();}
+ const carW=Math.min(w*.27,h*.32),carH=carW*.6,x=w/2,y=h*.81;
+ c.save();c.translate(x,y);c.fillStyle='rgba(0,0,0,.2)';c.beginPath();c.ellipse(0,carH*.53,carW*.58,carH*.13,0,0,TAU);c.fill();
+ c.fillStyle='#18333a';c.fillRect(-carW*.45,carH*.2,carW*.17,carH*.32);c.fillRect(carW*.28,carH*.2,carW*.17,carH*.32);
+ c.fillStyle='#e64f2c';c.beginPath();c.roundRect(-carW/2,-carH*.42,carW,carH*.85,[carH*.3,carH*.3,12,12]);c.fill();
+ c.fillStyle='#235766';poly(c,[[-carW*.35,-carH*.3],[carW*.35,-carH*.3],[carW*.43,0],[-carW*.43,0]]);c.fill();
+ c.fillStyle='#ffb64b';c.beginPath();c.roundRect(-carW*.43,carH*.09,carW*.18,carH*.14,5);c.roundRect(carW*.25,carH*.09,carW*.18,carH*.14,5);c.fill();
+ c.fillStyle='#fdf4d7';c.fillRect(-carW*.15,carH*.24,carW*.3,carH*.1);c.restore();
+ if(we==='rain'||we==='snow'){c.strokeStyle='rgba(230,244,251,.65)';c.fillStyle='#f5fbfc';c.lineWidth=DPR;for(let i=0;i<150;i++){let r=mulberry32(i+seed),x=r()*w,y=(r()*h+journey*(we==='rain'?350:55))%h;c.beginPath();if(we==='snow'){c.arc(x+Math.sin(journey+i)*12,y,2*DPR,0,TAU);c.fill();}else{c.moveTo(x,y);c.lineTo(x-7*DPR,y+18*DPR);c.stroke();}}}
+ if(we==='fog'){const g=c.createLinearGradient(0,h*.2,0,h);g.addColorStop(0,'rgba(232,238,234,.7)');g.addColorStop(1,'rgba(232,238,234,.06)');c.fillStyle=g;c.fillRect(0,0,w,h);}
+}
+
 /* rendering */
 const cv=document.getElementById('c'),ctx=cv.getContext('2d'),tiles=new Map();
 let S=1,DPR=1,topY=0,camX=0;
@@ -994,7 +1075,7 @@ let speed=40,playing=!reduce,drag=null,last=performance.now(),vel=0,dragV=0;
 const playBtn=document.getElementById('play'),syncPlay=()=>playBtn.textContent=playing?'Pause':'Play';
 playBtn.onclick=()=>{playing=!playing;syncPlay();};
 document.getElementById('spd').oninput=e=>speed=+e.target.value;
-document.getElementById('new').onclick=()=>setSeed(Math.random()*1e6|0);
+document.getElementById('new').onclick=()=>{journey=0;setSeed(Math.random()*1e6|0);};
 document.getElementById('sty').onchange=e=>setSeed(seed,e.target.value);
 cv.addEventListener('pointerdown',e=>{drag={x:e.clientX,c:camX,lx:e.clientX,lt:performance.now()};dragV=0;cv.setPointerCapture(e.pointerId);cv.style.cursor='grabbing';});
 cv.addEventListener('pointermove',e=>{if(!drag)return;camX=drag.c-(e.clientX-drag.x)/S;const now=performance.now(),dtm=Math.max(1,now-drag.lt);dragV=dragV*.6+(-(e.clientX-drag.lx)/S/dtm*1000)*.4;drag.lx=e.clientX;drag.lt=now;});
@@ -1010,8 +1091,11 @@ addEventListener('keydown',e=>{if(e.key==='h'||e.key==='H')setUI(bar.hidden);els
 try{if(localStorage.getItem('gond-ui')==='0')setUI(false);}catch(e){}
 matchMedia('(prefers-color-scheme: dark)').addEventListener('change',()=>{readTheme();OC.clear();resetTiles();});
 
+const modeBtn=document.getElementById('mode');
+modeBtn.onchange=()=>{const road=modeBtn.value==='road';document.getElementById('sty').hidden=road;document.getElementById('seed').hidden=road;for(const id of ['place','weather','trip-status'])document.getElementById(id).hidden=!road;cv.setAttribute('aria-label',road?'Infinite illustrated road trip through changing places and weather':'Endlessly scrolling world art landscape');};
 function frame(t){
   const dt=Math.min(.05,Math.max(0,(t-last)/1000));last=t;
+  if(modeBtn.value==='road'){roadFrame(t,dt);requestAnimationFrame(frame);return;}
   const target=playing&&!drag?speed:0;vel+=(target-vel)*(1-Math.exp(-dt*(Math.abs(vel)>speed*1.5?1.6:2.6)));
   if(!drag)camX+=vel*dt;
   const k=S*DPR,vw=cv.clientWidth/S,camPx=Math.round(camX*k),cam=camPx/k;
@@ -1044,3 +1128,4 @@ requestAnimationFrame(frame);
 </script>
 </body>
 </html>
+
