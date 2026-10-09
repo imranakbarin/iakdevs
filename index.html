@@ -1661,9 +1661,9 @@ modeBtn.onchange=()=>{
 document.getElementById('zen-garden').onchange=e=>zenSetGarden(e.target.value);
 document.getElementById('zen-atmosphere').onclick=e=>{zenAtmosphere=!zenAtmosphere;e.target.setAttribute('aria-pressed',String(zenAtmosphere));e.target.textContent=zenAtmosphere?'Atmosphere on':'Atmosphere off';};
 const zenFullscreen=document.getElementById('zen-fullscreen');
-if(!document.documentElement.requestFullscreen)zenFullscreen.textContent='Focus view';
+if(!document.documentElement.requestFullscreen||!document.fullscreenEnabled)zenFullscreen.textContent='Focus view';
 zenFullscreen.onclick=async()=>{
- if(!document.documentElement.requestFullscreen){setUI(false);return;}
+ if(!document.documentElement.requestFullscreen||!document.fullscreenEnabled){setUI(false);return;}
  try{if(document.fullscreenElement)await document.exitFullscreen();else await document.documentElement.requestFullscreen();}
  catch(e){setUI(false);}
 };
