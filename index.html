@@ -32,17 +32,19 @@ input[type=range]{width:80px;accent-color:#E63B2E}
 .fab{pointer-events:auto;background:var(--panel);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);width:40px;height:40px;padding:0;font-size:17px;line-height:1;margin-left:auto}
 .ui:has(.fab:not([hidden])){justify-content:flex-end}
 [hidden]{display:none!important}
+.zen-mode{--panel:rgba(35,36,29,.82);--ui:#eee8d8;--line:rgba(232,222,200,.24);background:#25251f}.zen-mode .bar{border-radius:16px;font-family:system-ui,sans-serif}.zen-mode h1{font:400 19px/1.2 Georgia,serif}.zen-mode canvas{cursor:default}.zen-mode input[type=range]{accent-color:#b8bea0}
 </style>
 </head>
 <body>
 <canvas id="c" aria-label="Endlessly scrolling art landscape inspired by traditional painting"></canvas>
 <div class="ui"><div class="bar">
   <h1>Infinite scroll</h1>
-<select id="mode" aria-label="Experience"><option value="art">World art</option><option value="road">Road trip</option></select>
+<select id="mode" aria-label="Experience"><option value="art">World art</option><option value="road">Road trip</option><option value="zen">Zen garden</option></select>
   <select id="sty" aria-label="Art style"><option value="gond">India · Gond</option><option value="warli">Warli</option><option value="madhubani">Madhubani</option><option value="kangra">Kangra miniature</option><option value="japan">Japan · Woodblock inspired</option><option value="china">China · Ink landscape</option><option value="mexico">Mexico · Folk inspired</option></select>
   <select id="place" aria-label="Road trip place" hidden><option value="auto">Places · Auto</option><option value="0">Mountain pass</option><option value="1">Desert highway</option><option value="2">Forest trail</option><option value="3">Coastal drive</option><option value="4">City outskirts</option></select>
 <button id="traffic" hidden aria-pressed="true">Traffic on</button>
 <select id="weather" aria-label="Road trip weather" hidden><option value="auto">Weather · Auto</option><option value="sun">Sunny</option><option value="rain">Rain</option><option value="sunset">Sunset</option><option value="snow">Snow</option><option value="fog">Fog</option><option value="night">Night</option></select>
+  <select id="zen-pattern" aria-label="Sand pattern" hidden><option value="spiral">Spiral</option><option value="petals">Lotus petals</option><option value="waves">Flowing waves</option></select>
   <span id="seed"></span>
   <button id="play">Pause</button>
   <label>Speed <input id="spd" type="range" min="0" max="200" value="40"></label>
@@ -50,6 +52,7 @@ input[type=range]{width:80px;accent-color:#E63B2E}
   <button id="hide" aria-label="Hide controls" title="Hide controls (H)">Hide</button>
 </div><button id="show" class="fab" hidden aria-label="Show controls" title="Show controls (H)">☰</button></div>
 <div id="trip-status" hidden role="status" style="position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:var(--panel);padding:8px 18px;border-radius:30px;white-space:nowrap;pointer-events:none"></div>
+<script src="assets/zen-garden.js"></script>
 <script>
 const H=640,CW=600,RIVER=585,TAU=Math.PI*2,PI=Math.PI;
 function mulberry32(a){return()=>{a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296;};}
@@ -1617,7 +1620,7 @@ let speed=40,playing=true,drag=null,last=performance.now(),vel=0,dragV=0;
 const playBtn=document.getElementById('play'),syncPlay=()=>playBtn.textContent=playing?'Pause':'Play';
 playBtn.onclick=()=>{playing=!playing;syncPlay();};
 document.getElementById('spd').oninput=e=>speed=+e.target.value;
-document.getElementById('new').onclick=()=>{journey=0;setSeed(Math.random()*1e6|0);};
+document.getElementById('new').onclick=()=>{if(modeBtn.value==='zen'){zenReset();return;}journey=0;setSeed(Math.random()*1e6|0);};
 document.getElementById('sty').onchange=e=>setSeed(seed,e.target.value);
 cv.addEventListener('pointerdown',e=>{drag={x:e.clientX,c:camX,lx:e.clientX,lt:performance.now()};dragV=0;cv.setPointerCapture(e.pointerId);cv.style.cursor='grabbing';});
 cv.addEventListener('pointermove',e=>{if(!drag)return;camX=drag.c-(e.clientX-drag.x)/S;const now=performance.now(),dtm=Math.max(1,now-drag.lt);dragV=dragV*.6+(-(e.clientX-drag.lx)/S/dtm*1000)*.4;drag.lx=e.clientX;drag.lt=now;});
@@ -1634,10 +1637,23 @@ try{if(localStorage.getItem('gond-ui')==='0')setUI(false);}catch(e){}
 matchMedia('(prefers-color-scheme: dark)').addEventListener('change',()=>{readTheme();OC.clear();resetTiles();});
 
 const modeBtn=document.getElementById('mode');
-modeBtn.onchange=()=>{const road=modeBtn.value==='road';document.getElementById('sty').hidden=road;document.getElementById('seed').hidden=road;for(const id of ['place','weather','trip-status','traffic'])document.getElementById(id).hidden=!road;cv.setAttribute('aria-label',road?'Infinite illustrated road trip through changing places and weather':'Endlessly scrolling world art landscape');};
+modeBtn.onchange=()=>{
+ const road=modeBtn.value==='road',zen=modeBtn.value==='zen';
+ document.body.classList.toggle('zen-mode',zen);
+ document.getElementById('sty').hidden=road||zen;document.getElementById('seed').hidden=road||zen;
+ document.getElementById('zen-pattern').hidden=!zen;
+ for(const id of ['place','weather','trip-status','traffic'])document.getElementById(id).hidden=!road;
+ document.querySelector('h1').textContent=zen?'Zen garden':'Infinite scroll';
+ document.getElementById('new').textContent=zen?'Smooth sand':'New landscape';
+ cv.setAttribute('aria-label',zen?'A steel ball slowly carves patterns in fine sand beside a gently moving maple tree and fallen leaf':road?'Infinite illustrated road trip through changing places and weather':'Endlessly scrolling world art landscape');
+ if(zen){if(!zenReady)zenReset();history.replaceState(null,'','#zen-'+seed);}
+ else if(location.hash.startsWith('#zen-'))history.replaceState(null,'','#'+document.getElementById('sty').value+'-'+seed);
+};
+ document.getElementById('zen-pattern').onchange=()=>zenReset();
 document.getElementById('traffic').onclick=e=>{trafficEnabled=!trafficEnabled;e.target.textContent=trafficEnabled?'Traffic on':'Traffic off';e.target.setAttribute('aria-pressed',String(trafficEnabled));};
 function frame(t){
   const dt=Math.min(.05,Math.max(0,(t-last)/1000));last=t;
+  if(modeBtn.value==='zen'){zenFrame(dt);requestAnimationFrame(frame);return;}
   if(modeBtn.value==='road'){roadFrame(t,dt);requestAnimationFrame(frame);return;}
   const target=playing&&!drag?speed:0;vel+=(target-vel)*(1-Math.exp(-dt*(Math.abs(vel)>speed*1.5?1.6:2.6)));
   if(!drag)camX+=vel*dt;
@@ -1668,6 +1684,7 @@ function frame(t){
 }
 {const m=/^#(?:([a-z]+)-)?(\d+)/.exec(location.hash),key=m&&m[1]&&STYLES[m[1]]?m[1]:'gond';ST=STYLES[key];
  layout();setSeed(m?+m[2]:(Math.random()*1e6|0),key);syncPlay();}
+if(location.hash.startsWith('#zen-')){modeBtn.value='zen';modeBtn.onchange();}
 requestAnimationFrame(frame);
 </script>
 </body>
