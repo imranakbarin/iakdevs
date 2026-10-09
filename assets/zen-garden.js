@@ -1,5 +1,6 @@
 /* A persistent, distance-driven sand trace. No moving photograph or looping video. */
 const zenPhoto=new Image();zenPhoto.src='assets/zen-garden.jpg';
+const zenLeaf=new Image();zenLeaf.src='assets/zen-maple-leaf.png';
 const zenTrace=document.createElement('canvas');zenTrace.width=zenTrace.height=1100;
 const zc=zenTrace.getContext('2d');
 let zenClock=0,zenDistance=0,zenPath=[],zenLength=0,zenReady=false,zenPattern='spiral',zenCycle=0;
@@ -27,31 +28,75 @@ function zenCarve(from,to){
  if(to<=from)return;
  const pts=[zenPoint(from)];for(let d=from+1.6;d<to;d+=1.6)pts.push(zenPoint(d));pts.push(zenPoint(to));
  zc.lineCap=zc.lineJoin='round';
- // Sand pushed to the edges, a shaded trough, then a narrow lit lip.
- for(const [width,color,dx,dy] of [[9,'rgba(112,89,58,.15)',1.6,2],[7,'rgba(255,250,224,.72)',-1.2,-1.6],[5.6,'rgba(117,94,64,.42)',0,0],[2.2,'rgba(151,127,91,.28)',.3,.8]]){
+ // Low sand ridges surround a recessed trough; illumination comes from upper left.
+ for(const [width,color,dx,dy] of [[8.4,'rgba(243,232,206,.34)',0,0],[6.2,'rgba(111,88,57,.35)',-.65,-.8],[3.8,'rgba(162,139,103,.31)',0,0],[1.2,'rgba(255,246,222,.48)',1.8,2]]){
   zc.beginPath();pts.forEach((p,i)=>i?zc.lineTo(p.x+dx,p.y+dy):zc.moveTo(p.x+dx,p.y+dy));zc.strokeStyle=color;zc.lineWidth=width;zc.stroke();
  }
 }
 function zenReset(){
  zenBuildPath(document.getElementById('zen-pattern')?.value||zenPattern);zc.clearRect(0,0,1100,1100);
- zenDistance=0;zenClock=0;zenCycle=0;zenReady=true;
- // Start with a few existing turns, so the texture and purpose are visible immediately.
- const initial=Math.min(zenLength*.15,1800);zenCarve(0,initial);zenDistance=initial;
+ zenDistance=0;zenCycle=0;zenReady=true;
+}
+const zenCanopy=[];
+function zenPrepareCanopy(iw,ih){
+ if(zenCanopy.length)return;
+ for(let j=0;j<12;j++){
+  const x=iw*(.73+(j%4)*.065),y=ih*(.025+Math.floor(j/4)*.13),rw=iw*.115,rh=ih*.16;
+  const tile=document.createElement('canvas');tile.width=Math.ceil(rw);tile.height=Math.ceil(rh);const q=tile.getContext('2d');
+  q.drawImage(zenPhoto,x,y,rw,rh,0,0,rw,rh);q.globalCompositeOperation='destination-in';
+  const mask=q.createRadialGradient(rw/2,rh/2,0,rw/2,rh/2,Math.max(rw,rh)*.49);
+  mask.addColorStop(0,'rgba(0,0,0,1)');mask.addColorStop(.55,'rgba(0,0,0,.95)');mask.addColorStop(1,'rgba(0,0,0,0)');q.fillStyle=mask;q.fillRect(0,0,rw,rh);
+  zenCanopy.push({tile,x,y,rw,rh});
+ }
+}
+function zenAir(c,iw,ih,t){
+ // Wide, soft beams slowly drift with the canopy. The photographic materials stay visible.
+ c.save();c.globalCompositeOperation='screen';
+ for(let j=0;j<3;j++){
+  c.save();c.translate(-iw*.09, -ih*.18);c.rotate(-.37+Math.sin(t*.055+j)*.028+j*.19);
+  const beam=c.createLinearGradient(-iw*.14,0,iw*.14,0);
+  beam.addColorStop(0,'rgba(255,233,177,0)');beam.addColorStop(.5,`rgba(255,232,171,${.07+.022*Math.sin(t*.11+j)})`);beam.addColorStop(1,'rgba(255,233,177,0)');
+  c.fillStyle=beam;c.fillRect(-iw*.14,0,iw*.28,ih*1.7);c.restore();
+ }
+ c.restore();
+ // Dappled shade shifts almost imperceptibly across the edge of the sand.
+ c.save();c.beginPath();c.arc(iw*.4036,ih*.488,ih*.406,0,Math.PI*2);c.clip();
+ for(let j=0;j<11;j++){
+  const x=iw*(.52+(j%4)*.07)+Math.sin(t*.19+j)*13,y=ih*(.07+Math.floor(j/4)*.09)+Math.cos(t*.14+j)*9;
+  const shade=c.createRadialGradient(x,y,0,x,y,ih*.1);shade.addColorStop(0,'rgba(43,53,31,.047)');shade.addColorStop(1,'rgba(43,53,31,0)');
+  c.fillStyle=shade;c.fillRect(x-ih*.1,y-ih*.1,ih*.2,ih*.2);
+ }
+ c.restore();
+ // Sparse sunlit motes: subdued highlights, with no flicker or large particle field.
+ c.save();for(let j=0;j<15;j++){
+  const u=(t/(48+j*1.7)+j*.618)%1,x=iw*(.12+u*.72)+Math.sin(t*.12+j)*13,y=ih*(.17+(j*.137)% .68)+Math.cos(t*.1+j)*16;
+  c.globalAlpha=.13+.13*Math.sin(Math.PI*u);c.fillStyle='#fff4d2';c.beginPath();c.arc(x,y,.8+(j%3)*.35,0,Math.PI*2);c.fill();
+ }c.restore();
+}
+function zenFallingLeaves(c,iw,ih,t){
+ if(!zenLeaf.complete||!zenLeaf.naturalWidth)return;
+ for(let j=0;j<5;j++){
+  const duration=38+j*5,u=(t/duration+j*.213)%1;
+  const x=iw*(1.04-u*1.13)+Math.sin(u*Math.PI*2+j)*iw*.035;
+  const y=ih*(-.12+u*1.25)+Math.sin(u*Math.PI+j)*ih*.08;
+  const size=ih*(.032+(j%3)*.013),angle=-.6+j*.8+u*2.7+Math.sin(t*.5+j)*.22;
+  const flutter=.55+.36*Math.cos(t*.65+j),alpha=Math.min(1,u*14,(1-u)*14);
+  // Height determines a broad, offset shadow, so leaves float above the sand.
+  c.save();c.translate(x+size*.65,y+size*.9);c.rotate(angle);c.scale(1,flutter);c.globalAlpha=alpha*.14;c.filter='brightness(0) blur(7px)';c.drawImage(zenLeaf,-size/2,-size/2,size,size);c.restore();
+  c.save();c.translate(x,y);c.rotate(angle);c.scale(1,flutter);c.globalAlpha=alpha*.93;c.drawImage(zenLeaf,-size/2,-size/2,size,size);c.restore();
+ }
 }
 function zenFrame(dt){
  if(!zenReady)zenReset();
- if(playing){zenClock+=dt;const previous=zenDistance;zenDistance=Math.min(zenLength,zenDistance+dt*22*speed/40);zenCarve(previous,zenDistance);}
+ if(playing&&zenPhoto.complete&&zenPhoto.naturalWidth){zenClock+=dt;const previous=zenDistance;zenDistance=Math.min(zenLength,zenDistance+dt*22*speed/40);zenCarve(previous,zenDistance);}
  const c=ctx,w=cv.width,h=cv.height;c.setTransform(1,0,0,1,0,0);c.fillStyle='#25251f';c.fillRect(0,0,w,h);
  if(!zenPhoto.complete||!zenPhoto.naturalWidth){c.fillStyle='#ddd4c2';c.font='18px system-ui';c.textAlign='center';c.fillText('Settling into the garden…',w/2,h/2);return;}
  const iw=zenPhoto.naturalWidth,ih=zenPhoto.naturalHeight,s=Math.min(w/iw,h/ih),ox=(w-iw*s)/2,oy=(h-ih*s)/2;
  c.save();c.translate(ox,oy);c.scale(s,s);c.drawImage(zenPhoto,0,0);
- // Subtle canopy movement: small individual regions, feathered into the original photo.
+ // Feathered foliage patches sway with a shared breeze and individual branch lag.
  const t=zenClock;
- for(let j=0;j<8;j++){
-  const x=iw*(.775+(j%3)*.048),y=ih*(.12+Math.floor(j/3)*.092),rw=iw*.075,rh=ih*.105;
-  c.save();c.beginPath();c.ellipse(x+rw/2,y+rh/2,rw*.42,rh*.42,0,0,Math.PI*2);c.clip();
-  c.translate(Math.sin(t*.65+j*.8)*1.4,Math.cos(t*.53+j)*.8);c.drawImage(zenPhoto,x-3,y-3,rw+6,rh+6,x-3,y-3,rw+6,rh+6);c.restore();
- }
+ zenPrepareCanopy(iw,ih);
+ zenCanopy.forEach(({tile,x,y,rw,rh},j)=>{const wind=Math.sin(t*.47)+.32*Math.sin(t*.91+j*.35);c.save();c.translate(x+rw/2+wind*3.8,y+rh/2+Math.sin(t*.39+j*.6)*1.7);c.rotate(wind*.009);c.drawImage(tile,-rw/2,-rh/2,rw,rh);c.restore();});
  const cx=iw*.4036,cy=ih*.488,r=ih*.408;
  c.save();c.beginPath();c.arc(cx,cy,r-2,0,Math.PI*2);c.clip();c.drawImage(zenTrace,cx-r,cy-r,r*2,r*2);c.restore();
  const p=zenPoint(zenDistance),x=cx+(p.x-550)/550*r,y=cy+(p.y-550)/550*r,br=ih*.013;
@@ -66,6 +111,8 @@ function zenFrame(dt){
  // A fallen leaf stirs independently of the canopy, without ever entering the tray.
  const lx=iw*.84,ly=ih*.75,lw=iw*.09,lh=ih*.11;
  c.save();c.beginPath();c.ellipse(lx,ly,lw*.48,lh*.48,0,0,Math.PI*2);c.clip();c.translate(lx,ly);c.rotate(Math.sin(t*.7)*.015);c.drawImage(zenPhoto,lx-lw/2-3,ly-lh/2-3,lw+6,lh+6,-lw/2-3,-lh/2-3,lw+6,lh+6);c.restore();
+ zenAir(c,iw,ih,t);
+ zenFallingLeaves(c,iw,ih,t);
  c.restore();
  // A completed pattern is held, then gently dissolved before a new continuous drawing.
  if(zenDistance>=zenLength&&playing){zenCycle+=dt;if(zenCycle>8){c.save();c.globalAlpha=Math.min(1,(zenCycle-8)/6);c.drawImage(zenPhoto,ox,oy,iw*s,ih*s);c.restore();if(zenCycle>=14)zenReset();}}
