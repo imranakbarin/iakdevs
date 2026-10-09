@@ -44,7 +44,7 @@ input[type=range]{width:80px;accent-color:#E63B2E}
   <select id="place" aria-label="Road trip place" hidden><option value="auto">Places · Auto</option><option value="0">Mountain pass</option><option value="1">Desert highway</option><option value="2">Forest trail</option><option value="3">Coastal drive</option><option value="4">City outskirts</option></select>
 <button id="traffic" hidden aria-pressed="true">Traffic on</button>
 <select id="weather" aria-label="Road trip weather" hidden><option value="auto">Weather · Auto</option><option value="sun">Sunny</option><option value="rain">Rain</option><option value="sunset">Sunset</option><option value="snow">Snow</option><option value="fog">Fog</option><option value="night">Night</option></select>
-  <select id="zen-pattern" aria-label="Sand pattern" hidden><option value="spiral">Spiral</option><option value="petals">Lotus petals</option><option value="waves">Flowing waves</option></select>
+  <select id="zen-pattern" aria-label="Sand pattern" hidden><option value="spiral">Spiral</option><option value="petals">Lotus petals</option><option value="waves">Flowing waves</option><option value="random">Random · Freeform</option></select>
   <span id="seed"></span>
   <button id="play">Pause</button>
   <label>Speed <input id="spd" type="range" min="0" max="200" value="40"></label>
@@ -52,7 +52,7 @@ input[type=range]{width:80px;accent-color:#E63B2E}
   <button id="hide" aria-label="Hide controls" title="Hide controls (H)">Hide</button>
 </div><button id="show" class="fab" hidden aria-label="Show controls" title="Show controls (H)">☰</button></div>
 <div id="trip-status" hidden role="status" style="position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:var(--panel);padding:8px 18px;border-radius:30px;white-space:nowrap;pointer-events:none"></div>
-<script src="assets/zen-garden.js?v=2"></script>
+<script src="assets/zen-garden.js?v=3"></script>
 <script>
 const requestedZen=location.hash.startsWith('#zen-');
 const H=640,CW=600,RIVER=585,TAU=Math.PI*2,PI=Math.PI;
@@ -1583,7 +1583,7 @@ function roadProjection(j,w,h,horizon){
 /* rendering */
 const cv=document.getElementById('c'),ctx=cv.getContext('2d'),tiles=new Map();
 let S=1,DPR=1,topY=0,camX=0;
-function layout(){const w=cv.clientWidth,h=cv.clientHeight;DPR=Math.max(1,Math.min(2,devicePixelRatio||1,Math.sqrt(4.2e6/Math.max(1,w*h))));cv.width=Math.round(w*DPR);cv.height=Math.round(h*DPR);
+function layout(){const w=cv.clientWidth,h=cv.clientHeight;const zenQuality=document.getElementById('mode').value==='zen';DPR=Math.max(1,Math.min(zenQuality?3:2,devicePixelRatio||1,Math.sqrt((zenQuality?8.3e6:4.2e6)/Math.max(1,w*h))));cv.width=Math.round(w*DPR);cv.height=Math.round(h*DPR);
   S=(ST===STYLES.china||ST===STYLES.japan)?h/H:Math.min(h/H,w/440);topY=H-h/S;resetTiles();}
 const jobs=new Map();let fx=null,fxc=null,mk=null,mkc=null;
 function* tileJob(i){
@@ -1639,10 +1639,11 @@ matchMedia('(prefers-color-scheme: dark)').addEventListener('change',()=>{readTh
 
 const modeBtn=document.getElementById('mode');
 modeBtn.onchange=()=>{
- const road=modeBtn.value==='road',zen=modeBtn.value==='zen';
+ const road=modeBtn.value==='road',zen=modeBtn.value==='zen',wasZen=document.body.classList.contains('zen-mode');
  document.body.classList.toggle('zen-mode',zen);
  document.getElementById('sty').hidden=road||zen;document.getElementById('seed').hidden=road||zen;
  document.getElementById('zen-pattern').hidden=!zen;
+ if(zen!==wasZen)layout();
  for(const id of ['place','weather','trip-status','traffic'])document.getElementById(id).hidden=!road;
  document.querySelector('h1').textContent=zen?'Zen garden':'Infinite scroll';
  document.getElementById('new').textContent=zen?'Smooth sand':'New landscape';

@@ -1,19 +1,24 @@
 /* A persistent, distance-driven sand trace. No moving photograph or looping video. */
-const zenPhoto=new Image();zenPhoto.src='assets/zen-garden.jpg';
+const zenPhoto=new Image();zenPhoto.src='assets/zen-garden-hd.jpg';
 const zenLeaf=new Image();zenLeaf.src='assets/zen-maple-leaf.png';
-const zenTrace=document.createElement('canvas');zenTrace.width=zenTrace.height=1100;
-const zc=zenTrace.getContext('2d');
+const zenTrace=document.createElement('canvas');zenTrace.width=zenTrace.height=2200;
+const zc=zenTrace.getContext('2d');zc.scale(2,2);
 let zenClock=0,zenDistance=0,zenPath=[],zenLength=0,zenReady=false,zenPattern='spiral',zenCycle=0;
 function zenBuildPath(pattern){
- const raw=[];const turns=pattern==='spiral'?12:pattern==='petals'?9:7;
+ const raw=[];const randomTerms=Array.from({length:4},(_,j)=>({fx:1+Math.floor(Math.random()*7),fy:1+Math.floor(Math.random()*7),px:Math.random()*Math.PI*2,py:Math.random()*Math.PI*2,a:1/(1+j*1.5)}));const turns=pattern==='spiral'?12:pattern==='petals'?9:7;
  for(let i=0;i<=16000;i++){
   const u=i/16000,a=u*Math.PI*2*turns;
+  if(pattern==='random'){
+   let x=0,y=0;for(const f of randomTerms){x+=Math.sin(u*Math.PI*2*f.fx+f.px)*f.a;y+=Math.cos(u*Math.PI*2*f.fy+f.py)*f.a;}
+   raw.push({x:550+x*250,y:550+y*250});continue;
+  }
   let r;
   if(pattern==='spiral')r=.08+.82*(.5-.5*Math.cos(u*Math.PI*2));
   else if(pattern==='petals')r=.18+.70*(.5+.5*Math.cos(a*5/9));
   else r=.12+.76*(.5+.5*Math.sin(a*3/7));
   raw.push({x:550+Math.cos(a)*r*510,y:550+Math.sin(a)*r*510});
  }
+ if(pattern==='random'){const max=Math.max(...raw.map(p=>Math.hypot(p.x-550,p.y-550)));for(const p of raw){p.x=550+(p.x-550)*460/max;p.y=550+(p.y-550)*460/max;}}
  zenPath=[{...raw[0],d:0}];let d=0;
  for(let i=1;i<raw.length;i++){d+=Math.hypot(raw[i].x-raw[i-1].x,raw[i].y-raw[i-1].y);zenPath.push({...raw[i],d});}
  zenLength=d;
@@ -27,7 +32,7 @@ function zenPoint(d){
 function zenCarve(from,to){
  if(to<=from)return;
  const pts=[zenPoint(from)];for(let d=from+1.6;d<to;d+=1.6)pts.push(zenPoint(d));pts.push(zenPoint(to));
- zc.lineCap=zc.lineJoin='round';
+ zc.lineCap='butt';zc.lineJoin='round';
  // Low sand ridges surround a recessed trough; illumination comes from upper left.
  for(const [width,color,dx,dy] of [[8.4,'rgba(243,232,206,.34)',0,0],[6.2,'rgba(111,88,57,.35)',-.65,-.8],[3.8,'rgba(162,139,103,.31)',0,0],[1.2,'rgba(255,246,222,.48)',1.8,2]]){
   zc.beginPath();pts.forEach((p,i)=>i?zc.lineTo(p.x+dx,p.y+dy):zc.moveTo(p.x+dx,p.y+dy));zc.strokeStyle=color;zc.lineWidth=width;zc.stroke();
@@ -53,9 +58,9 @@ function zenAir(c,iw,ih,t){
  // Wide, soft beams slowly drift with the canopy. The photographic materials stay visible.
  c.save();c.globalCompositeOperation='screen';
  for(let j=0;j<3;j++){
-  c.save();c.translate(-iw*.09, -ih*.18);c.rotate(-.37+Math.sin(t*.055+j)*.028+j*.19);
+  c.save();c.translate(-iw*.09, -ih*.18);c.rotate(-.38+j*.14);
   const beam=c.createLinearGradient(-iw*.14,0,iw*.14,0);
-  beam.addColorStop(0,'rgba(255,233,177,0)');beam.addColorStop(.5,`rgba(255,232,171,${.07+.022*Math.sin(t*.11+j)})`);beam.addColorStop(1,'rgba(255,233,177,0)');
+  beam.addColorStop(0,'rgba(255,233,177,0)');beam.addColorStop(.5,`rgba(255,232,171,${.035+.008*Math.sin(t*.11+j)})`);beam.addColorStop(1,'rgba(255,233,177,0)');
   c.fillStyle=beam;c.fillRect(-iw*.14,0,iw*.28,ih*1.7);c.restore();
  }
  c.restore();
@@ -73,17 +78,25 @@ function zenAir(c,iw,ih,t){
   c.globalAlpha=.13+.13*Math.sin(Math.PI*u);c.fillStyle='#fff4d2';c.beginPath();c.arc(x,y,.8+(j%3)*.35,0,Math.PI*2);c.fill();
  }c.restore();
 }
+// Overhead view: gravity drives descent, a breeze adds small lateral drift.
+function zenLeafState(j,t,iw,ih){
+ const duration=25+j*4,cycle=Math.floor(t/duration+j*.27),phase=(t/duration+j*.27)%1;
+ const u=Math.min(1,phase/.74),fall=(u-(1-Math.exp(-4*u))/4)/(1-(1-Math.exp(-4))/4);
+ const variation=Math.sin(cycle*17.3+j*2.8);
+ const x=iw*(.73+j*.056-.055*fall)+Math.sin(u*4.2+j+variation)*iw*.012*Math.sin(Math.PI*u);
+ const y=ih*(.065+(j%2)*.045+fall*(.59+j*.035));
+ const height=1-fall,size=ih*(.035+j*.003)*(1+height*.28);
+ const tilt=.76+Math.sin(u*8+j)*.18*height,angle=-.4+j*.67+Math.sin(u*5.7+j)*.5*height;
+ const fade=phase<.05?phase/.05:phase>.92?(1-phase)/.08:1;
+ return {x,y,size,height,tilt,angle,alpha:Math.max(0,fade),landed:u===1};
+}
 function zenFallingLeaves(c,iw,ih,t){
  if(!zenLeaf.complete||!zenLeaf.naturalWidth)return;
- for(let j=0;j<5;j++){
-  const duration=38+j*5,u=(t/duration+j*.213)%1;
-  const x=iw*(1.04-u*1.13)+Math.sin(u*Math.PI*2+j)*iw*.035;
-  const y=ih*(-.12+u*1.25)+Math.sin(u*Math.PI+j)*ih*.08;
-  const size=ih*(.032+(j%3)*.013),angle=-.6+j*.8+u*2.7+Math.sin(t*.5+j)*.22;
-  const flutter=.55+.36*Math.cos(t*.65+j),alpha=Math.min(1,u*14,(1-u)*14);
-  // Height determines a broad, offset shadow, so leaves float above the sand.
-  c.save();c.translate(x+size*.65,y+size*.9);c.rotate(angle);c.scale(1,flutter);c.globalAlpha=alpha*.14;c.filter='brightness(0) blur(7px)';c.drawImage(zenLeaf,-size/2,-size/2,size,size);c.restore();
-  c.save();c.translate(x,y);c.rotate(angle);c.scale(1,flutter);c.globalAlpha=alpha*.93;c.drawImage(zenLeaf,-size/2,-size/2,size,size);c.restore();
+ for(let j=0;j<4;j++){
+  const p=zenLeafState(j,t,iw,ih);
+  // The shadow approaches the leaf, sharpens, and darkens as it settles.
+  c.save();c.translate(p.x+p.size*(.04+p.height*.4),p.y+p.size*(.05+p.height*.5));c.rotate(p.angle);c.scale(1,p.tilt);c.globalAlpha=p.alpha*(.12+(1-p.height)*.13);c.filter=`brightness(0) blur(${1+p.height*5}px)`;c.drawImage(zenLeaf,-p.size/2,-p.size/2,p.size,p.size);c.restore();
+  c.save();c.translate(p.x,p.y);c.rotate(p.angle);c.scale(1,p.tilt);c.globalAlpha=p.alpha;c.drawImage(zenLeaf,-p.size/2,-p.size/2,p.size,p.size);c.restore();
  }
 }
 function zenFrame(dt){
@@ -96,7 +109,7 @@ function zenFrame(dt){
  // Feathered foliage patches sway with a shared breeze and individual branch lag.
  const t=zenClock;
  zenPrepareCanopy(iw,ih);
- zenCanopy.forEach(({tile,x,y,rw,rh},j)=>{const wind=Math.sin(t*.47)+.32*Math.sin(t*.91+j*.35);c.save();c.translate(x+rw/2+wind*3.8,y+rh/2+Math.sin(t*.39+j*.6)*1.7);c.rotate(wind*.009);c.drawImage(tile,-rw/2,-rh/2,rw,rh);c.restore();});
+ zenCanopy.forEach(({tile,x,y,rw,rh},j)=>{const wind=Math.sin(t*.47)+.32*Math.sin(t*.91+j*.35);c.save();c.translate(x+rw/2+wind*1.6,y+rh/2+Math.sin(t*.39+j*.6)*1.7);c.rotate(wind*.003);c.drawImage(tile,-rw/2,-rh/2,rw,rh);c.restore();});
  const cx=iw*.4036,cy=ih*.488,r=ih*.408;
  c.save();c.beginPath();c.arc(cx,cy,r-2,0,Math.PI*2);c.clip();c.drawImage(zenTrace,cx-r,cy-r,r*2,r*2);c.restore();
  const p=zenPoint(zenDistance),x=cx+(p.x-550)/550*r,y=cy+(p.y-550)/550*r,br=ih*.013;
@@ -107,7 +120,7 @@ function zenFrame(dt){
  const steel=c.createLinearGradient(-br,-br*1.3,br,br*.7);
  [[0,'#f9faf6'],[.17,'#d7ddd8'],[.33,'#7f8987'],[.43,'#293b38'],[.5,'#d4d6c9'],[.64,'#f0e7d3'],[.86,'#777b76'],[1,'#28312f']].forEach(([v,col])=>steel.addColorStop(v,col));c.fillStyle=steel;c.fillRect(-br,-br*1.3,br*2,br*2);
  const shine=c.createRadialGradient(-br*.37,-br*.78,0,0,-br*.3,br*1.2);shine.addColorStop(0,'rgba(255,255,255,.95)');shine.addColorStop(.25,'rgba(255,255,255,.15)');shine.addColorStop(.7,'rgba(255,255,255,0)');shine.addColorStop(1,'rgba(12,22,20,.5)');c.fillStyle=shine;c.fillRect(-br,-br*1.3,br*2,br*2);
- c.strokeStyle='rgba(255,255,255,.2)';c.lineWidth=.6;for(let j=0;j<7;j++){c.beginPath();c.ellipse(Math.sin(zenDistance/br+j)*br*.5,-br*.3,br*.65,br*.94,zenDistance/br*.02,0,Math.PI*2);c.stroke();}c.restore();
+ c.restore();
  // A fallen leaf stirs independently of the canopy, without ever entering the tray.
  const lx=iw*.84,ly=ih*.75,lw=iw*.09,lh=ih*.11;
  c.save();c.beginPath();c.ellipse(lx,ly,lw*.48,lh*.48,0,0,Math.PI*2);c.clip();c.translate(lx,ly);c.rotate(Math.sin(t*.7)*.015);c.drawImage(zenPhoto,lx-lw/2-3,ly-lh/2-3,lw+6,lh+6,-lw/2-3,-lh/2-3,lw+6,lh+6);c.restore();
