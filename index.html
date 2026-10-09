@@ -1613,8 +1613,7 @@ function setSeed(s,key){
   const k=Object.keys(STYLES).find(n=>STYLES[n]===ST);
   try{history.replaceState(null,'','#'+k+'-'+seed);}catch(e){}
 }
-const reduce=matchMedia('(prefers-reduced-motion: reduce)').matches;
-let speed=40,playing=!reduce,drag=null,last=performance.now(),vel=0,dragV=0;
+let speed=40,playing=true,drag=null,last=performance.now(),vel=0,dragV=0;
 const playBtn=document.getElementById('play'),syncPlay=()=>playBtn.textContent=playing?'Pause':'Play';
 playBtn.onclick=()=>{playing=!playing;syncPlay();};
 document.getElementById('spd').oninput=e=>speed=+e.target.value;
@@ -1646,7 +1645,7 @@ function frame(t){
   const k=S*DPR,vw=cv.clientWidth/S,camPx=Math.round(camX*k),cam=camPx/k;
   const a=Math.floor(cam/CW),b=Math.floor((cam+vw)/CW);
   ctx.setTransform(1,0,0,1,0,0);ctx.fillStyle=T.bg;ctx.fillRect(0,0,cv.width,cv.height);
-  const tt=reduce?0:t/1000,acts=[];for(let i=a-1;i<=b+1;i++)for(const A of objs(i).actors)acts.push(A);
+  const tt=t/1000,acts=[];for(let i=a-1;i<=b+1;i++)for(const A of objs(i).actors)acts.push(A);
   const world=()=>ctx.setTransform(k,0,0,k,-camPx,-topY*k);
   const runActs=back=>{world();for(const A of acts)if(A.back===back){ctx.save();A.fn(ctx,tt,mulberry32(A.s));ctx.restore();}ctx.setTransform(1,0,0,1,0,0);};
   runActs(true);
