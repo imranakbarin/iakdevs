@@ -32,7 +32,7 @@ function zenCarve(from,to){
  const pts=[zenPoint(from)];for(let d=from+1.6;d<to;d+=1.6)pts.push(zenPoint(d));pts.push(zenPoint(to));
  zc.lineCap='butt';zc.lineJoin='round';
  // Low sand ridges surround a recessed trough; illumination comes from upper left.
- for(const [width,color,dx,dy] of [[6,'rgba(255,246,215,.5)',0,0],[3.8,'rgba(113,86,54,.30)',-.5,-.5],[1.7,'rgba(160,127,81,.4)',0,0],[.8,'rgba(255,248,222,.7)',1.6,1.6]]){
+ for(const [width,color,dx,dy] of [[11,'rgba(255,246,215,.50)',1.6,1.6],[7,'rgba(94,67,39,.42)',-.8,-.8],[3.5,'rgba(103,77,44,.36)',0,0],[1.4,'rgba(255,249,224,.85)',3,3]]){
   zc.beginPath();pts.forEach((p,i)=>i?zc.lineTo(p.x+dx,p.y+dy):zc.moveTo(p.x+dx,p.y+dy));zc.strokeStyle=color;zc.lineWidth=width;zc.stroke();
  }
 }
@@ -75,6 +75,14 @@ function zenStaticScene(L){
  c.fillStyle='rgba(28,45,30,.2)';c.beginPath();c.ellipse(cx+2,cy+r*.035,r*.99,r*.975,0,0,Math.PI*2);c.fill();
  c.save();if(zenGarden==='moon')c.filter='brightness(.78) saturate(.65)';
  c.drawImage(zenSandImage,cx-r*1.05,cy-r*1.05,r*2.1,r*2.1);c.restore();
+ // Light falls across a recessed sand bed; the inner lip occludes the upper edge.
+ c.save();c.beginPath();c.arc(cx,cy,r*.885,0,Math.PI*2);c.clip();
+ const bed=c.createLinearGradient(cx-r,cy-r,cx+r,cy+r);
+ bed.addColorStop(0,'rgba(36,28,19,.28)');bed.addColorStop(.22,'rgba(71,50,25,.06)');bed.addColorStop(.58,'rgba(255,245,211,.10)');bed.addColorStop(1,'rgba(88,61,26,.16)');
+ c.fillStyle=bed;c.fillRect(cx-r,cy-r,r*2,r*2);
+ const lip=c.createRadialGradient(cx+r*.025,cy+r*.035,r*.78,cx,cy,r*.89);
+ lip.addColorStop(0,'rgba(36,26,14,0)');lip.addColorStop(.77,'rgba(36,26,14,.06)');lip.addColorStop(1,'rgba(36,26,14,.40)');
+ c.fillStyle=lip;c.fillRect(cx-r,cy-r,r*2,r*2);c.restore();
  // A low-resolution water mask lets fish swim beneath the painted lily pads.
  const mw=Math.min(720,Math.round(L.w)),mh=Math.round(mw*L.h/L.w),mask=document.createElement('canvas');mask.width=mw;mask.height=mh;
  const m=mask.getContext('2d');m.drawImage(im,0,0,mw,mh);const pixels=m.getImageData(0,0,mw,mh),data=pixels.data;
@@ -163,7 +171,7 @@ const zenSteelNormals=Array.from({length:64*64},(_,i)=>{
  const z=Math.sqrt(1-r),rx=2*x*z,ry=2*y*z;
  const light=Math.max(0,-x*.43-y*.57+z*.7);
  return {u:128+rx*122,v:96+ry*90,alpha:Math.round(255*Math.min(1,(1-Math.sqrt(r))*31)),
-  base:.34+.66*(.68+.32*Math.tanh(-ry*8)),sky:Math.max(0,-ry)*.7,
+  base:.12+.88*(.5+.5*Math.tanh(-ry*9)),sky:Math.max(0,-ry)*.7,
   shine:(.42+.58*Math.pow(1-z,3))*30+Math.pow(light,95)*225+Math.pow(light,18)*34,
   finish:Math.sin(x*37+y*12),finishB:Math.cos(x*37+y*12)};
 });
@@ -184,14 +192,17 @@ function zenShadeSteel(L,p){
   const n=zenSteelNormals[i],o=i*4;if(!n){data[o+3]=0;continue;}
   const u=Math.max(0,Math.min(255,(n.u+px)|0)),v=Math.max(0,Math.min(191,(n.v+py)|0));
   const e=(v*256+u)*4,finish=1+n.finish*rollA+n.finishB*rollB;
-  for(let k=0;k<3;k++)data[o+k]=((zenSteelEnv[e+k]*.34+110)*n.base+n.sky*(k===2?65:52))*finish+n.shine;
+  for(let k=0;k<3;k++)data[o+k]=((zenSteelEnv[e+k]*.48+118)*n.base+n.sky*(k===2?65:52))*finish+n.shine;
   data[o+3]=n.alpha;
  }
  zenSteelCtx.putImageData(zenSteelPixels,0,0);
 }
 function zenBall(c,L){
  const inner=L.r*.885,p=zenPoint(zenDistance),x=L.cx+(p.x-550)/550*inner,y=L.cy+(p.y-550)/550*inner;
- const br=Math.max(7.5,inner*.045),cy=y-br*.28;
+ const br=Math.max(9,inner*.052),cy=y-br*.28;
+ // A shallow compression ring and displaced sand give the sphere a tangible contact point.
+ c.strokeStyle='rgba(106,77,42,.30)';c.lineWidth=1.1;c.beginPath();c.ellipse(x,y+br*.35,br*.84,br*.42,0,0,Math.PI*2);c.stroke();
+ c.strokeStyle='rgba(255,247,218,.8)';c.beginPath();c.ellipse(x+1,y+br*.42,br*.85,br*.43,0,.08,Math.PI*.85);c.stroke();
  c.save();
  // Broad soft cast shadow plus a tight contact shadow anchor the weight in the sand.
  c.translate(x+br*.38,y+br*.35);c.scale(1,.58);

@@ -61,7 +61,7 @@ input[type=range]{width:80px;accent-color:#E63B2E}
 <div id="trip-status" hidden role="status" style="position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:var(--panel);padding:8px 18px;border-radius:30px;white-space:nowrap;pointer-events:none"></div>
 <script src="assets/scene-motion.js?v=1"></script>
 <script src="assets/world-atmosphere.js?v=1"></script>
-<script src="assets/zen-garden.js?v=6"></script>
+<script src="assets/zen-garden.js?v=7"></script>
 <script>
 const requestedZen=location.hash.startsWith('#zen-');
 const H=640,CW=600,RIVER=585,TAU=Math.PI*2,PI=Math.PI;
@@ -1449,7 +1449,9 @@ const places=[
 const mixColor=(a,b,t)=>{const n=parseInt(a.slice(1),16),m=parseInt(b.slice(1),16);return '#'+[16,8,0].map(s=>Math.round(lerp((n>>s)&255,(m>>s)&255,t)).toString(16).padStart(2,'0')).join('');};
 function drawTourCar(c,x,y,size,color,front=false,turn=0){
  c.save();c.translate(x,y);c.rotate(turn);c.scale(size,size);
- c.fillStyle='rgba(13,26,33,.22)';c.beginPath();c.ellipse(0,5,65,12,0,0,TAU);c.fill();
+ const cast=c.createRadialGradient(15,5,5,15,5,83);cast.addColorStop(0,'rgba(8,19,24,.60)');cast.addColorStop(.55,'rgba(8,19,24,.26)');cast.addColorStop(1,'rgba(8,19,24,0)');
+ c.save();c.translate(7,4);c.scale(1,.32);c.fillStyle=cast;c.fillRect(-90,-90,190,180);c.restore();
+ c.fillStyle='rgba(9,18,21,.52)';c.beginPath();c.ellipse(0,2,51,7,0,0,TAU);c.fill();
  c.fillStyle='#17242a';c.beginPath();c.roundRect(-54,-22,15,29,4);c.roundRect(39,-22,15,29,4);c.fill();
  c.fillStyle='#444e51';c.fillRect(-52,-12,3,15);c.fillRect(49,-12,3,15);
  const paint=c.createLinearGradient(-58,-75,55,0);paint.addColorStop(0,shade(color,45));paint.addColorStop(.36,color);paint.addColorStop(.7,shade(color,-15));paint.addColorStop(1,shade(color,-42));
@@ -1541,23 +1543,35 @@ function roadFrame(t,dt){
  if(night){c.fillStyle='#dce7ee';for(let i=0;i<65;i++){const r=mulberry32(seed+i);c.globalAlpha=.3+r()*.7;c.fillRect(r()*w,r()*horizon,2*DPR,2*DPR);}c.globalAlpha=1;}
  if(!night)for(let i=0;i<6;i++){const xx=((i*w/5-SceneMotion.time*4-SceneMotion.wind*12)%(w*1.3)+w*1.3)%(w*1.3)-w*.15,yy=h*(.11+(i%3)*.045);c.fillStyle=wet?'rgba(207,217,220,.65)':'rgba(255,249,232,.65)';c.beginPath();c.ellipse(xx,yy,w*.065,h*.018,0,0,TAU);c.ellipse(xx-w*.022,yy-h*.012,w*.027,h*.023,0,0,TAU);c.fill();}
  for(let layer=0;layer<4;layer++){c.fillStyle=mixColor(mount,night?'#23374b':'#c5d9d1',.72-layer*.19);c.beginPath();c.moveTo(0,horizon+10);for(let x=-30;x<=w+30;x+=30){const v=x/w*9+ix+journey*.008*(layer+1),y=horizon-h*(.035+Math.abs(Math.sin(v*.75)+Math.sin(v*1.9)*.32)*(.12-layer*.019));c.lineTo(x,y);}c.lineTo(w,horizon+12);c.closePath();c.fill();}
- c.fillStyle=snow?'#e4edec':night?'#263e40':land;c.fillRect(0,horizon,w,h-horizon);
+ const earth=c.createLinearGradient(0,horizon,0,h);earth.addColorStop(0,snow?'#e4edec':night?'#435659':mixColor(land,'#d3dac0',.36));earth.addColorStop(.5,snow?'#c6d5d2':night?'#263e40':land);earth.addColorStop(1,snow?'#aebfbe':night?'#172d30':shade(land,-34));c.fillStyle=earth;c.fillRect(0,horizon,w,h-horizon);
  if(ix===3){const ocean=c.createLinearGradient(0,horizon,0,h);ocean.addColorStop(0,'#75b9c6');ocean.addColorStop(1,'#248da8');c.fillStyle=ocean;c.beginPath();c.moveTo(0,horizon);c.lineTo(w*.27,horizon);for(let i=0;i<=40;i++){const z=i/40;c.lineTo(w*(.27+.025*Math.sin(z*6+journey*.014)),horizon+(h-horizon)*z);}c.lineTo(0,h);c.closePath();c.fill();c.strokeStyle='rgba(244,247,225,.55)';for(let i=0;i<15;i++){const y=horizon+(h-horizon)*i/15;c.beginPath();c.moveTo(0,y);c.quadraticCurveTo(w*.12,y+Math.sin(journey+i)*4,w*.27,y);c.stroke();}}
  const {rx,hw,yy}=roadProjection(journey,w,h,horizon);
  const strip=(a,b,color)=>{c.fillStyle=color;c.beginPath();for(let i=0;i<=70;i++){const z=i/70;c.lineTo(rx(z)+hw(z)*a,yy(z));}for(let i=70;i>=0;i--){const z=i/70;c.lineTo(rx(z)+hw(z)*b,yy(z));}c.closePath();c.fill();};
- strip(-1.09,1.09,snow?'#cbd7d6':'#a99677');
+ strip(-1.17,1.17,night?'#1c3030':'#77694b');strip(-1.13,1.13,snow?'#cbd7d6':'#baaa88');
+ // Raised asphalt edge and narrow gravel shoulders catch different amounts of light.
+ strip(-1.035,1.035,night?'#101e28':'#33423f');
  const asphalt=c.createLinearGradient(0,horizon,0,h);asphalt.addColorStop(0,night?'#536069':wet?'#69828a':'#788486');asphalt.addColorStop(1,night?'#1a2933':wet?'#2c4854':'#2f4247');strip(-1,1,asphalt);strip(-.99,-.96,'#e4e4cf');strip(.96,.99,'#e4e4cf');
+ strip(-.73,-.57,'rgba(13,26,31,.075)');strip(-.38,-.25,'rgba(13,26,31,.075)');strip(.25,.38,'rgba(13,26,31,.075)');strip(.57,.73,'rgba(13,26,31,.075)');
  // Markings are spaced in world distance, and grow as the camera approaches.
  for(let i=0;i<70;i++){const d=38+i*22-((journey*42)%22),z=36/d-.025,z2=36/(d+9)-.025;if(z<0||z>1.1)continue;c.fillStyle='#e9dfb3';poly(c,[[rx(z)-w*.0022*z,yy(z)],[rx(z)+w*.0022*z,yy(z)],[rx(z2)+w*.0022*z2,yy(z2)],[rx(z2)-w*.0022*z2,yy(z2)]]);c.fill();}
  roadDetails(c,rx,hw,yy,w,h,ix,journey,night,snow);
  // Roadside objects move in depth, not sideways across the screen.
- const propCount=ix===2?80:32;
+ const propCount=ix===2?64:40,props=[];
  for(let side of [-1,1])for(let i=0;i<propCount;i++){
-  const distance=38+((i*1400/propCount-journey*42)%1400+1400)%1400,z=Math.max(0,36/distance-.025),s=.015+z,xx=rx(z)+side*hw(z)*(1.22+(i%5)*.48),y=yy(z);
-  c.save();c.translate(xx,y);c.scale(s*DPR,s*DPR);
-  c.drawImage(roadPropSprite(i,side,ix,night,snow),-100,-240);
-  c.restore();
+  const distance=32+((i*1400/propCount-journey*42)%1400+1400)%1400,z=Math.max(0,36/distance-.025);
+  props.push({side,i,z});
  }
+ // Far objects must be painted first. Near trees frame the road and pass the camera.
+ props.sort((a,b)=>a.z-b.z);
+ for(const {side,i,z} of props){
+  const s=(.012+z*1.95)*Math.min(w/1363,h/936),xx=rx(z)+side*hw(z)*(1.32+(i%5)*.46),y=yy(z);
+  c.save();c.translate(xx,y);
+  c.fillStyle=night?'rgba(5,18,23,.32)':'rgba(34,55,36,.24)';c.beginPath();c.ellipse(s*DPR*33,0,s*DPR*64,s*DPR*13,-.12,0,TAU);c.fill();
+  c.scale(s*DPR,s*DPR);c.drawImage(roadPropSprite(i,side,ix,night,snow),-100,-240);c.restore();
+ }
+ // A thin veil separates the distant landscape from the sharply drawn foreground.
+ const haze=c.createLinearGradient(0,horizon,0,horizon+h*.18);haze.addColorStop(0,night?'rgba(112,141,154,.22)':'rgba(216,229,208,.44)');haze.addColorStop(1,'rgba(216,229,208,0)');c.fillStyle=haze;c.fillRect(0,horizon,w,h*.18);
+
  const traffic=tripTraffic(journey,trafficEnabled),pass=traffic.pass;SceneMotion.lane.target=traffic.lane;const lane=SceneMotion.lane.x;
  tripCue=pass>.8?'Overtaking':pass>.05?'Changing lane':'Cruising';
  const vehicles=traffic.cars;
@@ -1596,7 +1610,7 @@ function roadProjection(j,w,h,horizon){
  const origin=route(camera);
  const rx=z=>{const d=36/(z+.025);return w*.5+w*.65*(route(camera+d)-origin-d*slope)/d;};
  const hw=z=>w*.34*(z+.008);
- const yy=z=>horizon+(h-horizon)*z;
+ const yy=z=>horizon+(h-horizon)*z+h*.017*Math.sin(j*.075+z*4)*z*(1-z);
  return {rx,hw,yy};
 }
 
