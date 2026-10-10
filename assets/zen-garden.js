@@ -154,13 +154,57 @@ function zenAtmosphereLayer(c,L,t,dt){
  }
  c.globalAlpha=1;
 }
-function zenBall(c,L){
- const inner=L.r*.885,p=zenPoint(zenDistance),x=L.cx+(p.x-550)/550*inner,y=L.cy+(p.y-550)/550*inner,br=Math.max(4,inner*.032);
- c.fillStyle='rgba(57,55,34,.22)';c.beginPath();c.ellipse(x+br*.25,y+br*.4,br*1.05,br*.6,0,0,Math.PI*2);c.fill();
- const steel=c.createLinearGradient(x-br,y-br,x+br,y+br);steel.addColorStop(0,'#f7edca');steel.addColorStop(.4,'#91aea0');steel.addColorStop(.53,'#536e66');steel.addColorStop(.68,'#b4c4af');steel.addColorStop(1,'#3a544e');
- c.fillStyle=steel;c.strokeStyle='#31473d';c.lineWidth=1;c.beginPath();c.arc(x,y-br*.15,br,0,Math.PI*2);c.fill();c.stroke();
- c.fillStyle='#fff6d5';c.beginPath();c.ellipse(x-br*.3,y-br*.5,br*.32,br*.18,-.7,0,Math.PI*2);c.fill();
+// Small software-shaded sphere: cached normals, garden environment and no full-screen effects.
+const zenSteel=document.createElement('canvas');zenSteel.width=zenSteel.height=64;
+const zenSteelCtx=zenSteel.getContext('2d'),zenSteelPixels=zenSteelCtx.createImageData(64,64);
+const zenSteelNormals=Array.from({length:64*64},(_,i)=>{
+ const x=((i%64)+.5-32)/31,y=(Math.floor(i/64)+.5-32)/31,r=x*x+y*y;
+ if(r>1)return null;
+ const z=Math.sqrt(1-r),rx=2*x*z,ry=2*y*z;
+ const light=Math.max(0,-x*.43-y*.57+z*.7);
+ return {u:128+rx*122,v:96+ry*90,alpha:Math.round(255*Math.min(1,(1-Math.sqrt(r))*31)),
+  base:.34+.66*(.68+.32*Math.tanh(-ry*8)),sky:Math.max(0,-ry)*.7,
+  shine:(.42+.58*Math.pow(1-z,3))*30+Math.pow(light,95)*225+Math.pow(light,18)*34,
+  finish:Math.sin(x*37+y*12),finishB:Math.cos(x*37+y*12)};
+});
+let zenSteelEnv=null,zenSteelKey='',zenSteelStamp=-1,zenSteelLastDistance=-1;
+function zenShadeSteel(L,p){
+ if(zenSteelKey!==zenStaticKey){
+  const env=document.createElement('canvas');env.width=256;env.height=192;
+  const ec=env.getContext('2d'),soft=document.createElement('canvas');soft.width=32;soft.height=24;
+  soft.getContext('2d').drawImage(zenStatic,0,0,32,24);ec.drawImage(soft,0,0,256,192);
+  zenSteelEnv=ec.getImageData(0,0,256,192).data;zenSteelKey=zenStaticKey;zenSteelStamp=-1;
+ }
+ const stamp=Math.floor(zenClock*24);
+ if(stamp===zenSteelStamp)return;
+ zenSteelStamp=stamp;zenSteelLastDistance=zenDistance;
+ const data=zenSteelPixels.data,phase=zenDistance/23,px=(p.x-550)/550*12,py=(p.y-550)/550*9;
+ const rollA=.012*Math.cos(phase),rollB=.012*Math.sin(phase);
+ for(let i=0;i<zenSteelNormals.length;i++){
+  const n=zenSteelNormals[i],o=i*4;if(!n){data[o+3]=0;continue;}
+  const u=Math.max(0,Math.min(255,(n.u+px)|0)),v=Math.max(0,Math.min(191,(n.v+py)|0));
+  const e=(v*256+u)*4,finish=1+n.finish*rollA+n.finishB*rollB;
+  for(let k=0;k<3;k++)data[o+k]=((zenSteelEnv[e+k]*.34+110)*n.base+n.sky*(k===2?65:52))*finish+n.shine;
+  data[o+3]=n.alpha;
+ }
+ zenSteelCtx.putImageData(zenSteelPixels,0,0);
 }
+function zenBall(c,L){
+ const inner=L.r*.885,p=zenPoint(zenDistance),x=L.cx+(p.x-550)/550*inner,y=L.cy+(p.y-550)/550*inner;
+ const br=Math.max(7.5,inner*.045),cy=y-br*.28;
+ c.save();
+ // Broad soft cast shadow plus a tight contact shadow anchor the weight in the sand.
+ c.translate(x+br*.38,y+br*.35);c.scale(1,.58);
+ const shadow=c.createRadialGradient(0,0,br*.1,0,0,br*1.65);
+ shadow.addColorStop(0,'rgba(37,29,18,.46)');shadow.addColorStop(.43,'rgba(48,36,22,.24)');shadow.addColorStop(1,'rgba(48,36,22,0)');
+ c.fillStyle=shadow;c.fillRect(-br*1.7,-br*1.7,br*3.4,br*3.4);c.restore();
+ c.fillStyle='rgba(48,35,20,.36)';c.beginPath();c.ellipse(x,y+br*.48,br*.62,br*.24,0,0,Math.PI*2);c.fill();
+ zenShadeSteel(L,p);c.drawImage(zenSteel,x-br,cy-br,br*2,br*2);
+ // Crisp reflected sky on the rim, kept small enough to read as metal rather than glow.
+ c.strokeStyle='rgba(241,249,255,.64)';c.lineWidth=Math.max(.55,br*.045);
+ c.beginPath();c.arc(x,cy,br*.975,Math.PI*1.03,Math.PI*1.74);c.stroke();
+}
+
 function zenFrame(dt){
  if(!zenReady)zenReset();zenClock=SceneMotion.time;
  const c=ctx,w=cv.clientWidth,h=cv.clientHeight,L=zenComposition(w,h),background=zenStaticScene(L);
