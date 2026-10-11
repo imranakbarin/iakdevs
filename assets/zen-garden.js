@@ -153,6 +153,7 @@ function zenStaticScene(L){
  lip.addColorStop(0,'rgba(36,26,14,0)');lip.addColorStop(.77,'rgba(36,26,14,.06)');lip.addColorStop(1,'rgba(36,26,14,.40)');
  c.fillStyle=lip;c.fillRect(cx-r,cy-r,r*2,r*2);c.restore();
  zenSpringBed(c,L);
+ zenFountainBed(c,L);
  // A low-resolution water mask lets fish swim beneath the painted lily pads.
  const mw=Math.min(720,Math.round(L.w)),mh=Math.round(mw*L.h/L.w),mask=document.createElement('canvas');mask.width=mw;mask.height=mh;
  const m=mask.getContext('2d');m.drawImage(tile,0,0,mw,mh);const pixels=m.getImageData(0,0,mw,mh),data=pixels.data;
@@ -176,6 +177,14 @@ function zenDrawKoi(c,x,y,size,angle,t,j){
 function zenPond(c,L,t){
  if(!zenWater||!zenMask)return;
  const q=zenWater.getContext('2d');q.setTransform(zenWater.width/L.w,0,0,zenWater.height/L.h,0,0);q.clearRect(0,0,L.w,L.h);
+ // Advected streaks follow the stream from the right waterfall toward the lower pool.
+ // The cached water mask occludes them beneath the rocks and lily pads.
+ for(let j=0;j<44;j++){
+  const u=(t*.042+j/44)%1,lower=Math.max(0,(u-.52)/.48),x=L.w*(.91-lower*.24+Math.sin(j*2.37)*.042),y=L.h*(.17+u*.83);
+  q.globalAlpha=.1+.16*Math.sin(u*Math.PI);q.strokeStyle=zenGarden==='moon'?'#a2d1ce':'#b9e5d5';q.lineWidth=.8+(j%3)*.4;
+  q.beginPath();q.moveTo(x,y);q.bezierCurveTo(x-3,y+3,x+Math.sin(t*.6+j)*4,y+7,x-2-lower*7,y+12+(j%3)*4);q.stroke();
+ }
+ q.globalAlpha=1;
  for(let j=0;j<4;j++){
   const a=t*(.075+j*.008)+j*1.7;
   const cx=L.portrait?.59:(j<2?.925:.74),cy=L.portrait?.89:(j<2?.53:.89),rx=L.portrait?.22:(j<2?.03:.1),ry=L.portrait?.041:(j<2?.18:.036);
@@ -191,11 +200,75 @@ function zenPond(c,L,t){
  q.globalAlpha=1;q.setTransform(1,0,0,1,0,0);q.globalCompositeOperation='destination-in';q.drawImage(zenMask,0,0);q.globalCompositeOperation='source-over';
  c.drawImage(zenWater,0,0,L.w,L.h);
 }
+// Animate the painted canopy in place. Shared strip boundaries prevent tearing,
+// and fixed outer edges keep the bridge, stones and sand bed stationary.
+let zenCanopyKey='',zenCanopyTiles=[];
+function zenCanopy(c,L,t){
+ if(!zenStatic)return;
+ const width=L.w*(L.portrait?.78:.66),height=L.h*(L.portrait?.29:.32),rows=24,cols=4;
+ if(zenCanopyKey!==zenStaticKey){
+  zenCanopyTiles=[];
+  for(let row=0;row<rows;row++)for(let col=0;col<cols;col++){
+   const x0=Math.round(col*width/cols*DPR),x1=Math.round((col+1)*width/cols*DPR),y0=Math.round(row*height/rows*DPR),y1=Math.round((row+1)*height/rows*DPR);
+   const tile=document.createElement('canvas');tile.width=x1-x0;tile.height=y1-y0;
+   tile.getContext('2d').drawImage(zenStatic,x0,y0,tile.width,tile.height,0,0,tile.width,tile.height);
+   zenCanopyTiles.push({tile,x:x0/DPR,y:y0/DPR,w:tile.width/DPR,h:tile.height/DPR});
+  }zenCanopyKey=zenStaticKey;
+ }
+ const breeze=Math.sin(t*.63)*2.2+Math.sin(t*1.07+.4)*.7+SceneMotion.wind*1.8;
+ const edge=(x,y)=>Math.sin(x/width*Math.PI)*Math.sin(y/height*Math.PI)**2*breeze;
+ c.save();c.beginPath();c.rect(0,0,width,height);c.arc(L.cx,L.cy,L.r*1.08,0,Math.PI*2,true);c.clip('evenodd');
+ for(let row=0;row<rows;row++){
+  for(let col=0;col<cols;col++){
+   const {tile,x,y,w,h}=zenCanopyTiles[row*cols+col],mid=y+h*.5,left=x+edge(x,mid),right=x+w+edge(x+w,mid);
+   c.drawImage(tile,left,y,right-left,h);
+  }
+ }c.restore();
+}
+function zenFountainComposition(L){
+ // The wide artwork already contains a bamboo spout and granite basin.
+ // Portrait artwork crops it out, so it receives its own compact fountain.
+ if(L.portrait){const r=L.w*.105;return {x:L.w*.15,y:L.h*.866,rx:r,ry:r*.62,sx:L.w*.108,sy:L.h*.823,ex:L.w*.145,ey:L.h*.857,custom:true};}
+ return {x:L.w*.159,y:L.h*.847,rx:L.w*.034,ry:L.h*.03,sx:L.w*.151,sy:L.h*.806,ex:L.w*.159,ey:L.h*.847,custom:false};
+}
+function zenFountainBed(c,L){
+ const P=zenFountainComposition(L);if(!P.custom)return;
+ c.save();c.translate(P.x,P.y);
+ const stone=c.createLinearGradient(-P.rx,-P.ry,P.rx,P.ry);stone.addColorStop(0,'#9fa78a');stone.addColorStop(1,'#47594b');
+ c.fillStyle=stone;c.beginPath();c.ellipse(0,0,P.rx,P.ry,0,0,Math.PI*2);c.fill();
+ c.strokeStyle='#354837';c.lineWidth=2;c.stroke();
+ const pool=c.createLinearGradient(0,-P.ry,0,P.ry);pool.addColorStop(0,'#143d3c');pool.addColorStop(1,'#4e9182');c.fillStyle=pool;c.beginPath();c.ellipse(0,-P.ry*.05,P.rx*.77,P.ry*.71,0,0,Math.PI*2);c.fill();
+ const rnd=zenRand(618);for(let i=0;i<130;i++){const a=rnd()*Math.PI*2,r=.82+rnd()*.15;c.fillStyle=i%2?'rgba(218,212,166,.4)':'rgba(32,56,36,.4)';c.fillRect(Math.cos(a)*r*P.rx,Math.sin(a)*r*P.ry,1+rnd()*1.8,1);}
+ c.restore();
+ // A diagonal bamboo stalk and a cut outlet. These stay still while the water moves.
+ c.save();c.lineCap='round';c.strokeStyle='#294831';c.lineWidth=8;c.beginPath();c.moveTo(P.sx-L.w*.07,P.sy-L.h*.02);c.lineTo(P.sx,P.sy);c.stroke();
+ c.strokeStyle='#b4aa5b';c.lineWidth=5;c.stroke();c.strokeStyle='#e1d393';c.lineWidth=1.4;c.stroke();
+ c.fillStyle='#253c29';c.beginPath();c.ellipse(P.sx,P.sy,3.3,2.2,.5,0,Math.PI*2);c.fill();c.restore();
+}
+function zenFountain(c,L,t){
+ const P=zenFountainComposition(L),height=P.ey-P.sy;
+ c.save();c.lineCap='round';
+ // A continuous translucent jet, with highlights travelling down into the basin.
+ c.strokeStyle='rgba(175,218,210,.48)';c.lineWidth=L.portrait?2.7:3.8;
+ c.beginPath();c.moveTo(P.sx,P.sy);c.quadraticCurveTo(P.sx+(P.ex-P.sx)*.65,P.sy+height*.4,P.ex,P.ey);c.stroke();
+ for(let j=0;j<5;j++){
+  const u=(t*1.2+j*.2)%1,v=Math.min(1,u+.12),point=a=>({x:P.sx+(P.ex-P.sx)*(1.3*a-.3*a*a),y:P.sy+height*(.8*a+.2*a*a)}),a=point(u),b=point(v);
+  c.strokeStyle='rgba(240,251,232,.78)';c.lineWidth=L.portrait?.85:1.3;c.beginPath();c.moveTo(a.x,a.y);c.lineTo(b.x,b.y);c.stroke();
+ }
+ // Impact rings expand continuously; four small droplets return under gravity.
+ for(let j=0;j<3;j++){
+  const u=(t*.85+j/3)%1;c.globalAlpha=(1-u)*.48;c.strokeStyle='#d4ead6';c.lineWidth=.8;c.beginPath();c.ellipse(P.ex,P.ey,P.rx*(.08+u*.68),P.ry*(.04+u*.55),0,0,Math.PI*2);c.stroke();
+ }
+ for(let j=0;j<4;j++){
+  const u=(t*1.5+j*.25)%1,x=P.ex+(j%2?1:-1)*u*P.rx*.23,y=P.ey-Math.sin(u*Math.PI)*height*.16;
+  c.globalAlpha=Math.sin(u*Math.PI)*.5;c.fillStyle='#d8eee1';c.beginPath();c.ellipse(x,y,.7,1.2,0,0,Math.PI*2);c.fill();
+ }c.restore();
+}
 function zenRippleAt(x,y){zenRipples.push({x:x/cv.clientWidth,y:y/cv.clientHeight,born:SceneMotion.time});if(zenRipples.length>12)zenRipples.shift();}
 function zenFoliage(c,L,t,dt){
  SceneMotion.spring(zenBranch,SceneMotion.wind,dt,1.6);
- // A few foreground bamboo shoots bend from their base; the artwork stays still.
- c.save();c.translate(L.w*(L.portrait?.03:.025),L.h*.94);c.rotate(zenBranch.x*.015);
+ // Foreground bamboo bends from its base in the same breeze as the painted canopy.
+ c.save();c.translate(L.w*(L.portrait?.03:.025),L.h*.94);c.rotate(zenBranch.x*.035);
  const unit=Math.min(L.w,L.h)/850;
  c.scale(unit,unit);c.strokeStyle=zenGarden==='moon'?'#244b46':'#375b38';c.lineCap='round';
  for(let j=0;j<3;j++){
@@ -252,17 +325,17 @@ function zenAtmosphereLayer(c,L,t,dt){
  c.globalAlpha=1;
 }
 // Local 3D renderer: ray/sphere normals, reflected world directions and quaternion rolling.
-// Only a 96px sprite is shaded; the garden remains in its inexpensive cached layers.
-const zenSteel=document.createElement('canvas');zenSteel.width=zenSteel.height=96;
-const zenSteelCtx=zenSteel.getContext('2d'),zenSteelPixels=zenSteelCtx.createImageData(96,96);
-const zenSteelNormals=Array.from({length:96*96},(_,i)=>{
- const x=((i%96)+.5-48)/47.5,y=(Math.floor(i/96)+.5-48)/47.5,r=x*x+y*y;
+// Only a 64px sprite is shaded; the garden remains in its inexpensive cached layers.
+const zenSteel=document.createElement('canvas');zenSteel.width=zenSteel.height=64;
+const zenSteelCtx=zenSteel.getContext('2d'),zenSteelPixels=zenSteelCtx.createImageData(64,64);
+const zenSteelNormals=Array.from({length:64*64},(_,i)=>{
+ const x=((i%64)+.5-32)/31.5,y=(Math.floor(i/64)+.5-32)/31.5,r=x*x+y*y;
  if(r>1)return null;
  const z=Math.sqrt(1-r),wx=x,wy=y*.572-z*.82,wz=-y*.82+z*.572;
  // Reflect the view ray around the actual sphere normal in a world with Z pointing up.
  const rx=2*z*wx,ry=2*z*wy+.82,rz=2*z*wz-.572;
  const light=Math.max(0,x*-.38+y*-.55+z*.744);
- return {x,y,z,rx,ry,rz,alpha:Math.round(255*Math.min(1,(1-Math.sqrt(r))*47.5)),
+ return {x,y,z,rx,ry,rz,alpha:Math.round(255*Math.min(1,(1-Math.sqrt(r))*31.5)),
   fresnel:.56+.44*Math.pow(1-z,5),spec:Math.pow(light,110)*105+Math.pow(light,20)*13};
 });
 let zenSteelKey='',zenSteelStamp=-1,zenSteelLastDistance=-1,zenSteelColors=null,zenSteelSurface=zenSteel;
@@ -335,7 +408,7 @@ function zenShadeSteel(L,p,radius){
 }
 function zenBall(c,L){
  const inner=L.r*.885,p=zenPoint(zenDistance),x=L.cx+(p.x-550)/550*inner,y=L.cy+(p.y-550)/550*inner;
- const br=Math.max(10,inner*.078),cy=y-br*.52;
+ const br=Math.max(6.5,inner*.045),cy=y-br*.52;
  c.save();
  // Broad soft cast shadow plus a tight contact shadow anchor the weight in the sand.
  c.translate(x+br*.38,y+br*.35);c.scale(1,.58);
@@ -357,6 +430,7 @@ function zenFrame(dt){
  if(playing){SceneMotion.spring(zenDrive,34*speed/40,dt,2.5);const previous=zenDistance;zenDistance=Math.min(zenLength,zenDistance+dt*zenDrive.x);zenCarve(previous,zenDistance);if(zenDistance>=zenLength){zenCycle+=dt;if(zenCycle>=14)zenReset();}}
  c.clearRect(0,0,cv.width,cv.height);c.setTransform(DPR,0,0,DPR,0,0);
  if(zenCycle>8)zenTrace.style.opacity=String(1-Math.min(1,(zenCycle-8)/6));
+ if(zenAtmosphere)zenCanopy(c,L,zenClock);
  zenBall(c,L);
- if(zenAtmosphere){zenPond(c,L,zenClock);zenSpringWater(c,L,zenClock);zenAtmosphereLayer(c,L,zenClock,dt);}
+ if(zenAtmosphere){zenPond(c,L,zenClock);zenFountain(c,L,zenClock);zenSpringWater(c,L,zenClock);zenAtmosphereLayer(c,L,zenClock,dt);}
 }

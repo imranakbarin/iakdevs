@@ -74,8 +74,8 @@ input[type=range]{width:80px;accent-color:#E63B2E}
 <div id="trip-status" hidden role="status" style="position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:var(--panel);padding:8px 18px;border-radius:30px;white-space:nowrap;pointer-events:none"></div>
 <script src="assets/scene-motion.js?v=1"></script>
 <script src="assets/world-atmosphere.js?v=2"></script>
-<script src="assets/zen-steel-gpu.js?v=1"></script>
-<script src="assets/zen-garden.js?v=10"></script>
+<script src="assets/zen-steel-gpu.js?v=2"></script>
+<script src="assets/zen-garden.js?v=11"></script>
 <script src="assets/road-illustration.js?v=3"></script>
 <script>
 const requestedZen=location.hash.startsWith('#zen-');
@@ -1839,7 +1839,7 @@ modeBtn.onchange=()=>{
  for(const id of ['place','weather','trip-status','traffic'])document.getElementById(id).hidden=!road;
  document.querySelector('h1').textContent=zen?'Zen garden':'Infinite scroll';
  document.getElementById('new').textContent=zen?'Smooth sand':'New landscape';
- cv.setAttribute('aria-label',zen?'An illustrated garden with a steel ball drawing in sand, swimming koi, falling petals, lanterns and curling incense':road?'Infinite illustrated road trip through changing places and weather':'Endlessly scrolling world art landscape');
+ cv.setAttribute('aria-label',zen?'An illustrated garden with a steel ball drawing in sand, swimming koi, falling petals, swaying branches, flowing bamboo water and a steaming spring':road?'Infinite illustrated road trip through changing places and weather':'Endlessly scrolling world art landscape');
  if(zen){if(!zenReady)zenReset();history.replaceState(null,'','#zen-'+seed);}
  else if(location.hash.startsWith('#zen-'))history.replaceState(null,'','#'+document.getElementById('sty').value+'-'+seed);
 };
