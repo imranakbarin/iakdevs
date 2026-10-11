@@ -74,7 +74,7 @@ input[type=range]{width:80px;accent-color:#E63B2E}
 <script src="assets/scene-motion.js?v=1"></script>
 <script src="assets/world-atmosphere.js?v=1"></script>
 <script src="assets/zen-garden.js?v=8"></script>
-<script src="assets/road-illustration.js?v=1"></script>
+<script src="assets/road-illustration.js?v=2"></script>
 <script>
 const requestedZen=location.hash.startsWith('#zen-');
 const H=640,CW=600,RIVER=585,TAU=Math.PI*2,PI=Math.PI;
@@ -1508,6 +1508,7 @@ function roadDetails(c,rx,hw,yy,w,h,ix,j,night,snow){
   for(let k=0;k<5;k++){const d=40+((k*220-j*42)%1100+1100)%1100,z=Math.max(0,36/d-.025),s=.025+z,xx=rx(z)+side*hw(z)*(2.1+(k%2)*.8),y=yy(z);
    c.save();c.translate(xx,y);c.scale(s*DPR,s*DPR);
    if(ix===3&&side<0){c.fillStyle='#ece5cc';c.fillRect(-12,-95,24,95);c.fillStyle='#a75643';c.fillRect(-12,-60,24,10);c.fillRect(-16,-98,32,10);poly(c,[[-18,-99],[0,-113],[18,-99]]);c.fill();c.fillStyle='#325a69';c.fillRect(-5,-86,10,12);}
+   else if(ix===0||ix===2){const lodge=RoadIllustration.prop(3,night,snow);if(lodge)c.drawImage(lodge,-64,-160,128,160);}
    else if(ix!==1){c.fillStyle=night?'#58695f':'#d7c6a2';c.fillRect(-40,-47,80,47);poly(c,[[-49,-46],[0,-77],[49,-46]]);c.fillStyle='#7e6650';c.fill();c.fillStyle=night?'#edc883':'#5a817b';c.fillRect(-25,-33,14,17);c.fillRect(11,-33,14,17);c.fillStyle='#74634f';c.fillRect(-6,-23,12,23);}
    else {c.beginPath();c.ellipse(0,-5,55,17,.04,0,TAU);c.fillStyle='#b67c58';c.fill();c.beginPath();c.moveTo(-47,-7);c.quadraticCurveTo(0,-25,48,-7);artStroke(c,'#d7a574',1.5);}
    c.restore();
@@ -1560,6 +1561,20 @@ function roadFrame(t,dt){
  if(ix===3){const ocean=c.createLinearGradient(0,horizon,0,h);ocean.addColorStop(0,'#75b9c6');ocean.addColorStop(1,'#248da8');c.fillStyle=ocean;c.beginPath();c.moveTo(0,horizon);c.lineTo(w*.27,horizon);for(let i=0;i<=40;i++){const z=i/40;c.lineTo(w*(.27+.025*Math.sin(z*6+journey*.014)),horizon+(h-horizon)*z);}c.lineTo(0,h);c.closePath();c.fill();c.strokeStyle='rgba(244,247,225,.55)';for(let i=0;i<15;i++){const y=horizon+(h-horizon)*i/15;c.beginPath();c.moveTo(0,y);c.quadraticCurveTo(w*.12,y+Math.sin(journey+i)*4,w*.27,y);c.stroke();}}
  const {rx,hw,yy}=roadProjection(journey,w,h,horizon);
  if(ix===0||ix===2){
+  // Rolling foothills overlap the panorama's base instead of a flat cut at the horizon.
+  for(let layer=0;layer<3;layer++){
+   const color=snow?['#cad9d3','#b8cbc3','#9db7aa'][layer]:night?['#344d4d','#2e4940','#294637'][layer]:['#4c756b','#587d61','#668658'][layer];
+   c.fillStyle=color;c.beginPath();c.moveTo(0,h);
+   for(let x=0;x<=w+16;x+=16){const v=x/w*5.5+journey*(.014+layer*.008);const top=horizon+h*(layer*.021-.035)+h*.025*Math.sin(v+layer*2)+h*.012*Math.sin(v*2.7);c.lineTo(x,top);}
+   c.lineTo(w,h);c.closePath();c.fill();
+  }
+  // Distant trees sit on the foothills and move more slowly than the roadside.
+  const ridgeTree=RoadIllustration.prop(0,night,snow);
+  if(ridgeTree)for(let i=0;i<38;i++){
+   const x=((i/37*w*1.12-journey*w*.0015)%(w*1.12)+w*1.12)%(w*1.12)-w*.06;
+   const v=x/w*5.5+journey*.03,base=horizon+h*.03+h*.02*Math.sin(v+4),height=h*(.045+.018*Math.sin(i*2.4));
+   c.drawImage(ridgeTree,x-height*.4,base-height,height*.8,height);
+  }
   for(let side of [-1,1])for(let band=0;band<4;band++){
    const y=horizon+(h-horizon)*(.12+band*.23);c.fillStyle=night?'rgba(10,34,27,.15)':'rgba(39,81,44,.12)';c.beginPath();c.moveTo(side<0?0:w,y-h*.08);c.quadraticCurveTo(w*.5,y-h*.02,rx(.5)+side*hw(.5)*1.1,y+h*.1);c.lineTo(side<0?0:w,y+h*.2);c.closePath();c.fill();
   }
@@ -1585,7 +1600,7 @@ function roadFrame(t,dt){
  // Far objects must be painted first. Near trees frame the road and pass the camera.
  props.sort((a,b)=>a.z-b.z);
  for(const {side,i,z} of props){
-  const s=(.012+z*1.6)*Math.min(w/(900*DPR),h/(850*DPR)),xx=rx(z)+side*hw(z)*(1.36+(i%5)*.42),y=yy(z);
+  const s=(.010+z*1.10)*Math.min(w/(900*DPR),h/(850*DPR)),clearance=160*s*DPR,xx=rx(z)+side*(hw(z)*(1.25+(i%5)*.38)+clearance),y=yy(z);
   c.save();c.translate(xx,y);
   c.fillStyle=night?'rgba(5,18,23,.32)':'rgba(34,55,36,.24)';c.beginPath();c.ellipse(s*DPR*33,0,s*DPR*64,s*DPR*13,-.12,0,TAU);c.fill();
   c.scale(s*DPR,s*DPR);
@@ -1594,12 +1609,12 @@ function roadFrame(t,dt){
   if(painted)c.drawImage(painted,-160,-398);else c.drawImage(roadPropSprite(i,side,ix,night,snow),-100,-240);c.restore();
  }
  // A thin veil separates the distant landscape from the sharply drawn foreground.
- const haze=c.createLinearGradient(0,horizon,0,horizon+h*.18);haze.addColorStop(0,night?'rgba(112,141,154,.22)':'rgba(216,229,208,.44)');haze.addColorStop(1,'rgba(216,229,208,0)');c.fillStyle=haze;c.fillRect(0,horizon,w,h*.18);
+ const haze=c.createLinearGradient(0,horizon,0,horizon+h*.13);haze.addColorStop(0,night?'rgba(112,141,154,.16)':'rgba(216,229,208,.18)');haze.addColorStop(1,'rgba(216,229,208,0)');c.fillStyle=haze;c.fillRect(0,horizon,w,h*.13);
 
  const traffic=tripTraffic(journey,trafficEnabled),pass=traffic.pass;SceneMotion.lane.target=traffic.lane;const lane=SceneMotion.lane.x;
  tripCue=pass>.8?'Overtaking':pass>.05?'Changing lane':'Cruising';
  const vehicles=traffic.cars;
- const heroZ=.88,heroSize=Math.min(w*.0020,h*.0018),heroX=rx(heroZ)+hw(heroZ)*lane;
+ const heroZ=.88,heroSize=Math.min(hw(heroZ)*.46,h*.15)/135,heroX=rx(heroZ)+hw(heroZ)*lane;
  vehicles.push({z:heroZ,hero:true});
  vehicles.sort((a,b)=>a.z-b.z);
  for(const car of vehicles){if(car.hero){const lean=-Math.sin(journey*.035)*.014+pass*.018;if(!RoadIllustration.car(c,heroX,yy(heroZ),heroSize,lean))drawTourCar(c,heroX,yy(heroZ),heroSize,'#c65d43',false,lean);}else{const size=(.025+car.z)*Math.min(w*.00107,h*.00165);drawTourCar(c,rx(car.z)+hw(car.z)*car.lane,yy(car.z),size,car.col,car.front);}}

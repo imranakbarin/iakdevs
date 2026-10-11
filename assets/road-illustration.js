@@ -13,7 +13,7 @@ const RoadIllustration=(()=>{
  }
  function mountains(c,w,h,horizon,j,ix,night){
   const im=image('mountains');if(!im||ix===1||ix===4)return false;
-  const width=Math.max(w*1.12,h*1.05),height=Math.min(width/3,h*.40),shift=Math.sin(j*.012)*width*.035;
+  const width=Math.max(w*1.32,h*1.12),height=Math.min(width/3,h*.40),shift=Math.sin(j*.045)*width*.065;
   c.save();if(night)c.globalAlpha=.45;c.drawImage(im,(w-width)/2+shift,horizon-height,width,height+2);c.restore();return true;
  }
  function car(c,x,y,size,turn){
