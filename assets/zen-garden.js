@@ -171,7 +171,7 @@ const zenSteelNormals=Array.from({length:64*64},(_,i)=>{
  const z=Math.sqrt(1-r),rx=2*x*z,ry=2*y*z;
  const light=Math.max(0,-x*.43-y*.57+z*.7);
  return {u:128+rx*122,v:96+ry*90,alpha:Math.round(255*Math.min(1,(1-Math.sqrt(r))*31)),
-  base:.12+.88*(.5+.5*Math.tanh(-ry*9)),sky:Math.max(0,-ry)*.7,
+  base:.23+.77*(.5+.5*Math.tanh(-ry*6)),sky:Math.max(0,-ry)*.7,
   shine:(.42+.58*Math.pow(1-z,3))*30+Math.pow(light,95)*225+Math.pow(light,18)*34,
   finish:Math.sin(x*37+y*12),finishB:Math.cos(x*37+y*12)};
 });
@@ -199,7 +199,7 @@ function zenShadeSteel(L,p){
 }
 function zenBall(c,L){
  const inner=L.r*.885,p=zenPoint(zenDistance),x=L.cx+(p.x-550)/550*inner,y=L.cy+(p.y-550)/550*inner;
- const br=Math.max(9,inner*.052),cy=y-br*.28;
+ const br=Math.max(11,inner*.070),cy=y-br*.28;
  // A shallow compression ring and displaced sand give the sphere a tangible contact point.
  c.strokeStyle='rgba(106,77,42,.30)';c.lineWidth=1.1;c.beginPath();c.ellipse(x,y+br*.35,br*.84,br*.42,0,0,Math.PI*2);c.stroke();
  c.strokeStyle='rgba(255,247,218,.8)';c.beginPath();c.ellipse(x+1,y+br*.42,br*.85,br*.43,0,.08,Math.PI*.85);c.stroke();
