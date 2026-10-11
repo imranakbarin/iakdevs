@@ -76,7 +76,7 @@ input[type=range]{width:80px;accent-color:#E63B2E}
 <script src="assets/world-atmosphere.js?v=2"></script>
 <script src="assets/zen-steel-gpu.js?v=2"></script>
 <script src="assets/zen-garden.js?v=11"></script>
-<script src="assets/road-illustration.js?v=3"></script>
+<script src="assets/road-illustration.js?v=4"></script>
 <script>
 const requestedZen=location.hash.startsWith('#zen-');
 const H=640,CW=600,RIVER=585,TAU=Math.PI*2,PI=Math.PI;
@@ -1667,6 +1667,7 @@ function roadFrame(t,dt,c=ctx,placeOverride=null){
   }
  }
 
+ RoadIllustration.scenery(c,{rx,hw,yy},w,h,horizon,journey,ix,SceneMotion.time);
  const strip=(a,b,color)=>{c.fillStyle=color;c.beginPath();for(let i=0;i<=70;i++){const z=i/70;c.lineTo(rx(z)+hw(z)*a,yy(z));}for(let i=70;i>=0;i--){const z=i/70;c.lineTo(rx(z)+hw(z)*b,yy(z));}c.closePath();c.fill();};
  strip(-1.17,1.17,tone('#77694b',undefined,undefined,undefined,undefined,'#1c3030'));strip(-1.13,1.13,tone('#baaa88',undefined,undefined,undefined,'#cbd7d6','#56666a'));
  // Raised asphalt edge and narrow gravel shoulders catch different amounts of light.
@@ -1696,20 +1697,28 @@ function roadFrame(t,dt,c=ctx,placeOverride=null){
  }
  c.restore();
  // Roadside objects move in depth, not sideways across the screen.
- const propCount=ix===2?48:36,props=[];
+ const propCount=ix===2?34:24,props=RoadIllustration.encounters(journey,ix);
  for(let side of [-1,1])for(let i=0;i<propCount;i++){
   const distance=32+((i*1400/propCount+side*11+18*Math.sin(i*12.73+side)-journey*42)%1400+1400)%1400,z=Math.max(0,36/distance-.025);
   props.push({side,i,z});
  }
  // Far objects must be painted first. Near trees frame the road and pass the camera.
  props.sort((a,b)=>a.z-b.z);
- for(const {side,i,z} of props){
+ for(const {side,i,z,landmark,variant} of props){
+  if(z<=0||z>1.05)continue;
+  if(landmark){
+   const s=hw(z)/350*.92,xx=rx(z)+side*(hw(z)*1.38+180*s),y=yy(z);
+   if(xx+220*s<0||xx-220*s>w)continue;
+   // An access spur and a flattened clearing connect the foundation to the verge.
+   c.fillStyle=ix===1?'#c99867':ix===3?'#d8c9a5':'#9e9c78';poly(c,[[rx(z)+side*hw(z)*1.13,yy(z)],[xx,yy(z)-9*s],[xx,yy(z)+12*s],[rx(z)+side*hw(z)*1.13,yy(z)+6*s]]);c.fill();
+   RoadIllustration.foundation(c,xx,y,s,ix,175);c.drawImage(RoadIllustration.landmark(ix,variant),xx-220*s,y-320*s,440*s,340*s);RoadIllustration.landmarkMotion(c,xx,y,s,ix,variant,SceneMotion.time);continue;
+  }
   const s=(.010+z*1.10)*Math.min(w/(900*DPR),h/(850*DPR)),clearance=160*s*DPR,xx=rx(z)+side*(hw(z)*(1.25+(i%5)*.38)+clearance),y=yy(z);
   if(ix===3&&xx<rx(z)-hw(z)*1.55+35*s*DPR)continue;
   c.save();c.translate(xx,y);
-  c.fillStyle=night?'rgba(5,18,23,.32)':'rgba(34,55,36,.24)';c.beginPath();c.ellipse(s*DPR*33,0,s*DPR*64,s*DPR*13,-.12,0,TAU);c.fill();
+  c.fillStyle='rgba(25,43,31,.22)';c.beginPath();c.ellipse(s*DPR*16,1*s*DPR,s*DPR*(i%7===0?120:68),s*DPR*9,0,0,TAU);c.fill();c.fillStyle='rgba(19,32,24,.32)';c.beginPath();c.ellipse(0,-s*DPR,s*DPR*(i%7===0?80:35),s*DPR*3,0,0,TAU);c.fill();
   c.scale(s*DPR,s*DPR);
-  const kind=i===17?3:i%4===0?2:(i+side)%3===0?1:0;
+  const kind=i===17?3:i%7===0?2:(i+side)%3===0?1:0;
   const painted=ix!==1&&ix!==3&&ix!==4?RoadIllustration.prop(kind,false,false):null;
   if(painted){c.drawImage(painted,-160,-398);if(a.snow>.001){c.globalAlpha=a.snow;c.drawImage(RoadIllustration.prop(kind,false,true),-160,-398);}}else c.drawImage(roadPropSprite(i,side,ix,false,false),-100,-240);c.restore();
  }
@@ -1734,7 +1743,7 @@ function roadFrame(t,dt,c=ctx,placeOverride=null){
   roadFrame(t,0,roadPlaceLayer.getContext('2d'),next);
   c.save();c.globalAlpha=blend;c.drawImage(roadPlaceLayer,0,0);c.restore();
  }
- if(placeOverride===null){const tripLabel=p.name+(blend>.1?' → '+pn.name:'')+' · '+({sun:'Sunny',sunset:'Sunset',rain:'Rain',fog:'Fog',snow:'Snow',night:'Night'})[we]+' · '+tripCue;const status=document.getElementById('trip-status');if(status.textContent!==tripLabel)status.textContent=tripLabel;}
+ if(placeOverride===null){const upcoming=RoadIllustration.encounters(journey,ix).filter(e=>e.z>.07&&e.z<.8).sort((a,b)=>b.z-a.z)[0],stopNames=[['Alpine café','Scenic campsite'],['Desert rest stop','Windmill'],['Woodland lodge','Forest campsite'],['Lighthouse','Coastal café'],['Corner café','Farm market']];const stop=upcoming?' · '+stopNames[ix][upcoming.variant]+' ahead':'';const tripLabel=p.name+(blend>.1?' → '+pn.name:'')+' · '+({sun:'Sunny',sunset:'Sunset',rain:'Rain',fog:'Fog',snow:'Snow',night:'Night'})[we]+' · '+tripCue+stop;const status=document.getElementById('trip-status');if(status.textContent!==tripLabel)status.textContent=tripLabel;}
 }
 
 const mexicanPanorama=new Image();
