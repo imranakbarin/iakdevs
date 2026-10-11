@@ -1561,14 +1561,22 @@ function roadPropSprite(index,side,ix,night,snow){
 }
 let tripCue='Cruising',trafficEnabled=true;
 const roadPlaceLayer=document.createElement('canvas');
+const roadPlaceTransition={selection:null,previous:0,target:0,elapsed:7};
 const tripDrive={x:1,v:0};
 function roadFrame(t,dt,c=ctx,placeOverride=null){
  if(placeOverride===null&&playing&&!drag){SceneMotion.spring(tripDrive,speed/40,dt,2.4);journey+=dt*tripDrive.x;}
  const w=cv.width,h=cv.height;
  c.setTransform(1,0,0,1,0,0);
  const chosen=document.getElementById('place').value,phase=journey/32;
- const ix=placeOverride!==null?placeOverride:chosen==='auto'?Math.floor(phase)%places.length:+chosen,next=chosen==='auto'?(ix+1)%places.length:ix;
- const blend=placeOverride===null&&chosen==='auto'?smooth(.78,1,phase%1):0;
+ const selectedPlace=chosen==='auto'?Math.floor(phase)%places.length:+chosen;
+ if(placeOverride===null){
+  if(roadPlaceTransition.selection!==chosen){roadPlaceTransition.previous=roadPlaceTransition.target;roadPlaceTransition.target=selectedPlace;roadPlaceTransition.elapsed=roadPlaceTransition.selection===null?7:0;roadPlaceTransition.selection=chosen;}
+  roadPlaceTransition.elapsed=Math.min(7,roadPlaceTransition.elapsed+(playing?dt:7));
+  if(roadPlaceTransition.elapsed===7)roadPlaceTransition.target=selectedPlace;
+ }
+ const changingPlace=placeOverride===null&&roadPlaceTransition.elapsed<7;
+ const ix=placeOverride!==null?placeOverride:changingPlace?roadPlaceTransition.previous:selectedPlace,next=changingPlace?selectedPlace:chosen==='auto'?(ix+1)%places.length:ix;
+ const blend=changingPlace?smooth(0,7,roadPlaceTransition.elapsed):placeOverride===null&&chosen==='auto'?smooth(.78,1,phase%1):0;
  const p=places[ix],pn=places[next],land=mixColor(p.earth,pn.earth,blend),mount=mixColor(p.mount,pn.mount,blend);
  const weather=document.getElementById('weather').value,a=roadWeather(journey,placeOverride!==null?0:playing?dt:6,weather),we=roadWeatherNames.reduce((x,y)=>a[x]>=a[y]?x:y),tone=(...colors)=>roadTone(a,...colors);
  const night=false,wet=false,snow=false,horizon=h*.44;
