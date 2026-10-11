@@ -1591,6 +1591,17 @@ function roadFrame(t,dt){
  // Markings are spaced in world distance, and grow as the camera approaches.
  for(let i=0;i<70;i++){const d=38+i*22-((journey*42)%22),z=36/d-.025,z2=36/(d+9)-.025;if(z<0||z>1.1)continue;c.fillStyle='#e9dfb3';poly(c,[[rx(z)-w*.0022*z,yy(z)],[rx(z)+w*.0022*z,yy(z)],[rx(z2)+w*.0022*z2,yy(z2)],[rx(z2)-w*.0022*z2,yy(z2)]]);c.fill();}
  roadDetails(c,rx,hw,yy,w,h,ix,journey,night,snow);
+ // Small meadow tufts travel in world distance and keep open ground from feeling empty.
+ if((ix===0||ix===2)&&!snow)for(let side of [-1,1])for(let i=0;i<72;i++){
+  const r=mulberry32(seed+i*349+side*71),distance=34+((i*19.4-journey*42)%1400+1400)%1400,z=36/distance-.025;
+  if(z<=0||z>1.04)continue;
+  const x=rx(z)+side*(hw(z)*(1.32+r()*4.5)+10*DPR*z),y=yy(z),size=(2+z*12)*DPR;
+  c.strokeStyle=night?'#395943':i%2?'#748b49':'#425f3d';c.lineWidth=(.5+z)*DPR;c.beginPath();
+  c.moveTo(x-size*.35,y);c.quadraticCurveTo(x-size*.5,y-size*.6,x-size*.8,y-size*.8);
+  c.moveTo(x,y);c.quadraticCurveTo(x-size*.1,y-size*.6,x+size*.15,y-size);
+  c.moveTo(x+size*.25,y);c.quadraticCurveTo(x+size*.3,y-size*.5,x+size*.7,y-size*.7);c.stroke();
+  if(i%5===0&&!night){c.fillStyle=i%2?'#dfc77d':'#b7b5cd';c.beginPath();c.arc(x+size*.15,y-size,Math.max(.6,z*2.1)*DPR,0,TAU);c.fill();}
+ }
  // Roadside objects move in depth, not sideways across the screen.
  const propCount=ix===2?76:54,props=[];
  for(let side of [-1,1])for(let i=0;i<propCount;i++){
