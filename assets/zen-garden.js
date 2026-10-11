@@ -140,11 +140,24 @@ function zenFoliage(c,L,t,dt){
 }
 function zenAtmosphereLayer(c,L,t,dt){
  const g=zenGardens[zenGarden];zenPetals.update(dt);
+ // Sun shafts breathe slowly with the canopy; moonlight stays cool and restrained.
+ c.save();
+ for(let j=0;j<3;j++){
+  const drift=Math.sin(t*.075+j*.8)*L.w*.025,x=L.w*(.13+j*.18)+drift;
+  const ray=c.createLinearGradient(x,0,x+L.w*.34,L.h);
+  const warmth=zenGarden==='moon'?'188,216,224':'255,231,166';
+  ray.addColorStop(0,'rgba('+warmth+',0)');ray.addColorStop(.32,'rgba('+warmth+','+(.026+.012*Math.sin(t*.12+j))+')');ray.addColorStop(1,'rgba('+warmth+',0)');
+  c.fillStyle=ray;c.beginPath();c.moveTo(x,0);c.lineTo(x+L.w*.055,0);c.lineTo(x+L.w*.5,L.h);c.lineTo(x+L.w*.29,L.h);c.closePath();c.fill();
+ }
+ c.restore();
  for(const p of zenPetals.items){
   if(p.delay>0||p.alpha<=0)continue;
   const size=(L.portrait?4:6)*p.size,x=p.x*L.w,y=p.y*L.h;
-  c.save();c.translate(x,y);c.rotate(p.angle);c.scale(1,.6+.32*Math.abs(Math.cos(p.angle)));c.globalAlpha=p.alpha*.85;c.fillStyle=g.petals[p.kind%3];c.strokeStyle='rgba(69,66,42,.4)';c.lineWidth=.6;
-  c.beginPath();c.moveTo(-size,0);c.bezierCurveTo(-size,-size,size*.55,-size*.6,size,0);c.bezierCurveTo(size*.4,size*.85,-size*.6,size*.7,-size,0);c.fill();c.stroke();c.restore();
+  const altitude=Math.max(0,p.ground-p.y),shadowOffset=altitude*L.h*.13;
+  c.save();c.beginPath();c.arc(L.cx,L.cy,L.r*.87,0,Math.PI*2);c.clip();
+  c.globalAlpha=p.alpha*(.07+.16*(1-altitude));c.fillStyle='#6b624b';c.beginPath();c.ellipse(x+shadowOffset,y+shadowOffset,size*(.7+altitude),size*.35,p.angle,0,Math.PI*2);c.fill();c.restore();
+  c.save();c.translate(x+Math.sin(p.angle*1.4)*size*.5,y);c.rotate(p.angle*.55);c.scale(1,.18+.72*Math.abs(Math.cos(p.angle)));c.globalAlpha=p.alpha*.85;c.fillStyle=g.petals[p.kind%3];c.strokeStyle='rgba(69,66,42,.4)';c.lineWidth=.6;
+  c.beginPath();c.moveTo(-size,0);c.bezierCurveTo(-size,-size,size*.55,-size*.6,size,0);c.bezierCurveTo(size*.4,size*.85,-size*.6,size*.7,-size,0);c.fill();c.stroke();c.beginPath();c.moveTo(-size*.75,0);c.lineTo(size*.8,0);c.stroke();c.restore();
  }
  zenFoliage(c,L,t,dt);
  // Two soft translucent ribbons, no per-frame blur/filter passes.
@@ -171,7 +184,7 @@ const zenSteelNormals=Array.from({length:64*64},(_,i)=>{
  const z=Math.sqrt(1-r),rx=2*x*z,ry=2*y*z;
  const light=Math.max(0,-x*.43-y*.57+z*.7);
  return {u:128+rx*122,v:96+ry*90,alpha:Math.round(255*Math.min(1,(1-Math.sqrt(r))*31)),
-  base:.23+.77*(.5+.5*Math.tanh(-ry*6)),sky:Math.max(0,-ry)*.7,
+  base:.58+.42*(.5+.5*Math.tanh(-ry*4)),sky:Math.max(0,-ry)*.7,
   shine:(.42+.58*Math.pow(1-z,3))*30+Math.pow(light,95)*225+Math.pow(light,18)*34,
   finish:Math.sin(x*37+y*12),finishB:Math.cos(x*37+y*12)};
 });
@@ -179,8 +192,8 @@ let zenSteelEnv=null,zenSteelKey='',zenSteelStamp=-1,zenSteelLastDistance=-1;
 function zenShadeSteel(L,p){
  if(zenSteelKey!==zenStaticKey){
   const env=document.createElement('canvas');env.width=256;env.height=192;
-  const ec=env.getContext('2d'),soft=document.createElement('canvas');soft.width=32;soft.height=24;
-  soft.getContext('2d').drawImage(zenStatic,0,0,32,24);ec.drawImage(soft,0,0,256,192);
+  const ec=env.getContext('2d'),soft=document.createElement('canvas');soft.width=64;soft.height=48;
+  soft.getContext('2d').drawImage(zenStatic,0,0,64,48);ec.drawImage(soft,0,0,256,192);
   zenSteelEnv=ec.getImageData(0,0,256,192).data;zenSteelKey=zenStaticKey;zenSteelStamp=-1;
  }
  const stamp=Math.floor(zenClock*24);
@@ -192,7 +205,8 @@ function zenShadeSteel(L,p){
   const n=zenSteelNormals[i],o=i*4;if(!n){data[o+3]=0;continue;}
   const u=Math.max(0,Math.min(255,(n.u+px)|0)),v=Math.max(0,Math.min(191,(n.v+py)|0));
   const e=(v*256+u)*4,finish=1+n.finish*rollA+n.finishB*rollB;
-  for(let k=0;k<3;k++)data[o+k]=((zenSteelEnv[e+k]*.48+118)*n.base+n.sky*(k===2?65:52))*finish+n.shine;
+  const luminance=zenSteelEnv[e]*.2126+zenSteelEnv[e+1]*.7152+zenSteelEnv[e+2]*.0722;
+  for(let k=0;k<3;k++)data[o+k]=(((luminance*.72+zenSteelEnv[e+k]*.28)*.88+44)*n.base+n.sky*(k===2?58:40))*finish+n.shine;
   data[o+3]=n.alpha;
  }
  zenSteelCtx.putImageData(zenSteelPixels,0,0);
