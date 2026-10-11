@@ -64,7 +64,7 @@ const RoadIllustration=(()=>{
   // Bounded, seeded ground details; positions advance in road distance with irregular spacing.
   for(let side of [-1,1])for(let i=0;i<64;i++){
    const q=mulberry32(732+i*67+side*311),d=33+((i*21.8+q()*18-j*42)%1400+1400)%1400,z=36/d-.025;
-   if(z<=0||z>1.03)continue;
+   if(z<=0||z>1.03||onRiver(z,j,ix))continue;
    const x=rx(z)+side*hw(z)*(1.28+q()*6),y=yy(z),s=z*Math.min(w,h)*.026;
    if(x<-s||x>w+s||ix===3&&x<rx(z)-hw(z)*1.55+s||((ix===0||ix===2)&&side>0&&Math.abs((x-rx(z))/hw(z)-4.4)<.5))continue;
    c.fillStyle=ix===1?'#ac7754':ix===3?'#abaf77':ix===4?'#657e6f':'#466744';
@@ -137,7 +137,9 @@ const RoadIllustration=(()=>{
    if(ix===0){const x=w*.11+Math.sin(j*.02)*w*.012,y=horizon+h*.011,s=Math.min(w,h)*.0018;c.save();c.translate(x,y);c.scale(s,s);
     c.fillStyle='#738b7b';c.fillRect(-100,-35,206,9);
     for(let k=0;k<7;k++){const xx=-100+k*29;c.fillStyle='#718978';c.fillRect(xx,-27,7,32);c.beginPath();c.moveTo(xx+6,-22);c.quadraticCurveTo(xx+16,-41,xx+29,-22);c.lineWidth=5;c.strokeStyle='#718978';c.stroke();}
-    c.strokeStyle='#b7c6a5';c.lineWidth=2;c.beginPath();c.moveTo(-101,-35);c.lineTo(107,-35);c.stroke();c.restore();}
+    c.strokeStyle='#b7c6a5';c.lineWidth=2;c.beginPath();c.moveTo(-101,-35);c.lineTo(107,-35);c.stroke();
+    const tx=-145+((t*10)%335);for(let k=0;k<4;k++){const xx=tx-k*22;c.fillStyle=k?'#b68b60':'#5b7168';c.beginPath();c.roundRect(xx,-49,20,13,2);c.fill();c.fillStyle='#d9d8ae';c.fillRect(xx+3,-46,5,5);c.fillRect(xx+11,-46,5,5);c.fillStyle='#33453e';c.beginPath();c.arc(xx+4,-36,2,0,Math.PI*2);c.arc(xx+16,-36,2,0,Math.PI*2);c.fill();}
+    c.restore();}
   }
   if(ix===3){
    // Two sailboats remain in the sea; their shadows and wakes stay on the water.
@@ -159,8 +161,77 @@ const RoadIllustration=(()=>{
   for(let k=Math.floor(camera/260);k<=Math.floor(camera/260)+6;k++){
    const rnd=mulberry32(7291+k*97+ix*431),distance=k*260+120+rnd()*90-camera,z=36/distance-.025;
    if(distance<=34||z<=0||z>1.03)continue;
-   list.push({i:k,z,side:ix===3?1:k%2?1:-1,landmark:true,variant:k%2});
+   list.push({i:k,z,side:ix===3?1:k%2?1:-1,landmark:true,variant:k%3});
   }return list;
+ }
+ function life(c,P,w,h,j,ix,t){
+  if(ix===0||ix===1){
+   // A single distant balloon drifts with the breeze; the basket hangs below its envelope.
+   const x=w*(.2+.045*Math.sin(t*.035+ix)),y=h*(.15+.008*Math.sin(t*.13)),s=Math.min(w,h)*.0012;
+   c.save();c.translate(x,y);c.scale(s,s);const fabric=c.createLinearGradient(-20,-32,22,24);fabric.addColorStop(0,'#e7c895');fabric.addColorStop(.5,ix===1?'#b9654e':'#829b8b');fabric.addColorStop(1,'#586e66');c.fillStyle=fabric;
+   c.beginPath();c.moveTo(-6,22);c.bezierCurveTo(-13,13,-28,-4,-25,-20);c.bezierCurveTo(-22,-47,23,-46,26,-20);c.bezierCurveTo(29,-4,13,14,6,22);c.closePath();c.fill();
+   c.strokeStyle='rgba(243,223,183,.6)';c.lineWidth=1;for(let k=-1;k<=1;k++){c.beginPath();c.moveTo(k*5,21);c.bezierCurveTo(k*12,0,k*18,-25,k*8,-39);c.stroke();}
+   c.strokeStyle='#677264';c.beginPath();c.moveTo(-6,22);c.lineTo(-4,32);c.moveTo(6,22);c.lineTo(4,32);c.stroke();c.fillStyle='#907657';c.fillRect(-5,31,10,7);c.restore();
+  }
+  if(ix===0||ix===2){
+   const camera=j*42,k=Math.floor((camera+260)/1600),d=520+k*1600-camera,z=36/d-.025;
+   if(d>45&&z>.045&&z<.72&&!onRiver(z,j,ix))for(let n=0;n<2;n++){
+    const s=P.hw(z)/160,x=P.rx(z)-P.hw(z)*(2.8+n*.33),y=P.yy(z)+n*s*4;
+    c.save();c.translate(x,y);c.scale(s,s);c.fillStyle='rgba(39,59,35,.22)';c.beginPath();c.ellipse(0,1,17,3,0,0,Math.PI*2);c.fill();
+    c.fillStyle=n?'#9b8d66':'#987754';c.beginPath();c.ellipse(0,-16,15,7,0,0,Math.PI*2);c.fill();c.strokeStyle='#665d43';c.lineWidth=2;
+    for(const xx of [-11,-5,6,11]){c.beginPath();c.moveTo(xx,-13);c.lineTo(xx+(xx%2?2:-1),0);c.stroke();}
+    c.save();c.translate(12,-16);c.rotate(.2+Math.sin(t*.35+n)*.13);c.fillStyle='#a38b64';c.beginPath();c.moveTo(-3,2);c.lineTo(2,-17);c.lineTo(9,-21);c.lineTo(14,-17);c.lineTo(7,-13);c.lineTo(3,4);c.closePath();c.fill();c.beginPath();c.ellipse(8,-25,2,6,-.45,0,Math.PI*2);c.fill();c.fillStyle='#364c3d';c.beginPath();c.arc(10,-18,.8,0,Math.PI*2);c.fill();c.restore();c.restore();
+   }
+  }
+ }
+ function routeFeatures(j,ix){
+  const camera=j*42,features=[];
+  for(let k=Math.floor((camera-380)/1150);k<=Math.floor((camera-380)/1150)+2;k++){
+   if(k<0)continue;const distance=380+k*1150-camera,z=36/distance-.025;
+   if(distance>8&&z>0&&z<4)features.push({i:k,z,distance,structure:true,type:ix===1?'gateway':'bridge'});
+  }return features;
+ }
+ function onRiver(z,j,ix){if(ix===1)return false;return routeFeatures(j,ix).some(f=>z>=Math.max(0,36/(f.distance+130)-.025)&&z<=f.z);}
+ function riverCrossing(c,P,w,h,j,ix,t){
+  if(ix===1)return;
+  const f=routeFeatures(j,ix)[0];if(!f)return;
+  const near=Math.min(1.1,36/f.distance-.025),far=Math.max(0,36/(f.distance+130)-.025),yn=P.yy(near),yf=P.yy(far);
+  c.save();c.beginPath();c.moveTo(0,yf);c.bezierCurveTo(w*.3,yf-h*.012,w*.65,yf+h*.01,w,yf);c.lineTo(w,yn);c.bezierCurveTo(w*.6,yn-h*.018,w*.25,yn+h*.015,0,yn);c.closePath();
+  const water=c.createLinearGradient(0,yf,0,yn);water.addColorStop(0,ix===3?'#69b0b7':'#5b9392');water.addColorStop(1,'#397d85');c.fillStyle=water;c.fill();c.clip();
+  for(let k=0;k<19;k++){const y=yf+(yn-yf)*(k+.5)/19;c.strokeStyle=k%2?'rgba(199,230,212,.36)':'rgba(31,91,104,.17)';c.lineWidth=.8+near;c.beginPath();for(let x=-20;x<=w+20;x+=20){const yy=y+Math.sin(x*.019+t*.7+k)*Math.max(1,(yn-yf)*.025);x===-20?c.moveTo(x,yy):c.lineTo(x,yy);}c.stroke();}c.restore();
+ }
+ function structure(c,P,w,h,f,ix){
+  const {rx,hw,yy}=P;
+  if(f.type==='bridge'){
+   const from=Math.max(0,36/(f.distance+130)-.025),to=Math.min(1.15,f.z);
+   for(const side of [-1,1]){
+    // Edge masonry and railing posts use the same world-distance projection as the deck.
+    c.strokeStyle=ix===2?'#7c6951':ix===4?'#698b89':'#b7baa4';c.lineWidth=Math.max(1,hw(to)*.027);c.beginPath();
+    for(let k=0;k<=24;k++){const z=from+(to-from)*k/24;c.lineTo(rx(z)+side*hw(z)*1.12,yy(z)-h*.055*z);}c.stroke();
+    c.strokeStyle=ix===2?'#544e3f':'#697c76';c.lineWidth=Math.max(1,hw(to)*.018);c.beginPath();
+    for(let k=0;k<=24;k++){const z=from+(to-from)*k/24;c.lineTo(rx(z)+side*hw(z)*1.13,yy(z)-h*.025*z);}c.stroke();
+    for(let k=0;k<=10;k++){const distance=f.distance+k*13,z=36/distance-.025;if(z<=0||z>1.15)continue;const x=rx(z)+side*hw(z)*1.12,y=yy(z);c.strokeStyle=ix===2?'#726448':'#899b8e';c.lineWidth=Math.max(1,hw(z)*.03);c.beginPath();c.moveTo(x,y+hw(z)*.035);c.lineTo(x,y-h*.06*z);c.stroke();}
+   }
+  }else{
+   const z=f.z,x=rx(z),y=yy(z),width=hw(z)*1.35,height=Math.min(h*.33*z,width*1.65);
+   // A road-sized stone arch has an actual opening. The shared road continues through it.
+   c.save();c.translate(x,y);const outer=c.createLinearGradient(-width,-height,width,0);outer.addColorStop(0,'#c69a73');outer.addColorStop(.45,'#ad805b');outer.addColorStop(1,'#735b48');c.fillStyle=outer;
+   c.beginPath();c.moveTo(-width,0);c.lineTo(-width,-height*.51);c.bezierCurveTo(-width,-height*1.22,width,-height*1.22,width,-height*.51);c.lineTo(width,0);c.closePath();
+   c.moveTo(-width*.78,0);c.lineTo(width*.78,0);c.lineTo(width*.78,-height*.5);c.bezierCurveTo(width*.78,-height*.95,-width*.78,-height*.95,-width*.78,-height*.5);c.closePath();c.fill('evenodd');
+   c.strokeStyle='rgba(76,59,43,.37)';c.lineWidth=Math.max(.6,z*2);
+   for(let k=0;k<11;k++){const a=Math.PI+k/10*Math.PI;c.beginPath();c.moveTo(Math.cos(a)*width,-height*.5+Math.sin(a)*height*.55);c.lineTo(Math.cos(a)*width*.79,-height*.5+Math.sin(a)*height*.36);c.stroke();}
+   for(const side of [-1,1])for(let k=0;k<5;k++){const yy=-k*height*.1;c.beginPath();c.moveTo(side*width*.8,yy);c.lineTo(side*width,yy);c.stroke();}
+   c.fillStyle='rgba(35,44,32,.19)';for(const side of [-1,1]){c.beginPath();c.ellipse(side*width*.9,0,width*.16,Math.max(1,z*6),0,0,Math.PI*2);c.fill();}c.restore();
+  }
+ }
+ function overlook(c,x,y,s,ix){
+  c.save();c.translate(x,y);c.scale(s,s);
+  const deck=c.createLinearGradient(0,-20,0,10);deck.addColorStop(0,'#bab598');deck.addColorStop(1,'#7e8b73');c.fillStyle=deck;c.beginPath();c.moveTo(-155,0);c.lineTo(-127,-27);c.lineTo(128,-27);c.lineTo(160,0);c.lineTo(148,9);c.lineTo(-145,9);c.closePath();c.fill();
+  c.strokeStyle='#68786b';c.lineWidth=3;for(let k=0;k<9;k++){const xx=-126+k*31;c.beginPath();c.moveTo(xx,-24);c.lineTo(xx,-56);c.stroke();}c.beginPath();c.moveTo(-128,-55);c.lineTo(127,-55);c.moveTo(-128,-38);c.lineTo(127,-38);c.stroke();
+  // A bench, binocular telescope and trail marker give the stop a purpose.
+  c.fillStyle='#896b4a';c.fillRect(-87,-25,68,7);c.fillRect(-85,-42,63,8);c.fillRect(-80,-18,5,18);c.fillRect(-31,-18,5,18);
+  c.strokeStyle='#718c8a';c.lineWidth=7;c.beginPath();c.moveTo(69,-20);c.lineTo(69,-53);c.stroke();c.lineWidth=12;c.beginPath();c.moveTo(60,-57);c.lineTo(87,-64);c.stroke();c.strokeStyle='#d5dcbb';c.lineWidth=2;c.stroke();
+  c.fillStyle='#657d62';c.fillRect(-139,-94,48,32);c.fillStyle='#e5d9b0';c.font='bold 8px Georgia';c.textAlign='center';c.fillText('OVERLOOK',-115,-78);c.fillRect(-118,-64,5,40);c.restore();
  }
  function foundation(c,x,y,s,ix,width=130){
   c.save();c.translate(x,y);c.scale(s,s);
@@ -174,5 +245,5 @@ const RoadIllustration=(()=>{
   if((ix===0||ix===2)&&variant===1){for(let k=0;k<3;k++){const u=(t*.12+k/3)%1;c.strokeStyle='rgba(225,221,193,'+((1-u)*.15)+')';c.lineWidth=3+u*6;c.beginPath();c.moveTo(8,-14-u*62);c.quadraticCurveTo(19+Math.sin(t+k)*6,-24-u*62,6+Math.sin(t*.6+k)*8,-39-u*62);c.stroke();}}
   c.restore();
  }
- return {prop,mountains,car,landscape,verge,landmark,encounters,foundation,landmarkMotion,scenery};
+ return {prop,mountains,car,landscape,verge,landmark,encounters,foundation,landmarkMotion,scenery,routeFeatures,riverCrossing,structure,overlook,onRiver,life};
 })();
