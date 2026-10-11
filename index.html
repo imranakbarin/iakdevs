@@ -38,7 +38,7 @@ input[type=range]{width:80px;accent-color:#E63B2E}
 
 /* The artwork owns the viewport; secondary controls open on demand. */
 .ui{padding:10px;z-index:5}.bar{gap:8px;padding:7px 10px;border-radius:12px;background:rgba(20,44,35,.95);color:#f4ead0;box-shadow:0 5px 22px #10281e25;max-width:calc(100vw - 40px)}
-.bar>:not(#mode):not(#play):not(#settings){display:none!important}
+.bar>:where(:not(#mode):not(#play):not(#settings)){display:none!important}
 .bar #mode{order:0;min-width:150px;font:500 14px/1.4 system-ui;background:transparent;border:0;color:inherit;padding:8px 10px}.bar #play{order:1}.bar #settings{order:2}
 .bar #play,.bar #settings{font:500 14px/1.4 system-ui;border:0;padding:8px 12px;min-height:38px;background:transparent}
 .bar select option{background:#203b30;color:#f4ead0}
