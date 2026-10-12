@@ -4,10 +4,11 @@ const RoadRural=(()=>{
  function sites(j,ix){
   const camera=j*42,out=[];
   for(let k=Math.max(0,Math.floor((camera-220-90)/1400));k<=Math.floor((camera+1100-220)/1400);k++){
-   const s=220+k*1400,d=s-camera,side=ix===0||ix===2?-1:ix===3?1:k%2?1:-1;
+   const s=220+k*1400,d=s-camera,side=k%2?1:-1;
+   if(ix===3&&side<0)continue;
    // Keep a whole pasture clear of river crossings, including its far fence.
-   if(ix!==1&&Array.from({length:3},(_,n)=>380+(Math.floor((s-380)/1150)+n-1)*1150).some(r=>r>=380&&s+85>=r&&s-15<=r+130))continue;
-   if(d+85>34&&d<1000)out.push({k,d,side,variant:(k+ix)%3});
+   if(Array.from({length:3},(_,n)=>380+(Math.floor((s-380)/1150)+n-1)*1150).some(r=>r>=380&&s+85>=r&&s-15<=r+130))continue;
+   if(d+85>34&&d<1000)out.push({k,d,side,variant:k%3});
   }return out;
  }
  function encounters(j,ix){
@@ -66,7 +67,7 @@ const RoadRural=(()=>{
  function draw(c,P,w,h,event,ix,t){
   const {z,lane,part,n,variant}=event,x=P.rx(z)+P.hw(z)*lane,y=P.yy(z),s=P.hw(z)/160;
   if(x<-P.hw(z)||x>w+P.hw(z))return;
-  if(part==='animal'){animal(c,x,y,P.hw(z)/250,ix===4&&variant===1?'cow':'goat',n,t);return;}
+  if(part==='animal'){animal(c,x,y,P.hw(z)/250,variant===1?'cow':'goat',n,t);return;}
   if(part==='barn'){c.drawImage(barn(ix,variant),x-140*s,y-214*s,280*s,230*s);return;}
   c.save();c.translate(x,y);c.scale(s,s);
   if(part==='chicken'){

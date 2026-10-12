@@ -237,16 +237,15 @@ const RoadIllustration=(()=>{
  }
  function routeFeatures(j,ix){
   const camera=j*42,features=[];
-  for(let k=Math.floor((camera-380)/1150);k<=Math.floor((camera-380)/1150)+2;k++){
-   if(k<0)continue;const distance=380+k*1150-camera,z=36/distance-.025;
-   if(distance>8&&z>0&&z<4)features.push({i:k,z,distance,structure:true,type:ix===1?'gateway':'bridge'});
+  for(let k=Math.floor((camera-510)/1150);k<=Math.floor((camera-510)/1150)+2;k++){
+   if(k<0)continue;const distance=380+k*1150-camera,type=k%4===2?'gateway':'bridge',z=36/Math.max(8,distance)-.025;
+   if((type==='bridge'?distance+130:distance)>8&&z>0&&z<4.5)features.push({i:k,z,distance,structure:true,type});
   }return features;
  }
- function onRiver(z,j,ix){if(ix===1)return false;return routeFeatures(j,ix).some(f=>z>=Math.max(0,36/(f.distance+130)-.025)&&z<=f.z);}
+ function onRiver(z,j,ix){return routeFeatures(j,ix).some(f=>f.type==='bridge'&&z>=Math.max(0,36/(f.distance+130)-.025)&&z<=f.z);}
  function riverCrossing(c,P,w,h,j,ix,t){
-  if(ix===1)return;
-  const f=routeFeatures(j,ix)[0];if(!f)return;
-  const near=Math.min(1.1,36/f.distance-.025),far=Math.max(0,36/(f.distance+130)-.025),yn=P.yy(near),yf=P.yy(far);
+  const f=routeFeatures(j,ix).find(f=>f.type==='bridge');if(!f)return;
+  const near=Math.min(1.1,f.z),far=Math.max(0,36/(f.distance+130)-.025),yn=P.yy(near),yf=P.yy(far);
   c.save();c.beginPath();c.moveTo(0,yf);c.bezierCurveTo(w*.3,yf-h*.012,w*.65,yf+h*.01,w,yf);c.lineTo(w,yn);c.bezierCurveTo(w*.6,yn-h*.018,w*.25,yn+h*.015,0,yn);c.closePath();
   const water=c.createLinearGradient(0,yf,0,yn);water.addColorStop(0,ix===3?'#69b0b7':'#5b9392');water.addColorStop(1,'#397d85');c.fillStyle=water;c.fill();c.clip();
   for(let k=0;k<19;k++){const y=yf+(yn-yf)*(k+.5)/19;c.strokeStyle=k%2?'rgba(199,230,212,.36)':'rgba(31,91,104,.17)';c.lineWidth=.8+near;c.beginPath();for(let x=-20;x<=w+20;x+=20){const yy=y+Math.sin(x*.019+t*.7+k)*Math.max(1,(yn-yf)*.025);x===-20?c.moveTo(x,yy):c.lineTo(x,yy);}c.stroke();}c.restore();
