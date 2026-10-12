@@ -76,7 +76,7 @@ input[type=range]{width:80px;accent-color:#E63B2E}
 <script src="assets/world-atmosphere.js?v=2"></script>
 <script src="assets/zen-steel-gpu.js?v=2"></script>
 <script src="assets/zen-garden.js?v=11"></script>
-<script src="assets/road-illustration.js?v=5"></script>
+<script src="assets/road-illustration.js?v=6"></script>
 <script>
 const requestedZen=location.hash.startsWith('#zen-'),requestedRoad=location.hash.startsWith('#road-');
 const H=640,CW=600,RIVER=585,TAU=Math.PI*2,PI=Math.PI;
@@ -1736,7 +1736,7 @@ function roadFrame(t,dt,c=ctx,placeOverride=null){
  const heroZ=.88,heroSize=Math.min(hw(heroZ)*.46,h*.15)/135,heroX=rx(heroZ)+hw(heroZ)*lane;
  vehicles.push({z:heroZ,hero:true});
  vehicles.sort((a,b)=>a.z-b.z);
- for(const car of vehicles){if(car.hero){const lean=-Math.sin(journey*.035)*.014+pass*.018;if(!RoadIllustration.car(c,heroX,yy(heroZ),heroSize,lean))drawTourCar(c,heroX,yy(heroZ),heroSize,'#c65d43',false,lean);}else{const size=Math.min(hw(car.z)*.46,h*.15*car.z/.88)/122;drawTourCar(c,rx(car.z)+hw(car.z)*car.lane,yy(car.z),size,car.col,car.front);}}
+ for(const car of vehicles){if(car.hero){const pose=RoadIllustration.carGround(c,{rx,hw,yy},heroZ,lane,heroSize*135,w,h);const rendered=w/h<.85?RoadIllustration.car3d(c,{rx,hw,yy},heroZ,lane):RoadIllustration.car(c,pose.x,pose.y,heroSize,pose);if(!rendered)drawTourCar(c,pose.x,pose.y-7*heroSize,heroSize,'#c65d43',false,0);}else{const size=Math.min(hw(car.z)*.46,h*.15*car.z/.88)/122,pose=RoadIllustration.carGround(c,{rx,hw,yy},car.z,car.lane,size*122,w,h);drawTourCar(c,pose.x,pose.y-7*size,size,car.col,car.front);}}
  for(const f of RoadIllustration.routeFeatures(journey,ix))if(f.type==='gateway'&&f.z>.88)RoadIllustration.structure(c,{rx,hw,yy},w,h,f,ix);
  if(a.night>.001){c.globalAlpha=a.night*.38;c.fillStyle='#081a32';c.fillRect(0,0,w,h);c.globalAlpha=1;}
  if(a.sunset>.001){c.globalAlpha=a.sunset*.12;c.fillStyle='#d99666';c.fillRect(0,0,w,h);c.globalAlpha=1;}

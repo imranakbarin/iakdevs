@@ -23,18 +23,68 @@ const RoadIllustration=(()=>{
   c.save();if(night)c.globalAlpha=.45;c.drawImage(im,(w-width)/2+shift,horizon-height,width,height+2);c.restore();return true;
  }
  let carContact=null;
- function car(c,x,y,size,turn){
-  const im=image('car');if(!im)return false;
+ function carImage(){
+  const im=image('car');if(!im)return null;
   if(!carContact){
    const source=document.createElement('canvas');source.width=im.naturalWidth;source.height=im.naturalHeight;const q=source.getContext('2d');q.drawImage(im,0,0);const data=q.getImageData(0,0,source.width,source.height).data;
    let left=source.width,right=0,top=source.height,bottom=0;
    for(let y=0;y<source.height;y++)for(let x=0;x<source.width;x++)if(data[(y*source.width+x)*4+3]>48){left=Math.min(left,x);right=Math.max(right,x);top=Math.min(top,y);bottom=Math.max(bottom,y);}
    carContact=document.createElement('canvas');carContact.width=right-left+1;carContact.height=bottom-top+1;carContact.getContext('2d').drawImage(source,left,top,carContact.width,carContact.height,0,0,carContact.width,carContact.height);
   }
+  return carContact;
+ }
+ function car(c,x,y,size,turn){
+  if(!carImage())return false;
   const width=size*135,height=width*carContact.height/carContact.width;
-  c.save();c.translate(x,y);c.rotate(turn);
-  const sh=c.createRadialGradient(0,0,2,0,0,width*.56);sh.addColorStop(0,'rgba(10,21,24,.65)');sh.addColorStop(1,'rgba(10,21,24,0)');c.save();c.scale(1,.22);c.fillStyle=sh;c.fillRect(-width*.6,-width*.6,width*1.2,width*1.2);c.restore();
+  const pose=turn&&typeof turn==='object'?turn:{shear:0,pitch:1};
+  // Contact patches live on the road plane. They never rotate with the upper body.
+  c.save();c.translate(x,y);
+  const belly=c.createRadialGradient(0,-width*.065,width*.08,0,-width*.065,width*.46);
+  belly.addColorStop(0,'rgba(7,19,22,.5)');belly.addColorStop(.65,'rgba(7,19,22,.23)');belly.addColorStop(1,'rgba(7,19,22,0)');
+  c.save();c.scale(1,.28);c.fillStyle=belly;c.fillRect(-width*.5,-width*.55,width,width*1.1);c.restore();
+  c.fillStyle='rgba(8,18,20,.65)';
+  for(const side of [-1,1]){c.beginPath();c.ellipse(side*width*.375,-.1,width*.068,Math.max(.65,width*.012),0,0,Math.PI*2);c.fill();}
+  // Shear turns the roof toward the road's tangent while keeping both rear tyres planted.
+  c.transform(1,0,pose.shear||0,pose.pitch||1,0,0);
   c.drawImage(carContact,-width/2,-height,width,height);c.restore();return true;
+ }
+ function carGround(c,P,z,lane,width,w,h){
+  const rear={x:P.rx(z)+P.hw(z)*lane,y:P.yy(z)},d=36/(z+.025),frontZ=Math.max(.01,36/(d+3.8)-.025);
+  const front={x:P.rx(frontZ)+P.hw(frontZ)*lane,y:P.yy(frontZ)},ratio=P.hw(frontZ)/P.hw(z);
+  // Project all four corners of the undercarriage through the road, not a screen-space ellipse.
+  c.save();c.fillStyle='rgba(12,26,29,.22)';c.beginPath();c.moveTo(rear.x-width*.37,rear.y);c.lineTo(front.x-width*.32*ratio,front.y);c.lineTo(front.x+width*.32*ratio,front.y);c.lineTo(rear.x+width*.37,rear.y);c.closePath();c.fill();c.restore();
+  const pitch=Math.max(.77,Math.min(1,1-Math.max(0,h/w-1)*.18)),height=width*.877*pitch;
+  const shear=Math.max(-.2,Math.min(.2,(rear.x-front.x)/Math.max(1,height)));
+  return {x:rear.x,y:rear.y,shear,pitch,front,frontZ};
+ }
+ function car3d(c,P,z,lane){
+  const sprite=carImage();if(!sprite)return false;
+  const distance=36/(z+.025),roadHalf=3.5;
+  const point=(x,d,height=0)=>{const depth=36/(distance+d*.84)-.025,scale=P.hw(depth)/roadHalf;return {x:P.rx(depth)+P.hw(depth)*lane+x*scale,y:P.yy(depth)-height*scale,scale};};
+  const face=(points,colors)=>{const pts=points.map(p=>point(...p)),g=c.createLinearGradient(pts[0].x,pts[0].y,pts[2].x,pts[2].y);g.addColorStop(0,colors[0]);g.addColorStop(.45,colors[1]);g.addColorStop(1,colors[2]);c.beginPath();pts.forEach((p,i)=>i?c.lineTo(p.x,p.y):c.moveTo(p.x,p.y));c.closePath();c.fillStyle=g;c.fill();c.strokeStyle='rgba(81,45,33,.65)';c.lineWidth=.65;c.stroke();};
+  const line=(a,b,color,width=.8)=>{const p=point(...a),q=point(...b);c.strokeStyle=color;c.lineWidth=width;c.beginPath();c.moveTo(p.x,p.y);c.lineTo(q.x,q.y);c.stroke();};
+  // Four wheel contacts share the ground projection. The body is lifted in world height.
+  for(const d of [3.45,.48])for(const side of [-1,1]){
+   const p=point(side*.8,d),r=p.scale*.27;c.fillStyle='rgba(8,18,20,.55)';c.beginPath();c.ellipse(p.x,p.y,Math.max(1,p.scale*.12),Math.max(.55,p.scale*.035),0,0,Math.PI*2);c.fill();
+   c.fillStyle='#17282a';c.beginPath();c.ellipse(p.x,p.y-r,Math.max(1,p.scale*.105),r,0,0,Math.PI*2);c.fill();c.strokeStyle='#6a7871';c.lineWidth=.6;c.beginPath();c.ellipse(p.x,p.y-r,p.scale*.045,r*.5,0,0,Math.PI*2);c.stroke();
+  }
+  face([[-.77,0,.32],[-.77,4.05,.36],[-.73,4.05,.89],[-.73,0,.92]],['#8d302c','#b24a3b','#e68a6a']);
+  face([[.77,0,.32],[.77,4.05,.36],[.73,4.05,.89],[.73,0,.92]],['#792c29','#ad4337','#d66a53']);
+  // Bonnet, windscreen, curved roof, rear glass and boot each have their own plane.
+  face([[-.73,3,.91],[.73,3,.91],[.66,4.05,.85],[-.66,4.05,.85]],['#d86b53','#f2a184','#ac4437']);
+  face([[-.61,2.9,1.38],[.61,2.9,1.38],[.73,3.23,.91],[-.73,3.23,.91]],['#89b8b2','#416b75','#203e48']);
+  face([[-.58,1.42,1.48],[.58,1.42,1.48],[.61,2.9,1.38],[-.61,2.9,1.38]],['#ed9a7d','#bf5141','#f0b39a']);
+  face([[-.7,.82,.94],[.7,.82,.94],[.58,1.42,1.48],[-.58,1.42,1.48]],['#283f48','#527b7d','#a8c7b7']);
+  face([[-.73,0,.92],[.73,0,.92],[.7,.82,.94],[-.7,.82,.94]],['#bd4a3b','#e88869','#9d392f']);
+  for(const side of [-1,1])face([[side*.7,.82,.94],[side*.58,1.42,1.48],[side*.61,2.9,1.38],[side*.73,3.23,.91]],['#263f49','#4b7880','#bdd0bd']);
+  // The painted rear panel preserves the red vintage car's chrome and tail-light detail.
+  const a=point(-.78,0,1.0),b=point(.78,0,.33);c.drawImage(sprite,0,sprite.height*.46,sprite.width,sprite.height*.45,a.x,a.y,b.x-a.x,b.y-a.y);
+  // A dimensional luggage case follows the roof, including its side wall and leather straps.
+  face([[-.43,1.6,1.68],[.43,1.6,1.68],[.43,2.46,1.61],[-.43,2.46,1.61]],['#d0ae7b','#ae8353','#e0c18b']);
+  face([[-.43,1.6,1.48],[.43,1.6,1.48],[.43,1.6,1.68],[-.43,1.6,1.68]],['#795d41','#b08a5a','#ceac74']);
+  for(const x of [-.25,.25])line([x,1.6,1.69],[x,2.46,1.62],'#75593e',1.1);
+  line([-.71,.04,.37],[.71,.04,.37],'#d9d9b9',1.5);line([-.54,1.46,1.49],[.54,1.46,1.49],'#f1d19a',.8);
+  return true;
  }
  function landscape(c,w,h,horizon,j,ix){
   // Distant architecture belongs to the horizon, rather than rows of towers beside the tyres.
@@ -245,5 +295,5 @@ const RoadIllustration=(()=>{
   if((ix===0||ix===2)&&variant===1){for(let k=0;k<3;k++){const u=(t*.12+k/3)%1;c.strokeStyle='rgba(225,221,193,'+((1-u)*.15)+')';c.lineWidth=3+u*6;c.beginPath();c.moveTo(8,-14-u*62);c.quadraticCurveTo(19+Math.sin(t+k)*6,-24-u*62,6+Math.sin(t*.6+k)*8,-39-u*62);c.stroke();}}
   c.restore();
  }
- return {prop,mountains,car,landscape,verge,landmark,encounters,foundation,landmarkMotion,scenery,routeFeatures,riverCrossing,structure,overlook,onRiver,life};
+ return {prop,mountains,car,carGround,car3d,landscape,verge,landmark,encounters,foundation,landmarkMotion,scenery,routeFeatures,riverCrossing,structure,overlook,onRiver,life};
 })();
