@@ -77,9 +77,10 @@ input[type=range]{width:80px;accent-color:#E63B2E}
 <script src="assets/world-atmosphere.js?v=2"></script>
 <script src="assets/zen-steel-gpu.js?v=2"></script>
 <script src="assets/zen-garden.js?v=11"></script>
-<script src="assets/road-illustration.js?v=9"></script>
+<script src="assets/road-illustration.js?v=10"></script>
 <script src="assets/road-rural.js?v=3"></script>
-<script src="assets/road-vehicles.js?v=2"></script>
+<script src="assets/road-vehicles.js?v=3"></script>
+<script src="assets/road-weather-light.js?v=1"></script>
 <script>
 const requestedZen=location.hash.startsWith('#zen-'),requestedRoad=location.hash.startsWith('#road-');
 const H=640,CW=600,RIVER=585,TAU=Math.PI*2,PI=Math.PI;
@@ -1685,10 +1686,11 @@ function roadFrame(t,dt,c=ctx,placeOverride=null){
  const a={...roadAtmosphere.current},tone=(...colors)=>roadTone(a,...colors);
  const night=false,wet=false,snow=false,horizon=h*(w/h<.85?.40:.44);
  const sky=c.createLinearGradient(0,0,0,horizon);sky.addColorStop(0,tone(mixColor(p.sky,pn.sky,blend),'#826687','#668399','#adbbc0','#9eafb6','#122239'));sky.addColorStop(1,tone('#dae9df','#ffd19a','#a8bdc1','#d6dfdb','#dce5e5','#536a7d'));c.fillStyle=sky;c.fillRect(0,0,w,h);
- c.globalAlpha=(1-a.night)*(1-a.rain*.65-a.fog*.7);c.fillStyle='#ffe3a2';c.beginPath();c.arc(w*.76,h*(.14+a.sunset*.17),h*.043,0,TAU);c.fill();
+ c.globalAlpha=(1-a.night)*Math.max(0,1-a.rain-a.fog*.85-a.snow*.9);c.fillStyle='#ffe3a2';c.beginPath();c.arc(w*.76,h*(.14+a.sunset*.17),h*.043,0,TAU);c.fill();
  c.globalAlpha=a.night;c.fillStyle='#fff5d8';c.beginPath();c.arc(w*.76,h*.14,h*.028,0,TAU);c.fill();c.globalAlpha=1;
  if(a.night>.001){c.fillStyle='#dce7ee';for(let i=0;i<65;i++){const r=mulberry32(seed+i);c.globalAlpha=a.night*(.3+r()*.7);c.fillRect(r()*w,r()*horizon,2*DPR,2*DPR);}c.globalAlpha=1;}
  c.globalAlpha=1-a.night*.6;for(let i=0;i<6;i++){const xx=((i*w/5-SceneMotion.time*4-SceneMotion.wind*12)%(w*1.3)+w*1.3)%(w*1.3)-w*.15,yy=h*(.11+(i%3)*.045);c.fillStyle=tone('#edf0df','#d6b8ad','#a2b5bc','#b9c6c5','#c4d0d0','#536571');c.beginPath();c.ellipse(xx,yy,w*.065,h*.018,0,0,TAU);c.ellipse(xx-w*.022,yy-h*.012,w*.027,h*.023,0,0,TAU);c.fill();}c.globalAlpha=1;
+ RoadWeather.clouds(c,w,h,a,SceneMotion.time);
  if(!RoadIllustration.mountains(c,w,h,horizon,journey,ix,false))for(let layer=0;layer<4;layer++){c.fillStyle=mixColor(mount,tone('#c5d9d1','#d9b7ab','#8da8ad','#c5d9d1','#d4dfdf','#23374b'),.72-layer*.19);c.beginPath();c.moveTo(0,horizon+10);for(let x=-30;x<=w+30;x+=30){const v=x/w*9+ix+journey*.008*(layer+1),y=horizon-h*(.035+Math.abs(Math.sin(v*.75)+Math.sin(v*1.9)*.32)*(.12-layer*.019));c.lineTo(x,y);}c.lineTo(w,horizon+12);c.closePath();c.fill();}
  RoadIllustration.landscape(c,w,h,horizon,journey,ix);
  const earth=c.createLinearGradient(0,horizon,0,h);earth.addColorStop(0,tone(ix===0||ix===2?'#315b49':mixColor(land,'#d3dac0',.36),undefined,'#4d6964',undefined,'#e4edec','#435659'));earth.addColorStop(.5,tone(land,undefined,'#5d7a72',undefined,'#c6d5d2','#263e40'));earth.addColorStop(1,tone(shade(land,-34),undefined,'#3f6059',undefined,'#aebfbe','#172d30'));c.fillStyle=earth;c.fillRect(0,horizon,w,h-horizon);
@@ -1804,6 +1806,7 @@ function roadForeground(c,w,h){
  roadSurface(c,w,h);
  roadObjects(c,{rx,hw,yy},w,h,a);
  for(const f of RoadIllustration.routeFeatures(journey,0))if(f.type==='bridge')RoadIllustration.structure(c,{rx,hw,yy},w,h,f,0);
+ RoadWeather.capture(c,w,h,a,SceneMotion.time);
  const traffic=tripTraffic(journey,trafficEnabled,ix),pass=traffic.pass;SceneMotion.lane.target=traffic.lane;const lane=traffic.lane;
  tripCue=traffic.state==='passing'?'Overtaking':traffic.state==='outbound'?'Changing lane':traffic.state==='inbound'?'Returning to lane':traffic.factor<.95?'Following traffic':'Cruising';
  const vehicles=traffic.cars;
@@ -1811,14 +1814,13 @@ function roadForeground(c,w,h){
  vehicles.push({z:heroZ,hero:true});
  vehicles.push(...RoadIllustration.routeFeatures(journey,0).filter(f=>f.type==='gateway').map(f=>({...f,gateway:true})));
  vehicles.sort((a,b)=>a.z-b.z);
- for(const car of vehicles){if(car.gateway){RoadIllustration.structure(c,{rx,hw,yy},w,h,car,0);continue;}if(car.hero){const pose=RoadIllustration.carGround(c,{rx,hw,yy},heroZ,lane,heroSize*135,w,h);const rendered=w/h<.85?RoadIllustration.car3d(c,{rx,hw,yy},heroZ,lane):RoadIllustration.car(c,pose.x,pose.y,heroSize,pose);if(!rendered)drawTourCar(c,pose.x,pose.y-7*heroSize,heroSize,'#c65d43',false,0);}else RoadVehicles.draw(c,{rx,hw,yy},car);}
+ for(const car of vehicles){if(car.gateway){RoadIllustration.structure(c,{rx,hw,yy},w,h,car,0);continue;}if(car.hero){const pose=RoadIllustration.carGround(c,{rx,hw,yy},heroZ,lane,heroSize*135,w,h);const rendered=w/h<.85?RoadIllustration.car3d(c,{rx,hw,yy},heroZ,lane):RoadIllustration.car(c,pose.x,pose.y,heroSize,pose);if(!rendered)drawTourCar(c,pose.x,pose.y-7*heroSize,heroSize,'#c65d43',false,0);}else RoadVehicles.draw(c,{rx,hw,yy},car);RoadWeather.lamps(c,{rx,hw,yy},car.hero?{z:heroZ,lane,front:false}:car);}
 
  if(a.night>.001){c.globalAlpha=a.night*.38;c.fillStyle='#081a32';c.fillRect(0,0,w,h);c.globalAlpha=1;}
  if(a.sunset>.001){c.globalAlpha=a.sunset*.12;c.fillStyle='#d99666';c.fillRect(0,0,w,h);c.globalAlpha=1;}
- if(a.rain>.001){c.globalAlpha=a.rain;c.strokeStyle='rgba(227,241,247,.5)';c.lineWidth=DPR;for(let i=0;i<180;i++){const r=mulberry32(seed+i),x=r()*w,y=(r()*h+journey*450)%h;c.beginPath();c.moveTo(x,y);c.lineTo(x+(SceneMotion.wind*8-5)*DPR,y+17*DPR);c.stroke();}c.globalAlpha=1;}
- if(a.snow>.001){c.globalAlpha=a.snow;c.fillStyle='#f4faf7';for(let i=0;i<130;i++){const r=mulberry32(seed+i);c.beginPath();c.arc(r()*w+Math.sin(SceneMotion.time*.6+i)*10+SceneMotion.wind*18,(r()*h+journey*45)%h,(1+r()*2)*DPR,0,TAU);c.fill();}c.globalAlpha=1;}
+ RoadWeather.precipitation(c,w,h,{rx,hw,yy},journey,SceneMotion.time,a,SceneMotion.wind);
  if(a.fog>.001){c.globalAlpha=a.fog;const fog=c.createLinearGradient(0,horizon*.6,0,h);fog.addColorStop(0,'rgba(228,235,227,.8)');fog.addColorStop(.6,'rgba(228,235,227,.2)');fog.addColorStop(1,'rgba(228,235,227,0)');c.fillStyle=fog;c.fillRect(0,0,w,h);c.globalAlpha=1;}
- if(a.night>.001){c.globalAlpha=a.night;c.fillStyle='rgba(254,236,172,.12)';poly(c,[[heroX-heroSize*35,yy(heroZ)-heroSize*50],[rx(.3)-hw(.3)*.65,yy(.3)],[rx(.3)+hw(.3)*.8,yy(.3)],[heroX+heroSize*35,yy(heroZ)-heroSize*50]]);c.fill();c.globalAlpha=1;}
+ RoadWeather.beams(c,{rx,hw,yy},heroZ,lane);
 
  c.restore();
 }

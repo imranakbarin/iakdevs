@@ -46,7 +46,7 @@ const RoadIllustration=(()=>{
   for(const side of [-1,1]){c.beginPath();c.ellipse(side*width*.375,-.1,width*.068,Math.max(.65,width*.012),0,0,Math.PI*2);c.fill();}
   // Shear turns the roof toward the road's tangent while keeping both rear tyres planted.
   c.transform(1,0,pose.shear||0,pose.pitch||1,0,0);
-  c.drawImage(carContact,-width/2,-height,width,height);
+  c.drawImage(RoadWeather.paintedCar(carContact),-width/2,-height+Math.sin(journey*7)*width*.0015,width,height);
   c.strokeStyle='rgba(204,216,197,.42)';c.lineWidth=.65;const spin=(typeof journey==='undefined'?0:journey*42/.27);
   for(const side of [-1,1])for(let k=0;k<3;k++){const a=spin+k*Math.PI/3,r=width*.024,cx=side*width*.375,cy=-width*.06;c.beginPath();c.moveTo(cx-Math.cos(a)*r*.4,cy-Math.sin(a)*r);c.lineTo(cx+Math.cos(a)*r*.4,cy+Math.sin(a)*r);c.stroke();}c.restore();return true;
  }
@@ -63,7 +63,7 @@ const RoadIllustration=(()=>{
   const sprite=carImage();if(!sprite)return false;const hero=options.luggage!==false,front=Boolean(options.front),color=options.color||'#c95740';
   const distance=36/(z+.025),roadHalf=3.5;
   const point=(x,d,height=0)=>{if(typeof cv!=='undefined'&&cv.width/cv.height<.85){x*=.88;height*=.88;d*=.88;}const depth=36/(distance+d*.84)-.025,scale=P.hw(depth)/roadHalf;return {x:P.rx(depth)+P.hw(depth)*lane+x*scale,y:P.yy(depth)-height*scale,scale};};
-  const face=(points,colors)=>{const pts=points.map(p=>point(...p)),g=c.createLinearGradient(pts[0].x,pts[0].y,pts[2].x,pts[2].y);g.addColorStop(0,colors[0]);g.addColorStop(.45,hero||colors[1].startsWith('#4')||colors[1].startsWith('#5')?colors[1]:color);g.addColorStop(1,colors[2]);c.beginPath();pts.forEach((p,i)=>i?c.lineTo(p.x,p.y):c.moveTo(p.x,p.y));c.closePath();c.fillStyle=g;c.fill();c.strokeStyle='rgba(81,45,33,.65)';c.lineWidth=.65;c.stroke();};
+  const face=(points,colors)=>{const pts=points.map(p=>point(...p)),g=c.createLinearGradient(pts[0].x,pts[0].y,pts[2].x,pts[2].y);g.addColorStop(0,RoadWeather.lit(colors[0]));g.addColorStop(.45,hero||colors[1].startsWith('#4')||colors[1].startsWith('#5')?RoadWeather.lit(colors[1]):RoadWeather.lit(color));g.addColorStop(1,RoadWeather.lit(colors[2]));c.beginPath();pts.forEach((p,i)=>i?c.lineTo(p.x,p.y):c.moveTo(p.x,p.y));c.closePath();c.fillStyle=g;c.fill();RoadWeather.reflect(c,pts,['#89b8b2','#283f48','#263f49'].includes(colors[0]));c.strokeStyle='rgba(81,45,33,.65)';c.lineWidth=.65;c.stroke();};
   const line=(a,b,color,width=.8)=>{const p=point(...a),q=point(...b);c.strokeStyle=color;c.lineWidth=width;c.beginPath();c.moveTo(p.x,p.y);c.lineTo(q.x,q.y);c.stroke();};
   // Four wheel contacts share the ground projection. The body is lifted in world height.
   for(const d of [3.45,.48])for(const side of [-1,1]){
@@ -80,7 +80,7 @@ const RoadIllustration=(()=>{
   face([[-.73,0,.92],[.73,0,.92],[.7,.82,.94],[-.7,.82,.94]],['#bd4a3b','#e88869','#9d392f']);
   for(const side of [-1,1])face([[side*.7,.82,.94],[side*.58,1.42,1.48],[side*.61,2.9,1.38],[side*.73,3.23,.91]],['#263f49','#4b7880','#bdd0bd']);
   // The painted rear panel preserves the red vintage car's chrome and tail-light detail.
-  const a=point(-.78,0,1.0),b=point(.78,0,.33);if(hero)c.drawImage(sprite,0,sprite.height*.46,sprite.width,sprite.height*.45,a.x,a.y,b.x-a.x,b.y-a.y);
+  const a=point(-.78,0,1.0),b=point(.78,0,.33);if(hero){const painted=RoadWeather.paintedCar(sprite);c.drawImage(painted,0,painted.height*.46,painted.width,painted.height*.45,a.x,a.y,b.x-a.x,b.y-a.y);}
   else {c.fillStyle=color;c.fillRect(a.x,a.y,b.x-a.x,b.y-a.y);c.fillStyle=front?'#f0e6bb':'#b96552';const lampY=a.y+(b.y-a.y)*.35;for(const side of [-1,1]){const px=(a.x+b.x)/2+side*(b.x-a.x)*.31;c.beginPath();c.roundRect(px-(b.x-a.x)*.09,lampY,(b.x-a.x)*.18,Math.max(1,(b.y-a.y)*.13),1);c.fill();}c.fillStyle='#365054';c.fillRect((a.x+b.x)/2-(b.x-a.x)*.18,a.y+(b.y-a.y)*.46,(b.x-a.x)*.36,Math.max(1,(b.y-a.y)*.14));}
   // A dimensional luggage case follows the roof, including its side wall and leather straps.
   if(hero){face([[-.43,1.6,1.68],[.43,1.6,1.68],[.43,2.46,1.61],[-.43,2.46,1.61]],['#d0ae7b','#ae8353','#e0c18b']);
