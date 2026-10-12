@@ -4,7 +4,7 @@ const RoadTraffic=(()=>{
  let randomSeed=(Math.random()*4294967296)>>>0,bag=[];
  const lengths={hatchback:3.6,sedan:4.3,suv:4.6,pickup:5.3,van:5.6,truck:8.8};
  const random=()=>{randomSeed=(Math.imul(randomSeed,1664525)+1013904223)>>>0;return randomSeed/4294967296;};
- function appearance(){if(!bag.length){bag=['hatchback','sedan','suv','pickup','van','truck'];for(let i=bag.length-1;i>0;i--){const j=Math.floor(random()*(i+1));[bag[i],bag[j]]=[bag[j],bag[i]];}}const model=bag.pop(),colors=['#b66045','#d5c9a1','#5b8a83','#678294','#859464','#b89761','#8d7390'];return {model,length:lengths[model],col:colors[Math.floor(random()*colors.length)]};}
+ function appearance(){if(!bag.length){bag=['hatchback','sedan','suv','pickup','van','truck'];for(let i=bag.length-1;i>0;i--){const j=Math.floor(random()*(i+1));[bag[i],bag[j]]=[bag[j],bag[i]];}}const model=bag.pop(),colors=['#b66045','#d5c9a1','#5b8a83','#678294','#859464','#b89761','#8d7390'];return {model,length:lengths[model],pace:.61+random()*.15,col:colors[Math.floor(random()*colors.length)]};}
  let cars=[],clock=0,lastCamera=0,enabledBefore=null,nextLead=0,nextOncoming=18,id=0;
  let state='follow',transition=0,fromLane=.52,lane=.52,factor=1;
  const clamp=(x,a,b)=>Math.max(a,Math.min(b,x)),ease=x=>{x=clamp(x,0,1);return x*x*(3-2*x);};
@@ -30,13 +30,13 @@ const RoadTraffic=(()=>{
     cars.push({id:++id,s:camera+950,v:-cruise*.82,lane:-.52,front:true,...appearance()});nextOncoming=clock+25;
    }
   }
-  for(const car of cars){car.v=car.front?-cruise*.82:cruise*.68;car.s+=car.v*dt;}
+  for(const car of cars){car.v=car.front?-cruise*(.77+(car.pace-.61)*.6):cruise*car.pace;car.s+=car.v*dt;}
   cars=cars.filter(c=>c.s-camera>8);
   const lead=cars.find(c=>!c.front),gap=lead?lead.s-hero:Infinity;
   const relative=lead?Math.max(4,cruise-lead.v):4,passTime=(Math.max(0,gap)+22+(lead?.length||0))/relative+3.6;
   const arriving=cars.filter(c=>c.front).map(c=>(c.s-hero)/(cruise-Math.min(0,c.v)));
   // Include the next scheduled vehicle, so a pass cannot start just before it spawns.
-  arriving.push(Math.max(0,nextOncoming-clock)+(950-heroOffset)/(cruise*1.82));
+  arriving.push(Math.max(0,nextOncoming-clock)+(950-heroOffset)/(cruise*1.9));
   const clear=arriving.every(t=>t>passTime+4)&&!crossingAhead(hero,hero+cruise*(passTime+3));
   if(state==='follow'&&enabled&&lead&&gap<=95&&gap>18&&clear)enter('outbound');
   if(state==='outbound'){

@@ -73,13 +73,13 @@ input[type=range]{width:80px;accent-color:#E63B2E}
 </div><button id="show" class="fab" hidden aria-label="Show controls" title="Show controls (H)">☰</button></div>
 <div id="trip-status" hidden role="status" style="position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:var(--panel);padding:8px 18px;border-radius:30px;white-space:nowrap;pointer-events:none"></div>
 <script src="assets/scene-motion.js?v=1"></script>
-<script src="assets/road-traffic.js?v=2"></script>
+<script src="assets/road-traffic.js?v=3"></script>
 <script src="assets/world-atmosphere.js?v=2"></script>
 <script src="assets/zen-steel-gpu.js?v=2"></script>
 <script src="assets/zen-garden.js?v=11"></script>
-<script src="assets/road-illustration.js?v=8"></script>
-<script src="assets/road-rural.js?v=2"></script>
-<script src="assets/road-vehicles.js?v=1"></script>
+<script src="assets/road-illustration.js?v=9"></script>
+<script src="assets/road-rural.js?v=3"></script>
+<script src="assets/road-vehicles.js?v=2"></script>
 <script>
 const requestedZen=location.hash.startsWith('#zen-'),requestedRoad=location.hash.startsWith('#road-');
 const H=640,CW=600,RIVER=585,TAU=Math.PI*2,PI=Math.PI;
@@ -1629,13 +1629,23 @@ function roadPlaceWeights(dt,selection){
   const fade=roadEase((phase%1-32/44)/(12/44));
   target[index]=1-fade;target[(index+1)%places.length]=fade;
  }else target[+selection]=1;
- if(!roadPlaceTransition.current)roadPlaceTransition.current=target.slice();
- if(selection!==roadPlaceTransition.selection){roadPlaceTransition.from=roadPlaceTransition.current.slice();roadPlaceTransition.elapsed=0;roadPlaceTransition.selection=selection;}
+ if(!roadPlaceTransition.current){roadPlaceTransition.current=target.slice();roadPlaceTransition.bands=roadBandDepths.map(()=>target.slice());}
+ if(selection!==roadPlaceTransition.selection){roadPlaceTransition.from=roadPlaceTransition.current.slice();roadPlaceTransition.fromBands=roadPlaceTransition.bands.map(b=>b.slice());roadPlaceTransition.elapsed=0;roadPlaceTransition.selection=selection;}
  roadPlaceTransition.elapsed=Math.min(12,roadPlaceTransition.elapsed+dt);
  const progress=roadEase(roadPlaceTransition.elapsed/12);
  roadPlaceTransition.current=target.map((weight,i)=>lerp(roadPlaceTransition.from[i],weight,progress));
+ roadPlaceTransition.bands=roadBandDepths.map((depth,b)=>{
+  let goal=target;
+  if(selection==='auto'){
+   const phase=roadPlaceTransition.autoTime%44,index=Math.floor(roadPlaceTransition.autoTime/44)%places.length,begin=32+depth*9;
+   const fade=roadEase((phase-begin)/(44-begin));goal=places.map(()=>0);goal[index]=1-fade;goal[(index+1)%places.length]=fade;
+  }
+  const reveal=roadEase((roadPlaceTransition.elapsed/12-depth*.75)/(1-depth*.75));
+  return goal.map((v,i)=>lerp(roadPlaceTransition.fromBands[b][i],v,reveal));
+ });
  return roadPlaceTransition.current.slice();
 }
+const roadBandPositions=[0,.44,.52,.60,.68,.76,.84,.92,1],roadBandDepths=roadBandPositions.map(y=>Math.max(0,(y-.44)/.56));
 const tripDrive={x:1,v:0};
 function roadFrame(t,dt,c=ctx,placeOverride=null){
  const w=cv.width,h=cv.height;
@@ -1645,16 +1655,18 @@ function roadFrame(t,dt,c=ctx,placeOverride=null){
   RoadTraffic.advance(delta,journey*42,42*speed/40,trafficEnabled);
   roadWeather(journey,delta,document.getElementById('weather').value);
   const weights=roadPlaceWeights(delta,document.getElementById('place').value);
-  const active=weights.map((weight,ix)=>({weight,ix})).filter(p=>p.weight>0);
-  let total=0;
+  const bands=roadPlaceTransition.bands,active=weights.map((weight,ix)=>({weight,ix})).filter(p=>bands.some(b=>b[p.ix]>0));
+  const totals=roadBandDepths.map(()=>0);let total=0;
   for(const scene of active){
    if(total===0)roadFrame(t,0,c,scene.ix);
    else {
     if(roadPlaceLayer.width!==w||roadPlaceLayer.height!==h){roadPlaceLayer.width=w;roadPlaceLayer.height=h;}
     roadFrame(t,0,roadPlaceLayer.getContext('2d'),scene.ix);
-    c.save();c.setTransform(1,0,0,1,0,0);c.globalAlpha=scene.weight/(total+scene.weight);c.drawImage(roadPlaceLayer,0,0);c.restore();
+    const layer=roadPlaceLayer.getContext('2d');layer.save();layer.setTransform(1,0,0,1,0,0);layer.globalCompositeOperation='destination-in';
+    const mask=layer.createLinearGradient(0,0,0,h);for(let b=0;b<bands.length;b++){const v=bands[b][scene.ix],alpha=v/(totals[b]+v||1);mask.addColorStop(roadBandPositions[b]===0?0:(w/h<.85?.40:.44)+(roadBandPositions[b]-.44)*(w/h<.85?.60:.56)/.56,'rgba(0,0,0,'+alpha+')');}layer.fillStyle=mask;layer.fillRect(0,0,w,h);layer.restore();
+    c.save();c.setTransform(1,0,0,1,0,0);c.globalAlpha=1;c.drawImage(roadPlaceLayer,0,0);c.restore();
    }
-   total+=scene.weight;
+   total++;for(let b=0;b<bands.length;b++)totals[b]+=bands[b][scene.ix];
   }
   roadForeground(c,w,h);
   const dominant=weights.indexOf(Math.max(...weights)),p=places[dominant];
@@ -1668,10 +1680,10 @@ function roadFrame(t,dt,c=ctx,placeOverride=null){
   const status=document.getElementById('trip-status');if(status.textContent!==tripLabel)status.textContent=tripLabel;
   return;
  }
- c.save();c.setTransform(1,0,0,1,0,0);c.globalAlpha=1;c.globalCompositeOperation='source-over';c.lineCap='butt';c.lineJoin='miter';c.lineWidth=1;
+ c.save();c.setTransform(1,0,0,1,0,0);c.clearRect(0,0,w,h);c.globalAlpha=1;c.globalCompositeOperation='source-over';c.lineCap='butt';c.lineJoin='miter';c.lineWidth=1;
  const ix=placeOverride,p=places[ix],land=p.earth,mount=p.mount,blend=0,pn=p;
  const a={...roadAtmosphere.current},tone=(...colors)=>roadTone(a,...colors);
- const night=false,wet=false,snow=false,horizon=h*.44;
+ const night=false,wet=false,snow=false,horizon=h*(w/h<.85?.40:.44);
  const sky=c.createLinearGradient(0,0,0,horizon);sky.addColorStop(0,tone(mixColor(p.sky,pn.sky,blend),'#826687','#668399','#adbbc0','#9eafb6','#122239'));sky.addColorStop(1,tone('#dae9df','#ffd19a','#a8bdc1','#d6dfdb','#dce5e5','#536a7d'));c.fillStyle=sky;c.fillRect(0,0,w,h);
  c.globalAlpha=(1-a.night)*(1-a.rain*.65-a.fog*.7);c.fillStyle='#ffe3a2';c.beginPath();c.arc(w*.76,h*(.14+a.sunset*.17),h*.043,0,TAU);c.fill();
  c.globalAlpha=a.night;c.fillStyle='#fff5d8';c.beginPath();c.arc(w*.76,h*.14,h*.028,0,TAU);c.fill();c.globalAlpha=1;
@@ -1703,7 +1715,7 @@ function roadFrame(t,dt,c=ctx,placeOverride=null){
  }
 
  RoadIllustration.scenery(c,{rx,hw,yy},w,h,horizon,journey,ix,SceneMotion.time);
- RoadRural.fields(c,{rx,hw,yy},w,h,journey,ix);
+
  RoadIllustration.riverCrossing(c,{rx,hw,yy},w,h,journey,ix,SceneMotion.time);
  const strip=(a,b,color)=>roadStrip(c,{rx,hw,yy},a,b,color);
  RoadIllustration.verge(c,rx,hw,yy,w,h,journey,ix);
@@ -1722,16 +1734,33 @@ function roadFrame(t,dt,c=ctx,placeOverride=null){
   if(i%5===0&&!night){c.fillStyle=i%2?'#dfc77d':'#b7b5cd';c.beginPath();c.arc(x+size*.15,y-size,Math.max(.6,z*2.1)*DPR,0,TAU);c.fill();}
  }
  c.restore();
- // Roadside objects move in depth, not sideways across the screen.
- const propCount=ix===2?34:24,props=[...RoadIllustration.encounters(journey,ix),...RoadIllustration.routeFeatures(journey,ix),...RoadRural.encounters(journey,ix)];
- for(let side of [-1,1])for(let i=0;i<propCount;i++){
-  const distance=32+((i*1400/propCount+side*11+18*Math.sin(i*12.73+side)-journey*42)%1400+1400)%1400,z=Math.max(0,36/distance-.025);
-  props.push({side,i,z});
+ RoadIllustration.life(c,{rx,hw,yy},w,h,journey,ix,SceneMotion.time);
+ RoadRural.birds(c,w,h,ix,SceneMotion.time);
+ // A thin veil separates the distant landscape from the sharply drawn foreground.
+ const haze=c.createLinearGradient(0,horizon,0,horizon+h*.13);haze.addColorStop(0,night?'rgba(112,141,154,.16)':'rgba(216,229,208,.18)');haze.addColorStop(1,'rgba(216,229,208,0)');c.fillStyle=haze;c.fillRect(0,horizon,w,h*.13);
+
+ c.restore();
+}
+function roadStrip(c,{rx,hw,yy},a,b,color){c.fillStyle=color;c.beginPath();for(let i=0;i<=70;i++){const z=i/70;c.lineTo(rx(z)+hw(z)*a,yy(z));}for(let i=70;i>=0;i--){const z=i/70;c.lineTo(rx(z)+hw(z)*b,yy(z));}c.closePath();c.fill();}
+const roadObjectThemes=new Map();
+function roadObjectTheme(key,z){
+ if(roadObjectThemes.has(key))return roadObjectThemes.get(key);
+ const band=roadPlaceTransition.bands[Math.min(8,Math.max(0,Math.round(z*8)))],ix=band.indexOf(Math.max(...band));
+ roadObjectThemes.set(key,ix);if(roadObjectThemes.size>512)roadObjectThemes.delete(roadObjectThemes.keys().next().value);return ix;
+}
+function roadObjects(c,P,w,h,a){
+ const {rx,hw,yy}=P,night=false,props=[],camera=journey*42,seen=new Set();
+ for(let theme=0;theme<places.length;theme++){
+  for(const e of RoadIllustration.encounters(journey,theme)){const key='landmark:'+seed+':'+e.i,ix=roadObjectTheme(key,e.z);if(ix===theme&&!seen.has(key)){props.push({...e,ix});seen.add(key);}}
+  for(const e of RoadRural.encounters(journey,theme)){const key='farm:'+seed+':'+e.k,ix=roadObjectTheme(key,e.z);if(ix===theme)props.push({...e,ix});}
  }
- // Far objects must be painted first. Near trees frame the road and pass the camera.
+ for(let side of [-1,1])for(let i=0;i<30;i++){
+  const base=i*1400/30+side*11+18*Math.sin(i*12.73+side),distance=32+((base-camera)%1400+1400)%1400,z=Math.max(0,36/distance-.025),world=camera+distance;
+  const ix=roadObjectTheme('tree:'+seed+':'+side+':'+i+':'+Math.round(world),z);props.push({side,i,z,ix});
+ }
  props.sort((a,b)=>a.z-b.z);
  for(const event of props){
-  const {side,i,z,landmark,variant,structure,type,distance}=event;
+  const {side,i,z,landmark,variant,structure,type,distance}=event,ix=event.ix;
   if(z<=0||z>1.05&&!structure)continue;
   if(!structure&&RoadIllustration.onRiver(z,journey,ix))continue;
   if(structure)continue;
@@ -1752,16 +1781,9 @@ function roadFrame(t,dt,c=ctx,placeOverride=null){
   const painted=ix!==1&&ix!==3&&ix!==4?RoadIllustration.prop(kind,false,false):null;
   if(painted){c.drawImage(painted,-160,-398);if(a.snow>.001){c.globalAlpha=a.snow;c.drawImage(RoadIllustration.prop(kind,false,true),-160,-398);}}else c.drawImage(roadPropSprite(i,side,ix,false,false),-100,-240);c.restore();
  }
- RoadIllustration.life(c,{rx,hw,yy},w,h,journey,ix,SceneMotion.time);
- RoadRural.birds(c,w,h,ix,SceneMotion.time);
- // A thin veil separates the distant landscape from the sharply drawn foreground.
- const haze=c.createLinearGradient(0,horizon,0,horizon+h*.13);haze.addColorStop(0,night?'rgba(112,141,154,.16)':'rgba(216,229,208,.18)');haze.addColorStop(1,'rgba(216,229,208,0)');c.fillStyle=haze;c.fillRect(0,horizon,w,h*.13);
-
- c.restore();
 }
-function roadStrip(c,{rx,hw,yy},a,b,color){c.fillStyle=color;c.beginPath();for(let i=0;i<=70;i++){const z=i/70;c.lineTo(rx(z)+hw(z)*a,yy(z));}for(let i=70;i>=0;i--){const z=i/70;c.lineTo(rx(z)+hw(z)*b,yy(z));}c.closePath();c.fill();}
 function roadSurface(c,w,h){
- const horizon=h*.44,{rx,hw,yy}=roadProjection(journey,w,h,horizon),a=roadAtmosphere.current,tone=(...colors)=>roadTone(a,...colors);
+ const horizon=h*(w/h<.85?.40:.44),{rx,hw,yy}=roadProjection(journey,w,h,horizon),a=roadAtmosphere.current,tone=(...colors)=>roadTone(a,...colors);
  const strip=(a,b,color)=>{c.fillStyle=color;c.beginPath();for(let i=0;i<=70;i++){const z=i/70;c.lineTo(rx(z)+hw(z)*a,yy(z));}for(let i=70;i>=0;i--){const z=i/70;c.lineTo(rx(z)+hw(z)*b,yy(z));}c.closePath();c.fill();};
  strip(-1.17,1.17,tone('#77694b',undefined,undefined,undefined,undefined,'#1c3030'));strip(-1.13,1.13,tone('#baaa88',undefined,undefined,undefined,'#cbd7d6','#56666a'));
  // Raised asphalt edge and narrow gravel shoulders catch different amounts of light.
@@ -1777,8 +1799,10 @@ function roadSurface(c,w,h){
 }
 function roadForeground(c,w,h){
  c.save();c.setTransform(1,0,0,1,0,0);c.globalAlpha=1;c.globalCompositeOperation='source-over';c.lineCap='butt';c.lineJoin='miter';c.lineWidth=1;
- const {rx,hw,yy}=roadProjection(journey,w,h,h*.44),horizon=h*.44,a=roadAtmosphere.current,ix=0;
+ const horizon=h*(w/h<.85?.40:.44),{rx,hw,yy}=roadProjection(journey,w,h,horizon),a=roadAtmosphere.current,ix=0;
+ for(let theme=0;theme<places.length;theme++)RoadRural.fields(c,{rx,hw,yy},w,h,journey,theme,k=>roadObjectTheme('farm:'+seed+':'+k,.2)===theme);
  roadSurface(c,w,h);
+ roadObjects(c,{rx,hw,yy},w,h,a);
  for(const f of RoadIllustration.routeFeatures(journey,0))if(f.type==='bridge')RoadIllustration.structure(c,{rx,hw,yy},w,h,f,0);
  const traffic=tripTraffic(journey,trafficEnabled,ix),pass=traffic.pass;SceneMotion.lane.target=traffic.lane;const lane=traffic.lane;
  tripCue=traffic.state==='passing'?'Overtaking':traffic.state==='outbound'?'Changing lane':traffic.state==='inbound'?'Returning to lane':traffic.factor<.95?'Following traffic':'Cruising';
@@ -1869,7 +1893,7 @@ let speed=40,playing=true,drag=null,last=performance.now(),vel=0,dragV=0;
 const playBtn=document.getElementById('play'),syncPlay=()=>playBtn.textContent=playing?'Pause':'Play';
 playBtn.onclick=()=>{playing=!playing;syncPlay();};
 document.getElementById('spd').oninput=e=>speed=+e.target.value;
-document.getElementById('new').onclick=()=>{if(modeBtn.value==='zen'){zenReset();return;}journey=0;roadPlaceTransition.autoTime=0;roadPlaceTransition.current=null;roadPlaceTransition.selection=null;roadAtmosphere.autoTime=0;roadAtmosphere.current=null;roadAtmosphere.selection=null;tripDrive.x=speed/40;tripDrive.v=0;SceneMotion.resetLane();RoadTraffic.reset();setSeed(Math.random()*1e6|0);};
+document.getElementById('new').onclick=()=>{if(modeBtn.value==='zen'){zenReset();return;}journey=0;roadObjectThemes.clear();roadPlaceTransition.autoTime=0;roadPlaceTransition.current=null;roadPlaceTransition.selection=null;roadAtmosphere.autoTime=0;roadAtmosphere.current=null;roadAtmosphere.selection=null;tripDrive.x=speed/40;tripDrive.v=0;SceneMotion.resetLane();RoadTraffic.reset();setSeed(Math.random()*1e6|0);};
 document.getElementById('sty').onchange=e=>setSeed(seed,e.target.value);
 cv.addEventListener('pointerdown',e=>{if(modeBtn.value==='zen'){zenRippleAt(e.clientX,e.clientY);wakeScene();return;}drag={x:e.clientX,c:camX,lx:e.clientX,lt:performance.now()};dragV=0;cv.setPointerCapture(e.pointerId);cv.style.cursor='grabbing';});
 cv.addEventListener('pointermove',e=>{if(!drag)return;camX=drag.c-(e.clientX-drag.x)/S;const now=performance.now(),dtm=Math.max(1,now-drag.lt);dragV=dragV*.6+(-(e.clientX-drag.lx)/S/dtm*1000)*.4;drag.lx=e.clientX;drag.lt=now;});

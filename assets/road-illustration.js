@@ -46,7 +46,9 @@ const RoadIllustration=(()=>{
   for(const side of [-1,1]){c.beginPath();c.ellipse(side*width*.375,-.1,width*.068,Math.max(.65,width*.012),0,0,Math.PI*2);c.fill();}
   // Shear turns the roof toward the road's tangent while keeping both rear tyres planted.
   c.transform(1,0,pose.shear||0,pose.pitch||1,0,0);
-  c.drawImage(carContact,-width/2,-height,width,height);c.restore();return true;
+  c.drawImage(carContact,-width/2,-height,width,height);
+  c.strokeStyle='rgba(204,216,197,.42)';c.lineWidth=.65;const spin=(typeof journey==='undefined'?0:journey*42/.27);
+  for(const side of [-1,1])for(let k=0;k<3;k++){const a=spin+k*Math.PI/3,r=width*.024,cx=side*width*.375,cy=-width*.06;c.beginPath();c.moveTo(cx-Math.cos(a)*r*.4,cy-Math.sin(a)*r);c.lineTo(cx+Math.cos(a)*r*.4,cy+Math.sin(a)*r);c.stroke();}c.restore();return true;
  }
  function carGround(c,P,z,lane,width,w,h){
   const rear={x:P.rx(z)+P.hw(z)*lane,y:P.yy(z)},d=36/(z+.025),frontZ=Math.max(.01,36/(d+3.8)-.025);
@@ -60,13 +62,13 @@ const RoadIllustration=(()=>{
  function car3d(c,P,z,lane,options={}){
   const sprite=carImage();if(!sprite)return false;const hero=options.luggage!==false,front=Boolean(options.front),color=options.color||'#c95740';
   const distance=36/(z+.025),roadHalf=3.5;
-  const point=(x,d,height=0)=>{const depth=36/(distance+d*.84)-.025,scale=P.hw(depth)/roadHalf;return {x:P.rx(depth)+P.hw(depth)*lane+x*scale,y:P.yy(depth)-height*scale,scale};};
+  const point=(x,d,height=0)=>{if(typeof cv!=='undefined'&&cv.width/cv.height<.85){x*=.88;height*=.88;d*=.88;}const depth=36/(distance+d*.84)-.025,scale=P.hw(depth)/roadHalf;return {x:P.rx(depth)+P.hw(depth)*lane+x*scale,y:P.yy(depth)-height*scale,scale};};
   const face=(points,colors)=>{const pts=points.map(p=>point(...p)),g=c.createLinearGradient(pts[0].x,pts[0].y,pts[2].x,pts[2].y);g.addColorStop(0,colors[0]);g.addColorStop(.45,hero||colors[1].startsWith('#4')||colors[1].startsWith('#5')?colors[1]:color);g.addColorStop(1,colors[2]);c.beginPath();pts.forEach((p,i)=>i?c.lineTo(p.x,p.y):c.moveTo(p.x,p.y));c.closePath();c.fillStyle=g;c.fill();c.strokeStyle='rgba(81,45,33,.65)';c.lineWidth=.65;c.stroke();};
   const line=(a,b,color,width=.8)=>{const p=point(...a),q=point(...b);c.strokeStyle=color;c.lineWidth=width;c.beginPath();c.moveTo(p.x,p.y);c.lineTo(q.x,q.y);c.stroke();};
   // Four wheel contacts share the ground projection. The body is lifted in world height.
   for(const d of [3.45,.48])for(const side of [-1,1]){
    const p=point(side*.8,d),r=p.scale*.27;c.fillStyle='rgba(8,18,20,.55)';c.beginPath();c.ellipse(p.x,p.y,Math.max(1,p.scale*.12),Math.max(.55,p.scale*.035),0,0,Math.PI*2);c.fill();
-   c.fillStyle='#17282a';c.beginPath();c.ellipse(p.x,p.y-r,Math.max(1,p.scale*.105),r,0,0,Math.PI*2);c.fill();c.strokeStyle='#6a7871';c.lineWidth=.6;c.beginPath();c.ellipse(p.x,p.y-r,p.scale*.045,r*.5,0,0,Math.PI*2);c.stroke();
+   c.fillStyle='#17282a';c.beginPath();c.ellipse(p.x,p.y-r,Math.max(1,p.scale*.105),r,0,0,Math.PI*2);c.fill();c.strokeStyle='#6a7871';c.lineWidth=.6;c.beginPath();c.ellipse(p.x,p.y-r,p.scale*.045,r*.5,0,0,Math.PI*2);c.stroke();for(let spoke=0;spoke<3;spoke++){const angle=(typeof journey==='undefined'?0:journey*42/.27)+spoke*Math.PI/3;c.beginPath();c.moveTo(p.x-Math.cos(angle)*p.scale*.035,p.y-r-Math.sin(angle)*r*.45);c.lineTo(p.x+Math.cos(angle)*p.scale*.035,p.y-r+Math.sin(angle)*r*.45);c.stroke();}
   }
   face([[-.77,0,.32],[-.77,4.05,.36],[-.73,4.05,.89],[-.73,0,.92]],['#8d302c','#b24a3b','#e68a6a']);
   face([[.77,0,.32],[.77,4.05,.36],[.73,4.05,.89],[.73,0,.92]],['#792c29','#ad4337','#d66a53']);

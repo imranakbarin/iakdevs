@@ -14,15 +14,16 @@ const RoadRural=(()=>{
  function encounters(j,ix){
   const out=[];for(const site of sites(j,ix)){
    const add=(part,offset,lane,n=0)=>{const d=site.d+offset,z=36/d-.025;if(d>34&&z>0&&z<1.05)out.push({...site,rural:true,part,n,lane:lane*site.side,distance:d,z});};
-   add('barn',58,3.05);add('hay',46,2.65);add('trough',23,2.8);add('chicken',40,2.25);add('chicken',43,2.38,1);
+   add('path',52,2.1);add('barn',58,3.05);add('hay',46,2.65);add('trough',23,2.8);add('chicken',40,2.25);add('chicken',43,2.38,1);
    if(site.variant===2)for(let n=0;n<4;n++)add('orchard',18+n*17,3.65,n);
    else if(site.variant===0)add('scarecrow',34,3.7);
    for(let n=0;n<3;n++)add('animal',12+n*13,1.98+n*.3,n);
    for(let n=0;n<7;n++)add('fence',n*12,1.55,n);
   }return out;
  }
- function fields(c,P,w,h,j,ix){
+ function fields(c,P,w,h,j,ix,filter=()=>true){
   for(const site of sites(j,ix)){
+   if(!filter(site.k))continue;
    const point=(d,lane)=>{const z=36/Math.max(8,d)-.025;return [P.rx(z)+P.hw(z)*lane*site.side,P.yy(z)];};
    const a=point(site.d,1.5),b=point(site.d+84,1.5),q=point(site.d+84,4.05),d=point(site.d,4.05);
    c.fillStyle=ix===1?'#b59a60':ix===3?'#99aa72':'#8a9e62';c.beginPath();[a,b,q,d].forEach((p,i)=>i?c.lineTo(...p):c.moveTo(...p));c.closePath();c.fill();
@@ -47,27 +48,30 @@ const RoadRural=(()=>{
   c.fillStyle='#ead4a0';c.fillRect(-24,-98,22,13);c.strokeStyle='#635848';c.lineWidth=2;c.strokeRect(-24,-98,22,13);
   c.fillStyle='#a09a76';c.fillRect(-68,-4,163,5);
   c.fillStyle='#e5d8ad';c.fillRect(-58,-65,89,13);c.fillStyle='#655e42';c.textAlign='center';c.font='bold 8px Georgia';c.fillText(ix===1?'DESERT RANCH':variant===1?'DAIRY FARM':variant===2?'ORCHARD':'MEADOW FARM',-13,-55);
+  c.save();c.strokeStyle='rgba(225,215,178,.3)';c.lineWidth=.65;for(let n=0;n<7;n++){c.beginPath();c.moveTo(-63+n*16,-77);c.lineTo(-12+n*5,-118);c.stroke();}c.restore();
+  const pixels=c.getImageData(0,0,280,230);for(let i=0;i<pixels.data.length;i+=4)if(pixels.data[i+3]){const grain=((i*13%41)-20)*.17;for(let k=0;k<3;k++)pixels.data[i+k]=Math.max(0,Math.min(255,pixels.data[i+k]+grain));}c.putImageData(pixels,0,0);
   barns.set(key,tile);return tile;
  }
- function animal(c,x,y,s,kind,n,t){
+ function animal(c,x,y,s,kind,n,t,walking=false){
   c.save();c.translate(x,y);c.scale(s*(n%2?-1:1),s);
   c.fillStyle='rgba(32,47,27,.25)';c.beginPath();c.ellipse(0,1,24,4,0,0,Math.PI*2);c.fill();
   const cow=kind==='cow',coat=cow?'#e7dccc':n===1?'#a48b6b':'#eee3ca';
   c.strokeStyle=cow?'#655b4b':'#897a60';c.lineWidth=cow?4:2.2;
-  for(const xx of [-15,-8,9,16]){c.beginPath();c.moveTo(xx,-14);c.lineTo(xx+Math.sin(t*.5+n+xx)*.65,-2);c.stroke();c.strokeStyle='#5d5947';c.lineWidth=2;c.beginPath();c.moveTo(xx-2,-1);c.lineTo(xx+2,-1);c.stroke();c.strokeStyle=cow?'#655b4b':'#897a60';c.lineWidth=cow?4:2.2;}
+  for(const xx of [-15,-8,9,16]){c.beginPath();c.moveTo(xx,-14);c.lineTo(xx+Math.sin(t*(walking?4:.5)+n+xx)*(walking?2.4:.25),-2);c.stroke();c.strokeStyle='#5d5947';c.lineWidth=2;c.beginPath();c.moveTo(xx-2,-1);c.lineTo(xx+2,-1);c.stroke();c.strokeStyle=cow?'#655b4b':'#897a60';c.lineWidth=cow?4:2.2;}
   const g=c.createLinearGradient(0,-28,0,-10);g.addColorStop(0,coat);g.addColorStop(1,cow?'#b6ac91':'#bbad90');c.fillStyle=g;c.beginPath();c.ellipse(0,-20,cow?24:20,cow?11:9,0,0,Math.PI*2);c.fill();
   if(cow){c.fillStyle='#625f54';for(const [a,b,r]of [[-12,-22,7],[9,-17,6]]){c.beginPath();c.ellipse(a,b,r,r*.75,.4,0,Math.PI*2);c.fill();}}
   // Hooves remain planted; only the grazing neck, ears and tail move.
-  c.save();c.translate(16,-20);c.rotate(.55+.2*Math.sin(t*.65+n));c.fillStyle=coat;c.beginPath();c.ellipse(8,-3,13,5,.3,0,Math.PI*2);c.fill();c.beginPath();c.ellipse(17,0,7,5,0,0,Math.PI*2);c.fill();
+  c.save();c.translate(16,-20);c.rotate(walking?-.2:.25+.48*Math.sin(t*.25+n));c.fillStyle=coat;c.beginPath();c.ellipse(8,-3,13,5,.3,0,Math.PI*2);c.fill();c.beginPath();c.ellipse(17,0,7,5,0,0,Math.PI*2);c.fill();
   for(const side of [-1,1]){c.beginPath();c.ellipse(10,-6,6,2.3,side*.55,0,Math.PI*2);c.fill();}
   if(!cow){c.strokeStyle='#87795e';c.lineWidth=1.5;for(const xx of [10,15]){c.beginPath();c.moveTo(xx,-5);c.quadraticCurveTo(xx-2,-15,xx-6,-15);c.stroke();}c.fillStyle='#99896d';c.beginPath();c.moveTo(15,4);c.lineTo(19,10);c.lineTo(21,3);c.fill();}
   c.fillStyle='#333e32';c.beginPath();c.arc(18,-2,1,0,Math.PI*2);c.fill();c.restore();
   c.strokeStyle=coat;c.lineWidth=2;c.beginPath();c.moveTo(-20,-21);c.quadraticCurveTo(-28,-22+Math.sin(t*1.5+n)*3,-26,-16);c.stroke();c.restore();
  }
  function draw(c,P,w,h,event,ix,t){
-  const {z,lane,part,n,variant}=event,x=P.rx(z)+P.hw(z)*lane,y=P.yy(z),s=P.hw(z)/160;
+  const {z,lane,part,n,variant}=event;const cycle=(t+n*4+event.k)%28,walking=cycle>=12&&cycle<16||cycle>=24;const ease=v=>.5-.5*Math.cos(Math.PI*Math.max(0,Math.min(1,v)));const wander=part==='animal'?.18*(cycle<16?ease((cycle-12)/4):1-ease((cycle-24)/4)):0;const x=P.rx(z)+P.hw(z)*(lane+wander),y=P.yy(z),s=P.hw(z)/160;
   if(x<-P.hw(z)||x>w+P.hw(z))return;
-  if(part==='animal'){animal(c,x,y,P.hw(z)/250,variant===1?'cow':'goat',n,t);return;}
+  if(part==='path'){const far=36/(event.distance+8)-.025;c.fillStyle=ix===1?'#c8a877':'#b7ad83';c.beginPath();c.moveTo(P.rx(z)+P.hw(z)*1.15*event.side,y);c.lineTo(x+P.hw(z)*.7,y);c.lineTo(P.rx(far)+P.hw(far)*(lane+event.side*.7),P.yy(far));c.lineTo(P.rx(far)+P.hw(far)*1.15*event.side,P.yy(far));c.closePath();c.fill();return;}
+  if(part==='animal'){animal(c,x,y,P.hw(z)/250,variant===1?'cow':'goat',n,t,walking);return;}
   if(part==='barn'){c.drawImage(barn(ix,variant),x-140*s,y-214*s,280*s,230*s);return;}
   c.save();c.translate(x,y);c.scale(s,s);
   if(part==='chicken'){
@@ -92,7 +96,7 @@ const RoadRural=(()=>{
   c.save();const count=ix===1?3:5;
   for(let n=0;n<count;n++){
    const phase=(t*.017+.45+n*.04+ix*.11)%1.4,x=w*(phase-.2),y=h*(.19+n*.012)+Math.sin(t*.32+n)*h*.018,size=Math.min(w,h)*(.007+n*.0004);
-   const wing=Math.sin(t*(ix===1?1.3:3.3)+n*.6);c.strokeStyle=ix===3?'#eae9d5':'#4c6460';c.lineWidth=Math.max(.65,size*.2);c.lineCap='round';c.beginPath();c.moveTo(x-size,y-wing*size*.6);c.quadraticCurveTo(x-size*.45,y-size*.2,x,y);c.quadraticCurveTo(x+size*.45,y-size*.2,x+size,y-wing*size*.6);c.stroke();
+   const burst=(t+n*.9)%7,pulse=burst<.5?.5-.5*Math.cos(Math.PI*burst/.5):burst<2?1:burst<2.5?.5+.5*Math.cos(Math.PI*(burst-2)/.5):0,glide=.22+Math.sin(t*.35+n)*.08,wing=glide+(Math.sin(t*(ix===1?1.3:3.3)+n*.6)-glide)*pulse;c.strokeStyle=ix===3?'#eae9d5':'#4c6460';c.lineWidth=Math.max(.65,size*.2);c.lineCap='round';c.beginPath();c.moveTo(x-size,y-wing*size*.6);c.quadraticCurveTo(x-size*.45,y-size*.2,x,y);c.quadraticCurveTo(x+size*.45,y-size*.2,x+size,y-wing*size*.6);c.stroke();
   }c.restore();
  }
  return {encounters,fields,draw,birds};
