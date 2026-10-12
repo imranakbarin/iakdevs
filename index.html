@@ -1518,17 +1518,19 @@ const places=[
 ];
 const mixColor=(a,b,t)=>{const n=parseInt(a.slice(1),16),m=parseInt(b.slice(1),16);return '#'+[16,8,0].map(s=>Math.round(lerp((n>>s)&255,(m>>s)&255,t)).toString(16).padStart(2,'0')).join('');};
 const roadWeatherNames=['sun','sunset','rain','fog','snow','night'];
-const roadAtmosphere={selection:null,elapsed:6,from:null,current:null};
+const roadAtmosphere={selection:null,elapsed:10,autoTime:0,from:null,current:null};
+const roadEase=x=>{x=Math.max(0,Math.min(1,x));return x*x*x*(x*(x*6-15)+10);};
 function roadWeather(j,dt,selection){
  const target=Object.fromEntries(roadWeatherNames.map(k=>[k,0]));
  if(selection==='auto'){
-  const phase=j/36,index=Math.floor(phase)%6,fade=smooth(28/36,1,phase%1);
+  roadAtmosphere.autoTime+=dt;
+  const phase=roadAtmosphere.autoTime/48,index=Math.floor(phase)%6,fade=roadEase((phase%1-34/48)/(14/48));
   target[roadWeatherNames[index]]=1-fade;target[roadWeatherNames[(index+1)%6]]=fade;
  }else target[selection]=1;
  if(!roadAtmosphere.current)roadAtmosphere.current={...target};
  if(selection!==roadAtmosphere.selection){roadAtmosphere.from={...roadAtmosphere.current};roadAtmosphere.elapsed=0;roadAtmosphere.selection=selection;}
- roadAtmosphere.elapsed=Math.min(6,roadAtmosphere.elapsed+dt);
- const progress=smooth(0,6,roadAtmosphere.elapsed);
+ roadAtmosphere.elapsed=Math.min(10,roadAtmosphere.elapsed+dt);
+ const progress=roadEase(roadAtmosphere.elapsed/10);
  for(const key of roadWeatherNames)roadAtmosphere.current[key]=lerp(roadAtmosphere.from[key],target[key],progress);
  return {...roadAtmosphere.current};
 }
@@ -1588,10 +1590,10 @@ function roadDetails(c,rx,hw,yy,w,h,ix,j,night,snow){
  // A small flock uses depth-independent motion, with no new controls.
  for(let k=0;k<4;k++){const x=w*(.13+k*.025)+Math.sin(j*.12+k)*w*.025,y=h*(.2+k*.009);c.beginPath();c.moveTo(x-5*DPR,y+Math.sin(j*2+k)*2*DPR);c.quadraticCurveTo(x-2*DPR,y-3*DPR,x,y);c.quadraticCurveTo(x+2*DPR,y-3*DPR,x+5*DPR,y+Math.sin(j*2+k)*2*DPR);artStroke(c,night?'#b2c1bd':'#496e73',DPR);}
 }
-const roadPropCache=new Map();let roadPropTheme='';
+const roadPropCache=new Map();let roadPropSeed=null;
 function roadPropSprite(index,side,ix,night,snow){
- const theme=[seed,ix,night,snow].join(':');if(theme!==roadPropTheme){roadPropCache.clear();roadPropTheme=theme;}
- const i=index%14,key=i+':'+side;if(roadPropCache.has(key))return roadPropCache.get(key);
+ if(seed!==roadPropSeed){roadPropCache.clear();roadPropSeed=seed;}
+ const i=index%14,key=[ix,night,snow,i,side].join(':');if(roadPropCache.has(key))return roadPropCache.get(key);
  const tile=document.createElement('canvas');tile.width=200;tile.height=260;
  const c=tile.getContext('2d'),r=mulberry32(seed+i+side*91);c.translate(100,240);
   if(i%7===0){c.fillStyle='#a8aaa0';c.fillRect(-3,-85,6,85);c.fillStyle='#447969';c.beginPath();c.roundRect(-35,-100,70,30,3);c.fill();c.strokeStyle='#ecebd2';c.lineWidth=2;c.beginPath();c.moveTo(-24,-87);c.lineTo(22,-87);c.lineTo(15,-93);c.stroke();}
@@ -1613,25 +1615,57 @@ function roadPropSprite(index,side,ix,night,snow){
 }
 let tripCue='Cruising',trafficEnabled=true;
 const roadPlaceLayer=document.createElement('canvas');
-const roadPlaceTransition={selection:null,previous:0,target:0,elapsed:7};
+// Blend complete scenes once; preserve the visible mixture when a selection interrupts a fade.
+const roadPlaceTransition={selection:null,elapsed:12,autoTime:0,from:null,current:null};
+function roadPlaceWeights(dt,selection){
+ const target=places.map(()=>0);
+ if(selection==='auto'){
+  roadPlaceTransition.autoTime+=dt;
+  const phase=roadPlaceTransition.autoTime/44,index=Math.floor(phase)%places.length;
+  const fade=roadEase((phase%1-32/44)/(12/44));
+  target[index]=1-fade;target[(index+1)%places.length]=fade;
+ }else target[+selection]=1;
+ if(!roadPlaceTransition.current)roadPlaceTransition.current=target.slice();
+ if(selection!==roadPlaceTransition.selection){roadPlaceTransition.from=roadPlaceTransition.current.slice();roadPlaceTransition.elapsed=0;roadPlaceTransition.selection=selection;}
+ roadPlaceTransition.elapsed=Math.min(12,roadPlaceTransition.elapsed+dt);
+ const progress=roadEase(roadPlaceTransition.elapsed/12);
+ roadPlaceTransition.current=target.map((weight,i)=>lerp(roadPlaceTransition.from[i],weight,progress));
+ return roadPlaceTransition.current.slice();
+}
 const tripDrive={x:1,v:0};
 function roadFrame(t,dt,c=ctx,placeOverride=null){
- if(placeOverride===null&&playing&&!drag){SceneMotion.spring(tripDrive,speed/40*RoadTraffic.factor,dt,2.4);journey+=dt*tripDrive.x;}
  const w=cv.width,h=cv.height;
- c.setTransform(1,0,0,1,0,0);
- const chosen=document.getElementById('place').value,phase=journey/32;
- const selectedPlace=chosen==='auto'?Math.floor(phase)%places.length:+chosen;
  if(placeOverride===null){
-  if(roadPlaceTransition.selection!==chosen){roadPlaceTransition.previous=roadPlaceTransition.target;roadPlaceTransition.target=selectedPlace;roadPlaceTransition.elapsed=roadPlaceTransition.selection===null?7:0;roadPlaceTransition.selection=chosen;}
-  roadPlaceTransition.elapsed=Math.min(7,roadPlaceTransition.elapsed+(playing?dt:7));
-  if(roadPlaceTransition.elapsed===7)roadPlaceTransition.target=selectedPlace;
+  const delta=playing?dt:0;
+  if(playing&&!drag){SceneMotion.spring(tripDrive,speed/40*RoadTraffic.factor,dt,2.4);journey+=dt*tripDrive.x;}
+  RoadTraffic.advance(delta,journey*42,42*speed/40,trafficEnabled);
+  roadWeather(journey,delta,document.getElementById('weather').value);
+  const weights=roadPlaceWeights(delta,document.getElementById('place').value);
+  const active=weights.map((weight,ix)=>({weight,ix})).filter(p=>p.weight>0);
+  let total=0;
+  for(const scene of active){
+   if(total===0)roadFrame(t,0,c,scene.ix);
+   else {
+    if(roadPlaceLayer.width!==w||roadPlaceLayer.height!==h){roadPlaceLayer.width=w;roadPlaceLayer.height=h;}
+    roadFrame(t,0,roadPlaceLayer.getContext('2d'),scene.ix);
+    c.save();c.setTransform(1,0,0,1,0,0);c.globalAlpha=scene.weight/(total+scene.weight);c.drawImage(roadPlaceLayer,0,0);c.restore();
+   }
+   total+=scene.weight;
+  }
+  const dominant=weights.indexOf(Math.max(...weights)),p=places[dominant];
+  const a=roadAtmosphere.current,we=roadWeatherNames.reduce((x,y)=>a[x]>=a[y]?x:y);
+  const names=active.filter(s=>s.weight>.05).map(s=>places[s.ix].name).join(' ↔ ');
+  const upcoming=RoadIllustration.encounters(journey,dominant).filter(e=>e.z>.07&&e.z<.8).sort((a,b)=>b.z-a.z)[0];
+  const stopNames=[['Alpine café','Scenic campsite','Valley overlook'],['Desert rest stop','Windmill','Canyon overlook'],['Woodland lodge','Forest campsite','Forest overlook'],['Lighthouse','Coastal café','Ocean overlook'],['Corner café','Farm market','City overlook']];
+  const feature=RoadIllustration.routeFeatures(journey,dominant).find(f=>f.z>.08&&f.z<1);
+  const stop=feature?' · '+(feature.type==='gateway'?'Stone gateway':'River bridge')+' ahead':upcoming?' · '+stopNames[dominant][upcoming.variant]+' ahead':'';
+  const tripLabel=(names||p.name)+' · '+({sun:'Sunny',sunset:'Sunset',rain:'Rain',fog:'Fog',snow:'Snow',night:'Night'})[we]+' · '+tripCue+stop;
+  const status=document.getElementById('trip-status');if(status.textContent!==tripLabel)status.textContent=tripLabel;
+  return;
  }
- const changingPlace=placeOverride===null&&roadPlaceTransition.elapsed<7;
- const ix=placeOverride!==null?placeOverride:changingPlace?roadPlaceTransition.previous:selectedPlace,next=changingPlace?selectedPlace:chosen==='auto'?(ix+1)%places.length:ix;
- const blend=changingPlace?smooth(0,7,roadPlaceTransition.elapsed):placeOverride===null&&chosen==='auto'?smooth(.78,1,phase%1):0;
- if(placeOverride===null)RoadTraffic.advance(playing?dt:0,journey*42,42*speed/40,trafficEnabled);
- const p=places[ix],pn=places[next],land=mixColor(p.earth,pn.earth,blend),mount=mixColor(p.mount,pn.mount,blend);
- const weather=document.getElementById('weather').value,a=roadWeather(journey,placeOverride!==null?0:playing?dt:6,weather),we=roadWeatherNames.reduce((x,y)=>a[x]>=a[y]?x:y),tone=(...colors)=>roadTone(a,...colors);
+ c.setTransform(1,0,0,1,0,0);
+ const ix=placeOverride,p=places[ix],land=p.earth,mount=p.mount,blend=0,pn=p;
+ const a={...roadAtmosphere.current},tone=(...colors)=>roadTone(a,...colors);
  const night=false,wet=false,snow=false,horizon=h*.44;
  const sky=c.createLinearGradient(0,0,0,horizon);sky.addColorStop(0,tone(mixColor(p.sky,pn.sky,blend),'#826687','#668399','#adbbc0','#9eafb6','#122239'));sky.addColorStop(1,tone('#dae9df','#ffd19a','#a8bdc1','#d6dfdb','#dce5e5','#536a7d'));c.fillStyle=sky;c.fillRect(0,0,w,h);
  c.globalAlpha=(1-a.night)*(1-a.rain*.65-a.fog*.7);c.fillStyle='#ffe3a2';c.beginPath();c.arc(w*.76,h*(.14+a.sunset*.17),h*.043,0,TAU);c.fill();
@@ -1739,12 +1773,7 @@ function roadFrame(t,dt,c=ctx,placeOverride=null){
  if(a.snow>.001){c.globalAlpha=a.snow;c.fillStyle='#f4faf7';for(let i=0;i<130;i++){const r=mulberry32(seed+i);c.beginPath();c.arc(r()*w+Math.sin(SceneMotion.time*.6+i)*10+SceneMotion.wind*18,(r()*h+journey*45)%h,(1+r()*2)*DPR,0,TAU);c.fill();}c.globalAlpha=1;}
  if(a.fog>.001){c.globalAlpha=a.fog;const fog=c.createLinearGradient(0,horizon*.6,0,h);fog.addColorStop(0,'rgba(228,235,227,.8)');fog.addColorStop(.6,'rgba(228,235,227,.2)');fog.addColorStop(1,'rgba(228,235,227,0)');c.fillStyle=fog;c.fillRect(0,0,w,h);c.globalAlpha=1;}
  if(a.night>.001){c.globalAlpha=a.night;c.fillStyle='rgba(254,236,172,.12)';poly(c,[[heroX-heroSize*35,yy(heroZ)-heroSize*50],[rx(.3)-hw(.3)*.65,yy(.3)],[rx(.3)+hw(.3)*.8,yy(.3)],[heroX+heroSize*35,yy(heroZ)-heroSize*50]]);c.fill();c.globalAlpha=1;}
- if(blend>0){
-  if(roadPlaceLayer.width!==w||roadPlaceLayer.height!==h){roadPlaceLayer.width=w;roadPlaceLayer.height=h;}
-  roadFrame(t,0,roadPlaceLayer.getContext('2d'),next);
-  c.save();c.globalAlpha=blend;c.drawImage(roadPlaceLayer,0,0);c.restore();
- }
- if(placeOverride===null){const upcoming=RoadIllustration.encounters(journey,ix).filter(e=>e.z>.07&&e.z<.8).sort((a,b)=>b.z-a.z)[0],stopNames=[['Alpine café','Scenic campsite','Valley overlook'],['Desert rest stop','Windmill','Canyon overlook'],['Woodland lodge','Forest campsite','Forest overlook'],['Lighthouse','Coastal café','Ocean overlook'],['Corner café','Farm market','City overlook']];const feature=RoadIllustration.routeFeatures(journey,ix).find(f=>f.z>.08&&f.z<1);const stop=feature?' · '+(feature.type==='gateway'?'Stone gateway':'River bridge')+' ahead':upcoming?' · '+stopNames[ix][upcoming.variant]+' ahead':'';const tripLabel=p.name+(blend>.1?' → '+pn.name:'')+' · '+({sun:'Sunny',sunset:'Sunset',rain:'Rain',fog:'Fog',snow:'Snow',night:'Night'})[we]+' · '+tripCue+stop;const status=document.getElementById('trip-status');if(status.textContent!==tripLabel)status.textContent=tripLabel;}
+
 }
 
 const mexicanPanorama=new Image();
@@ -1817,7 +1846,7 @@ let speed=40,playing=true,drag=null,last=performance.now(),vel=0,dragV=0;
 const playBtn=document.getElementById('play'),syncPlay=()=>playBtn.textContent=playing?'Pause':'Play';
 playBtn.onclick=()=>{playing=!playing;syncPlay();};
 document.getElementById('spd').oninput=e=>speed=+e.target.value;
-document.getElementById('new').onclick=()=>{if(modeBtn.value==='zen'){zenReset();return;}journey=0;SceneMotion.resetLane();RoadTraffic.reset();setSeed(Math.random()*1e6|0);};
+document.getElementById('new').onclick=()=>{if(modeBtn.value==='zen'){zenReset();return;}journey=0;roadPlaceTransition.autoTime=0;roadPlaceTransition.current=null;roadPlaceTransition.selection=null;roadAtmosphere.autoTime=0;roadAtmosphere.current=null;roadAtmosphere.selection=null;SceneMotion.resetLane();RoadTraffic.reset();setSeed(Math.random()*1e6|0);};
 document.getElementById('sty').onchange=e=>setSeed(seed,e.target.value);
 cv.addEventListener('pointerdown',e=>{if(modeBtn.value==='zen'){zenRippleAt(e.clientX,e.clientY);wakeScene();return;}drag={x:e.clientX,c:camX,lx:e.clientX,lt:performance.now()};dragV=0;cv.setPointerCapture(e.pointerId);cv.style.cursor='grabbing';});
 cv.addEventListener('pointermove',e=>{if(!drag)return;camX=drag.c-(e.clientX-drag.x)/S;const now=performance.now(),dtm=Math.max(1,now-drag.lt);dragV=dragV*.6+(-(e.clientX-drag.lx)/S/dtm*1000)*.4;drag.lx=e.clientX;drag.lt=now;});
