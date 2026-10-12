@@ -78,6 +78,7 @@ input[type=range]{width:80px;accent-color:#E63B2E}
 <script src="assets/zen-steel-gpu.js?v=2"></script>
 <script src="assets/zen-garden.js?v=11"></script>
 <script src="assets/road-illustration.js?v=7"></script>
+<script src="assets/road-rural.js?v=1"></script>
 <script>
 const requestedZen=location.hash.startsWith('#zen-'),requestedRoad=location.hash.startsWith('#road-');
 const H=640,CW=600,RIVER=585,TAU=Math.PI*2,PI=Math.PI;
@@ -1698,6 +1699,7 @@ function roadFrame(t,dt,c=ctx,placeOverride=null){
  }
 
  RoadIllustration.scenery(c,{rx,hw,yy},w,h,horizon,journey,ix,SceneMotion.time);
+ RoadRural.fields(c,{rx,hw,yy},w,h,journey,ix);
  RoadIllustration.riverCrossing(c,{rx,hw,yy},w,h,journey,ix,SceneMotion.time);
  const strip=(a,b,color)=>{c.fillStyle=color;c.beginPath();for(let i=0;i<=70;i++){const z=i/70;c.lineTo(rx(z)+hw(z)*a,yy(z));}for(let i=70;i>=0;i--){const z=i/70;c.lineTo(rx(z)+hw(z)*b,yy(z));}c.closePath();c.fill();};
  strip(-1.17,1.17,tone('#77694b',undefined,undefined,undefined,undefined,'#1c3030'));strip(-1.13,1.13,tone('#baaa88',undefined,undefined,undefined,'#cbd7d6','#56666a'));
@@ -1728,17 +1730,19 @@ function roadFrame(t,dt,c=ctx,placeOverride=null){
  }
  c.restore();
  // Roadside objects move in depth, not sideways across the screen.
- const propCount=ix===2?34:24,props=[...RoadIllustration.encounters(journey,ix),...RoadIllustration.routeFeatures(journey,ix)];
+ const propCount=ix===2?34:24,props=[...RoadIllustration.encounters(journey,ix),...RoadIllustration.routeFeatures(journey,ix),...RoadRural.encounters(journey,ix)];
  for(let side of [-1,1])for(let i=0;i<propCount;i++){
   const distance=32+((i*1400/propCount+side*11+18*Math.sin(i*12.73+side)-journey*42)%1400+1400)%1400,z=Math.max(0,36/distance-.025);
   props.push({side,i,z});
  }
  // Far objects must be painted first. Near trees frame the road and pass the camera.
  props.sort((a,b)=>a.z-b.z);
- for(const {side,i,z,landmark,variant,structure,type,distance} of props){
+ for(const event of props){
+  const {side,i,z,landmark,variant,structure,type,distance}=event;
   if(z<=0||z>1.05&&!structure)continue;
   if(!structure&&RoadIllustration.onRiver(z,journey,ix))continue;
   if(structure){if(type==='gateway'&&z>.88)continue;RoadIllustration.structure(c,{rx,hw,yy},w,h,{z,type,distance},ix);continue;}
+  if(event.rural){RoadRural.draw(c,{rx,hw,yy},w,h,event,ix,SceneMotion.time);continue;}
   if(landmark){
    const s=hw(z)/350*.92,xx=rx(z)+side*(hw(z)*1.38+180*s),y=yy(z);
    if(xx+220*s<0||xx-220*s>w)continue;
@@ -1756,6 +1760,7 @@ function roadFrame(t,dt,c=ctx,placeOverride=null){
   if(painted){c.drawImage(painted,-160,-398);if(a.snow>.001){c.globalAlpha=a.snow;c.drawImage(RoadIllustration.prop(kind,false,true),-160,-398);}}else c.drawImage(roadPropSprite(i,side,ix,false,false),-100,-240);c.restore();
  }
  RoadIllustration.life(c,{rx,hw,yy},w,h,journey,ix,SceneMotion.time);
+ RoadRural.birds(c,w,h,ix,SceneMotion.time);
  // A thin veil separates the distant landscape from the sharply drawn foreground.
  const haze=c.createLinearGradient(0,horizon,0,horizon+h*.13);haze.addColorStop(0,night?'rgba(112,141,154,.16)':'rgba(216,229,208,.18)');haze.addColorStop(1,'rgba(216,229,208,0)');c.fillStyle=haze;c.fillRect(0,horizon,w,h*.13);
 
