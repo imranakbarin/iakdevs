@@ -21,14 +21,15 @@ const RoadRural=(()=>{
    for(let n=0;n<7;n++)add('fence',n*12,1.55,n);
   }return out;
  }
- function fields(c,P,w,h,j,ix,filter=()=>true){
+ function fields(c,P,w,h,j,ix,filter=()=>true,ground=()=>1){
   for(const site of sites(j,ix)){
    if(!filter(site.k))continue;
+   const dry=ground(site);if(dry<.001)continue;c.save();c.globalAlpha*=dry;
    const point=(d,lane)=>{const z=36/Math.max(8,d)-.025;return [P.rx(z)+P.hw(z)*lane*site.side,P.yy(z)];};
    const a=point(site.d,1.5),b=point(site.d+84,1.5),q=point(site.d+84,4.05),d=point(site.d,4.05);
    c.fillStyle=ix===1?'#b59a60':ix===3?'#99aa72':'#8a9e62';c.beginPath();[a,b,q,d].forEach((p,i)=>i?c.lineTo(...p):c.moveTo(...p));c.closePath();c.fill();
    c.save();c.clip();c.strokeStyle=ix===1?'#978454':'rgba(213,211,140,.5)';c.lineWidth=1;
-   for(let n=0;n<8;n++){const x=point(site.d,3.3+n*.09),y=point(site.d+84,3.3+n*.09);c.beginPath();c.moveTo(...x);c.lineTo(...y);c.stroke();}c.restore();
+   for(let n=0;n<8;n++){const x=point(site.d,3.3+n*.09),y=point(site.d+84,3.3+n*.09);c.beginPath();c.moveTo(...x);c.lineTo(...y);c.stroke();}c.restore();c.restore();
   }
  }
  function barn(ix,variant){
