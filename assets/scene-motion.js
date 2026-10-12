@@ -40,11 +40,11 @@ const SceneMotion=(()=>{
   get time(){return time;},get wind(){return wind;},get resolution(){return resolution;},get renderMs(){return renderEMA;},
   invalidate(){dirty=true;},consumeDirty(){const d=dirty;dirty=false;return d;},
   resetLane(){lane.x=lane.target=.52;lane.v=0;},
-  report(ms){
+  report(ms,budget=21){
    renderEMA=samples?renderEMA*.94+ms*.06:ms;samples++;
    // Only reduce resolution after sustained load, never from a single tile build.
-   slow=ms>21?slow+1:Math.max(0,slow-1);
-   if(slow>75&&resolution>.65){resolution=Math.max(.65,resolution-.15);slow=0;dirty=true;return true;}
+   slow=ms>budget?slow+1:Math.max(0,slow-1);
+   if(slow>75&&resolution>.85){resolution=Math.max(.85,resolution-.1);slow=0;dirty=true;return true;}
    return false;
   }
  };

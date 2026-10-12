@@ -72,7 +72,7 @@ input[type=range]{width:80px;accent-color:#E63B2E}
   <button id="hide" aria-label="Hide controls" title="Hide controls (H)">Hide</button>
 </div><button id="show" class="fab" hidden aria-label="Show controls" title="Show controls (H)">☰</button></div>
 <div id="trip-status" hidden role="status" style="position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:var(--panel);padding:8px 18px;border-radius:30px;white-space:nowrap;pointer-events:none"></div>
-<script src="assets/scene-motion.js?v=1"></script>
+<script src="assets/scene-motion.js?v=2"></script>
 <script src="assets/road-traffic.js?v=3"></script>
 <script src="assets/world-atmosphere.js?v=2"></script>
 <script src="assets/zen-steel-gpu.js?v=2"></script>
@@ -1978,12 +1978,12 @@ let frameHandle=0,lastPaint=0,lastMetrics=0;
 function wakeScene(){SceneMotion.invalidate();if(!frameHandle&&!document.hidden)frameHandle=requestAnimationFrame(frame);}
 function frame(t){
  frameHandle=0;if(document.hidden){last=t;return;}
- const dirty=SceneMotion.consumeDirty(),moving=playing||Boolean(drag),interval=cv.clientWidth<700?1000/30:1000/60;
+ const dirty=SceneMotion.consumeDirty(),moving=playing||Boolean(drag),interval=cv.clientWidth<700||SceneMotion.renderMs>18?1000/30:1000/60;
  if(!dirty&&!moving)return;
  if(!dirty&&t-lastPaint<interval-.7){frameHandle=requestAnimationFrame(frame);return;}
  const dt=SceneMotion.advance((t-last)/1000,playing);last=t;lastPaint=t;
  const start=performance.now();drawScene(dt);const cost=performance.now()-start;
- if(SceneMotion.report(cost))layout();
+ if(SceneMotion.report(cost,interval>25?29:21))layout();
  if(t-lastMetrics>1000){cv.dataset.renderMs=SceneMotion.renderMs.toFixed(2);cv.dataset.pixelRatio=DPR.toFixed(2);lastMetrics=t;}
  if(moving)frameHandle=requestAnimationFrame(frame);
 }
