@@ -57,11 +57,11 @@ const RoadIllustration=(()=>{
   const shear=Math.max(-.2,Math.min(.2,(rear.x-front.x)/Math.max(1,height)));
   return {x:rear.x,y:rear.y,shear,pitch,front,frontZ};
  }
- function car3d(c,P,z,lane){
-  const sprite=carImage();if(!sprite)return false;
+ function car3d(c,P,z,lane,options={}){
+  const sprite=carImage();if(!sprite)return false;const hero=options.luggage!==false,front=Boolean(options.front),color=options.color||'#c95740';
   const distance=36/(z+.025),roadHalf=3.5;
   const point=(x,d,height=0)=>{const depth=36/(distance+d*.84)-.025,scale=P.hw(depth)/roadHalf;return {x:P.rx(depth)+P.hw(depth)*lane+x*scale,y:P.yy(depth)-height*scale,scale};};
-  const face=(points,colors)=>{const pts=points.map(p=>point(...p)),g=c.createLinearGradient(pts[0].x,pts[0].y,pts[2].x,pts[2].y);g.addColorStop(0,colors[0]);g.addColorStop(.45,colors[1]);g.addColorStop(1,colors[2]);c.beginPath();pts.forEach((p,i)=>i?c.lineTo(p.x,p.y):c.moveTo(p.x,p.y));c.closePath();c.fillStyle=g;c.fill();c.strokeStyle='rgba(81,45,33,.65)';c.lineWidth=.65;c.stroke();};
+  const face=(points,colors)=>{const pts=points.map(p=>point(...p)),g=c.createLinearGradient(pts[0].x,pts[0].y,pts[2].x,pts[2].y);g.addColorStop(0,colors[0]);g.addColorStop(.45,hero||colors[1].startsWith('#4')||colors[1].startsWith('#5')?colors[1]:color);g.addColorStop(1,colors[2]);c.beginPath();pts.forEach((p,i)=>i?c.lineTo(p.x,p.y):c.moveTo(p.x,p.y));c.closePath();c.fillStyle=g;c.fill();c.strokeStyle='rgba(81,45,33,.65)';c.lineWidth=.65;c.stroke();};
   const line=(a,b,color,width=.8)=>{const p=point(...a),q=point(...b);c.strokeStyle=color;c.lineWidth=width;c.beginPath();c.moveTo(p.x,p.y);c.lineTo(q.x,q.y);c.stroke();};
   // Four wheel contacts share the ground projection. The body is lifted in world height.
   for(const d of [3.45,.48])for(const side of [-1,1]){
@@ -78,11 +78,12 @@ const RoadIllustration=(()=>{
   face([[-.73,0,.92],[.73,0,.92],[.7,.82,.94],[-.7,.82,.94]],['#bd4a3b','#e88869','#9d392f']);
   for(const side of [-1,1])face([[side*.7,.82,.94],[side*.58,1.42,1.48],[side*.61,2.9,1.38],[side*.73,3.23,.91]],['#263f49','#4b7880','#bdd0bd']);
   // The painted rear panel preserves the red vintage car's chrome and tail-light detail.
-  const a=point(-.78,0,1.0),b=point(.78,0,.33);c.drawImage(sprite,0,sprite.height*.46,sprite.width,sprite.height*.45,a.x,a.y,b.x-a.x,b.y-a.y);
+  const a=point(-.78,0,1.0),b=point(.78,0,.33);if(hero)c.drawImage(sprite,0,sprite.height*.46,sprite.width,sprite.height*.45,a.x,a.y,b.x-a.x,b.y-a.y);
+  else {c.fillStyle=color;c.fillRect(a.x,a.y,b.x-a.x,b.y-a.y);c.fillStyle=front?'#f0e6bb':'#b96552';const lampY=a.y+(b.y-a.y)*.35;for(const side of [-1,1]){const px=(a.x+b.x)/2+side*(b.x-a.x)*.31;c.beginPath();c.roundRect(px-(b.x-a.x)*.09,lampY,(b.x-a.x)*.18,Math.max(1,(b.y-a.y)*.13),1);c.fill();}c.fillStyle='#365054';c.fillRect((a.x+b.x)/2-(b.x-a.x)*.18,a.y+(b.y-a.y)*.46,(b.x-a.x)*.36,Math.max(1,(b.y-a.y)*.14));}
   // A dimensional luggage case follows the roof, including its side wall and leather straps.
-  face([[-.43,1.6,1.68],[.43,1.6,1.68],[.43,2.46,1.61],[-.43,2.46,1.61]],['#d0ae7b','#ae8353','#e0c18b']);
+  if(hero){face([[-.43,1.6,1.68],[.43,1.6,1.68],[.43,2.46,1.61],[-.43,2.46,1.61]],['#d0ae7b','#ae8353','#e0c18b']);
   face([[-.43,1.6,1.48],[.43,1.6,1.48],[.43,1.6,1.68],[-.43,1.6,1.68]],['#795d41','#b08a5a','#ceac74']);
-  for(const x of [-.25,.25])line([x,1.6,1.69],[x,2.46,1.62],'#75593e',1.1);
+  for(const x of [-.25,.25])line([x,1.6,1.69],[x,2.46,1.62],'#75593e',1.1);}
   line([-.71,.04,.37],[.71,.04,.37],'#d9d9b9',1.5);line([-.54,1.46,1.49],[.54,1.46,1.49],'#f1d19a',.8);
   return true;
  }

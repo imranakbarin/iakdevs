@@ -73,10 +73,11 @@ input[type=range]{width:80px;accent-color:#E63B2E}
 </div><button id="show" class="fab" hidden aria-label="Show controls" title="Show controls (H)">☰</button></div>
 <div id="trip-status" hidden role="status" style="position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:var(--panel);padding:8px 18px;border-radius:30px;white-space:nowrap;pointer-events:none"></div>
 <script src="assets/scene-motion.js?v=1"></script>
+<script src="assets/road-traffic.js?v=1"></script>
 <script src="assets/world-atmosphere.js?v=2"></script>
 <script src="assets/zen-steel-gpu.js?v=2"></script>
 <script src="assets/zen-garden.js?v=11"></script>
-<script src="assets/road-illustration.js?v=6"></script>
+<script src="assets/road-illustration.js?v=7"></script>
 <script>
 const requestedZen=location.hash.startsWith('#zen-'),requestedRoad=location.hash.startsWith('#road-');
 const H=640,CW=600,RIVER=585,TAU=Math.PI*2,PI=Math.PI;
@@ -1567,14 +1568,7 @@ function drawTourCar(c,x,y,size,color,front=false,turn=0){
  if(!front){c.fillStyle='#a7b2af';c.beginPath();c.ellipse(-31,-8,4,1.5,0,0,TAU);c.ellipse(31,-8,4,1.5,0,0,TAU);c.fill();}
  c.restore();
 }
-function tripTraffic(j,enabled,ix=null){
- const cycle=j%36;let pass=enabled?smooth(4,6,cycle)*(1-smooth(12,15,cycle)):0;
- const cars=[];
- if(enabled&&cycle<12.5)cars.push({z:lerp(.16,1.08,smooth(0,12.5,cycle)),lane:.52,front:false,col:'#d3b993'});
- if(enabled&&cycle>=21&&cycle<32)cars.push({z:lerp(.03,1.14,(cycle-21)/11),lane:-.52,front:true,col:'#7897a0'});
- if(ix!==null&&RoadIllustration.routeFeatures(j,ix).some(f=>f.distance<150)){pass=0;for(const car of cars)if(!car.front)car.z=Math.min(car.z,.48);}
- return {cars:cars.filter(x=>x.z<=1.1),pass,lane:lerp(.52,-.52,pass)};
-}
+function tripTraffic(j){return RoadTraffic.snapshot(j*42);}
 function roadDetails(c,rx,hw,yy,w,h,ix,j,night,snow){
  // Distance layers: fields, hedgerows, farms, poles and winding fences.
  for(let side of [-1,1]){
@@ -1622,7 +1616,7 @@ const roadPlaceLayer=document.createElement('canvas');
 const roadPlaceTransition={selection:null,previous:0,target:0,elapsed:7};
 const tripDrive={x:1,v:0};
 function roadFrame(t,dt,c=ctx,placeOverride=null){
- if(placeOverride===null&&playing&&!drag){SceneMotion.spring(tripDrive,speed/40,dt,2.4);journey+=dt*tripDrive.x;}
+ if(placeOverride===null&&playing&&!drag){SceneMotion.spring(tripDrive,speed/40*RoadTraffic.factor,dt,2.4);journey+=dt*tripDrive.x;}
  const w=cv.width,h=cv.height;
  c.setTransform(1,0,0,1,0,0);
  const chosen=document.getElementById('place').value,phase=journey/32;
@@ -1635,6 +1629,7 @@ function roadFrame(t,dt,c=ctx,placeOverride=null){
  const changingPlace=placeOverride===null&&roadPlaceTransition.elapsed<7;
  const ix=placeOverride!==null?placeOverride:changingPlace?roadPlaceTransition.previous:selectedPlace,next=changingPlace?selectedPlace:chosen==='auto'?(ix+1)%places.length:ix;
  const blend=changingPlace?smooth(0,7,roadPlaceTransition.elapsed):placeOverride===null&&chosen==='auto'?smooth(.78,1,phase%1):0;
+ if(placeOverride===null)RoadTraffic.advance(playing?dt:0,journey*42,42*speed/40,trafficEnabled);
  const p=places[ix],pn=places[next],land=mixColor(p.earth,pn.earth,blend),mount=mixColor(p.mount,pn.mount,blend);
  const weather=document.getElementById('weather').value,a=roadWeather(journey,placeOverride!==null?0:playing?dt:6,weather),we=roadWeatherNames.reduce((x,y)=>a[x]>=a[y]?x:y),tone=(...colors)=>roadTone(a,...colors);
  const night=false,wet=false,snow=false,horizon=h*.44;
@@ -1730,13 +1725,13 @@ function roadFrame(t,dt,c=ctx,placeOverride=null){
  // A thin veil separates the distant landscape from the sharply drawn foreground.
  const haze=c.createLinearGradient(0,horizon,0,horizon+h*.13);haze.addColorStop(0,night?'rgba(112,141,154,.16)':'rgba(216,229,208,.18)');haze.addColorStop(1,'rgba(216,229,208,0)');c.fillStyle=haze;c.fillRect(0,horizon,w,h*.13);
 
- const traffic=tripTraffic(journey,trafficEnabled,ix),pass=traffic.pass;SceneMotion.lane.target=traffic.lane;const lane=SceneMotion.lane.x;
- tripCue=pass>.8?'Overtaking':pass>.05?'Changing lane':'Cruising';
+ const traffic=tripTraffic(journey,trafficEnabled,ix),pass=traffic.pass;SceneMotion.lane.target=traffic.lane;const lane=traffic.lane;
+ tripCue=traffic.state==='passing'?'Overtaking':traffic.state==='outbound'?'Changing lane':traffic.state==='inbound'?'Returning to lane':traffic.factor<.95?'Following traffic':'Cruising';
  const vehicles=traffic.cars;
  const heroZ=.88,heroSize=Math.min(hw(heroZ)*.46,h*.15)/135,heroX=rx(heroZ)+hw(heroZ)*lane;
  vehicles.push({z:heroZ,hero:true});
  vehicles.sort((a,b)=>a.z-b.z);
- for(const car of vehicles){if(car.hero){const pose=RoadIllustration.carGround(c,{rx,hw,yy},heroZ,lane,heroSize*135,w,h);const rendered=w/h<.85?RoadIllustration.car3d(c,{rx,hw,yy},heroZ,lane):RoadIllustration.car(c,pose.x,pose.y,heroSize,pose);if(!rendered)drawTourCar(c,pose.x,pose.y-7*heroSize,heroSize,'#c65d43',false,0);}else{const size=Math.min(hw(car.z)*.46,h*.15*car.z/.88)/122,pose=RoadIllustration.carGround(c,{rx,hw,yy},car.z,car.lane,size*122,w,h);drawTourCar(c,pose.x,pose.y-7*size,size,car.col,car.front);}}
+ for(const car of vehicles){if(car.hero){const pose=RoadIllustration.carGround(c,{rx,hw,yy},heroZ,lane,heroSize*135,w,h);const rendered=w/h<.85?RoadIllustration.car3d(c,{rx,hw,yy},heroZ,lane):RoadIllustration.car(c,pose.x,pose.y,heroSize,pose);if(!rendered)drawTourCar(c,pose.x,pose.y-7*heroSize,heroSize,'#c65d43',false,0);}else{const size=Math.min(hw(car.z)*.46,h*.15*car.z/.88)/122,pose=RoadIllustration.carGround(c,{rx,hw,yy},car.z,car.lane,size*122,w,h);if(w/h>=.85||!RoadIllustration.car3d(c,{rx,hw,yy},car.z,car.lane,{front:car.front,color:car.col,luggage:false}))drawTourCar(c,pose.x,pose.y-7*size,size,car.col,car.front);}}
  for(const f of RoadIllustration.routeFeatures(journey,ix))if(f.type==='gateway'&&f.z>.88)RoadIllustration.structure(c,{rx,hw,yy},w,h,f,ix);
  if(a.night>.001){c.globalAlpha=a.night*.38;c.fillStyle='#081a32';c.fillRect(0,0,w,h);c.globalAlpha=1;}
  if(a.sunset>.001){c.globalAlpha=a.sunset*.12;c.fillStyle='#d99666';c.fillRect(0,0,w,h);c.globalAlpha=1;}
@@ -1822,7 +1817,7 @@ let speed=40,playing=true,drag=null,last=performance.now(),vel=0,dragV=0;
 const playBtn=document.getElementById('play'),syncPlay=()=>playBtn.textContent=playing?'Pause':'Play';
 playBtn.onclick=()=>{playing=!playing;syncPlay();};
 document.getElementById('spd').oninput=e=>speed=+e.target.value;
-document.getElementById('new').onclick=()=>{if(modeBtn.value==='zen'){zenReset();return;}journey=0;SceneMotion.resetLane();setSeed(Math.random()*1e6|0);};
+document.getElementById('new').onclick=()=>{if(modeBtn.value==='zen'){zenReset();return;}journey=0;SceneMotion.resetLane();RoadTraffic.reset();setSeed(Math.random()*1e6|0);};
 document.getElementById('sty').onchange=e=>setSeed(seed,e.target.value);
 cv.addEventListener('pointerdown',e=>{if(modeBtn.value==='zen'){zenRippleAt(e.clientX,e.clientY);wakeScene();return;}drag={x:e.clientX,c:camX,lx:e.clientX,lt:performance.now()};dragV=0;cv.setPointerCapture(e.pointerId);cv.style.cursor='grabbing';});
 cv.addEventListener('pointermove',e=>{if(!drag)return;camX=drag.c-(e.clientX-drag.x)/S;const now=performance.now(),dtm=Math.max(1,now-drag.lt);dragV=dragV*.6+(-(e.clientX-drag.lx)/S/dtm*1000)*.4;drag.lx=e.clientX;drag.lt=now;});
