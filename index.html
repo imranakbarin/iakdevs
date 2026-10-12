@@ -1779,16 +1779,16 @@ function roadForeground(c,w,h){
  c.save();c.setTransform(1,0,0,1,0,0);c.globalAlpha=1;c.globalCompositeOperation='source-over';c.lineCap='butt';c.lineJoin='miter';c.lineWidth=1;
  const {rx,hw,yy}=roadProjection(journey,w,h,h*.44),horizon=h*.44,a=roadAtmosphere.current,ix=0;
  roadSurface(c,w,h);
- for(const f of RoadIllustration.routeFeatures(journey,0))if(f.type==='bridge'||f.z<=.88)RoadIllustration.structure(c,{rx,hw,yy},w,h,f,0);
+ for(const f of RoadIllustration.routeFeatures(journey,0))if(f.type==='bridge')RoadIllustration.structure(c,{rx,hw,yy},w,h,f,0);
  const traffic=tripTraffic(journey,trafficEnabled,ix),pass=traffic.pass;SceneMotion.lane.target=traffic.lane;const lane=traffic.lane;
  tripCue=traffic.state==='passing'?'Overtaking':traffic.state==='outbound'?'Changing lane':traffic.state==='inbound'?'Returning to lane':traffic.factor<.95?'Following traffic':'Cruising';
  const vehicles=traffic.cars;
  const heroZ=.88,heroSize=Math.min(hw(heroZ)*.46,h*.15)/135,heroX=rx(heroZ)+hw(heroZ)*lane;
  vehicles.push({z:heroZ,hero:true});
+ vehicles.push(...RoadIllustration.routeFeatures(journey,0).filter(f=>f.type==='gateway').map(f=>({...f,gateway:true})));
  vehicles.sort((a,b)=>a.z-b.z);
- for(const car of vehicles){if(car.hero){const pose=RoadIllustration.carGround(c,{rx,hw,yy},heroZ,lane,heroSize*135,w,h);const rendered=w/h<.85?RoadIllustration.car3d(c,{rx,hw,yy},heroZ,lane):RoadIllustration.car(c,pose.x,pose.y,heroSize,pose);if(!rendered)drawTourCar(c,pose.x,pose.y-7*heroSize,heroSize,'#c65d43',false,0);}else RoadVehicles.draw(c,{rx,hw,yy},car);}
+ for(const car of vehicles){if(car.gateway){RoadIllustration.structure(c,{rx,hw,yy},w,h,car,0);continue;}if(car.hero){const pose=RoadIllustration.carGround(c,{rx,hw,yy},heroZ,lane,heroSize*135,w,h);const rendered=w/h<.85?RoadIllustration.car3d(c,{rx,hw,yy},heroZ,lane):RoadIllustration.car(c,pose.x,pose.y,heroSize,pose);if(!rendered)drawTourCar(c,pose.x,pose.y-7*heroSize,heroSize,'#c65d43',false,0);}else RoadVehicles.draw(c,{rx,hw,yy},car);}
 
- for(const f of RoadIllustration.routeFeatures(journey,ix))if(f.type==='gateway'&&f.z>.88)RoadIllustration.structure(c,{rx,hw,yy},w,h,f,ix);
  if(a.night>.001){c.globalAlpha=a.night*.38;c.fillStyle='#081a32';c.fillRect(0,0,w,h);c.globalAlpha=1;}
  if(a.sunset>.001){c.globalAlpha=a.sunset*.12;c.fillStyle='#d99666';c.fillRect(0,0,w,h);c.globalAlpha=1;}
  if(a.rain>.001){c.globalAlpha=a.rain;c.strokeStyle='rgba(227,241,247,.5)';c.lineWidth=DPR;for(let i=0;i<180;i++){const r=mulberry32(seed+i),x=r()*w,y=(r()*h+journey*450)%h;c.beginPath();c.moveTo(x,y);c.lineTo(x+(SceneMotion.wind*8-5)*DPR,y+17*DPR);c.stroke();}c.globalAlpha=1;}
