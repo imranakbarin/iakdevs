@@ -178,6 +178,33 @@ const RoadIllustration=(()=>{
   const rnd=mulberry32(932+ix*31+variant);c.globalCompositeOperation='source-atop';for(let k=0;k<1700;k++){c.fillStyle=k%2?'rgba(237,225,180,.09)':'rgba(42,57,46,.09)';c.fillRect((rnd()-.5)*400,-rnd()*300,1+rnd()*2,.7+rnd());}c.globalCompositeOperation='source-over';
   landmarkCache.set(key,tile);return tile;
  }
+ function trainViaduct(c,x,y,s,t){
+  c.save();c.translate(x,y);c.scale(s,s);
+  // Both banks carry the approach track all the way to the tunnel mouths.
+  c.fillStyle='#637e62';c.beginPath();c.moveTo(-176,11);c.lineTo(-176,-36);c.lineTo(-112,-36);c.lineTo(-98,11);c.closePath();c.fill();
+  c.beginPath();c.moveTo(98,11);c.lineTo(112,-36);c.lineTo(176,-36);c.lineTo(176,11);c.closePath();c.fill();
+  // One solid spandrel wall; openings stay entirely beneath the uninterrupted deck.
+  c.fillStyle='#748778';c.beginPath();c.rect(-112,-28,224,38);
+  for(let k=0;k<7;k++){const xx=-112+k*32;c.moveTo(xx+6,10);c.lineTo(xx+6,-12);c.quadraticCurveTo(xx+16,-33,xx+26,-12);c.lineTo(xx+26,10);c.closePath();}
+  c.fill('evenodd');
+  c.fillStyle='#657867';for(let k=0;k<=7;k++)c.fillRect(-115+k*32,7,6,5);
+  c.fillStyle='#829584';c.fillRect(-114,-36,228,8);c.fillStyle='#a0ad90';c.fillRect(-114,-36,228,2);
+  c.fillStyle='#5f6f60';for(let a=-146;a<=146;a+=7)c.fillRect(a,-38,3,2);
+  c.strokeStyle='#c3c7a6';c.lineWidth=1.2;c.beginPath();c.moveTo(-148,-38);c.lineTo(148,-38);c.stroke();
+  // The entire train is offscreen behind a tunnel before its distance wraps.
+  const lead=-230+((t*11)%460+460)%460;
+  c.save();c.beginPath();c.rect(-148,-76,296,38);c.clip();
+  for(let k=3;k>=0;k--){const xx=lead-k*24;
+   if(k){c.strokeStyle='#405347';c.lineWidth=1;c.beginPath();c.moveTo(xx+20,-43);c.lineTo(xx+24,-43);c.stroke();}
+   c.fillStyle=k?'#af8863':'#55766f';c.beginPath();c.roundRect(xx,-57,21,15,2);c.fill();c.fillStyle='#486157';c.fillRect(xx-1,-58,23,2);
+   c.fillStyle='#e1d9ae';c.fillRect(xx+3,-54,5,5);c.fillRect(xx+12,-54,5,5);
+   if(!k){c.fillStyle='#cfb77c';c.fillRect(xx+19,-48,2,3);c.fillStyle='#385248';c.fillRect(xx+17,-61,3,4);}
+   for(const wheel of [4,17]){c.fillStyle='#34483c';c.beginPath();c.arc(xx+wheel,-40,2,0,Math.PI*2);c.fill();const angle=t*11/2;c.strokeStyle='#a0ac8d';c.lineWidth=.5;c.beginPath();c.moveTo(xx+wheel-Math.cos(angle)*1.5,-40-Math.sin(angle)*1.5);c.lineTo(xx+wheel+Math.cos(angle)*1.5,-40+Math.sin(angle)*1.5);c.stroke();}
+  }c.restore();
+  // Foreground banks conceal the clipped entry and exit, rather than exposing a cut.
+  for(const side of [-1,1]){c.save();c.scale(side,1);c.fillStyle='#557452';c.beginPath();c.moveTo(145,12);c.lineTo(145,-62);c.quadraticCurveTo(157,-81,177,-62);c.lineTo(193,12);c.closePath();c.fill();c.strokeStyle='#809271';c.lineWidth=2;c.beginPath();c.moveTo(145,-38);c.lineTo(145,-56);c.quadraticCurveTo(151,-66,158,-56);c.stroke();c.restore();}
+  c.restore();
+ }
  function scenery(c,P,w,h,horizon,j,ix,t){
   const {rx,hw,yy}=P;
   if(ix===0||ix===2){
@@ -187,12 +214,7 @@ const RoadIllustration=(()=>{
    c.save();c.strokeStyle='rgba(216,236,212,.52)';
    for(let i=0;i<22;i++){const d=35+((i*62-j*42)%1350+1350)%1350,z=36/d-.025;if(z<=0||z>1)continue;const x=rx(z)+hw(z)*(4.4+Math.sin(z*7+j*.025)*.15);c.lineWidth=Math.max(.6,z*1.2);c.beginPath();c.moveTo(x-hw(z)*.12,yy(z)+Math.sin(t*1.2+i));c.lineTo(x+hw(z)*.1,yy(z));c.stroke();}c.restore();
    // A low stone viaduct sits across the far valley, with its supports embedded in earth.
-   if(ix===0){const x=w*.11+Math.sin(j*.02)*w*.012,y=horizon+h*.011,s=Math.min(w,h)*.0018;c.save();c.translate(x,y);c.scale(s,s);
-    c.fillStyle='#738b7b';c.fillRect(-100,-35,206,9);
-    for(let k=0;k<7;k++){const xx=-100+k*29;c.fillStyle='#718978';c.fillRect(xx,-27,7,32);c.beginPath();c.moveTo(xx+6,-22);c.quadraticCurveTo(xx+16,-41,xx+29,-22);c.lineWidth=5;c.strokeStyle='#718978';c.stroke();}
-    c.strokeStyle='#b7c6a5';c.lineWidth=2;c.beginPath();c.moveTo(-101,-35);c.lineTo(107,-35);c.stroke();
-    const tx=-145+((t*10)%335);for(let k=0;k<4;k++){const xx=tx-k*22;c.fillStyle=k?'#b68b60':'#5b7168';c.beginPath();c.roundRect(xx,-49,20,13,2);c.fill();c.fillStyle='#d9d8ae';c.fillRect(xx+3,-46,5,5);c.fillRect(xx+11,-46,5,5);c.fillStyle='#33453e';c.beginPath();c.arc(xx+4,-36,2,0,Math.PI*2);c.arc(xx+16,-36,2,0,Math.PI*2);c.fill();}
-    c.restore();}
+   if(ix===0)trainViaduct(c,w*.11+Math.sin(j*.02)*w*.012,horizon+h*.011,Math.min(w,h)*.0018,t);
   }
   if(ix===3){
    // Two sailboats remain in the sea; their shadows and wakes stay on the water.
@@ -297,5 +319,5 @@ const RoadIllustration=(()=>{
   if((ix===0||ix===2)&&variant===1){for(let k=0;k<3;k++){const u=(t*.12+k/3)%1;c.strokeStyle='rgba(225,221,193,'+((1-u)*.15)+')';c.lineWidth=3+u*6;c.beginPath();c.moveTo(8,-14-u*62);c.quadraticCurveTo(19+Math.sin(t+k)*6,-24-u*62,6+Math.sin(t*.6+k)*8,-39-u*62);c.stroke();}}
   c.restore();
  }
- return {prop,mountains,car,carGround,car3d,landscape,verge,landmark,encounters,foundation,landmarkMotion,scenery,routeFeatures,riverCrossing,structure,overlook,onRiver,life};
+ return {prop,mountains,car,carGround,car3d,landscape,verge,landmark,encounters,foundation,landmarkMotion,scenery,routeFeatures,riverCrossing,structure,overlook,onRiver,life,trainViaduct};
 })();
