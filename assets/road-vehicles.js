@@ -2,18 +2,18 @@
 const RoadVehicles=(()=>{
  const fleetNames=['hatchback','sedan','suv','pickup','van','truck'],fleetSprites=new Map();let fleetImage=null;
  // Alpha-component bounds measured from the atlas; unequal painted silhouettes keep every tyre.
- const fleetBoxes=[[11,86,338,245],[356,108,359,220],[724,77,352,258],[11,437,373,258],[384,407,335,284],[729,386,342,314],[19,774,336,252],[369,805,350,218],[732,768,341,264],[12,1132,364,241],[424,1104,301,267],[763,1081,313,290]];
+ const fleetBoxes=[[29,98,305,242],[374,104,338,236],[745,73,321,268],[17,452,329,275],[383,396,318,331],[744,372,330,356],[23,770,315,275],[379,808,327,237],[746,761,322,284],[26,1099,310,299],[387,1065,309,332],[777,1060,267,339]];
  const models={hatchback:{length:3.6,height:1.42,width:.79},sedan:{length:4.3,height:1.36,width:.81},suv:{length:4.6,height:1.68,width:.89},pickup:{length:5.3,height:1.67,width:.91},van:{length:5.6,height:2.05,width:.93},truck:{length:8.8,height:2.65,width:1.05}};
  function painted(c,P,car){
-  if(!fleetImage){fleetImage=new Image();fleetImage.onload=()=>{fleetSprites.clear();if(typeof wakeScene==='function')wakeScene();};fleetImage.src='assets/road-fleet-painted.webp';}
+  if(!fleetImage){fleetImage=new Image();fleetImage.onload=()=>{fleetSprites.clear();if(typeof wakeScene==='function')wakeScene();};fleetImage.src='assets/road-fleet-straight.webp';}
   if(!fleetImage.complete||!fleetImage.naturalWidth)return false;
   const model=models[car.model]?car.model:'sedan',m=models[model],index=fleetNames.indexOf(model)+(car.front?0:6),key=index+':'+car.col;
   let sprite=fleetSprites.get(key);
   if(!sprite){const box=fleetBoxes[index];sprite=document.createElement('canvas');sprite.width=320;sprite.height=Math.round(320*box[3]/box[2]);const g=sprite.getContext('2d');g.drawImage(fleetImage,...box,0,0,sprite.width,sprite.height);g.globalCompositeOperation='source-atop';g.globalAlpha=.10;g.fillStyle=car.col||'#638582';g.fillRect(0,0,sprite.width,sprite.height);g.globalAlpha=1;g.globalCompositeOperation='source-over';fleetSprites.set(key,sprite);if(fleetSprites.size>24)fleetSprites.delete(fleetSprites.keys().next().value);}
-  const z=36/car.distance-.025,farZ=36/(car.distance+m.length)-.025,scale=P.hw(z)/3.5,width=scale*m.width*2*1.13,height=width*sprite.height/sprite.width,x=P.rx(z)+P.hw(z)*car.lane,y=P.yy(z);
-  const farX=P.rx(farZ)+P.hw(farZ)*car.lane,lean=Math.max(-.11,Math.min(.11,(farX-x)/Math.max(1,height)*.32));
+  const z=36/car.distance-.025,scale=P.hw(z)/3.5,width=scale*m.width*2*1.13,height=width*sprite.height/sprite.width,x=P.rx(z)+P.hw(z)*car.lane,y=P.yy(z);
   c.save();c.fillStyle='rgba(9,21,24,.25)';c.beginPath();c.ellipse(x,y,width*.48,Math.max(.5,width*.055),0,0,Math.PI*2);c.fill();c.fillStyle='rgba(8,17,19,.32)';c.beginPath();c.ellipse(x-width*.34,y,width*.08,Math.max(.4,width*.02),0,0,Math.PI*2);c.ellipse(x+width*.34,y,width*.08,Math.max(.4,width*.02),0,0,Math.PI*2);c.fill();
-  c.translate(x,y);c.transform(1,0,-lean,1,0,0);if(car.lane<0)c.scale(-1,1);c.drawImage(RoadWeather.paintedCar(sprite),-width*.5,-height,width,height);c.restore();return true;
+  // The art is axis-aligned: lane position never changes the vehicle heading.
+  c.translate(x,y);c.drawImage(RoadWeather.paintedCar(sprite),-width*.5,-height,width,height);c.restore();return true;
  }
  function draw(c,P,car){
   if(painted(c,P,car))return;
