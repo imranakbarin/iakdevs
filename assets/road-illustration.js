@@ -191,9 +191,11 @@ const RoadIllustration=(()=>{
   c.fillStyle='#829584';c.fillRect(-114,-36,228,8);c.fillStyle='#a0ad90';c.fillRect(-114,-36,228,2);
   c.fillStyle='#5f6f60';for(let a=-146;a<=146;a+=7)c.fillRect(a,-38,3,2);
   c.strokeStyle='#c3c7a6';c.lineWidth=1.2;c.beginPath();c.moveTo(-148,-38);c.lineTo(148,-38);c.stroke();
+  // The tunnel recess is behind the train; the outer bank is in front.
+  for(const side of [-1,1]){c.save();c.scale(side,1);c.fillStyle='#557452';c.beginPath();c.moveTo(145,12);c.lineTo(145,-62);c.quadraticCurveTo(157,-81,177,-62);c.lineTo(193,12);c.closePath();c.fill();c.fillStyle='#263e34';c.beginPath();c.moveTo(144,-38);c.lineTo(144,-56);c.quadraticCurveTo(152,-70,164,-56);c.lineTo(164,-38);c.closePath();c.fill();c.restore();}
   // The entire train is offscreen behind a tunnel before its distance wraps.
   const lead=-230+((t*11)%460+460)%460;
-  c.save();c.beginPath();c.rect(-148,-76,296,38);c.clip();
+  c.save();c.beginPath();c.rect(-156,-76,312,38);c.clip();
   for(let k=3;k>=0;k--){const xx=lead-k*24;
    if(k){c.strokeStyle='#405347';c.lineWidth=1;c.beginPath();c.moveTo(xx+20,-43);c.lineTo(xx+24,-43);c.stroke();}
    c.fillStyle=k?'#af8863':'#55766f';c.beginPath();c.roundRect(xx,-57,21,15,2);c.fill();c.fillStyle='#486157';c.fillRect(xx-1,-58,23,2);
@@ -202,7 +204,7 @@ const RoadIllustration=(()=>{
    for(const wheel of [4,17]){c.fillStyle='#34483c';c.beginPath();c.arc(xx+wheel,-40,2,0,Math.PI*2);c.fill();const angle=t*11/2;c.strokeStyle='#a0ac8d';c.lineWidth=.5;c.beginPath();c.moveTo(xx+wheel-Math.cos(angle)*1.5,-40-Math.sin(angle)*1.5);c.lineTo(xx+wheel+Math.cos(angle)*1.5,-40+Math.sin(angle)*1.5);c.stroke();}
   }c.restore();
   // Foreground banks conceal the clipped entry and exit, rather than exposing a cut.
-  for(const side of [-1,1]){c.save();c.scale(side,1);c.fillStyle='#557452';c.beginPath();c.moveTo(145,12);c.lineTo(145,-62);c.quadraticCurveTo(157,-81,177,-62);c.lineTo(193,12);c.closePath();c.fill();c.strokeStyle='#809271';c.lineWidth=2;c.beginPath();c.moveTo(145,-38);c.lineTo(145,-56);c.quadraticCurveTo(151,-66,158,-56);c.stroke();c.restore();}
+  for(const side of [-1,1]){c.save();c.scale(side,1);c.fillStyle='#557452';c.beginPath();c.moveTo(156,12);c.lineTo(156,-70);c.quadraticCurveTo(166,-79,177,-62);c.lineTo(193,12);c.closePath();c.fill();c.strokeStyle='#a0ad8d';c.lineWidth=2;c.beginPath();c.moveTo(144,-38);c.lineTo(144,-56);c.quadraticCurveTo(150,-68,157,-61);c.stroke();c.strokeStyle='#718961';c.lineWidth=1;c.beginPath();c.moveTo(164,-26);c.lineTo(172,-35);c.moveTo(170,-45);c.lineTo(177,-48);c.stroke();c.restore();}
   c.restore();
  }
  function scenery(c,P,w,h,horizon,j,ix,t){
