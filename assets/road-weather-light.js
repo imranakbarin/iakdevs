@@ -42,7 +42,7 @@ const RoadWeather=(()=>{
  }
  function lamps(c,P,car){
   const strength=atmosphere.night*.7+atmosphere.rain*.1;if(strength<.01)return;
-  const width=P.hw(car.z)*.44,x=P.rx(car.z)+P.hw(car.z)*car.lane,y=P.yy(car.z),rgb=car.front?'255,239,185':'236,87,55';
+  const width=car.hero?P.hw(car.z)*.44:RoadVehicles.width(P,car),x=P.rx(car.z)+P.hw(car.z)*car.lane,y=P.yy(car.z),rgb=car.front?'255,239,185':'236,87,55';
   c.save();c.globalCompositeOperation='screen';for(const side of [-1,1]){const px=x+side*width*.35,py=y-width*(car.front?.37:.27),r=Math.max(2,width*.14),g=c.createRadialGradient(px,py,0,px,py,r);g.addColorStop(0,'rgba('+rgb+','+strength+')');g.addColorStop(.35,'rgba('+rgb+','+strength*.3+')');g.addColorStop(1,'rgba('+rgb+',0)');c.fillStyle=g;c.fillRect(px-r,py-r,r*2,r*2);
    if(atmosphere.rain>.1){const reflection=c.createLinearGradient(px,y,px,y+width*.8);reflection.addColorStop(0,'rgba('+rgb+','+strength*atmosphere.rain*.22+')');reflection.addColorStop(1,'rgba('+rgb+',0)');c.fillStyle=reflection;c.beginPath();c.moveTo(px-width*.025,y);c.lineTo(px+width*.025,y);c.lineTo(px+width*.07,y+width*.8);c.lineTo(px-width*.07,y+width*.8);c.closePath();c.fill();}
   }if(atmosphere.rain>.15){c.globalCompositeOperation='source-over';for(const side of [-1,1])for(let i=0;i<5;i++){const phase=(time*(1.1+i*.07)+i*.21)%1;c.globalAlpha=atmosphere.rain*(1-phase)*.12;c.fillStyle='#c8dbdf';c.beginPath();c.ellipse(x+side*width*(.38+phase*.08),y+phase*width*.32,Math.max(.5,width*phase*.025),Math.max(.5,width*phase*.013),0,0,Math.PI*2);c.fill();}}c.restore();
