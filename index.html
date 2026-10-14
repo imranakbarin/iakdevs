@@ -94,14 +94,14 @@ input[type=range]{width:80px;accent-color:#E63B2E}
 <dialog id="art-gallery" aria-labelledby="art-gallery-heading"><div class="art-gallery-head"><div><h2 id="art-gallery-heading">The living collection</h2><p>Original digital interpretations of seven painting traditions. Explore an unfolding painting or contemplate a still composition with living details.</p></div><button id="art-close" aria-label="Close art gallery">Close</button></div><div id="art-grid"></div></dialog>
 <script src="assets/living-art.js?v=1"></script>
 <script src="assets/scene-motion.js?v=2"></script>
-<script src="assets/road-traffic.js?v=3"></script>
+<script src="assets/road-traffic.js?v=4"></script>
 <script src="assets/world-atmosphere.js?v=2"></script>
 <script src="assets/zen-steel-gpu.js?v=2"></script>
 <script src="assets/zen-garden.js?v=11"></script>
 <script src="assets/road-illustration.js?v=12"></script>
 <script src="assets/road-rural.js?v=4"></script>
-<script src="assets/road-vehicles.js?v=5"></script>
-<script src="assets/road-weather-light.js?v=1"></script>
+<script src="assets/road-vehicles.js?v=6"></script>
+<script src="assets/road-weather-light.js?v=2"></script>
 <script>
 const requestedZen=location.hash.startsWith('#zen-'),requestedRoad=location.hash.startsWith('#road-');
 const H=640,CW=600,RIVER=585,TAU=Math.PI*2,PI=Math.PI;
@@ -1673,8 +1673,7 @@ function roadFrame(t,dt,c=ctx,placeOverride=null){
  const w=cv.width,h=cv.height;
  if(placeOverride===null){
   const delta=playing&&!drag?dt:0;
-  if(playing&&!drag){SceneMotion.spring(tripDrive,speed/40*RoadTraffic.factor,dt,2.4);journey+=dt*tripDrive.x;}
-  RoadTraffic.advance(delta,journey*42,42*speed/40,trafficEnabled);
+  journey=RoadTraffic.drive(delta,journey*42,42*speed/40,trafficEnabled,tripDrive)/42;
   roadWeather(journey,delta,document.getElementById('weather').value);
   const weights=roadPlaceWeights(delta,document.getElementById('place').value);
   const bands=roadPlaceTransition.bands,active=weights.map((weight,ix)=>({weight,ix})).filter(p=>bands.some(b=>b[p.ix]>0));
@@ -1848,7 +1847,7 @@ function roadForeground(c,w,h){
  vehicles.push({z:heroZ,hero:true});
  vehicles.push(...RoadIllustration.routeFeatures(journey,0).filter(f=>f.type==='gateway').map(f=>({...f,gateway:true})));
  vehicles.sort((a,b)=>a.z-b.z);
- for(const car of vehicles){if(car.gateway){RoadIllustration.structure(c,{rx,hw,yy},w,h,car,0);continue;}if(car.hero){const pose=RoadIllustration.carGround(c,{rx,hw,yy},heroZ,lane,heroSize*135,w,h);const rendered=w/h<.85?RoadIllustration.car3d(c,{rx,hw,yy},heroZ,lane):RoadIllustration.car(c,pose.x,pose.y,heroSize,pose);if(!rendered)drawTourCar(c,pose.x,pose.y-7*heroSize,heroSize,'#c65d43',false,0);}else RoadVehicles.draw(c,{rx,hw,yy},car);RoadWeather.lamps(c,{rx,hw,yy},car.hero?{z:heroZ,lane,front:false}:car);}
+ for(const car of vehicles){if(car.gateway){RoadIllustration.structure(c,{rx,hw,yy},w,h,car,0);continue;}if(car.hero){const pose=RoadIllustration.carGround(c,{rx,hw,yy},heroZ,lane,heroSize*135,w,h);const rendered=w/h<.85?RoadIllustration.car3d(c,{rx,hw,yy},heroZ,lane):RoadIllustration.car(c,pose.x,pose.y,heroSize,pose);if(!rendered)drawTourCar(c,pose.x,pose.y-7*heroSize,heroSize,'#c65d43',false,0);}else RoadVehicles.draw(c,{rx,hw,yy},car);RoadWeather.lamps(c,{rx,hw,yy},car.hero?{z:heroZ,lane,front:false,hero:true}:car);}
 
  if(a.night>.001){c.globalAlpha=a.night*.38;c.fillStyle='#081a32';c.fillRect(0,0,w,h);c.globalAlpha=1;}
  if(a.sunset>.001){c.globalAlpha=a.sunset*.12;c.fillStyle='#d99666';c.fillRect(0,0,w,h);c.globalAlpha=1;}

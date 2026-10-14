@@ -3,14 +3,16 @@ const RoadVehicles=(()=>{
  const fleetNames=['hatchback','sedan','suv','pickup','van','truck'],fleetSprites=new Map();let fleetImage=null;
  // Alpha-component bounds measured from the atlas; unequal painted silhouettes keep every tyre.
  const fleetBoxes=[[29,98,305,242],[374,104,338,236],[745,73,321,268],[17,452,329,275],[383,396,318,331],[744,372,330,356],[23,770,315,275],[379,808,327,237],[746,761,322,284],[26,1099,310,299],[387,1065,309,332],[777,1060,267,339]];
- const models={hatchback:{length:3.6,height:1.42,width:.79},sedan:{length:4.3,height:1.36,width:.81},suv:{length:4.6,height:1.68,width:.89},pickup:{length:5.3,height:1.67,width:.91},van:{length:5.6,height:2.05,width:.93},truck:{length:8.8,height:2.65,width:1.05}};
+ const models={hatchback:{length:3.6,height:1.42,width:.6715},sedan:{length:4.3,height:1.36,width:.6885},suv:{length:4.6,height:1.68,width:.7565},pickup:{length:5.3,height:1.67,width:.7735},van:{length:5.6,height:2.05,width:.7905},truck:{length:8.8,height:2.65,width:.8925}};
+ // Keep wide, shallow viewports proportional to the height-limited player car.
+ const roadScale=(P,z)=>Math.min(P.hw(z)/3.5,(P.yy(1)-P.yy(0))*.34*(z+.025)/.905);
  function painted(c,P,car){
   if(!fleetImage){fleetImage=new Image();fleetImage.onload=()=>{fleetSprites.clear();if(typeof wakeScene==='function')wakeScene();};fleetImage.src='assets/road-fleet-straight.webp';}
   if(!fleetImage.complete||!fleetImage.naturalWidth)return false;
   const model=models[car.model]?car.model:'sedan',m=models[model],index=fleetNames.indexOf(model)+(car.front?0:6),key=index+':'+car.col;
   let sprite=fleetSprites.get(key);
   if(!sprite){const box=fleetBoxes[index];sprite=document.createElement('canvas');sprite.width=320;sprite.height=Math.round(320*box[3]/box[2]);const g=sprite.getContext('2d');g.drawImage(fleetImage,...box,0,0,sprite.width,sprite.height);g.globalCompositeOperation='source-atop';g.globalAlpha=.10;g.fillStyle=car.col||'#638582';g.fillRect(0,0,sprite.width,sprite.height);g.globalAlpha=1;g.globalCompositeOperation='source-over';fleetSprites.set(key,sprite);if(fleetSprites.size>24)fleetSprites.delete(fleetSprites.keys().next().value);}
-  const z=36/car.distance-.025,scale=P.hw(z)/3.5,width=scale*m.width*2*1.13,height=width*sprite.height/sprite.width,x=P.rx(z)+P.hw(z)*car.lane,y=P.yy(z);
+  const z=36/car.distance-.025,scale=roadScale(P,z),width=scale*m.width*2,height=width*sprite.height/sprite.width,x=P.rx(z)+P.hw(z)*car.lane,y=P.yy(z);
   c.save();c.fillStyle='rgba(9,21,24,.25)';c.beginPath();c.ellipse(x,y,width*.48,Math.max(.5,width*.055),0,0,Math.PI*2);c.fill();c.fillStyle='rgba(8,17,19,.32)';c.beginPath();c.ellipse(x-width*.34,y,width*.08,Math.max(.4,width*.02),0,0,Math.PI*2);c.ellipse(x+width*.34,y,width*.08,Math.max(.4,width*.02),0,0,Math.PI*2);c.fill();
   // The art is axis-aligned: lane position never changes the vehicle heading.
   c.translate(x,y);c.drawImage(RoadWeather.paintedCar(sprite),-width*.5,-height,width,height);c.restore();return true;
@@ -20,7 +22,7 @@ const RoadVehicles=(()=>{
   const kind=models[car.model]?car.model:'sedan',m=models[kind],L=m.length,W=m.width,H=m.height,color=car.col||'#638582';
   const tint=n=>{const v=parseInt(color.slice(1),16);return '#'+[16,8,0].map(s=>Math.max(0,Math.min(255,((v>>s)&255)+n)).toString(16).padStart(2,'0')).join('');};
   const depth=d=>car.distance+(car.front?L-d:d);
-  const point=(x,d,height=0)=>{const z=36/depth(d)-.025,scale=P.hw(z)/3.5,bob=height>.3?.008*Math.sin((car.s||0)*2.1):0;return {x:P.rx(z)+P.hw(z)*car.lane+x*scale,y:P.yy(z)-(height+bob)*scale,scale};};
+  const point=(x,d,height=0)=>{const z=36/depth(d)-.025,scale=roadScale(P,z),bob=height>.3?.008*Math.sin((car.s||0)*2.1):0;return {x:P.rx(z)+P.hw(z)*car.lane+x*scale,y:P.yy(z)-(height+bob)*scale,scale};};
   const jobs=[],nearScale=point(0,car.front?L:0).scale,stroke=Math.max(.35,Math.min(1.1,nearScale*.022));
   function face(ps,colors,glass=false,bias=0){jobs.push({depth:ps.reduce((v,p)=>v+depth(p[1]),0)/ps.length+bias,paint(){
    const q=ps.map(p=>point(...p)),g=c.createLinearGradient(q[0].x,q[0].y,q[2].x,q[2].y);g.addColorStop(0,RoadWeather.lit(colors[0]));g.addColorStop(.55,RoadWeather.lit(colors[1]));g.addColorStop(1,RoadWeather.lit(colors[2]));
@@ -71,5 +73,5 @@ const RoadVehicles=(()=>{
   }
   jobs.sort((a,b)=>b.depth-a.depth);for(const job of jobs)job.paint();c.restore();
  }
- return {models,draw};
+ return {models,draw,width:(P,car)=>roadScale(P,car.z??(36/car.distance-.025))*(models[car.model]||models.sedan).width*2};
 })();
