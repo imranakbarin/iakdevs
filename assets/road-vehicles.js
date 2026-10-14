@@ -5,7 +5,7 @@ const RoadVehicles=(()=>{
  const fleetBoxes=[[29,98,305,242],[374,104,338,236],[745,73,321,268],[17,452,329,275],[383,396,318,331],[744,372,330,356],[23,770,315,275],[379,808,327,237],[746,761,322,284],[26,1099,310,299],[387,1065,309,332],[777,1060,267,339]];
  const models={hatchback:{length:3.6,height:1.42,width:.6715},sedan:{length:4.3,height:1.36,width:.6885},suv:{length:4.6,height:1.68,width:.7565},pickup:{length:5.3,height:1.67,width:.7735},van:{length:5.6,height:2.05,width:.7905},truck:{length:8.8,height:2.65,width:.8925}};
  // Keep wide, shallow viewports proportional to the height-limited player car.
- const roadScale=(P,z)=>Math.min(P.hw(z)/3.5,(P.yy(1)-P.yy(0))*.34*(z+.025)/.905);
+ const roadScale=(P,z)=>Math.min(P.hw(z)/3.5,(P.yy(1)-P.yy(0))*.18*(z+.025)/.905);
  function painted(c,P,car){
   if(!fleetImage){fleetImage=new Image();fleetImage.onload=()=>{fleetSprites.clear();if(typeof wakeScene==='function')wakeScene();};fleetImage.src='assets/road-fleet-straight.webp';}
   if(!fleetImage.complete||!fleetImage.naturalWidth)return false;
