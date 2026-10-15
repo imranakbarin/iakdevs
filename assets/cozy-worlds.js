@@ -15,10 +15,10 @@ window.CozyWorlds=(()=>{
   let renderer,scene,camera,raf=0,running=!reduced,frameTime=0,rafTime=0,lit=true,rainLevel=1,stir=0,dragging=false,px=0,py=0,targetX=0,targetY=0,lookX=0,lookY=0,viewW=0,viewH=0;
   try{renderer=new THREE.WebGLRenderer({antialias:true,alpha:false,powerPreference:'low-power'});}
   catch(e){root.innerHTML='<p class="cozy-error">This browser cannot start the WebGL reading nook. The other experiences remain available.</p>';life.dispose();return;}
-  renderer.outputColorSpace=THREE.SRGBColorSpace;renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=1.5;
+  renderer.outputColorSpace=THREE.SRGBColorSpace;renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=1.05;
   root.prepend(renderer.domElement);renderer.setClearColor(0x171d29);
-  scene=new THREE.Scene();scene.background=new THREE.Color(0x1b2735);
-  camera=new THREE.PerspectiveCamera(37,1,.1,70);camera.position.set(5,3.25,8.8);camera.lookAt(0,1.65,0);
+  scene=new THREE.Scene();scene.background=new THREE.Color(0x121b27);
+  camera=new THREE.PerspectiveCamera(34,1,.1,70);camera.position.set(3.2,2.75,9.2);camera.lookAt(0,1.65,0);
   const wood=new THREE.MeshStandardMaterial({color:0x493124,roughness:.91});
   const darkWood=new THREE.MeshStandardMaterial({color:0x271e20,roughness:.9});
   const trim=new THREE.MeshStandardMaterial({color:0xab7b4b,roughness:.64,metalness:.13});
@@ -36,14 +36,15 @@ window.CozyWorlds=(()=>{
   const stitch=new THREE.MeshStandardMaterial({color:0x8db1a4,roughness:1});
   const copper=new THREE.MeshStandardMaterial({color:0x5e3529,roughness:.77});
   const shadow=new THREE.MeshBasicMaterial({color:0x171411,transparent:true,opacity:.18,depthWrite:false});
-  const warm=new THREE.PointLight(0xffba68,38,7,2);warm.position.set(-1.45,3.25,1.3);scene.add(warm);
-  scene.add(new THREE.HemisphereLight(0xc4d7e8,0x493126,2.15));
-  const fill=new THREE.DirectionalLight(0xffe1b2,2.1);fill.position.set(5,7,6);scene.add(fill);
+  const warm=new THREE.PointLight(0xffb86c,16,6,2);warm.position.set(-1.45,3.25,1.3);scene.add(warm);
+  scene.add(new THREE.HemisphereLight(0xa9bdd5,0x382b28,1.55));
+  const fill=new THREE.DirectionalLight(0xffe1b2,1.15);fill.position.set(5,7,6);scene.add(fill);
   const box=(w,h,d,m,x,y,z,parent=scene)=>{const a=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),m);a.position.set(x,y,z);parent.add(a);return a;};
   const sph=(rx,ry,rz,m,x,y,z,parent=scene)=>{const a=new THREE.Mesh(new THREE.SphereGeometry(1,24,16),m);a.scale.set(rx,ry,rz);a.position.set(x,y,z);parent.add(a);return a;};
   const cyl=(r1,r2,h,m,x,y,z,parent=scene)=>{const a=new THREE.Mesh(new THREE.CylinderGeometry(r1,r2,h,20),m);a.position.set(x,y,z);parent.add(a);return a;};
   const line=(coords,m,r=.018,parent=scene)=>{const curve=new THREE.CatmullRomCurve3(coords.map(v=>new THREE.Vector3(...v)));const obj=new THREE.Mesh(new THREE.TubeGeometry(curve,Math.max(8,coords.length*8),r,6,false),m);parent.add(obj);return obj;};
-  // A shallow architectural room, not a painted backdrop.
+  // A shallower sculpted architecture with a physical front book lip, shadowed recesses and beveled details.
+  const bevel=(w,h,d,m,x,y,z,r=.075,parent=scene)=>{const shape=new THREE.Shape();shape.moveTo(-w/2+r,-h/2);shape.lineTo(w/2-r,-h/2);shape.quadraticCurveTo(w/2,-h/2,w/2,-h/2+r);shape.lineTo(w/2,h/2-r);shape.quadraticCurveTo(w/2,h/2,w/2-r,h/2);shape.lineTo(-w/2+r,h/2);shape.quadraticCurveTo(-w/2,h/2,-w/2,h/2-r);shape.lineTo(-w/2,-h/2+r);shape.quadraticCurveTo(-w/2,-h/2,-w/2+r,-h/2);const geo=new THREE.ExtrudeGeometry(shape,{depth:d,bevelEnabled:true,bevelSegments:2,steps:1,bevelSize:.018,bevelThickness:.018,curveSegments:5});const mesh=new THREE.Mesh(geo,m);mesh.position.set(x,y,z-d/2);parent.add(mesh);return mesh;};
   box(5.6,.22,4.4,wood,0,-.13,0);box(5.6,4.25,.15,wall,0,2.03,-2.15);
   box(.16,4.2,4.4,darkWood,-2.8,2,0);box(.16,4.2,4.4,darkWood,2.8,2,0);
   box(5.8,.20,.25,trim,0,4.13,-2.08);box(5.8,.14,.24,trim,0,.14,-2.08);
@@ -86,14 +87,14 @@ window.CozyWorlds=(()=>{
   // Upholstered chair: layered lobes, piped cushioning and button tufting.
   const chair=new THREE.Group();chair.position.set(-.27,0,.36);scene.add(chair);
   for(const sx of [-1,1]){box(.12,.87,.13,darkWood,sx*.73,.48,.32,chair);box(.12,.87,.13,darkWood,sx*.73,.48,-.39,chair);}
-  sph(.83,.25,.72,tealDeep,0,.91,0,chair);sph(.77,.21,.62,tealLight,0,1.10,.03,chair);
-  const back=sph(.9,1.05,.25,teal,0,2.05,-.49,chair);back.rotation.x=-.13;
-  sph(.63,.78,.22,tealLight,0,2.12,-.24,chair);
+  bevel(1.55,.35,1.22,tealDeep,0,1.0,.04,.15,chair);bevel(1.43,.26,1.13,tealLight,0,1.19,.11,.12,chair);
+  const back=bevel(1.65,1.88,.36,teal,0,2.12,-.58,.40,chair);back.rotation.x=-.085;
+  const innerBack=bevel(1.36,1.55,.10,tealLight,0,2.11,-.32,.32,chair);innerBack.rotation.x=-.085;
   for(const sx of [-1,1]){
-   const arm=sph(.22,.53,.68,teal,sx*.8,1.36,.05,chair);arm.rotation.z=-sx*.09;
-   sph(.21,.16,.46,tealLight,sx*.83,1.77,.08,chair);
+   const arm=bevel(.34,.66,1.25,teal,sx*.83,1.43,.04,.16,chair);arm.rotation.z=-sx*.04;
+   bevel(.36,.17,1.20,tealLight,sx*.83,1.83,.08,.08,chair);
   }
-  for(const y of [1.65,2.14,2.65])for(const x of [-.37,0,.37]){const z=-.24 + .22*Math.sqrt(Math.max(0,1-(x/.9)**2-((y-2.05)/1.05)**2));sph(.03,.03,.018,tealDeep,x,y,z+.01,chair);}
+  for(const y of [1.65,2.14,2.65])for(const x of [-.37,0,.37]){const z=-.195;sph(.03,.03,.018,tealDeep,x,y,z+.01,chair);}
   for(const sx of [-1,1]){
    line([[sx*.69,1.77,.15],[sx*.72,1.48,.43],[sx*.66,1.08,.46]],stitch,.009,chair);
    for(let j=0;j<7;j++)sph(.012,.012,.009,stitch,sx*.70,1.20+j*.075,.49,chair);
@@ -108,7 +109,9 @@ window.CozyWorlds=(()=>{
   line([[.12,.32,.80],[.41,.29,.85],[.72,.43,.83],[.82,.84,.68]],cream,.014,chair);
   // Curled ginger cat, with a tiny breathing motion.
   const cat=new THREE.Group();cat.position.set(-.29,1.32,.49);chair.add(cat);
-  sph(.38,.19,.29,ginger,0,0,0,cat);sph(.18,.16,.17,ginger,-.28,.065,.13,cat);
+  const body=sph(.39,.18,.28,ginger,0,0,0,cat);body.rotation.z=-.1;
+  const head=sph(.19,.16,.17,ginger,-.29,.045,.16,cat);head.rotation.z=.12;
+  for(const z of [-.16,.0,.16]){const stripe=sph(.042,.17,.065,copper,.03+z*.4,.047,z,cat);stripe.rotation.z=.35;}
   for(const s of [-1,1]){
     const ear=new THREE.Mesh(new THREE.ConeGeometry(.085,.17,4),ginger);
     ear.position.set(-.37+s*.12,.24,.12);ear.rotation.z=s*.17;cat.add(ear);
@@ -128,7 +131,7 @@ window.CozyWorlds=(()=>{
   }
   // Amber floor lamp with gathered shade.
   cyl(.23,.29,.06,wood,-1.92,.12,.7);cyl(.028,.035,2.65,trim,-1.92,1.44,.7);
-  const shade=new THREE.Mesh(new THREE.CylinderGeometry(.2,.48,.52,32,1,true),new THREE.MeshStandardMaterial({color:0xd7a17c,emissive:0xe59d50,emissiveIntensity:.38,roughness:.8,side:THREE.DoubleSide}));
+  const shade=new THREE.Mesh(new THREE.CylinderGeometry(.23,.43,.48,48,1,true),new THREE.MeshStandardMaterial({color:0xd7a17c,emissive:0xe59d50,emissiveIntensity:.38,roughness:.8,side:THREE.DoubleSide}));
   shade.position.set(-1.92,2.85,.7);scene.add(shade);
   sph(.17,.10,.17,new THREE.MeshBasicMaterial({color:0xffd294}),-1.92,2.65,.7);
   // Side table, cup, books and curling steam.
@@ -152,10 +155,10 @@ window.CozyWorlds=(()=>{
   for(let i=0;i<5;i++)box(5.8,.011,.04,cream,0,-.09+i*.028,2.31);
   // Flecks and rain are genuinely behind or in front of furniture in 3D.
   const flecks=[];const fleckGeo=new THREE.TetrahedronGeometry(.021,0);
-  for(let i=0;i<(innerWidth<700?65:125);i++){const mat=new THREE.MeshBasicMaterial({color:i%4?0xd2bd91:0xffecc3,transparent:true,opacity:.32+rnd()*.4,depthWrite:false});const a=new THREE.Mesh(fleckGeo,mat);const data={x:(rnd()-.5)*5,y:.3+rnd()*3.6,z:(rnd()-.5)*3.7,s:.11+rnd()*.14,phase:rnd()*6.28};a.position.set(data.x,data.y,data.z);scene.add(a);flecks.push({a,...data});}
+  for(let i=0;i<(innerWidth<700?28:55);i++){const mat=new THREE.MeshBasicMaterial({color:i%4?0xd2bd91:0xffecc3,transparent:true,opacity:.32+rnd()*.4,depthWrite:false});const a=new THREE.Mesh(fleckGeo,mat);const data={x:(rnd()-.5)*5,y:.3+rnd()*3.6,z:(rnd()-.5)*3.7,s:.05+rnd()*.09,phase:rnd()*6.28};a.position.set(data.x,data.y,data.z);scene.add(a);flecks.push({a,...data});}
   const drops=[];const dropMat=new THREE.MeshBasicMaterial({color:0xbcd4e4,transparent:true,opacity:.45,depthWrite:false});
   for(let i=0;i<72;i++){const a=box(.006,.05+rnd()*.12,.003,dropMat,-.59+rnd()*1.67,1.50+rnd()*2.25,-1.84);drops.push({a,fall:.35+rnd()*.75});}
-  function size(){const w=Math.max(1,root.clientWidth),h=Math.max(1,root.clientHeight);if(w===viewW&&h===viewH)return;viewW=w;viewH=h;renderer.setPixelRatio(Math.min(devicePixelRatio||1,w<700?1.35:1.8));renderer.setSize(w,h,false);camera.aspect=w/h;camera.fov=w<h?48:37;camera.position.set(w<h?4.55:5, w<h?3.05:3.25,w<h?12.5:8.8);camera.updateProjectionMatrix();}
+  function size(){const w=Math.max(1,root.clientWidth),h=Math.max(1,root.clientHeight);if(w===viewW&&h===viewH)return;viewW=w;viewH=h;renderer.setPixelRatio(Math.min(devicePixelRatio||1,w<700?1.35:1.8));renderer.setSize(w,h,false);camera.aspect=w/h;camera.fov=w<h?41:34;camera.position.set(w<h?2.4:3.2, w<h?2.9:2.75,w<h?12.8:9.2);camera.updateProjectionMatrix();}
   const ro=new ResizeObserver(size);ro.observe(root);size();
   function tick(t){
    raf=0;if(life.dead||document.hidden)return;
