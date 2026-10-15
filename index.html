@@ -1953,7 +1953,7 @@ matchMedia('(prefers-color-scheme: dark)').addEventListener('change',()=>{readTh
 const modeBtn=document.getElementById('mode');
 let cozyPromise=null;
 function openCozy(){
- if(!cozyPromise)cozyPromise=new Promise((resolve,reject)=>{const js=document.createElement('script');js.src='assets/cozy-worlds.js?v=3';js.onload=resolve;js.onerror=reject;document.head.append(js);});
+ if(!cozyPromise)cozyPromise=new Promise((resolve,reject)=>{const js=document.createElement('script');js.src='assets/cozy-illustrated.js?v=2';js.onload=resolve;js.onerror=reject;document.head.append(js);});
  cozyPromise.then(()=>{if(modeBtn.value==='cozy')CozyWorlds.mount(document.getElementById('cozy-host'));}).catch(()=>{if(modeBtn.value==='cozy')document.getElementById('cozy-host').innerHTML='<p class="cozy-error">Unable to load Cozy Worlds. Please check your connection.</p>';cozyPromise=null;});
 }
 modeBtn.onchange=()=>{
