@@ -66,7 +66,7 @@ input[type=range]{width:80px;accent-color:#E63B2E}
 <body>
 <canvas id="zen-backdrop" class="zen-layer" aria-hidden="true"></canvas>
 <canvas id="zen-sand" class="zen-layer" aria-hidden="true"></canvas>
-<div id="cozy-host" aria-label="Interactive 3D miniature reading room"></div>
+<div id="cozy-host" aria-label="Illustrated cozy reading nook"></div>
 <canvas id="c" aria-label="Endlessly scrolling art landscape inspired by traditional painting"></canvas>
 <div class="ui"><div class="bar" id="scene-controls">
   <h1>Infinite scroll</h1>
@@ -1953,7 +1953,7 @@ matchMedia('(prefers-color-scheme: dark)').addEventListener('change',()=>{readTh
 const modeBtn=document.getElementById('mode');
 let cozyPromise=null;
 function openCozy(){
- if(!cozyPromise)cozyPromise=new Promise((resolve,reject)=>{const js=document.createElement('script');js.src='assets/cozy-illustrated.js?v=2';js.onload=resolve;js.onerror=reject;document.head.append(js);});
+ if(!cozyPromise)cozyPromise=new Promise((resolve,reject)=>{const js=document.createElement('script');js.src='assets/cozy-illustrated.js?v=3';js.onload=resolve;js.onerror=reject;document.head.append(js);});
  cozyPromise.then(()=>{if(modeBtn.value==='cozy')CozyWorlds.mount(document.getElementById('cozy-host'));}).catch(()=>{if(modeBtn.value==='cozy')document.getElementById('cozy-host').innerHTML='<p class="cozy-error">Unable to load Cozy Worlds. Please check your connection.</p>';cozyPromise=null;});
 }
 modeBtn.onchange=()=>{
