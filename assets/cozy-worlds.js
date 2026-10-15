@@ -9,7 +9,7 @@ window.CozyWorlds=(()=>{
   catch(e){if(!life.dead)host.innerHTML='<p class="cozy-error">Cozy Worlds needs WebGL and an internet connection for its 3D engine. Please try again online.</p>';return;}
   if(life.dead)return;
   const root=document.createElement('div');root.className='cozy-stage';
-  root.innerHTML='<div class="cozy-hud"><span class="cozy-name">COZY WORLDS <small>Rainy Reading Nook</small></span><div class="cozy-actions"><button data-action="stir" title="Stir floating flecks">✦ Stir</button><button data-action="lamp" title="Toggle lamp brightness">☼ Lamp</button><button data-action="rain" title="Cycle rain intensity">☂ Rain</button><button data-action="pause" title="Pause animations">Ⅱ Pause</button><button data-action="focus" title="Hide controls">⛶ Focus</button></div></div><div class="cozy-tip">Drag gently to explore · Tap the room to return</div>';
+  root.innerHTML='<div class="cozy-hud"><span class="cozy-name">COZY WORLDS <small>Rainy Reading Nook</small></span><div class="cozy-actions"><button data-action="stir" title="Stir floating flecks">✦ Stir</button><button data-action="lamp" title="Toggle lamp brightness">☼ Lamp</button><button data-action="rain" title="Cycle rain intensity">☂ Rain</button><button data-action="pause" title="Pause animations">Ⅱ Pause</button><button data-action="focus" title="Hide controls">⛶ Focus</button></div></div><div class="cozy-tip">Drag gently to explore · Double-tap to recenter</div>';
   host.replaceChildren(root);
   const reduced=matchMedia('(prefers-reduced-motion:reduce)').matches;
   let renderer,scene,camera,raf=0,running=!reduced,frameTime=0,rafTime=0,lit=true,rainLevel=1,stir=0,dragging=false,px=0,py=0,targetX=0,targetY=0,lookX=0,lookY=0,viewW=0,viewH=0;
@@ -33,6 +33,9 @@ window.CozyWorlds=(()=>{
   const ceramic=new THREE.MeshStandardMaterial({color:0xc9a6a0,roughness:.48});
   const cloth=new THREE.MeshStandardMaterial({color:0x8b6773,roughness:1,side:THREE.DoubleSide});
   const glass=new THREE.MeshBasicMaterial({color:0x41536a,transparent:true,opacity:.42,depthWrite:false});
+  const stitch=new THREE.MeshStandardMaterial({color:0x8db1a4,roughness:1});
+  const copper=new THREE.MeshStandardMaterial({color:0x5e3529,roughness:.77});
+  const shadow=new THREE.MeshBasicMaterial({color:0x171411,transparent:true,opacity:.18,depthWrite:false});
   const warm=new THREE.PointLight(0xffba68,38,7,2);warm.position.set(-1.45,3.25,1.3);scene.add(warm);
   scene.add(new THREE.HemisphereLight(0xc4d7e8,0x493126,2.15));
   const fill=new THREE.DirectionalLight(0xffe1b2,2.1);fill.position.set(5,7,6);scene.add(fill);
@@ -90,12 +93,19 @@ window.CozyWorlds=(()=>{
    const arm=sph(.22,.53,.68,teal,sx*.8,1.36,.05,chair);arm.rotation.z=-sx*.09;
    sph(.21,.16,.46,tealLight,sx*.83,1.77,.08,chair);
   }
-  for(const y of [1.65,2.14,2.65])for(const x of [-.37,0,.37]){sph(.027,.027,.014,tealDeep,x,y,-.005-(1-Math.abs(x))*.08,chair);}
+  for(const y of [1.65,2.14,2.65])for(const x of [-.37,0,.37]){const z=-.24 + .22*Math.sqrt(Math.max(0,1-(x/.9)**2-((y-2.05)/1.05)**2));sph(.03,.03,.018,tealDeep,x,y,z+.01,chair);}
+  for(const sx of [-1,1]){
+   line([[sx*.69,1.77,.15],[sx*.72,1.48,.43],[sx*.66,1.08,.46]],stitch,.009,chair);
+   for(let j=0;j<7;j++)sph(.012,.012,.009,stitch,sx*.70,1.20+j*.075,.49,chair);
+  }
+  line([[-.61,2.55,-.08],[-.64,2.12,.04],[-.52,1.58,.03]],stitch,.014,chair);
+  line([[.61,2.55,-.08],[.64,2.12,.04],[.52,1.58,.03]],stitch,.014,chair);
   line([[-.64,1.12,.46],[0,1.12,.66],[.66,1.13,.45]],trim,.013,chair);
   // Cream blanket flowing down one side of the seat.
   const folds=new THREE.PlaneGeometry(.86,1.31,20,30),p=folds.attributes.position;
   for(let i=0;i<p.count;i++){const x=p.getX(i),y=p.getY(i);p.setZ(i,.11*Math.sin(x*12+y*2)+.035*Math.sin(y*18));}
-  folds.computeVertexNormals();const blanket=new THREE.Mesh(folds,linen);blanket.position.set(.48,.88,.45);blanket.rotation.set(-.42,.06,.20);chair.add(blanket);
+  folds.computeVertexNormals();const blanket=new THREE.Mesh(folds,linen);blanket.position.set(.48,.88,.71);blanket.rotation.set(-.22,.06,.25);chair.add(blanket);
+  line([[.12,.32,.80],[.41,.29,.85],[.72,.43,.83],[.82,.84,.68]],cream,.014,chair);
   // Curled ginger cat, with a tiny breathing motion.
   const cat=new THREE.Group();cat.position.set(-.29,1.32,.49);chair.add(cat);
   sph(.38,.19,.29,ginger,0,0,0,cat);sph(.18,.16,.17,ginger,-.28,.065,.13,cat);
@@ -106,6 +116,16 @@ window.CozyWorlds=(()=>{
   }
   line([[.25,.07,-.01],[.48,.04,.15],[.51,.13,.3],[.38,.17,.34]],ginger,.069,cat);
   for(let i=0;i<4;i++)line([[-.18+i*.11,.18,-.16],[-.2+i*.11,.2,.13]],cream,.008,cat);
+  // A few warm picture frames and miniature curios make the back wall feel lived-in.
+  for(const [x,y,w,h] of [[-1.24,3.56,.43,.52],[1.43,3.55,.38,.42]]){
+   box(w,h,.09,trim,x,y,-1.98);box(w-.085,h-.085,.095,copper,x,y,-1.91);
+   box(w*.48,h*.22,.01,bookM[0],x,y-.055,-1.85);
+   sph(.052,.052,.014,gold,x+.09,y+.10,-1.84);
+  }
+  for(const side of [-1,1]){
+   const x=side*2.12;sph(.13,.17,.13,ceramic,x,3.62,-1.34);
+   cyl(.07,.06,.13,gold,x,3.81,-1.34);
+  }
   // Amber floor lamp with gathered shade.
   cyl(.23,.29,.06,wood,-1.92,.12,.7);cyl(.028,.035,2.65,trim,-1.92,1.44,.7);
   const shade=new THREE.Mesh(new THREE.CylinderGeometry(.2,.48,.52,32,1,true),new THREE.MeshStandardMaterial({color:0xd7a17c,emissive:0xe59d50,emissiveIntensity:.38,roughness:.8,side:THREE.DoubleSide}));
@@ -119,17 +139,23 @@ window.CozyWorlds=(()=>{
   cyl(.14,.12,.27,ceramic,1.88,1.21,1.46);
   cyl(.126,.126,.006,darkWood,1.88,1.349,1.46);
   const handle=new THREE.Mesh(new THREE.TorusGeometry(.095,.025,7,16,Math.PI*1.65),ceramic);handle.position.set(2.035,1.23,1.46);scene.add(handle);
+  const coaster=cyl(.20,.20,.018,trim,1.88,1.042,1.46);
   const steam=[];
   for(let i=0;i<3;i++){const pts=[];for(let j=0;j<10;j++)pts.push([1.82+i*.055+.035*Math.sin(j*.65+i),1.38+j*.067,1.45]);const s=line(pts,new THREE.MeshBasicMaterial({color:0xf8e8c9,transparent:true,opacity:.16,depthWrite:false}),.008);steam.push(s);}
   // Small patterned rug grounds the chair.
   const rug=new THREE.Mesh(new THREE.CylinderGeometry(1.42,1.42,.016,72),new THREE.MeshStandardMaterial({color:0x775a50,roughness:1}));rug.scale.z=.73;rug.position.set(-.15,.026,.33);scene.add(rug);
   const rim=new THREE.Mesh(new THREE.TorusGeometry(1.24,.02,6,80),trim);rim.rotation.x=Math.PI/2;rim.scale.y=.72;rim.position.set(-.15,.047,.33);scene.add(rim);
+  // Book-like shell in the foreground; its open front keeps the interior readable.
+  box(5.85,.16,.28,darkWood,0,-.03,2.16);
+  box(.21,4.18,.35,wood,-2.83,2.05,.42);box(.21,4.18,.35,wood,2.83,2.05,.42);
+  box(5.85,.15,.34,trim,0,4.18,-.08);
+  for(let i=0;i<5;i++)box(5.8,.011,.04,cream,0,-.09+i*.028,2.31);
   // Flecks and rain are genuinely behind or in front of furniture in 3D.
   const flecks=[];const fleckGeo=new THREE.TetrahedronGeometry(.021,0);
   for(let i=0;i<(innerWidth<700?65:125);i++){const mat=new THREE.MeshBasicMaterial({color:i%4?0xd2bd91:0xffecc3,transparent:true,opacity:.32+rnd()*.4,depthWrite:false});const a=new THREE.Mesh(fleckGeo,mat);const data={x:(rnd()-.5)*5,y:.3+rnd()*3.6,z:(rnd()-.5)*3.7,s:.11+rnd()*.14,phase:rnd()*6.28};a.position.set(data.x,data.y,data.z);scene.add(a);flecks.push({a,...data});}
   const drops=[];const dropMat=new THREE.MeshBasicMaterial({color:0xbcd4e4,transparent:true,opacity:.45,depthWrite:false});
-  for(let i=0;i<120;i++){const a=box(.007,.09+rnd()*.16,.003,dropMat,-.59+rnd()*1.67,1.50+rnd()*2.25,-1.85);drops.push({a,fall:.35+rnd()*.75});}
-  function size(){const w=Math.max(1,root.clientWidth),h=Math.max(1,root.clientHeight);if(w===viewW&&h===viewH)return;viewW=w;viewH=h;renderer.setPixelRatio(Math.min(devicePixelRatio||1,w<700?1.35:1.8));renderer.setSize(w,h,false);camera.aspect=w/h;camera.fov=w<h?46:37;camera.position.set(w<h?6.3:5, w<h?3.65:3.25,w<h?11.7:8.8);camera.updateProjectionMatrix();}
+  for(let i=0;i<72;i++){const a=box(.006,.05+rnd()*.12,.003,dropMat,-.59+rnd()*1.67,1.50+rnd()*2.25,-1.84);drops.push({a,fall:.35+rnd()*.75});}
+  function size(){const w=Math.max(1,root.clientWidth),h=Math.max(1,root.clientHeight);if(w===viewW&&h===viewH)return;viewW=w;viewH=h;renderer.setPixelRatio(Math.min(devicePixelRatio||1,w<700?1.35:1.8));renderer.setSize(w,h,false);camera.aspect=w/h;camera.fov=w<h?48:37;camera.position.set(w<h?4.55:5, w<h?3.05:3.25,w<h?12.5:8.8);camera.updateProjectionMatrix();wake();}
   const ro=new ResizeObserver(size);ro.observe(root);size();
   function tick(t){
    raf=0;if(life.dead||document.hidden)return;
@@ -156,22 +182,22 @@ window.CozyWorlds=(()=>{
   surface.addEventListener('dblclick',()=>{targetX=targetY=0;wake();});
   const actions=e=>{const btn=e.target.closest('[data-action]');if(!btn)return;
    switch(btn.dataset.action){
-    case 'stir':stir=1.8;running=true;break;
+    case 'stir':stir=1.1;running=true;root.querySelector('[data-action="pause"]').textContent='Ⅱ Pause';break;
     case 'lamp':lit=!lit;warm.intensity=lit?38:2;shade.material.emissiveIntensity=lit?.38:.03;break;
-    case 'rain':rainLevel=(rainLevel+1)%3;btn.textContent=['☂ Dry','☂ Rain','☂ Downpour'][rainLevel];break;
+    case 'rain':rainLevel=(rainLevel+1)%3;dropMat.opacity=[0,.35,.58][rainLevel];btn.textContent=['☂ Dry','☂ Rain','☂ Downpour'][rainLevel];break;
     case 'pause':running=!running;btn.textContent=running?'Ⅱ Pause':'▶ Play';break;
     case 'focus':root.classList.toggle('cozy-focus');break;
    }wake();
   };
   root.addEventListener('click',actions);
   const vis=()=>{if(!document.hidden)wake();else {cancelAnimationFrame(raf);raf=0;}};
-  const lost=e=>{e.preventDefault();running=false;root.classList.add('cozy-context-lost');};
+  const lost=e=>{e.preventDefault();running=false;cancelAnimationFrame(raf);raf=0;root.classList.add('cozy-context-lost');root.querySelector('.cozy-tip').textContent='Graphics interrupted. Attempting to restore the miniature…';};
   surface.addEventListener('webglcontextlost',lost,false);
-  const restored=()=>{root.classList.remove('cozy-context-lost');running=true;wake();};
+  const restored=()=>{root.classList.remove('cozy-context-lost');root.querySelector('.cozy-tip').textContent='Drag gently to explore · Double-tap to recenter';running=!reduced;wake();};
   surface.addEventListener('webglcontextrestored',restored,false);
   document.addEventListener('visibilitychange',vis);
-  life.pause=()=>{running=false;cancelAnimationFrame(raf);raf=0;};
-  life.resume=()=>{running=true;wake();};
+  life.pause=()=>{running=false;root.querySelector('[data-action="pause"]').textContent='▶ Play';cancelAnimationFrame(raf);raf=0;};
+  life.resume=()=>{running=true;root.querySelector('[data-action="pause"]').textContent='Ⅱ Pause';wake();};
   life.dispose=()=>{
    if(life.dead)return;life.dead=true;cancelAnimationFrame(raf);ro.disconnect();document.removeEventListener('visibilitychange',vis);root.removeEventListener('click',actions);
    surface.removeEventListener('pointerdown',down);surface.removeEventListener('pointermove',move);surface.removeEventListener('pointerup',up);surface.removeEventListener('pointercancel',up);
