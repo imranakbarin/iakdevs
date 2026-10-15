@@ -3,10 +3,10 @@ window.CozyWorlds=(()=>{
  let active=null;
  async function mount(host){
   if(active)active.dispose();
-  const life={dead:false};active=life;
+  const life={dead:false};life.dispose=()=>{life.dead=true;if(active===life)active=null;};active=life;
   let THREE;
   try{THREE=await import('https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js');}
-  catch(e){if(!life.dead)host.innerHTML='<p class="cozy-error">Cozy Worlds needs WebGL and an internet connection for its 3D engine. Please try again online.</p>';return;}
+  catch(e){if(!life.dead)host.innerHTML='<p class="cozy-error">Cozy Worlds needs WebGL and an internet connection for its 3D engine. Please try again online.</p>';life.dispose();return;}
   if(life.dead)return;
   const root=document.createElement('div');root.className='cozy-stage';
   root.innerHTML='<div class="cozy-hud"><span class="cozy-name">COZY WORLDS <small>Rainy Reading Nook</small></span><div class="cozy-actions"><button data-action="stir" title="Stir floating flecks">✦ Stir</button><button data-action="lamp" title="Toggle lamp brightness">☼ Lamp</button><button data-action="rain" title="Cycle rain intensity">☂ Rain</button><button data-action="pause" title="Pause animations">Ⅱ Pause</button><button data-action="focus" title="Hide controls">⛶ Focus</button></div></div><div class="cozy-tip">Drag gently to explore · Double-tap to recenter</div>';
@@ -14,7 +14,7 @@ window.CozyWorlds=(()=>{
   const reduced=matchMedia('(prefers-reduced-motion:reduce)').matches;
   let renderer,scene,camera,raf=0,running=!reduced,frameTime=0,rafTime=0,lit=true,rainLevel=1,stir=0,dragging=false,px=0,py=0,targetX=0,targetY=0,lookX=0,lookY=0,viewW=0,viewH=0;
   try{renderer=new THREE.WebGLRenderer({antialias:true,alpha:false,powerPreference:'low-power'});}
-  catch(e){root.innerHTML='<p class="cozy-error">This browser cannot start the WebGL reading nook. The other experiences remain available.</p>';return;}
+  catch(e){root.innerHTML='<p class="cozy-error">This browser cannot start the WebGL reading nook. The other experiences remain available.</p>';life.dispose();return;}
   renderer.outputColorSpace=THREE.SRGBColorSpace;renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=1.5;
   root.prepend(renderer.domElement);renderer.setClearColor(0x171d29);
   scene=new THREE.Scene();scene.background=new THREE.Color(0x1b2735);
