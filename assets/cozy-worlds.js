@@ -155,7 +155,7 @@ window.CozyWorlds=(()=>{
   for(let i=0;i<(innerWidth<700?65:125);i++){const mat=new THREE.MeshBasicMaterial({color:i%4?0xd2bd91:0xffecc3,transparent:true,opacity:.32+rnd()*.4,depthWrite:false});const a=new THREE.Mesh(fleckGeo,mat);const data={x:(rnd()-.5)*5,y:.3+rnd()*3.6,z:(rnd()-.5)*3.7,s:.11+rnd()*.14,phase:rnd()*6.28};a.position.set(data.x,data.y,data.z);scene.add(a);flecks.push({a,...data});}
   const drops=[];const dropMat=new THREE.MeshBasicMaterial({color:0xbcd4e4,transparent:true,opacity:.45,depthWrite:false});
   for(let i=0;i<72;i++){const a=box(.006,.05+rnd()*.12,.003,dropMat,-.59+rnd()*1.67,1.50+rnd()*2.25,-1.84);drops.push({a,fall:.35+rnd()*.75});}
-  function size(){const w=Math.max(1,root.clientWidth),h=Math.max(1,root.clientHeight);if(w===viewW&&h===viewH)return;viewW=w;viewH=h;renderer.setPixelRatio(Math.min(devicePixelRatio||1,w<700?1.35:1.8));renderer.setSize(w,h,false);camera.aspect=w/h;camera.fov=w<h?48:37;camera.position.set(w<h?4.55:5, w<h?3.05:3.25,w<h?12.5:8.8);camera.updateProjectionMatrix();wake();}
+  function size(){const w=Math.max(1,root.clientWidth),h=Math.max(1,root.clientHeight);if(w===viewW&&h===viewH)return;viewW=w;viewH=h;renderer.setPixelRatio(Math.min(devicePixelRatio||1,w<700?1.35:1.8));renderer.setSize(w,h,false);camera.aspect=w/h;camera.fov=w<h?48:37;camera.position.set(w<h?4.55:5, w<h?3.05:3.25,w<h?12.5:8.8);camera.updateProjectionMatrix();}
   const ro=new ResizeObserver(size);ro.observe(root);size();
   function tick(t){
    raf=0;if(life.dead||document.hidden)return;
