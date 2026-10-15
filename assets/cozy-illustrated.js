@@ -35,7 +35,7 @@ function mount(host){
  <pattern id="upholstery" width="17" height="14" patternUnits="userSpaceOnUse"><path d="M0 0L17 14M17 0L0 14" stroke="#fff9de" opacity=".06" stroke-width=".65"/></pattern>
  </defs>
  <rect width="960" height="720" fill="#191f2d"/>
- <g class="nook-parallax-room" data-depth="0.20"><path d="M75 52H885V617H75Z" fill="url(#room)"/><path d="M75 52H885V617H75Z" fill="url(#wallpaper)"/>
+ <g class="nook-parallax-room"><path d="M75 52H885V617H75Z" fill="url(#room)"/><path d="M75 52H885V617H75Z" fill="url(#wallpaper)"/>
  <path d="M74 541H887V650H74Z" fill="url(#floor)"/><path d="M75 536H886" stroke="#c59871" stroke-width="12"/><path d="M75 545H886" stroke="#3d2b31" stroke-width="5"/>
  <path d="M80 549L478 528L880 549M80 592L480 549L880 592M80 644L480 565L880 644" stroke="#b68d69" stroke-opacity=".12" stroke-width="2" fill="none"/>
  <rect x="292" y="75" width="370" height="381" rx="8" fill="#201e28" stroke="#b88a63" stroke-width="13"/>
@@ -53,7 +53,7 @@ function mount(host){
  <path d="M247 569q229-94 438-4l21 72q-249 64-488-1z" fill="#84665e" stroke="#d2a17c" stroke-width="7"/>
  <path d="M252 570q224-76 420-3M246 629q230 43 451-2" fill="none" stroke="#f1d0a5" stroke-opacity=".35" stroke-width="3"/>
  </g>
- <g class="nook-parallax-front" data-depth="0.50">
+ <g class="nook-parallax-front">
  <ellipse cx="466" cy="526" rx="177" ry="31" fill="#201a21" opacity=".55" filter="url(#shadow)"/>
  <path d="M345 460l-18 113q8 12 24 6l32-100M563 462l31 113q-7 12-24 5l-44-101" fill="#372a2b" stroke="#aa8362" stroke-width="6"/>
  <path d="M316 303q-20-108 90-136q71-25 134 4q79 39 65 135l-14 157q-116 60-264 2Z" fill="#163e46" stroke="#0d333d" stroke-width="14"/>
@@ -70,7 +70,7 @@ function mount(host){
  <path d="M526 383Q544 431 575 479q23 43 11 106q-17 20-45-5l-38-54q-14-53-11-84q-26-22-14-55Z" fill="url(#blanket)" stroke="#f9e4c9" stroke-width="4"/>
  <path d="M498 417q38 59 53 98q12 46 15 62M522 393q24 72 38 86M519 510q27 12 49 35" fill="none" stroke="#b99c8a" stroke-width="5" opacity=".55"/>
  <path d="M489 403q-8 30 13 39l50 4q-19-36-30-53Z" fill="#fff3df"/>
- <g data-depth="0.25"><g class="nook-cat">
+ <g><g class="nook-cat">
  <path d="M365 421q-26-54 35-77q86-29 132 19q27 29-2 61q-44 35-112 23q-36 4-53-26Z" fill="url(#catfur)" stroke="#915132" stroke-width="5"/>
  <path d="M423 365q-10 14-13 30M450 357q-15 17-17 34M483 357q-12 17-16 35" stroke="#9a4e31" opacity=".44" stroke-width="8" fill="none"/>
  <path d="M357 392q-22-30-3-52l12-31l20 20q34-11 48 22q10 32-23 54q-34 20-54-13Z" fill="url(#catfur)" stroke="#995436" stroke-width="4"/>
@@ -82,61 +82,45 @@ function mount(host){
  <path d="M423 425q48 4 75-16q34-23 51 7q12 21-17 29q-18 3-26-9" fill="none" stroke="#b36b3d" stroke-width="21" stroke-linecap="round"/>
  <path d="M365 386l-25-5M366 393l-26 4M410 390l27-4M407 395l25 7" stroke="#f6d4a1" stroke-opacity=".68" fill="none" stroke-width="1.6"/>
  </g></g>
- <g class="nook-table" data-depth="0.35"><ellipse cx="733" cy="510" rx="102" ry="23" fill="#211b20" opacity=".53" filter="url(#shadow)"/>
+ <g class="nook-table"><ellipse cx="733" cy="510" rx="102" ry="23" fill="#211b20" opacity=".53" filter="url(#shadow)"/>
  <path d="M691 476l-17 91h12l29-91M781 472l32 95h12l-20-96" fill="#52382d"/><ellipse cx="750" cy="478" rx="101" ry="34" fill="url(#wood)" stroke="#b88859" stroke-width="6"/>
  <path d="M693 455q25-20 57 0l-8 13h-58Z" fill="#8f4c4b" stroke="#eac794" stroke-width="3"/><path d="M698 443q25-18 57 0l-6 15h-57Z" fill="#4c6874" stroke="#e6be87" stroke-width="2"/><path d="M707 430q26-16 53 0l-5 14h-52Z" fill="#c09068" stroke="#ead2a6" stroke-width="2"/>
  <ellipse cx="792" cy="437" rx="28" ry="9" fill="#d2a18b"/><path d="M765 394h52l-4 44q-24 19-46 0Z" fill="#d0a9a0" stroke="#f4dbb6" stroke-width="3"/><ellipse cx="790" cy="395" rx="26" ry="8" fill="#f5d9bc"/><ellipse cx="790" cy="396" rx="19" ry="5" fill="#73534e"/><path d="M816 401q24-4 19 15q-4 17-23 9" fill="none" stroke="#d6a799" stroke-width="8"/>
  <g class="nook-steam" stroke="#fff4d8" stroke-opacity=".6" stroke-width="2.5" fill="none" stroke-linecap="round"><path d="M779 383q-11-15 1-27t0-24"/><path d="M795 383q12-16 1-28t1-28"/><path d="M805 379q8-11 0-21t1-18"/></g></g>
- <g class="nook-lamp" data-depth="0.38"><ellipse cx="230" cy="552" rx="35" ry="9" fill="#301f24"/><path d="M224 543l4-237" stroke="#b99267" stroke-width="9"/><path d="M207 304h40l40 83q-62 24-116 0Z" fill="url(#shade)" stroke="#f8d1a8" stroke-width="5"/><path d="M211 307q-23 40-28 80M242 307q26 39 33 82" stroke="#fff5cb" stroke-opacity=".24" stroke-width="4" fill="none"/><ellipse cx="228" cy="385" rx="51" ry="12" fill="#ffc78f" opacity=".56"/><ellipse cx="230" cy="302" rx="22" ry="6" fill="#8b6270"/><ellipse class="nook-lamp-aura" cx="229" cy="394" rx="220" ry="226" fill="url(#lamplight)"/></g>
+ <g class="nook-lamp"><ellipse cx="230" cy="552" rx="35" ry="9" fill="#301f24"/><path d="M224 543l4-237" stroke="#b99267" stroke-width="9"/><path d="M207 304h40l40 83q-62 24-116 0Z" fill="url(#shade)" stroke="#f8d1a8" stroke-width="5"/><path d="M211 307q-23 40-28 80M242 307q26 39 33 82" stroke="#fff5cb" stroke-opacity=".24" stroke-width="4" fill="none"/><ellipse cx="228" cy="385" rx="51" ry="12" fill="#ffc78f" opacity=".56"/><ellipse cx="230" cy="302" rx="22" ry="6" fill="#8b6270"/><ellipse class="nook-lamp-aura" cx="229" cy="394" rx="220" ry="226" fill="url(#lamplight)"/></g>
  </g>
- <g class="nook-sparkles" data-depth="1.10">${flecks}</g>
- <g data-depth="0.98"><path d="M68 46h824v613H68z" fill="none" stroke="#231c22" stroke-width="21"/><path d="M78 55h805v597H78z" fill="none" stroke="#b38d62" stroke-opacity=".8" stroke-width="4"/>
+ <g class="nook-sparkles">${flecks}</g>
+ <g><path d="M68 46h824v613H68z" fill="none" stroke="#231c22" stroke-width="21"/><path d="M78 55h805v597H78z" fill="none" stroke="#b38d62" stroke-opacity=".8" stroke-width="4"/>
  <path d="M66 658q401 30 826 0l-21 30H87Z" fill="#a37c58"/><path d="M87 688h784" stroke="#f5d9ac" stroke-width="6"/></g><rect width="960" height="720" fill="url(#vignette)" pointer-events="none"/>
  </svg>
  <div class="nook-overlay">
  <div class="nook-eyebrow">THE LITTLE WORLDS COLLECTION <span>001 / RAINY READING NOOK</span></div>
- <div class="nook-bottom"><div><strong>Somewhere, a story is waiting.</strong><span>A quiet evening, one more chapter.</span></div>
- <div class="nook-buttons"><button data-a="lamp" aria-pressed="true">✺ Warm light</button><button data-a="rain" aria-pressed="true">☔ Rain</button><button data-a="stir">✦ Glimmer</button><button data-a="motion" aria-pressed="${!matchMedia('(prefers-reduced-motion:reduce)').matches}">Ⅱ Motion</button></div></div></div>`;
+ <div class="nook-bottom"><div><strong>A little room for big dreams.</strong><span>A quiet evening, one more chapter.</span></div>
+ <div class="nook-buttons"><button data-a="lamp" aria-pressed="true">✺ Warm light</button><button data-a="rain" aria-pressed="true">☔ Rain</button><button data-a="motion" aria-pressed="${!matchMedia('(prefers-reduced-motion:reduce)').matches}">Ⅱ Motion</button></div></div></div>`;
  const css=document.createElement('style');css.textContent=`
  .nook-world{position:absolute;inset:0;overflow:hidden;background:radial-gradient(ellipse at 50% 43%,#5e4851,#1b1e2b 76%);color:#f6e5cd;font-family:Georgia,serif;isolation:isolate}
- .nook-illustration{position:absolute;inset:0;width:100%;height:100%;filter:drop-shadow(0 18px 50px #050810a0);transform:scale(1);transform-origin:center}
+ .nook-illustration{position:absolute;inset:0;width:100%;height:100%;filter:drop-shadow(0 18px 50px #050810a0);transform:none}
  .nook-overlay{position:absolute;inset:0;pointer-events:none;display:flex;flex-direction:column;justify-content:space-between;padding:clamp(15px,3vw,30px);box-sizing:border-box}
  .nook-eyebrow{font:600 10px/1.5 system-ui;letter-spacing:.22em;color:#f2d8b0;display:flex;justify-content:space-between;text-shadow:0 2px 10px #111}
  .nook-eyebrow span{opacity:.75}.nook-bottom{display:flex;align-items:end;justify-content:space-between;gap:18px}.nook-bottom strong{display:block;font:italic clamp(19px,2.5vw,29px)/1.3 Georgia,serif;text-shadow:0 2px 14px #120e19}.nook-bottom span{display:block;font:12px/1.7 system-ui;color:#efd8bc}
  .nook-buttons{pointer-events:auto;display:flex;gap:7px;flex-wrap:wrap;justify-content:flex-end}.nook-buttons button{color:#fbe6c5;background:#211e29cf;border:1px solid #dbb99177;border-radius:99px;font:12px/1.2 system-ui;padding:11px 13px;backdrop-filter:blur(8px)}.nook-buttons button:hover{background:#624b4e}.nook-buttons button[aria-pressed=false]{opacity:.55}
  .nook-rain line{animation:nook-rain .85s linear infinite}.nook-rain line:nth-child(3n){animation-delay:-.43s}.nook-rain line:nth-child(5n){animation-duration:1.13s}
- .nook-cat{animation:nook-breathe 3.5s ease-in-out infinite;transform-origin:440px 419px}.nook-steam{animation:nook-steam 4s ease-in-out infinite;transform-origin:791px 385px}.nook-fleck{animation:nook-fleck 9s ease-in-out infinite}.nook-lamp-aura{mix-blend-mode:screen;pointer-events:none}.nook-world.nook-dark .nook-lamp-aura{opacity:0}.nook-world.nook-dry .nook-rain{display:none}.nook-world.nook-still .nook-rain line,.nook-world.nook-still .nook-cat,.nook-world.nook-still .nook-steam,.nook-world.nook-still .nook-fleck{animation-play-state:paused}
+ .nook-cat{animation:nook-breathe 3.5s ease-in-out infinite;transform-origin:440px 419px}.nook-steam{animation:nook-steam 4s ease-in-out infinite;transform-origin:791px 385px}.nook-fleck{animation:none}.nook-lamp-aura{mix-blend-mode:screen;pointer-events:none}.nook-world.nook-dark .nook-lamp-aura{opacity:0}.nook-world.nook-dry .nook-rain{display:none}.nook-world.nook-still .nook-rain line,.nook-world.nook-still .nook-cat,.nook-world.nook-still .nook-steam,.nook-world.nook-still .nook-fleck{animation-play-state:paused}
  @keyframes nook-breathe{50%{transform:translateY(-2px) scale(1.005)}}@keyframes nook-steam{50%{transform:translate(5px,-7px);opacity:.38}}@keyframes nook-fleck{50%{transform:translate(8px,-14px);opacity:.13}}@keyframes nook-rain{to{transform:translate(-12px,35px);opacity:0}}
- @media(max-width:720px){.nook-world{background:#201f2b}.nook-illustration{transform:scale(1.22)}.nook-overlay{padding:14px}.nook-eyebrow{font-size:8px;letter-spacing:.1em}.nook-bottom{flex-direction:column;align-items:start}.nook-bottom strong{font-size:19px}.nook-buttons{justify-content:start}.nook-buttons button{font-size:11px;padding:9px 10px}}
+ @media(max-width:720px){.nook-world{background:#201f2b}.nook-illustration{transform:none}.nook-overlay{padding:14px}.nook-eyebrow{font-size:8px;letter-spacing:.1em}.nook-bottom{flex-direction:column;align-items:start}.nook-bottom strong{font-size:19px}.nook-buttons{justify-content:start}.nook-buttons button{font-size:11px;padding:9px 10px}}
  @media(prefers-reduced-motion:reduce){.nook-rain line,.nook-cat,.nook-steam,.nook-fleck{animation:none!important}.nook-illustration{transition:none}}
  `;
  root.append(css);host.replaceChildren(root);
- let x=0,y=0,down=false,startX=0,startY=0,motion=!matchMedia('(prefers-reduced-motion:reduce)').matches,disposable=false;
+ let motion=!matchMedia('(prefers-reduced-motion:reduce)').matches,disposable=false;
  if(!motion)root.classList.add('nook-still');
- const svg=root.querySelector('svg');
- // Parallax runs on SVG groups, not the whole image: spatially separated
- // foreground and background planes keep the miniature framed.
- const planes=[...svg.querySelectorAll('[data-depth]')].map(el=>({el,depth:Number(el.dataset.depth)}));
- let shownX=0,shownY=0,raf=0,alive=true;
- const renderDepth=()=>{raf=0;if(!alive||document.hidden)return;
-  shownX+=(x-shownX)*.14;shownY+=(y-shownY)*.14;
-  for(const {el,depth} of planes)el.setAttribute('transform','translate('+(shownX*depth).toFixed(2)+' '+(shownY*depth).toFixed(2)+')');
-  if(Math.abs(shownX-x)>.04||Math.abs(shownY-y)>.04)raf=requestAnimationFrame(renderDepth);
- };
- const wake=()=>{if(!raf&&alive&&!document.hidden)raf=requestAnimationFrame(renderDepth);};
- const pointerDown=e=>{down=true;startX=e.clientX;startY=e.clientY;svg.setPointerCapture(e.pointerId);};
- const pointerMove=e=>{if(!down)return;x=Math.max(-18,Math.min(18,x+(e.clientX-startX)*.10));y=Math.max(-12,Math.min(12,y+(e.clientY-startY)*.08));startX=e.clientX;startY=e.clientY;wake();};
- const pointerUp=()=>{down=false;};
- const reset=()=>{x=y=0;wake();};
  const onClick=e=>{const b=e.target.closest('[data-a]');if(!b)return;const a=b.dataset.a;
   if(a==='lamp'){root.classList.toggle('nook-dark');b.setAttribute('aria-pressed',String(!root.classList.contains('nook-dark')));}
   if(a==='rain'){root.classList.toggle('nook-dry');b.setAttribute('aria-pressed',String(!root.classList.contains('nook-dry')));}
   if(a==='motion'){motion=!motion;root.classList.toggle('nook-still',!motion);b.setAttribute('aria-pressed',String(motion));b.textContent=motion?'Ⅱ Motion':'▶ Motion';}
-  if(a==='stir'){if(!motion||document.hidden)return;root.querySelectorAll('.nook-fleck').forEach((el,i)=>{el.animate([{opacity:.9,transform:'translateY(0px)'},{opacity:.3,transform:'translateY(-'+(8+i%5*8)+'px)'}],{duration:900+i%5*180,easing:'ease-out'});});}
  };
- const visibility=()=>{root.classList.toggle('nook-still',document.hidden||!motion);if(!document.hidden)wake();};
- svg.addEventListener('pointerdown',pointerDown);svg.addEventListener('pointermove',pointerMove);svg.addEventListener('pointerup',pointerUp);svg.addEventListener('pointercancel',pointerUp);svg.addEventListener('dblclick',reset);root.addEventListener('click',onClick);document.addEventListener('visibilitychange',visibility);
- current={pause(){root.classList.add('nook-still');},resume(){if(motion)root.classList.remove('nook-still');},dispose(){if(disposable)return;disposable=true;alive=false;cancelAnimationFrame(raf);svg.removeEventListener('pointerdown',pointerDown);svg.removeEventListener('pointermove',pointerMove);svg.removeEventListener('pointerup',pointerUp);svg.removeEventListener('pointercancel',pointerUp);svg.removeEventListener('dblclick',reset);root.removeEventListener('click',onClick);document.removeEventListener('visibilitychange',visibility);root.remove();current=null;}};
+ const visibility=()=>{root.classList.toggle('nook-still',document.hidden||!motion);};
+ root.addEventListener('click',onClick);document.addEventListener('visibilitychange',visibility);
+ current={pause(){root.classList.add('nook-still');},resume(){if(motion)root.classList.remove('nook-still');},dispose(){if(disposable)return;disposable=true;root.removeEventListener('click',onClick);document.removeEventListener('visibilitychange',visibility);root.remove();current=null;}};
 }
 return{mount,dispose(){current?.dispose();},pause(){current?.pause();},resume(){current?.resume();}};
 })();
