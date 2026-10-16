@@ -14,7 +14,7 @@ window.CozyWorlds=(()=>{let active=null;function mount(host){active?.dispose();c
 
   const isPortraitPhone = () => window.innerWidth < 820 && window.innerHeight > window.innerWidth;
   let fillScreen = isPortraitPhone();
-  let motionOn = !window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  let motionOn = true; // motion can always be paused explicitly
   let raining = true;
   let audioOn = false;
   let lampTarget = 1;
@@ -68,8 +68,10 @@ window.CozyWorlds=(()=>{let active=null;function mount(host){active?.dispose();c
   function ensureCanvas(cv) {
     const dpr = Math.min(window.devicePixelRatio || 1, 2);
     const rect = scene.getBoundingClientRect();
-    cv.width = Math.max(1, Math.round(rect.width*dpr));
-    cv.height = Math.max(1, Math.round(rect.height*dpr));
+    const nextWidth=Math.max(1,Math.round(rect.width*dpr));
+    const nextHeight=Math.max(1,Math.round(rect.height*dpr));
+    if(cv.width!==nextWidth)cv.width=nextWidth;
+    if(cv.height!==nextHeight)cv.height=nextHeight;
     const ctx = cv.getContext('2d');
     ctx.setTransform(dpr,0,0,dpr,0,0);
     return ctx;
@@ -145,12 +147,6 @@ window.CozyWorlds=(()=>{let active=null;function mount(host){active?.dispose();c
       }
       ctx.restore();
     }
-    // glass sheen
-    ctx.save();
-    const sheen = ctx.createLinearGradient(imgRect.x + imgRect.w*.68, imgRect.y, imgRect.x + imgRect.w*.92, imgRect.y+imgRect.h*.55);
-    sheen.addColorStop(0,'rgba(200,220,245,.02)'); sheen.addColorStop(.45,'rgba(210,230,255,.06)'); sheen.addColorStop(1,'rgba(255,255,255,0)');
-    ctx.fillStyle = sheen; ctx.fillRect(imgRect.x+imgRect.w*.67, imgRect.y+imgRect.h*.02, imgRect.w*.27, imgRect.h*.50);
-    ctx.restore();
   }
 
   function drawLighting(t) {
@@ -273,7 +269,9 @@ window.CozyWorlds=(()=>{let active=null;function mount(host){active?.dispose();c
   }
 
   function renderOnce() {
-    drawRain(0); drawLighting(elapsed*1000); drawCat(elapsed*1000); drawSteam(0);
+    if(motionOn)drawRain(0);
+    else{const c=ensureCanvas(rainCv);clear(c,rainCv);}
+    drawLighting(elapsed*1000);drawCat(elapsed*1000);drawSteam(0);
   }
 
   function tick(ts) {
@@ -281,19 +279,19 @@ window.CozyWorlds=(()=>{let active=null;function mount(host){active?.dispose();c
     const dt = Math.min(.050, Math.max(0, (ts - (last || ts))/1000));
     last = ts;
     elapsed += dt;
-    if(motionOn) {
-      drawRain(dt); drawLighting(elapsed*1000); drawCat(elapsed*1000); drawSteam(dt);
-      raf = requestAnimationFrame(tick);
-    } else {
-      renderOnce();
+    if(motionOn){
+      raf=requestAnimationFrame(tick);
+      try{drawRain(dt)}catch(e){console.warn('Cozy rain:',e)}
+      try{drawLighting(elapsed*1000)}catch(e){console.warn('Cozy light:',e)}
+      try{drawCat(elapsed*1000)}catch(e){console.warn('Cozy cat:',e)}
+      try{drawSteam(dt)}catch(e){console.warn('Cozy steam:',e)}
     }
-    renderAudio();
   }
 
   function restart() {
     if(raf) cancelAnimationFrame(raf); raf = 0; last = 0;
     renderOnce();
-    if(motionOn) raf = requestAnimationFrame(tick);
+    if(motionOn && !document.hidden)raf=requestAnimationFrame(tick);
   }
 
   viewBtn.onclick = () => { fillScreen = !fillScreen; computeLayout(); restart(); };
@@ -312,8 +310,13 @@ window.CozyWorlds=(()=>{let active=null;function mount(host){active?.dispose();c
     }
   });
 
-  window.addEventListener('resize', () => { computeLayout(); restart(); });
-  document.addEventListener('visibilitychange', () => { if(document.hidden) { if(raf) cancelAnimationFrame(raf); raf=0; } else restart(); });
+  const onResize=()=>{computeLayout();restart()};
+  window.addEventListener('resize',onResize);
+  const onVisibility=()=>{
+    if(document.hidden){if(raf)cancelAnimationFrame(raf);raf=0;if(audio&&audio.ctx.state==='running')audio.ctx.suspend()}
+    else{if(audioOn&&audio&&audio.ctx.state==='suspended')audio.ctx.resume();restart()}
+  };
+  document.addEventListener('visibilitychange',onVisibility);
 
   // Optional synthetic rain ambience
   let audio = null;
