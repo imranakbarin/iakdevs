@@ -129,9 +129,9 @@ function mount(host){
   }
   function catFrame(t){
    const c=virtual(layers.cat);if(!img.complete)return;
-   const breathe=.5+.5*Math.sin(t*.0025),cx=838,cy=557,inflate=.003+breathe*.006;
+   const breathe=.5+.5*Math.sin(t*.0025),cx=838,cy=557,inflate=.004+breathe*.022;
    c.save();c.beginPath();c.ellipse(cx,cy,115,51,-.10,0,Math.PI*2);c.clip();
-   c.globalAlpha=.88;c.translate(cx,cy);c.scale(1+inflate,1+inflate*.62);
+   c.globalAlpha=.67+.28*breathe;c.translate(cx,cy);c.scale(1+inflate,1+inflate*.62);
    c.translate(-cx,-cy);c.drawImage(img,0,0,W,H);c.restore();
   }
   function render(ts){
