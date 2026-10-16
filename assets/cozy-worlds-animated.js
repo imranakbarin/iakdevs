@@ -19,6 +19,8 @@ window.CozyWorlds=(()=>{let active=null;function mount(host){active?.dispose();c
   let audioOn = false;
   let lampTarget = 1;
   let lampLevel = 1;
+  let artworkReady = false;
+  let artworkCoordsMatch = true;
   let raf = 0;
   let last = 0;
   let elapsed = 0;
@@ -26,23 +28,25 @@ window.CozyWorlds=(()=>{let active=null;function mount(host){active?.dispose();c
   let catEarTwitchUntil = 0;
   let nextEarTwitchAt = 4.5 + Math.random()*5.5;
 
+  // Pixel-fitted, glass-only masks for the 1448x1086 original artwork.
+  // Intentionally exclude the curtains, wall, lamp, flower arrangement and books.
+  // Do not expand to rectangular window bounds: interior objects occlude that glass.
   const rainPanes = [
-    [[1002,34],[1090,34],[1090,203],[1002,210]],
-    [[1105,34],[1197,34],[1197,203],[1105,203]],
-    [[1212,34],[1288,34],[1288,203],[1212,203]],
-    [[1002,220],[1090,220],[1090,406],[1002,406]],
-    [[1105,220],[1197,220],[1197,406],[1105,406]],
-    [[1212,220],[1288,220],[1288,406],[1212,406]],
-    [[1002,424],[1090,424],[1090,538],[1002,538]],
-    [[1105,424],[1197,424],[1197,538],[1105,538]],
-    [[1212,424],[1288,424],[1288,538],[1212,538]]
+    [[1052,15],[1152,15],[1152,138],[1052,149]],
+    [[1205,10],[1285,10],[1285,124],[1205,129]],
+    [[1299,10],[1323,10],[1323,122],[1299,124]],
+    [[1103,165],[1151,162],[1151,242],[1103,242]],
+    [[1205,153],[1285,149],[1285,278],[1205,287]],
+    [[1299,147],[1324,143],[1324,285],[1299,287]],
+    [[1205,305],[1284,302],[1284,360],[1205,370]],
+    [[1301,308],[1323,308],[1323,443],[1301,443]]
   ];
   const paneBounds = rainPanes.map(p => {
     const xs = p.map(v => v[0]), ys = p.map(v => v[1]);
     return { minX:Math.min(...xs), maxX:Math.max(...xs), minY:Math.min(...ys), maxY:Math.max(...ys) };
   });
 
-  const rainDrops = Array.from({length:150}, () => {
+  const rainDrops = Array.from({length:115}, () => {
     const pane = Math.floor(Math.random()*rainPanes.length);
     const b = paneBounds[pane];
     return { pane, x:b.minX + Math.random()*(b.maxX-b.minX), y:b.minY + Math.random()*(b.maxY-b.minY), speed:70+Math.random()*150, len:8+Math.random()*18, alpha:.10+Math.random()*.20 };
@@ -66,7 +70,7 @@ window.CozyWorlds=(()=>{let active=null;function mount(host){active?.dispose();c
   const steam = Array.from({length:26}, (_,i) => ({ age:i/26, speed:.12+Math.random()*.10, phase:Math.random()*Math.PI*2, drift:-8+Math.random()*16, size:2.2+Math.random()*2.5 }));
 
   function ensureCanvas(cv) {
-    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    const dpr = Math.min(window.devicePixelRatio || 1, scene.clientWidth < 650 ? 1.5 : 2);
     const rect = scene.getBoundingClientRect();
     const nextWidth=Math.max(1,Math.round(rect.width*dpr));
     const nextHeight=Math.max(1,Math.round(rect.height*dpr));
@@ -99,18 +103,19 @@ window.CozyWorlds=(()=>{let active=null;function mount(host){active?.dispose();c
   function polygon(ctx, pts) { pts.forEach((p,i)=>{ const [sx,sy]=toScreen(p[0],p[1]); if(i===0) ctx.moveTo(sx,sy); else ctx.lineTo(sx,sy); }); ctx.closePath(); }
 
   function updateButtons() {
-    lampBtn.textContent = lampTarget > .5 ? 'Lamp: warm' : 'Lamp: low';
+    lampBtn.textContent = lampTarget > .5 ? 'Lamp: warm' : 'Lamp: dim';
     lampBtn.dataset.on = String(lampTarget > .5);
-    rainBtn.textContent = raining ? 'Rain: on' : 'Rain: off';
+    rainBtn.textContent = raining ? 'Glass trails: on' : 'Glass trails: off';
     rainBtn.dataset.on = String(raining);
     audioBtn.dataset.on = String(audioOn);
-    audioBtn.textContent = audioOn ? 'Rain ambience: on' : 'Rain ambience';
-    motionBtn.textContent = motionOn ? 'Motion: on' : 'Motion: off';
+    audioBtn.textContent = audioOn ? 'Ambience: playing' : 'Ambience: off';
+    motionBtn.textContent = motionOn ? 'Motion: on' : 'Motion: paused';
     motionBtn.dataset.on = String(motionOn);
+    for(const [button,pressed] of [[lampBtn,lampTarget>.5],[rainBtn,raining],[audioBtn,audioOn],[motionBtn,motionOn],[viewBtn,!fillScreen]]) button.setAttribute('aria-pressed',String(pressed));
   }
 
   function drawRain(dt) {
-    const ctx = ensureCanvas(rainCv); clear(ctx, rainCv); if(!raining) return;
+    const ctx = ensureCanvas(rainCv); clear(ctx, rainCv); if(!raining || !artworkReady || !artworkCoordsMatch) return;
     for(const p of rainPanes) {
       ctx.save(); ctx.beginPath(); polygon(ctx,p); ctx.clip();
       // trails
@@ -152,7 +157,14 @@ window.CozyWorlds=(()=>{let active=null;function mount(host){active?.dispose();c
   function drawLighting(t) {
     const ctx = ensureCanvas(lightCv); clear(ctx, lightCv);
     // gentle global lamp illumination
-    lampLevel += (lampTarget - lampLevel) * .06;
+    lampLevel += (lampTarget - lampLevel) * .14;
+    // Changing the lamp must change the painted room, not only a faint additive halo.
+    // The candle layer stays luminous, so dim mode still feels like candlelight.
+    const brightness = (.59 + .41 * lampLevel).toFixed(3);
+    const saturation = (.86 + .14 * lampLevel).toFixed(3);
+    const roomFilter = 'brightness(' + brightness + ') saturate(' + saturation + ')';
+    art.style.filter = roomFilter;
+    catCv.style.filter = roomFilter;
     const [lx,ly] = toScreen(1016,319);
     ctx.save();
     const roomGlow = ctx.createRadialGradient(lx,ly,0,lx,ly,scaleVal(420));
@@ -218,7 +230,7 @@ window.CozyWorlds=(()=>{let active=null;function mount(host){active?.dispose();c
 
   function drawCat(t) {
     const ctx = ensureCanvas(catCv); clear(ctx, catCv);
-    if(!art.complete) return;
+    if(!artworkReady || !art.naturalWidth || !art.naturalHeight) return;
     const breath = .5 + .5*Math.sin(t*.0018);
     const chestScaleX = 1 + (.006 + breath*.012);
     const chestScaleY = 1 + (.003 + breath*.007);
@@ -269,8 +281,8 @@ window.CozyWorlds=(()=>{let active=null;function mount(host){active?.dispose();c
   }
 
   function renderOnce() {
-    if(motionOn)drawRain(0);
-    else{const c=ensureCanvas(rainCv);clear(c,rainCv);}
+    // Motion pause freezes the drops rather than removing the rain layer.
+    drawRain(0);
     drawLighting(elapsed*1000);drawCat(elapsed*1000);drawSteam(0);
   }
 
@@ -295,10 +307,10 @@ window.CozyWorlds=(()=>{let active=null;function mount(host){active?.dispose();c
   }
 
   viewBtn.onclick = () => { fillScreen = !fillScreen; computeLayout(); restart(); };
-  lampBtn.onclick = () => { lampTarget = lampTarget > .5 ? .36 : 1; updateButtons(); restart(); };
+  lampBtn.onclick = () => { lampTarget = lampTarget > .5 ? 0 : 1; updateButtons(); restart(); };
   rainBtn.onclick = () => { raining = !raining; updateButtons(); restart(); };
   motionBtn.onclick = () => { motionOn = !motionOn; updateButtons(); restart(); };
-  audioBtn.onclick = async () => { if(!audio) initAudio(); audioOn = !audioOn; updateButtons(); renderAudio(); };
+  audioBtn.onclick = () => { try { if(!audio) initAudio(); if(!audio) { audioBtn.textContent='Audio unavailable'; return; } audioOn = !audioOn; updateButtons(); renderAudio(); } catch(e) { console.warn('Cozy audio:',e); audioOn=false; updateButtons(); audioBtn.textContent='Audio unavailable'; } };
 
   scene.addEventListener('pointerdown', (e) => {
     const rect = scene.getBoundingClientRect();
@@ -306,7 +318,7 @@ window.CozyWorlds=(()=>{let active=null;function mount(host){active?.dispose();c
     const lamp = toScreen(1016,319);
     const dx = px - lamp[0], dy = py - lamp[1];
     if((dx*dx)/(scaleVal(86)**2) + (dy*dy)/(scaleVal(86)**2) < 1) {
-      lampTarget = lampTarget > .5 ? .36 : 1; updateButtons(); restart();
+      lampTarget = lampTarget > .5 ? 0 : 1; updateButtons(); restart();
     }
   });
 
@@ -353,7 +365,7 @@ window.CozyWorlds=(()=>{let active=null;function mount(host){active?.dispose();c
     if(!audio) return;
     audio.enabled = audioOn;
     if(audioOn && audio.ctx.state === 'suspended') audio.ctx.resume();
-    const target = audioOn ? .055 : 0;
+    const target = audioOn ? .12 : 0;
     const now = audio.ctx.currentTime;
     audio.rainGain.gain.cancelScheduledValues(now);
     audio.rainGain.gain.linearRampToValueAtTime(target, now + .35);
@@ -370,8 +382,14 @@ window.CozyWorlds=(()=>{let active=null;function mount(host){active?.dispose();c
     audioOn=false;
     if(audio) { audio.enabled=false; try { audio.src.stop(); } catch(e) {} audio.ctx.close(); audio=null; }
   }
-  art.onload = () => { computeLayout(); updateButtons(); restart(); };
-  if(art.complete) { computeLayout(); updateButtons(); restart(); }
+  art.onload = () => {
+    artworkReady = art.naturalWidth > 0 && art.naturalHeight > 0;
+    artworkCoordsMatch = art.naturalWidth === ART_W && art.naturalHeight === ART_H;
+    if(!artworkCoordsMatch) console.warn('Cozy artwork dimensions differ: glass effects disabled to prevent spill.',art.naturalWidth,art.naturalHeight);
+    computeLayout(); updateButtons(); restart();
+  };
+  computeLayout(); updateButtons();
+  if(art.complete && art.naturalWidth > 0) art.onload();
   return {dispose:disposeScene,pause(){motionOn=false;updateButtons();restart()},resume(){motionOn=true;updateButtons();restart()}};
 })();const handle={dispose(){logic.dispose();holder.remove();if(active===handle)active=null;},pause(){logic.pause()},resume(){logic.resume()}};active=handle;
 const artwork=root.getElementById('art');
