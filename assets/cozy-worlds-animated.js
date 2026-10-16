@@ -49,12 +49,12 @@ window.CozyWorlds=(()=>{let active=null;function mount(host){active?.dispose();c
   const rainDrops = Array.from({length:115}, () => {
     const pane = Math.floor(Math.random()*rainPanes.length);
     const b = paneBounds[pane];
-    return { pane, x:b.minX + Math.random()*(b.maxX-b.minX), y:b.minY + Math.random()*(b.maxY-b.minY), speed:70+Math.random()*150, len:8+Math.random()*18, alpha:.10+Math.random()*.20 };
+    return { pane, x:b.minX + Math.random()*(b.maxX-b.minX), y:b.minY + Math.random()*(b.maxY-b.minY), speed:75+Math.random()*125, len:10+Math.random()*17, alpha:.21+Math.random()*.24 };
   });
   const beads = Array.from({length:70}, () => {
     const pane = Math.floor(Math.random()*rainPanes.length);
     const b = paneBounds[pane];
-    return { pane, x:b.minX + Math.random()*(b.maxX-b.minX), y:b.minY + Math.random()*(b.maxY-b.minY), r:0.8 + Math.random()*1.8, speed:7+Math.random()*18, alpha:.06+Math.random()*.14, trail:3+Math.random()*18 };
+    return { pane, x:b.minX + Math.random()*(b.maxX-b.minX), y:b.minY + Math.random()*(b.maxY-b.minY), r:0.8 + Math.random()*1.8, speed:7+Math.random()*18, alpha:.10+Math.random()*.17, trail:3+Math.random()*18 };
   });
 
   const candles = [
@@ -105,7 +105,7 @@ window.CozyWorlds=(()=>{let active=null;function mount(host){active?.dispose();c
   function updateButtons() {
     lampBtn.textContent = lampTarget > .5 ? 'Lamp: warm' : 'Lamp: dim';
     lampBtn.dataset.on = String(lampTarget > .5);
-    rainBtn.textContent = raining ? 'Glass trails: on' : 'Glass trails: off';
+    rainBtn.textContent = raining ? 'Moving rain: on' : 'Moving rain: off';
     rainBtn.dataset.on = String(raining);
     audioBtn.dataset.on = String(audioOn);
     audioBtn.textContent = audioOn ? 'Ambience: playing' : 'Ambience: off';
@@ -126,7 +126,7 @@ window.CozyWorlds=(()=>{let active=null;function mount(host){active?.dispose();c
         if(d.y > b.maxY + 4) { d.y = b.minY - 10; d.x = b.minX + Math.random()*(b.maxX-b.minX); }
         const [sx,sy] = toScreen(d.x,d.y);
         ctx.strokeStyle = `rgba(214,232,247,${d.alpha.toFixed(3)})`;
-        ctx.lineWidth = Math.max(.55, .95*imgRect.scale);
+        ctx.lineWidth = Math.max(.65, 1.25*imgRect.scale);
         ctx.beginPath();
         ctx.moveTo(sx,sy);
         ctx.lineTo(sx - 2.0*imgRect.scale, sy + d.len*imgRect.scale);
@@ -157,7 +157,8 @@ window.CozyWorlds=(()=>{let active=null;function mount(host){active?.dispose();c
   function drawLighting(t) {
     const ctx = ensureCanvas(lightCv); clear(ctx, lightCv);
     // gentle global lamp illumination
-    lampLevel += (lampTarget - lampLevel) * .14;
+    // When Motion is paused, a lamp toggle must still produce a complete change.
+    lampLevel = motionOn ? lampLevel + (lampTarget - lampLevel) * .14 : lampTarget;
     // Changing the lamp must change the painted room, not only a faint additive halo.
     // The candle layer stays luminous, so dim mode still feels like candlelight.
     const brightness = (.59 + .41 * lampLevel).toFixed(3);
