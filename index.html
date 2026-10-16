@@ -1953,7 +1953,7 @@ matchMedia('(prefers-color-scheme: dark)').addEventListener('change',()=>{readTh
 const modeBtn=document.getElementById('mode');
 let cozyPromise=null;
 function openCozy(){
- if(!cozyPromise)cozyPromise=new Promise((resolve,reject)=>{const js=document.createElement('script');js.src='assets/cozy-worlds-animated.js?v=12-framing';js.onload=resolve;js.onerror=reject;document.head.append(js);});
+ if(!cozyPromise)cozyPromise=new Promise((resolve,reject)=>{const js=document.createElement('script');js.src='assets/cozy-worlds-v13.js';js.onload=resolve;js.onerror=reject;document.head.append(js);});
  cozyPromise.then(()=>{if(modeBtn.value==='cozy')CozyWorlds.mount(document.getElementById('cozy-host'));}).catch(()=>{if(modeBtn.value==='cozy')document.getElementById('cozy-host').innerHTML='<p class="cozy-error">Unable to load Cozy Worlds. Please check your connection.</p>';cozyPromise=null;});
 }
 modeBtn.onchange=()=>{
@@ -1969,10 +1969,10 @@ modeBtn.onchange=()=>{
  document.querySelector('h1').textContent=cozy?'Cozy Worlds':zen?'Zen garden':'Infinite scroll';
  document.getElementById('new').textContent=cozy?'Reading nook':zen?'Smooth sand':road?'New landscape':'Another view';
  cv.setAttribute('aria-label',zen?'An illustrated garden with a steel ball drawing in sand, swimming koi, falling petals, swaying branches, flowing bamboo water and a steaming spring':road?'Infinite illustrated road trip through changing places and weather':'Endlessly scrolling world art landscape');
- if(cozy)history.replaceState(null,'','#cozy-nook');
+ if(cozy)history.replaceState(null,'',location.pathname+location.search+'#cozy-nook');
   else if(zen){if(!zenReady)zenReset();history.replaceState(null,'','#zen-'+seed);}
  else if(road)history.replaceState(null,'','#road-'+seed);
- else if(location.hash.startsWith('#zen-')||location.hash.startsWith('#road-')||location.hash.startsWith('#cozy-'))history.replaceState(null,'','#'+document.getElementById('sty').value+'-'+seed);
+ else if(location.hash.startsWith('#zen-')||location.hash.startsWith('#road-')||location.hash.startsWith('#cozy-'))history.replaceState(null,'',location.pathname+location.search+'#'+document.getElementById('sty').value+'-'+seed);
 };
  document.getElementById('zen-pattern').onchange=()=>zenReset();
 document.getElementById('zen-garden').onchange=e=>zenSetGarden(e.target.value);
