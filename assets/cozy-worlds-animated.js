@@ -1,7 +1,8 @@
-window.CozyWorlds=(()=>{let active=null;function mount(host){active?.dispose();const holder=document.createElement('div');holder.style.cssText='position:absolute;inset:0';const root=holder.attachShadow({mode:'open'});root.innerHTML="<style>\n  :host {\n    --bg:#0f1219;\n    --panel:rgba(18,22,31,.82);\n    --line:rgba(255,231,200,.18);\n    --text:#f5e5cb;\n    --muted:#cdbca2;\n  }\n  * { box-sizing:border-box; }\n  :host { position:absolute; inset:0; display:block; overflow:hidden; background:var(--bg); color:var(--text); font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif; }\n\n  #app { position:fixed; inset:0; background:radial-gradient(circle at 50% 18%, rgba(255,200,120,.08), transparent 42%), var(--bg); }\n  .scene { position:absolute; inset:0; overflow:hidden; }\n  .scene img { position:absolute; inset:0; width:100%; height:100%; user-select:none; -webkit-user-drag:none; pointer-events:none; }\n  canvas { position:absolute; inset:0; width:100%; height:100%; pointer-events:none; }\n  .title {\n    position:absolute; left:max(14px, env(safe-area-inset-left)); top:max(12px, env(safe-area-inset-top)); z-index:4;\n    padding:10px 14px; border-radius:14px; background:rgba(10,12,18,.50); border:1px solid rgba(255,255,255,.06); backdrop-filter:blur(10px); -webkit-backdrop-filter:blur(10px);\n  }\n  .title h1 { margin:0; font:italic 700 clamp(18px, 2.7vw, 28px)/1.1 Georgia, serif; letter-spacing:.2px; }\n  .title p { margin:4px 0 0; font-size:12px; color:var(--muted); }\n  .controls {\n    position:absolute; left:50%; bottom:calc(12px + env(safe-area-inset-bottom)); transform:translateX(-50%);\n    z-index:5; display:flex; gap:8px; flex-wrap:wrap; justify-content:center; align-items:center;\n    width:min(100% - 16px, 920px); padding:8px; border-radius:20px; background:var(--panel); border:1px solid var(--line);\n    backdrop-filter:blur(14px); -webkit-backdrop-filter:blur(14px); box-shadow:0 12px 32px rgba(0,0,0,.30);\n  }\n  button {\n    appearance:none; border:1px solid rgba(255,226,190,.18); background:rgba(255,255,255,.05); color:var(--text);\n    border-radius:999px; padding:10px 14px; font:600 12px/1 system-ui,sans-serif; letter-spacing:.15px; cursor:pointer;\n    min-height:38px; transition:.22s ease background,.22s ease border-color,.22s ease transform;\n  }\n  button:hover { background:rgba(255,255,255,.09); }\n  button:active { transform:scale(.98); }\n  button[data-on=\"true\"] { background:rgba(255,210,140,.12); border-color:rgba(255,220,175,.35); }\n  .hint { position:absolute; right:max(14px, env(safe-area-inset-right)); top:max(12px, env(safe-area-inset-top)); z-index:4; padding:10px 12px; font-size:12px; color:var(--muted); background:rgba(10,12,18,.45); border:1px solid rgba(255,255,255,.06); border-radius:14px; backdrop-filter:blur(10px); -webkit-backdrop-filter:blur(10px); max-width:min(320px, 45vw); }\n  @media (max-width: 780px) {\n    .title p, .hint { display:none; }\n    .controls { width:calc(100% - 12px); gap:6px; padding:6px; bottom:calc(10px + env(safe-area-inset-bottom)); }\n    button { padding:10px 12px; font-size:11px; min-height:36px; }\n  }/* Cozy Worlds v3: a compact, discoverable controller; no full-width artwork obstruction. */\n  .controls {left:auto;right:max(12px,env(safe-area-inset-right));transform:none;width:auto;max-width:min(92vw,725px);bottom:calc(14px + env(safe-area-inset-bottom));padding:6px;gap:5px;border-radius:15px;justify-content:flex-end;}\n  .controls button {min-height:35px;padding:8px 10px;font-size:11px;white-space:nowrap;}\n  .controls #controlsToggle {background:rgba(255,223,170,.13);border-color:rgba(255,226,190,.4);font-weight:700;}\n  .controls.is-collapsed {width:auto;max-width:none;padding:5px;border-radius:100px;}\n  .controls.is-collapsed > button:not(#controlsToggle) {display:none;}\n  .controls button:focus-visible {outline:2px solid #ffe4b3;outline-offset:2px;}\n  @media(max-width:780px){\n    .controls {width:auto;max-width:calc(100% - 16px);left:auto;right:8px;bottom:calc(8px + env(safe-area-inset-bottom));gap:4px;padding:6px;border-radius:13px;}\n    .controls button {padding:8px 9px;min-height:35px;font-size:11px;}\n  }\n  @media(max-width:540px){.controls:not(.is-collapsed){max-width:calc(100% - 14px);justify-content:center}.controls button{font-size:10px;}}\n</style><div id=\"app\"><div class=\"scene\" id=\"scene\"><img id=\"art\" alt=\"Cozy Worlds 2.0\"><canvas id=\"fx-glass\"></canvas><canvas id=\"fx-rain\"></canvas><canvas id=\"fx-shade\"></canvas><canvas id=\"fx-light\"></canvas><canvas id=\"fx-cat\"></canvas><canvas id=\"fx-steam\"></canvas></div><div class=\"controls\" id=\"controls\"><button id=\"controlsToggle\" type=\"button\" aria-expanded=\"true\" aria-label=\"Collapse or expand Cozy Worlds controls\">✦ Scene</button><button id=\"viewBtn\">Whole image</button><button id=\"lampBtn\">Lamp: warm</button><button id=\"rainBtn\">Rain: on</button><button id=\"audioBtn\">Rain ambience</button><button id=\"motionBtn\">Motion: on</button></div></div>";host.replaceChildren(holder);const logic=(()=>{
+window.CozyWorlds=(()=>{let active=null;function mount(host){active?.dispose();const holder=document.createElement('div');holder.style.cssText='position:absolute;inset:0';const root=holder.attachShadow({mode:'open'});root.innerHTML="<style>\n  :host {\n    --bg:#0f1219;\n    --panel:rgba(18,22,31,.82);\n    --line:rgba(255,231,200,.18);\n    --text:#f5e5cb;\n    --muted:#cdbca2;\n  }\n  * { box-sizing:border-box; }\n  :host { position:absolute; inset:0; display:block; overflow:hidden; background:var(--bg); color:var(--text); font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif; }\n\n  #app { position:fixed; inset:0; width:100vw; height:100dvh; overflow:hidden; background:var(--bg); }\n  .scene { position:absolute; inset:0; width:100%; height:100%; overflow:hidden; }\n  .scene img { position:absolute; user-select:none; -webkit-user-drag:none; pointer-events:none; }\n  .scene #backdrop {left:0;top:0;width:100%;height:100%;object-fit:cover;object-position:50% 50%;filter:blur(36px) brightness(.52) saturate(.83);transform:scale(1.07);will-change:auto;}\n  .scene #art {max-width:none;max-height:none;object-fit:fill;}\n  canvas { position:absolute; inset:0; width:100%; height:100%; pointer-events:none; }\n  .title {\n    position:absolute; left:max(14px, env(safe-area-inset-left)); top:max(12px, env(safe-area-inset-top)); z-index:4;\n    padding:10px 14px; border-radius:14px; background:rgba(10,12,18,.50); border:1px solid rgba(255,255,255,.06); backdrop-filter:blur(10px); -webkit-backdrop-filter:blur(10px);\n  }\n  .title h1 { margin:0; font:italic 700 clamp(18px, 2.7vw, 28px)/1.1 Georgia, serif; letter-spacing:.2px; }\n  .title p { margin:4px 0 0; font-size:12px; color:var(--muted); }\n  .controls {\n    position:absolute; left:50%; bottom:calc(12px + env(safe-area-inset-bottom)); transform:translateX(-50%);\n    z-index:5; display:flex; gap:8px; flex-wrap:wrap; justify-content:center; align-items:center;\n    width:min(100% - 16px, 920px); padding:8px; border-radius:20px; background:var(--panel); border:1px solid var(--line);\n    backdrop-filter:blur(14px); -webkit-backdrop-filter:blur(14px); box-shadow:0 12px 32px rgba(0,0,0,.30);\n  }\n  button {\n    appearance:none; border:1px solid rgba(255,226,190,.18); background:rgba(255,255,255,.05); color:var(--text);\n    border-radius:999px; padding:10px 14px; font:600 12px/1 system-ui,sans-serif; letter-spacing:.15px; cursor:pointer;\n    min-height:38px; transition:.22s ease background,.22s ease border-color,.22s ease transform;\n  }\n  button:hover { background:rgba(255,255,255,.09); }\n  button:active { transform:scale(.98); }\n  button[data-on=\"true\"] { background:rgba(255,210,140,.12); border-color:rgba(255,220,175,.35); }\n  .hint { position:absolute; right:max(14px, env(safe-area-inset-right)); top:max(12px, env(safe-area-inset-top)); z-index:4; padding:10px 12px; font-size:12px; color:var(--muted); background:rgba(10,12,18,.45); border:1px solid rgba(255,255,255,.06); border-radius:14px; backdrop-filter:blur(10px); -webkit-backdrop-filter:blur(10px); max-width:min(320px, 45vw); }\n  @media (max-width: 780px) {\n    .title p, .hint { display:none; }\n    .controls { width:calc(100% - 12px); gap:6px; padding:6px; bottom:calc(10px + env(safe-area-inset-bottom)); }\n    button { padding:10px 12px; font-size:11px; min-height:36px; }\n  }/* Cozy Worlds v3: a compact, discoverable controller; no full-width artwork obstruction. */\n  .controls {left:auto;right:max(12px,env(safe-area-inset-right));transform:none;width:auto;max-width:min(92vw,725px);bottom:calc(14px + env(safe-area-inset-bottom));padding:6px;gap:5px;border-radius:15px;justify-content:flex-end;}\n  .controls button {min-height:35px;padding:8px 10px;font-size:11px;white-space:nowrap;}\n  .controls #controlsToggle {background:rgba(255,223,170,.13);border-color:rgba(255,226,190,.4);font-weight:700;}\n  .controls.is-collapsed {width:auto;max-width:none;padding:5px;border-radius:100px;}\n  .controls.is-collapsed > button:not(#controlsToggle) {display:none;}\n  .controls button:focus-visible {outline:2px solid #ffe4b3;outline-offset:2px;}\n  @media(max-width:780px){\n    .controls {width:auto;max-width:calc(100% - 16px);left:auto;right:8px;bottom:calc(8px + env(safe-area-inset-bottom));gap:4px;padding:6px;border-radius:13px;}\n    .controls button {padding:8px 9px;min-height:35px;font-size:11px;}\n  }\n  @media(max-width:540px){.controls:not(.is-collapsed){max-width:calc(100% - 14px);justify-content:center}.controls button{font-size:10px;}}\n</style><div id=\"app\"><div class=\"scene\" id=\"scene\"><img id=\"backdrop\" aria-hidden=\"true\" alt=\"\"><img id=\"art\" alt=\"Cozy Worlds 2.0\"><canvas id=\"fx-glass\"></canvas><canvas id=\"fx-rain\"></canvas><canvas id=\"fx-shade\"></canvas><canvas id=\"fx-light\"></canvas><canvas id=\"fx-cat\"></canvas><canvas id=\"fx-steam\"></canvas></div><div class=\"controls\" id=\"controls\"><button id=\"controlsToggle\" type=\"button\" aria-expanded=\"true\" aria-label=\"Collapse or expand Cozy Worlds controls\">✦ Scene</button><button id=\"viewBtn\">Whole image</button><button id=\"lampBtn\">Lamp: warm</button><button id=\"rainBtn\">Rain: on</button><button id=\"audioBtn\">Rain ambience</button><button id=\"motionBtn\">Motion: on</button></div></div>";host.replaceChildren(holder);const logic=(()=>{
   const ART_W = 1448, ART_H = 1086;
   const scene = root.getElementById('scene');
   const art = root.getElementById('art');
+  const backdrop = root.getElementById('backdrop');
   const rainCv = root.getElementById('fx-rain');
   const glassCv = root.getElementById('fx-glass');
   const shadeCv = root.getElementById('fx-shade');
@@ -90,17 +91,21 @@ window.CozyWorlds=(()=>{let active=null;function mount(host){active?.dispose();c
   }
 
   function computeLayout() {
-    const rect = scene.getBoundingClientRect();
-    const scale = fillScreen ? Math.max(rect.width/ART_W, rect.height/ART_H) : Math.min(rect.width/ART_W, rect.height/ART_H);
+    // Explicitly position the source image using the SAME transform as every effect.
+    // CSS object-fit inside the shadow host previously left an entire black viewport column.
+    const vw = Math.max(1,window.innerWidth), vh = Math.max(1,window.innerHeight);
+    scene.style.width = vw+'px'; scene.style.height = vh+'px';
+    const scale = fillScreen ? Math.max(vw/ART_W, vh/ART_H) : Math.min(vw/ART_W, vh/ART_H);
     const focusX = fillScreen ? .72 : .5;
-    const focusY = .5;
-    const w = ART_W * scale;
-    const h = ART_H * scale;
-    const x = (rect.width - w) * focusX;
-    const y = (rect.height - h) * focusY;
+    const w = ART_W * scale, h = ART_H * scale;
+    const x = (vw - w) * focusX, y = (vh - h) * .5;
     imgRect = { x, y, w, h, scale };
-    art.style.objectFit = fillScreen ? 'cover' : 'contain';
-    art.style.objectPosition = (fillScreen ? '72%' : '50%') + ' 50%';
+    art.style.inset='auto';
+    art.style.left=x+'px';art.style.top=y+'px';
+    art.style.width=w+'px';art.style.height=h+'px';
+    art.style.objectFit='fill';
+    backdrop.style.display=fillScreen?'none':'block';
+    backdrop.style.objectPosition='50% 50%';
     viewBtn.textContent = fillScreen ? 'Fit whole room' : 'Immersive crop';
     viewBtn.dataset.on = String(!fillScreen);
   }
@@ -145,16 +150,16 @@ window.CozyWorlds=(()=>{let active=null;function mount(host){active?.dispose();c
   function prepareLayers(){
     if(!artworkReady)return;
     // Feathered image-derived dark patch: visibly extinguishes the bulb without a dark rectangle.
-    lampPatch.width=260;lampPatch.height=240;
-    const l=lampPatch.getContext('2d');l.clearRect(0,0,260,240);
-    l.filter='brightness(.075) saturate(.55)';
-    l.drawImage(art,890,215,260,240,0,0,260,240);l.filter='none';
+    lampPatch.width=210;lampPatch.height=175;
+    const l=lampPatch.getContext('2d');l.clearRect(0,0,210,175);
+    l.filter='brightness(.22) saturate(.65)';
+    l.drawImage(art,922,206,210,175,0,0,210,175);l.filter='none';
     l.globalCompositeOperation='destination-in';
-    const lg=l.createRadialGradient(126,111,27,126,111,130);
+    const lg=l.createRadialGradient(92,90,19,92,90,105);
     lg.addColorStop(0,'rgba(255,255,255,1)');
     lg.addColorStop(.52,'rgba(255,255,255,.97)');
     lg.addColorStop(1,'rgba(255,255,255,0)');
-    l.fillStyle=lg;l.fillRect(0,0,260,240);l.globalCompositeOperation='source-over';
+    l.fillStyle=lg;l.fillRect(0,0,210,175);l.globalCompositeOperation='source-over';
 
     // The cat's chest and ear are source-image cutouts with alpha-feathered edges.
     // No straight clip seams or geometry-only hard edges remain.
@@ -175,8 +180,8 @@ window.CozyWorlds=(()=>{let active=null;function mount(host){active?.dispose();c
   function drawShade(){
     const ctx=ensureCanvas(shadeCv);clear(ctx,shadeCv);
     if(!artworkReady || !lampPatch.width)return;
-    const [x,y]=toScreen(890,215);
-    ctx.drawImage(lampPatch,x,y,scaleVal(260),scaleVal(240));
+    const [x,y]=toScreen(922,206);
+    ctx.drawImage(lampPatch,x,y,scaleVal(210),scaleVal(175));
     shadeCv.style.opacity=String(Math.max(0,Math.min(1,1-lampLevel)));
   }
 
@@ -227,8 +232,8 @@ window.CozyWorlds=(()=>{let active=null;function mount(host){active?.dispose();c
     lampLevel = motionOn ? lampLevel + (lampTarget - lampLevel) * .14 : lampTarget;
     // Changing the lamp must change the painted room, not only a faint additive halo.
     // The candle layer stays luminous, so dim mode still feels like candlelight.
-    const brightness = (.59 + .41 * lampLevel).toFixed(3);
-    const saturation = (.86 + .14 * lampLevel).toFixed(3);
+    const brightness = (.91 + .09 * lampLevel).toFixed(3);
+    const saturation = (.96 + .04 * lampLevel).toFixed(3);
     const roomFilter = 'brightness(' + brightness + ') saturate(' + saturation + ')';
     art.style.filter = roomFilter;
     catCv.style.filter = roomFilter;
@@ -308,24 +313,25 @@ window.CozyWorlds=(()=>{let active=null;function mount(host){active?.dispose();c
     const ctx=ensureCanvas(steamCv);clear(ctx,steamCv);
     if(!artworkReady)return;
     ctx.save();ctx.globalCompositeOperation='screen';
+    ctx.filter='blur('+Math.max(1.2,Math.min(3.1,2.2*imgRect.scale))+'px)';
     const t=elapsed;
     // Three delicate cup wisps; the source is the lip of the cup, not the chair.
     for(let i=0;i<3;i++){
-      const x=437+i*13+Math.sin(t*.42+i*2.1)*2;
-      const y=524;
+      const x=439+i*13+Math.sin(t*.42+i*2.1)*3;
+      const y=497;
       const [x0,y0]=toScreen(x,y);
-      const top=toScreen(x+Math.sin(t*.49+i)*18-6,y-100);
+      const top=toScreen(x+Math.sin(t*.49+i)*18-6,y-82);
       const grad=ctx.createLinearGradient(x0,y0,x0,top[1]);
       grad.addColorStop(0,'rgba(255,248,237,0)');
-      grad.addColorStop(.19,'rgba(255,248,237,.26)');
-      grad.addColorStop(.65,'rgba(255,248,237,.12)');
+      grad.addColorStop(.19,'rgba(255,248,237,.18)');
+      grad.addColorStop(.65,'rgba(255,248,237,.08)');
       grad.addColorStop(1,'rgba(255,248,237,0)');
       ctx.beginPath();ctx.moveTo(x0,y0);
       const [cx1,cy1]=toScreen(x+16*Math.sin(t*.6+i),y-32);
       const [cx2,cy2]=toScreen(x-13+14*Math.sin(t*.38+i),y-68);
       ctx.bezierCurveTo(cx1,cy1,cx2,cy2,top[0],top[1]);
       ctx.strokeStyle=grad;
-      ctx.lineWidth=Math.max(.7,scaleVal(1.9-i*.25));
+      ctx.lineWidth=Math.max(.9,scaleVal(2.0-i*.20));
       ctx.stroke();
     }
     ctx.restore();
@@ -438,7 +444,7 @@ window.CozyWorlds=(()=>{let active=null;function mount(host){active?.dispose();c
     artworkReady = art.naturalWidth > 0 && art.naturalHeight > 0;
     artworkCoordsMatch = art.naturalWidth === ART_W && art.naturalHeight === ART_H;
     if(!artworkCoordsMatch) console.warn('Cozy artwork dimensions differ: glass effects disabled to prevent spill.',art.naturalWidth,art.naturalHeight);
-    prepareLayers();computeLayout(); updateButtons(); restart();
+    prepareLayers();backdrop.src=art.src;computeLayout(); updateButtons(); restart();
   };
   computeLayout(); updateButtons();
   if(art.complete && art.naturalWidth > 0) art.onload();
