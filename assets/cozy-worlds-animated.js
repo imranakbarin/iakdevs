@@ -30,13 +30,13 @@ window.CozyWorlds = (() => {
     let observer;
     const stage = document.createElement('section');
     stage.className = 'cozy-direct-stage';
-    stage.style.cssText = 'position:absolute;inset:0;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:12px;overflow:hidden;background:#10121a;padding:60px 8px 72px;box-sizing:border-box;';
+    stage.style.cssText = 'position:absolute;inset:0;display:block;overflow:hidden;background:#10121a;padding:0;box-sizing:border-box;';
     const frame = document.createElement('div');
     frame.className = 'cozy-direct-picture';
-    frame.style.cssText='width:100%;max-width:1260px;max-height:100%;aspect-ratio:1448/1086;position:relative;flex:none;overflow:hidden;box-shadow:0 18px 48px #0008;border-radius:7px;';
+    frame.style.cssText='position:absolute;inset:0;width:100%;height:100%;overflow:hidden;box-shadow:none;border-radius:0;background:#10121a;';
     const img = document.createElement('img');
     img.alt = 'Candlelit reading nook with books, rainy window, teal armchair and sleeping cat';
-    img.style.cssText='width:100%;height:100%;object-fit:contain;display:block;';
+    img.style.cssText='position:absolute;inset:0;width:100%;height:100%;object-fit:contain;object-position:center center;display:block;';
     const canvas = document.createElement('canvas');
     canvas.setAttribute('aria-hidden', 'true');
     canvas.style.cssText='position:absolute;inset:0;width:100%;height:100%;pointer-events:none;';
@@ -45,10 +45,10 @@ window.CozyWorlds = (() => {
     status.textContent='Loading illustrated scene…';
     status.style.cssText='position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);color:#f0d8ae;font:13px system-ui;text-shadow:0 1px 6px #000;background:#10121aca;border-radius:14px;padding:9px 14px;white-space:nowrap;';
     const ctrl=document.createElement('div');
-    ctrl.style.cssText='display:flex;justify-content:center;align-items:center;gap:10px;flex-wrap:wrap;min-height:32px;z-index:3;';
+    ctrl.style.cssText='position:absolute;left:50%;bottom:calc(12px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);display:flex;justify-content:center;align-items:center;gap:6px;flex-wrap:wrap;max-width:calc(100% - 16px);padding:6px;border-radius:18px;background:#161824d9;backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);box-shadow:0 7px 24px #0008;z-index:3;';
     function pill(label){const b=document.createElement('button');b.type='button';b.textContent=label;b.style.cssText='font:12px system-ui;color:#f4e3c5;background:#262733d9;border:1px solid #9d836a;border-radius:999px;padding:9px 14px;cursor:pointer;';return b;}
-    const rainBtn=pill('Rain: on'),motionBtn=pill('Motion: on');
-    ctrl.append(rainBtn,motionBtn);
+    const rainBtn=pill('Rain: on'),motionBtn=pill('Motion: on'),viewBtn=pill('Whole image');
+    ctrl.append(viewBtn,rainBtn,motionBtn);
     frame.append(img,canvas,status);stage.append(frame,ctrl);host.replaceChildren(stage);
     const ctx=canvas.getContext('2d',{alpha:true});
     if(!ctx){status.textContent='Animation unavailable in this browser';return {dispose(){stage.remove();}};}
@@ -57,17 +57,31 @@ window.CozyWorlds = (() => {
       return {pane:which,x:Math.min(...xs)+Math.random()*(Math.max(...xs)-Math.min(...xs)),y:Math.min(...ys)+Math.random()*(Math.max(...ys)-Math.min(...ys)),speed:125+Math.random()*135,length:7+Math.random()*12,alpha:.14+Math.random()*.2};
     });
     const steam=Array.from({length:22},(_,i)=>({age:i/22,seed:Math.random()*6.3,dx:(Math.random()-.5)*5,pace:.18+Math.random()*.07}));
+    // Portrait phones default to an immersive full-screen crop, focused on the
+    // cat and window. The Whole image button provides a lossless fit view.
+    // In both modes the original artwork stays unchanged; only its viewport changes.
+    let fillScreen=window.innerWidth<700&&window.innerHeight>window.innerWidth;
     function layout(){
       if(!running)return;
-      const controlsHeight=ctrl.getBoundingClientRect().height||36;
-      const availableWidth=Math.max(100,stage.clientWidth-16),availableHeight=Math.max(110,stage.clientHeight-60-72-controlsHeight-12);
-      const width=Math.max(100,Math.min(availableWidth,1260,availableHeight*(ART_W/ART_H)));
-      frame.style.width=width+'px';
+      const availableWidth=Math.max(1,frame.clientWidth);
+      const availableHeight=Math.max(1,frame.clientHeight);
       const dpr=Math.min(window.devicePixelRatio||1,window.innerWidth<700?1.35:1.7);
-      canvas.width=Math.max(1,Math.round(width*dpr));
-      canvas.height=Math.max(1,Math.round(width*ART_H/ART_W*dpr));
-      ctx.setTransform(canvas.width/ART_W,0,0,canvas.height/ART_H,0,0);
+      canvas.width=Math.max(1,Math.round(availableWidth*dpr));
+      canvas.height=Math.max(1,Math.round(availableHeight*dpr));
+      const scale=(fillScreen?Math.max:Math.min)(availableWidth/ART_W,availableHeight/ART_H);
+      const focalX=fillScreen?.78:.5;
+      const offsetX=(availableWidth-ART_W*scale)*focalX;
+      const offsetY=(availableHeight-ART_H*scale)*.5;
+      ctx.setTransform(scale*dpr,0,0,scale*dpr,offsetX*dpr,offsetY*dpr);
+      img.style.objectFit=fillScreen?'cover':'contain';
+      img.style.objectPosition=(fillScreen?'78%':'50%')+' 50%';
+      viewBtn.textContent=fillScreen?'Whole image':'Fill screen';
+      viewBtn.setAttribute('aria-label',fillScreen?'Show the complete illustration without cropping':'Fill the screen with the illustration');
       renderOnce();
+    }
+    function clearCanvas(){
+      ctx.save();ctx.setTransform(1,0,0,1,0,0);
+      ctx.clearRect(0,0,canvas.width,canvas.height);ctx.restore();
     }
     function polygon(poly){ctx.beginPath();poly.forEach((p,i)=>i?ctx.lineTo(p[0],p[1]):ctx.moveTo(p[0],p[1]));ctx.closePath();}
     function drawRain(dt){
@@ -131,16 +145,17 @@ window.CozyWorlds = (() => {
       ctx.drawImage(img,717,475,255,154,717,475,255,154);ctx.restore();
     }
     function renderOnce(){
-      ctx.clearRect(0,0,ART_W,ART_H);if(!loaded)return;
+      clearCanvas();if(!loaded)return;
       if(playing){drawRain(0);drawSteam(0);} drawFlicker(elapsed*1000);drawCat(elapsed*1000);
     }
     function tick(ts){
       raf=0;if(!running||!playing||document.hidden)return;
       raf=requestAnimationFrame(tick);
       const dt=Math.min(.07,Math.max(0,(ts-(last||ts))/1000));last=ts;elapsed+=dt;
-      try{ctx.clearRect(0,0,ART_W,ART_H);drawRain(dt);drawSteam(dt);drawFlicker(elapsed*1000);drawCat(elapsed*1000);}catch(e){console.warn('Cozy animation frame:',e);}
+      try{clearCanvas();drawRain(dt);drawSteam(dt);drawFlicker(elapsed*1000);drawCat(elapsed*1000);}catch(e){console.warn('Cozy animation frame:',e);}
     }
     function restart(){cancelAnimationFrame(raf);raf=0;last=0;if(running&&playing&&!document.hidden&&loaded)raf=requestAnimationFrame(tick);else renderOnce();}
+    viewBtn.onclick=()=>{fillScreen=!fillScreen;layout();};
     rainBtn.onclick=()=>{raining=!raining;rainBtn.textContent=raining?'Rain: on':'Rain: off';renderOnce();};
     motionBtn.onclick=()=>{playing=!playing;motionBtn.textContent=playing?'Motion: on':'Motion: off';restart();};
     const visibility=()=>restart();document.addEventListener('visibilitychange',visibility);
@@ -152,7 +167,7 @@ window.CozyWorlds = (() => {
     img.onerror=()=>fail('The reading nook artwork could not load');
     if(window.__COZY_TEST_ART__){img.src=window.__COZY_TEST_ART__;}
     else {
-      fetch('assets/cozy-reading-nook.html?v=6', {cache:'force-cache'})
+      fetch('assets/cozy-reading-nook.html?v=7', {cache:'force-cache'})
         .then(r=>{if(!r.ok)throw new Error('HTTP '+r.status);return r.text();})
         .then(html=>{if(!running)return;const m=html.match(/<img\b[^>]*\bsrc=["'](data:image\/(?:png|jpeg|webp);base64,[^"']+)["']/i);if(!m)throw Error('Illustration missing');img.src=m[1];})
         .catch(e=>{if(running)fail('Unable to load illustration — reload this page');console.warn('Cozy art:',e);});
