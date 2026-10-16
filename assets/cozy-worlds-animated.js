@@ -6,7 +6,7 @@ function mount(host){
  const outer=document.createElement('div');
  outer.style.cssText='position:absolute;inset:0;overflow:hidden;background:#0c0e14';
  const frame=document.createElement('iframe');
- frame.src='assets/cozy-reading-nook.html?v=4';
+ frame.src='assets/cozy-reading-nook.html?v=5';
  frame.title='Cozy Worlds — animated illustrated reading nook';
  frame.loading='eager';
  frame.style.cssText='display:block;width:100%;height:100%;border:0;background:#0c0e14';
@@ -33,7 +33,10 @@ function mount(host){
    scene.append(cv);layers[name]={cv,c:cv.getContext('2d')};
   }
   const W=1448,H=1086;
-  let raining=true,animate=!w.matchMedia('(prefers-reduced-motion:reduce)').matches,raf=0,last=0,elapsed=0;
+  // This experience is deliberately animated; visible Play/Pause controls remain available.
+  // Do not silently freeze its rain when iOS requests reduced motion.
+  let raining=true,animate=true,raf=0,last=0,elapsed=0,lastCat=0;
+  const parentWindow=window,parentDocument=document;
   // Each polygon is entirely inside one glass pane of the source artwork.
   const panes=[
    [[1038,7],[1151,7],[1151,135],[1030,151]],
@@ -47,10 +50,10 @@ function mount(host){
   ];
   function poly(ctx,points){ctx.beginPath();points.forEach(([x,y],i)=>i?ctx.lineTo(x,y):ctx.moveTo(x,y));ctx.closePath();}
   const rand=(a,b)=>a+Math.random()*(b-a);
-  const drops=Array.from({length:115},()=>{
+  const drops=Array.from({length:104},()=>{
    const pane=Math.floor(Math.random()*panes.length),p=panes[pane];
    const xs=p.map(q=>q[0]),ys=p.map(q=>q[1]);
-   return {pane,x:rand(Math.min(...xs),Math.max(...xs)),y:rand(Math.min(...ys),Math.max(...ys)),speed:rand(50,100),len:rand(7,15),alpha:rand(.11,.24)};
+   return {pane,x:rand(Math.min(...xs),Math.max(...xs)),y:rand(Math.min(...ys),Math.max(...ys)),speed:rand(135,230),len:rand(10,21),alpha:rand(.17,.31)};
   });
   // Candle/lantern wick locations in actual image pixels, not guessed viewport percentages.
   const lights=[
@@ -80,7 +83,7 @@ function mount(host){
     drop.y+=dt*drop.speed;
     if(drop.y>Math.max(...ys)){drop.y=Math.min(...ys);drop.x=rand(Math.min(...xs),Math.max(...xs));}
     c.save();poly(c,pane);c.clip();
-    c.strokeStyle='rgba(206,226,245,'+drop.alpha+')';c.lineWidth=.95;c.beginPath();
+    c.strokeStyle='rgba(210,232,249,'+drop.alpha+')';c.lineWidth=1.1;c.beginPath();
     c.moveTo(drop.x,drop.y);c.lineTo(drop.x-2.3,drop.y+drop.len);c.stroke();c.restore();
    }
   }
@@ -128,27 +131,48 @@ function mount(host){
    }
   }
   function catFrame(t){
-   const c=virtual(layers.cat);if(!img.complete)return;
+   const c=virtual(layers.cat);if(!img.complete||!img.naturalWidth||!img.naturalHeight)return;
    const breathe=.5+.5*Math.sin(t*.0025),cx=838,cy=557,inflate=.004+breathe*.022;
    c.save();c.beginPath();c.ellipse(cx,cy,115,51,-.10,0,Math.PI*2);c.clip();
    c.globalAlpha=.67+.28*breathe;c.translate(cx,cy);c.scale(1+inflate,1+inflate*.62);
-   c.translate(-cx,-cy);c.drawImage(img,0,0,W,H);c.restore();
+   c.translate(-cx,-cy);c.drawImage(img,717,480,250,142,717,480,250,142);c.restore();
+  }
+  // Keep the animation alive even if a decorative layer fails on Safari.
+  let failedLayer=null;
+  function safeDraw(name,fn){
+   try{fn();}catch(error){if(failedLayer!==name){failedLayer=name;console.warn('Cozy animation layer unavailable:',name,error);}}
   }
   function render(ts){
-   raf=0;if(!alive||paused||d.hidden||!animate)return;
-   const dt=Math.min(.045,Math.max(0,(ts-(last||ts))/1000));last=ts;elapsed+=dt;
-   rainFrame(dt);steamFrame(dt);flameFrame(elapsed*1000);catFrame(elapsed*1000);
-   raf=w.requestAnimationFrame(render);
+   raf=0;
+   if(!alive||paused||parentDocument.hidden||!animate)return;
+   // Schedule first: one canvas/image exception must never freeze the rain.
+   raf=parentWindow.requestAnimationFrame(render);
+   const dt=Math.min(.065,Math.max(0,(ts-(last||ts))/1000));
+   last=ts;elapsed+=dt;
+   safeDraw('rain',()=>rainFrame(dt));
+   safeDraw('steam',()=>steamFrame(dt));
+   safeDraw('flame',()=>flameFrame(elapsed*1000));
+   if(ts-lastCat>85){lastCat=ts;safeDraw('cat',()=>catFrame(elapsed*1000));}
   }
-  function still(){rainFrame(0);steamFrame(0);flameFrame(elapsed*1000);catFrame(elapsed*1000);}
-  function restart(){if(raf)w.cancelAnimationFrame(raf);raf=0;last=0;if(alive&&!paused&&!d.hidden&&animate)raf=w.requestAnimationFrame(render);else still();}
+  function still(){
+   // Do not paint a frozen set of synthetic raindrops when paused.
+   virtual(layers.rain);virtual(layers.steam);
+   safeDraw('flame',()=>flameFrame(elapsed*1000));
+   safeDraw('cat',()=>catFrame(elapsed*1000));
+  }
+  function restart(){
+   if(raf)parentWindow.cancelAnimationFrame(raf);
+   raf=0;last=0;
+   if(alive&&!paused&&!parentDocument.hidden&&animate)raf=parentWindow.requestAnimationFrame(render);
+   else still();
+  }
   const rainButton=d.querySelector('#rain');
   if(rainButton){rainButton.onclick=()=>{raining=!raining;rainButton.textContent=raining?'Rain on':'Rain off';rainButton.setAttribute('aria-pressed',String(raining));if(!animate)still();};}
   if(oldMotion){oldMotion.textContent=animate?'Animation on':'Animation off';oldMotion.setAttribute('aria-pressed',String(animate));oldMotion.onclick=()=>{animate=!animate;oldMotion.textContent=animate?'Animation on':'Animation off';oldMotion.setAttribute('aria-pressed',String(animate));restart();};}
-  const ro=new w.ResizeObserver(()=>{resize();restart();});ro.observe(scene);resize();restart();
-  const visibility=()=>restart();d.addEventListener('visibilitychange',visibility);
-  disposeFrame=()=>{if(raf)w.cancelAnimationFrame(raf);ro.disconnect();d.removeEventListener('visibilitychange',visibility);Object.values(layers).forEach(({cv})=>cv.remove());style.remove();};
-  pauseFrame=()=>{if(raf)w.cancelAnimationFrame(raf);raf=0;};
+  const ro=new parentWindow.ResizeObserver(()=>{resize();restart();});ro.observe(scene);resize();restart();
+  const visibility=()=>restart();parentDocument.addEventListener('visibilitychange',visibility);parentWindow.addEventListener('pageshow',visibility);
+  disposeFrame=()=>{if(raf)parentWindow.cancelAnimationFrame(raf);ro.disconnect();parentDocument.removeEventListener('visibilitychange',visibility);parentWindow.removeEventListener('pageshow',visibility);Object.values(layers).forEach(({cv})=>cv.remove());style.remove();};
+  pauseFrame=()=>{if(raf)parentWindow.cancelAnimationFrame(raf);raf=0;still();};
   resumeFrame=()=>restart();
  });
 }
