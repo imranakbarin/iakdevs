@@ -6,7 +6,7 @@ function mount(host){
  const outer=document.createElement('div');
  outer.style.cssText='position:absolute;inset:0;overflow:hidden;background:#0c0e14';
  const frame=document.createElement('iframe');
- frame.src='assets/cozy-reading-nook.html?v=2';
+ frame.src='assets/cozy-reading-nook.html?v=3';
  frame.title='Cozy Worlds — animated illustrated reading nook';
  frame.loading='eager';
  frame.style.cssText='display:block;width:100%;height:100%;border:0;background:#0c0e14';
@@ -31,7 +31,7 @@ function mount(host){
   scene.append(fx);
   const c=fx.getContext('2d');
   let rain=true,motion=!w.matchMedia('(prefers-reduced-motion:reduce)').matches,last=0;
-  const drops=Array.from({length:88},()=>({x:.735+Math.random()*.19,y:.02+Math.random()*.48,v:.13+Math.random()*.15,a:.1+Math.random()*.13}));
+  const drops=Array.from({length:82},()=>({x:.743+Math.random()*.173,y:.036+Math.random()*.427,v:.11+Math.random()*.12,a:.12+Math.random()*.13}));
   const steam=Array.from({length:19},()=>({age:Math.random(),seed:Math.random()*6.283}));
   const lights=[
    [.085,.143,22,'c'],[.084,.410,20,'c'],[.239,.55,22,'c'],
@@ -45,14 +45,23 @@ function mount(host){
    c.clearRect(0,0,width,height);
    if(rain){
     c.save();c.beginPath();
-    // Rain only inside the clear glass, not over shelves, curtains or the room.
-    c.rect(width*.735,height*.025,width*.076,height*.445);
-    c.rect(width*.825,height*.025,width*.074,height*.445);
-    c.rect(width*.906,height*.025,width*.034,height*.445);
+    // Six tight glass-only panes: separate mullions, curtains and furniture.
+    const panes=[
+      [.743,.036,.044,.210],[.805,.036,.068,.210],[.891,.036,.025,.210],
+      [.743,.278,.044,.185],[.805,.278,.068,.185],[.891,.278,.025,.185]
+    ];
+    for(const [x,y,ww,hh] of panes)c.rect(x*width,y*height,ww*width,hh*height);
     c.clip();
-    for(const p of drops){p.y+=p.v*dt;if(p.y>.47){p.y=.025;p.x=.735+Math.random()*.203;}
-     c.strokeStyle='rgba(210,230,246,'+p.a+')';c.lineWidth=.75;
-     c.beginPath();c.moveTo(p.x*width,p.y*height);c.lineTo(p.x*width-1.7,p.y*height+7);c.stroke();}
+    for(const p of drops){
+      p.y+=p.v*dt;
+      if(p.y>.463){p.y=.036;p.x=.743+Math.random()*.174;}
+      c.strokeStyle='rgba(210,230,246,'+Math.min(.32,p.a*1.1)+')';
+      c.lineWidth=Math.max(.6,width/1400*.85);
+      c.beginPath();
+      c.moveTo(p.x*width,p.y*height);
+      c.lineTo(p.x*width-1.1,p.y*height+Math.max(4,width/1400*10));
+      c.stroke();
+    }
     c.restore();
    }
    // One fine drifting steam plume, originating above the cup rim.
@@ -65,13 +74,35 @@ function mount(host){
     g.addColorStop(0,'rgba(248,246,240,'+op+')');g.addColorStop(1,'rgba(248,246,240,0)');
     c.fillStyle=g;c.beginPath();c.arc(x,y,r,0,Math.PI*2);c.fill();}
    c.restore();
-   // Gentle but visible natural candle flutter and warm fixture halos.
+   // Genuine time-varying brightness, each candle independently flickering.
+   c.save();c.globalCompositeOperation='screen';
    for(let i=0;i<lights.length;i++){
     const [px,py,size,type]=lights[i],x=px*width,y=py*height;
-    const pulse=.9+.065*Math.sin(t*.007+i*1.7)+.035*Math.sin(t*.017+i*2.3),g=c.createRadialGradient(x,y,0,x,y,size*pulse);
-    g.addColorStop(0,'rgba(255,232,155,'+(type==='l'?.30:.36)+')');g.addColorStop(.28,'rgba(255,182,78,.14)');g.addColorStop(1,'rgba(255,165,65,0)');
-    c.fillStyle=g;c.beginPath();c.arc(x,y,size*pulse,0,Math.PI*2);c.fill();
+    const speed=t*.001;
+    const slow=Math.sin(speed*(type==='l'?2.7:6.3)+i*2.7);
+    const fast=Math.sin(speed*(type==='l'?5.5:17.1)+i*1.37);
+    const micro=Math.sin(speed*31.4+i*.81);
+    const strength=Math.max(.1,Math.min(1, .62+.23*slow+.12*fast+.035*micro));
+    const radius=size*(.78+.22*strength);
+    const g=c.createRadialGradient(x,y,0,x,y,radius);
+    const power=type==='l'?.40:.53;
+    g.addColorStop(0,'rgba(255,241,175,'+(power*strength)+')');
+    g.addColorStop(.20,'rgba(255,195,92,'+(.29*strength)+')');
+    g.addColorStop(.62,'rgba(255,156,62,'+(.095*strength)+')');
+    g.addColorStop(1,'rgba(255,149,52,0)');
+    c.fillStyle=g;c.beginPath();c.arc(x,y,radius,0,Math.PI*2);c.fill();
+    if(type!=='l'){
+      // Small wavering flame core, anchored to existing painted wick.
+      const sway=Math.sin(speed*9.4+i*1.8)*1.35;
+      c.fillStyle='rgba(255,242,196,'+(.31+.46*strength)+')';
+      c.beginPath();
+      c.moveTo(x,y+5);
+      c.quadraticCurveTo(x-3+sway,y,x+sway*.35,y-9-3*strength);
+      c.quadraticCurveTo(x+4+sway,y,x,y+5);
+      c.fill();
+    }
    }
+   c.restore();
    // Breathing is a very faint lighting change over the cat's flank.
    const breath=.5+.5*Math.sin(t*.002),cx=width*.63,cy=height*.556;
    const g=c.createRadialGradient(cx,cy,8,cx,cy,65+breath*3);
