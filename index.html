@@ -1923,7 +1923,7 @@ function setSeed(s,key){
   OC.clear();resetTiles();camX=0;document.getElementById('seed').textContent='#'+seed;
   document.getElementById('sty').value=key||document.getElementById('sty').value;
   const k=Object.keys(STYLES).find(n=>STYLES[n]===ST);
-  try{history.replaceState(null,'','#'+k+'-'+seed);}catch(e){}
+  try{history.replaceState(null,'',location.pathname+location.search+'#'+k+'-'+seed);}catch(e){}
 }
 let speed=40,playing=true,drag=null,last=performance.now(),vel=0,dragV=0;
 const playBtn=document.getElementById('play'),syncPlay=()=>playBtn.textContent=playing?'Pause':'Play';
@@ -1970,8 +1970,8 @@ modeBtn.onchange=()=>{
  document.getElementById('new').textContent=cozy?'Reading nook':zen?'Smooth sand':road?'New landscape':'Another view';
  cv.setAttribute('aria-label',zen?'An illustrated garden with a steel ball drawing in sand, swimming koi, falling petals, swaying branches, flowing bamboo water and a steaming spring':road?'Infinite illustrated road trip through changing places and weather':'Endlessly scrolling world art landscape');
  if(cozy)history.replaceState(null,'',location.pathname+location.search+'#cozy-nook');
-  else if(zen){if(!zenReady)zenReset();history.replaceState(null,'','#zen-'+seed);}
- else if(road)history.replaceState(null,'','#road-'+seed);
+  else if(zen){if(!zenReady)zenReset();history.replaceState(null,'',location.pathname+location.search+'#zen-'+seed);}
+ else if(road)history.replaceState(null,'',location.pathname+location.search+'#road-'+seed);
  else if(location.hash.startsWith('#zen-')||location.hash.startsWith('#road-')||location.hash.startsWith('#cozy-'))history.replaceState(null,'',location.pathname+location.search+'#'+document.getElementById('sty').value+'-'+seed);
 };
  document.getElementById('zen-pattern').onchange=()=>zenReset();
