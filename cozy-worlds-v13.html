@@ -1,0 +1,20 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Cozy Worlds v13 — Rainy Reading Nook</title>
+<meta name="color-scheme" content="dark">
+<style>
+html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#12151c;color:#f7ead2;font-family:system-ui,sans-serif}
+#cozy-host{position:fixed;inset:0;overflow:hidden}
+#diagnostic{position:fixed;top:max(8px,env(safe-area-inset-top));left:max(9px,env(safe-area-inset-left));z-index:9999;border:1px solid #e9c99c55;border-radius:999px;padding:7px 10px;font:600 11px/1 system-ui;background:#141a23c9;color:#ffdfb2;pointer-events:none}
+#fallback{position:fixed;inset:20%;display:grid;place-items:center;font-size:14px;text-align:center}
+</style></head><body>
+<main id="cozy-host" aria-label="Cozy Worlds v13 interactive rainy reading nook"><p id="fallback">Loading Cozy Worlds v13…</p></main>
+<div id="diagnostic" aria-label="Website version">COZY v13 · 16 OCT</div>
+<script src="assets/cozy-worlds-v13.js"></script>
+<script>
+(function(){
+  var host=document.getElementById('cozy-host');
+  if(!window.CozyWorlds){host.innerHTML='<p id="fallback">The latest scene could not load. Please retry.</p>';return;}
+  try{window.CozyWorlds.mount(host);}catch(error){console.error('Cozy v13 failed',error);host.innerHTML='<p id="fallback">Could not initialize the latest scene. Please refresh.</p>';}
+})();
+</script></body></html>
