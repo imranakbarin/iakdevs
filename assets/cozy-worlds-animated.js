@@ -360,7 +360,21 @@ window.CozyWorlds=(()=>{let active=null;function mount(host){active?.dispose();c
     if(!audioOn) audio._started = false;
   }
 
+  function disposeScene() {
+    if(raf) cancelAnimationFrame(raf);
+    window.removeEventListener('resize', onResize);
+    document.removeEventListener('visibilitychange', onVisibility);
+    audioOn=false;
+    if(audio) { audio.enabled=false; try { audio.src.stop(); } catch(e) {} audio.ctx.close(); audio=null; }
+  }
   art.onload = () => { computeLayout(); updateButtons(); restart(); };
   if(art.complete) { computeLayout(); updateButtons(); restart(); }
-
-})();const handle={dispose(){holder.remove();if(active===handle)active=null;},pause(){},resume(){}};active=handle;return handle;}return {mount,dispose(){active?.dispose()},pause(){active?.pause()},resume(){active?.resume()}}})();
+  return {dispose:disposeScene,pause(){motionOn=false;updateButtons();restart()},resume(){motionOn=true;updateButtons();restart()}};
+})();const handle={dispose(){logic.dispose();holder.remove();if(active===handle)active=null;},pause(){logic.pause()},resume(){logic.resume()}};active=handle;
+const artwork=root.getElementById('art');
+if(window.__COZY_TEST_ART__){artwork.src=window.__COZY_TEST_ART__}
+else fetch('assets/cozy-reading-nook.html?v=7',{cache:'force-cache'})
+.then(r=>{if(!r.ok)throw Error('Artwork HTTP '+r.status);return r.text()})
+.then(html=>{if(active!==handle)return;const m=html.match(/<img\b[^>]*\bsrc=["'](data:image\/(?:png|jpeg|webp);base64,[^"']+)["']/i);if(!m)throw Error('Artwork missing');artwork.src=m[1]})
+.catch(error=>{console.warn('Cozy art:',error);const msg=document.createElement('p');msg.textContent='Unable to load the reading nook artwork; please refresh.';msg.style.cssText='position:absolute;inset:35% 8%;text-align:center;color:#ead4ad';holder.shadowRoot.append(msg)});
+return handle;}return {mount,dispose(){active?.dispose()},pause(){active?.pause()},resume(){active?.resume()}}})();
