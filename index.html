@@ -48,18 +48,19 @@ input[type=range]{width:80px;accent-color:#E63B2E}
 .controls-open .bar #mode{flex:1 1 45%}
 @media(max-width:600px){.ui{padding:0}.bar,.zen-mode .bar{box-sizing:border-box;width:100%;max-width:none;border:0;border-radius:0;justify-content:space-between;gap:2px;padding:5px 8px;min-height:52px}.bar #mode{min-width:0;flex:1;padding:7px 6px;font-size:14px}.bar #play,.bar #settings{font-size:13px;padding:7px 10px}.controls-open .bar{padding-bottom:14px;border-radius:0 0 14px 14px;justify-content:center;gap:8px}.controls-open .bar #mode{flex:1 1 40%}.controls-open .bar select{max-width:calc(50% - 12px);font-size:13px!important}.controls-open .bar label{flex-basis:45%;justify-content:center}.controls-open .bar input{width:86px}.controls-open .bar #settings{margin-left:auto}#trip-status{font-size:11px;bottom:14px!important;padding:6px 12px!important}.fab{margin:8px}}
 /* A quiet gallery for the living paintings; road and garden controls stay independent. */
-.art-mode .bar{background:rgba(246,239,224,.94);color:#302c25;border:1px solid #5c514d22;box-shadow:0 8px 30px #30251b14;border-radius:16px}
-.art-mode .bar select option{background:#f6efe0;color:#302c25}
-.art-mode .bar #art-browse,.art-mode .bar #art-travel{display:block!important;order:1;border:0;font-size:13px;padding:8px 10px;min-height:38px}
-.art-mode .bar #art-browse{background:#302f27;color:#f8eed9;border-radius:10px}.art-mode .bar #mode{min-width:110px}.art-mode .bar #play{order:2}.art-mode .bar #settings{order:3}
-.art-mode.controls-open .bar select:not([hidden]),.art-mode.controls-open .bar button{color:#302c25;background:#eee4d2;border-color:#75665033}.art-mode.controls-open .bar #art-browse{background:#302f27;color:#f8eed9}
+.art-mode .bar{background:rgba(246,239,224,.94);color:#302c25;border:1px solid #5c514d22;box-shadow:0 8px 30px #30251b14;border-radius:16px;gap:6px;flex-wrap:nowrap;width:auto;max-width:calc(100vw - 24px);padding:5px 7px}
+.art-mode .bar > :not(#mode):not(#play):not(#art-browse){display:none!important}
+.art-mode .bar #mode,.art-mode .bar #art-browse,.art-mode .bar #play{display:block!important;flex:none;min-height:44px;border:0;font:500 13px/1.4 system-ui,sans-serif;padding:8px 12px;order:0;color:#302c25;background:transparent}
+.art-mode .bar #mode{min-width:110px;max-width:150px}.art-mode .bar #mode option{background:#f6efe0;color:#302c25}
+.art-mode .bar #art-browse{order:1;background:#302f27;color:#f8eed9;border-radius:11px}.art-mode .bar #play{order:2;min-width:63px}
+.art-status{position:fixed;z-index:3;left:50%;top:90px;transform:translateX(-50%);max-width:calc(100% - 40px);padding:9px 15px;border-radius:14px;background:#f6efe0ed;color:#302c25;font:13px/1.4 system-ui;text-align:center}
 #art-caption{position:fixed;left:30px;bottom:26px;z-index:3;pointer-events:none;background:rgba(246,239,224,.91);border:1px solid #5c514d22;padding:14px 19px;border-radius:2px 16px 2px 16px;max-width:calc(100vw - 96px);color:#39362e;backdrop-filter:blur(8px)}
 #art-title{display:block;font:400 24px/1.15 Georgia,serif;margin-bottom:5px}#art-medium{font:11px/1.5 system-ui;letter-spacing:.06em}
 .art-ui-hidden #art-caption{display:none}
 #art-gallery{border:1px solid #5c514d22;border-radius:22px;background:#f7f0e4;color:#38342d;padding:28px;max-width:1000px;width:calc(100vw - 90px);max-height:82dvh;box-shadow:0 20px 100px #1c211b55}
 #art-gallery::backdrop{background:#252e27a8;backdrop-filter:blur(8px)}.art-gallery-head{display:flex;justify-content:space-between;align-items:start;gap:20px}.art-gallery-head h2{font:400 34px/1.2 Georgia,serif;margin:0 0 8px}.art-gallery-head p{font-size:13px;color:#756f60;margin:0 0 24px;max-width:540px}
 #art-close{color:#443d30;border-color:#75665044}#art-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px}.art-card{display:block;text-align:left;border:1px solid #b2a28b44;border-radius:12px;padding:0 0 15px;overflow:hidden;background:#fffaf0;color:#3e3a30}.art-card img{display:block;width:100%;height:140px;object-fit:cover}.art-card strong,.art-card span{display:block;padding:0 14px}.art-card strong{margin-top:13px;font:400 19px/1.3 Georgia,serif}.art-card span{font-size:11px;margin-top:5px;color:#756e5f}.art-card[aria-pressed=true]{outline:2px solid #7e7957;outline-offset:2px}.art-card:hover{transform:translateY(-2px);box-shadow:0 6px 20px #45362518}
-@media(max-width:600px){.art-mode .ui{padding:8px}.art-mode .bar{border-radius:14px;border:1px solid #5c514d22;min-height:46px;padding:4px;gap:0}.art-mode .bar #mode{font-size:12px;min-width:0;max-width:104px;padding:6px 4px}.art-mode .bar #art-browse,.art-mode .bar #art-travel,.art-mode .bar #play,.art-mode .bar #settings{font-size:11px;padding:7px 6px;min-height:34px}.art-mode .bar #art-travel{display:none!important}.art-mode.controls-open .bar #art-travel{display:block!important}#art-caption{left:14px;bottom:18px;padding:11px 14px;max-width:calc(100vw - 58px)}#art-title{font-size:20px}#art-medium{font-size:10px;letter-spacing:.02em}#art-gallery{padding:18px;width:calc(100vw - 64px);max-height:85dvh;border-radius:16px}.art-gallery-head h2{font-size:27px}#art-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.art-card img{height:112px}.art-card strong{font-size:16px}.art-card strong,.art-card span{padding:0 10px}.art-card span{font-size:10px}}
+@media(max-width:600px){.art-mode .ui{padding:8px}.art-mode .bar{border-radius:14px;min-height:46px;padding:3px 5px;gap:2px}.art-mode .bar #mode{font-size:12px;min-width:0;width:111px;max-width:111px;padding:8px}.art-mode .bar #art-browse,.art-mode .bar #play{font-size:12px;padding:8px 10px;min-height:44px}#art-caption{left:14px;bottom:18px;padding:11px 14px;max-width:calc(100vw - 58px)}#art-title{font-size:20px}#art-medium{font-size:10px;letter-spacing:.02em}#art-gallery{padding:18px;width:calc(100vw - 64px);max-height:85dvh;border-radius:16px}.art-gallery-head h2{font-size:27px}#art-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.art-card img{height:112px}.art-card strong{font-size:16px}.art-card strong,.art-card span{padding:0 10px}.art-card span{font-size:10px}}
 @media(prefers-reduced-motion:reduce){.art-card:hover{transform:none}}
 .cozy-mode{background:#131814}.cozy-mode #c,.cozy-mode #zen-backdrop,.cozy-mode #zen-sand,.cozy-mode .ui{display:none!important}#cozy-host{display:none;position:fixed;inset:0;background:#131814;z-index:1}.cozy-mode #cozy-host{display:block}.cozy-error{color:#ece5d4;text-align:center;margin:40vh 20px}
 </style>
@@ -72,7 +73,7 @@ input[type=range]{width:80px;accent-color:#E63B2E}
 <div class="ui"><div class="bar" id="scene-controls">
   <h1>Infinite scroll</h1>
 <select id="mode" aria-label="Experience"><option value="art">World art</option><option value="road">Road trip</option><option value="zen">Zen garden</option><option value="cozy">Cozy Worlds</option></select>
-  <select id="sty" aria-label="Art style"><option value="gond">India · Gond</option><option value="warli">Warli</option><option value="madhubani">Madhubani</option><option value="kangra">Kangra miniature</option><option value="japan">Japan · Woodblock inspired</option><option value="china">China · Ink landscape</option><option value="mexico">Mexico · Folk inspired</option></select>
+  <input id="sty" type="hidden" value="gond">
   <select id="place" aria-label="Road trip place" hidden><option value="auto">Places · Auto</option><option value="0">Mountain pass</option><option value="1">Desert highway</option><option value="2">Forest trail</option><option value="3">Coastal drive</option><option value="4">City outskirts</option></select>
 <button id="traffic" hidden aria-pressed="true">Traffic on</button>
 <select id="weather" aria-label="Road trip weather" hidden><option value="auto">Weather · Auto</option><option value="sun">Sunny</option><option value="rain">Rain</option><option value="sunset">Sunset</option><option value="snow">Snow</option><option value="fog">Fog</option><option value="night">Night</option></select>
@@ -80,10 +81,7 @@ input[type=range]{width:80px;accent-color:#E63B2E}
   <select id="zen-pattern" aria-label="Sand pattern" hidden><option value="spiral">Spiral</option><option value="petals">Lotus petals</option><option value="waves">Flowing waves</option><option value="random">Random · Freeform</option></select>
   <span id="seed"></span>
   <button id="play">Pause</button>
-  <button id="art-browse">Gallery</button>
-  <button id="art-travel" aria-pressed="false">Journey</button>
-  <button id="art-motion" aria-pressed="true">Living details on</button>
-  <select id="art-render" aria-label="Art viewing mode"><option value="painted">Living painting</option><option value="generative">Infinite generative scroll</option></select>
+  <button id="art-browse" aria-label="Choose artwork">Artworks</button>
   <button id="settings" aria-expanded="false" aria-controls="scene-controls">Settings</button>
   <label>Speed <input id="spd" type="range" min="0" max="200" value="40"></label>
   <button id="new">New landscape</button>
@@ -92,9 +90,10 @@ input[type=range]{width:80px;accent-color:#E63B2E}
   <button id="hide" aria-label="Hide controls" title="Hide controls (H)">Hide</button>
 </div><button id="show" class="fab" hidden aria-label="Show controls" title="Show controls (H)">☰</button></div>
 <div id="trip-status" hidden role="status" style="position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:var(--panel);padding:8px 18px;border-radius:30px;white-space:nowrap;pointer-events:none"></div>
+<div id="art-status" class="art-status" role="status" hidden></div>
 <aside id="art-caption" aria-label="Artwork description"><strong id="art-title">Living paintings</strong><span id="art-medium">A collection of moving worlds</span></aside>
-<dialog id="art-gallery" aria-labelledby="art-gallery-heading"><div class="art-gallery-head"><div><h2 id="art-gallery-heading">The living collection</h2><p>Original digital interpretations of seven painting traditions. Explore an unfolding painting or contemplate a still composition with living details.</p></div><button id="art-close" aria-label="Close art gallery">Close</button></div><div id="art-grid"></div></dialog>
-<script src="assets/living-art.js?v=1"></script>
+<dialog id="art-gallery" aria-labelledby="art-gallery-heading"><div class="art-gallery-head"><div><h2 id="art-gallery-heading">Choose artwork</h2></div><button id="art-close" aria-label="Close art gallery">Close</button></div><div id="art-grid"></div></dialog>
+<script src="assets/living-art.js?v=2"></script>
 <script src="assets/scene-motion.js?v=2"></script>
 <script src="assets/road-traffic.js?v=4"></script>
 <script src="assets/world-atmosphere.js?v=2"></script>
@@ -1926,11 +1925,12 @@ function setSeed(s,key){
   const k=Object.keys(STYLES).find(n=>STYLES[n]===ST);
   try{history.replaceState(null,'',location.pathname+location.search+'#'+k+'-'+seed);}catch(e){}
 }
-let speed=40,playing=true,drag=null,last=performance.now(),vel=0,dragV=0;
-const playBtn=document.getElementById('play'),syncPlay=()=>playBtn.textContent=playing?'Pause':'Play';
+const motionPreference=matchMedia('(prefers-reduced-motion: reduce)');
+let speed=40,playing=!motionPreference.matches,drag=null,last=performance.now(),vel=0,dragV=0;
+const playBtn=document.getElementById('play'),syncPlay=()=>{playBtn.textContent=playing?'Pause':'Play';playBtn.setAttribute('aria-label',playing?'Pause animation':'Play animation');};
 playBtn.onclick=()=>{playing=!playing;syncPlay();if(modeBtn.value==='cozy'&&window.CozyWorlds)(playing?CozyWorlds.resume():CozyWorlds.pause)();};
 document.getElementById('spd').oninput=e=>speed=+e.target.value;
-document.getElementById('new').onclick=()=>{if(modeBtn.value==='zen'){zenReset();return;}if(modeBtn.value==='art'&&document.getElementById('art-render').value==='painted'){setSeed(Math.random()*1e6|0);camX=(seed%3-1)*1300;return;}journey=0;roadObjectThemes.clear();roadPlaceTransition.autoTime=0;roadPlaceTransition.current=null;roadPlaceTransition.selection=null;roadAtmosphere.autoTime=0;roadAtmosphere.current=null;roadAtmosphere.selection=null;tripDrive.x=speed/40;tripDrive.v=0;SceneMotion.resetLane();RoadTraffic.reset();setSeed(Math.random()*1e6|0);};
+document.getElementById('new').onclick=()=>{if(modeBtn.value==='zen'){zenReset();return;}if(modeBtn.value==='art'){setSeed(Math.random()*1e6|0);camX=(seed%3-1)*1300;return;}journey=0;roadObjectThemes.clear();roadPlaceTransition.autoTime=0;roadPlaceTransition.current=null;roadPlaceTransition.selection=null;roadAtmosphere.autoTime=0;roadAtmosphere.current=null;roadAtmosphere.selection=null;tripDrive.x=speed/40;tripDrive.v=0;SceneMotion.resetLane();RoadTraffic.reset();setSeed(Math.random()*1e6|0);};
 document.getElementById('sty').onchange=e=>setSeed(seed,e.target.value);
 cv.addEventListener('pointerdown',e=>{if(modeBtn.value==='zen'){zenRippleAt(e.clientX,e.clientY);wakeScene();return;}drag={x:e.clientX,c:camX,lx:e.clientX,lt:performance.now()};dragV=0;cv.setPointerCapture(e.pointerId);cv.style.cursor='grabbing';});
 cv.addEventListener('pointermove',e=>{if(!drag)return;camX=drag.c-(e.clientX-drag.x)/S;const now=performance.now(),dtm=Math.max(1,now-drag.lt);dragV=dragV*.6+(-(e.clientX-drag.lx)/S/dtm*1000)*.4;drag.lx=e.clientX;drag.lt=now;});
@@ -1942,7 +1942,7 @@ const bar=document.querySelector('.bar'),showBtn=document.getElementById('show')
 const settingsBtn=document.getElementById('settings');
 function openSettings(on){document.body.classList.toggle('controls-open',on);settingsBtn.setAttribute('aria-expanded',String(on));settingsBtn.textContent=on?'Done':'Settings';}
 settingsBtn.onclick=()=>openSettings(!document.body.classList.contains('controls-open'));
-addEventListener('keydown',e=>{if(e.key==='Escape'){openSettings(false);settingsBtn.focus();}});
+addEventListener('keydown',e=>{if(e.key==='Escape'&&modeBtn.value!=='art'){openSettings(false);settingsBtn.focus();}});
 
 function setUI(on){bar.hidden=!on;showBtn.hidden=on;document.body.classList.toggle('art-ui-hidden',!on);try{localStorage.setItem('gond-ui',on?'1':'0');}catch(e){}}
 document.getElementById('hide').onclick=()=>{setUI(false);showBtn.focus();};
@@ -1960,9 +1960,9 @@ function openCozy(){
 modeBtn.onchange=()=>{
  const road=modeBtn.value==='road',zen=modeBtn.value==='zen',cozy=modeBtn.value==='cozy',wasZen=document.body.classList.contains('zen-mode');
  if(!cozy&&window.CozyWorlds)CozyWorlds.dispose();document.body.classList.toggle('cozy-mode',cozy);if(cozy)openCozy();
-  LivingArt.mode(!road&&!zen&&!cozy);document.getElementById('art-render').hidden=road||zen||cozy;
+  LivingArt.mode(!road&&!zen&&!cozy);if(!road&&!zen&&!cozy){openSettings(false);setUI(true);}
  document.body.classList.toggle('zen-mode',zen);
- document.getElementById('sty').hidden=road||zen||cozy;document.getElementById('seed').hidden=road||zen||cozy;
+ document.getElementById('sty').hidden=true;document.getElementById('seed').hidden=road||zen||cozy;
  document.getElementById('zen-pattern').hidden=!zen;
  for(const id of ['zen-garden','zen-atmosphere','zen-fullscreen'])document.getElementById(id).hidden=!zen;
  if(zen!==wasZen)layout();
@@ -1991,43 +1991,17 @@ function drawScene(dt){
    if(modeBtn.value==='cozy')return;
   if(modeBtn.value==='zen'){zenFrame(dt);return;}
   if(modeBtn.value==='road'){roadFrame(SceneMotion.time*1000,dt);return;}
-  const painted=document.getElementById('art-render').value==='painted';
-  const target=playing&&!drag&&(!painted||LivingArt.view==='journey')?speed*(painted?.32:1):0;vel+=(target-vel)*(1-Math.exp(-dt*(Math.abs(vel)>speed*1.5?1.6:2.6)));
+  // One artwork renderer and one playback state. Artwork choice lives in Artworks.
+  const target=playing&&!drag?12.8:0;vel+=(target-vel)*(1-Math.exp(-dt*2.6));
   if(!drag)camX+=vel*dt;
-  if(painted&&LivingArt.draw(ctx,document.getElementById('sty').value,cv.width,cv.height,camX,SceneMotion.time,dt,seed))return;
-  if(document.getElementById('art-title').textContent!==ST.name)document.getElementById('art-title').textContent=ST.name;
-  if(document.getElementById('art-medium').textContent!=='Infinite generative scroll · Drag to explore')document.getElementById('art-medium').textContent='Infinite generative scroll · Drag to explore';
-  const k=S*DPR,vw=cv.clientWidth/S,camPx=Math.round(camX*k),cam=camPx/k;
-  const a=Math.floor(cam/CW),b=Math.floor((cam+vw)/CW);
-  ctx.setTransform(1,0,0,1,0,0);ctx.fillStyle=T.bg;ctx.fillRect(0,0,cv.width,cv.height);
-  const tt=SceneMotion.time,acts=[];for(let i=a-1;i<=b+1;i++)for(const A of objs(i).actors)acts.push(A);
-  const world=()=>ctx.setTransform(k,0,0,k,-camPx,-topY*k);
-  const runActs=back=>{world();for(const A of acts)if(A.back===back){ctx.save();A.fn(ctx,tt,mulberry32(A.s));ctx.restore();}ctx.setTransform(1,0,0,1,0,0);};
-  runActs(true);
-  for(let i=a;i<=b;i++)ctx.drawImage(needTile(i),Math.round(i*CW*k)-camPx,0);
-  if(ST.anim){world();ST.anim(ctx,cam-20,cam+vw+20,tt);ctx.setTransform(1,0,0,1,0,0);}
-  if(ST.tintGrad){
-    const tA=acts.filter(A=>!A.back&&!A.glow),xa=cam-20,xb=cam+vw+20;
-    if(tA.length){if(!fx||fx.width!==cv.width||fx.height!==cv.height){fx=document.createElement('canvas');fx.width=cv.width;fx.height=cv.height;fxc=fx.getContext('2d');}
-      const run=()=>{fxc.setTransform(k,0,0,k,-camPx,-topY*k);for(const A of tA){fxc.save();A.fn(fxc,tt,mulberry32(A.s));fxc.restore();}};
-      fxc.setTransform(1,0,0,1,0,0);fxc.clearRect(0,0,fx.width,fx.height);run();
-      if(!ST.isDay(xa,xb)){fxc.globalCompositeOperation='source-atop';fxc.fillStyle=ST.atopCol((xa+xb)/2);fxc.setTransform(1,0,0,1,0,0);fxc.fillRect(0,0,fx.width,fx.height);fxc.globalCompositeOperation='source-over';}
-      ctx.setTransform(1,0,0,1,0,0);ctx.drawImage(fx,0,0);}
-    world();for(const A of acts)if(!A.back&&A.glow){ctx.save();A.fn(ctx,tt,mulberry32(A.s));ctx.restore();}ctx.setTransform(1,0,0,1,0,0);
-  }else runActs(false);
-  // The generative styles retain their own actors without unrelated shared plants.
-  const fwd=vel>=0;pump(fwd?[b+1,b+2]:[a-1,b+1],4);
-  for(const i of tiles.keys())if(i<a-2||i>b+2)tiles.delete(i);
-  for(const i of jobs.keys())if(i<a-2||i>b+2)jobs.delete(i);
-  for(const i of OC.keys())if(i<a-5||i>b+5)OC.delete(i);
-  
+  LivingArt.draw(ctx,document.getElementById('sty').value,cv.width,cv.height,camX,SceneMotion.time,dt,seed);
 }
 let frameHandle=0,lastPaint=0,lastMetrics=0;
 function wakeScene(){SceneMotion.invalidate();if(!frameHandle&&!document.hidden)frameHandle=requestAnimationFrame(frame);}
 function frame(t){
  frameHandle=0;if(document.hidden){last=t;return;}
  if(modeBtn.value==='cozy'){last=t;return;}
-  const dirty=SceneMotion.consumeDirty(),artMoving=modeBtn.value!=='art'||document.getElementById('art-render').value!=='painted'||LivingArt.view==='journey'||LivingArt.detail,moving=playing&&artMoving||Boolean(drag),interval=cv.clientWidth<700||SceneMotion.renderMs>18?1000/30:1000/60;
+  const dirty=SceneMotion.consumeDirty(),moving=playing||Boolean(drag),interval=cv.clientWidth<700||SceneMotion.renderMs>18?1000/30:1000/60;
  if(!dirty&&!moving)return;
  if(!dirty&&t-lastPaint<interval-.7){frameHandle=requestAnimationFrame(frame);return;}
  const dt=SceneMotion.advance((t-last)/1000,playing);last=t;lastPaint=t;
@@ -2043,8 +2017,9 @@ document.addEventListener('visibilitychange',()=>{last=performance.now();if(docu
 
 {const m=/^#(?:([a-z]+)-)?(\d+)/.exec(location.hash),key=m&&m[1]&&STYLES[m[1]]?m[1]:'gond';ST=STYLES[key];
  layout();setSeed(m?+m[2]:(Math.random()*1e6|0),key);syncPlay();}
-LivingArt.setup();LivingArt.mode(!requestedZen&&!requestedRoad&&!requestedCozy);if(!requestedZen&&!requestedRoad&&!requestedCozy)document.getElementById('new').textContent='Another view';
+LivingArt.setup();LivingArt.mode(!requestedZen&&!requestedRoad&&!requestedCozy);if(!requestedZen&&!requestedRoad&&!requestedCozy){setUI(true);document.getElementById('new').textContent='Another view';}
 if(requestedZen||requestedRoad||requestedCozy){modeBtn.value=requestedCozy?'cozy':requestedZen?'zen':'road';modeBtn.onchange();}
+motionPreference.addEventListener('change',e=>{if(e.matches){playing=false;syncPlay();if(modeBtn.value==='cozy')window.CozyWorlds?.pause();wakeScene();}});
 wakeScene();
 </script>
 </body>
