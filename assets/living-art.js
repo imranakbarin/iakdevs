@@ -10,7 +10,7 @@ const LivingArt=(()=>{
   mexico:{name:'Amate inspired',country:'Mexico',title:'Under the flowering tree',medium:'Bark-paper texture & painted folk motifs',file:'mexican-amate-panorama.webp',color:'#a46b38',chapters:['Deer among the agave','The flowering canopy','The riverside town']}
  };
  const images=new Map(),patches=new Map();const reduced=typeof matchMedia==='function'&&matchMedia('(prefers-reduced-motion: reduce)').matches;
- let view=reduced?'still':'journey',detail=!reduced,lastKey='',previous=null,fade=1,frame=null;
+ let lastKey='',previous=null,fade=1,frame=null;
  const clamp=(x,a,b)=>Math.max(a,Math.min(b,x)),smooth=x=>{x=clamp(x,0,1);return x*x*(3-2*x);};
  function image(key){
   if(images.has(key))return images.get(key);
@@ -88,13 +88,19 @@ const LivingArt=(()=>{
   for(let i=0;i<12;i++){const a=i/12*Math.PI*2,cx=Math.cos(a)*78*s,cy=Math.sin(a)*21*s,lean=Math.sin(t*1.3+i*.4)*2*s;c.save();c.translate(cx,cy);dot(c,lean,-19*s,2.5*s,'#f0dfbb');c.beginPath();c.moveTo(lean,-15*s);c.lineTo(-5*s,-8*s);c.lineTo(5*s,-8*s);c.closePath();c.fill();c.beginPath();c.moveTo(0,-8*s);c.lineTo(-5*s,-2*s);c.lineTo(5*s,-2*s);c.closePath();c.fill();c.beginPath();c.moveTo(-4*s,-1*s);c.lineTo(-6*s,3*s);c.moveTo(4*s,-1*s);c.lineTo(6*s,3*s);c.moveTo(-4*s,-12*s);c.lineTo(-10*s,-9*s+lean*.2);c.moveTo(4*s,-12*s);c.lineTo(10*s,-9*s-lean*.2);c.stroke();c.restore();}c.restore();
  }
  function draw(c,key,w,h,position,t,dt,seed){
-  if(!collection[key])return false;const im=image(key);if(!im.complete||!im.naturalWidth)return false;
-  if(lastKey!==key){if(frame&&frame.width===w&&frame.height===h){previous=document.createElement('canvas');previous.width=w;previous.height=h;previous.getContext('2d').drawImage(frame,0,0);}lastKey=key;fade=previous&&dt>0&&!reduced&&(view==='journey'||detail)?0:1;}
+  if(!collection[key])return false;const im=image(key),status=document.getElementById('art-status');
+  if(!im.complete||!im.naturalWidth){
+   c.save();c.setTransform(1,0,0,1,0,0);c.globalAlpha=1;
+   if(frame&&frame.width===w&&frame.height===h)c.drawImage(frame,0,0);else{c.fillStyle='#eee7d8';c.fillRect(0,0,w,h);}c.restore();
+   if(status){status.hidden=false;status.textContent=im.failed?'This artwork could not load. Choose another in Artworks.':'Opening artwork…';}return true;
+  }
+  if(status)status.hidden=true;
+  if(lastKey!==key){if(frame&&frame.width===w&&frame.height===h){previous=document.createElement('canvas');previous.width=w;previous.height=h;previous.getContext('2d').drawImage(frame,0,0);}lastKey=key;fade=previous&&dt>0&&!reduced?0:1;}
   fade=Math.min(1,fade+dt/1.8);
   const height=h*(w/h<.85?1.01:1.04),width=height*im.naturalWidth/im.naturalHeight;
   const phase=.5+.46*Math.sin(position*.0008+(seed%13-6)*.03),x=(w-width)*phase,y=(h-height)*.5;
   const P={x,y,width,height,viewport:w};c.save();c.setTransform(1,0,0,1,0,0);c.globalAlpha=1;c.clearRect(0,0,w,h);c.drawImage(im,x,y,width,height);
-  if(detail)motion(c,key,im,P,t,seed);
+  motion(c,key,im,P,t,seed);
   if(previous&&fade<1){c.globalAlpha=1-smooth(fade);c.drawImage(previous,0,0);c.globalAlpha=1;}else previous=null;
   c.restore();
   if(!frame||frame.width!==w||frame.height!==h){frame=document.createElement('canvas');frame.width=w;frame.height=h;}frame.getContext('2d').drawImage(c.canvas,0,0);
@@ -112,9 +118,8 @@ const LivingArt=(()=>{
   function closeGallery(){modal.close();open.focus();}
   open.onclick=()=>{for(const b of grid.querySelectorAll('button'))b.setAttribute('aria-pressed',String(b.dataset.art===document.getElementById('sty').value));modal.showModal();close.focus();};close.onclick=closeGallery;
   modal.addEventListener('click',e=>{if(e.target===modal)closeGallery();});modal.addEventListener('cancel',()=>open.focus());
-  const travel=document.getElementById('art-travel');travel.textContent=view==='journey'?'Journey':'Contemplate';travel.setAttribute('aria-pressed',String(view==='still'));travel.onclick=()=>{view=view==='journey'?'still':'journey';if(view==='still'&&typeof vel!=='undefined')vel=0;travel.textContent=view==='journey'?'Journey':'Contemplate';travel.setAttribute('aria-pressed',String(view==='still'));wakeScene();};
-  const movement=document.getElementById('art-motion');movement.textContent=detail?'Living details on':'Living details off';movement.setAttribute('aria-pressed',String(detail));movement.onclick=()=>{detail=!detail;movement.textContent=detail?'Living details on':'Living details off';movement.setAttribute('aria-pressed',String(detail));wakeScene();};
+
  }
- function mode(active){document.body.classList.toggle('art-mode',active);for(const id of ['art-caption','art-browse','art-travel','art-motion']){const e=document.getElementById(id);if(e)e.hidden=!active;}}
- return {draw,setup,mode,collection,get view(){return view;},get detail(){return detail;}};
+ function mode(active){document.body.classList.toggle('art-mode',active);if(!active){const status=document.getElementById('art-status');if(status)status.hidden=true;const gallery=document.getElementById('art-gallery');if(gallery?.open)gallery.close();}for(const id of ['art-caption','art-browse']){const e=document.getElementById(id);if(e)e.hidden=!active;}}
+ return {draw,setup,mode,collection};
 })();
