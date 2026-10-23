@@ -107,6 +107,14 @@ const LivingArt=(()=>{
   const note=document.getElementById('art-caption');if(note){const chapter=collection[key].chapters[Math.min(2,Math.floor(phase*3))];const title=document.getElementById('art-title'),label=document.getElementById('art-medium');if(title.textContent!==collection[key].title)title.textContent=collection[key].title;const text=collection[key].country+' · '+collection[key].name+' / '+chapter;if(label.textContent!==text)label.textContent=text;}
   return true;
  }
+ function syncGallery(){
+  const live=artPresentation==='live',grid=document.getElementById('art-grid');grid.dataset.presentation=artPresentation;
+  document.getElementById('art-live').setAttribute('aria-pressed',String(live));document.getElementById('art-painted').setAttribute('aria-pressed',String(!live));
+  for(const b of grid.querySelectorAll('button')){
+   b.setAttribute('aria-pressed',String(b.dataset.art===document.getElementById('sty').value));
+   b.querySelector('span').textContent=live?'Endless living landscape':collection[b.dataset.art].medium;
+  }
+ }
  function setup(){
   const modal=document.getElementById('art-gallery'),grid=document.getElementById('art-grid'),open=document.getElementById('art-browse'),close=document.getElementById('art-close');if(!modal)return;
   for(const [key,info]of Object.entries(collection)){
@@ -116,10 +124,11 @@ const LivingArt=(()=>{
    button.onclick=()=>{document.getElementById('sty').value=key;setSeed(seed,key);closeGallery();wakeScene();};grid.append(button);
   }
   function closeGallery(){modal.close();open.focus();}
-  open.onclick=()=>{for(const b of grid.querySelectorAll('button'))b.setAttribute('aria-pressed',String(b.dataset.art===document.getElementById('sty').value));modal.showModal();close.focus();};close.onclick=closeGallery;
+  document.getElementById('art-live').onclick=()=>setArtPresentation('live');document.getElementById('art-painted').onclick=()=>setArtPresentation('painted');
+  open.onclick=()=>{syncGallery();modal.showModal();close.focus();};close.onclick=closeGallery;
   modal.addEventListener('click',e=>{if(e.target===modal)closeGallery();});modal.addEventListener('cancel',()=>open.focus());
 
  }
  function mode(active){document.body.classList.toggle('art-mode',active);if(!active){const status=document.getElementById('art-status');if(status)status.hidden=true;const gallery=document.getElementById('art-gallery');if(gallery?.open)gallery.close();}for(const id of ['art-caption','art-browse']){const e=document.getElementById(id);if(e)e.hidden=!active;}}
- return {draw,setup,mode,collection};
+ return {draw,setup,mode,collection,syncGallery};
 })();
