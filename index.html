@@ -2088,6 +2088,7 @@ function wakeScene(){SceneMotion.invalidate();if(!frameHandle&&!document.hidden)
 function frame(t){
  frameHandle=0;if(document.hidden){last=t;return;}
  if(modeBtn.value==='cozy'){last=t;return;}
+ if(modeBtn.value==='art'&&(cv.width!==Math.round(cv.clientWidth*DPR)||cv.height!==Math.round(cv.clientHeight*DPR)))layout();
   const dirty=SceneMotion.consumeDirty(),moving=playing||Boolean(drag),interval=cv.clientWidth<700||SceneMotion.renderMs>18?1000/30:1000/60;
  if(!dirty&&!moving)return;
  if(!dirty&&t-lastPaint<interval-.7){frameHandle=requestAnimationFrame(frame);return;}
@@ -2100,6 +2101,7 @@ function frame(t){
 for(const event of ['input','change','click','keydown','pointerup','pointercancel'])document.addEventListener(event,wakeScene,{passive:true});
 document.addEventListener('pointermove',()=>{if(drag)wakeScene();},{passive:true});
 addEventListener('resize',wakeScene);
+window.visualViewport?.addEventListener('resize',()=>{cancelArtDrag();layout();wakeScene();});
 document.addEventListener('visibilitychange',()=>{last=performance.now();if(document.hidden){cancelArtDrag();cancelAnimationFrame(frameHandle);frameHandle=0;}else wakeScene();});
 
 {const m=/^#(?:painting-)?(?:([a-z]+)-)?(\d+)/.exec(location.hash),key=m&&m[1]&&STYLES[m[1]]?m[1]:'gond';ST=STYLES[key];
