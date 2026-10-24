@@ -1150,21 +1150,49 @@ function folkAnimal(c,x,y,q,t,kind){
  for(let k=0;k<4;k++){folkFlower(c,-28+k*17,-43,10,mulberry32(k+41));textileStitches(c,-28+k*17,-43,10,'#fff2d4');}
  c.fillStyle='#f5e6c8';c.beginPath();c.arc(kind==='bird'?42:65,kind==='bird'?-64:-108,4,0,TAU);c.fill();c.fillStyle='#493633';c.beginPath();c.arc(kind==='bird'?43:66,kind==='bird'?-64:-108,1.5,0,TAU);c.fill();c.restore();
 }
-STYLES.mexico={name:'Mexican folk inspired',theme:()=>({bg:'#f6e7c9',ink:'#784d38',mark:'#784d38',light:'#fff2d5'}),init(){},
- sky(c,xa,xb){artPaper(c,xa,xb,'#f6e7c9');},
- ground(c,xa,xb){c.fillStyle='#ecd4a4';c.fillRect(xa,535,xb-xa,105);for(let x=Math.floor(xa/28)*28;x<xb;x+=28){poly(c,[[x,610],[x+14,590],[x+28,610],[x+14,630]]);c.fillStyle=folkColors[Math.abs(Math.floor(x/28))%7];c.fill();c.beginPath();c.arc(x+14,610,3,0,TAU);c.fillStyle='#f6e7c9';c.fill();}},
+// One composed grove per stretch: branches, perches and feet share fixed anchors.
+STYLES.mexico={name:'Mexican folk inspired',focus:370,
+ theme:()=>({bg:'#edcf9d',ink:'#654737',mark:'#654737',light:'#fff2d5'}),init(){},
+ sky(c,xa,xb){artPaper(c,xa,xb,'#edcf9d');},
+ ground(c,xa,xb){
+  c.fillStyle='#e4bd83';c.fillRect(xa,555,xb-xa,85);
+  c.beginPath();c.moveTo(xa,555);c.lineTo(xb,555);artStroke(c,'#a7794c',1);
+  for(let ix=Math.floor(xa/32);ix<=xb/32;ix++){const x=ix*32;poly(c,[[x,614],[x+16,596],[x+32,614],[x+16,632]]);c.fillStyle=['#a95c4b','#477e71','#cf9a42','#6e678b'][((ix%4)+4)%4];c.fill();c.beginPath();c.arc(x+16,614,2.2,0,TAU);c.fillStyle='#f6e7c9';c.fill();}
+ },
  chunk(r,x0,add,z,act){
-  add(1,(c,q)=>{for(let k=0;k<3;k++){const x=x0+50+k*210;c.beginPath();c.moveTo(x,510);c.quadraticCurveTo(x-65,290,x+10,230);c.quadraticCurveTo(x+85,300,x+65,510);c.fillStyle=k%2?'#d7af75':'#e5c790';c.fill();}
-   for(let k=0;k<7;k++){const x=x0+15+k*90,y=70+Math.sin(k*.8)*25;folkFlower(c,x,y,25,q);c.beginPath();c.moveTo(x,y+25);c.quadraticCurveTo(x+35,y+65,x+12,y+100);artStroke(c,'#528358',2);folkPetal(c,x+14,y+65,-1,30,8,'#528358');}
+  const root=x0+140,base=555,lean=(r()-.5)*28;
+  const tips=[[x0+35,280],[x0+155+lean,205],[x0+285,290]];
+  add(2,(c,q)=>{
+   const trunk=quadPts(root,base,root-24,410,root+lean,350,24);
+   poly(c,trunk,false);artStroke(c,'#72533b',12);poly(c,trunk,false);artStroke(c,'#bb9561',2);
+   for(const [j,[tx,ty]] of tips.entries()){
+    const path=quadPts(root+lean,365,root+(tx-root)*.6,ty+50,tx,ty,24);
+    poly(c,path,false);artStroke(c,'#72533b',5-j*.5);
+    let side=1;along(path,23,(x,y,a)=>{side=-side;const la=a+side*.85;folkPetal(c,x,y,la+PI/2,29+q()*10,8,pick(q,['#496f4c','#64885a','#39776d']));});
+    for(const [k,idx] of [8,14,20].entries()){
+     const [x,y]=path[idx],sg=(k+j)%2?1:-1,ex=x+sg*(28+q()*18),ey=y-25-q()*12;
+     c.beginPath();c.moveTo(x,y);c.quadraticCurveTo(ex,y-8,ex,ey);artStroke(c,'#72533b',1.4);
+     folkPetal(c,ex,ey,.65,21,6,'#39776d');folkPetal(c,ex,ey,-.75,25,7,'#64885a');
+     folkFlower(c,ex,ey-14,11+q()*4,q);textileStitches(c,ex,ey-14,10,'#fff2d5');
+    }
+    for(let k=0;k<3;k++)folkPetal(c,tx,ty,-.65+k*.65,34,9,pick(q,['#496f4c','#64885a','#39776d']));
+   }
+   // A visible branch supports the perched bird, rather than an actor floating in space.
+   c.beginPath();c.moveTo(root+lean,365);c.quadraticCurveTo(x0+235,345,x0+295,335);artStroke(c,'#72533b',3);
+   folkPetal(c,x0+250,342,.9,34,9,'#39776d');
   });
-  add(3,(c,q)=>{for(let side of [60,520]){c.beginPath();c.moveTo(x0+side,535);c.bezierCurveTo(x0+side-60,460,x0+side+50,355,x0+side,270);artStroke(c,'#3a8765',4);
-   for(let j=0;j<7;j++){const y=290+j*34,sg=j%2?1:-1;folkPetal(c,x0+side,y,sg*.9,45,13,pick(q,folkColors));folkFlower(c,x0+side+sg*40,y+16,18+q()*10,q);}
+  for(const [j,[x,y]] of tips.entries())act((c,t,q)=>{
+   c.translate(x,y);c.rotate(Math.sin(t*.5+j)*.035);folkFlower(c,0,0,22,q);textileStitches(c,0,0,20,'#fff2d5');
+  });
+  const animalSeed=hash(seed,Math.round(x0/CW));
+  act((c,t)=>{c.translate(x0+405,base);c.scale(.9,.9);folkAnimal(c,0,0,mulberry32(animalSeed),t,'deer');});
+  act((c,t)=>{c.translate(x0+280,335);c.scale(.68,.68);folkAnimal(c,0,0,mulberry32(animalSeed+17),t,'bird');});
+  // Low flowers frame the clearing without covering the animals or becoming confetti.
+  for(const [x,h] of [[x0+25,66],[x0+315,40],[x0+540,95]]){
+   add(4,(c)=>{c.beginPath();c.moveTo(x,base);c.quadraticCurveTo(x-5,base-h*.55,x,base-h);artStroke(c,'#53754a',2);folkPetal(c,x,base-h*.4,.85,27,7,'#64885a');folkPetal(c,x-2,base-h*.65,-.75,22,7,'#39776d');});
+   act((c,t,q)=>{c.translate(x,base-h);c.rotate(Math.sin(t*.6+x*.01)*.04);folkFlower(c,0,0,17,q);});
   }
-  for(let k=0;k<5;k++){const x=x0+100+k*95;c.beginPath();c.moveTo(x,550);c.lineTo(x,518);artStroke(c,'#3a8765',2);folkFlower(c,x,515,15+q()*8,q);}
-  });
-  const animalSeed=(r()*1e8)|0;
-  act((c,t)=>folkAnimal(c,x0+220,465,mulberry32(animalSeed),t,'deer'));
-  act((c,t)=>folkAnimal(c,x0+390,310+Math.sin(t)*3,mulberry32(animalSeed+17),t,'bird'));
+  add(5,(c,q)=>{for(let j=0;j<12;j++){const x=x0+20+j*49;c.beginPath();c.moveTo(x,base+3);c.lineTo(x-3,base-5);c.moveTo(x,base+3);c.lineTo(x+4,base-4);artStroke(c,'#64885a',.8);}});
  }};
 
 const paperPatterns=new Map();
@@ -1241,42 +1269,6 @@ function textileStitches(c,x,y,r,col){
  c.save();c.translate(x,y);c.strokeStyle=col;c.lineWidth=.55;
  for(let i=0;i<32;i++){const a=i*TAU/32;c.beginPath();c.moveTo(Math.cos(a)*r*.85,Math.sin(a)*r*.85);c.lineTo(Math.cos(a)*r*.7,Math.sin(a)*r*.7);c.stroke();}c.restore();
 }
-// Extend each tradition with supporting foreground and distance layers.
-// Supporting details for the procedural Mexican fallback.
-{
- const oldChunk=STYLES.mexico.chunk;
- STYLES.mexico.zones=['orchard','marigolds','agave','songbirds'];
- STYLES.mexico.sky=(c,xa,xb)=>{artPaper(c,xa,xb,'#e7bc83');const g=c.createLinearGradient(0,80,0,535);g.addColorStop(0,'rgba(135,71,47,.12)');g.addColorStop(1,'rgba(252,229,170,.55)');c.fillStyle=g;c.fillRect(xa,80,xb-xa,455);};
- STYLES.mexico.over=(c,xa,xb)=>paperGrain(c,xa,xb,false);
- STYLES.mexico.chunk=(r,x0,add,z,act)=>{
-  oldChunk(r,x0,add,z,act);
-  add(2,(c,q)=>{
-   // Generative amate-inspired branching: each stretch gets its own flowering canopy.
-   const root=x0+75+q()*90;
-   c.save();c.translate(root,540);c.strokeStyle='#6f4937';c.lineCap='round';
-   for(let b=0;b<7;b++){
-    const endX=(b-3)*47,ey=-220-q()*175;c.lineWidth=9-b*.6;c.beginPath();c.moveTo(0,0);c.bezierCurveTo(-12,-85,endX*.4,ey+95,endX,ey);c.stroke();
-    c.lineWidth=1;c.strokeStyle='#b88a56';c.beginPath();c.moveTo(-2,-10);c.bezierCurveTo(-17,-85,endX*.4-3,ey+85,endX-2,ey+10);c.stroke();c.strokeStyle='#6f4937';
-    for(let k=0;k<10;k++){
-     const u=.24+k*.072,x=endX*u,y=ey*u,side=k%2?-1:1,leafX=x+side*(24+q()*25);
-     c.beginPath();c.moveTo(x,y);c.quadraticCurveTo(leafX,y-28,leafX+side*9,y-33);artStroke(c,'#466b49',1.4);
-     folkPetal(c,leafX,y-24,side*.6,24+q()*16,8+q()*6,pick(q,['#476d47','#77934f','#2f806a']));
-     if(k%3===0){folkFlower(c,leafX+side*8,y-39,12+q()*12,q);textileStitches(c,leafX+side*8,y-39,10,'#f5dca0');}
-    }
-   }c.restore();
-   if(z==='agave')for(let j=0;j<3;j++){
-    const x=x0+280+j*90,y=560;c.save();c.translate(x,y);
-    for(let k=0;k<11;k++){const a=-PI+.12+k*(PI-.24)/10,len=55+q()*75;c.beginPath();c.moveTo(-5,0);c.quadraticCurveTo(Math.cos(a)*len*.4,Math.sin(a)*len*.7,Math.cos(a)*len,Math.sin(a)*len);c.quadraticCurveTo(Math.cos(a)*len*.45+7,Math.sin(a)*len*.45,5,0);c.fillStyle=k%2?'#3a8c81':'#668c67';c.fill();artStroke(c,'#f0d38a',.7);}c.restore();
-   }
-   for(let j=0;j<25;j++){const x=x0+q()*600,y=535+q()*50;folkFlower(c,x,y,6+q()*12,q);}
-  });
-  if(z==='songbirds')act((c,t)=>folkAnimal(c,x0+390,190+Math.sin(t*.7)*4,mulberry32(hash(seed,x0+38)),t,'bird'));
-  add(5,(c,q)=>{for(let k=0;k<16;k++){const x=x0+q()*600,y=170+q()*360,r=8+q()*9;folkFlower(c,x,y,r,q);textileStitches(c,x,y,r,'#fff2d4');}
-   for(let k=0;k<6;k++){const x=x0+60+k*95,y=580;c.beginPath();c.moveTo(x-36,y);c.quadraticCurveTo(x,y-26,x+36,y);artStroke(c,'#bb8457',1);for(let j=0;j<12;j++){const xx=x-30+j*5;c.beginPath();c.moveTo(xx,y-5);c.lineTo(xx+2,y+2);artStroke(c,'#785b42',.5);}}
-  });
- };
-}
-
 /* A seeded woodblock landscape: varied compositions at unbounded coordinates. */
 function jpPaper(c,xa,xb){
  let tile=paperPatterns.get('jp-print');
@@ -1974,7 +1966,7 @@ function setSeed(s,key){
   const previousStyle=ST;if(key&&STYLES[key])ST=STYLES[key];readTheme();
   if(previousStyle!==ST)layout();
   seed=s>>>0;const r=mulberry32(seed);P=Array.from({length:4},()=>r()*TAU);ST.init(r);
-  OC.clear();resetTiles();camX=0;document.getElementById('seed').textContent='#'+seed;
+  OC.clear();resetTiles();camX=ST.focus?Math.max(0,ST.focus-cv.clientWidth/S/2):0;document.getElementById('seed').textContent='#'+seed;
   document.getElementById('sty').value=key||document.getElementById('sty').value;
   const k=Object.keys(STYLES).find(n=>STYLES[n]===ST);
   try{history.replaceState(null,'',location.pathname+location.search+'#'+(artPresentation==='painted'?'painting-':'')+k+'-'+seed);}catch(e){}
