@@ -7,6 +7,22 @@ const ArtDepth=(()=>{
  }
  function prepare(key){for(const name of key==='mexico'?['tree','deer']:key==='kangra'?['kangraPavilion','kangraTree']:[]){if(started.has(name))continue;started.add(name);painted[name].src=sources[name];}}
  const layered=style=>['mexico','kangra','japan','china'].some(key=>STYLES[key]===style);
+ // Sites share both the surface coordinates and the camera plane of their terrain.
+ function treeSite(c,x,q,s,surface){
+  const y=surface(x);c.save();c.translate(x,y);c.scale(s,s);c.translate(-x,-(gy(x)+3));kTree(c,x,q);c.restore();
+ }
+ function flatSite(x,s,surface){
+  let best=x,score=Infinity;const w=83*s;
+  for(let d=-180;d<=180;d+=6){const ys=[];for(let j=-4;j<=4;j++)ys.push(surface(x+d+j*w/4));const cost=Math.max(...ys)-Math.min(...ys)+Math.abs(d)*.012;if(cost<score){score=cost;best=x+d;}}
+  return best;
+ }
+ function pavilionSite(c,x,q,s,surface){
+  const w=83*s,points=[];for(let j=0;j<=12;j++){const xx=x-w+j*w/6;points.push([xx,surface(xx)+5*s]);}
+  const y=Math.min(...points.map(p=>p[1]))-2*s;
+  c.save();c.beginPath();c.moveTo(x-w,y);c.lineTo(x+w,y);for(let j=points.length-1;j>=0;j--)c.lineTo(...points[j]);c.closePath();
+  c.fillStyle='#b5a47d';c.fill();stroke(c,'#8f8664',.65);c.beginPath();c.moveTo(x-w,y);c.lineTo(x+w,y);stroke(c,'#e0d2ac',2*s);
+  c.translate(x,y);c.scale(s,s);c.translate(-x,-(gy(x)+4));kPavilion(c,x,q);c.restore();
+ }
  function stroke(c,color,width){c.strokeStyle=color;c.lineWidth=width;c.lineCap='round';c.lineJoin='round';c.stroke();}
  function almond(c,x,y,a,l,w,color,light='#dbc786'){
   c.save();c.translate(x,y);c.rotate(a);leafPath(c,l,w);
@@ -184,13 +200,16 @@ const ArtDepth=(()=>{
    if(!painted.kangraTree.width||force==='cypress')return nativeTree(c,x,q,force);
    if(q()<.28)return nativeTree(c,x,q,'cypress');
    const h=150+q()*55,y=gy(x)+4,flip=q()<.5?-1:1;
-   c.save();c.translate(x,y);c.scale(flip,1);c.drawImage(painted.kangraTree,-h*.5,-h,h,h);c.restore();
+   c.save();c.translate(x,y-1);c.scale(flip,1);
+   c.beginPath();c.ellipse(0,0,h*.13,3,0,0,TAU);c.fillStyle='rgba(26,50,26,.22)';c.fill();
+   c.drawImage(painted.kangraTree,6,9,1246,1238,-h*.5,-h,h,h);
+   c.beginPath();for(let j=-3;j<=3;j++){c.moveTo(j*4,1);c.lineTo(j*4-2,-2);c.lineTo(j*4+1,0);}stroke(c,'#688b46',.7);c.restore();
   };
   kPavilion=function(c,x,q){
    if(!painted.kangraPavilion.width)return nativePavilion(c,x,q);
    const y=gy(x)+4;
    c.save();c.translate(x,y);c.scale(1,.13);const shade=c.createRadialGradient(0,0,1,0,0,90);shade.addColorStop(0,'rgba(25,47,30,.3)');shade.addColorStop(1,'rgba(25,47,30,0)');c.fillStyle=shade;c.fillRect(-90,-90,180,180);c.restore();
-   c.drawImage(painted.kangraPavilion,x-85,y-180,170,180);
+   c.drawImage(painted.kangraPavilion,34,18,1186,1206,x-85,y-180,170,180);
   };
   STYLES.mexico.sky=mexicoSky;STYLES.mexico.ground=mexicoGround;STYLES.mexico.chunk=mexicoChunk;STYLES.mexico.focus=360;
   STYLES.kangra.focus=330;STYLES.gond.focus=300;STYLES.madhubani.focus=180;STYLES.warli.focus=300;STYLES.japan.focus=300;STYLES.china.focus=220;
@@ -204,7 +223,7 @@ const ArtDepth=(()=>{
  c.beginPath();c.moveTo(x,gy(x)+9);c.lineTo(x,523);stroke(c,'#d9cfa9',9);for(let j=0;j<4;j++){c.beginPath();c.moveTo(x-17,512+j*3);c.lineTo(x+17,512+j*3);stroke(c,'#a79b76',.8);}
  for(const sg of[-1,1]){kLotus(c,x+sg*70,y,q);for(let j=0;j<4;j++)kBush(c,x+sg*(120+j*14),q);}
  });act((c,t)=>{const x=x0+330,y=548;c.beginPath();c.moveTo(x-12,y);c.quadraticCurveTo(x-15,526+Math.sin(t)*1.5,x,522);c.quadraticCurveTo(x+15,526-Math.sin(t)*1.5,x+12,y);stroke(c,'rgba(218,239,221,.7)',.9);});}
- add(2,(c,q)=>{const x=x0+90;c.save();c.translate(x,gy(x)+5);c.scale(1.05,1.05);c.translate(-x,-gy(x));kTree(c,x,q);c.restore();});};
+ add(2,(c,q)=>treeSite(c,x0+90,q,1.05,gy));};
  }
- return {install,prepare,layered,near,light,atmosphere,reset(){nearTiles.clear();orchardTiles.clear();}};
+ return {install,prepare,layered,near,light,atmosphere,treeSite,pavilionSite,flatSite,reset(){nearTiles.clear();orchardTiles.clear();}};
 })();
