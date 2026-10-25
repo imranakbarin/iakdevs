@@ -2,11 +2,16 @@
 const ArtDepth=(()=>{
  const nearTiles=new Map(),orchardTiles=new Map();
  const painted={},sources={},started=new Set();
- for(const [key,file] of [['tree','mexico-flowering-tree.webp'],['deer','mexico-painted-deer.webp'],['kangraPavilion','kangra-painted-pavilion.webp'],['kangraTree','kangra-flowering-tree.webp']]){
-  const img=new Image();img.onload=()=>{requestAnimationFrame(()=>{resetTiles();wakeScene();});};painted[key]=img;sources[key]='assets/'+file;
+ for(const [key,file] of [['tree','mexico-flowering-tree.webp'],['deer','mexico-painted-deer.webp'],['kangraPavilion','kangra-painted-pavilion.webp'],['kangraTree','kangra-flowering-tree.webp'],['kangraTerrain','kangra-meadow.webp'],['kangraCypress','kangra-cypress.webp'],['kangraBoat','kangra-boat.webp'],['kangraBuck','kangra-buck.webp']]){
+  const img=new Image();img.artReady=false;img.onload=()=>{img.artReady=true;requestAnimationFrame(()=>{resetTiles();wakeScene();});};painted[key]=img;sources[key]='assets/'+file;
  }
- function prepare(key){for(const name of key==='mexico'?['tree','deer']:key==='kangra'?['kangraPavilion','kangraTree']:[]){if(started.has(name))continue;started.add(name);painted[name].src=sources[name];}}
+ function prepare(key){for(const name of key==='mexico'?['tree','deer']:key==='kangra'?['kangraPavilion','kangraTree','kangraTerrain','kangraCypress','kangraBoat','kangraBuck']:[]){if(started.has(name))continue;started.add(name);painted[name].src=sources[name];}}
  const layered=style=>['mexico','kangra','japan','china'].some(key=>STYLES[key]===style);
+ function foliage(c,x,y,w,h,q,alpha=1){
+  if(!painted.kangraTree.width)return;
+  c.save();c.globalAlpha=alpha;c.beginPath();c.ellipse(x,y-1,w*.44,2,0,0,TAU);c.fillStyle='rgba(43,62,34,.2)';c.fill();
+  c.beginPath();c.ellipse(x,y-h*.48,w*.5,h*.54,0,0,TAU);c.clip();c.drawImage(painted.kangraTree,6,9,1246,940,x-w*.5,y-h,w,h);c.restore();
+ }
  // Sites share both the surface coordinates and the camera plane of their terrain.
  function treeSite(c,x,q,s,surface){
   const y=surface(x);c.save();c.translate(x,y);c.scale(s,s);c.translate(-x,-(gy(x)+3));kTree(c,x,q);c.restore();
@@ -151,7 +156,7 @@ const ArtDepth=(()=>{
    }else if(key==='china'){
     inkMass(c,x,669,175*small,75*small,q,'#65785f',.55);inkPine(c,x-22,628,.85*small,q);
    }else if(key==='kangra'){
-    c.save();c.translate(x,661);c.scale(small,small);for(let j=0;j<8;j++){const xx=(q()-.5)*120;almond(c,xx,0,(q()-.5)*1.4,50+q()*60,10,'#386943','#a8bb72');if(j%2===0)kLotus(c,xx,-35-q()*20,q);}c.restore();
+    c.save();c.translate(x,661);c.scale(small,small);foliage(c,0,0,110,66,q);for(let j=0;j<9;j++){const xx=(q()-.5)*100,yy=-30-q()*50;c.beginPath();c.moveTo(xx*.3,0);c.quadraticCurveTo(xx*.5,yy*.65,xx,yy);stroke(c,j%2?'#7e8b53':'#526f43',1+q());if(j%3===0)kLotus(c,xx,yy+12,q);}c.restore();
    }else if(key==='madhubani'){
     for(let j=0;j<5;j++){const xx=x+(j-2)*17;mbLeaf(c,xx,663,(j-2)*.27,65+q()*35,17,'#287353');}mbLotus(c,x,630,39,'#b44149','#dcb94a');
    }else if(key==='gond'){
@@ -181,7 +186,7 @@ const ArtDepth=(()=>{
    const spacing=520,phase=cam*.58;
    for(let i=Math.floor(phase/spacing)-1;i<=(phase+vw)/spacing+1;i++){
     const q=mulberry32(hash(seed^0xa83,i)),x=i*spacing-phase+q()*80;
-    c.save();c.globalAlpha=(1-night)*.19;c.beginPath();c.moveTo(x,topY-40);c.lineTo(x+32,topY-40);c.lineTo(x+260,580);c.lineTo(x+90,580);c.closePath();
+    c.save();c.globalAlpha=(1-night)*(kangra?.035:.19);c.beginPath();c.moveTo(x,topY-40);c.lineTo(x+32,topY-40);c.lineTo(x+260,580);c.lineTo(x+90,580);c.closePath();
     const beam=c.createLinearGradient(0,topY,0,580);beam.addColorStop(0,'rgba(255,241,183,0)');beam.addColorStop(.25,'rgba(255,241,183,.85)');beam.addColorStop(1,'rgba(255,241,183,0)');c.fillStyle=beam;c.fill();c.restore();
    }
    const haze=c.createLinearGradient(0,360,0,520);haze.addColorStop(0,'rgba(248,223,170,0)');haze.addColorStop(.6,'rgba(248,223,170,.13)');haze.addColorStop(1,'rgba(248,223,170,0)');c.globalAlpha=1-night;c.fillStyle=haze;c.fillRect(0,360,vw,160);
@@ -197,8 +202,9 @@ const ArtDepth=(()=>{
  function install(){
   const nativeTree=kTree,nativePavilion=kPavilion;
   kTree=function(c,x,q,force){
-   if(!painted.kangraTree.width||force==='cypress')return nativeTree(c,x,q,force);
-   if(q()<.28)return nativeTree(c,x,q,'cypress');
+   if(force==='cypress')return KangraWorld.cypress(c,x,q);
+   if(!painted.kangraTree.width)return nativeTree(c,x,q,force);
+   if(q()<.28)return KangraWorld.cypress(c,x,q);
    const h=150+q()*55,y=gy(x)+4,flip=q()<.5?-1:1;
    c.save();c.translate(x,y-1);c.scale(flip,1);
    c.beginPath();c.ellipse(0,0,h*.13,3,0,0,TAU);c.fillStyle='rgba(26,50,26,.22)';c.fill();
@@ -225,5 +231,5 @@ const ArtDepth=(()=>{
  });act((c,t)=>{const x=x0+330,y=548;c.beginPath();c.moveTo(x-12,y);c.quadraticCurveTo(x-15,526+Math.sin(t)*1.5,x,522);c.quadraticCurveTo(x+15,526-Math.sin(t)*1.5,x+12,y);stroke(c,'rgba(218,239,221,.7)',.9);});}
  add(2,(c,q)=>treeSite(c,x0+90,q,1.05,gy));};
  }
- return {install,prepare,layered,near,light,atmosphere,treeSite,pavilionSite,flatSite,reset(){nearTiles.clear();orchardTiles.clear();}};
+ return {install,prepare,layered,near,light,atmosphere,treeSite,pavilionSite,flatSite,foliage,asset:key=>painted[key],reset(){nearTiles.clear();orchardTiles.clear();}};
 })();
