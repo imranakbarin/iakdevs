@@ -112,7 +112,7 @@ input[type=range]{width:80px;accent-color:#E63B2E}
 <script src="assets/road-rural.js?v=4"></script>
 <script src="assets/road-vehicles.js?v=7"></script>
 <script src="assets/road-weather-light.js?v=2"></script>
-<script src="assets/art-depth.js?v=2"></script>
+<script src="assets/art-depth.js?v=3"></script>
 <script>
 const requestedZen=location.hash.startsWith('#zen-'),requestedRoad=location.hash.startsWith('#road-'),requestedCozy=location.hash.startsWith('#cozy-');
 let artPresentation=location.hash.startsWith('#painting-')?'painted':'live';
@@ -2111,6 +2111,7 @@ function drawScene(dt){
   }else runActs(false);
   ArtDepth.near(ctx,ST,document.getElementById('sty').value,cam,vw,k,cv.height);
   ArtDepth.light(ctx,ST,cam,vw,k,cv.height);
+  ArtDepth.atmosphere(ctx,ST,cam,vw,k,cv.height,tt);
   if(ST.tintGrad&&ArtDepth.layered(ST)){world();for(const A of acts)if(!A.back&&A.glow){ctx.save();A.fn(ctx,tt,mulberry32(A.s));ctx.restore();}ctx.setTransform(1,0,0,1,0,0);}
   const fwd=vel>=0;pump(fwd?[b+1,b+2]:[a-1,b+1],4);
   for(const i of tiles.keys())if(i<a-2||i>b+2)tiles.delete(i);
