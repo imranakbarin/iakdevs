@@ -112,7 +112,7 @@ input[type=range]{width:80px;accent-color:#E63B2E}
 <script src="assets/road-rural.js?v=4"></script>
 <script src="assets/road-vehicles.js?v=7"></script>
 <script src="assets/road-weather-light.js?v=2"></script>
-<script src="assets/art-depth.js?v=5"></script>
+<script src="assets/art-depth.js?v=6"></script>
 <script>
 const requestedZen=location.hash.startsWith('#zen-'),requestedRoad=location.hash.startsWith('#road-'),requestedCozy=location.hash.startsWith('#cozy-');
 let artPresentation=location.hash.startsWith('#painting-')?'painted':'live';
@@ -903,7 +903,7 @@ STYLES.kangra={name:'Kangra miniature',
     if(e>-.2)for(let k=(r()<.6?1:0)+(r()<.3?1:0);k>0;k--){const cx=x0+r()*CW,cy=topY+35+r()*65;add(0,(c,q)=>kCloud(c,cx,cy,q));}
     if(e>.08&&r()<(z==='riverside'||z==='lake'?.6:.3)){const bx=x0+r()*CW,by=topY+45+r()*55;act((c,t,q)=>kCranes(c,loopC(c,bx,t*14),by+Math.sin(t*.7)*4,q,t*2.5));}
     const walk=(fn,L,sp,st,ax)=>{ax=ax??freeSpot(r,x0,occ);const p=r();act((c,t,q)=>walkA(t,ax,L,sp,p,st,(x,A)=>fn(c,x,q,A)));};
-    if(z==='palace'){const px=x0+330;occ.push(px,px-95,px+95);add(3,(c,q)=>{c.save();c.translate(px,gy(px));c.scale(1.55,1.55);c.translate(-px,-gy(px));kPavilion(c,px,q);c.restore();});for(const sg of[-1,1]){const cx=px+sg*125;add(3,(c,q)=>kTree(c,cx,q,'cypress'));}add(6,c=>kLamp(c,px));}
+    if(z==='palace'){const px=x0+330;occ.push(px,px-95,px+95);add(3,(c,q)=>ArtDepth.pavilionSite(c,px,q,1.55,gy));for(const sg of[-1,1]){const cx=px+sg*125;add(3,(c,q)=>kTree(c,cx,q,'cypress'));}add(6,c=>kLamp(c,px));}
     else{const nt={woods:3+(r()*2|0),pasture:1,riverside:1+(r()*2|0),palace:2,lake:1}[z]??2;for(let k=0;k<nt;k++){const tx=x0+(k+.15+r()*.7)*CW/nt;occ.push(tx);add(3,(c,q)=>kTree(c,tx,q));}}
     if(z==='pasture'||r()<.3){const cx=freeSpot(r,x0,occ);for(let k=0,m=z==='pasture'?3+(r()*3|0):1+(r()*2|0);k<m;k++)walk(kCow,40,2.5,30,cx-50+k*(30+r()*24));}
     if(z==='woods'||z==='pasture'?r()<.5:r()<.15){const cx=freeSpot(r,x0,occ);for(let k=0,m=2+(r()*3|0);k<m;k++)walk(kBuck,90,7,26,cx-30+k*(26+r()*14));}
@@ -911,10 +911,10 @@ STYLES.kangra={name:'Kangra miniature',
     if(z==='lake'||(z==='riverside'&&r()<.5))for(let k=1+(r()*2|0);k>0;k--){const dx=x0+r()*CW,dy=RIVER+18+r()*22;act((c,t,q)=>kDucks(c,dx,dy,q,t));}
     for(let k=z==='riverside'||z==='lake'?2+(r()*2|0):(r()<.5?1:0);k>0;k--){const lx=x0+r()*CW,ly=RIVER+14+r()*26;add(4,(c,q)=>kLotus(c,lx,ly,q));}
     for(let k=(z==='woods'?3:1)+(r()*3|0);k>0;k--){const bx=x0+r()*CW;add(5,(c,q)=>kBush(c,bx,q));}
-    add(2,(c,q)=>{
+    add(1,(c,q)=>{
       // Small orchards and a distant chhatri add miniature-painting scale and depth.
-      for(let j=0;j<5;j++){const x=x0+40+j*125,y=444+Math.sin(x*.009)*16;c.save();c.translate(x,y);c.scale(.36,.36);c.translate(-x,-gy(x));kTree(c,x,q);c.restore();}
-      if(z==='riverside'||z==='lake'){const x=x0+400;c.save();c.translate(x,390);c.scale(.46,.46);c.translate(-x,-gy(x));kPavilion(c,x,q);c.restore();}
+      for(let j=0;j<5;j++)ArtDepth.treeSite(c,x0+40+j*125,q,.26,x=>kRidge(x,1));
+      if(z==='riverside'||z==='lake'){const surface=x=>kRidge(x,1),x=ArtDepth.flatSite(x0+400,.36,surface);ArtDepth.pavilionSite(c,x,q,.36,surface);}
     });
     add(5,(c,q)=>{for(let j=0;j<4;j++){const x=x0+50+j*155;c.save();c.translate(x,gy(x)+36);c.scale(.55,.55);kLotus(c,0,0,q);c.restore();}});
     if(z==='palace'||z==='riverside')act((c,t)=>{const x=x0+440+Math.sin(t*.035)*24;kFigure(c,x,gy(x)+4,.78,'#b64f43',t*.6);kFigure(c,x+24,gy(x+24)+4,.73,'#ddaf57',t*.6+.8);});
