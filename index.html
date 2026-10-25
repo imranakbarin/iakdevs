@@ -112,7 +112,7 @@ input[type=range]{width:80px;accent-color:#E63B2E}
 <script src="assets/road-rural.js?v=4"></script>
 <script src="assets/road-vehicles.js?v=7"></script>
 <script src="assets/road-weather-light.js?v=2"></script>
-<script src="assets/art-depth.js?v=4"></script>
+<script src="assets/art-depth.js?v=5"></script>
 <script>
 const requestedZen=location.hash.startsWith('#zen-'),requestedRoad=location.hash.startsWith('#road-'),requestedCozy=location.hash.startsWith('#cozy-');
 let artPresentation=location.hash.startsWith('#painting-')?'painted':'live';
@@ -2083,6 +2083,7 @@ function drawScene(dt){
   const target=playing&&!drag?(painted?12.8:26):0;
   vel+=(target-vel)*(1-Math.exp(-dt*2.6));if(!drag&&playing)camX+=vel*dt;
   if(painted){LivingArt.draw(ctx,document.getElementById('sty').value,cv.width,cv.height,camX,SceneMotion.time,dt,seed);return;}
+  ArtDepth.prepare(document.getElementById('sty').value);
   document.getElementById('art-status').hidden=true;
   if(document.getElementById('art-title').textContent!==ST.name)document.getElementById('art-title').textContent=ST.name;
   if(document.getElementById('art-medium').textContent!=='Live art · Endless landscape · Drag to explore')document.getElementById('art-medium').textContent='Live art · Endless landscape · Drag to explore';

@@ -1,10 +1,11 @@
 /* Scene-scale composition and independently moving planes for live, seeded art. */
 const ArtDepth=(()=>{
  const nearTiles=new Map(),orchardTiles=new Map();
- const painted={};
- for(const [key,file] of [['tree','mexico-flowering-tree.webp'],['deer','mexico-painted-deer.webp']]){
-  const img=new Image();img.onload=()=>{requestAnimationFrame(()=>{resetTiles();wakeScene();});};img.src='assets/'+file;painted[key]=img;
+ const painted={},sources={},started=new Set();
+ for(const [key,file] of [['tree','mexico-flowering-tree.webp'],['deer','mexico-painted-deer.webp'],['kangraPavilion','kangra-painted-pavilion.webp'],['kangraTree','kangra-flowering-tree.webp']]){
+  const img=new Image();img.onload=()=>{requestAnimationFrame(()=>{resetTiles();wakeScene();});};painted[key]=img;sources[key]='assets/'+file;
  }
+ function prepare(key){for(const name of key==='mexico'?['tree','deer']:key==='kangra'?['kangraPavilion','kangraTree']:[]){if(started.has(name))continue;started.add(name);painted[name].src=sources[name];}}
  const layered=style=>['mexico','kangra','japan','china'].some(key=>STYLES[key]===style);
  function stroke(c,color,width){c.strokeStyle=color;c.lineWidth=width;c.lineCap='round';c.lineJoin='round';c.stroke();}
  function almond(c,x,y,a,l,w,color,light='#dbc786'){
@@ -178,6 +179,19 @@ const ArtDepth=(()=>{
   const w=vw*k,h=height,edge=c.createRadialGradient(w*.52,h*.42,Math.min(w,h)*.24,w*.52,h*.42,Math.max(w,h)*.77);edge.addColorStop(0,'rgba(17,39,31,0)');edge.addColorStop(1,'rgba(17,39,31,.28)');c.fillStyle=edge;c.fillRect(0,0,w,h);c.restore();
  }
  function install(){
+  const nativeTree=kTree,nativePavilion=kPavilion;
+  kTree=function(c,x,q,force){
+   if(!painted.kangraTree.width||force==='cypress')return nativeTree(c,x,q,force);
+   if(q()<.28)return nativeTree(c,x,q,'cypress');
+   const h=150+q()*55,y=gy(x)+4,flip=q()<.5?-1:1;
+   c.save();c.translate(x,y);c.scale(flip,1);c.drawImage(painted.kangraTree,-h*.5,-h,h,h);c.restore();
+  };
+  kPavilion=function(c,x,q){
+   if(!painted.kangraPavilion.width)return nativePavilion(c,x,q);
+   const y=gy(x)+4;
+   c.save();c.translate(x,y);c.scale(1,.13);const shade=c.createRadialGradient(0,0,1,0,0,90);shade.addColorStop(0,'rgba(25,47,30,.3)');shade.addColorStop(1,'rgba(25,47,30,0)');c.fillStyle=shade;c.fillRect(-90,-90,180,180);c.restore();
+   c.drawImage(painted.kangraPavilion,x-85,y-180,170,180);
+  };
   STYLES.mexico.sky=mexicoSky;STYLES.mexico.ground=mexicoGround;STYLES.mexico.chunk=mexicoChunk;STYLES.mexico.focus=360;
   STYLES.kangra.focus=330;STYLES.gond.focus=300;STYLES.madhubani.focus=180;STYLES.warli.focus=300;STYLES.japan.focus=300;STYLES.china.focus=220;
   const gond=STYLES.gond.chunk;STYLES.gond.chunk=function(r,x0,add,z,act){gond.call(this,r,x0,add,z,act);if(((x0/CW)%3+3)%3===0)act((c,t,q)=>{const x=x0+305;if(!artVisible(x,210))return;c.translate(x,gy(x));c.scale(1.3,1.3);c.translate(-x,-gy(x));peacock(c,x,q,{dir:1,t,ph:0,m:0,k:2});});};
@@ -192,5 +206,5 @@ const ArtDepth=(()=>{
  });act((c,t)=>{const x=x0+330,y=548;c.beginPath();c.moveTo(x-12,y);c.quadraticCurveTo(x-15,526+Math.sin(t)*1.5,x,522);c.quadraticCurveTo(x+15,526-Math.sin(t)*1.5,x+12,y);stroke(c,'rgba(218,239,221,.7)',.9);});}
  add(2,(c,q)=>{const x=x0+90;c.save();c.translate(x,gy(x)+5);c.scale(1.05,1.05);c.translate(-x,-gy(x));kTree(c,x,q);c.restore();});};
  }
- return {install,layered,near,light,atmosphere,reset(){nearTiles.clear();orchardTiles.clear();}};
+ return {install,prepare,layered,near,light,atmosphere,reset(){nearTiles.clear();orchardTiles.clear();}};
 })();
