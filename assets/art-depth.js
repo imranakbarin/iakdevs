@@ -1,6 +1,10 @@
 /* Scene-scale composition and independently moving planes for live, seeded art. */
 const ArtDepth=(()=>{
  const nearTiles=new Map(),orchardTiles=new Map();
+ const painted={};
+ for(const [key,file] of [['tree','mexico-flowering-tree.webp'],['deer','mexico-painted-deer.webp']]){
+  const img=new Image();img.onload=()=>{requestAnimationFrame(()=>{resetTiles();wakeScene();});};img.src='assets/'+file;painted[key]=img;
+ }
  const layered=style=>['mexico','kangra','japan','china'].some(key=>STYLES[key]===style);
  function stroke(c,color,width){c.strokeStyle=color;c.lineWidth=width;c.lineCap='round';c.lineJoin='round';c.stroke();}
  function almond(c,x,y,a,l,w,color,light='#dbc786'){
@@ -31,6 +35,7 @@ const ArtDepth=(()=>{
   c.beginPath();for(let j=0;j<24;j++){const u=j/24;c.moveTo(lean*u-7,-h*u);c.quadraticCurveTo(lean*u,-h*u-7,lean*u+6,-h*u-2);}stroke(c,'#dfb56c',.55);c.restore();
  }
  function orchardTree(c,x,y,s,q,bloom=true){
+  if(painted.tree.width>0){c.drawImage(painted.tree,x-182*s,y-360*s,365*s,365*s);return;}
   const n=(q()*4294967296)>>>0,m=c.getTransform(),ratio=Math.max(1,Math.min(3,Math.ceil(Math.hypot(m.a,m.b)*s*2)/2)),key=[n,bloom,ratio].join(':');let tile=orchardTiles.get(key);
   if(!tile){tile=document.createElement('canvas');tile.width=Math.ceil(440*ratio);tile.height=Math.ceil(430*ratio);const g=tile.getContext('2d');g.scale(ratio,ratio);paintOrchard(g,220,410,1,mulberry32(n),bloom);orchardTiles.set(key,tile);while(orchardTiles.size>10)orchardTiles.delete(orchardTiles.keys().next().value);}
   c.drawImage(tile,x-220*s,y-410*s,440*s,430*s);
@@ -79,6 +84,10 @@ const ArtDepth=(()=>{
   }
  }
  function deer(c,x,y,s,t,q){
+  if(painted.deer.width>0){
+   // Subtle breathing is anchored to the hooves; the scene remains live and pannable.
+   c.save();c.translate(x,y);c.transform(1,0,Math.sin(t*.38)*.0015,1+Math.sin(t*.65)*.0015,0,0);c.drawImage(painted.deer,-66*s,-253*s,176*s,264*s);c.restore();return;
+  }
   c.save();c.translate(x,y);c.scale(s,s);c.lineJoin='round';
   const body='#a86e43',edge='#624831';
   // Four jointed legs terminate on the same bank, independent of breathing.
@@ -100,16 +109,13 @@ const ArtDepth=(()=>{
   almond(c,-57,-78,-1.05+Math.sin(t*.5)*.05,24,7,'#99683e');c.restore();
  }
  function mexicoChunk(r,x0,add,z,act){
-  add(2,(c,q)=>{orchardTree(c,x0+68,555,1.28,q,true);orchardTree(c,x0+570,555,.57,q,true);
-   c.beginPath();c.moveTo(x0+70,322);c.quadraticCurveTo(x0+160,305,x0+270,300);stroke(c,'#695036',5);
-  });
+  add(2,(c,q)=>{orchardTree(c,x0+68,555,1.28,q,true);orchardTree(c,x0+570,555,.57,q,true);});
   add(3,(c)=>{
    for(const [x,w,h] of [[x0+370,100,13],[x0+68,76,10],[x0+570,42,7]]){
     c.save();c.translate(x,556);c.rotate(-.08);const shadow=c.createRadialGradient(0,0,1,0,0,w);shadow.addColorStop(0,'rgba(34,58,31,.38)');shadow.addColorStop(1,'rgba(34,58,31,0)');c.scale(1,h/w);c.fillStyle=shadow;c.fillRect(-w,-w,w*2,w*2);c.restore();
    }
   });
   act((c,t,q)=>{if(artVisible(x0+385,175))deer(c,x0+355,555,cv.clientWidth/cv.clientHeight<.85?.9:1.05,t,q);});
-  act((c,t,q)=>{if(!artVisible(x0+245,90))return;c.translate(x0+245,300);c.scale(.85,.85);folkAnimal(c,0,0,q,t,'bird');});
   for(const x of[x0+50,x0+305,x0+540]){
    add(4,(c,q)=>{const y=555;for(let j=0;j<6;j++){const a=(j-2.5)*.4;almond(c,x,y,a,35+q()*30,5+q()*5,'#49734a');}for(let j=0;j<4;j++){const xx=x-22+j*14,yy=y-35-q()*20;c.beginPath();c.moveTo(x,y);c.lineTo(xx,yy);stroke(c,'#5e793e',1);folkFlower(c,xx,yy,7+q()*4,q);}});
   }
