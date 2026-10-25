@@ -128,6 +128,12 @@ const ArtDepth=(()=>{
   const nearCam=cam*1.16,a=Math.floor(nearCam/CW),b=Math.floor((nearCam+vw)/CW);
   c.setTransform(1,0,0,1,0,0);for(let i=a;i<=b;i++)c.drawImage(foregroundTile(style,key,i,k,height,vw),Math.round((i*CW-nearCam)*k),0);
  }
+ function light(c,style,cam,vw,k,height){
+  if(style!==STYLES.kangra)return;
+  c.save();c.setTransform(k,0,0,k,-cam*k,-topY*k);c.globalCompositeOperation='multiply';c.fillStyle=style.tintGrad(c,cam,cam+vw);c.fillRect(cam,topY,vw,height/k);c.globalCompositeOperation='source-over';
+  const n=dayW(cam+vw/2).n;if(n>.05){c.fillStyle='#fff3ce';for(let i=Math.floor(cam/31);i<=(cam+vw)/31;i++){const q=mulberry32(hash(seed^0x261,i));c.globalAlpha=n*(.4+q()*.5);c.beginPath();c.arc(i*31+q()*16,topY+8+q()*57,.5+q()*.6,0,TAU);c.fill();}}
+  c.restore();
+ }
  function install(){
   STYLES.mexico.sky=mexicoSky;STYLES.mexico.ground=mexicoGround;STYLES.mexico.chunk=mexicoChunk;STYLES.mexico.focus=360;
   STYLES.kangra.focus=330;STYLES.gond.focus=300;STYLES.madhubani.focus=180;STYLES.warli.focus=300;STYLES.japan.focus=300;STYLES.china.focus=220;
@@ -143,5 +149,5 @@ const ArtDepth=(()=>{
  });act((c,t)=>{const x=x0+330,y=548;c.beginPath();c.moveTo(x-12,y);c.quadraticCurveTo(x-15,526+Math.sin(t)*1.5,x,522);c.quadraticCurveTo(x+15,526-Math.sin(t)*1.5,x+12,y);stroke(c,'rgba(218,239,221,.7)',.9);});}
  add(2,(c,q)=>{const x=x0+90;c.save();c.translate(x,gy(x)+5);c.scale(1.05,1.05);c.translate(-x,-gy(x));kTree(c,x,q);c.restore();});};
  }
- return {install,layered,near,reset(){nearTiles.clear();orchardTiles.clear();}};
+ return {install,layered,near,light,reset(){nearTiles.clear();orchardTiles.clear();}};
 })();

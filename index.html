@@ -112,7 +112,7 @@ input[type=range]{width:80px;accent-color:#E63B2E}
 <script src="assets/road-rural.js?v=4"></script>
 <script src="assets/road-vehicles.js?v=7"></script>
 <script src="assets/road-weather-light.js?v=2"></script>
-<script src="assets/art-depth.js?v=1"></script>
+<script src="assets/art-depth.js?v=2"></script>
 <script>
 const requestedZen=location.hash.startsWith('#zen-'),requestedRoad=location.hash.startsWith('#road-'),requestedCozy=location.hash.startsWith('#cozy-');
 let artPresentation=location.hash.startsWith('#painting-')?'painted':'live';
@@ -899,7 +899,7 @@ STYLES.kangra={name:'Kangra miniature',
     z=this.zones[((Math.round(x0/CW)+2)%5+5)%5];
     const {n,e}=dayW(x0+CW/2),occ=[];
     if(e>.2&&r()<.22){const sx=x0+80+r()*(CW-160),sy=topY+48;add(0,c=>kSun(c,sx,sy));}
-    if(n>.5&&r()<.32){const mx=x0+80+r()*(CW-160),my=topY+48;add(6,c=>kMoon(c,mx,my));}
+    if(n>.5&&r()<.32){const mx=x0+80+r()*(CW-160),my=topY+48;act(c=>kMoon(c,mx,my),false,true);}
     if(e>-.2)for(let k=(r()<.6?1:0)+(r()<.3?1:0);k>0;k--){const cx=x0+r()*CW,cy=topY+35+r()*65;add(0,(c,q)=>kCloud(c,cx,cy,q));}
     if(e>.08&&r()<(z==='riverside'||z==='lake'?.6:.3)){const bx=x0+r()*CW,by=topY+45+r()*55;act((c,t,q)=>kCranes(c,loopC(c,bx,t*14),by+Math.sin(t*.7)*4,q,t*2.5));}
     const walk=(fn,L,sp,st,ax)=>{ax=ax??freeSpot(r,x0,occ);const p=r();act((c,t,q)=>walkA(t,ax,L,sp,p,st,(x,A)=>fn(c,x,q,A)));};
@@ -1982,10 +1982,10 @@ function* tileJob(i,back=false){
     if(ST.sky){ST.sky(c,xa,xb);yield;}
     for(const o of all)if(o.layer<2){yield* draw(o);yield;}
   }
-  if(back){if(ST.tintGrad&&ST.over)ST.over(c,xa,xb);return t;}
+  if(back)return t;
   ST.ground(c,xa,xb);yield;
   for(const o of all)if(o.layer>=2&&o.layer<6){yield* draw(o);yield;}
-  if(ST.over){if(layered&&ST.tintGrad){c.save();c.globalCompositeOperation='source-atop';c.fillStyle=ST.atopCol((xa+xb)/2);c.fillRect(xa,-1500,xb-xa,2300);c.restore();}else ST.over(c,xa,xb);yield;}
+  if(ST.over&&!(layered&&ST.tintGrad)){ST.over(c,xa,xb);yield;}
   for(const o of all)if(o.layer>=6){yield* draw(o);yield;}
   return t;
 }
@@ -2105,11 +2105,13 @@ function drawScene(dt){
     if(tA.length){if(!fx||fx.width!==cv.width||fx.height!==cv.height){fx=document.createElement('canvas');fx.width=cv.width;fx.height=cv.height;fxc=fx.getContext('2d');}
       const run=()=>{fxc.setTransform(k,0,0,k,-camPx,-topY*k);for(const A of tA){fxc.save();A.fn(fxc,tt,mulberry32(A.s));fxc.restore();}};
       fxc.setTransform(1,0,0,1,0,0);fxc.clearRect(0,0,fx.width,fx.height);run();
-      if(!ST.isDay(xa,xb)){fxc.globalCompositeOperation='source-atop';fxc.fillStyle=ST.atopCol((xa+xb)/2);fxc.setTransform(1,0,0,1,0,0);fxc.fillRect(0,0,fx.width,fx.height);fxc.globalCompositeOperation='source-over';}
+      if(!ArtDepth.layered(ST)&&!ST.isDay(xa,xb)){fxc.globalCompositeOperation='source-atop';fxc.fillStyle=ST.atopCol((xa+xb)/2);fxc.setTransform(1,0,0,1,0,0);fxc.fillRect(0,0,fx.width,fx.height);fxc.globalCompositeOperation='source-over';}
       ctx.setTransform(1,0,0,1,0,0);ctx.drawImage(fx,0,0);}
-    world();for(const A of acts)if(!A.back&&A.glow){ctx.save();A.fn(ctx,tt,mulberry32(A.s));ctx.restore();}ctx.setTransform(1,0,0,1,0,0);
+    world();for(const A of acts)if(!ArtDepth.layered(ST)&&!A.back&&A.glow){ctx.save();A.fn(ctx,tt,mulberry32(A.s));ctx.restore();}ctx.setTransform(1,0,0,1,0,0);
   }else runActs(false);
   ArtDepth.near(ctx,ST,document.getElementById('sty').value,cam,vw,k,cv.height);
+  ArtDepth.light(ctx,ST,cam,vw,k,cv.height);
+  if(ST.tintGrad&&ArtDepth.layered(ST)){world();for(const A of acts)if(!A.back&&A.glow){ctx.save();A.fn(ctx,tt,mulberry32(A.s));ctx.restore();}ctx.setTransform(1,0,0,1,0,0);}
   const fwd=vel>=0;pump(fwd?[b+1,b+2]:[a-1,b+1],4);
   for(const i of tiles.keys())if(i<a-2||i>b+2)tiles.delete(i);
   for(const i of jobs.keys())if(i<a-2||i>b+2)jobs.delete(i);
