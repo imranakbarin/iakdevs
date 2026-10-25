@@ -5,7 +5,7 @@ const ArtDepth=(()=>{
  for(const [key,file] of [['tree','mexico-flowering-tree.webp'],['deer','mexico-painted-deer.webp'],['kangraPavilion','kangra-painted-pavilion.webp'],['kangraTree','kangra-flowering-tree.webp'],['kangraTerrain','kangra-meadow.webp'],['kangraCypress','kangra-cypress.webp'],['kangraBoat','kangra-boat.webp'],['kangraBuck','kangra-buck.webp']]){
   const img=new Image();img.artReady=false;img.onload=()=>{img.artReady=true;requestAnimationFrame(()=>{resetTiles();wakeScene();});};painted[key]=img;sources[key]='assets/'+file;
  }
- function prepare(key){for(const name of key==='mexico'?['tree','deer']:key==='kangra'?['kangraPavilion','kangraTree','kangraTerrain','kangraCypress','kangraBoat','kangraBuck']:[]){if(started.has(name))continue;started.add(name);painted[name].src=sources[name];}}
+ function prepare(key){for(const name of key==='mexico'?['tree','deer','kangraTerrain']:key==='kangra'?['kangraPavilion','kangraTree','kangraTerrain','kangraCypress','kangraBoat','kangraBuck']:[]){if(started.has(name))continue;started.add(name);painted[name].src=sources[name];}}
  const layered=style=>['mexico','kangra','japan','china'].some(key=>STYLES[key]===style);
  function foliage(c,x,y,w,h,q,alpha=1){
   if(!painted.kangraTree.width)return;
@@ -90,6 +90,7 @@ const ArtDepth=(()=>{
  }
  function mexicoGround(c,xa,xb){
   const g=c.createLinearGradient(0,490,0,640);g.addColorStop(0,'#b4b780');g.addColorStop(.5,'#8d9a58');g.addColorStop(1,'#79854a');c.fillStyle=g;c.fillRect(xa,555,xb-xa,85);
+  c.save();c.beginPath();c.rect(xa,555,xb-xa,85);c.clip();KangraWorld.material(c,xa,xb,.65);c.restore();
   for(let i=Math.floor(xa/CW)-1;i<=xb/CW+1;i++){
    const x=i*CW+220,y=604;c.beginPath();c.ellipse(x,y,173,34,-.025,0,TAU);
    const water=c.createLinearGradient(0,y-34,0,y+34);water.addColorStop(0,'#b8cbb4');water.addColorStop(.5,'#729c91');water.addColorStop(1,'#487f78');c.fillStyle=water;c.fill();stroke(c,'#d4c58b',4);

@@ -5,7 +5,7 @@ const KangraWorld=(()=>{
  function material(c,a,b,alpha){
   const im=ArtDepth.asset('kangraTerrain');if(!im.artReady)return;
   if(!pigment){pigment=document.createElement('canvas');pigment.width=pigment.height=512;const g=pigment.getContext('2d');for(const sx of[1,-1])for(const sy of[1,-1]){g.save();g.translate(sx<0?512:0,sy<0?512:0);g.scale(sx,sy);g.drawImage(im,0,0,256,256);g.restore();}}
-  c.save();c.globalAlpha=alpha;c.globalCompositeOperation='soft-light';c.fillStyle=c.createPattern(pigment,'repeat');c.fillRect(a,120,b-a,RIVER-120);c.restore();
+  c.save();c.globalAlpha=alpha;c.globalCompositeOperation='soft-light';c.fillStyle=c.createPattern(pigment,'repeat');c.fillRect(a,120,b-a,H-120);c.restore();
  }
  function line(c,col,w){c.strokeStyle=col;c.lineWidth=w;c.lineCap='round';c.stroke();}
  function surface(c,xa,xb,edge,top,bottom,salt){
@@ -95,5 +95,5 @@ const KangraWorld=(()=>{
   kBoat=(c,x,q,t)=>ArtDepth.asset('kangraBoat').width?boat(c,x,q,t):oldBoat(c,x,q,t);
   kBush=(c,x,q)=>{const w=37+q()*24;ArtDepth.foliage(c,x,gy(x)+4,w,w*.56,q,1);};
  }
- return{install,cypress};
+ return{install,cypress,material};
 })();
