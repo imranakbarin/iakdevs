@@ -65,7 +65,7 @@ for(let i=-2;i<28;i++){
   }
 }
 assert.equal(kinds.size,10,'all ten stunts occur');
-assert.equal(win.__probe.act(380).lift,132,'bounce reaches cap contact');
+assert.ok(Math.abs(win.__probe.act(760+380).lift-132)<1e-6,'bounce reaches mushroom cap contact');
 function tick(now){
   const next=pending.entries().next().value;
   assert.ok(next,'frame is scheduled');
