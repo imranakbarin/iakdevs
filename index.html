@@ -72,16 +72,25 @@ input[type=range]{width:80px;accent-color:#E63B2E}
  .art-mode #art-gallery{box-sizing:border-box;max-height:calc(100dvh - env(safe-area-inset-top,0px) - env(safe-area-inset-bottom,0px) - 32px);overflow-y:auto}
 }
 .cozy-mode{background:#131814}.cozy-mode #c,.cozy-mode #zen-backdrop,.cozy-mode #zen-sand,.cozy-mode .ui{display:none!important}#cozy-host{display:none;position:fixed;inset:0;background:#131814;z-index:1}.cozy-mode #cozy-host{display:block}.cozy-error{color:#ece5d4;text-align:center;margin:40vh 20px}
+.mushroom-mode{background:#b8edeb}
+#mushroom-host{display:none;position:fixed;inset:0;z-index:1;background:#b8edeb}
+.mushroom-mode #mushroom-host{display:block}
+.mushroom-mode #c,.mushroom-mode #zen-backdrop,.mushroom-mode #zen-sand,.mushroom-mode #cozy-host{display:none!important}
+#mushroom-host iframe{width:100%;height:100%;display:block;border:0}
+.mushroom-mode .bar{background:rgba(37,79,89,.88);color:#fff7e5;border:1px solid #ffffff40}
+.mushroom-mode .bar > :not(#mode):not(#play){display:none!important}
+.mushroom-mode .bar #mode,.mushroom-mode .bar #play{color:#fff7e5;display:block!important}
 </style>
 </head>
 <body>
 <canvas id="zen-backdrop" class="zen-layer" aria-hidden="true"></canvas>
 <canvas id="zen-sand" class="zen-layer" aria-hidden="true"></canvas>
 <div id="cozy-host" aria-label="Cozy Worlds calming environments"></div>
+<div id="mushroom-host" aria-label="Mushroom Island, an illustrated auto-running adventure"><iframe id="mushroom-frame" title="Mushroom Island animated adventure" loading="lazy"></iframe></div>
 <canvas id="c" aria-label="Endlessly scrolling art landscape inspired by traditional painting"></canvas>
 <div class="ui"><div class="bar" id="scene-controls">
   <h1>Infinite scroll</h1>
-<select id="mode" aria-label="Experience"><option value="art">World art</option><option value="road">Road trip</option><option value="zen">Zen garden</option><option value="cozy">Cozy Worlds</option></select>
+<select id="mode" aria-label="Experience"><option value="art">World art</option><option value="road">Road trip</option><option value="zen">Zen garden</option><option value="cozy">Cozy Worlds</option><option value="mushroom">Mushroom Island</option></select>
   <input id="sty" type="hidden" value="gond">
   <select id="place" aria-label="Road trip place" hidden><option value="auto">Places · Auto</option><option value="0">Mountain pass</option><option value="1">Desert highway</option><option value="2">Forest trail</option><option value="3">Coastal drive</option><option value="4">City outskirts</option></select>
 <button id="traffic" hidden aria-pressed="true">Traffic on</button>
@@ -117,7 +126,7 @@ input[type=range]{width:80px;accent-color:#E63B2E}
 <script src="assets/art-finishing.js?v=2"></script>
 <script src="assets/gond-benchmark.js?v=1"></script>
 <script>
-const requestedZen=location.hash.startsWith('#zen-'),requestedRoad=location.hash.startsWith('#road-'),requestedCozy=location.hash.startsWith('#cozy-');
+const requestedZen=location.hash.startsWith('#zen-'),requestedRoad=location.hash.startsWith('#road-'),requestedCozy=location.hash.startsWith('#cozy-'),requestedMushroom=location.hash.startsWith('#mushroom-island');
 let artPresentation=location.hash.startsWith('#painting-')?'painted':'live';
 const H=640,CW=600,RIVER=585,TAU=Math.PI*2,PI=Math.PI;
 function mulberry32(a){return()=>{a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296;};}
@@ -2033,9 +2042,9 @@ function setArtPresentation(value){
 const motionPreference=matchMedia('(prefers-reduced-motion: reduce)');
 let speed=40,playing=!motionPreference.matches,drag=null,last=performance.now(),vel=0,dragV=0;
 const playBtn=document.getElementById('play'),syncPlay=()=>{playBtn.textContent=playing?'Pause':'Play';playBtn.setAttribute('aria-label',playing?'Pause animation':'Play animation');};
-playBtn.onclick=()=>{playing=!playing;syncPlay();if(modeBtn.value==='cozy'&&window.CozyWorlds)(playing?CozyWorlds.resume():CozyWorlds.pause)();};
+playBtn.onclick=()=>{playing=!playing;syncPlay();if(modeBtn.value==='cozy'&&window.CozyWorlds)(playing?CozyWorlds.resume():CozyWorlds.pause)();if(modeBtn.value==='mushroom')mushroomMotion(playing);};
 document.getElementById('spd').oninput=e=>speed=+e.target.value;
-document.getElementById('new').onclick=()=>{if(modeBtn.value==='zen'){zenReset();return;}if(modeBtn.value==='art'){setSeed(Math.random()*1e6|0);camX=(seed%3-1)*1300;return;}journey=0;roadObjectThemes.clear();roadPlaceTransition.autoTime=0;roadPlaceTransition.current=null;roadPlaceTransition.selection=null;roadAtmosphere.autoTime=0;roadAtmosphere.current=null;roadAtmosphere.selection=null;tripDrive.x=speed/40;tripDrive.v=0;SceneMotion.resetLane();RoadTraffic.reset();setSeed(Math.random()*1e6|0);};
+document.getElementById('new').onclick=()=>{if(modeBtn.value==='mushroom'){document.getElementById('mushroom-frame').src='mushroom-island.html';return;}if(modeBtn.value==='zen'){zenReset();return;}if(modeBtn.value==='art'){setSeed(Math.random()*1e6|0);camX=(seed%3-1)*1300;return;}journey=0;roadObjectThemes.clear();roadPlaceTransition.autoTime=0;roadPlaceTransition.current=null;roadPlaceTransition.selection=null;roadAtmosphere.autoTime=0;roadAtmosphere.current=null;roadAtmosphere.selection=null;tripDrive.x=speed/40;tripDrive.v=0;SceneMotion.resetLane();RoadTraffic.reset();setSeed(Math.random()*1e6|0);};
 document.getElementById('sty').onchange=e=>setSeed(seed,e.target.value);
 cv.addEventListener('pointerdown',e=>{if(modeBtn.value==='zen'){zenRippleAt(e.clientX,e.clientY);wakeScene();return;}drag={x:e.clientX,c:camX,lx:e.clientX,lt:performance.now()};dragV=0;cv.setPointerCapture(e.pointerId);cv.style.cursor='grabbing';});
 cv.addEventListener('pointermove',e=>{if(!drag)return;camX=drag.c-(e.clientX-drag.x)/S;const now=performance.now(),dtm=Math.max(1,now-drag.lt);dragV=dragV*.6+(-(e.clientX-drag.lx)/S/dtm*1000)*.4;drag.lx=e.clientX;drag.lt=now;});
@@ -2059,28 +2068,37 @@ try{if(localStorage.getItem('gond-ui')==='0')setUI(false);}catch(e){}
 matchMedia('(prefers-color-scheme: dark)').addEventListener('change',()=>{readTheme();OC.clear();resetTiles();});
 
 const modeBtn=document.getElementById('mode');
+const mushroomFrame=document.getElementById('mushroom-frame');
+function mushroomMotion(on){
+ if(mushroomFrame.getAttribute('src'))mushroomFrame.contentWindow?.postMessage({type:'mushroom:motion',playing:Boolean(on)},location.origin);
+}
+mushroomFrame.addEventListener('load',()=>mushroomMotion(modeBtn.value==='mushroom'&&playing));
 let cozyPromise=null;
 function openCozy(){
  if(!cozyPromise)cozyPromise=Promise.all(['assets/cozy-scene-motion.js?v=1','assets/cozy-worlds-calm.js?v=2'].map(src=>new Promise((resolve,reject)=>{const js=document.createElement('script');js.src=src;js.onload=resolve;js.onerror=()=>{js.remove();reject(new Error('Scene script unavailable'));};document.head.append(js);})));
  cozyPromise.then(()=>{if(modeBtn.value==='cozy')CozyWorlds.mount(document.getElementById('cozy-host'),{onMotionChange(value){playing=value;syncPlay();},onExperienceChange(value){modeBtn.value=value;modeBtn.onchange();}});}).catch(()=>{if(modeBtn.value==='cozy')document.getElementById('cozy-host').innerHTML='<p class="cozy-error">The scene could not load. Please refresh.</p>';cozyPromise=null;});
 }
 modeBtn.onchange=()=>{
- const road=modeBtn.value==='road',zen=modeBtn.value==='zen',cozy=modeBtn.value==='cozy',wasZen=document.body.classList.contains('zen-mode');
+ const road=modeBtn.value==='road',zen=modeBtn.value==='zen',cozy=modeBtn.value==='cozy',mushroom=modeBtn.value==='mushroom',wasZen=document.body.classList.contains('zen-mode');
  if(!cozy&&window.CozyWorlds)CozyWorlds.dispose();document.body.classList.toggle('cozy-mode',cozy);if(cozy)openCozy();
-  LivingArt.mode(!road&&!zen&&!cozy);if(!road&&!zen&&!cozy){openSettings(false);setUI(true);}
+ document.body.classList.toggle('mushroom-mode',mushroom);
+ if(mushroom&&!mushroomFrame.getAttribute('src'))mushroomFrame.src='mushroom-island.html';
+ mushroomMotion(mushroom&&playing);
+  LivingArt.mode(!road&&!zen&&!cozy&&!mushroom);if(!road&&!zen&&!cozy&&!mushroom){openSettings(false);setUI(true);}
  document.body.classList.toggle('zen-mode',zen);
- document.getElementById('sty').hidden=true;document.getElementById('seed').hidden=road||zen||cozy;
+ document.getElementById('sty').hidden=true;document.getElementById('seed').hidden=road||zen||cozy||mushroom;
  document.getElementById('zen-pattern').hidden=!zen;
  for(const id of ['zen-garden','zen-atmosphere','zen-fullscreen'])document.getElementById(id).hidden=!zen;
  if(zen!==wasZen)layout();
  for(const id of ['place','weather','trip-status','traffic'])document.getElementById(id).hidden=!road;
- document.querySelector('h1').textContent=cozy?'Cozy Worlds':zen?'Zen garden':'Infinite scroll';
- document.getElementById('new').textContent=cozy?'Reading nook':zen?'Smooth sand':road?'New landscape':'Another view';
+ document.querySelector('h1').textContent=mushroom?'Mushroom Island':cozy?'Cozy Worlds':zen?'Zen garden':'Infinite scroll';
+ document.getElementById('new').textContent=mushroom?'Restart island':cozy?'Reading nook':zen?'Smooth sand':road?'New landscape':'Another view';
  cv.setAttribute('aria-label',zen?'An illustrated garden with a steel ball drawing in sand, swimming koi, falling petals, swaying branches, flowing bamboo water and a steaming spring':road?'Infinite illustrated road trip through changing places and weather':'Endlessly scrolling world art landscape');
- if(cozy)history.replaceState(null,'',location.pathname+location.search+'#cozy-nook');
+ if(mushroom)history.replaceState(null,'',location.pathname+location.search+'#mushroom-island');
+ else if(cozy)history.replaceState(null,'',location.pathname+location.search+'#cozy-nook');
   else if(zen){if(!zenReady)zenReset();history.replaceState(null,'',location.pathname+location.search+'#zen-'+seed);}
  else if(road)history.replaceState(null,'',location.pathname+location.search+'#road-'+seed);
- else if(location.hash.startsWith('#zen-')||location.hash.startsWith('#road-')||location.hash.startsWith('#cozy-'))history.replaceState(null,'',location.pathname+location.search+'#'+(artPresentation==='painted'?'painting-':'')+document.getElementById('sty').value+'-'+seed);
+ else if(location.hash.startsWith('#zen-')||location.hash.startsWith('#road-')||location.hash.startsWith('#cozy-')||location.hash.startsWith('#mushroom-island'))history.replaceState(null,'',location.pathname+location.search+'#'+(artPresentation==='painted'?'painting-':'')+document.getElementById('sty').value+'-'+seed);
 };
  document.getElementById('zen-pattern').onchange=()=>zenReset();
 document.getElementById('zen-garden').onchange=e=>zenSetGarden(e.target.value);
@@ -2095,7 +2113,7 @@ zenFullscreen.onclick=async()=>{
 document.addEventListener('fullscreenchange',()=>{zenFullscreen.textContent=document.fullscreenElement?'Exit full screen':'Full screen';layout();wakeScene();});
 document.getElementById('traffic').onclick=e=>{trafficEnabled=!trafficEnabled;e.target.textContent=trafficEnabled?'Traffic on':'Traffic off';e.target.setAttribute('aria-pressed',String(trafficEnabled));};
 function drawScene(dt){
-   if(modeBtn.value==='cozy')return;
+   if(modeBtn.value==='cozy'||modeBtn.value==='mushroom')return;
   if(modeBtn.value==='zen'){zenFrame(dt);return;}
   if(modeBtn.value==='road'){roadFrame(SceneMotion.time*1000,dt);return;}
   const painted=artPresentation==='painted';
@@ -2148,7 +2166,7 @@ let frameHandle=0,lastPaint=0,lastMetrics=0;
 function wakeScene(){SceneMotion.invalidate();if(!frameHandle&&!document.hidden)frameHandle=requestAnimationFrame(frame);}
 function frame(t){
  frameHandle=0;if(document.hidden){last=t;return;}
- if(modeBtn.value==='cozy'){last=t;return;}
+ if(modeBtn.value==='cozy'||modeBtn.value==='mushroom'){last=t;return;}
  if(modeBtn.value==='art'&&(cv.width!==Math.round(cv.clientWidth*DPR)||cv.height!==Math.round(cv.clientHeight*DPR)))layout();
   const dirty=SceneMotion.consumeDirty(),moving=playing||Boolean(drag),interval=cv.clientWidth<700||SceneMotion.renderMs>18?1000/30:1000/60;
  if(!dirty&&!moving)return;
@@ -2168,7 +2186,7 @@ document.addEventListener('visibilitychange',()=>{last=performance.now();if(docu
 {const m=/^#(?:painting-)?(?:([a-z]+)-)?(\d+)/.exec(location.hash),key=m&&m[1]&&STYLES[m[1]]?m[1]:'gond';ST=STYLES[key];
  layout();setSeed(m?+m[2]:(Math.random()*1e6|0),key);syncPlay();}
 LivingArt.setup();LivingArt.mode(!requestedZen&&!requestedRoad&&!requestedCozy);if(!requestedZen&&!requestedRoad&&!requestedCozy){setUI(true);document.getElementById('new').textContent='Another view';}
-if(requestedZen||requestedRoad||requestedCozy){modeBtn.value=requestedCozy?'cozy':requestedZen?'zen':'road';modeBtn.onchange();}
+if(requestedZen||requestedRoad||requestedCozy||requestedMushroom){modeBtn.value=requestedMushroom?'mushroom':requestedCozy?'cozy':requestedZen?'zen':'road';modeBtn.onchange();}
 motionPreference.addEventListener('change',e=>{if(e.matches){playing=false;syncPlay();if(modeBtn.value==='cozy')window.CozyWorlds?.pause();wakeScene();}});
 wakeScene();
 </script>
