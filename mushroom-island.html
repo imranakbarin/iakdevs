@@ -1,0 +1,404 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#a6e5ef">
+<title>Mushroom Island — The Little Wanderer</title>
+<style>
+html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#b8edeb}
+canvas{display:block;width:100vw;height:100dvh;touch-action:pan-y}
+@media(prefers-reduced-motion:reduce){canvas{animation:none}}
+</style>
+</head>
+<body>
+<canvas id="island" role="img" aria-label="An original little mushroom-capped adventurer automatically runs, flips, glides, slides and bounces through a colorful illustrated island."></canvas>
+<script>
+/* Mushroom Island: original illustrated, zero-input autoplay.
+ * No external assets, audio, random frame effects or gameplay controls.
+ * Deterministic world-distance choreography keeps takeoffs and landings consistent.
+ */
+(() => {
+  'use strict';
+  const canvas=document.getElementById('island');
+  const c=canvas.getContext('2d',{alpha:false});
+  const TAU=Math.PI*2, CELL=760, SPEED=171;
+  const motifs=['leap','bounce','spin','slide','vault','glide','twirl','dash','wallkick','cartwheel'];
+  const palettes=[
+    ['#ffc386','#ec728b','#794c9a'],['#f6bb6f','#d96fae','#774ea9'],
+    ['#ffcf7d','#ee837d','#8064bb'],['#ffb59f','#cf82be','#5e8b9e']
+  ];
+  const clamp=(a,b,x)=>Math.max(a,Math.min(b,x));
+  const mix=(a,b,p)=>a+(b-a)*p;
+  const smooth=x=>{x=clamp(0,1,x);return x*x*(3-2*x);};
+  const hash=n=>{n=Math.imul(n^0x9e3779b9,0x85ebca6b);n^=n>>>13;n=Math.imul(n,0xc2b2ae35);return(n^(n>>>16))>>>0;};
+  const rand=(i,salt=0)=>hash((i|0)^(salt*11939))/4294967296;
+  const segment=i=>({kind:motifs[((i%motifs.length)+motifs.length)%motifs.length],
+    tint:palettes[hash(i+79)%palettes.length],variant:hash(i+653)%4});
+  let W=900,H=600,DPR=1,scale=1,distance=0,time=0,paused=matchMedia('(prefers-reduced-motion: reduce)').matches;
+  let raf=0,previous=0,hasParent=false;
+
+  function resize(){
+    const w=Math.max(1,canvas.clientWidth),h=Math.max(1,canvas.clientHeight);
+    DPR=Math.min(2,window.devicePixelRatio||1,Math.sqrt(2600000/(w*h)));
+    canvas.width=Math.round(w*DPR);canvas.height=Math.round(h*DPR);
+    // A portrait phone still sees enough ground ahead of the runner.
+    scale=Math.min(h/610,w/510);W=w/scale;H=h/scale;
+    paint();
+  }
+  const ground=x=>H*.715+8*Math.sin(x*.0043)+3*Math.sin(x*.014);
+  const gap=(i,x)=>segment(i).kind==='leap'&&x>i*CELL+345&&x<i*CELL+457;
+  const visible=(x,cam,pad=0)=>x>=cam-pad&&x<cam+W+pad;
+  function ellipse(x,y,rx,ry,color){
+    c.fillStyle=color;c.beginPath();c.ellipse(x,y,rx,ry,0,0,TAU);c.fill();
+  }
+  function line(x1,y1,x2,y2,color,width=1){
+    c.strokeStyle=color;c.lineWidth=width;c.beginPath();c.moveTo(x1,y1);c.lineTo(x2,y2);c.stroke();
+  }
+  function glow(x,y,r,col){
+    const g=c.createRadialGradient(x,y,0,x,y,r);
+    g.addColorStop(0,col);g.addColorStop(1,'rgba(255,255,255,0)');
+    c.fillStyle=g;c.fillRect(x-r,y-r,r*2,r*2);
+  }
+  function sky(cam){
+    const g=c.createLinearGradient(0,0,0,H);
+    g.addColorStop(0,'#84cbd9');g.addColorStop(.48,'#c6f2e5');g.addColorStop(1,'#f2e5bd');
+    c.fillStyle=g;c.fillRect(0,0,W,H);
+    const sunX=W*.73+Math.sin(time*.045)*12,sunY=H*.19;
+    glow(sunX,sunY,160,'rgba(255,247,184,.66)');
+    ellipse(sunX,sunY,47,47,'#fff3be');
+    for(let k=0;k<3;k++){
+      const fac=[.10,.21,.37][k],spacing=[490,330,255][k],p=cam*fac;
+      for(let j=Math.floor((p-100)/spacing)-1;j<=Math.ceil((p+W+150)/spacing);j++){
+        const x=j*spacing-p+rand(j,k+19)*125;
+        const y=H*(.34+k*.09)+Math.sin(j*1.6)*22+rand(j,k+22)*23;
+        if(k===0){
+          // Airy island-shaped clouds, drawn far from the ground.
+          c.globalAlpha=.59;
+          ellipse(x,y,75,17,'#f8fff5');
+          ellipse(x-30,y-8,36,23,'#f8fff5');
+          ellipse(x+17,y-18,39,26,'#f8fff5');
+          c.globalAlpha=1;
+        }else{
+          c.beginPath();c.moveTo(x-135,y+100);
+          c.bezierCurveTo(x-120,y-48,x-15,y-105,x+60,y-24);
+          c.quadraticCurveTo(x+107,y+6,x+135,y+100);c.closePath();
+          c.fillStyle=k===1?'#9fcbb5':'#83b49f';c.fill();
+          c.beginPath();c.moveTo(x-55,y-14);c.quadraticCurveTo(x-18,y-66,x+21,y-31);
+          c.strokeStyle='rgba(242,255,228,.4)';c.lineWidth=6;c.stroke();
+        }
+      }
+    }
+  }
+  function cap(x,y,w,h,colors,spots=5){
+    c.save();c.translate(x,y);
+    c.beginPath();c.moveTo(-w*.55,0);c.bezierCurveTo(-w*.58,-h*.54,-w*.27,-h,w*.03,-h);
+    c.bezierCurveTo(w*.39,-h,w*.64,-h*.46,w*.55,0);c.closePath();
+    const grd=c.createLinearGradient(0,-h,0,4);
+    grd.addColorStop(0,colors[0]);grd.addColorStop(1,colors[1]);c.fillStyle=grd;c.fill();
+    c.strokeStyle=colors[2];c.lineWidth=2;c.stroke();
+    c.save();c.clip();
+    for(let k=0;k<spots;k++){
+      const xx=(rand(k,43)-.5)*w*1.15,yy=-h*(.18+rand(k,34)*.55);
+      ellipse(xx,yy,5+rand(k,37)*10,3+rand(k,41)*5,'rgba(255,246,221,.85)');
+    }
+    c.restore();
+    c.beginPath();c.ellipse(0,1,w*.55,7,0,0,TAU);c.fillStyle='#ffead6';c.fill();
+    c.beginPath();c.ellipse(0,-1,w*.52,3.5,0,0,TAU);c.fillStyle='rgba(120,75,92,.27)';c.fill();
+    c.restore();
+  }
+  function mushroom(x,y,s,colors,sway=0){
+    c.save();c.translate(x,y);c.scale(s,s);
+    const bend=Math.sin(time*.6+x*.013)*sway;
+    ellipse(3,0,35,6,'rgba(67,101,68,.21)');
+    c.beginPath();c.moveTo(-13,0);c.bezierCurveTo(-21,-28,0,-74,bend-12,-100);
+    c.quadraticCurveTo(bend+2,-110,bend+13,-100);
+    c.bezierCurveTo(bend+3,-62,bend+19,-20,17,0);c.closePath();
+    const stem=c.createLinearGradient(-20,0,20,0);
+    stem.addColorStop(0,'#e5caaf');stem.addColorStop(.5,'#fff0cf');stem.addColorStop(1,'#cba893');
+    c.fillStyle=stem;c.fill();c.strokeStyle='#b48d88';c.lineWidth=2;c.stroke();
+    ellipse(-4,-34,2.5,8,'rgba(164,112,105,.22)');
+    cap(bend,-100,126,72,colors,7);
+    c.restore();
+  }
+  function islands(cam){
+    // Distant giant mushrooms move slowly; grounded props move at the runner's speed.
+    const p=cam*.53,step=400;
+    for(let k=Math.floor((p-160)/step)-1;k<=Math.ceil((p+W+160)/step);k++){
+      const x=k*step-p+rand(k,11)*65;
+      const y=H*.69+Math.sin(k*3.2)*17;
+      mushroom(x,y,.77+rand(k,13)*.43,
+        palettes[hash(k+92)%palettes.length],5);
+      ellipse(x+73,y-29,15,6,'rgba(78,157,112,.26)');
+    }
+  }
+  function water(cam){
+    const y=H*.755;
+    const g=c.createLinearGradient(0,y,0,H);
+    g.addColorStop(0,'#63c9c1');g.addColorStop(1,'#297ca3');
+    c.fillStyle=g;c.fillRect(0,y,W,H-y);
+    c.strokeStyle='rgba(248,251,213,.36)';
+    for(let k=-1;k<=Math.ceil(W/58)+1;k++){
+      const x=k*58-(cam*.35%58),yy=y+21+(k%5)*24;
+      c.lineWidth=1.8;c.beginPath();c.moveTo(x,yy);
+      c.quadraticCurveTo(x+13,yy-3+Math.sin(time*.9+k)*2,x+30,yy);c.stroke();
+    }
+  }
+  function strip(a,b,cam,kind,variant){
+    if(b-a<2)return;
+    const left=a-cam,right=b-cam;
+    c.beginPath();c.moveTo(left,ground(a));
+    for(let x=a+12;x<b;x+=12)c.lineTo(x-cam,ground(x));
+    c.lineTo(right,ground(b));c.lineTo(right,H+80);c.lineTo(left,H+80);c.closePath();
+    const soil=c.createLinearGradient(0,H*.69,0,H);
+    soil.addColorStop(0,'#96d17b');soil.addColorStop(.13,'#54ac86');
+    soil.addColorStop(.15,'#9c755d');soil.addColorStop(1,'#694f68');
+    c.fillStyle=soil;c.fill();
+    // Anchored highlights and layered strata.
+    c.beginPath();c.moveTo(left,ground(a)-2);
+    for(let x=a+12;x<b;x+=12)c.lineTo(x-cam,ground(x)-2);
+    c.lineTo(right,ground(b)-2);c.strokeStyle='#d1ea9c';c.lineWidth=7;c.stroke();
+    c.save();c.beginPath();c.rect(left,ground(a)+17,right-left,H);c.clip();
+    for(let y=H*.8;y<H+30;y+=23){
+      const offset=(variant%3)*7;
+      for(let x=Math.floor(a/39)*39;x<b;x+=39){
+        const xx=x-cam+offset,yy=y+3*Math.sin(x*.02+y);
+        line(xx,yy,xx+13,yy+3,'rgba(251,200,145,.18)',2);
+      }
+    }c.restore();
+  }
+  function scenery(cam){
+    water(cam);
+    const first=Math.floor(cam/CELL)-1,last=Math.ceil((cam+W)/CELL)+1;
+    for(let i=first;i<=last;i++){
+      const st=segment(i),a=i*CELL,b=(i+1)*CELL;
+      if(st.kind==='leap'){
+        strip(a,a+345,cam,st.kind,st.variant);
+        strip(a+457,b,cam,st.kind,st.variant);
+        // The chasm has an actual visible edge; scripted jump clears it.
+        line(a+345-cam,ground(a+345)+1,a+345-cam,H*.86,'#ebd38d',3);
+        line(a+457-cam,ground(a+457)+1,a+457-cam,H*.86,'#ebd38d',3);
+      } else strip(a,b,cam,st.kind,st.variant);
+
+      // Distance-correct silhouettes; omit detail from a jumping gap.
+      for(let k=0;k<5;k++){
+        const x=a+62+k*143+rand(i*7+k,8)*33;
+        if(!visible(x,cam,100)||gap(i,x))continue;
+        const y=ground(x),r=rand(i*7+k,5);
+        if(k===1||r>.66){
+          const sc=.28+rand(i*7+k,7)*.17;
+          mushroom(x-cam,y,sc,st.tint,2);
+        }else{
+          c.save();c.translate(x-cam,y);
+          for(let j=0;j<5;j++){
+            c.beginPath();c.moveTo(0,0);
+            c.quadraticCurveTo((j-2)*9,-12,(j-2)*10,-19-13*rand(j,i+3));
+            c.strokeStyle=j%2?'#2e936f':'#5caa5d';c.lineWidth=2;c.stroke();
+          }
+          ellipse(0,-3,10,3,'#478e64');c.restore();
+        }
+      }
+      const px=a+420,py=ground(px);
+      if(!visible(px,cam,150))continue;
+      if(st.kind==='bounce'){
+        mushroom(px-cam,py,.77,st.tint,3);
+        glow(px-cam,py-164,43,'rgba(255,244,172,.38)');
+      }else if(st.kind==='slide'){
+        c.save();c.translate(px-cam,py);
+        // Raised horizontal log with enough clearance for the sliding hero.
+        ellipse(-4,0,55,9,'rgba(78,66,69,.25)');
+        c.fillStyle='#9e7487';c.fillRect(-59,-104,118,18);
+        ellipse(-59,-95,10,9,'#ffdca1');ellipse(59,-95,10,9,'#ffdca1');
+        c.restore();
+      }else if(st.kind==='wallkick'){
+        c.save();c.translate(px-cam,py);
+        c.fillStyle='#c7a6b5';c.beginPath();c.roundRect(-18,-168,36,168,9);c.fill();
+        for(let j=0;j<5;j++)ellipse(0,-24-j*28,4,4,'#f8e8cb');
+        c.restore();
+      }else if(st.kind==='vault'){
+        mushroom(px-cam,py,.53,st.tint,2);
+      }else if(st.kind==='glide'){
+        const x=px-cam,y=py-155;
+        line(x,y,x+60,y-17,'#d99d85',2);
+        ellipse(x+60,y-17,8,8,'#fff0b5');
+      }
+      if(st.kind!=='slide'&&st.kind!=='dash'){
+        for(let j=0;j<5;j++){
+          const xx=a+250+j*58,yy=ground(xx)-120-46*Math.sin(j/4*Math.PI);
+          const x=xx-cam;
+          if(!visible(xx,cam,25))continue;
+          // Small star-seeds are part of the scenery, not gameplay pickups.
+          c.save();c.translate(x,yy+Math.sin(time*1.3+j+i)*4);
+          c.rotate(time*.22+j*.2);
+          c.beginPath();
+          for(let v=0;v<8;v++){
+            const ang=v*TAU/8-Math.PI/2,r=v%2?6:12;
+            if(!v)c.moveTo(Math.cos(ang)*r,Math.sin(ang)*r);
+            else c.lineTo(Math.cos(ang)*r,Math.sin(ang)*r);
+          }
+          c.closePath();c.fillStyle='#ffe495';c.fill();
+          c.strokeStyle='#e7ab7b';c.lineWidth=1.5;c.stroke();c.restore();
+        }
+      }
+    }
+  }
+  function act(x){
+    const i=Math.floor(x/CELL),st=segment(i),p=x-i*CELL;
+    const u=clamp(0,1,(p-190)/380),inMove=p>=190&&p<=570;
+    const wave=Math.sin(Math.PI*u),ease=smooth(u);
+    const out={kind:inMove?st.kind:'run',lift:0,spin:0,squash:1,lean:0,glide:false};
+    if(!inMove)return out;
+    switch(st.kind){
+      case 'leap':out.lift=156*wave;out.lean=.09*wave;break;
+      case 'bounce':out.lift=110*Math.abs(Math.sin(TAU*u));out.squash=1-.18*Math.pow(Math.cos(TAU*u),16);break;
+      case 'spin':out.lift=125*wave;out.spin=TAU*ease;break;
+      case 'slide':out.squash=1-.46*Math.sin(Math.PI*u)**2;out.lean=-.12*wave;break;
+      case 'vault':out.lift=105*wave;out.spin=-TAU*ease;break;
+      case 'glide':out.lift=133*wave;out.glide=true;out.lean=.08*Math.sin(TAU*u);break;
+      case 'twirl':out.lift=116*wave;out.spin=-TAU*ease;break;
+      case 'dash':out.lift=4*wave;out.lean=.3*wave;break;
+      case 'wallkick':out.lift=147*wave;out.spin=TAU*ease;break;
+      case 'cartwheel':out.lift=92*wave;out.spin=TAU*ease;break;
+    }
+    return out;
+  }
+  function runner(x,y,pose){
+    const running=pose.kind==='run'||pose.kind==='dash';
+    const cadence=time*17,leg=running?Math.sin(cadence)*.78:.17;
+    const bob=running?Math.abs(Math.sin(cadence))*2.8:0;
+    const airborne=pose.lift>9;
+    const squash=pose.squash;
+    // Shadow stays fixed on the ground even while the character flies.
+    ellipse(x,ground(distance)+4,airborne?18:28,airborne?3:5,
+      airborne?'rgba(44,71,65,.13)':'rgba(44,71,65,.24)');
+    c.save();c.translate(x,y-bob);
+    c.translate(0,-49*squash);
+    c.rotate(pose.spin+pose.lean);
+    c.translate(0,49*squash);
+    c.scale(1,squash);
+    // A recognizable original "Pip": mint spotted hat, lilac coat, red scarf.
+    // Different silhouette and palette from Nintendo's characters.
+    c.lineCap='round';c.lineJoin='round';
+    c.save();c.translate(-12,-48);
+    c.fillStyle='#d6ac78';c.beginPath();c.roundRect(-15,-13,30,33,9);c.fill();
+    line(-7,-8,7,10,'#846e9a',4);c.restore();
+    for(const side of[-1,1]){
+      c.save();c.translate(side*13,-22);
+      c.rotate(side*(airborne?-.38:leg));
+      line(0,0,side*3,18,'#665980',9);
+      ellipse(side*6,20,13,7,'#cf754f');
+      ellipse(side*10,21,7,4,'#f2bc77');
+      c.restore();
+    }
+    c.save();c.translate(0,-62);
+    c.rotate(pose.lean*.45);
+    ellipse(0,9,21,26,'#756ac9');
+    ellipse(7,10,12,21,'#8c7ce1');
+    ellipse(-11,21,7,7,'#f6d59c');
+    // Short teal vest / buttons.
+    c.fillStyle='#84d0b1';c.beginPath();c.roundRect(-12,-10,24,26,7);c.fill();
+    ellipse(-1,2,2.5,2.5,'#ffeec0');ellipse(-1,12,2.5,2.5,'#ffeec0');
+    for(const s of[-1,1]){
+      c.save();c.translate(s*20,0);
+      c.rotate(s*(airborne?-.8:Math.sin(cadence)*.38));
+      line(0,-6,s*9,15,'#8669ba',9);
+      ellipse(s*9,15,6,6,'#f9d6a1');c.restore();
+    }
+    // Face with gently blinking eyes and little cheek dots.
+    ellipse(0,-26,24,24,'#ffe0b2');
+    ellipse(-20,-31,7,13,'#ffc992');ellipse(20,-31,7,13,'#ffc992');
+    const blink=(time%5.1)>4.94;
+    if(blink){
+      line(-11,-29,-4,-29,'#554d62',2.1);
+      line(5,-29,12,-29,'#554d62',2.1);
+    }else{
+      ellipse(-8,-29,2.7,4,'#514963');ellipse(8,-29,2.7,4,'#514963');
+      ellipse(-7,-30,1,1.2,'white');ellipse(9,-30,1,1.2,'white');
+    }
+    ellipse(-17,-21,4,2.1,'#ec9d9d');ellipse(17,-21,4,2.1,'#ec9d9d');
+    c.beginPath();c.arc(0,-22,5,.2,Math.PI-.2);c.strokeStyle='#a15b70';c.lineWidth=1.7;c.stroke();
+    // Large mint cap, with a trailing leaf rather than a trademark cap insignia.
+    c.beginPath();c.ellipse(0,-47,31,9,0,0,TAU);c.fillStyle='#dcf6dc';c.fill();
+    c.beginPath();c.moveTo(-30,-47);c.bezierCurveTo(-42,-66,-24,-96,0,-99);
+    c.bezierCurveTo(27,-102,43,-65,30,-47);c.closePath();
+    const hat=c.createLinearGradient(0,-100,0,-43);
+    hat.addColorStop(0,'#66bfa5');hat.addColorStop(1,'#3a978d');
+    c.fillStyle=hat;c.fill();c.strokeStyle='#318374';c.lineWidth=2;c.stroke();
+    ellipse(-14,-73,7,10,'#e5fff1');
+    ellipse(15,-66,10,8,'#e5fff1');
+    ellipse(1,-89,5,4,'#e5fff1');
+    c.restore();
+    if(pose.glide){
+      c.save();c.translate(4,-92);c.rotate(Math.sin(time)*.03);
+      line(-49,-1,49,-1,'#777fa5',4);
+      c.beginPath();c.moveTo(-70,-5);c.quadraticCurveTo(0,-46,70,-5);
+      c.quadraticCurveTo(0,10,-70,-5);c.fillStyle='#ffdca4';c.fill();
+      c.strokeStyle='#ac8eac';c.lineWidth=2;c.stroke();c.restore();
+    }
+    c.restore();
+  }
+  function foreground(cam){
+    // A handful of near flowers adds visual velocity without occluding Pip.
+    const offset=cam*1.12,spacing=225;
+    for(let i=Math.floor(offset/spacing)-1;i<=Math.ceil((offset+W)/spacing);i++){
+      const x=i*spacing-offset+rand(i,500)*45;
+      const y=H*.9+rand(i,501)*40;
+      c.save();c.translate(x,y);c.globalAlpha=.58;
+      for(let p=0;p<4;p++){
+        c.beginPath();c.moveTo(0,20);
+        c.quadraticCurveTo((p-1.5)*14,-15,(p-1.5)*19,-36-rand(i+p,502)*14);
+        c.strokeStyle=p%2?'#255f76':'#388b82';c.lineWidth=4;c.stroke();
+      }
+      ellipse(0,-17,12,5,'#a3da91');c.restore();
+    }
+  }
+  function paint(){
+    if(!c||!canvas.width)return;
+    c.setTransform(DPR*scale,0,0,DPR*scale,0,0);
+    const cam=distance-W*.34;
+    sky(cam);
+    islands(cam);
+    scenery(cam);
+    const pose=act(distance),x=distance-cam,y=ground(distance)-pose.lift;
+    runner(x,y,pose);
+    foreground(cam);
+    // Soft final frame edges, unlike a hard black vignette.
+    const v=c.createRadialGradient(W*.5,H*.45,Math.min(W,H)*.2,W*.5,H*.45,Math.max(W,H)*.82);
+    v.addColorStop(0,'rgba(24,62,77,0)');v.addColorStop(1,'rgba(31,86,98,.12)');
+    c.fillStyle=v;c.fillRect(0,0,W,H);
+  }
+  function frame(now){
+    raf=0;
+    if(paused||document.hidden){previous=0;return;}
+    const dt=previous?clamp(0,.04,(now-previous)/1000):0;
+    previous=now;
+    time+=dt;
+    distance+=SPEED*dt;
+    // Keep floating-point precision bounded on very long running sessions.
+    if(distance>760000)distance-=760000;
+    paint();raf=requestAnimationFrame(frame);
+  }
+  function setPlaying(v){
+    paused=!v;
+    previous=0;
+    if(raf){cancelAnimationFrame(raf);raf=0;}
+    if(!paused&&!document.hidden)raf=requestAnimationFrame(frame);
+    else paint();
+  }
+  window.addEventListener('message',event=>{
+    if(event.origin!==location.origin||!event.data||event.data.type!=='mushroom:motion')return;
+    hasParent=true;
+    setPlaying(Boolean(event.data.playing));
+  });
+  window.addEventListener('resize',resize,{passive:true});
+  document.addEventListener('visibilitychange',()=>setPlaying(!paused));
+  window.addEventListener('keydown',e=>{
+    if(hasParent||e.code!=='Space')return;
+    e.preventDefault();setPlaying(paused);
+  });
+  resize();
+  setPlaying(!paused);
+})();
+</script>
+</body>
+</html>
