@@ -2,8 +2,21 @@
 
 A standalone canvas experience at https://imranakbarin.github.io/iakdevs/.
 
-The original Gond, Warli, Madhubani and Kangra art is preserved. Japanese and Chinese inspired landscapes use procedural linework and paper grain. The Mexican inspired view uses an original AI-generated, richly detailed folk-art panorama with patterned wildlife, foliage, a river, hills and villages. Adjacent sections alternate orientation for continuous image edges. Seeds vary the starting view; they do not regenerate the painted panorama. Pause, speed and drag apply to the art scroll. The optimized WebP asset is stored under assets/.
+## Modes
 
-Road trip uses distance-based perspective for road curves, markings, scenery and traffic placement. It includes weather, five environments, a foreground touring car, and at most one other vehicle. Opposing traffic appears outside the automatic overtaking phase. This is an animated drive, not a traffic physics simulator.
+- **World art** — endless living paintings: Gond, Warli, Madhubani, Kangra, Japanese, Chinese and Mexican folk-art inspired. Live art uses each tradition's procedural chunk grammar; Artworks → Painting uses the authored panoramas in `assets/art-*-living.webp` (see `assets/living-art-notes.md`).
+- **Road trip** — distance-based perspective road with weather, five environments, a touring car and at most one other vehicle. An animated drive, not a traffic simulator.
+- **Zen garden** — raked-sand patterns over painted gardens.
+- **Cozy Worlds** — calming illustrated scenes.
 
+## Deep links
 
+`#<style>-<seed>` opens a style at a seed, e.g. `#gond-12345`, `#warli-7`. Prefix `painting-` for the painted panorama (`#painting-kangra-3`). `#zen-…`, `#road-…` and `#cozy-…` open the other modes. Seeds vary the starting layout; they do not regenerate painted panoramas.
+
+## Gond benchmark
+
+`assets/gond-benchmark.js` replaces the Gond chunk grammar with a composition-first layout: one hero tree per chapter, an optional support tree whose placement is planned from a separate seeded stream so neighbouring chunks never collide, one animal story, rooted bank plants and patterned distant rises that run down behind the bank.
+
+## Rendering notes
+
+World tiles are 600 world units wide and cached per chunk. Tiles are blitted only up to the next tile's origin so translucent paint (hills, paper grain) never doubles along a seam. Bump the `?v=` query on a script tag when its file changes.

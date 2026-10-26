@@ -4,6 +4,18 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Infinite World Scrolls</title>
+<meta name="description" content="Endless living paintings inspired by Gond, Warli, Madhubani, Kangra, Japanese, Chinese and Mexican folk art — plus a Zen garden, road trip and Cozy Worlds.">
+<meta name="theme-color" content="#f6efe0">
+<link rel="canonical" href="https://imranakbarin.github.io/iakdevs/">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%23f6efe0'/%3E%3Cpath d='M32 54V30M32 36l-10-9M32 32l11-10' stroke='%231b120c' stroke-width='5' stroke-linecap='round'/%3E%3Ccircle cx='20' cy='22' r='9' fill='%23436b58' stroke='%231b120c' stroke-width='3'/%3E%3Ccircle cx='44' cy='18' r='10' fill='%23af563c' stroke='%231b120c' stroke-width='3'/%3E%3Cpath d='M8 56h48' stroke='%23306f78' stroke-width='5' stroke-linecap='round'/%3E%3C/svg%3E">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Infinite World Scrolls">
+<meta property="og:description" content="Endless living paintings inspired by world folk-art traditions.">
+<meta property="og:url" content="https://imranakbarin.github.io/iakdevs/">
+<meta property="og:image" content="https://imranakbarin.github.io/iakdevs/assets/og-gond.jpg">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Yatra+One&display=swap" rel="stylesheet">
@@ -115,7 +127,7 @@ input[type=range]{width:80px;accent-color:#E63B2E}
 <script src="assets/kangra-world.js?v=2"></script>
 <script src="assets/art-depth.js?v=9"></script>
 <script src="assets/art-finishing.js?v=2"></script>
-<script src="assets/gond-benchmark.js?v=1"></script>
+<script src="assets/gond-benchmark.js?v=2"></script>
 <script>
 const requestedZen=location.hash.startsWith('#zen-'),requestedRoad=location.hash.startsWith('#road-'),requestedCozy=location.hash.startsWith('#cozy-');
 let artPresentation=location.hash.startsWith('#painting-')?'painted':'live';
@@ -2115,14 +2127,16 @@ function drawScene(dt){
   if(ArtDepth.layered(ST)){
     const farCam=cam*.58,fa=Math.floor(farCam/CW),fb=Math.floor((farCam+vw)/CW);
     ctx.save();
-    for(let i=fa;i<=fb;i++){if(!farTiles.has(i))farTiles.set(i,finish(tileJob(i,true)));ctx.drawImage(farTiles.get(i),Math.round((i*CW-farCam)*k),0);}
+    for(let i=fa;i<=fb;i++){if(!farTiles.has(i))farTiles.set(i,finish(tileJob(i,true)));{const dx=Math.round((i*CW-farCam)*k),w=Math.round(((i+1)*CW-farCam)*k)-dx;ctx.drawImage(farTiles.get(i),0,0,w,cv.height,dx,0,w,cv.height);}}
     for(const i of farTiles.keys())if(i<fa-1||i>fb+1)farTiles.delete(i);
     ctx.setTransform(k,0,0,k,-Math.round(farCam*k),-topY*k);
     for(let i=fa-1;i<=fb+1;i++)for(const A of objs(i).actors)if(A.plane==='far'){ctx.save();A.fn(ctx,tt,mulberry32(A.s));ctx.restore();}
     ctx.restore();
   }
   runActs(true);
-  for(let i=a;i<=b;i++)ctx.drawImage(needTile(i),Math.round(i*CW*k)-camPx,0);
+  // Each tile is blitted only up to where its neighbour begins; the +2px padding
+  // used to overlap and double any translucent paint along every seam.
+  for(let i=a;i<=b;i++){const dx=Math.round(i*CW*k),w=Math.round((i+1)*CW*k)-dx;ctx.drawImage(needTile(i),0,0,w,cv.height,dx-camPx,0,w,cv.height);}
   if(ST.anim){world();ST.anim(ctx,cam-20,cam+vw+20,tt);ctx.setTransform(1,0,0,1,0,0);}
   if(ST.tintGrad){
     const tA=acts.filter(A=>!A.back&&!A.glow&&A.plane!=='far'),xa=cam-20,xb=cam+vw+20;
