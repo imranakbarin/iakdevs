@@ -11,11 +11,20 @@ A standalone canvas experience at https://imranakbarin.github.io/iakdevs/.
 
 ## Deep links
 
-`#<style>-<seed>` opens a style at a seed, e.g. `#gond-12345`, `#warli-7`. Prefix `painting-` for the painted panorama (`#painting-kangra-3`). `#zen-…`, `#road-…` and `#cozy-…` open the other modes. Seeds vary the starting layout; they do not regenerate painted panoramas.
+`#<style>-<seed>` opens a style at a seed, e.g. `#gond-12345`, `#warli-7`. Prefix `painting-` for the painted panorama (`#painting-kangra-3`). `#zen-…`, `#road-…` and `#cozy-…` open the other modes. Seeds vary the starting layout; they do not regenerate painted panoramas. Editing the hash in an open tab loads that world.
 
 ## Gond benchmark
 
 `assets/gond-benchmark.js` replaces the Gond chunk grammar with a composition-first layout: one hero tree per chapter, an optional support tree whose placement is planned from a separate seeded stream so neighbouring chunks never collide, one animal story, rooted bank plants and patterned distant rises that run down behind the bank.
+
+## Creature behaviour
+
+`assets/creature-mind.js` gives live-art creatures simple intentions. `wander` alternates rests (with an idle action) and purposeful walks between seeded waypoints; `flight` tours perches for birds and butterflies. Both are pure functions of time and seed, so paused redraws stay pixel-identical and evicted chunks rebuild exactly; gait phase follows distance actually covered, so nothing moonwalks.
+
+- **Gond:** each chapter's animal keeps to its own chapter by half its body width (no cross-seam overlaps). Deer graze, rabbits nibble, peacocks shiver their fans and peck; prey next to a tiger chapter stops, faces and watches it while the tiger crouches into a stalk. Birds commute between the real crowns of neighbouring trees (crown geometry is replayed from the tree painter's seed, which `add()` now returns).
+- **Warli / Madhubani / Kangra:** grazing animals and strollers walk-and-rest; walkers' and the plough team's legs stop at the turn. Kangra's boat moors and faces its direction of travel. Madhubani zone names now match what they paint.
+- **Japan / China / Mexico:** flocks fly the way they face instead of flapping in place; a butterfly works each Mexican clearing's flowers and pond edge.
+- **Road trip:** props fade with the share of their place in the ground under them, and roadside slots cross-fade to the new place, so the desert no longer carries alpine pines.
 
 ## Rendering notes
 
