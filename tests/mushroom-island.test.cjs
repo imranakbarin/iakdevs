@@ -8,10 +8,13 @@ const root=path.resolve(__dirname,'..');
 const page=fs.readFileSync(path.join(root,'mushroom-island.html'),'utf8');
 const index=fs.readFileSync(path.join(root,'index.html'),'utf8');
 const art=fs.readFileSync(path.join(root,'assets/mushroom-island-v2.js'),'utf8');
+const kingdom=fs.readFileSync(path.join(root,'assets/mushroom-kingdom-v3.js'),'utf8');
 const match=page.match(/<script>([\s\S]*?)<\/script>/);
 assert.ok(match,'standalone animation script found');
 new vm.Script(match[1]);
 new vm.Script(art);
+new vm.Script(kingdom);
+assert.match(page,/assets\/mushroom-kingdom-v3\.js\?v=1/,'kingdom module loaded ahead of v2');
 assert.match(page,/assets\/mushroom-island-v2\.js\?v=1/,'diorama script loaded');
 for(const m of index.matchAll(/<script>([\s\S]*?)<\/script>/g))new vm.Script(m[1]);
 assert.match(index,/<option value="mushroom">Mushroom Island<\/option>/);
@@ -55,6 +58,8 @@ const sandbox={
   requestAnimationFrame,cancelAnimationFrame,Math,console
 };
 // Execute the authored 2.5D renderer as well as the original fallback.
+vm.runInNewContext(kingdom,sandbox,{timeout:2000});
+assert.equal(win.MushroomKingdom.version,'grand-mushroom-kingdom-v3');
 vm.runInNewContext(art,sandbox,{timeout:2000});
 assert.equal(win.MushroomIslandV2.version,'2.5d-diorama-v2');
 // Expose the internal pure choreography ONLY within the test run.
@@ -81,6 +86,15 @@ for(let i=0;i<14;i++)for(const p of [0,190,270,380,500,570,750]){
   win.__probe.drawAt(i*760+p);
 }
 assert.ok(calls>1000,'v2 diorama scene actually rendered');
+// Test panoramic parallax across chapter boundaries and both directions.
+for(const [cw,ch] of [[1170,650],[390,844],[844,390]]){
+  canvas.clientWidth=cw;canvas.clientHeight=ch;
+  events['win:resize']();
+  for(let i=-4;i<=14;i++)for(const p of [80,380,710]){
+    win.__probe.drawAt(i*760+p);
+  }
+}
+assert.ok(calls>80000,'grand kingdom was drawn at many world offsets');
 assert.ok(Math.abs(win.__probe.act(760+380).lift-132)<1e-6,'bounce reaches mushroom cap contact');
 function tick(now){
   const next=pending.entries().next().value;
@@ -99,4 +113,4 @@ events['win:message']({origin:'https://bad.example',data:{type:'mushroom:motion'
 assert.equal(pending.size,0,'cross-origin messages ignored');
 events['win:message']({origin:'https://test.example',data:{type:'mushroom:motion',playing:true}});
 assert.equal(pending.size,1,'resume schedules animation');
-console.log('Mushroom Island v2 PASS: both scripts parse, all 10 stunts, 98 staged diorama renders, desktop + portrait animation, pause/resume, origin guard.');
+console.log('Mushroom Island v3 PASS: kingdom + diorama scripts parse, 10 stunts, 269 world poses across desktop/phone sizes, pause/resume, origin guard.');
