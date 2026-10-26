@@ -139,6 +139,9 @@ function fillBody(c,rx,ry,base,bands){
 
 const PAIRS=[['#2E933C','#F7B32B'],['#12A4B6','#F25F92'],['#E63B2E','#F7B32B'],['#2B59C3','#12A4B6'],['#F28C28','#2E933C'],['#D7263D','#F7B32B'],['#6A4C93','#F25F92'],['#7CB518','#12A4B6']];
 const TRUNK=['#8B4A2B','#2B59C3','#6A4C93','#D7263D','#12A4B6','#B5651D'];
+// Gond foliage is curated into connected pigment families rather than every bright hue.
+const GOND_PAIRS=[['#416e5b','#e6b34b'],['#af563c','#e4ac53'],['#47788a','#dba34a'],['#5b7751','#c66c43'],['#866947','#e5bc61']];
+const GOND_TRUNKS=['#724b39','#92533c','#566b55','#75553d'];
 const HILL=['#2E933C','#12A4B6','#6A4C93','#7CB518','#2B59C3','#F28C28','#F25F92'];
 const EARTH=[['#B5432B','#F7B32B'],['#8B4A2B','#F28C28'],['#D7263D','#F7B32B'],['#6A4C93','#F25F92']];
 const WATER=['#2B59C3','#12A4B6'];
@@ -213,7 +216,7 @@ function trunkPattern(c,L,R,st){
 }
 function* tree(c,x,q){
   const y0=gy(x)+4,h=150+q()*110,w=34+q()*22,tx=x+(q()-.5)*44,ty=y0-h,wt=w*.5,bend=(q()-.5)*34;
-  const tcol=pick(q,TRUNK),pair=pick(q,PAIRS),ls=q()*3|0,flw=q()<.35,tst=q()*3|0;
+  const tcol=pick(q,GOND_TRUNKS),pair=pick(q,GOND_PAIRS),ls=q()*3|0,flw=q()<.24,tst=q()*3|0;
   const N=26,L=[],R=[];
   for(let i=0;i<=N;i++){const t=i/N,cx=lerp(x,tx,t)+Math.sin(t*PI)*bend,ww=lerp(w,wt,Math.pow(t,.7))+Math.max(0,.15-t)*w*2.6,yy=lerp(y0,ty,t);L.push([cx-ww/2,yy]);R.push([cx+ww/2,yy]);}
   const trunk=L.concat(R.slice().reverse()),polys=[],cls=[],tips=[],mids=[];
