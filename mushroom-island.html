@@ -200,7 +200,7 @@ canvas{display:block;width:100vw;height:100dvh;touch-action:pan-y}
           ellipse(0,-3,10,3,'#478e64');c.restore();
         }
       }
-      const px=a+420,py=ground(px);
+      const px=a+(st.kind==='bounce'?380:420),py=ground(px);
       if(!visible(px,cam,150))continue;
       if(st.kind==='bounce'){
         mushroom(px-cam,py,.77,st.tint,3);
@@ -209,8 +209,8 @@ canvas{display:block;width:100vw;height:100dvh;touch-action:pan-y}
         c.save();c.translate(px-cam,py);
         // Raised horizontal log with enough clearance for the sliding hero.
         ellipse(-4,0,55,9,'rgba(78,66,69,.25)');
-        c.fillStyle='#9e7487';c.fillRect(-59,-104,118,18);
-        ellipse(-59,-95,10,9,'#ffdca1');ellipse(59,-95,10,9,'#ffdca1');
+        c.fillStyle='#9e7487';c.fillRect(-59,-116,118,18);
+        ellipse(-59,-107,10,9,'#ffdca1');ellipse(59,-107,10,9,'#ffdca1');
         c.restore();
       }else if(st.kind==='wallkick'){
         c.save();c.translate(px-cam,py);
@@ -252,7 +252,7 @@ canvas{display:block;width:100vw;height:100dvh;touch-action:pan-y}
     if(!inMove)return out;
     switch(st.kind){
       case 'leap':out.lift=156*wave;out.lean=.09*wave;break;
-      case 'bounce':out.lift=110*Math.abs(Math.sin(TAU*u));out.squash=1-.18*Math.pow(Math.cos(TAU*u),16)*Math.sin(Math.PI*u)**2;break;
+      case 'bounce':out.lift=132*wave+50*Math.abs(Math.sin(TAU*u));out.squash=1-.12*Math.pow(Math.sin(Math.PI*u),20);break;
       case 'spin':out.lift=125*wave;out.spin=TAU*ease;break;
       case 'slide':out.squash=1-.46*Math.sin(Math.PI*u)**2;out.lean=-.12*wave;break;
       case 'vault':out.lift=105*wave;out.spin=-TAU*ease;break;
