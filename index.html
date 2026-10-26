@@ -115,6 +115,7 @@ input[type=range]{width:80px;accent-color:#E63B2E}
 <script src="assets/kangra-world.js?v=2"></script>
 <script src="assets/art-depth.js?v=9"></script>
 <script src="assets/art-finishing.js?v=2"></script>
+<script src="assets/gond-benchmark.js?v=1"></script>
 <script>
 const requestedZen=location.hash.startsWith('#zen-'),requestedRoad=location.hash.startsWith('#road-'),requestedCozy=location.hash.startsWith('#cozy-');
 let artPresentation=location.hash.startsWith('#painting-')?'painted':'live';
@@ -1979,6 +1980,7 @@ function roadProjection(j,w,h,horizon){
 ArtDepth.install();
 KangraWorld.install();
 ArtFinishing.install();
+GondBenchmark.install();
 const cv=document.getElementById('c'),ctx=cv.getContext('2d'),tiles=new Map(),farTiles=new Map();
 let S=1,DPR=1,topY=0,camX=0;
 function layout(){const w=cv.clientWidth,h=cv.clientHeight;DPR=Math.max(.65,Math.min(2,devicePixelRatio||1,Math.sqrt(2.8e6/Math.max(1,w*h)))*SceneMotion.resolution);cv.width=Math.round(w*DPR);cv.height=Math.round(h*DPR);
