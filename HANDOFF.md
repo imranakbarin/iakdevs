@@ -1,5 +1,20 @@
 # HANDOFF — Mushroom Island (October 26, 2026)
 
+## v4 — Cinematic Mushroom Island rebuild (October 26, 2026)
+
+**Reason for rewrite:** The previous v1–v3 vector/Canvas scenery could not achieve the user's supplied richly rendered mushroom kingdom reference. A static generated picture alone was also not an app. This implementation combines an original authored *cinematic art plate* with a newly written live runner, motion and scene renderer.
+
+- **Branch / PR:** `feature/mushroom-cinematic-rebuild-20261026`. Based on master commit `517026c15b8ee2cf4c86248dd25dd2809817dcbc`. Keep Claude's previous changes intact.
+- **Visual asset:** `assets/mushroom-cinematic-kingdom.webp` — optimized 1172×659 WebP of a freshly generated original mushroom city image derived from the agreed cinematic visual direction, cropped to remove the stationary main character. Approx. 149 KB, versioned and self-hosted in this repository; no external image hotlinks. Under the user-visible live island this preserves authored detail (terraced castles, waterfalls, arches, glowing mushroom villages, floating islands).
+- **New renderer:** `assets/mushroom-cinematic.js` — complete rewrite, no dependence on the old v1/v2/v3 render modules; slow pan on the cinematic image, restrained image-aligned waterfall glints, airborne birds and fairy lights, independent raised moss path, grounded shrubs/flowers/mushroom bounce props, illustrated original Pip, 10 continuous stunts and transitions.
+- **App entry:** `mushroom-island.html` rewritten as a tiny responsive standalone page. Main `index.html` **untouched**; existing `#mushroom-island` route, parent play/pause postMessage, and loading remain compatible.
+- **Tests:** `node tests/mushroom-cinematic.test.cjs`. Legacy entry `node tests/mushroom-island.test.cjs` delegates to it. Verifies embedded WebP signature and realistic asset size, all ten stunt chapters, grounded starts/landings, parent pause/resume, visibility policy, cross-origin message rejection, landscape/portrait redraws and repeated animation calls.
+- **Visual QA:** Rendered locally using Skia Canvas at desktop 1440×900, phone portrait 390×844, and landscape 844×390, and inspected screenshots. This is **real Canvas pixel output but not Chromium / physical iPhone testing**. A container browser navigation policy blocked the independent Chromium preview. QA still needed in the published browser and on a physical phone.
+- **Important limitation:** The cinematic kingdom art plate itself is not a 3D live environment. The image gently moves as one plane; birds, waterfall highlights, particles, foreground props, and Pip animate on separate layers. For full depth/panning between districts, author additional painted depth plates and matching transparent foreground assets. This rebuild prioritizes getting the **visual quality** right before adding more procedural complexity.
+- **Collaboration:** Do not overwrite Claude's `index.html`, Gond, Road, Cozy or Zen edits. When continuing from here, read the current `master` before editing, and improve this separate `mushroom-cinematic.js` feature.
+
+---
+
 ## Grand Mushroom Kingdom v3 — reference-driven panoramic world (October 26, 2026)
 
 **Visual target:** user-supplied reference of a cinematic, highly dimensional mushroom archipelago, with a giant mushroom-topped city, floating rock islands, clustered village houses, bridges, waterfalls, glowing windows, foreground runner, clear blue skies and atmospheric depth. This is the art direction reference, **not** an asset copied into the app.
