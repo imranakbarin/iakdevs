@@ -1,5 +1,18 @@
 # HANDOFF — Mushroom Island (October 26, 2026)
 
+## Mushroom Island v2 — 2.5D storybook upgrade (October 26, 2026)
+
+- Branch: `feature/mushroom-island-v2-diorama-20261026` (based on `748957877521ea42167e6e456b68f006f14e037f`, after Claude #60 and Mushroom #61).
+- Goal: noticeably richer, dimensional, side-scrolling *storybook* world reminiscent of joyful platform-adventure art. The mascot, props and world are original and do not reuse commercial characters or assets.
+- New `assets/mushroom-island-v2.js`: standalone procedural 2.5D visual renderer. Sculpted terrain with beveled turf, carved rock faces, shadowed mushroom stems, glossy highlights, soft sun and layered atmospheric perspective, rounded fantasy towers, distant toy pipes, floating story blocks, flower clusters, waterfalls and bridges. Pip now has dimensional shading, a leaf cap, articulated boots, satchel, fluttering scarf, glider and subtle dust/sparkles.
+- `mushroom-island.html` loads the optional v2 script and calls its renderer within the *existing* deterministic auto-run choreography. Original v1 Canvas renderer remains as a fallback if the add-on cannot load.
+- `tests/mushroom-island.test.cjs` now tests production module exposure, 98 full diorama stunt poses, scene script syntax, gradient/shape coordinates, 90 desktop frames, 30 portrait frames, 10 stunt types and pause/resume/origin guard. Reproduce with `node tests/mushroom-island.test.cjs`.
+- No changes to `index.html`, live arts, Gond, Road Trip, Cozy or Zen; existing selector/deep link `#mushroom-island` preserved.
+- **QA still required:** actual Chromium/iPhone-size *visual* captures and real-device frame profiling, collision observation, and aesthetics review. Mock drawing validates function calls, not appearance. Do not represent this as screenshot-tested.
+- Merge/deploy status: see the v2 pull request and GitHub Pages workflow; do not assume deployed solely from passing unit tests.
+
+---
+
 ## Working state
 
 - Repository: `imranakbarin/iakdevs`
