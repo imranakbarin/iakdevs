@@ -172,6 +172,9 @@ const ArtDepth=(()=>{
   nearTiles.set(id,tile);while(nearTiles.size>Math.max(4,Math.ceil(worldWidth/CW)+2))nearTiles.delete(nearTiles.keys().next().value);return tile;
  }
  function near(c,style,key,cam,vw,k,height){
+  // Gond's shoreline ends at RIVER; screen-bottom near tiles would plant flowers in water.
+  // The benchmark draws its foreground flora at terrain elevation in the scene itself.
+  if(key==='gond')return;
   const nearCam=cam*1.16,a=Math.floor(nearCam/CW),b=Math.floor((nearCam+vw)/CW);
   c.setTransform(1,0,0,1,0,0);for(let i=a;i<=b;i++)c.drawImage(foregroundTile(style,key,i,k,height,vw),Math.round((i*CW-nearCam)*k),0);
  }
