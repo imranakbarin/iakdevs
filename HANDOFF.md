@@ -3,10 +3,12 @@
 ## Working state
 
 - Repository: `imranakbarin/iakdevs`
-- Branch: `feature/mushroom-island-autoplay-20261026`
+- Original feature branch: `feature/mushroom-island-autoplay-20261026` (merged)
 - Base commit at branch creation: `24af548c7cedb35990cfdf6af7a9be813e8d2a99`. The feature was manually integrated on top of Claude PR #60 merged as `75b781ba65f9fc2a7ca0547032a8fe40c48f158c`, retaining Claude's rendering, creature and road fixes.
-- Draft PR: https://github.com/imranakbarin/iakdevs/pull/61
-- Status: integrated on the feature branch above Claude PR #60; smoke checks pass. Deployment/merge status must be checked against PR #61. Coordinate merge with Claude's separate in-flight changes; do not overwrite unrelated files.
+- Merged PR: https://github.com/imranakbarin/iakdevs/pull/61
+- Merge commit on `master`: `d70125df0e61d2817c5f5fd21babd4007bc52f90`, after Claude PR #60.
+- GitHub Pages deployment workflow for this merge: https://github.com/imranakbarin/iakdevs/actions/runs/40393884399
+- Status: **merged into master** after Claude PR #60. Smoke checks pass. Check the linked Pages workflow for publication success; actual full visual and device QA remains pending. Continue protecting unrelated files and Claude improvements.
 - Experience: standalone, original character "Pip" in a cheerful illustrated mushroom fantasy island; watch-only automatic runner. This is not an official Mario/Nintendo asset or game.
 
 ## Changed files
@@ -34,13 +36,13 @@
 - Verified all 10 stunt types encountered, offscreen culling, pause/resume scheduling, and rejected cross-origin messages.
 - No screenshots, real Chromium/mobile profiling, collision pixel review or real visual QA were possible in this connector-only execution. Do not claim them as passed.
 
-## Remaining before merge / deployment
+## Remaining visual QA and future improvements
 
 1. Preview the branch with desktop (wide) and portrait (phone) viewports, watch at least 2 complete stunt cycles, pause, resume, switch worlds and return.
 2. Verify visual quality: hero silhouette, no ground/river floaters, chasm launch/landing, glide, wallkick, slide clearance, scenery seam continuity, no jitter, no clipped mushrooms, and no occluded controls.
 3. Profile actual device FPS and verify reduced-motion behavior. Tune density if needed, keeping the scene a passive show with **no new controls**.
-4. Review draft PR #61 and re-read latest `master` and Claude's changes. Rebase/cherry-pick only this feature; protect everything else.
-5. Merge/deploy only after these checks; confirm GitHub Pages run and published `#mushroom-island` route.
+4. For subsequent changes, re-read latest `master` and coordinate with Claude before editing shared `index.html`. Do not overwrite his work.
+5. Verify GitHub Pages workflow success and the published `#mushroom-island` route. The deployment is automatic from `master`.
 
 ## Constraints
 
