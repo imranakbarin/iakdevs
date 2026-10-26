@@ -55,7 +55,7 @@ const sandbox={
   requestAnimationFrame,cancelAnimationFrame,Math,console
 };
 // Execute the authored 2.5D renderer as well as the original fallback.
-vm.runInNewContext(art+'\nwindow.MushroomIslandV2=MushroomIslandV2;',sandbox,{timeout:2000});
+vm.runInNewContext(art,sandbox,{timeout:2000});
 assert.equal(win.MushroomIslandV2.version,'2.5d-diorama-v2');
 // Expose the internal pure choreography ONLY within the test run.
 const source=match[1].replace(
