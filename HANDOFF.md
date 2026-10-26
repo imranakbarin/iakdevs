@@ -5,6 +5,7 @@
 - Repository: `imranakbarin/iakdevs`
 - Branch: `feature/mushroom-island-autoplay-20261026`
 - Base commit at branch creation: `24af548c7cedb35990cfdf6af7a9be813e8d2a99` (`master`, Gond benchmark already deployed).
+- Draft PR: https://github.com/imranakbarin/iakdevs/pull/61
 - Status: implemented on feature branch, **not deployed or merged**. Coordinate merge with Claude's separate in-flight changes; do not overwrite unrelated files.
 - Experience: standalone, original character "Pip" in a cheerful illustrated mushroom fantasy island; watch-only automatic runner. This is not an official Mario/Nintendo asset or game.
 
@@ -38,7 +39,7 @@
 1. Preview the branch with desktop (wide) and portrait (phone) viewports, watch at least 2 complete stunt cycles, pause, resume, switch worlds and return.
 2. Verify visual quality: hero silhouette, no ground/river floaters, chasm launch/landing, glide, wallkick, slide clearance, scenery seam continuity, no jitter, no clipped mushrooms, and no occluded controls.
 3. Profile actual device FPS and verify reduced-motion behavior. Tune density if needed, keeping the scene a passive show with **no new controls**.
-4. Re-read latest `master` and Claude's changes. Rebase/cherry-pick only this feature; protect everything else. Create/update PR after verification.
+4. Review draft PR #61 and re-read latest `master` and Claude's changes. Rebase/cherry-pick only this feature; protect everything else.
 5. Merge/deploy only after these checks; confirm GitHub Pages run and published `#mushroom-island` route.
 
 ## Constraints
