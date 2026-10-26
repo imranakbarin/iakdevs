@@ -12,6 +12,7 @@
 
 - `mushroom-island.html` — a complete independent zero-dependency Canvas animation: seeded parallax islands, land/lagoon/gaps, forest mushrooms, colored skies, star seeds, original character, coherent ground-contact, 10 types of timed stunts (leap, bounce, spin, slide, vault, glide, twirl, dash, wallkick, cartwheel), bounded time-step and pause/restart handling.
 - `index.html` — adds `Mushroom Island` to the existing experience selector, isolated same-origin iframe lazy load, URL `#mushroom-island`, parent play/pause sync, resume/stop when changing modes, and minimal watch-only presentation. Road/Zen/Cozy/Gond engines remain separate.
+- `tests/mushroom-island.test.cjs` — dependency-free repeatable rendering, choreography and integration smoke test.
 - `HANDOFF.md` — this operational status and QA list.
 
 ## Entry points and integration
@@ -25,9 +26,10 @@
 
 ## Checks performed
 
+- To reproduce: `node tests/mushroom-island.test.cjs` from repository root (Node 18+).
 - Standalone JavaScript and the parent inline script parse successfully.
 - Mock Canvas rendering ran for 90 desktop frames and 30 portrait frames without exceptions.
-- Sampled 30 world sections and 3 points per section (90 trajectory checks); stunt lift returns to zero at landing and spin/squash values remain finite.
+- Sampled 30 world sections and 3 points per section (90 trajectory checks); stunt lift returns to zero at landing and spin/squash values remain finite. Bounce timing is aligned with a mushroom-cap contact; slide roof is raised to clear the crouch.
 - Verified all 10 stunt types encountered, offscreen culling, pause/resume scheduling, and rejected cross-origin messages.
 - No screenshots, real Chromium/mobile profiling, collision pixel review or real visual QA were possible in this connector-only execution. Do not claim them as passed.
 
