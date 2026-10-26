@@ -140,11 +140,17 @@ const ArtDepth=(()=>{
   }});
   // The painted deer has no leg rig: keep its hooves planted instead of sliding it.
   if(Math.round(x0/CW)===0||r()<.32){const dx=x0+300+r()*100,ds=.8+r()*.2;act((c,t,q)=>{if(artVisible(dx,175))deer(c,dx,551,ds,t,q);});}
+  const clumps=[];
   for(let j=0,n=1+(r()*3|0);j<n;j++){
-   const x=x0+35+r()*530;
+   const x=x0+35+r()*530;clumps.push(x);
    add(4,(c,q)=>{const y=555;for(let j=0;j<6;j++){const a=(j-2.5)*.4;almond(c,x,y,a,35+q()*30,5+q()*5,'#49734a');}for(let j=0;j<4;j++){const xx=x-22+j*14,yy=y-35-q()*20;c.beginPath();c.moveTo(x,y);c.lineTo(xx,yy);stroke(c,'#5e793e',1);folkFlower(c,xx,yy,7+q()*4,q);}});
   }
   const pond=pondPlan(Math.round(x0/CW));
+  // A butterfly works this clearing's flowers (and the pond edge), settling on each.
+  const spots=clumps.map(x=>[x,508]);if(pond.show)spots.push([pond.x-pond.w*.55,pond.y-pond.h-6]);
+  if(spots.length>=2){const key=hash(seed^0xbf1,Math.round(x0/CW)),pal=[['#e9883a','#f6d27a'],['#3f8f86','#f2c66b'],['#c75a4e','#f4e1b0']][key%3];
+   act((c,t)=>{const b=CreatureMind.flight({key,spots,speed:55,period:11,lift:18},t);if(!artVisible(b.x,40))return;
+    butterfly(c,b.x,b.flying?b.y+Math.sin(t*7+key%9)*3:b.y,.55,b.flying?t*16:1.2+Math.sin(t*1.1+key%5)*1.1,pal[0],pal[1],'gond',b.dir,b.flying?Math.sin(t*3)*.15:0);});}
   if(pond.show)act((c,t)=>{c.save();c.beginPath();c.ellipse(pond.x,pond.y,pond.w-5,pond.h-4,-.025,0,TAU);c.clip();c.strokeStyle='rgba(240,227,176,.55)';c.lineWidth=.7;for(let j=0;j<8;j++){const x=pond.x-85+j*24,y=pond.y-15+(j%3)*8+Math.sin(t*.6+j)*1.5;c.beginPath();c.moveTo(x-8,y);c.quadraticCurveTo(x,y-2,x+11,y);c.stroke();}c.restore();});
  }
  function foregroundTile(style,key,i,k,height,worldWidth){
