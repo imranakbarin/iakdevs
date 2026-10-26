@@ -181,6 +181,7 @@ const MushroomIslandV2 = (() => {
       if(x<-170||x>W+170)continue;
       const y=H*.72+Math.sin(j*1.79)*10;
       mushroom(x,y,.67+rand(j,40)*.25,hash(j+99)%4,2);
+      if(((j%4)+4)%4===2)pipe(x+132,y+1,.49);
       oval(x+40,y+1,36,8,'rgba(84,149,106,.17)');
     }
   }
@@ -371,8 +372,6 @@ const MushroomIslandV2 = (() => {
       for(let j=0;j<2;j++)block(x+(j-.5)*61,y-167-(j%2)*24,j);
     }else if(kind==='cartwheel'){
       for(let j=0;j<3;j++)block(x+(j-1)*63,y-173, j===1?1:0);
-    }else if(kind==='wallkick'){
-      pipe(x+125,y,.58);
     }
   }
   function scenery(){
@@ -568,3 +567,4 @@ const MushroomIslandV2 = (() => {
   }
   return {paint,version:'2.5d-diorama-v2'};
 })();
+window.MushroomIslandV2 = MushroomIslandV2;
