@@ -327,6 +327,28 @@ function paint(ctx,opts){
  airborneNature();
  c.restore();
 }
-return {paint,version:'grand-mushroom-kingdom-v3'};
+function waterVeil(ctx,opts){
+ // The v2 world renders its lagoon as a distinct plane. Continue the falls
+ // over that plane *before* the runner's solid platforms are drawn.
+ c=ctx;W=opts.W;H=opts.H;cam=opts.cam;time=opts.time;
+ c.save();
+ c.beginPath();c.rect(0,H*.755,W,H*.245);c.clip();
+ const deep=cam*.27,span=1520;
+ for(let i=Math.floor((deep-650)/span)-1;i<=Math.ceil((deep+W+650)/span);i++){
+   const base=i*span-deep+span*.46,y=H*.60+Math.sin(i*1.72)*H*.023;
+   const sz=.77+f(i+40)*.15;
+   if(base<-600||base>W+600)continue;
+   waterfall(base-205*sz,y+4*sz,34*sz,214*sz,.36);
+   waterfall(base+224*sz,y+4*sz,30*sz,165*sz,.33);
+ }
+ const p=cam*.50,step=620;
+ for(let i=Math.floor((p-350)/step)-1;i<=Math.ceil((p+W+350)/step);i++){
+   const x=i*step-p+120+f(i+141)*90,y=H*.705+Math.sin(i*1.8)*9;
+   if(x<-250||x>W+250)continue;
+   waterfall(x+135,y+9,18,100,.39);
+ }
+ c.restore();
+}
+return {paint,waterVeil,version:'grand-mushroom-kingdom-v3'};
 })();
 window.MushroomKingdom=MushroomKingdom;
