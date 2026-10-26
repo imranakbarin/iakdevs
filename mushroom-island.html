@@ -13,6 +13,7 @@ canvas{display:block;width:100vw;height:100dvh;touch-action:pan-y}
 </head>
 <body>
 <canvas id="island" role="img" aria-label="An original little mushroom-capped adventurer automatically runs, flips, glides, slides and bounces through a colorful illustrated island."></canvas>
+<script src="assets/mushroom-island-v2.js?v=1"></script>
 <script>
 /* Mushroom Island: original illustrated, zero-input autoplay.
  * No external assets, audio, random frame effects or gameplay controls.
@@ -360,10 +361,15 @@ canvas{display:block;width:100vw;height:100dvh;touch-action:pan-y}
     if(!c||!canvas.width)return;
     c.setTransform(DPR*scale,0,0,DPR*scale,0,0);
     const cam=distance-W*.34;
+    const pose=act(distance),x=distance-cam,y=ground(distance)-pose.lift;
+    if(window.MushroomIslandV2){
+      window.MushroomIslandV2.paint(c,{W,H,cam,time,distance,pose,segment,gap,ground,rand,hash});
+      return;
+    }
+    // Keep the original illustration as a graceful fallback if the art module fails.
     sky(cam);
     islands(cam);
     scenery(cam);
-    const pose=act(distance),x=distance-cam,y=ground(distance)-pose.lift;
     runner(x,y,pose);
     foreground(cam);
     // Soft final frame edges, unlike a hard black vignette.
