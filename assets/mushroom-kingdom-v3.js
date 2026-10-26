@@ -201,11 +201,11 @@ function flagship(x,y,s,variant=0){
  }
  // Main palace mushroom dome crowns the colonnade and is fully attached.
  pillar(0,-137,105);
- cap(0,-226,363,170,variant%2?'#ffd0bd':'#ffc79d','#df7398');
+ cap(0,-226,363,170,variant%2?1:0);
  // Secondary little spires sit on terrace ledges.
  for(const side of[-1,1]){
     pillar(side*184,-12,127);
-    cap(side*184,-138,105,63,'#f9bbcb','#ca79a9');
+    cap(side*184,-138,105,63,2);
  }
  beam(-38,-123,76,55,25,'#8a7895','#f9e5c6');
  beam(-29,-117,58,49,20,'#5e7899');
