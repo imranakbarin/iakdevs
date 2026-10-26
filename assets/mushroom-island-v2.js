@@ -376,6 +376,7 @@ const MushroomIslandV2 = (() => {
   }
   function scenery(){
     water();
+    if(window.MushroomKingdom)window.MushroomKingdom.waterVeil(c,{W,H,cam,time});
     const first=Math.floor(cam/CELL)-1,last=Math.ceil((cam+W)/CELL)+1;
     for(let i=first;i<=last;i++){
       const a=i*CELL,b=a+CELL,kind=segment(i).kind;
@@ -558,8 +559,13 @@ const MushroomIslandV2 = (() => {
     ground=opt.ground;segment=opt.segment;gap=opt.gap;
     rand=opt.rand;hash=opt.hash;pose=opt.pose;
     c.save();
-    sky();
-    distantMushrooms();
+    if(window.MushroomKingdom){
+      window.MushroomKingdom.paint(c,{W,H,cam,time});
+    }else{
+      // All original v2 scenery remains the graceful fallback.
+      sky();
+      distantMushrooms();
+    }
     scenery();
     pip(distance-cam,ground(distance)-pose.lift);
     nearPlane();

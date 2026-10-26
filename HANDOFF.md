@@ -1,5 +1,19 @@
 # HANDOFF — Mushroom Island (October 26, 2026)
 
+## Grand Mushroom Kingdom v3 — reference-driven panoramic world (October 26, 2026)
+
+**Visual target:** user-supplied reference of a cinematic, highly dimensional mushroom archipelago, with a giant mushroom-topped city, floating rock islands, clustered village houses, bridges, waterfalls, glowing windows, foreground runner, clear blue skies and atmospheric depth. This is the art direction reference, **not** an asset copied into the app.
+
+- Branch: `feature/mushroom-kingdom-grand-v3-20261026`, based on v2 merge commit `955eac78e0f2a10cd905e5f81d113aa8cb058c93`.
+- Added `assets/mushroom-kingdom-v3.js`: procedural, parallax-scrolling epic kingdom with **physically supported** inhabited rock terraces, mushroom palace, smaller villages, connected bridges, flowing falls reaching the lagoon, floating distance islands, warm window glow, decorative foliage, moving atmospheric lights and layered cloud banks.
+- Kept existing `assets/mushroom-island-v2.js` foreground running lane, Pip, and **all ten stunt sequences**. It now delegates its sky/city/background to `window.MushroomKingdom.paint()` and uses `waterVeil()` between the lagoon and foreground platforms. It falls back to the existing v2 sky/distant mushrooms if the optional module is absent.
+- `mushroom-island.html` now loads v3 before v2. No modification to app selector `index.html` or Claude's Gond / other art / road code.
+- Test: `node tests/mushroom-island.test.cjs`. Smoke tests exercised the v3 drawing routines at **269 sampled world poses across responsive sizes**, including negative chunk offsets, water overlay, scripted stunt transitions, fade-safe module load and pause/origin guard.
+- **Quality note:** the referenced image has high-end rendered 3D texture, dense architectural modeling, indirect lighting and intricate illustration. This Canvas upgrade moves toward its **composition and depth** but cannot honestly be described as pixel-equivalent film quality. For that result the next step requires genuinely rendered layered art assets or a 3D-render-to-sprites production workflow—not just more primitive vector decoration.
+- **Remaining QA:** Real Chromium/phone screenshots, timing/performance and visual inspection on a live device are outstanding; mock rendering checks are not visual QA. Look for tiny architecture at mobile scale, waterfalls at the lagoon, repetitive district silhouettes, foreground clearance, and performance while moving.
+
+---
+
 ## Mushroom Island v2 — 2.5D storybook upgrade (October 26, 2026)
 
 - Branch: `feature/mushroom-island-v2-diorama-20261026` (based on `748957877521ea42167e6e456b68f006f14e037f`, after Claude #60 and Mushroom #61).
