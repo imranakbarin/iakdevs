@@ -123,7 +123,7 @@ const GondBenchmark = (() => {
       });
 
       // Small supporting foliage is asymmetrical, and never competes with the hero.
-      const supports=hero?[x0+64,x0+554]:(r()<.52?[x0+525]:[x0+70]);
+      const supports=hero?[r()<.5?x0+65:x0+550]:(r()<.52?[x0+525]:[x0+70]);
       for(const tx of supports){
         if(Math.abs(tx-primary)<160)continue;
         occupancy.push(tx);
@@ -153,7 +153,7 @@ const GondBenchmark = (() => {
         if(!artVisible(primary,250))return;
         const u=((t*.026+phase/TAU)%1+1)%1;
         const x=left+Math.sin(u*TAU)*18+u*32;
-        const y=gy(primary)-155+u*127;
+        const y=gy(primary)-210+u*185;
         c.globalAlpha=Math.min(.82,u*8,(1-u)*6);
         c.save();c.translate(x,y);c.rotate(Math.sin(u*TAU)*.2);
         leaf(c,0,0,-PI/2+Math.sin(t*.42+phase)*.17,19,7,1,
@@ -194,7 +194,7 @@ const GondBenchmark = (() => {
           const x=bx+Math.sin(t*.19+ph)*58;
           if(artVisible(x,75))bird(c,x,by+Math.sin(t*.48+ph)*6,1,.55,q,true,
              Math.sin(t*2.3+ph));
-        },true);
+        });
       } else if(hero) {
         const bx=primary-72,by=gy(primary)-210;
         act((c,t,q)=>{if(artVisible(bx,80))restingBird(c,bx,by,q,t,phase);});
