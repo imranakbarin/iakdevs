@@ -97,7 +97,7 @@ const MushroomIslandV2 = (() => {
       rounded(tx-21,-hh,42,hh+2,13,
         colorGradient(tx-21,-120,tx+21,0,[[0,'#f8dbb9'],[.55,'#cca5b4'],[1,'#a28ba6']]),
         '#ac91a4');
-      cap(tx,-hh+3,49,34,variant?'#ed8ca4':'#f4a078');
+      cap(tx,-hh+3,49,34,variant?'#ed8ca4':'#f4a078','#a975a6');
       oval(tx,-hh-2,18,4,'rgba(255,242,211,.48)');
       rounded(tx-9,-hh+39,18,31,8,'#718ba7','#fff0ca');
     }
@@ -339,7 +339,7 @@ const MushroomIslandV2 = (() => {
     c.restore();
   }
   function themedProp(i,a,kind){
-    const offset=a+420,x=sx(offset),y=ground(offset),variant=hash(i+201)%4;
+    const offset=a+(kind==='bounce'?380:420),x=sx(offset),y=ground(offset),variant=hash(i+201)%4;
     if(!visible(offset,160))return;
     if(kind==='bounce'){
       mushroom(x,y,.77,variant,1.2);
@@ -371,8 +371,8 @@ const MushroomIslandV2 = (() => {
       for(let j=0;j<2;j++)block(x+(j-.5)*61,y-167-(j%2)*24,j);
     }else if(kind==='cartwheel'){
       for(let j=0;j<3;j++)block(x+(j-1)*63,y-173, j===1?1:0);
-    }else if(kind==='vault'){
-      pipe(x,y,.75);
+    }else if(kind==='wallkick'){
+      pipe(x+125,y,.58);
     }
   }
   function scenery(){
