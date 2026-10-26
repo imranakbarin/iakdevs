@@ -69,9 +69,10 @@ const KangraWorld=(()=>{
   c.save();c.translate(x,y);c.scale((A?.dir||1)*s,s);c.transform(1,0,Math.sin(t*.7)*.002,1+Math.sin(t*.9)*.003,0,0);
   c.beginPath();c.ellipse(0,0,25,2.5,0,0,TAU);c.fillStyle='rgba(44,59,32,.16)';c.fill();c.drawImage(im,90,23,1142,1182,-29,-61,59,61);c.restore();
  }
- function boat(c,x,q,t=0){
+ function boat(c,x,q,t=0,d){
   const im=ArtDepth.asset('kangraBoat');if(!im.width)return;
-  const y=RIVER+25+Math.sin(t*.8)*1.1,dir=q()<.5?-1:1;
+  // The boatman faces +x, so travel direction decides the flip.
+  const y=RIVER+25+Math.sin(t*.8)*1.1,dir=d??(q()<.5?-1:1);
   c.save();c.translate(x,y);c.scale(dir,1);c.beginPath();c.ellipse(0,0,47,3,0,0,TAU);c.fillStyle='rgba(38,75,64,.2)';c.fill();c.drawImage(im,37,101,1873,613,-48,-31,96,31);
   c.beginPath();c.moveTo(32,-18);c.lineTo(40+Math.sin(t*.7)*8,8);line(c,'#796543',.85);c.beginPath();c.moveTo(38+Math.sin(t*.7)*8,8);c.lineTo(43+Math.sin(t*.7)*8,9);line(c,'rgba(215,221,181,.5)',.6);c.restore();
  }
@@ -92,7 +93,7 @@ const KangraWorld=(()=>{
   const oldBuck=kBuck,oldCow=kCow,oldBoat=kBoat;
   kBuck=(c,x,q,A)=>ArtDepth.asset('kangraBuck').width?buck(c,x,q,A):oldBuck(c,x,q,A);
   kCow=(c,x,q,A)=>ArtDepth.asset('kangraBuck').width?buck(c,x,q,A):oldCow(c,x,q,A);
-  kBoat=(c,x,q,t)=>ArtDepth.asset('kangraBoat').width?boat(c,x,q,t):oldBoat(c,x,q,t);
+  kBoat=(c,x,q,t,d)=>ArtDepth.asset('kangraBoat').width?boat(c,x,q,t,d):oldBoat(c,x,q,t,d);
   kBush=(c,x,q)=>{const w=37+q()*24;ArtDepth.foliage(c,x,gy(x)+4,w,w*.56,q,1);};
  }
  return{install,cypress,material};

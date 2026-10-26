@@ -4,9 +4,9 @@
 
 - Repository: `imranakbarin/iakdevs`
 - Branch: `feature/mushroom-island-autoplay-20261026`
-- Base commit at branch creation: `24af548c7cedb35990cfdf6af7a9be813e8d2a99` (`master`, Gond benchmark already deployed).
+- Base commit at branch creation: `24af548c7cedb35990cfdf6af7a9be813e8d2a99`. The feature was manually integrated on top of Claude PR #60 merged as `75b781ba65f9fc2a7ca0547032a8fe40c48f158c`, retaining Claude's rendering, creature and road fixes.
 - Draft PR: https://github.com/imranakbarin/iakdevs/pull/61
-- Status: implemented on feature branch, **not deployed or merged**. Coordinate merge with Claude's separate in-flight changes; do not overwrite unrelated files.
+- Status: integrated on the feature branch above Claude PR #60; smoke checks pass. Deployment/merge status must be checked against PR #61. Coordinate merge with Claude's separate in-flight changes; do not overwrite unrelated files.
 - Experience: standalone, original character "Pip" in a cheerful illustrated mushroom fantasy island; watch-only automatic runner. This is not an official Mario/Nintendo asset or game.
 
 ## Changed files

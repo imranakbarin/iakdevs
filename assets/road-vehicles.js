@@ -34,7 +34,7 @@ const RoadVehicles=(()=>{
   const footprint=[[-W-.08,0],[W+.08,0],[W+.08,L],[-W-.08,L]].map(p=>point(...p));c.fillStyle='rgba(9,21,24,.19)';c.beginPath();footprint.forEach((p,i)=>i?c.lineTo(p.x,p.y):c.moveTo(p.x,p.y));c.closePath();c.fill();
   const R=kind==='truck'?.35:kind==='suv'||kind==='pickup'?.31:.28,axles=kind==='truck'?[.9,2.25,L-.95]:[.67,L-.76];
   for(const axle of axles)for(const side of [-1,1]){const p=point(side*(W+.03),axle),r=p.scale*R;c.fillStyle='rgba(8,17,19,.4)';c.beginPath();c.ellipse(p.x,p.y,r*.65,Math.max(.45,r*.11),0,0,Math.PI*2);c.fill();jobs.push({depth:depth(axle)-.035,paint(){
-   c.fillStyle='#182329';c.beginPath();c.ellipse(p.x,p.y-r,Math.max(.6,r*.43),r,0,Math.PI*2);c.fill();c.fillStyle='#8b9a9c';c.beginPath();c.ellipse(p.x,p.y-r,r*.25,r*.59,0,0,Math.PI*2);c.fill();
+   c.fillStyle='#182329';c.beginPath();c.ellipse(p.x,p.y-r,Math.max(.6,r*.43),r,0,0,Math.PI*2);c.fill();c.fillStyle='#8b9a9c';c.beginPath();c.ellipse(p.x,p.y-r,r*.25,r*.59,0,0,Math.PI*2);c.fill();
    c.strokeStyle='#35474d';c.lineWidth=Math.max(.35,r*.07);const angle=(car.s||0)/R;for(let k=0;k<5;k++){const a=angle+k*Math.PI*2/5;c.beginPath();c.moveTo(p.x,p.y-r);c.lineTo(p.x+Math.cos(a)*r*.22,p.y-r+Math.sin(a)*r*.53);c.stroke();}
   }});}
   const body=kind==='truck'?.94:kind==='van'?.97:kind==='suv'||kind==='pickup'?.99:.82,nose=kind==='truck'?.86:kind==='van'?.82:body-.13;
