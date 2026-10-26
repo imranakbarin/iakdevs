@@ -376,6 +376,7 @@ const MushroomIslandV2 = (() => {
   }
   function scenery(){
     water();
+    if(window.MushroomKingdom)window.MushroomKingdom.waterVeil(c,{W,H,cam,time});
     const first=Math.floor(cam/CELL)-1,last=Math.ceil((cam+W)/CELL)+1;
     for(let i=first;i<=last;i++){
       const a=i*CELL,b=a+CELL,kind=segment(i).kind;
