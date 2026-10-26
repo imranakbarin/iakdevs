@@ -126,6 +126,7 @@ canvas{display:block;width:100vw;height:100dvh;touch-action:pan-y}
     const p=cam*.53,step=400;
     for(let k=Math.floor((p-160)/step)-1;k<=Math.ceil((p+W+160)/step);k++){
       const x=k*step-p+rand(k,11)*65;
+      if(x<-180||x>W+180)continue;
       const y=H*.69+Math.sin(k*3.2)*17;
       mushroom(x,y,.77+rand(k,13)*.43,
         palettes[hash(k+92)%palettes.length],5);
@@ -172,6 +173,7 @@ canvas{display:block;width:100vw;height:100dvh;touch-action:pan-y}
     const first=Math.floor(cam/CELL)-1,last=Math.ceil((cam+W)/CELL)+1;
     for(let i=first;i<=last;i++){
       const st=segment(i),a=i*CELL,b=(i+1)*CELL;
+      if(b<cam-70||a>cam+W+70)continue;
       if(st.kind==='leap'){
         strip(a,a+345,cam,st.kind,st.variant);
         strip(a+457,b,cam,st.kind,st.variant);
@@ -250,7 +252,7 @@ canvas{display:block;width:100vw;height:100dvh;touch-action:pan-y}
     if(!inMove)return out;
     switch(st.kind){
       case 'leap':out.lift=156*wave;out.lean=.09*wave;break;
-      case 'bounce':out.lift=110*Math.abs(Math.sin(TAU*u));out.squash=1-.18*Math.pow(Math.cos(TAU*u),16);break;
+      case 'bounce':out.lift=110*Math.abs(Math.sin(TAU*u));out.squash=1-.18*Math.pow(Math.cos(TAU*u),16)*Math.sin(Math.PI*u)**2;break;
       case 'spin':out.lift=125*wave;out.spin=TAU*ease;break;
       case 'slide':out.squash=1-.46*Math.sin(Math.PI*u)**2;out.lean=-.12*wave;break;
       case 'vault':out.lift=105*wave;out.spin=-TAU*ease;break;
@@ -342,7 +344,9 @@ canvas{display:block;width:100vw;height:100dvh;touch-action:pan-y}
     const offset=cam*1.12,spacing=225;
     for(let i=Math.floor(offset/spacing)-1;i<=Math.ceil((offset+W)/spacing);i++){
       const x=i*spacing-offset+rand(i,500)*45;
-      const y=H*.9+rand(i,501)*40;
+      const worldX=cam+x,section=Math.floor(worldX/CELL);
+      if(gap(section,worldX))continue;
+      const y=H+14+rand(i,501)*14;
       c.save();c.translate(x,y);c.globalAlpha=.58;
       for(let p=0;p<4;p++){
         c.beginPath();c.moveTo(0,20);
@@ -374,8 +378,6 @@ canvas{display:block;width:100vw;height:100dvh;touch-action:pan-y}
     previous=now;
     time+=dt;
     distance+=SPEED*dt;
-    // Keep floating-point precision bounded on very long running sessions.
-    if(distance>760000)distance-=760000;
     paint();raf=requestAnimationFrame(frame);
   }
   function setPlaying(v){
