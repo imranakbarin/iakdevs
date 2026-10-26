@@ -49,3 +49,11 @@
 - Keep existing Road Trip, World Art, Cozy Worlds and Zen Garden unchanged.
 - Do not substitute official Nintendo sprites, sounds, logos, or level art. The island and character are original.
 - No external assets, tracking, API calls, audio, data collection, ads or gameplay prompts were introduced.
+
+## Claude follow-up (Presence) — shared `index.html` anchors touched
+
+Scoped edits only; Mushroom Island integration untouched:
+- Script tags: `creature-mind.js?v=2`, new `art-presence.js?v=1`, `art-depth.js?v=11`, `gond-benchmark.js?v=4`.
+- `ArtPresence.install();` right after the `hashchange` listener (needs `cv`, so it must stay after the canvas setup).
+- `drawScene`: live/painted camera target is multiplied by `(1-.7*ArtPresence.level(SceneMotion.time))`.
+- `walkA`, the Warli grazing animal and Kangra strollers call `ArtPresence.creature(...)` instead of `CreatureMind.wander(...)`.

@@ -149,7 +149,7 @@ const ArtDepth=(()=>{
   // A butterfly works this clearing's flowers (and the pond edge), settling on each.
   const spots=clumps.map(x=>[x,508]);if(pond.show)spots.push([pond.x-pond.w*.55,pond.y-pond.h-6]);
   if(spots.length>=2){const key=hash(seed^0xbf1,Math.round(x0/CW)),pal=[['#e9883a','#f6d27a'],['#3f8f86','#f2c66b'],['#c75a4e','#f4e1b0']][key%3];
-   act((c,t)=>{const b=CreatureMind.flight({key,spots,speed:55,period:11,lift:18},t);if(!artVisible(b.x,40))return;
+   act((c,t)=>{const b=ArtPresence.perch({key,spots,speed:55,period:11,lift:18},t,{reach:60,shy:45});if(!artVisible(b.x,40))return;
     butterfly(c,b.x,b.flying?b.y+Math.sin(t*7+key%9)*3:b.y,.55,b.flying?t*16:1.2+Math.sin(t*1.1+key%5)*1.1,pal[0],pal[1],'gond',b.dir,b.flying?Math.sin(t*3)*.15:0);});}
   if(pond.show)act((c,t)=>{c.save();c.beginPath();c.ellipse(pond.x,pond.y,pond.w-5,pond.h-4,-.025,0,TAU);c.clip();c.strokeStyle='rgba(240,227,176,.55)';c.lineWidth=.7;for(let j=0;j<8;j++){const x=pond.x-85+j*24,y=pond.y-15+(j%3)*8+Math.sin(t*.6+j)*1.5;c.beginPath();c.moveTo(x-8,y);c.quadraticCurveTo(x,y-2,x+11,y);c.stroke();}c.restore();});
  }

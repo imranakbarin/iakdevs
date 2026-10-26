@@ -26,6 +26,16 @@ A standalone canvas experience at https://imranakbarin.github.io/iakdevs/.
 - **Japan / China / Mexico:** flocks fly the way they face instead of flapping in place; a butterfly works each Mexican clearing's flowers and pond edge.
 - **Road trip:** props fade with the share of their place in the ground under them, and roadside slots cross-fade to the new place, so the desert no longer carries alpine pines.
 
+## Presence (calm interaction)
+
+`assets/art-presence.js` lets live art respond to the viewer without new controls; every response fades within a few seconds and reduced motion disables it.
+
+- **Attention:** a resting mouse pointer, or a finger held still for ~0.4s, is noticed by nearby creatures. Their own clock eases to a stop, they look up and face you, then resume from where they were (no jumps). Gond prey prick up; the tiger watches; a watched peacock displays.
+- **Lean in:** while you attend, the scroll eases to ~30% speed, then returns.
+- **Tap:** water ripples; fish, ducks and hens scatter and drift back; a tap near a perched Gond bird sends it to another tree; Mexican butterflies are shy of a close pointer.
+
+Inputs are recorded on the scene clock, so paused redraws remain pixel-identical.
+
 ## Rendering notes
 
 World tiles are 600 world units wide and cached per chunk. Tiles are blitted only up to the next tile's origin so translucent paint (hills, paper grain) never doubles along a seam. Bump the `?v=` query on a script tag when its file changes.

@@ -56,7 +56,7 @@ const CreatureMind = (() => {
       // Hops a little along the branch between longer flights.
       const shuffle = f > restT ? (f - restT) / Math.max(.01, takeoff - restT) : 0;
       return {x: a[0] + Math.sin(shuffle * Math.PI) * 6 * Math.sign(dx || 1), y: a[1],
-        dir: a[0] >= prev[0] ? 1 : -1, flying: false, env, w: 0, visit: k};
+        dir: a[0] >= prev[0] ? 1 : -1, flying: false, env, w: 0, visit: k, takeoffIn: takeoff - f};
     }
     const w = (f - takeoff) / flyT, s = ease(w), lift = (o.lift || 30) + dist * .16;
     return {x: a[0] + dx * s, y: a[1] + (b[1] - a[1]) * s - Math.sin(Math.PI * w) * lift,
