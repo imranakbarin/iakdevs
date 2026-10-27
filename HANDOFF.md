@@ -1,5 +1,18 @@
 # HANDOFF — Mushroom Island (October 26, 2026)
 
+## Corrective rollback after v6 visual review (October 26, 2026)
+
+**Decision:** The user reported that the v6 rendered character, obstacle artwork, and animation were severely mismatched and unnatural. This is a **visual-quality failure**, despite v6's passing simulated physics tests.
+
+- Live version is restored to the previously accepted **v5 matched-cinematic Pip, textured path and rendered bounce prop**, using the exact v5 code blobs from commit `3109070e8fb0790c4c6435059d6c36ae18d4f790`. No regeneration, restyling or change to other worlds.
+- v6 `assets/mushroom-physics.js`, `assets/mushroom-hurdles.js` and `tests/mushroom-physics.test.cjs` are removed from the published tree; their source and tests are preserved in <https://github.com/imranakbarin/iakdevs/pull/66> and branch `feature/mushroom-physics-hurdles-20261026`.
+- **Root cause:** v6 used a single largely rigid sprite for spinning/crouching, world-physics heights that did not map to believable full-body movement, vector obstacles visibly unlike the cinematic background, and rudimentary abrupt terrain gap masks. Numeric collision passes cannot establish natural motion.
+- **Requirement for replacement:** Make an independently reviewed **8–12 pose coherent sprite sequence or properly joint-rigged character**, with distinct run contact/push-off/air/landing poses, synchronized feet to the terrain, and image-derived/rendered hurdles matching the kingdom's textures and light. Review recorded movement on an actual desktop and mobile browser before merging. Avoid shipping merely on mocked draw calls and code-based collision passes.
+- Do not re-enable v6 by switching the script tags alone. Match foreground and animation first, then test physics against the authored animation and terrain. Coordinate with Claude's work via a separate branch and avoid changes to `index.html`.
+- This rollback is not the finished new animation; it is a quality reset to the last visually preferred state.
+
+---
+
 ## v6 — Physics-driven Pip and cinematic hurdles (October 26, 2026)
 
 **Feature:** Automatic side-scrolling now uses **actual fixed-timestep gravity and collision logic**, not precomputed sine-wave stunt heights. This is still a watch-only, original mushroom-world character; do not introduce extra controls or official Nintendo characters/sprites.
