@@ -24,10 +24,7 @@ function paint(ctx,o){
    ctx.beginPath();ctx.moveTo(-w*.53,0);
    ctx.bezierCurveTo(-w*.54,-h*.58,-w*.19,-h,0,-h);
    ctx.bezierCurveTo(w*.25,-h*1.08,w*.58,-h*.52,w*.52,0);ctx.closePath();
-   ctx.fillStyle=grad(-w*.5,-h,w*.5,0,
-     [['#e8c9a1','#d19c86','#947586'][variation%3],
-      '#c9aa92','#8a7181']);
-   // make three attractive and stable color families
+   // Three light-matched material families, including negative chunks.
    if(variation%3===0)ctx.fillStyle=grad(-w*.6,-h,w*.5,0,['#f5dbb6','#c5a084','#87738a']);
    else if(variation%3===1)ctx.fillStyle=grad(-w*.6,-h,w*.5,0,['#e4d0c3','#b9a6ac','#8d769a']);
    else ctx.fillStyle=grad(-w*.6,-h,w*.5,0,['#edc79d','#c28c83','#8c768d']);
