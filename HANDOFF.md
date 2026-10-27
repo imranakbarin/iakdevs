@@ -1,5 +1,18 @@
 # HANDOFF — Mushroom Island (October 26, 2026)
 
+## v8 — Motion polish for approved Pip run (October 27, 2026)
+
+**Direction:** Keep v7's approved cinematic Pip, 16 grounded run poses, six special poses, textured foreground and kingdom composition exactly as they are. Improve continuity around actions **without reintroducing the rejected physics or vector hurdles**.
+
+- Branch: `feature/pip-motion-polish-v8-20261027` based on v7 merge `2322e3c841c53dd4e25cfcdaf560567afab3820f`.
+- `assets/mushroom-cinematic.js`: added distance-based `animationAt` to ease a few centimeters before takeoff and gently settle on contact; special poses crossfade only at their transitions, while the 16-frame grounded run remains crisp and *never* ghost-blended. Shadow changes with jump altitude continuously instead of popping at a height cutoff. Landing adds tiny, sunlit ground-contact dust; slides smoothly unfold without false impact dust, and dashes preserve momentum.
+- `mushroom-island.html`: bumped `mushroom-cinematic.js?v=8` to avoid stale browser caches.
+- `tests/mushroom-cinematic.test.cjs`: checks continuous jump height/squash at both boundary coordinates, graded preparation and recovery, transition frame mixing, unchanged distinct run frames, lack of spurious dash/slide landing events, 4 responsive layouts, and balanced Canvas alpha states with no state leakage; existing security and pause/resume tests remain.
+- No new controls, artwork, hurdles, external libraries, physics simulations, or modifications to `index.html` or Claude's other worlds.
+- **QA caveat:** production code and simulated Canvas draw calls are tested, but actual full-speed live browser/physical phone playback was not verified in this session. Visual acceptance remains essential before describing this as final character animation. Do not discard the v7 running poses if a future physics revision fails visually.
+
+---
+
 ## v7 — Pip's actual running cycle (October 26, 2026)
 
 **User acceptance issue:** Pip was not running: the eight v5 frames were nearly identical and the complete sprite was rocked side to side, appearing to wave. v6's physics and mismatched hurdle graphics were rolled back as documented below.
