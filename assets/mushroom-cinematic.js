@@ -407,6 +407,15 @@
       ctx.strokeStyle='rgba(119,99,116,.54)';ctx.lineWidth=1.8*s;ctx.stroke();
     }
     ctx.restore();
+    // The physically measured landing impulse releases a brief contact puff.
+    if(pose.landing>0){
+      const puff=pose.landing;
+      for(const side of [-1,1]){
+        oval(x+side*(14+27*(1-puff))*s,groundY-5*s-(1-puff)*12*s,
+          (6+8*(1-puff))*s,(2.5+3*puff)*s,
+          'rgba(243,222,183,'+(.21*puff).toFixed(3)+')');
+      }
+    }
     // Dust is tinted by the same golden sunlight, no cartoon particle stream.
     if(!pose.active){
       for(let k=0;k<2;k++){
