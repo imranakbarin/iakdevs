@@ -260,10 +260,13 @@
     const anticipation=base.kind!=='dash'&&p>=160&&p<218
       ?(p<195?smooth((p-160)/35):1-smooth((p-195)/23)):0;
     // Contact compression begins only when the feet have returned near ground.
-    const landing=p>=542&&p<595
+    const recovery=base.kind!=='dash'&&p>=542&&p<595
       ?(p<550?smooth((p-542)/8):1-smooth((p-550)/45)):0;
-    return {...base,anticipation,landing,
-      squash:base.squash*(1-.04*anticipation-.055*landing)};
+    // Sliding unfolds without a fictional landing impulse or dust burst.
+    const landing=base.kind==='slide'?0:recovery;
+    return {...base,anticipation,recovery,landing,
+      squash:base.squash*(1-.04*anticipation-.055*landing-
+        (base.kind==='slide'?.02*recovery:0))};
   }
   function pip(x,y,pose){
     const s=minmax(.73,H/690,1.13);
@@ -397,9 +400,9 @@
       return ((Math.floor(world/stride)%RUN_FRAMES)+RUN_FRAMES)%RUN_FRAMES;
     };
     const run=runIndex();
-    const anticipation=pose.anticipation||0,landing=pose.landing||0;
-    if(landing>0&&pose.active===false)
-      return {from:run,to:20,t:landing};
+    const anticipation=pose.anticipation||0,recovery=pose.recovery||0;
+    if(recovery>0&&pose.active===false)
+      return {from:run,to:20,t:recovery};
     if(anticipation>0)
       return {from:run,to:pose.kind==='slide'?21:16,t:anticipation};
     if(!pose.active||pose.kind==='dash')
@@ -434,7 +437,7 @@
     // Tie leg cadence to horizontal travel, not elapsed time; torso stays stable.
     const runPhase=(world/(RUN_FRAMES*RUN_STRIDE_PX))*TAU;
     // A planted foot stays visually anchored through preparation and recovery.
-    const anchored=Math.max(pose.anticipation||0,pose.landing||0);
+    const anchored=Math.max(pose.anticipation||0,pose.recovery||0);
     const bob=pose.active?0:Math.abs(Math.sin(runPhase*2))*2.1*s*(1-anchored);
     const lift=pose.lift*s;
     const footInset=newSheet?9*s:0;
