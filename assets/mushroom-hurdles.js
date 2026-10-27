@@ -127,11 +127,11 @@ function paint(ctx,o){
    else if(f.type==='stepping-stones'){
      for(let k=0;k<3;k++)rock(x+(k-1)*26,gy,25,25+k*6,k+f.index);
    }else if(f.type==='lantern-flower')flower(x,gy,51);
-   else if(f.type==='spring-mushroom')spring(x,gy,95,bounceCap);
+   else if(f.type==='spring-mushroom')spring(x,gy,85,bounceCap);
    else if(f.type==='low-arch')canopy(x,gy,f.width,92);
    else if(f.type==='wind-arch')gate(x,gy,124,125);
    else if(f.type==='speed-gate'){
-     gate(x,gy,116,111);
+     gate(x,gy,116,184);
      for(let j=0;j<4;j++){
        const sx=x-74-j*27;glow(sx,gy-28-j*6,12,.11);
      }
