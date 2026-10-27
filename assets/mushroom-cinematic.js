@@ -392,32 +392,19 @@
     if(pose.u<.88)return 19;   // reach for terrain
     return 20;                 // contact / landing
   }
-  // Blend only authored *transition* poses, never the 16-frame grounded run.
-  // Blending the run would make arms/legs appear doubled or ghosted.
-  function spriteMix(pose){
-    const runIndex=()=>{
-      const stride=pose.kind==='dash'?9:RUN_STRIDE_PX;
-      return ((Math.floor(world/stride)%RUN_FRAMES)+RUN_FRAMES)%RUN_FRAMES;
-    };
-    const run=runIndex();
-    const anticipation=pose.anticipation||0,recovery=pose.recovery||0;
-    if(recovery>0&&pose.active===false)
-      return {from:run,to:20,t:recovery};
-    if(anticipation>0)
-      return {from:run,to:pose.kind==='slide'?21:16,t:anticipation};
-    if(!pose.active||pose.kind==='dash')
-      return {from:run,to:run,t:0};
-    const target=pipFrame(pose);
-    if(pose.kind==='slide'){
-      const tuckBack=smooth((pose.u-.90)/.10);
-      return {from:21,to:20,t:tuckBack};
+  // Exactly one opaque authored pose is drawn per frame. The former v8
+  // crossfade briefly brought running legs back *after* takeoff and painted
+  // two overlapping translucent full-body sprites, which visibly flickered.
+  // Use time/ground easing for softness instead of body-image transparency.
+  function spriteFrame(pose){
+    const stride=pose.kind==='dash'?9:RUN_STRIDE_PX;
+    const run=((Math.floor(world/stride)%RUN_FRAMES)+RUN_FRAMES)%RUN_FRAMES;
+    if(!pose.active){
+      if((pose.recovery||0)>.5)return pose.kind==='slide'?21:20;
+      if((pose.anticipation||0)>.72)return pose.kind==='slide'?21:16;
+      return run;
     }
-    for(const [threshold,from,to] of [[.16,16,17],[.38,17,18],[.64,18,19],[.88,19,20]]){
-      const half=.027;
-      if(Math.abs(pose.u-threshold)<half)
-        return {from,to,t:smooth((pose.u-threshold+half)/(2*half))};
-    }
-    return {from:target,to:target,t:0};
+    return pose.kind==='dash'?run:pipFrame(pose);
   }
   function cinematicPip(x,y,pose){
     if(!renderedPip.complete||!renderedPip.naturalWidth){pip(x,y,pose);return;}
@@ -447,20 +434,12 @@
     ctx.rotate(pose.active?Math.max(-.09,Math.min(.09,pose.lean)):0);
     ctx.translate(0,143*s);
     ctx.scale(1,pose.squash);
-    const frame=newSheet?pipFrame(pose):Math.floor(Math.abs(world)/RUN_STRIDE_PX)%PIP_FRAMES;
+    const frame=newSheet?spriteFrame(pose):Math.floor(Math.abs(world)/RUN_STRIDE_PX)%PIP_FRAMES;
     const sheet=newSheet?runningPip:renderedPip;
-    const paintFrame=(index,opacity=1)=>{
-      ctx.save();ctx.globalAlpha*=opacity;
-      ctx.drawImage(sheet,index*PIP_FRAME_W,0,PIP_FRAME_W,PIP_FRAME_H,
-        -PIP_FRAME_W*s*.5,-PIP_FRAME_H*s,PIP_FRAME_W*s,PIP_FRAME_H*s);
-      ctx.restore();
-    };
-    if(newSheet){
-      const mix=spriteMix(pose);
-      if(mix.from===mix.to||mix.t<=0)paintFrame(mix.from);
-      else if(mix.t>=1)paintFrame(mix.to);
-      else {paintFrame(mix.from,1-mix.t);paintFrame(mix.to,mix.t);}
-    }else paintFrame(frame);
+    // Draw one full-opacity sprite. Never overlay two partially transparent
+    // Pip images: limb silhouettes, hair and outlines otherwise shimmer.
+    ctx.drawImage(sheet,frame*PIP_FRAME_W,0,PIP_FRAME_W,PIP_FRAME_H,
+      -PIP_FRAME_W*s*.5,-PIP_FRAME_H*s,PIP_FRAME_W*s,PIP_FRAME_H*s);
     if(pose.glide){
       // Warm, dimensionally shaded silk glider, tucked behind its hero.
       const gl=ctx.createLinearGradient(-58*s,-291*s,66*s,-233*s);
