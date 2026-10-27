@@ -153,7 +153,7 @@
     // Rounded stone volume makes the narrow front cliff feel tactile.
     // Fine rock plane texture, deterministic in world-space.
     for(let j=0;j<Math.ceil(W/82)+2;j++){
-      const id=j+Math.floor(world/82),x=(id*82-world*.9)%(W+164)-20;
+      const id=j+Math.floor(world/82),x=id*82-world-20;
       if(x<0||x>W)continue;
       const y0=y+26+random(id,42)*(depth-27);
       const w=7+random(id,38)*31;
@@ -164,8 +164,8 @@
   function flowers(){
     const y=ground();
     for(let j=0;j<Math.ceil(W/130)+3;j++){
-      const index=j+Math.floor(world/130),wx=index*130+random(index,10)*40;
-      const x=wx-world*.94+W*.35;
+      const index=j+Math.floor((world-W*.35)/130),wx=index*130+random(index,10)*40;
+      const x=wx-world+W*.35;
       if(x<-25||x>W+25||Math.abs(x-W*.34)<42)continue;
       const f=.36+random(index,1)*.30;
       ctx.save();ctx.translate(x,y-10);ctx.scale(f,f);
