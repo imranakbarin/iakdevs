@@ -257,7 +257,7 @@
   // looks identical after frame drops, tab resumes, and on different screens.
   function animationAt(x){
     const base=poseAt(x),p=x-Math.floor(x/CHAPTER)*CHAPTER;
-    const anticipation=p>=160&&p<218
+    const anticipation=base.kind!=='dash'&&p>=160&&p<218
       ?(p<195?smooth((p-160)/35):1-smooth((p-195)/23)):0;
     // Contact compression begins only when the feet have returned near ground.
     const landing=p>=542&&p<595
@@ -405,7 +405,10 @@
     if(!pose.active||pose.kind==='dash')
       return {from:run,to:run,t:0};
     const target=pipFrame(pose);
-    if(pose.kind==='slide')return {from:21,to:21,t:0};
+    if(pose.kind==='slide'){
+      const tuckBack=smooth((pose.u-.90)/.10);
+      return {from:21,to:20,t:tuckBack};
+    }
     for(const [threshold,from,to] of [[.16,16,17],[.38,17,18],[.64,18,19],[.88,19,20]]){
       const half=.027;
       if(Math.abs(pose.u-threshold)<half)
