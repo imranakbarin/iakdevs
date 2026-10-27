@@ -1,5 +1,20 @@
 # HANDOFF — Mushroom Island (October 26, 2026)
 
+## v5 — Matched cinematic foreground and Pip (October 26, 2026)
+
+**User finding:** the v4 kingdom's 3D cinematic architecture did not match its flat vector foreground, path, and runner. v5 deliberately replaces the three offending pieces with *rendered artwork from the same coherent scene*.
+
+- **Branch:** `feature/mushroom-foreground-style-match-v5`, based on v4 production commit `0edd1374954827cd53916384fb002012eae131ef`; kept `index.html`, Claude's work, and all other world files untouched.
+- **Pip:** `assets/pip-cinematic-run.webp` — original character matte taken from the agreed cinematic scene, 8 subtly limb-deformed run frames on a 1952×305 transparent WebP sprite sheet. Character proportions, soft film-like materials, warm sunlight and tiny shadows match the castle and path. The sprite rotates/scales for the original ten stunt types; it is *not* a full articulated 3D rig.
+- **Foreground:** `assets/mushroom-terrace-cinematic.webp` — 760×211 alpha-textured grass, stone and earthen path extracted from the matching cinematic scene and leveled/tile-blended. Replaces v4's untextured gray polygon and bright flat green horizontal stripes. Foreground scrolls independently from the city, and Pip's boots and contact shadow share its ground line.
+- **Bounce prop:** `assets/mushroom-bounce-cinematic.webp` — a rendered mushroom from the same lighting and color palette, in place of the flat procedural mushroom used for bounces/vaults.
+- **Script:** `assets/mushroom-cinematic.js` loads three optional local assets and uses `cinematicTerrace`, `cinematicPip`, `cinematicSetPieces`. Previous Canvas shapes remain as load-error fallbacks. The original kingdom background, slow pan, water highlights, birds, particles, pause/resume and ten authored stunt sequences are unchanged.
+- **Cache:** `mushroom-island.html` references `mushroom-cinematic.js?v=5` so deployed users receive the new script.
+- **Validation:** `node tests/mushroom-cinematic.test.cjs` checks all four WebP assets, actual image drawing calls, 46 chapter instances, ten stunts, multiple portrait/landscape viewports and parent cross-origin pause/resume. Locally rendered and inspected actual Skia Canvas screenshots at 1440×900, 390×844 and 844×390, including grounded running and midair stunt poses. Chromium headless startup failed in this execution environment; physical iPhone and real-browser runtime/FPS checks remain outstanding.
+- **Remaining quality limits:** the background remains a single gently moving cinematic art plate, and the hero's eight frames are a stylized 2D sprite sheet rather than full-body 3D animation. Build separately authored rigged sprite poses, higher-quality landscape tiles and multiple cinematic districts when pursuing greater fluidity and full-depth exploration. Avoid reverting to simple geometric vector layers.
+
+---
+
 ## v4 — Cinematic Mushroom Island rebuild (October 26, 2026)
 
 **Reason for rewrite:** The previous v1–v3 vector/Canvas scenery could not achieve the user's supplied richly rendered mushroom kingdom reference. A static generated picture alone was also not an app. This implementation combines an original authored *cinematic art plate* with a newly written live runner, motion and scene renderer.
