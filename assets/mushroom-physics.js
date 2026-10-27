@@ -116,7 +116,12 @@
       const terrain=feature(chapterAt(x));
       const solid=['fallen-log','mossy-stump','round-boulder','stepping-stones','lantern-flower'].includes(terrain.type);
       const overlap=Math.abs(x-terrain.x)<terrain.width*.30;
-      if(solid&&overlap&&y>-(terrain.height+13)&&hitIndex!==terrain.index){
+      const arch=terrain.type==='low-arch'&&Math.abs(x-terrain.x)<terrain.width*.21;
+      const lp=clamp((x-terrain.index*CHAPTER-245)/260,0,1);
+      const crouch=active==='slide'?1-.48*Math.sin(Math.PI*lp)**2:1;
+      const impact=(solid&&overlap&&y>-(terrain.height+13))||
+        (arch&&onGround&&crouch>.73);
+      if(impact&&hitIndex!==terrain.index){
         hitIndex=terrain.index;stats.collisions++;emit('collision',terrain.index);
       }
       // Register only one clear per obstacle: real space and fixed-step time.
@@ -141,7 +146,11 @@
       const spin=rotational&&!onGround?TAU*smooth(Math.min(1,elapsed/Math.max(.2,2*plans[active].impulse/GRAVITY)))*(active==='cartwheel'?-1:1):0;
       const slid=active==='slide'?Math.sin(Math.PI*clamp((local-245)/260,0,1))**2:0;
       const lean=(active==='dash'?.21:active==='longjump'?.12:active==='vault'?.10:0)*Math.sin(Math.PI*p);
-      const squash=Math.max(.49,1-.48*slid-.20*landPulse);
+      const upcoming=plans[kindAt(ci)];
+      const distanceToTrigger=ci*CHAPTER+upcoming.trigger-x;
+      const anticipation=onGround&&upcoming.impulse>0&&actionIndex!==ci
+        ?(1-smooth(distanceToTrigger/40))*.12:0;
+      const squash=Math.max(.49,1-.48*slid-.20*landPulse-anticipation);
       return {x,kind,action:active,active:active!=='run',chapter:ci,
         lift:Math.max(0,-y),height:y,vy,onGround,
         spin,lean,squash,glide:active==='glide'&&!onGround,landing:landPulse,
