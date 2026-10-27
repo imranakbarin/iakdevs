@@ -126,7 +126,7 @@ for(const x of [158,170,183,189,194.99,195,202,209,217,218,230,250,251,260,275,
 for(const x of [189,195,202,209,217,218])
   assert.equal(win.__probe.spriteFrame(aAt(x)),16,
     'takeoff must not flash back to a grounded running frame at '+x);
-assert.equal(win.__probe.spriteFrame(aAt(575)),20,'settling uses one opaque landing pose');
+assert.equal(win.__probe.spriteFrame(aAt(565)),20,'settling uses one opaque landing pose');
 assert.ok(win.__probe.spriteFrame(aAt(594))<16,'running returns after contact');
 const normal=win.__probe.spriteFrame(aAt(100));
 assert.ok(normal>=0&&normal<16,'ordinary running remains the original 16-frame atlas');
