@@ -1,5 +1,22 @@
 # HANDOFF — Mushroom Island (October 26, 2026)
 
+## v6 — Physics-driven Pip and cinematic hurdles (October 26, 2026)
+
+**Feature:** Automatic side-scrolling now uses **actual fixed-timestep gravity and collision logic**, not precomputed sine-wave stunt heights. This is still a watch-only, original mushroom-world character; do not introduce extra controls or official Nintendo characters/sprites.
+
+- Branch: `feature/mushroom-physics-hurdles-20261026`, based on v5 master `3109070e8fb0790c4c6435059d6c36ae18d4f790`.
+- New `assets/mushroom-physics.js`: isolated deterministic 120 Hz physical simulator, world-space obstacle authoring, vertical position/velocity, actual takeoff and touchdown, sprung mushroom collisions, variable gravity glide, ducking below low arches, brief dash acceleration, safe real ravine crossings, landing compression, anticipation, stunt rotation and event counters. Ten existing stunt chapters preserved: hop, dash, bounce, flip, slide, glide, vault, cartwheel, twirl, longjump.
+- New `assets/mushroom-hurdles.js`: cohesive soft-lit obstacle renderer for fallen logs, stone obstacles, stepping stones, spring mushrooms, flowering low arches, wind gates, lantern flowers and ravine lips. Geometry comes from **the same physics module**, so visual placements are not independently guessed.
+- `assets/mushroom-cinematic.js`: uses physics world position and snapshot for the existing rendered Pip sprite; clips actual holes in the cinematic foreground at long-jump ravines, paints matching hurdles, adds short physically triggered contact dust and retains the original city image, terrace texture, lighting, birds, water effects and existing fallback rendering.
+- `mushroom-island.html`: load physics and hurdle modules before cinematic renderer; bump main script to `?v=6`. Parent same-origin pause/resume and simple selector in `index.html` unchanged.
+- Tests: `node tests/mushroom-physics.test.cjs` runs 240 seconds at each of 30, 60 and 144 FPS; checks obstacle geometry, fixed-step deterministic travel, the 10 stunt families, spring contacts, zero falls, zero hurdle impacts and continued auto-run. `node tests/mushroom-cinematic.test.cjs` checks actual integration and rendering calls, assets, pause/resume, visibility and cross-origin guard. Both should pass on Node 18+.
+- No changes to Claude's Gond, Road, art, Cozy or Zen source. No physics library, tracking, audio, buttons, external assets or user controls added.
+- Before any future modification, review latest master and work only on scoped module files; do not overwrite shared `index.html`.
+- **Remaining QA:** browser screenshots at stunt takeoff, spring contact, crouch under arch, ravine crossing and landing; actual iPhone frame-rate profiling and a longer autoplay watch-through. The test harness exercises drawing commands and dynamics but is not proof of real-device visuals or physical-device FPS.
+- **Visual limitation:** Pip still uses a light-matched cinematic 2D frame sheet with transform-based stunt poses, not a fully joint-rigged character; separate authentic poses and transition sprites would improve foot articulation. The kingdom remains a large slowly moving painted cinematic plate behind interactive foreground scenery.
+
+---
+
 ## v5 — Matched cinematic foreground and Pip (October 26, 2026)
 
 **User finding:** the v4 kingdom's 3D cinematic architecture did not match its flat vector foreground, path, and runner. v5 deliberately replaces the three offending pieces with *rendered artwork from the same coherent scene*.

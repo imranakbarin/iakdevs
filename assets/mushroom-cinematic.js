@@ -22,6 +22,7 @@
   let loadState='loading',loadError=null;
   let reduced=matchMedia('(prefers-reduced-motion: reduce)');
   const info={};
+  const physics=window.MushroomPhysics?window.MushroomPhysics.create():null;
   const colors=[['#ee8488','#a45c93'],['#f6b16c','#b26795'],['#ed98bb','#a56eb0'],['#ebb474','#b3768a']];
 
   const gradient=(x,y,x2,y2,stops)=>{
@@ -329,6 +330,21 @@
     const drift=world*1.02;
     const phase=((drift%width)+width)%width;
     ctx.save();
+    // True empty chasms: the cinematic art is clipped out between the two
+    // ledge edges. The background kingdom is visible through the hole.
+    if(physics&&window.MushroomPhysics){
+      const gapFeatures=window.MushroomPhysics.range(world-W*.34-160,world+W*.66+160)
+        .filter(f=>f.type==='ravine');
+      let cursor=0;
+      ctx.beginPath();
+      for(const f of gapFeatures){
+        const l=W*.34+f.left-world,r=W*.34+f.right-world;
+        if(l>cursor)ctx.rect(cursor,top,l-cursor,H-top+60);
+        cursor=Math.max(cursor,r);
+      }
+      if(cursor<W)ctx.rect(cursor,top,W-cursor,H-top+60);
+      ctx.clip();
+    }
     for(let x=-width-phase;x<W+width;x+=width)
       ctx.drawImage(texturedLedge,x,top,width,height);
     // A subtle warm bounce at the horizon gives the textured ground the
@@ -370,13 +386,14 @@
     shadow.addColorStop(1,'rgba(55,49,42,0)');
     ctx.fillStyle=shadow;ctx.fillRect(x-70*s,groundY-21*s,140*s,53*s);
     const bob=pose.active?0:Math.abs(Math.sin(clock*16.5))*2.4*s;
-    const lift=pose.lift*s;
+    // Physics is in actual world pixels; scripted fallback remains scaled.
+    const lift=physics?pose.lift:pose.lift*s;
     ctx.translate(x,groundY-lift-bob);
     ctx.translate(0,-143*s);
     ctx.rotate(pose.spin+pose.lean +(!pose.active?Math.sin(clock*8.2)*.017:0));
     ctx.translate(0,143*s);
     ctx.scale(1,pose.squash);
-    const frame=Math.floor(clock*12.1)%PIP_FRAMES;
+    const frame=pose.onGround===false ? 2 : pose.action==='slide' ? 5 : Math.floor(clock*(pose.action==='dash'?17.5:12.1))%PIP_FRAMES;
     ctx.drawImage(renderedPip,frame*PIP_FRAME_W,0,PIP_FRAME_W,PIP_FRAME_H,
       -PIP_FRAME_W*s*.5,-PIP_FRAME_H*s,PIP_FRAME_W*s,PIP_FRAME_H*s);
     if(pose.glide){
@@ -390,6 +407,15 @@
       ctx.strokeStyle='rgba(119,99,116,.54)';ctx.lineWidth=1.8*s;ctx.stroke();
     }
     ctx.restore();
+    // The physically measured landing impulse releases a brief contact puff.
+    if(pose.landing>0){
+      const puff=pose.landing;
+      for(const side of [-1,1]){
+        oval(x+side*(14+27*(1-puff))*s,groundY-5*s-(1-puff)*12*s,
+          (6+8*(1-puff))*s,(2.5+3*puff)*s,
+          'rgba(243,222,183,'+(.21*puff).toFixed(3)+')');
+      }
+    }
     // Dust is tinted by the same golden sunlight, no cartoon particle stream.
     if(!pose.active){
       for(let k=0;k<2;k++){
@@ -402,9 +428,14 @@
     if(!ctx||!canvas.width)return;
     ctx.setTransform(dpr,0,0,dpr,0,0);
     background();waterMotion();skyLife();
-    cinematicTerrace();cinematicSetPieces();
+    cinematicTerrace();
+    if(physics&&window.MushroomHurdles){
+      window.MushroomHurdles.paint(ctx,{
+        W,H,world,clock,ground,physics:window.MushroomPhysics,bounceCap
+      });
+    }else cinematicSetPieces();
     const characterX=W*.34;
-    cinematicPip(characterX,ground()+10,poseAt(world));
+    cinematicPip(characterX,ground()+10,physics?physics.snapshot():poseAt(world));
     // Soft corner falloff integrates the photographically rich kingdom plate
     // and the sculpted foreground land without masking readable detail.
     const v=ctx.createRadialGradient(W*.5,H*.48,Math.min(W,H)*.32,W*.5,H*.48,Math.max(W,H)*.89);
@@ -415,7 +446,9 @@
     raf=0;
     if(!playing||!visible)return;
     const dt=previous?minmax(0,(now-previous)/1000,.04):0;
-    previous=now;clock+=dt;world+=SPEED*dt;
+    previous=now;clock+=dt;
+    if(physics)world=physics.update(dt).x;
+    else world+=SPEED*dt;
     render();raf=requestAnimationFrame(frame);
   }
   function updateMotion(next){
