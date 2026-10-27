@@ -135,6 +135,7 @@ input[type=range]{width:80px;accent-color:#E63B2E}
 <script src="assets/road-weather-light.js?v=2"></script>
 <script src="assets/creature-mind.js?v=2"></script>
 <script src="assets/art-presence.js?v=1"></script>
+<script src="assets/art-ambience.js?v=1"></script>
 <script src="assets/kangra-world.js?v=3"></script>
 <script src="assets/art-depth.js?v=11"></script>
 <script src="assets/art-finishing.js?v=2"></script>
@@ -2226,7 +2227,7 @@ if(requestedZen||requestedRoad||requestedCozy||requestedMushroom){modeBtn.value=
 // Editing the hash (or following a deep link in the same tab) opens that world;
 // the app's own replaceState calls never fire hashchange.
 addEventListener('hashchange',()=>location.reload());
-ArtPresence.install();
+ArtAmbience.install();ArtPresence.install();
 motionPreference.addEventListener('change',e=>{if(e.matches){playing=false;syncPlay();if(modeBtn.value==='cozy')window.CozyWorlds?.pause();wakeScene();}});
 wakeScene();
 </script>

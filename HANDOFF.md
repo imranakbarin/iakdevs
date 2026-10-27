@@ -183,3 +183,12 @@ Scoped edits only; Mushroom Island integration untouched:
 - `ArtPresence.install();` right after the `hashchange` listener (needs `cv`, so it must stay after the canvas setup).
 - `drawScene`: live/painted camera target is multiplied by `(1-.7*ArtPresence.level(SceneMotion.time))`.
 - `walkA`, the Warli grazing animal and Kangra strollers call `ArtPresence.creature(...)` instead of `CreatureMind.wander(...)`.
+
+## Claude follow-up (Mushroom life + ambience)
+
+- New `assets/mushroom-life.js` (loaded before `mushroom-cinematic.js` in `mushroom-island.html`). `render()` in `mushroom-cinematic.js` now builds one `state` object and calls `MushroomLife.back/beforePip/front`; if the file is absent the hooks are no-ops. Cinematic bumped to `?v=10`; `tests/mushroom-cinematic.test.cjs` regex updated to match. New `tests/mushroom-life.test.cjs`.
+  - Kingdom (plate-anchored): drifting cloud shadows, breathing light shafts, mist at waterfall bases, lamp glow on the main bridge, mushroom-cap townsfolk strolling the bridge walk, a flock every ~31s.
+  - Route: star seeds trace each stunt arc and burst as Pip collects them; a fairy companion trails Pip's path; butterflies lift off as Pip approaches; drifting petals.
+  - All derived from `clock`/`world`, so frames are reproducible.
+- Observed, not changed (your file): the textured terrace shows a faint vertical seam where `texturedLedge` repeats (visible around x≈720 at 1363×936). Mirroring alternate tiles or cross-fading the overlap would hide it.
+- World art: new `assets/art-ambience.js` (mist, cloud shadows, water glints for Kangra/Japan/China/Mexico), installed next to `ArtPresence.install()`.

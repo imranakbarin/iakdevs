@@ -36,6 +36,10 @@ A standalone canvas experience at https://imranakbarin.github.io/iakdevs/.
 
 Inputs are recorded on the scene clock, so paused redraws remain pixel-identical.
 
+## Ambience
+
+`assets/art-ambience.js` adds slow mist veils, cloud shadows and water glints to the painterly live-art styles (Kangra, Japan, China, Mexico). Mushroom Island's `assets/mushroom-life.js` animates the painted kingdom (mist, lamps, townsfolk, flocks, light shafts) and gives Pip's run star seeds to collect, a fairy companion and butterflies that lift off as he passes.
+
 ## Rendering notes
 
 World tiles are 600 world units wide and cached per chunk. Tiles are blitted only up to the next tile's origin so translucent paint (hills, paper grain) never doubles along a seam. Bump the `?v=` query on a script tag when its file changes.
