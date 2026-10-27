@@ -1,5 +1,20 @@
 # HANDOFF — Mushroom Island (October 26, 2026)
 
+## v7 — Pip's actual running cycle (October 26, 2026)
+
+**User acceptance issue:** Pip was not running: the eight v5 frames were nearly identical and the complete sprite was rocked side to side, appearing to wave. v6's physics and mismatched hurdle graphics were rolled back as documented below.
+
+- Feature branch: `feature/pip-articulated-run-v7-20261026`, based on the coherent v5 restoration `274c2f877ae77489ea5d2b8f387cfef535a94d38`.
+- New `assets/pip-full-run-22.webp`: 5,368×305 RGBA WebP atlas, 22 frames of the **same cinematic Pip**. Sixteen grounded running frames feature independently repositioned opposite legs and arms (stride / passing / opposite contact), plus six dedicated takeoff / rise / tucked airborne / descend / contact / crouch poses. Built from cleanly masked regions of the **matching character image**, not new flat Canvas shapes.
+- `assets/mushroom-cinematic.js`: uses `pipFrame()` to select frames by **distance traveled** (12 pixels/frame), so boots cycle consistently with world velocity; removes the side-to-side body rotation during running and suppresses full rigid-body rotations during stunts. Adds small vertical cadence bounce and corrected foot-to-ground alignment. Keeps old `assets/pip-cinematic-run.webp` as a load failure fallback.
+- `mushroom-island.html` now requests `mushroom-cinematic.js?v=7` to invalidate cached scene code.
+- `tests/mushroom-cinematic.test.cjs`: validates the new WebP asset is referenced, all 16 grounded frame indices, special jump/crouch poses, actual Canvas atlas image usage, varied source rectangles across a live simulated loop, four viewport sizes, image assets and secure pause/resume/visibility.
+- Art and layout preserved: the v5 cinematic kingdom, textured rock/grass foreground, matching Pip appearance, waterfall effects, birds and ambient lighting. **No physics or mismatched vector hurdles reintroduced.** Other art/road/Cozy/Zen modules and `index.html` unchanged.
+- **QA performed:** generated and visually inspected 22-frame sprite montage; source atlas inspected for pose changes/foot contact in Python/Pillow, JavaScript and mocked Canvas integration tests passed. **Actual Safari/Chromium live-site playback and physical iPhone FPS/landings are not yet verified**. The sprite pose changes are an illustrated cutout / image-part articulation—not a full rigged mesh; minor matte cleanup and truly bespoke hand-painted poses remain possible quality improvements.
+- Subsequent priorities: visual inspect the full running animation in the live browser first. Only after it looks natural, design *cinematically matched* obstacles and physics separately, with full visual QA rather than unit tests alone.
+
+---
+
 ## Corrective rollback after v6 visual review (October 26, 2026)
 
 **Decision:** The user reported that the v6 rendered character, obstacle artwork, and animation were severely mismatched and unnatural. This is a **visual-quality failure**, despite v6's passing simulated physics tests.
