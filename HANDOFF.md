@@ -1,5 +1,16 @@
 # HANDOFF — Mushroom Island (October 26, 2026)
 
+## v8.1 — Fix flashing during Pip's pose transitions (October 27, 2026)
+
+- User reported visible flickering after the v8 animation polish.
+- **Code-level root cause:** `spriteMix` evaluated anticipation *after* the character was airborne, briefly fading back to grounded running frames and snapping to airborne art. Multiple semi-transparent complete-body sprites were drawn simultaneously, causing doubled or translucent limbs.
+- `assets/mushroom-cinematic.js` now draws a **single, full-opacity authored sprite per frame**. Preparatory pose stays coherent through takeoff; authored airborne frames continue until landing and recovery leads to the original 16-frame running cycle. Soft preparation, squash, shadow and landing dust remain. No new background art, physics or hurdles.
+- `mushroom-island.html` loads `mushroom-cinematic.js?v=9` to bypass cached v8 JavaScript.
+- Test: `node tests/mushroom-cinematic.test.cjs` validates exactly one sprite per render across all ten stunt types and explicitly asserts there is no reversion to grounded running artwork during takeoff. Existing responsive, pause/resume/visibility tests remain.
+- Remaining: actual desktop/physical iPhone visual playback and performance check. Other art worlds and Claude's code remain untouched.
+
+---
+
 ## v8 — Motion polish for approved Pip run (October 27, 2026)
 
 **Direction:** Keep v7's approved cinematic Pip, 16 grounded run poses, six special poses, textured foreground and kingdom composition exactly as they are. Improve continuity around actions **without reintroducing the rejected physics or vector hurdles**.
