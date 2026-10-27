@@ -1,0 +1,369 @@
+/* Mushroom Island v4 — cinematic living illustrated world.
+ * Clean rewrite: one authored high-detail kingdom plate plus separate
+ * parallax atmosphere, sculpted runner terrace and deterministic stunt animation.
+ * Original character; no official franchise sprites/audio, no external APIs.
+ */
+(() => {
+  'use strict';
+  const canvas = document.getElementById('island');
+  const ctx = canvas.getContext('2d', {alpha:false});
+  const palace = new Image();
+  const TAU=Math.PI*2, PI=Math.PI, SPEED=155, CHAPTER=750;
+  const stunts=['hop','dash','bounce','flip','slide','glide','vault','cartwheel','twirl','longjump'];
+  const minmax=(a,x,b)=>Math.max(a,Math.min(b,x));
+  const smooth=x=>{x=minmax(0,x,1);return x*x*(3-2*x);};
+  const hash=n=>{n=Math.imul(n^0x9e3779b9,0x85ebca6b);n=Math.imul(n^(n>>>13),0xc2b2ae35);return (n^(n>>>16))>>>0;};
+  const random=(id,salt=0)=>hash((id|0)^(salt*13997))/4294967296;
+  const lerp=(a,b,t)=>a+(b-a)*t;
+  let W=900,H=600,dpr=1,clock=0,world=0,playing=!matchMedia('(prefers-reduced-motion: reduce)').matches;
+  let raf=0,previous=0,visible=!document.hidden,embedded=window.top!==window;
+  let loadState='loading',loadError=null;
+  let reduced=matchMedia('(prefers-reduced-motion: reduce)');
+  const info={};
+  const colors=[['#ee8488','#a45c93'],['#f6b16c','#b26795'],['#ed98bb','#a56eb0'],['#ebb474','#b3768a']];
+
+  const gradient=(x,y,x2,y2,stops)=>{
+    const g=ctx.createLinearGradient(x,y,x2,y2);
+    for(const [at,col] of stops)g.addColorStop(at,col);
+    return g;
+  };
+  const oval=(x,y,rx,ry,col)=>{
+    if(!(rx>0&&ry>0))return;
+    ctx.beginPath();ctx.ellipse(x,y,rx,ry,0,0,TAU);
+    ctx.fillStyle=col;ctx.fill();
+  };
+  const line=(x1,y1,x2,y2,col,thick=1)=>{
+    ctx.beginPath();ctx.moveTo(x1,y1);ctx.lineTo(x2,y2);
+    ctx.lineWidth=thick;ctx.strokeStyle=col;ctx.stroke();
+  };
+  const rounded=(x,y,w,h,r,col)=>{
+    if(w<=0||h<=0)return;
+    ctx.beginPath();ctx.roundRect(x,y,w,h,Math.min(r,w/2,h/2));ctx.fillStyle=col;ctx.fill();
+  };
+  const bloom=(x,y,r,col)=>{
+    const g=ctx.createRadialGradient(x,y,0,x,y,r);
+    g.addColorStop(0,col);g.addColorStop(1,'rgba(255,255,255,0)');
+    ctx.fillStyle=g;ctx.fillRect(x-r,y-r,2*r,2*r);
+  };
+
+  function resize(){
+    const w=Math.max(1,canvas.clientWidth),h=Math.max(1,canvas.clientHeight);
+    dpr=Math.min(window.devicePixelRatio||1,2,Math.sqrt(2700000/(w*h)));
+    W=w;H=h;canvas.width=Math.round(w*dpr);canvas.height=Math.round(h*dpr);
+    render();
+  }
+  function background(){
+    if(loadState!=='ready'){
+      ctx.fillStyle=gradient(0,0,0,H,[[0,'#79bce9'],[.54,'#c7e8d5'],[1,'#5ea6bd']]);
+      ctx.fillRect(0,0,W,H);
+      if(loadError){
+        ctx.font=`${Math.max(12,Math.min(W/36,19))}px system-ui`;
+        ctx.textAlign='center';ctx.fillStyle='#294f65';
+        ctx.fillText('The island scenery could not load',W*.5,H*.43);
+      }
+      return;
+    }
+    // The kingdom is a detailed painted world. Slow filmic camera movement
+    // keeps the entire scene dimensional without obvious infinitely repeating tiles.
+    const iw=palace.naturalWidth,ih=palace.naturalHeight;
+    const overscan=1.06+Math.sin(clock*.075)*.009;
+    const factor=Math.max(W/iw,H/ih)*overscan;
+    const drawW=iw*factor,drawH=ih*factor;
+    const travelX=Math.max(0,drawW-W),travelY=Math.max(0,drawH-H);
+    const pan=.48+.40*Math.sin(clock*.045);
+    const dx=-travelX*pan,dy=-travelY*(.34+.1*Math.sin(clock*.03));
+    info.plate={dx,dy,factor,iw,ih};
+    ctx.drawImage(palace,dx,dy,drawW,drawH);
+    // Sky sunlight and atmospheric veil warm the scene without a heavy filter.
+    const sun=ctx.createRadialGradient(W*.65,H*.16,0,W*.65,H*.16,H*.7);
+    sun.addColorStop(0,'rgba(255,245,184,.10)');sun.addColorStop(1,'rgba(255,255,255,0)');
+    ctx.fillStyle=sun;ctx.fillRect(0,0,W,H);
+  }
+  function waterMotion(){
+    if(loadState!=='ready')return;
+    // Local scene coordinates map soft animated water glints onto visible falls.
+    // Effects are intentionally understated: the authored painting stays dominant.
+    const {dx,dy,factor,iw,ih}=info.plate;
+    const falls=[
+      [.259,.48,.018,.23], [.485,.40,.030,.27],
+      [.568,.69,.015,.20], [.818,.67,.014,.23]
+    ];
+    ctx.save();ctx.globalCompositeOperation='screen';
+    for(let k=0;k<falls.length;k++){
+      const [bx,by,bw,bh]=falls[k];
+      const xx=dx+bx*iw*factor, yy=dy+by*ih*factor;
+      const ww=bw*iw*factor,hh=bh*ih*factor;
+      if(xx+ww<0||xx>W||yy+hh<0||yy>H)continue;
+      ctx.save();ctx.beginPath();ctx.rect(xx,yy,ww,hh);ctx.clip();
+      for(let n=0;n<5;n++){
+        const x=xx+ww*(n+.5)/5 +Math.sin(clock*1.8+n*2+k)*ww*.035;
+        const y=yy+((clock*35+n*hh*.26)%(hh+40))-20;
+        ctx.strokeStyle='rgba(231,252,252,.08)';ctx.lineWidth=Math.max(1,ww*.07);
+        ctx.beginPath();ctx.moveTo(x,y-36);ctx.lineTo(x-2,y+10);ctx.stroke();
+      }
+      ctx.restore();
+    }
+    ctx.restore();
+  }
+  function skyLife(){
+    // Tiny living elements follow different camera speeds; no random frame noise.
+    const spacing=225;
+    for(let j=0;j<Math.ceil(W/spacing)+3;j++){
+      const i=j+Math.floor(clock*.075);
+      const x=(i*spacing-clock*17)%(W+spacing*2)-spacing;
+      const y=H*(.10+.22*random(i,88))+Math.sin(clock*.9+i)*8;
+      const alpha=.17+random(i,31)*.4;
+      ctx.save();ctx.globalAlpha=alpha;
+      ctx.strokeStyle='#f7fff2';ctx.lineWidth=1.1+random(i,12);
+      ctx.beginPath();ctx.moveTo(x-7,y);
+      ctx.quadraticCurveTo(x-2,y-4,x+2,y);
+      ctx.quadraticCurveTo(x+8,y-5,x+14,y);ctx.stroke();
+      ctx.restore();
+    }
+    // Glowing drifting seeds appear near the village edges.
+    for(let i=0;i<19;i++){
+      const x=random(i,100)*W+Math.sin(clock*(.28+.02*i)+i)*23;
+      const y=H*(.24+random(i,121)*.52)+Math.cos(clock*.48+i)*11;
+      const a=.10+.23*(.5+.5*Math.sin(clock*1.3+i*3));
+      oval(x,y,1.2,1.2,`rgba(255,246,186,${a.toFixed(3)})`);
+    }
+  }
+  // Everything from here belongs to a separate foreground depth plane.
+  // The runner moves to the right through these rooted objects while the
+  // extremely detailed kingdom remains readable behind the route.
+  const ground=()=>H*.892;
+  function ledge(){
+    const y=ground(),depth=Math.max(32,H-y);
+    ctx.beginPath();ctx.moveTo(0,y+7);
+    for(let x=0;x<=W+20;x+=16){
+      const wobble=Math.sin(x*.013+world*.0007)*1.7+Math.sin(x*.045+world*.003)*2.1;
+      ctx.lineTo(x,y+wobble);
+    }
+    ctx.lineTo(W,H+30);ctx.lineTo(0,H+30);ctx.closePath();
+    ctx.fillStyle=gradient(0,y,0,H,[[0,'#947a72'],[.25,'#78677a'],[1,'#504c64']]);
+    ctx.fill();
+    // Rounded, sunlit moss lip with long continuous paths and no tile seams.
+    for(const [offset,width,col] of [[11,23,'#365f51'],[3,17,'#59a87a'],[-5,12,'#85c58d'],[-10,4,'#d0e9a2']]){
+      ctx.beginPath();ctx.moveTo(0,y+offset);
+      for(let x=0;x<=W+20;x+=12){
+        ctx.lineTo(x,y+offset+Math.sin(x*.013+world*.0007)*1.7+Math.sin(x*.045+world*.003)*2.1);
+      }
+      ctx.strokeStyle=col;ctx.lineWidth=width;ctx.stroke();
+    }
+    // Rounded stone volume makes the narrow front cliff feel tactile.
+    // Fine rock plane texture, deterministic in world-space.
+    for(let j=0;j<Math.ceil(W/82)+2;j++){
+      const id=j+Math.floor(world/82),x=id*82-world-20;
+      if(x<0||x>W)continue;
+      const y0=y+26+random(id,42)*(depth-27);
+      const w=7+random(id,38)*31;
+      oval(x,y0,w,1.8+random(id,12)*3,'rgba(255,219,173,.17)');
+      if(j%3===0)oval(x+22,y0+18,8,2,'rgba(41,52,79,.15)');
+    }
+  }
+  function flowers(){
+    const y=ground();
+    for(let j=0;j<Math.ceil(W/130)+3;j++){
+      const index=j+Math.floor((world-W*.35)/130),wx=index*130+random(index,10)*40;
+      const x=wx-world+W*.35;
+      if(x<-25||x>W+25||Math.abs(x-W*.34)<42)continue;
+      const f=.36+random(index,1)*.30;
+      ctx.save();ctx.translate(x,y-10);ctx.scale(f,f);
+      const lean=Math.sin(clock*.93+index)*.09;
+      ctx.rotate(lean);
+      line(0,3,-2,-20,'#397f63',2.8);
+      oval(-7,-12,9,3.5,'#69a56e');
+      oval(7,-17,7,3,'#80c382');
+      const petals=index%4===0?5:index%4===1?6:0;
+      if(petals){
+        const col=index%2===0?'#faf9dc':'#c9b7f3';
+        for(let k=0;k<petals;k++){
+          const a=k*TAU/petals;
+          oval(Math.cos(a)*8,-23+Math.sin(a)*8,6,7.5,col);
+        }
+        oval(0,-23,4.7,4.7,'#f3c36b');
+      }else{
+        for(let k=0;k<3;k++){
+          const dx=(k-1)*13;
+          oval(dx,-5-k*7,6,14,k%2?'#2e7862':'#5baf76');
+        }
+      }
+      ctx.restore();
+    }
+  }
+  function softMushroom(x,y,scale=1,type=0){
+    const pair=colors[type%colors.length];
+    ctx.save();ctx.translate(x,y);ctx.scale(scale,scale);
+    oval(0,4,37,6,'rgba(24,54,43,.23)');
+    ctx.beginPath();ctx.moveTo(-14,1);ctx.bezierCurveTo(-15,-30,-10,-53,-14,-83);
+    ctx.quadraticCurveTo(-1,-91,13,-82);ctx.bezierCurveTo(9,-44,17,-22,15,1);ctx.closePath();
+    ctx.fillStyle=gradient(-18,-52,19,-52,[[0,'#b99a9e'],[.38,'#ffead3'],[.65,'#f5dabb'],[1,'#a98997']]);ctx.fill();
+    ctx.beginPath();ctx.ellipse(0,-83,53,9,0,0,TAU);ctx.fillStyle='#f1d4b9';ctx.fill();
+    ctx.beginPath();ctx.moveTo(-55,-84);ctx.bezierCurveTo(-52,-130,-26,-158,0,-157);
+    ctx.bezierCurveTo(31,-158,55,-127,55,-84);ctx.closePath();
+    ctx.fillStyle=gradient(-35,-157,51,-79,[[0,'#ffd6b6'],[.42,pair[0]],[1,pair[1]]]);ctx.fill();
+    oval(-24,-128,10,7,'rgba(255,247,231,.96)');
+    oval(15,-132,10,8,'rgba(255,247,231,.90)');
+    oval(26,-104,7,6,'rgba(255,247,231,.93)');
+    ctx.restore();
+  }
+  function setPieces(){
+    const idx=Math.floor(world/CHAPTER),lane=world%CHAPTER;
+    const viewX=W*.34;
+    // A couple of oversized mushroom monuments drift by, not a dense row of props.
+    for(let j=idx-1;j<=idx+2;j++){
+      const kind=stunts[((j%stunts.length)+stunts.length)%stunts.length];
+      const start=j*CHAPTER;
+      const x=viewX+(start+390-world);
+      if(x<-170||x>W+170)continue;
+      if(kind==='bounce')softMushroom(x,ground()-9,.86,j);
+      else if(kind==='vault')softMushroom(x,ground()-6,.47,j);
+      else if(kind==='glide'){
+        // A soft celebratory arch with upright foundations.
+        const y=ground();
+        ctx.save();ctx.globalAlpha=.9;
+        rounded(x-110,y-86,12,84,5,'#ad8c83');
+        rounded(x+103,y-86,12,84,5,'#ad8c83');
+        ctx.beginPath();ctx.moveTo(x-106,y-82);ctx.quadraticCurveTo(x,y-172,x+109,y-82);
+        ctx.strokeStyle='#e2b98d';ctx.lineWidth=12;ctx.stroke();ctx.restore();
+      }
+    }
+  }
+  function poseAt(x){
+    const chapter=Math.floor(x/CHAPTER),kind=stunts[((chapter%stunts.length)+stunts.length)%stunts.length];
+    const p=x-chapter*CHAPTER;
+    const u=minmax(0,(p-195)/355,1),active=p>=195&&p<=550;
+    const wave=Math.sin(PI*u),ease=smooth(u);
+    let lift=0,spin=0,squash=1,lean=0,glide=false;
+    if(active){
+      if(kind==='hop')lift=65*wave;
+      if(kind==='dash')lean=.23*wave;
+      if(kind==='bounce')lift=139*wave+32*Math.sin(2*PI*u)**2;
+      if(kind==='flip'){lift=116*wave;spin=TAU*ease;}
+      if(kind==='slide')squash=1-.47*wave*wave;
+      if(kind==='glide'){lift=138*wave;glide=true;}
+      if(kind==='vault')lift=85*wave;
+      if(kind==='cartwheel'){lift=76*wave;spin=-TAU*ease;}
+      if(kind==='twirl'){lift=103*wave;spin=TAU*ease;}
+      if(kind==='longjump'){lift=124*wave;lean=.17*wave;}
+    }
+    return {kind,active,u,lift,spin,squash,lean,glide};
+  }
+  function pip(x,y,pose){
+    const s=minmax(.73,H/690,1.13);
+    ctx.save();ctx.translate(x,y);ctx.scale(s,s);
+    oval(3,4,pose.lift?17:28,pose.lift?3:5,pose.lift?'rgba(23,51,47,.17)':'rgba(23,51,47,.30)');
+    const stride=clock*16.1,leg=Math.sin(stride)*.73;
+    ctx.translate(0,-pose.lift-Math.abs(Math.sin(stride))*(pose.active?0:2.5));
+    ctx.translate(0,-51*pose.squash);ctx.rotate(pose.spin+pose.lean);
+    ctx.translate(0,51*pose.squash);ctx.scale(1,pose.squash);
+    ctx.lineCap='round';ctx.lineJoin='round';
+    // Satchel and fluttering scarf, behind the torso.
+    rounded(-29,-83,35,38,11,gradient(-29,-82,7,-47,[[0,'#b98c72'],[.45,'#e9b994'],[1,'#8e7776']]));
+    line(-22,-68,-14,-35,'#8b6e7a',4);
+    ctx.beginPath();ctx.moveTo(-9,-80);ctx.quadraticCurveTo(-32,-78,-50,-87+Math.sin(clock*11)*6);
+    ctx.quadraticCurveTo(-33,-65,-9,-67);ctx.closePath();ctx.fillStyle='#de9079';ctx.fill();
+    // Legs visibly cycle independently. Small landing fold reduces mechanical look.
+    for(const side of [-1,1]){
+      ctx.save();ctx.translate(side*12,-25);
+      ctx.rotate(side*(pose.lift>10?-.40:leg));
+      rounded(-7,-1,15,29,6,gradient(-10,0,10,25,[[0,'#656b99'],[.7,'#837cac'],[1,'#494e78']]));
+      oval(side*3+4,27,15,8,gradient(-13,20,17,31,[[0,'#edb080'],[.55,'#d28d72'],[1,'#ac6477']]));
+      oval(side*7+5,24,7,2.4,'rgba(253,238,207,.62)');
+      ctx.restore();
+    }
+    // Body modeled with broad lighting, bright vest and soft specular regions.
+    oval(0,-58,22,29,gradient(-23,-85,23,-30,[[0,'#5e5191'],[.38,'#9988ca'],[1,'#65598b']]));
+    rounded(-15,-78,30,33,10,gradient(-16,-75,17,-50,[[0,'#419b92'],[.5,'#81d5b6'],[1,'#3a9d9b']]));
+    oval(-1,-68,2.7,2.7,'#fff0c0');oval(-1,-57,2.7,2.7,'#fff0c0');
+    for(const side of [-1,1]){
+      ctx.save();ctx.translate(side*21,-74);
+      ctx.rotate(side*(pose.lift>10?-.6:Math.sin(stride+side)*.42));
+      line(0,0,side*7,22,'#6865a0',11);oval(side*7,22,6,7,'#f8dfb9');
+      ctx.restore();
+    }
+    oval(0,-99,25,26,gradient(-25,-121,24,-73,[[0,'#f3c5a6'],[.55,'#ffe5bc'],[1,'#e4b39f']]));
+    oval(18,-98,6,11,'#ecc09b');
+    oval(-18,-98,6,11,'#edbf9f');
+    const blink=clock%4.1>3.96;
+    if(blink){line(-10,-102,-3,-102,'#524b67',2);line(6,-102,13,-102,'#524b67',2);}
+    else {oval(-8,-104,3,5,'#564a68');oval(10,-103,3,5,'#564a68');oval(-9,-106,1,1,'white');oval(9,-105,1,1,'white');}
+    oval(-17,-93,4,2,'rgba(238,135,138,.54)');oval(17,-93,4,2,'rgba(238,135,138,.55)');
+    ctx.beginPath();ctx.arc(1,-94,5,.2,PI-.15);ctx.strokeStyle='#aa7385';ctx.lineWidth=1.7;ctx.stroke();
+    // Unique leaf cap, not a commercial character's outfit.
+    oval(0,-119,35,8,'#d2eaca');
+    ctx.beginPath();ctx.moveTo(-35,-119);ctx.bezierCurveTo(-44,-151,-18,-180,2,-181);
+    ctx.bezierCurveTo(33,-180,48,-147,35,-119);ctx.closePath();
+    ctx.fillStyle=gradient(-35,-180,38,-121,[[0,'#b1e7ba'],[.42,'#56bfae'],[1,'#337e91']]);ctx.fill();
+    oval(-15,-154,8.5,10,'#eaffdc');oval(17,-145,10,8,'#f5ffe5');oval(1,-170,6,4,'#f5ffe7');
+    if(pose.glide){
+      line(-7,-188,1,-230,'#9b869d',2);
+      ctx.beginPath();ctx.moveTo(-84,-224);ctx.quadraticCurveTo(0,-276,84,-224);
+      ctx.quadraticCurveTo(0,-202,-84,-224);ctx.closePath();
+      ctx.fillStyle=gradient(0,-263,0,-206,[[0,'#ffe8bd'],[1,'#d0b2bd']]);ctx.fill();
+      ctx.strokeStyle='#ab8999';ctx.lineWidth=2;ctx.stroke();
+    }
+    ctx.restore();
+    // Dust trails and happy stunt glints are temporally deterministic.
+    if(!pose.active){
+      for(let i=0;i<3;i++){
+        oval(x-s*(20+i*13),y-2-i*4,6-i,2.8-i*.4,`rgba(255,245,196,${.35-i*.085})`);
+      }
+    }else if(pose.lift>30){
+      for(let i=0;i<3;i++){
+        const th=clock*1.4+i*TAU/3;
+        oval(x+Math.sin(th)*s*48,y-pose.lift*s-s*(89+Math.cos(th)*20),2.7,2.7,'rgba(255,242,166,.75)');
+      }
+    }
+  }
+  function render(){
+    if(!ctx||!canvas.width)return;
+    ctx.setTransform(dpr,0,0,dpr,0,0);
+    background();waterMotion();skyLife();
+    ledge();setPieces();flowers();
+    const characterX=W*.34;
+    pip(characterX,ground()-10,poseAt(world));
+    // Soft corner falloff integrates the photographically rich kingdom plate
+    // and the sculpted foreground land without masking readable detail.
+    const v=ctx.createRadialGradient(W*.5,H*.48,Math.min(W,H)*.32,W*.5,H*.48,Math.max(W,H)*.89);
+    v.addColorStop(0,'rgba(22,64,64,0)');v.addColorStop(1,'rgba(34,53,75,.17)');
+    ctx.fillStyle=v;ctx.fillRect(0,0,W,H);
+  }
+  function frame(now){
+    raf=0;
+    if(!playing||!visible)return;
+    const dt=previous?minmax(0,(now-previous)/1000,.04):0;
+    previous=now;clock+=dt;world+=SPEED*dt;
+    render();raf=requestAnimationFrame(frame);
+  }
+  function updateMotion(next){
+    playing=Boolean(next)&&!reduced.matches;
+    previous=0;
+    if(raf){cancelAnimationFrame(raf);raf=0;}
+    if(playing&&visible)raf=requestAnimationFrame(frame);
+    else render();
+  }
+  window.addEventListener('message',e=>{
+    if(e.origin!==location.origin||!e.data||e.data.type!=='mushroom:motion')return;
+    embedded=true;updateMotion(e.data.playing);
+  });
+  window.addEventListener('resize',resize,{passive:true});
+  document.addEventListener('visibilitychange',()=>{
+    visible=!document.hidden;previous=0;
+    if(visible){if(playing&&!raf)raf=requestAnimationFrame(frame);}else if(raf){cancelAnimationFrame(raf);raf=0;}
+  });
+  window.addEventListener('keydown',e=>{
+    if(!embedded&&(e.code==='Space'||e.key===' ')){
+      e.preventDefault();updateMotion(!playing);
+    }
+  });
+  reduced.addEventListener?.('change',e=>{
+    if(e.matches)updateMotion(false);
+  });
+  palace.onload=()=>{loadState='ready';render();};
+  palace.onerror=()=>{loadState='error';loadError=true;render();};
+  palace.src='assets/mushroom-cinematic-kingdom.webp';
+  resize();if(playing)raf=requestAnimationFrame(frame);
+  // Minimal test-only hooks may be injected by the smoke harness; production
+  // does not expose animation controls or debugging objects to app users.
+})();
