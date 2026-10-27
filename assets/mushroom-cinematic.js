@@ -253,6 +253,18 @@
     }
     return {kind,active,u,lift,spin,squash,lean,glide};
   }
+  // Timing envelopes are derived only from travel distance, so the transition
+  // looks identical after frame drops, tab resumes, and on different screens.
+  function animationAt(x){
+    const base=poseAt(x),p=x-Math.floor(x/CHAPTER)*CHAPTER;
+    const anticipation=p>=160&&p<218
+      ?(p<195?smooth((p-160)/35):1-smooth((p-195)/23)):0;
+    // Contact compression begins only when the feet have returned near ground.
+    const landing=p>=542&&p<595
+      ?(p<550?smooth((p-542)/8):1-smooth((p-550)/45)):0;
+    return {...base,anticipation,landing,
+      squash:base.squash*(1-.04*anticipation-.055*landing)};
+  }
   function pip(x,y,pose){
     const s=minmax(.73,H/690,1.13);
     ctx.save();ctx.translate(x,y);ctx.scale(s,s);
@@ -377,21 +389,50 @@
     if(pose.u<.88)return 19;   // reach for terrain
     return 20;                 // contact / landing
   }
+  // Blend only authored *transition* poses, never the 16-frame grounded run.
+  // Blending the run would make arms/legs appear doubled or ghosted.
+  function spriteMix(pose){
+    const runIndex=()=>{
+      const stride=pose.kind==='dash'?9:RUN_STRIDE_PX;
+      return ((Math.floor(world/stride)%RUN_FRAMES)+RUN_FRAMES)%RUN_FRAMES;
+    };
+    const run=runIndex();
+    const anticipation=pose.anticipation||0,landing=pose.landing||0;
+    if(landing>0&&pose.active===false)
+      return {from:run,to:20,t:landing};
+    if(anticipation>0)
+      return {from:run,to:pose.kind==='slide'?21:16,t:anticipation};
+    if(!pose.active||pose.kind==='dash')
+      return {from:run,to:run,t:0};
+    const target=pipFrame(pose);
+    if(pose.kind==='slide')return {from:21,to:21,t:0};
+    for(const [threshold,from,to] of [[.16,16,17],[.38,17,18],[.64,18,19],[.88,19,20]]){
+      const half=.027;
+      if(Math.abs(pose.u-threshold)<half)
+        return {from,to,t:smooth((pose.u-threshold+half)/(2*half))};
+    }
+    return {from:target,to:target,t:0};
+  }
   function cinematicPip(x,y,pose){
     if(!renderedPip.complete||!renderedPip.naturalWidth){pip(x,y,pose);return;}
     // At each aspect ratio Pip matches the apparent scale of the near cliff.
     const s=Math.max(.49,Math.min(.90,Math.min(W/540,H/980)*.87));
     const groundY=y;
     ctx.save();
-    // Matte contact shadow stays on the ledge while Pip performs aerial tricks.
-    const shadow=ctx.createRadialGradient(x+7,groundY+5,2,x+7,groundY+5,(pose.lift>5?28:48)*s);
-    shadow.addColorStop(0,pose.lift>5?'rgba(41,38,32,.24)':'rgba(43,38,32,.37)');
+    // Shadow broadens and fades continuously as Pip rises. No sudden pop
+    // at an arbitrary jump-height threshold.
+    const airtime=minmax(0,pose.lift/145,1);
+    const shadowOpacity=(.37-.22*airtime).toFixed(3);
+    const shadow=ctx.createRadialGradient(x+7,groundY+5,2,x+7,groundY+5,(43+15*airtime)*s);
+    shadow.addColorStop(0,`rgba(43,38,32,${shadowOpacity})`);
     shadow.addColorStop(1,'rgba(55,49,42,0)');
     ctx.fillStyle=shadow;ctx.fillRect(x-70*s,groundY-21*s,140*s,53*s);
     const newSheet=runningPip.complete&&runningPip.naturalWidth===PIP_FRAME_W*RUN_TOTAL;
     // Tie leg cadence to horizontal travel, not elapsed time; torso stays stable.
     const runPhase=(world/(RUN_FRAMES*RUN_STRIDE_PX))*TAU;
-    const bob=pose.active?0:Math.abs(Math.sin(runPhase*2))*2.1*s;
+    // A planted foot stays visually anchored through preparation and recovery.
+    const anchored=Math.max(pose.anticipation||0,pose.landing||0);
+    const bob=pose.active?0:Math.abs(Math.sin(runPhase*2))*2.1*s*(1-anchored);
     const lift=pose.lift*s;
     const footInset=newSheet?9*s:0;
     ctx.translate(x,groundY-lift-bob+footInset);
@@ -402,8 +443,18 @@
     ctx.scale(1,pose.squash);
     const frame=newSheet?pipFrame(pose):Math.floor(Math.abs(world)/RUN_STRIDE_PX)%PIP_FRAMES;
     const sheet=newSheet?runningPip:renderedPip;
-    ctx.drawImage(sheet,frame*PIP_FRAME_W,0,PIP_FRAME_W,PIP_FRAME_H,
-      -PIP_FRAME_W*s*.5,-PIP_FRAME_H*s,PIP_FRAME_W*s,PIP_FRAME_H*s);
+    const paintFrame=(index,opacity=1)=>{
+      ctx.save();ctx.globalAlpha*=opacity;
+      ctx.drawImage(sheet,index*PIP_FRAME_W,0,PIP_FRAME_W,PIP_FRAME_H,
+        -PIP_FRAME_W*s*.5,-PIP_FRAME_H*s,PIP_FRAME_W*s,PIP_FRAME_H*s);
+      ctx.restore();
+    };
+    if(newSheet){
+      const mix=spriteMix(pose);
+      if(mix.from===mix.to||mix.t<=0)paintFrame(mix.from);
+      else if(mix.t>=1)paintFrame(mix.to);
+      else {paintFrame(mix.from,1-mix.t);paintFrame(mix.to,mix.t);}
+    }else paintFrame(frame);
     if(pose.glide){
       // Warm, dimensionally shaded silk glider, tucked behind its hero.
       const gl=ctx.createLinearGradient(-58*s,-291*s,66*s,-233*s);
@@ -415,6 +466,17 @@
       ctx.strokeStyle='rgba(119,99,116,.54)';ctx.lineWidth=1.8*s;ctx.stroke();
     }
     ctx.restore();
+    // Two quiet, sunlit dust flecks follow real foot contact after a jump;
+    // no bursty particles, outlines, or new mismatched vector obstacles.
+    const contact=pose.landing||0;
+    if(contact>.01){
+      for(const side of [-1,1]){
+        const a=(contact*.19).toFixed(3);
+        oval(x+side*(14+13*(1-contact))*s,groundY-(6+6*(1-contact))*s,
+          (4+3*(1-contact))*s,(1.6+contact)*s,
+          `rgba(248,228,192,${a})`);
+      }
+    }
     // Dust is tinted by the same golden sunlight, no cartoon particle stream.
     if(!pose.active){
       for(let k=0;k<2;k++){
@@ -429,7 +491,7 @@
     background();waterMotion();skyLife();
     cinematicTerrace();cinematicSetPieces();
     const characterX=W*.34;
-    cinematicPip(characterX,ground()+10,poseAt(world));
+    cinematicPip(characterX,ground()+10,animationAt(world));
     // Soft corner falloff integrates the photographically rich kingdom plate
     // and the sculpted foreground land without masking readable detail.
     const v=ctx.createRadialGradient(W*.5,H*.48,Math.min(W,H)*.32,W*.5,H*.48,Math.max(W,H)*.89);
