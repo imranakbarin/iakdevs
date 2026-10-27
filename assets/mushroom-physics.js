@@ -8,15 +8,15 @@
   const TAU=Math.PI*2, STEP=1/120, CHAPTER=750, SPEED=155, GRAVITY=760;
   const types=['hop','dash','bounce','flip','slide','glide','vault','cartwheel','twirl','longjump'];
   const plans={
-    hop:{type:'fallen-log',at:365,width:74,height:33,trigger:195,impulse:450},
+    hop:{type:'fallen-log',at:365,width:70,height:33,trigger:195,impulse:565},
     dash:{type:'speed-gate',at:392,width:144,height:95,trigger:210,impulse:0},
     bounce:{type:'spring-mushroom',at:380,width:76,height:85,trigger:222,impulse:440},
-    flip:{type:'mossy-stump',at:398,width:64,height:52,trigger:195,impulse:585},
+    flip:{type:'mossy-stump',at:398,width:64,height:52,trigger:195,impulse:665},
     slide:{type:'low-arch',at:390,width:162,height:92,trigger:205,impulse:0},
     glide:{type:'wind-arch',at:423,width:116,height:108,trigger:205,impulse:590},
-    vault:{type:'round-boulder',at:389,width:68,height:65,trigger:207,impulse:545},
-    cartwheel:{type:'stepping-stones',at:396,width:86,height:47,trigger:194,impulse:560},
-    twirl:{type:'lantern-flower',at:384,width:63,height:51,trigger:204,impulse:520},
+    vault:{type:'round-boulder',at:389,width:68,height:65,trigger:207,impulse:655},
+    cartwheel:{type:'stepping-stones',at:396,width:82,height:47,trigger:194,impulse:655},
+    twirl:{type:'lantern-flower',at:384,width:60,height:51,trigger:204,impulse:650},
     longjump:{type:'ravine',at:422,width:150,height:160,trigger:200,impulse:748,left:345,right:495}
   };
   const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
@@ -46,7 +46,7 @@
   function create(){
     let x=0,y=0,vy=0,onGround=true,elapsed=0,landPulse=0,active='run';
     let startAt=0,spin=0,angleStart=0,actionIndex=-Infinity,steps=0;
-    let lastEvent=null,acc=0;
+    let lastEvent=null,acc=0,clearedIndex=-Infinity,hitIndex=-Infinity;
     const stats={jumps:0,landings:0,bounces:0,slides:0,dashes:0,cleared:0,collisions:0,falls:0};
     const events=[];
     function emit(type,index){lastEvent={type,index,x};events.push(lastEvent);if(events.length>20)events.shift();}
@@ -114,11 +114,15 @@
       // A scripted autonomous runner never strikes a collision obstacle.
       // Only the center overlap is checked; the cap's surface is a spring.
       const terrain=feature(chapterAt(x));
-      if(['fallen-log','mossy-stump','round-boulder','stepping-stones','lantern-flower'].includes(terrain.type)){
-        const overlap=Math.abs(x-terrain.x)<terrain.width*.30;
-        if(overlap&&y>-(terrain.height+13)&&!onGround)stats.collisions++;
-        // Ground contact near an obstacle is also a collision.
-        if(overlap&&onGround)stats.collisions++;
+      const solid=['fallen-log','mossy-stump','round-boulder','stepping-stones','lantern-flower'].includes(terrain.type);
+      const overlap=Math.abs(x-terrain.x)<terrain.width*.30;
+      if(solid&&overlap&&y>-(terrain.height+13)&&hitIndex!==terrain.index){
+        hitIndex=terrain.index;stats.collisions++;emit('collision',terrain.index);
+      }
+      // Register only one clear per obstacle: real space and fixed-step time.
+      const clearX=terrain.x+terrain.width*.40;
+      if(terrain.index!==clearedIndex&&previousX<clearX&&x>=clearX){
+        clearedIndex=terrain.index;stats.cleared++;emit('cleared',terrain.index);
       }
     }
     function update(dt){
@@ -144,7 +148,7 @@
         cadence:stepPhase,obstacle:feature(ci),event:lastEvent};
     }
     function state(){return {x,y,vy,onGround,action:active,steps,stats:{...stats},lastEvent,events:[...events]};}
-    function reset(){x=0;y=0;vy=0;onGround=true;elapsed=0;landPulse=0;active='run';actionIndex=-Infinity;acc=0;steps=0;lastEvent=null;events.length=0;for(const k in stats)stats[k]=0;}
+    function reset(){x=0;y=0;vy=0;onGround=true;elapsed=0;landPulse=0;active='run';actionIndex=-Infinity;acc=0;steps=0;lastEvent=null;clearedIndex=-Infinity;hitIndex=-Infinity;events.length=0;for(const k in stats)stats[k]=0;}
     return {update,snapshot,state,reset};
   }
   root.MushroomPhysics={create,feature,range,isGap,kindAt,CHAPTER,SPEED,GRAVITY,STEP,types};
