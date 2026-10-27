@@ -15,7 +15,8 @@ assert.match(page, /id="island"/);
 assert.ok(image.length>100000&&image.subarray(0,4).toString()==='RIFF'&&image.subarray(8,12).toString()==='WEBP','real authored kingdom art is included');
 new vm.Script(js,{filename:'mushroom-cinematic.js'});
 
-let drawCount=0, imageDraws=0, cancelled=0;
+let drawCount=0, imageDraws=0, cancelled=0, realRunDraws=0;
+const atlasFramesSeen=new Set();
 const methods=new Set(['setTransform','save','restore','translate','scale','rotate','beginPath','closePath','moveTo','lineTo','arc','ellipse','fill','stroke','clip','fillRect','rect','roundRect','quadraticCurveTo','bezierCurveTo','drawImage','fillText']);
 const g={addColorStop(n,str){assert.ok(Number.isFinite(n)&&n>=0&&n<=1,'legal gradient stop');assert.equal(typeof str,'string');}};
 const ctx = new Proxy({}, {get(o,k){
@@ -23,7 +24,14 @@ const ctx = new Proxy({}, {get(o,k){
  if(k==='createLinearGradient'||k==='createRadialGradient')return (...a)=>{assert.ok(a.every(Number.isFinite));return g;};
  if(methods.has(k))return (...a)=>{
    drawCount++;
-   if(k==='drawImage')imageDraws++;
+   if(k==='drawImage'){
+     imageDraws++;
+     if(a[0]?.source?.endsWith('/pip-full-run-22.webp')){
+       realRunDraws++;
+       atlasFramesSeen.add(a[1]/244);
+       assert.ok(a[1]>=0&&a[1]<5368,'sprite sheet source coordinate');
+     }
+   }
    if(k==='ellipse')assert.ok(a[2]>0&&a[3]>0);
    if(k==='roundRect')assert.ok(a[2]>0&&a[3]>0);
    if(k==='setTransform'||k==='translate'||k==='rotate'||k==='fillRect')assert.ok(a.every(Number.isFinite));
@@ -43,6 +51,7 @@ const cancel=id=>{queue.delete(id);cancelled++;};
 class MockImage{
  constructor(){this.naturalWidth=1172;this.naturalHeight=659;this.complete=false;this.onload=null;this.onerror=null;}
  set src(v){
+  this.source=v;
   assert.ok(['assets/mushroom-cinematic-kingdom.webp',...matchedAssets.map(x=>'assets/'+x)].includes(v),'allowed local image path');
   const sizes={'pip-cinematic-run.webp':[1952,305],'pip-full-run-22.webp':[5368,305],'mushroom-terrace-cinematic.webp':[760,211],'mushroom-bounce-cinematic.webp':[169,128]};
   const match=matchedAssets.find(x=>v.endsWith(x));
@@ -91,6 +100,8 @@ for(let i=0;i<70;i++){
  assert.ok(entry,'autoplay is scheduled');queue.delete(entry[0]);entry[1]((i+1)*16.7);
 }
 assert.ok(imageDraws>900,'real cinematic kingdom, textured terrace, and animated sprite all draw repeatedly');
+assert.ok(realRunDraws>100,'production Canvas used the articulated sprite sheet');
+assert.ok(atlasFramesSeen.size>=16,'Canvas drew sixteen distinct sprite frames');
 assert.ok(drawCount>30000,'animated foreground and scene render');
 events['w:message']({origin:'https://unit.example',data:{type:'mushroom:motion',playing:false}});
 assert.equal(queue.size,0,'parent pause cancels RAF');
