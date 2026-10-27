@@ -7,13 +7,19 @@ const path = require('node:path');
 const root = path.resolve(__dirname,'..');
 const page = fs.readFileSync(path.join(root,'mushroom-island.html'),'utf8');
 const js = fs.readFileSync(path.join(root,'assets/mushroom-cinematic.js'),'utf8');
+const physicsJs = fs.readFileSync(path.join(root,'assets/mushroom-physics.js'),'utf8');
+const hurdlesJs = fs.readFileSync(path.join(root,'assets/mushroom-hurdles.js'),'utf8');
 const image = fs.readFileSync(path.join(root,'assets/mushroom-cinematic-kingdom.webp'));
 const matchedAssets=['pip-cinematic-run.webp','mushroom-terrace-cinematic.webp','mushroom-bounce-cinematic.webp'];
 for(const a of matchedAssets){const b=fs.readFileSync(path.join(root,'assets',a));assert.ok(b.length>3000&&b.subarray(0,4).toString()==='RIFF'&&b.subarray(8,12).toString()==='WEBP',a+' must be self-hosted WebP');}
-assert.match(page, /assets\/mushroom-cinematic\.js\?v=5/);
+assert.match(page, /assets\/mushroom-cinematic\.js\?v=6/);
+assert.match(page, /assets\/mushroom-physics\.js\?v=1/);
+assert.match(page, /assets\/mushroom-hurdles\.js\?v=1/);
 assert.match(page, /id="island"/);
 assert.ok(image.length>100000&&image.subarray(0,4).toString()==='RIFF'&&image.subarray(8,12).toString()==='WEBP','real authored kingdom art is included');
 new vm.Script(js,{filename:'mushroom-cinematic.js'});
+new vm.Script(physicsJs,{filename:'mushroom-physics.js'});
+new vm.Script(hurdlesJs,{filename:'mushroom-hurdles.js'});
 
 let drawCount=0, imageDraws=0, cancelled=0;
 const methods=new Set(['setTransform','save','restore','translate','scale','rotate','beginPath','closePath','moveTo','lineTo','arc','ellipse','fill','stroke','clip','fillRect','rect','roundRect','quadraticCurveTo','bezierCurveTo','drawImage','fillText']);
@@ -50,10 +56,15 @@ class MockImage{
   this.complete=true;if(this.onload)this.onload();
 }
 }
+// Use the real production module exports rather than mocking their effects.
+vm.runInNewContext(physicsJs,{window:win},{timeout:3000});
+vm.runInNewContext(hurdlesJs,{window:win},{timeout:3000});
+assert.equal(typeof win.MushroomPhysics.create,'function');
+assert.equal(typeof win.MushroomHurdles.paint,'function');
 // Inject internal pose exposure in test only, not in the deployed build.
 const marker="  palace.src='assets/mushroom-cinematic-kingdom.webp';";
 assert.equal(js.split(marker).length,2);
-const code=js.replace(marker,'  window.__probe={poseAt,render,setWorld:x=>{world=x;render();}};\n'+marker);
+const code=js.replace(marker,'  window.__probe={poseAt,render,physics,setWorld:x=>{world=x;render();}};\n'+marker);
 vm.runInNewContext(code,{window:win,document:doc,Image:MockImage,matchMedia:()=>reduced,
  location:{origin:'https://unit.example'},requestAnimationFrame:raf,cancelAnimationFrame:cancel,console,Math},{timeout:3000});
 const kinds=new Set();
@@ -69,16 +80,19 @@ for(let i=-10;i<36;i++){
  for(const p of [50,350,700])win.__probe.setWorld(i*750+p);
 }
 assert.deepEqual([...kinds].sort(),[...names].sort());
+assert.ok(win.__probe.physics,'physically driven runner is active');
 for(const [width,height] of [[1170,650],[390,844],[844,390],[1440,900]]){
  canvas.clientWidth=width;canvas.clientHeight=height;events['w:resize']();
  assert.ok(canvas.width>0&&canvas.height>0);
  for(let j=0;j<20;j++)win.__probe.setWorld(j*750+380);
 }
-for(let i=0;i<70;i++){
+for(let i=0;i<250;i++){
  const entry=queue.entries().next().value;
  assert.ok(entry,'autoplay is scheduled');queue.delete(entry[0]);entry[1]((i+1)*16.7);
 }
 assert.ok(imageDraws>900,'real cinematic kingdom, textured terrace, and animated sprite all draw repeatedly');
+assert.ok(win.__probe.physics.state().stats.jumps>=1,'runner performs physically simulated jump');
+assert.equal(win.__probe.physics.state().stats.collisions,0,'no visible hurdle impacts');
 assert.ok(drawCount>30000,'animated foreground and scene render');
 events['w:message']({origin:'https://unit.example',data:{type:'mushroom:motion',playing:false}});
 assert.equal(queue.size,0,'parent pause cancels RAF');
@@ -89,4 +103,4 @@ assert.equal(queue.size,1,'parent resume restores RAF');
 hidden=true;events['d:visibilitychange']();assert.equal(queue.size,0);
 hidden=false;events['d:visibilitychange']();assert.equal(queue.size,1,'visible tab resumes');
 assert.ok(cancelled>0);
-console.log('Mushroom v5 MATCH PASS: rendered sprite sheet, terrain texture, bounce asset, 10 stunts, 46 chapters, 4 viewports, 70 frames, secure play/pause.');
+console.log('Mushroom v6 PHYSICS PASS: rendered cinematic Pip and ground, real hurdles, 10 stunt families, responsive scene, 250 autoplay frames, secure play/pause.');
