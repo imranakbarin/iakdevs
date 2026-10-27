@@ -8,7 +8,9 @@ const root = path.resolve(__dirname,'..');
 const page = fs.readFileSync(path.join(root,'mushroom-island.html'),'utf8');
 const js = fs.readFileSync(path.join(root,'assets/mushroom-cinematic.js'),'utf8');
 const image = fs.readFileSync(path.join(root,'assets/mushroom-cinematic-kingdom.webp'));
-assert.match(page, /assets\/mushroom-cinematic\.js\?v=1/);
+const matchedAssets=['pip-cinematic-run.webp','mushroom-terrace-cinematic.webp','mushroom-bounce-cinematic.webp'];
+for(const a of matchedAssets){const b=fs.readFileSync(path.join(root,'assets',a));assert.ok(b.length>3000&&b.subarray(0,4).toString()==='RIFF'&&b.subarray(8,12).toString()==='WEBP',a+' must be self-hosted WebP');}
+assert.match(page, /assets\/mushroom-cinematic\.js\?v=5/);
 assert.match(page, /id="island"/);
 assert.ok(image.length>100000&&image.subarray(0,4).toString()==='RIFF'&&image.subarray(8,12).toString()==='WEBP','real authored kingdom art is included');
 new vm.Script(js,{filename:'mushroom-cinematic.js'});
@@ -39,8 +41,14 @@ const queue=new Map();
 const raf=fn=>{const id=++nextId;queue.set(id,fn);return id;};
 const cancel=id=>{queue.delete(id);cancelled++;};
 class MockImage{
- constructor(){this.naturalWidth=1172;this.naturalHeight=659;this.onload=null;this.onerror=null;}
- set src(v){assert.equal(v,'assets/mushroom-cinematic-kingdom.webp');if(this.onload)this.onload();}
+ constructor(){this.naturalWidth=1172;this.naturalHeight=659;this.complete=false;this.onload=null;this.onerror=null;}
+ set src(v){
+  assert.ok(['assets/mushroom-cinematic-kingdom.webp',...matchedAssets.map(x=>'assets/'+x)].includes(v),'allowed local image path');
+  const sizes={'pip-cinematic-run.webp':[1952,305],'mushroom-terrace-cinematic.webp':[760,211],'mushroom-bounce-cinematic.webp':[169,128]};
+  const match=matchedAssets.find(x=>v.endsWith(x));
+  if(match)[this.naturalWidth,this.naturalHeight]=sizes[match];
+  this.complete=true;if(this.onload)this.onload();
+}
 }
 // Inject internal pose exposure in test only, not in the deployed build.
 const marker="  palace.src='assets/mushroom-cinematic-kingdom.webp';";
@@ -70,7 +78,7 @@ for(let i=0;i<70;i++){
  const entry=queue.entries().next().value;
  assert.ok(entry,'autoplay is scheduled');queue.delete(entry[0]);entry[1]((i+1)*16.7);
 }
-assert.ok(imageDraws>100,'real cinematic kingdom plate paints repeatedly');
+assert.ok(imageDraws>900,'real cinematic kingdom, textured terrace, and animated sprite all draw repeatedly');
 assert.ok(drawCount>30000,'animated foreground and scene render');
 events['w:message']({origin:'https://unit.example',data:{type:'mushroom:motion',playing:false}});
 assert.equal(queue.size,0,'parent pause cancels RAF');
@@ -81,4 +89,4 @@ assert.equal(queue.size,1,'parent resume restores RAF');
 hidden=true;events['d:visibilitychange']();assert.equal(queue.size,0);
 hidden=false;events['d:visibilitychange']();assert.equal(queue.size,1,'visible tab resumes');
 assert.ok(cancelled>0);
-console.log('Mushroom cinematic rebuild PASS: real image asset, 10 stunts, 46 chapters, 4 viewports, 70 frames, parent pause and visibility controls.');
+console.log('Mushroom v5 MATCH PASS: rendered sprite sheet, terrain texture, bounce asset, 10 stunts, 46 chapters, 4 viewports, 70 frames, secure play/pause.');

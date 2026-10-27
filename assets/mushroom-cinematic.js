@@ -1,4 +1,4 @@
-/* Mushroom Island v4 — cinematic living illustrated world.
+/* Mushroom Island v5 — matched cinematic foreground + runner artwork.
  * Clean rewrite: one authored high-detail kingdom plate plus separate
  * parallax atmosphere, sculpted runner terrace and deterministic stunt animation.
  * Original character; no official franchise sprites/audio, no external APIs.
@@ -8,6 +8,8 @@
   const canvas = document.getElementById('island');
   const ctx = canvas.getContext('2d', {alpha:false});
   const palace = new Image();
+  const renderedPip = new Image(), texturedLedge = new Image(), bounceCap = new Image();
+  const PIP_FRAME_W=244, PIP_FRAME_H=305, PIP_FRAMES=8;
   const TAU=Math.PI*2, PI=Math.PI, SPEED=155, CHAPTER=750;
   const stunts=['hop','dash','bounce','flip','slide','glide','vault','cartwheel','twirl','longjump'];
   const minmax=(a,x,b)=>Math.max(a,Math.min(b,x));
@@ -316,13 +318,93 @@
       }
     }
   }
+  function cinematicTerrace(){
+    if(!texturedLedge.complete||!texturedLedge.naturalWidth){ledge();flowers();return;}
+    // A photographed, sunlit earthen terrace from the same cinematic artwork.
+    // This deliberately replaces the old flat gray rock + cartoon green stripe.
+    const scale=Math.max(.78,Math.min(1.23,H/910));
+    const width=texturedLedge.naturalWidth*scale;
+    const height=texturedLedge.naturalHeight*scale;
+    const top=ground()-95*scale;
+    const drift=world*1.02;
+    const phase=((drift%width)+width)%width;
+    ctx.save();
+    for(let x=-width-phase;x<W+width;x+=width)
+      ctx.drawImage(texturedLedge,x,top,width,height);
+    // A subtle warm bounce at the horizon gives the textured ground the
+    // same afternoon lighting direction as the kingdom architecture.
+    const g=ctx.createLinearGradient(0,ground()-35,0,H);
+    g.addColorStop(0,'rgba(255,222,157,0)');
+    g.addColorStop(.5,'rgba(218,157,89,.025)');
+    g.addColorStop(1,'rgba(44,62,63,.10)');
+    ctx.fillStyle=g;ctx.fillRect(0,ground()-36,W,H-ground()+40);
+    ctx.restore();
+  }
+  function cinematicSetPieces(){
+    const first=Math.floor((world-W*.4)/CHAPTER)-1;
+    const last=Math.ceil((world+W*.7)/CHAPTER)+1;
+    const figureScale=Math.max(.46,Math.min(.86,Math.min(W/590,H/1030)*.91));
+    for(let i=first;i<=last;i++){
+      const kind=stunts[((i%stunts.length)+stunts.length)%stunts.length];
+      if(kind!=='bounce'&&kind!=='vault')continue;
+      const x=W*.34 +i*CHAPTER+385-world;
+      if(x<-150||x>W+150)continue;
+      if(bounceCap.complete&&bounceCap.naturalWidth){
+        const h=(kind==='bounce'?133:86)*figureScale/.72;
+        const w=h*(bounceCap.naturalWidth/bounceCap.naturalHeight);
+        ctx.save();ctx.globalAlpha=.95;
+        ctx.drawImage(bounceCap,x-w*.5,ground()-h+4,w,h);
+        ctx.restore();
+      }else softMushroom(x,ground()-8,kind==='bounce'?.70:.45,i);
+    }
+  }
+  function cinematicPip(x,y,pose){
+    if(!renderedPip.complete||!renderedPip.naturalWidth){pip(x,y,pose);return;}
+    // At each aspect ratio Pip matches the apparent scale of the near cliff.
+    const s=Math.max(.49,Math.min(.90,Math.min(W/540,H/980)*.87));
+    const groundY=y;
+    ctx.save();
+    // Matte contact shadow stays on the ledge while Pip performs aerial tricks.
+    const shadow=ctx.createRadialGradient(x+7,groundY+5,2,x+7,groundY+5,(pose.lift>5?28:48)*s);
+    shadow.addColorStop(0,pose.lift>5?'rgba(41,38,32,.24)':'rgba(43,38,32,.37)');
+    shadow.addColorStop(1,'rgba(55,49,42,0)');
+    ctx.fillStyle=shadow;ctx.fillRect(x-70*s,groundY-21*s,140*s,53*s);
+    const bob=pose.active?0:Math.abs(Math.sin(clock*16.5))*2.4*s;
+    const lift=pose.lift*s;
+    ctx.translate(x,groundY-lift-bob);
+    ctx.translate(0,-143*s);
+    ctx.rotate(pose.spin+pose.lean +(!pose.active?Math.sin(clock*8.2)*.017:0));
+    ctx.translate(0,143*s);
+    ctx.scale(1,pose.squash);
+    const frame=Math.floor(clock*12.1)%PIP_FRAMES;
+    ctx.drawImage(renderedPip,frame*PIP_FRAME_W,0,PIP_FRAME_W,PIP_FRAME_H,
+      -PIP_FRAME_W*s*.5,-PIP_FRAME_H*s,PIP_FRAME_W*s,PIP_FRAME_H*s);
+    if(pose.glide){
+      // Warm, dimensionally shaded silk glider, tucked behind its hero.
+      const gl=ctx.createLinearGradient(-58*s,-291*s,66*s,-233*s);
+      gl.addColorStop(0,'#ffe8ad');gl.addColorStop(.54,'#f6cdab');gl.addColorStop(1,'#b887a1');
+      ctx.beginPath();ctx.moveTo(-83*s,-257*s);
+      ctx.quadraticCurveTo(0,-320*s,83*s,-257*s);
+      ctx.quadraticCurveTo(0,-245*s,-83*s,-257*s);
+      ctx.closePath();ctx.fillStyle=gl;ctx.fill();
+      ctx.strokeStyle='rgba(119,99,116,.54)';ctx.lineWidth=1.8*s;ctx.stroke();
+    }
+    ctx.restore();
+    // Dust is tinted by the same golden sunlight, no cartoon particle stream.
+    if(!pose.active){
+      for(let k=0;k<2;k++){
+        const a=.17-k*.06;
+        oval(x-(17+k*18)*s,groundY-(8+k*3)*s,7*s,2.4*s,`rgba(253,232,185,${a})`);
+      }
+    }
+  }
   function render(){
     if(!ctx||!canvas.width)return;
     ctx.setTransform(dpr,0,0,dpr,0,0);
     background();waterMotion();skyLife();
-    ledge();setPieces();flowers();
+    cinematicTerrace();cinematicSetPieces();
     const characterX=W*.34;
-    pip(characterX,ground()-10,poseAt(world));
+    cinematicPip(characterX,ground()+10,poseAt(world));
     // Soft corner falloff integrates the photographically rich kingdom plate
     // and the sculpted foreground land without masking readable detail.
     const v=ctx.createRadialGradient(W*.5,H*.48,Math.min(W,H)*.32,W*.5,H*.48,Math.max(W,H)*.89);
@@ -363,6 +445,13 @@
   palace.onload=()=>{loadState='ready';render();};
   palace.onerror=()=>{loadState='error';loadError=true;render();};
   palace.src='assets/mushroom-cinematic-kingdom.webp';
+  for(const picture of [renderedPip,texturedLedge,bounceCap]){
+    picture.onload=()=>render();picture.onerror=()=>render();
+  }
+  renderedPip.src='assets/pip-cinematic-run.webp';
+  texturedLedge.src='assets/mushroom-terrace-cinematic.webp';
+  bounceCap.src='assets/mushroom-bounce-cinematic.webp';
+
   resize();if(playing)raf=requestAnimationFrame(frame);
   // Minimal test-only hooks may be injected by the smoke harness; production
   // does not expose animation controls or debugging objects to app users.
