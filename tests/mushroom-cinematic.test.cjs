@@ -66,7 +66,7 @@ class MockImage{
 // Inject internal pose exposure in test only, not in the deployed build.
 const marker="  palace.src='assets/mushroom-cinematic-kingdom.webp';";
 assert.equal(js.split(marker).length,2);
-const code=js.replace(marker,'  window.__probe={poseAt,pipFrame,animationAt,spriteMix,render,setWorld:x=>{world=x;render();}};\n'+marker);
+const code=js.replace(marker,'  window.__probe={poseAt,pipFrame,animationAt,spriteFrame,render,setWorld:x=>{world=x;render();}};\n'+marker);
 vm.runInNewContext(code,{window:win,document:doc,Image:MockImage,matchMedia:()=>reduced,
  location:{origin:'https://unit.example'},requestAnimationFrame:raf,cancelAnimationFrame:cancel,console,Math},{timeout:3000});
 const kinds=new Set();
@@ -109,15 +109,35 @@ assert.equal(aAt(188+750).anticipation,0,'dash maintains momentum without crouch
 assert.equal(aAt(750+567).landing,0,'dash has no fictitious impact');
 assert.equal(aAt(4*750+567).landing,0,'sliding has no landing dust');
 assert.ok(aAt(4*750+567).recovery>.3,'slide smoothly unfolds after arch');
-// Only transitional sprites are blended; 16 running poses remain crisp.
-const plain=win.__probe.spriteMix(aAt(100));
-assert.equal(plain.from,plain.to,'the normal run is never ghost-blended');
-for(const cut of [.16,.38,.64,.88]){
- const x=195+355*cut,blend=win.__probe.spriteMix(aAt(x));
- assert.ok(blend.from!==blend.to&&blend.t>.1&&blend.t<.9,'special pose blend near '+cut);
+// Every render must use exactly one full-opacity Pip pose, including all
+// transition frames. No ghosted limbs or flicker at takeoff/landing.
+const checkSinglePose=x=>{
+  const before=realRunDraws;
+  win.__probe.setWorld(x);
+  assert.equal(realRunDraws-before,1,'exactly one Pip draw at world x='+x);
+  assert.equal(ctx.globalAlpha,1,'Pip drawn without transparent body overlay');
+  return win.__probe.spriteFrame(aAt(x));
+};
+for(const x of [158,170,183,189,194.99,195,202,209,217,218,230,250,251,260,275,
+  331,332,340,410,508,509,520,540,549.99,550,551,563,571,577,594,596]){
+  const frame=checkSinglePose(x);
+  assert.ok(frame>=0&&frame<22,'valid Pip atlas frame');
 }
-const slide=win.__probe.spriteMix(aAt(4*750+535));
-assert.ok(slide.t>0,'slide ends by smoothly unfolding into landing pose');
+for(const x of [189,195,202,209,217,218])
+  assert.equal(win.__probe.spriteFrame(aAt(x)),16,
+    'takeoff must not flash back to a grounded running frame at '+x);
+assert.equal(win.__probe.spriteFrame(aAt(575)),20,'settling uses one opaque landing pose');
+assert.ok(win.__probe.spriteFrame(aAt(594))<16,'running returns after contact');
+const normal=win.__probe.spriteFrame(aAt(100));
+assert.ok(normal>=0&&normal<16,'ordinary running remains the original 16-frame atlas');
+const slide=win.__probe.spriteFrame(aAt(4*750+535));
+assert.equal(slide,21,'sliding stays on authored crouch pose');
+for(let k=0;k<10;k++){
+  const offset=k*750;
+  for(const p of [190,195,205,217,218,550,560,570,590]){
+    checkSinglePose(offset+p);
+  }
+}
 for(const [width,height] of [[1170,650],[390,844],[844,390],[1440,900]]){
  canvas.clientWidth=width;canvas.clientHeight=height;events['w:resize']();
  assert.ok(canvas.width>0&&canvas.height>0);
@@ -142,4 +162,4 @@ hidden=false;events['d:visibilitychange']();assert.equal(queue.size,1,'visible t
 assert.ok(cancelled>0);
 assert.equal(alphaStack.length,0,'canvas transforms and alpha all restored');
 assert.equal(ctx.globalAlpha,1,'no fading or leaking opacity between frames');
-console.log('Mushroom v8 MOTION PASS: 16 distance-synced moving-limb run frames, 6 takeoff/air/landing/slide poses, matched cinematic ground, 4 viewports, secure play/pause.');
+console.log('Mushroom v8.1 FLICKER FIX PASS: 16 distance-synced moving-limb run frames, 6 takeoff/air/landing/slide poses, matched cinematic ground, 4 viewports, secure play/pause.');
