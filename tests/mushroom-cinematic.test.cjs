@@ -106,6 +106,9 @@ assert.ok(aAt(188).anticipation>.5,'prepare ahead of takeoff');
 assert.ok(aAt(567).landing>.3&&aAt(567).landing<1,'settle gradually after ground contact');
 assert.equal(aAt(605).landing,0,'normal running resumes after recovery');
 assert.equal(aAt(188+750).anticipation,0,'dash maintains momentum without crouching');
+assert.equal(aAt(750+567).landing,0,'dash has no fictitious impact');
+assert.equal(aAt(4*750+567).landing,0,'sliding has no landing dust');
+assert.ok(aAt(4*750+567).recovery>.3,'slide smoothly unfolds after arch');
 // Only transitional sprites are blended; 16 running poses remain crisp.
 const plain=win.__probe.spriteMix(aAt(100));
 assert.equal(plain.from,plain.to,'the normal run is never ghost-blended');
