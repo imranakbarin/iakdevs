@@ -9,7 +9,9 @@
   const ctx = canvas.getContext('2d', {alpha:false});
   const palace = new Image();
   const renderedPip = new Image(), texturedLedge = new Image(), bounceCap = new Image();
-  const PIP_FRAME_W=244, PIP_FRAME_H=305, PIP_FRAMES=8;
+  // 16 true opposing-stride poses plus six separate jump/landing/crouch poses.
+  const runningPip = new Image();
+  const PIP_FRAME_W=244, PIP_FRAME_H=305, PIP_FRAMES=8, RUN_FRAMES=16, RUN_TOTAL=22, RUN_STRIDE_PX=12;
   const TAU=Math.PI*2, PI=Math.PI, SPEED=155, CHAPTER=750;
   const stunts=['hop','dash','bounce','flip','slide','glide','vault','cartwheel','twirl','longjump'];
   const minmax=(a,x,b)=>Math.max(a,Math.min(b,x));
@@ -358,6 +360,23 @@
       }else softMushroom(x,ground()-8,kind==='bounce'?.70:.45,i);
     }
   }
+  function pipFrame(pose){
+    const progress=((world%(RUN_FRAMES*RUN_STRIDE_PX))+
+      RUN_FRAMES*RUN_STRIDE_PX)%(RUN_FRAMES*RUN_STRIDE_PX);
+    if(!pose.active||pose.kind==='dash'){
+      const distancePerFrame=pose.kind==='dash'?9:RUN_STRIDE_PX;
+      return Math.floor(world/distancePerFrame)%RUN_FRAMES < 0
+        ? (Math.floor(world/distancePerFrame)%RUN_FRAMES)+RUN_FRAMES
+        : Math.floor(world/distancePerFrame)%RUN_FRAMES;
+    }
+    // Distinct authored silhouettes, not the entire picture spinning in midair.
+    if(pose.kind==='slide')return 21;
+    if(pose.u<.16)return 16;   // anticipation and push-off
+    if(pose.u<.38)return 17;   // rising
+    if(pose.u<.64)return 18;   // legs tucked at apex
+    if(pose.u<.88)return 19;   // reach for terrain
+    return 20;                 // contact / landing
+  }
   function cinematicPip(x,y,pose){
     if(!renderedPip.complete||!renderedPip.naturalWidth){pip(x,y,pose);return;}
     // At each aspect ratio Pip matches the apparent scale of the near cliff.
@@ -369,15 +388,21 @@
     shadow.addColorStop(0,pose.lift>5?'rgba(41,38,32,.24)':'rgba(43,38,32,.37)');
     shadow.addColorStop(1,'rgba(55,49,42,0)');
     ctx.fillStyle=shadow;ctx.fillRect(x-70*s,groundY-21*s,140*s,53*s);
-    const bob=pose.active?0:Math.abs(Math.sin(clock*16.5))*2.4*s;
+    const newSheet=runningPip.complete&&runningPip.naturalWidth===PIP_FRAME_W*RUN_TOTAL;
+    // Tie leg cadence to horizontal travel, not elapsed time; torso stays stable.
+    const runPhase=(world/(RUN_FRAMES*RUN_STRIDE_PX))*TAU;
+    const bob=pose.active?0:Math.abs(Math.sin(runPhase*2))*2.1*s;
     const lift=pose.lift*s;
-    ctx.translate(x,groundY-lift-bob);
+    const footInset=newSheet?9*s:0;
+    ctx.translate(x,groundY-lift-bob+footInset);
     ctx.translate(0,-143*s);
-    ctx.rotate(pose.spin+pose.lean +(!pose.active?Math.sin(clock*8.2)*.017:0));
+    // Limit pitch to a small authored pose transition. No full-body waving.
+    ctx.rotate(pose.active?Math.max(-.09,Math.min(.09,pose.lean)):0);
     ctx.translate(0,143*s);
     ctx.scale(1,pose.squash);
-    const frame=Math.floor(clock*12.1)%PIP_FRAMES;
-    ctx.drawImage(renderedPip,frame*PIP_FRAME_W,0,PIP_FRAME_W,PIP_FRAME_H,
+    const frame=newSheet?pipFrame(pose):Math.floor(Math.abs(world)/RUN_STRIDE_PX)%PIP_FRAMES;
+    const sheet=newSheet?runningPip:renderedPip;
+    ctx.drawImage(sheet,frame*PIP_FRAME_W,0,PIP_FRAME_W,PIP_FRAME_H,
       -PIP_FRAME_W*s*.5,-PIP_FRAME_H*s,PIP_FRAME_W*s,PIP_FRAME_H*s);
     if(pose.glide){
       // Warm, dimensionally shaded silk glider, tucked behind its hero.
@@ -449,6 +474,8 @@
     picture.onload=()=>render();picture.onerror=()=>render();
   }
   renderedPip.src='assets/pip-cinematic-run.webp';
+  runningPip.onload=()=>render();runningPip.onerror=()=>render();
+  runningPip.src='assets/pip-full-run-22.webp';
   texturedLedge.src='assets/mushroom-terrace-cinematic.webp';
   bounceCap.src='assets/mushroom-bounce-cinematic.webp';
 
