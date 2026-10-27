@@ -19,8 +19,12 @@ let drawCount=0, imageDraws=0, cancelled=0, realRunDraws=0;
 const atlasFramesSeen=new Set();
 const methods=new Set(['setTransform','save','restore','translate','scale','rotate','beginPath','closePath','moveTo','lineTo','arc','ellipse','fill','stroke','clip','fillRect','rect','roundRect','quadraticCurveTo','bezierCurveTo','drawImage','fillText']);
 const g={addColorStop(n,str){assert.ok(Number.isFinite(n)&&n>=0&&n<=1,'legal gradient stop');assert.equal(typeof str,'string');}};
-const ctx = new Proxy({}, {get(o,k){
+// Model the graphics-state alpha stack used by transition crossfades.
+const alphaStack=[];
+const ctx = new Proxy({globalAlpha:1}, {get(o,k){
  if(k in o)return o[k];
+ if(k==='save')return ()=>{alphaStack.push(ctx.globalAlpha);drawCount++;};
+ if(k==='restore')return ()=>{ctx.globalAlpha=alphaStack.pop()??1;drawCount++;};
  if(k==='createLinearGradient'||k==='createRadialGradient')return (...a)=>{assert.ok(a.every(Number.isFinite));return g;};
  if(methods.has(k))return (...a)=>{
    drawCount++;
@@ -62,7 +66,7 @@ class MockImage{
 // Inject internal pose exposure in test only, not in the deployed build.
 const marker="  palace.src='assets/mushroom-cinematic-kingdom.webp';";
 assert.equal(js.split(marker).length,2);
-const code=js.replace(marker,'  window.__probe={poseAt,pipFrame,render,setWorld:x=>{world=x;render();}};\n'+marker);
+const code=js.replace(marker,'  window.__probe={poseAt,pipFrame,animationAt,spriteMix,render,setWorld:x=>{world=x;render();}};\n'+marker);
 vm.runInNewContext(code,{window:win,document:doc,Image:MockImage,matchMedia:()=>reduced,
  location:{origin:'https://unit.example'},requestAnimationFrame:raf,cancelAnimationFrame:cancel,console,Math},{timeout:3000});
 const kinds=new Set();
@@ -90,6 +94,27 @@ for(const [u,expected] of [[.08,16],[.25,17],[.5,18],[.75,19],[.97,20]]){
  assert.equal(win.__probe.pipFrame({active:true,kind:'hop',u}),expected,'dedicated airborne pose');
 }
 assert.equal(win.__probe.pipFrame({active:true,kind:'slide',u:.5}),21,'crouch pose');
+// Transitions must be continuous on either side of takeoff and touchdown.
+const aAt=x=>win.__probe.animationAt(x);
+for(const cut of [195,550]){
+ const before=aAt(cut-.001),after=aAt(cut+.001);
+ assert.ok(Math.abs(before.squash-after.squash)<.001,'smooth compression at '+cut);
+ assert.ok(Math.abs(before.lift-after.lift)<.01,'smooth position at '+cut);
+}
+assert.equal(aAt(145).anticipation,0,'no anticipatory wobble during ordinary run');
+assert.ok(aAt(188).anticipation>.5,'prepare ahead of takeoff');
+assert.ok(aAt(567).landing>.3&&aAt(567).landing<1,'settle gradually after ground contact');
+assert.equal(aAt(605).landing,0,'normal running resumes after recovery');
+assert.equal(aAt(188+750).anticipation,0,'dash maintains momentum without crouching');
+// Only transitional sprites are blended; 16 running poses remain crisp.
+const plain=win.__probe.spriteMix(aAt(100));
+assert.equal(plain.from,plain.to,'the normal run is never ghost-blended');
+for(const cut of [.16,.38,.64,.88]){
+ const x=195+355*cut,blend=win.__probe.spriteMix(aAt(x));
+ assert.ok(blend.from!==blend.to&&blend.t>.1&&blend.t<.9,'special pose blend near '+cut);
+}
+const slide=win.__probe.spriteMix(aAt(4*750+535));
+assert.ok(slide.t>0,'slide ends by smoothly unfolding into landing pose');
 for(const [width,height] of [[1170,650],[390,844],[844,390],[1440,900]]){
  canvas.clientWidth=width;canvas.clientHeight=height;events['w:resize']();
  assert.ok(canvas.width>0&&canvas.height>0);
@@ -112,4 +137,6 @@ assert.equal(queue.size,1,'parent resume restores RAF');
 hidden=true;events['d:visibilitychange']();assert.equal(queue.size,0);
 hidden=false;events['d:visibilitychange']();assert.equal(queue.size,1,'visible tab resumes');
 assert.ok(cancelled>0);
-console.log('Mushroom v7 RUN PASS: 16 distance-synced moving-limb run frames, 6 takeoff/air/landing/slide poses, matched cinematic ground, 4 viewports, secure play/pause.');
+assert.equal(alphaStack.length,0,'canvas transforms and alpha all restored');
+assert.equal(ctx.globalAlpha,1,'no fading or leaking opacity between frames');
+console.log('Mushroom v8 MOTION PASS: 16 distance-synced moving-limb run frames, 6 takeoff/air/landing/slide poses, matched cinematic ground, 4 viewports, secure play/pause.');
