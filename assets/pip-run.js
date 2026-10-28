@@ -379,7 +379,7 @@
     seed = newSeed; chunks = new Map(); gen = {ci: -1, h: 3, recent: []}; crumbleFall = new Map(); regrow = [];
     chunk(0);
     pl = {x: 40, y: (ROWS - 3) * TS - P.h, vx: 0, vy: 0, w: P.w, h: P.h, ground: false, jprev: false, buf: 0, coyote: 0, jumping: false};
-    enemies = []; parts = []; seeds = 0; cam = 0; cp = {x: 40, y: pl.y}; maxX = 40; dead = 0; inv = 0; landedAt = -99; anim = 0; facing = 1; frameNo = 0;
+    enemies = []; parts = []; prints = []; rustle.clear(); seeds = 0; cam = 0; cp = {x: 40, y: pl.y}; maxX = 40; dead = 0; inv = 0; landedAt = -99; anim = 0; facing = 1; frameNo = 0;
     big = false; growing = 0; items = []; if (typeof stats !== 'undefined') stats = {bumps: 0, sprouts: 0};
     if (typeof charges !== 'undefined') { tool = null; charges = 3; chargeT = 0; dirScore = 0; notes = []; placed = []; }
     title = null; lastRegion = -1; arrival = null; chapter = null; chapters = 0; journey = {start: 0, seeds0: 0, tumbles: 0, finds0: 0, arrived: -1};
@@ -429,6 +429,33 @@
 
   /* ---------------- effects ---------------- */
   function puff(x, y, col, n, up = 1) { for (let i = 0; i < n; i++) { const a = Math.PI * (1 + i / (n - 1 || 1)) * up; parts.push({x, y, vx: Math.cos(a) * (1 + i % 3 * .5), vy: Math.sin(a) * 1.2 - .4, life: 26 + i % 4 * 4, col, r: 1.6 + i % 3 * .6}); } }
+  // What a footfall throws up depends on the ground: dust and grass clippings,
+  // snow, cloud, or glowing spores in the caves.
+  function kick(x, y, n, power = 1, m = surface()) {
+    const bio = biomeAt(x);
+    for (let i = 0; i < n; i++) {
+      const s = (i % 2 ? 1 : -1) * (.35 + (i * 7 % 5) * .22) * power, up = (.5 + (i * 3 % 4) * .3) * power, life = 26 + i % 3 * 7;
+      if (m === 'ice' || bio === 'frost') parts.push({x: x + s * 1.5, y: y - .5, vx: s, vy: -up, life: life + 6, l0: life + 6, col: '#ffffff', r: 2 + i % 3 * .8, soft: true, g: .035, drag: .92});
+      else if (m === 'cloud') parts.push({x: x + s * 2, y: y - 1, vx: s * .8, vy: -up * .5, life: life + 10, l0: life + 10, col: '#f4f0ff', r: 2.6 + i % 3, soft: true, g: -.012, drag: .9});
+      else if (bio === 'caves') parts.push({x: x + s * 2.5, y: y - 1 - i % 3, vx: ((i * 37 + frameNo) % 11 - 5) * .09, vy: -(.2 + (i * 53 + frameNo) % 7 * .09), life: 50 + i % 4 * 14, l0: 50 + i % 4 * 14, col: ['#8ff7de', '#c9a8ff', '#a5fbe8'][i % 3], r: .9, glow: true, g: -.006, drag: .97});
+      else if (m === 'grass' && i % 2) parts.push({x, y: y - 1, vx: s * 1.2, vy: -up * 1.6, life: 34, l0: 34, col: ['#7cc24e', '#a6dc6a', '#5aa83f'][i % 3], r: 1.1, leaf: true, spin: s, g: .06, drag: .95});
+      else parts.push({x: x + s, y: y - .5, vx: s, vy: -up * .7, life, l0: life, col: m === 'stone' ? '#e4e0d6' : '#efdcb7', r: 1.8 + i % 3 * .6, soft: true, g: .02, drag: .93});
+    }
+  }
+  // Each footfall: a little kick, a footprint in snow or cloud (the moss
+  // lights up under Pip's boots in the caves), petals where he runs through flowers.
+  function stepFx(st) {
+    const m = surface(), x = pl.x + 6 + (st % 2 ? 1.5 : -1.5), y = pl.y + pl.h, bio = biomeAt(x);
+    if (bio !== 'meadow' || st % 2) kick(x, y, 1, .7, m);
+    if (!pl.on && (m === 'ice' || m === 'cloud' || (bio === 'caves' && m === 'stone'))) { prints.push({x, y, at: frameNo, m: bio === 'caves' ? 'moss' : m}); if (prints.length > 40) prints.shift(); }
+    if (m === 'grass') {
+      const tx = Math.floor(x / TS), ty = Math.floor((y + 1) / TS), hf = hash(seed ^ 0xf10, tx * 16 + ty), fx = tx * TS + 3 + (hf >>> 3) % 10;
+      if (hf % 5 === 0 && Math.abs(fx - x) < 5) {
+        const col = ['#fffaf0', '#ffd23f', '#f29ab8'][(hf >>> 7) % 3];
+        for (let i = 0; i < 3; i++) parts.push({x: fx, y: y - 2.5, vx: (i - 1) * .5 + pl.vx * .3, vy: -1 - i * .3, life: 44, l0: 44, col, r: .8, leaf: true, spin: i - 1 || .5, g: .03, drag: .95});
+      }
+    }
+  }
   function sparkle(x, y) { for (let i = 0; i < 8; i++) { const a = i / 8 * Math.PI * 2; parts.push({x, y, vx: Math.cos(a) * 1.6, vy: Math.sin(a) * 1.6, life: 22, col: '#ffe9a0', r: 1.4, star: true}); } }
 
   /* ---------------- the demo player ---------------- */
@@ -843,17 +870,17 @@
       if (run.inputs.length < RUN_MAX) { run.inputs.push((inp.l ? 1 : 0) | (inp.r ? 2 : 0) | (inp.j ? 4 : 0)); if (human) run.human++; }
     }
     simNow = frameNo;   // the planner may have moved it while imagining
-    const vy0 = pl.vy, ev = stepBody(pl, inp);
+    const vy0 = pl.vy, under = pl.ground ? surface() : 'wood', ev = stepBody(pl, inp);
     crumbleTick();
     if (pl.x < cam) { pl.x = cam; pl.vx = Math.max(0, pl.vx); }
     if (inp.r && !inp.l) facing = 1; else if (inp.l && !inp.r) facing = -1;
     anim += Math.abs(pl.vx);
-    if (pl.ground && Math.abs(pl.vx) > .3) { const st = Math.floor(anim / ((shownBig() ? 1.5 : 1.15) * 8)); if (st !== stepAt) { stepAt = st; sfx('step', {surface: surface(), v: Math.abs(pl.vx) / P.max}); } }
+    if (pl.ground && Math.abs(pl.vx) > .3) { const st = Math.floor(anim / ((shownBig() ? 1.5 : 1.15) * 8)); if (st !== stepAt) { stepAt = st; sfx('step', {surface: surface(), v: Math.abs(pl.vx) / P.max}); stepFx(st); } }
     sq *= .78;
     skidding = pl.ground && Math.abs(pl.vx) > 1 && (inp.l && pl.vx > 0 || inp.r && pl.vx < 0);
-    if (ev.jumped) { sfx('jump'); sq = 1; puff(pl.x + 6, pl.y + pl.h, '#f3e2c0', 4); }
-    if (ev.landed) { sfx('land', {impact: vy0}); sq = -1; landedAt = frameNo; puff(pl.x + 6, pl.y + pl.h, '#efdcb7', 5); }
-    if (pl.ground && Math.abs(pl.vx) > 1.4 && (inp.l && pl.vx > 0 || inp.r && pl.vx < 0) && frameNo % 4 === 0) puff(pl.x + 6, pl.y + pl.h, '#efdcb7', 2);
+    if (ev.jumped) { sfx('jump'); sq = 1; kick(pl.x + 6, pl.y + pl.h, 4, 1, under); }
+    if (ev.landed) { sfx('land', {impact: vy0}); sq = -1; landedAt = frameNo; kick(pl.x + 6, pl.y + pl.h, 4 + Math.min(4, vy0 | 0), Math.min(1.6, .6 + vy0 / 5)); }
+    if (pl.ground && Math.abs(pl.vx) > 1.4 && (inp.l && pl.vx > 0 || inp.r && pl.vx < 0) && frameNo % 4 === 0) kick(pl.x + 6, pl.y + pl.h, 2, 1.2);
     if (ev.bump) bump(ev.bump[0], ev.bump[1]);
     if (pl.y > VIEW_H + 24) { if (!dead) { gotcha(); remember(); sfx('tumble'); helpBridge(); } dead = 30; pl.vy = 0; if (big) { big = false; pl.h = P.h; pl.w = P.w; } }
     if (inv) inv--;
@@ -909,11 +936,11 @@
     }
     for (const ch of chunks.values()) for (const s of ch.seeds)
       if (!s.got && Math.abs(s.x - pl.x - 6) < 11 && Math.abs(s.y - pl.y - 10) < 14) { s.got = true; s.gotAt = frameNo; seeds++; seedStreak = frameNo - lastSeedAt < 50 ? seedStreak + 1 : 0; lastSeedAt = frameNo; sfx('seed', {streak: seedStreak}); sparkle(s.x, s.y); }
-    parts = parts.filter(p => { p.x += p.vx; p.y += p.vy; p.vy += p.star ? 0 : .08; p.vx *= .96; return --p.life > 0; });
+    parts = parts.filter(p => { p.x += p.vx; p.y += p.vy; p.vy += p.g ?? (p.star ? 0 : .08); p.vx *= p.drag ?? .96; return --p.life > 0; });
     for (const b of bumps) b.t++;
     bumps = bumps.filter(b => b.t < 10);
   }
-  let bumps = [], stepAt = 0, seedStreak = 0, lastSeedAt = -99;
+  let bumps = [], stepAt = 0, seedStreak = 0, lastSeedAt = -99, prints = [];
   // Sound lives in assets/pip-audio.js; the simulation only names events.
   // Nothing sounds while a ghost is rebuilt or the planner imagines.
   const BUZZ = {stomp: 12, tumble: 30, spring: 10, grow: 16, arrive: [12, 60, 12], smash: 14};
@@ -1469,10 +1496,12 @@
         } else if (bio === 'sky' && hf % 3 === 0) { g.fillStyle = 'rgba(255,214,120,.9)'; g.beginPath(); g.arc(X + 3 + hf % 10, Y + 2.2 + (hf >>> 4) % 2, .5, 0, 7); g.fill(); }
       }
     };
+    ch.tops = [];
     for (let y = 0; y < ROWS; y++) for (let x = 0; x < CW;) {
       if (at(x, y) !== EARTH || mass(x, y - 1)) { x++; continue; }
       let b = x; while (b < CW && at(b, y) === EARTH && !mass(b, y - 1)) b++;
-      cap(x, b, y); x = b;
+      cap(x, b, y); for (let q = x; q < b; q++) ch.tops.push([ch.ci * CW + q, y]);
+      x = b;
     }
     // 5. Stone blocks, each a little different, and stumps where the generator put columns.
     const C = P.stone;
@@ -1938,6 +1967,8 @@
     for (const ch of chunks.values()) { for (const k of ch.crystals) { const [x, y] = W2D(k.x, k.y + (k.up ? -8 : 8)); if (x > -60 && x < cv.width + 60) hole(x, y, 34 * S, .85); }
       for (const sd of ch.seeds) if (!sd.got) { const [x, y] = W2D(sd.x, sd.y); if (x > -20 && x < cv.width + 20) hole(x, y, 13 * S, .9); } }
     for (const it of items) { const [x, y] = W2D(it.x + 6, it.y + 6); hole(x, y, 26 * S); }
+    for (const p of parts) if (p.glow) { const [x, y] = W2D(p.x, p.y); hole(x, y, 9 * S, .7 * Math.min(1, p.life / 14)); }
+    for (const k of prints) { const age = frameNo - k.at; if (k.m === 'moss' && age >= 0 && age < PRINT_LIFE.moss) { const [x, y] = W2D(k.x, k.y); hole(x, y, 12 * S, .7 * (1 - age / PRINT_LIFE.moss)); } }
     ctx.drawImage(darkBuf, 0, 0);
     // Creature eyes glint in the dark.
     for (const e of enemies) { if (e.state === 'dead' || e.state === 'squash') continue; const [x, y] = W2D(e.x + 7, e.y + 5); if (x < -20 || x > cv.width + 20) continue; ctx.fillStyle = `rgba(255,240,170,${(.8 * w).toFixed(2)})`; for (const d of [-2.4, 2.4]) { ctx.beginPath(); ctx.arc(x + d * S, y, .9 * S, 0, 7); ctx.fill(); } }
@@ -2185,13 +2216,97 @@
       ctx.strokeStyle = '#2f8a3a'; ctx.lineWidth = s; ctx.beginPath(); ctx.moveTo(x, y - 7.5 * s); ctx.lineTo(x, y - 10 * s); ctx.stroke();
     }
   }
+  // A soft round of colour, painted once per colour and stretched: puffs, glows.
+  const blobs = new Map();
+  function blob(x, y, r, col, a) {
+    let b = blobs.get(col);
+    if (!b) {
+      b = document.createElement('canvas'); b.width = b.height = 32;
+      const g = b.getContext('2d'), q = g.createRadialGradient(16, 16, 0, 16, 16, 16), rgb = [1, 3, 5].map(i => parseInt(col.slice(i, i + 2), 16)).join(',');
+      q.addColorStop(0, `rgba(${rgb},1)`); q.addColorStop(.45, `rgba(${rgb},.55)`); q.addColorStop(1, `rgba(${rgb},0)`); g.fillStyle = q; g.fillRect(0, 0, 32, 32);
+      blobs.set(col, b);
+    }
+    ctx.globalAlpha = a; ctx.drawImage(b, x - r, y - r, r * 2, r * 2); ctx.globalAlpha = 1;
+  }
   function drawParts() {
     for (const p of parts) {
       const [x, y] = W2D(p.x, p.y), a = Math.min(1, p.life / 14);
       if (p.seed) { star(x, y, 5 * S * a, frameNo * .2); continue; }
-      ctx.globalAlpha = a; ctx.fillStyle = p.col; ctx.beginPath(); ctx.arc(x, y, p.r * S, 0, 7); ctx.fill();
+      if (p.soft) { blob(x, y, p.r * S * (1.2 + (1 - p.life / p.l0) * 1.4), p.col, .85 * a); continue; }
+      if (p.glow) blob(x, y, p.r * S * 5, p.col, .6 * a);
+      ctx.globalAlpha = a; ctx.fillStyle = p.col;
+      if (p.leaf) { ctx.save(); ctx.translate(x, y); ctx.rotate(p.life * p.spin * .25); ctx.beginPath(); ctx.ellipse(0, 0, p.r * 1.7 * S, p.r * .7 * S, 0, 0, 7); ctx.fill(); ctx.restore(); }
+      else { ctx.beginPath(); ctx.arc(x, y, p.r * S, 0, 7); ctx.fill(); }
     }
     ctx.globalAlpha = 1;
+  }
+  // Footprints pressed into snow and cloud; in the caves, moss that glows where Pip stepped.
+  const PRINT_LIFE = {ice: 900, cloud: 260, moss: 300};
+  function drawPrints() {
+    const t = drawT ?? frameNo;
+    for (const k of prints) {
+      const age = t - k.at, f = 1 - age / PRINT_LIFE[k.m]; if (age < 0 || f <= 0) continue;
+      const [x, y] = W2D(k.x, k.y); if (x < -20 || x > cv.width + 20) continue;
+      if (k.m === 'moss') { blob(x, y, 7 * S, '#8ff7de', .8 * f * f); continue; }
+      ctx.fillStyle = k.m === 'ice' ? `rgba(84,118,168,${(.38 * f).toFixed(3)})` : `rgba(150,140,206,${(.3 * f).toFixed(3)})`;
+      ctx.beginPath(); ctx.ellipse(x, y + .9 * S, 2.3 * S, .75 * S, 0, 0, 7); ctx.fill();
+      ctx.fillStyle = `rgba(255,255,255,${(.5 * f).toFixed(3)})`; ctx.beginPath(); ctx.ellipse(x + .4 * S, y + 1.7 * S, 2 * S, .4 * S, 0, 0, 7); ctx.fill();
+    }
+  }
+  // Grass at the front of the painted turf sways in the breeze and parts
+  // around Pip and the creatures; where Pip lands it flattens for a moment.
+  const GRASS = {meadow: ['#4f9a3a', '#6fbf4f', '#94d35e', '#b7e77e'], caves: ['#1f8a74', '#38c2a4', '#7ef0d4', '#2fb79c']};
+  function drawGrass() {
+    const t = drawT ?? frameNo, x0 = cam - TS, x1 = cam + viewW + TS, push = [];
+    if (!dead) push.push([pl.x + 6, pl.y + pl.h, 1, t - landedAt]);
+    for (const e of enemies) if (e.ground && e.state !== 'dead' && e.kind !== 'flier') push.push([e.x + 7, e.y + e.h, .6, 99]);
+    for (const ch of chunks.values()) {
+      const cols = GRASS[ch.biome]; if (!cols || !ch.tops || !ch.art) continue;
+      for (const [tx, ty] of ch.tops) {
+        if (tx * TS > x1 || tx * TS + TS < x0) continue;
+        const Y = ty * TS + 1.3;
+        for (let i = 0; i < 3; i++) {
+          const h = hash(seed ^ 0x6a5, tx * 4 + i); if (h % 3 === 0) continue;
+          const bx = tx * TS + 1.5 + i * 5.2 + (h >>> 12) % 40 / 10, bh = (ch.biome === 'caves' ? 1.8 : 2.4) + (h >>> 3) % 6 * .55;
+          let a = Math.sin(t * .045 + bx * .09) * .2 + Math.sin(t * .13 + bx * .31) * .06;
+          for (const [mx, my, k, since] of push) {
+            const dx = bx - mx; if (Math.abs(my - Y) > 7 || Math.abs(dx) > 14) continue;
+            a += Math.sign(dx || 1) * (1 - Math.abs(dx) / 14) * (1.05 + (since >= 0 && since < 24 ? (1 - since / 24) * .9 : 0)) * k;
+          }
+          a = clamp(-1.35, a, 1.35);
+          const [sx, sy] = W2D(bx, Y), L = bh * S, w = .5 * S, cx = sx + Math.sin(a * .45) * L * .55, cy = sy - Math.cos(a * .45) * L * .55;
+          ctx.fillStyle = cols[(h >>> 7) % 4]; ctx.beginPath(); ctx.moveTo(sx - w, sy);
+          ctx.quadraticCurveTo(cx - w * .3, cy, sx + Math.sin(a) * L, sy - Math.cos(a) * L); ctx.quadraticCurveTo(cx + w * .3, cy, sx + w, sy); ctx.fill();
+        }
+      }
+    }
+  }
+  // Leaves drift down from the painted oaks and snow sifts from the pines;
+  // a shower of them comes down when Pip runs past a trunk.
+  const rustle = new Map();
+  function drawLeaves() {
+    const t = drawT ?? frameNo;
+    for (const ch of chunks.values()) {
+      if (!ch.art || !ch.props) continue;
+      ch.props.forEach((p, i) => {
+        if (p.kind !== 'oak' && p.kind !== 'pine') return;
+        const [, , sw, sh, H] = PROP[p.kind], w = H * sw / sh, cx = p.x * TS + 8 + ((p.hv >>> 5) % 7 - 3), top = p.s * TS + 3 - H, snow = p.kind === 'pine';
+        const [sx] = W2D(cx, 0); if (sx < -w * S || sx > cv.width + w * S) return;
+        const key = ch.ci * 64 + i, last = rustle.get(key);
+        if (!dead && Math.abs(pl.x + 6 - cx) < 20 && pl.y + pl.h > top + H * .4 && (last === undefined || t - last > 240 || t < last)) rustle.set(key, t);
+        const since = rustle.has(key) ? t - rustle.get(key) : -1;
+        for (let j = 0; j < (since >= 0 && since < 170 ? 10 : 3); j++) {
+          const burst = j >= 3, P = 460 + j * 70, off = hash(p.hv, j) % P, ph = burst ? (since - (j - 3) * 9) / 150 : ((t + off) % P) / P;
+          if (ph < 0 || ph > 1) continue;
+          const hq = hash(p.hv ^ (burst ? rustle.get(key) : Math.floor((t + off) / P)), j);
+          const x0 = cx + ((hq % 1000) / 1000 - .5) * w * (snow ? .6 : .7), y0 = top + H * (.12 + (hq >>> 10) % 100 / 100 * (snow ? .6 : .38));
+          const [lx, ly] = W2D(x0 + Math.sin(ph * 7 + j) * (snow ? 2 : 6) + ph * (snow ? 3 : 12), y0 + ph * (p.s * TS - y0)), al = Math.min(1, ph * 10, (1 - ph) * 6);
+          if (snow) { blob(lx, ly, 1.5 * S, '#ffffff', .85 * al); continue; }
+          ctx.save(); ctx.globalAlpha = al; ctx.translate(lx, ly); ctx.rotate(Math.sin(ph * 11 + j) * 1.3);
+          ctx.fillStyle = ['#8fbf4a', '#b9c84a', '#d9a03a', '#6faa3c'][hq % 4]; ctx.beginPath(); ctx.ellipse(0, 0, 1.9 * S, .8 * S, 0, 0, 7); ctx.fill(); ctx.restore();
+        }
+      });
+    }
   }
   function drawHud() {
     const W = cv.width, u = Math.max(12, 9 * S), pad = u * .9;
@@ -2353,7 +2468,7 @@
   }
   function scene(arcs, at) {
     const m = biomeMix();
-    drawBackground(); drawDestination(); drawTiles(); drawMovers(); drawCrystals(); drawSeeds(); drawMarks();
+    drawBackground(); drawDestination(); drawTiles(); drawPrints(); drawGrass(); drawLeaves(); drawMovers(); drawCrystals(); drawSeeds(); drawMarks();
     drawItems();
     for (const e of enemies) drawEnemy(e);
     drawGhost(); drawPip(); drawParts(); drawWeather(m); drawLight(m); drawDarkness(m);
@@ -2434,7 +2549,7 @@
   if (playing) raf = requestAnimationFrame(frame);
   // Test hook: lets the smoke test drive the simulation without a browser clock.
   window.__pipRun = {tick, reset, state: () => ({pl, enemies, seeds, maxX, dead, human, cam, viewW}), GAP, layout, tileAt: (x, y) => tileAt(x, y),
-    art: ci => { const ch = chunk(ci); return ch && {art: chunkArt(ch, Math.round(TS * S)), biome: ch.biome}; },
+    art: ci => { const ch = chunk(ci); return ch && {art: chunkArt(ch, Math.round(TS * S)), biome: ch.biome}; }, render: () => render(), fx: () => ({parts: parts.length, prints: prints.length, rustled: rustle.size}),
     scores: () => { const th = enemies.filter(e => e.state !== 'dead' && e.state !== 'squash' && Math.abs(e.x - pl.x) < 260); return OPTIONS.map(o => [o.dir, o.wait, o.hold, Math.round(simulate(o, th).score)]); },
     actions: () => actions(),
     tile: (x, y, v) => setTile(x, y, v),
