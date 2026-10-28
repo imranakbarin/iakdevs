@@ -598,10 +598,15 @@
   const TOOLS = [{id: 'brick', key: 'Digit1'}, {id: 'creature', key: 'Digit2'}, {id: 'spring', key: 'Digit3'}];
   let tool = null, charges = 3, chargeT = 0, dirScore = 0, notes = [], placed = [], hover = null, view = {zoom: 1, cx: 0, fy: 0};
   function note(text, x, y, col) { notes.push({text, x, y, t: 0, col: col || '#fffbea'}); }
+  // Rows of the portrait console, in CSS pixels.
+  function rows() {
+    const H = cv.clientHeight, top = consoleY, size = Math.round(Math.max(40, Math.min(56, VIEW_H * S / dpr * .1)));
+    return {strip: top + 10, tools: top + 60, hint: Math.min(H - 24, top + 60 + size + 12 + Math.round(size * .72) + 26), pad: (top + 64 + H) / 2};
+  }
   function toolbar() {
-    const W = cv.clientWidth, H = cv.clientHeight, top = oy / dpr, bandH = VIEW_H * S / dpr;
+    const top = oy / dpr, bandH = VIEW_H * S / dpr;
     const size = Math.round(Math.max(40, Math.min(56, bandH * .1))), gap = Math.round(size * .25);
-    const y = H > W ? top + bandH + size * .35 : top + bandH - size - 12;
+    const y = portrait ? rows().tools : top + bandH - size - 12;
     return TOOLS.map((t, i) => ({...t, x: 12 + i * (size + gap), y, w: size, h: size}));
   }
   // Share and restart sit at the opposite end of the toolbar's row. Hidden while
@@ -610,13 +615,16 @@
     if (replay || (human && usingTouch)) return [];
     // In portrait the row is too narrow for both, so they go on a row below.
     const bar = toolbar(), h = Math.round(bar[0].h * .72), W = cv.clientWidth, y = cv.clientHeight <= W ? bar[0].y + (bar[0].h - h) / 2 : bar[0].y + bar[0].h + 12;
+    const font = main.font;   // measuring must not leak into whatever is drawn next
     main.font = `600 ${Math.round(h * .38)}px system-ui,-apple-system,sans-serif`;
     let x = W - 12;
     const list = [['share', '⤴ Share run'], ['restart', ghost ? '↺ Race again' : '↺ Restart']];
     if (typeof PipAudio !== 'undefined') list.push(['sound', PipAudio.label()]);
-    return list.map(([id, label]) => {
+    const out = list.map(([id, label]) => {
       const w = Math.round(main.measureText(label).width + h * .9); x -= w; const b = {id, label, x, y, w, h}; x -= 8; return b;
     });
+    main.font = font;
+    return out;
   }
   // Screen point to tile, undoing the tension push-in when it is active.
   function cellAt(clientX, clientY) {
@@ -679,7 +687,7 @@
   function directorPointer(e) {
     const hit = toolbar().find(b => e.offsetX >= b.x && e.offsetX <= b.x + b.w && e.offsetY >= b.y && e.offsetY <= b.y + b.h);
     if (hit) { tool = tool === hit.id ? null : hit.id; return true; }
-    if (tool) { place(...cellAt(e.clientX, e.clientY)); return true; }
+    if (tool) { if (portrait && e.offsetY > consoleY) { tool = null; return true; } place(...cellAt(e.clientX, e.clientY)); return true; }
     return false;
   }
 
@@ -701,13 +709,21 @@
   addEventListener('keyup', e => keys.delete(e.code));
   addEventListener('blur', () => keys.clear());
   const zones = () => {
-    const W = cv.clientWidth, H = cv.clientHeight, s = Math.min(W, H) * .16, y = H - s * .9;
+    const W = cv.clientWidth, H = cv.clientHeight;
+    if (portrait) {   // big thumb zones in the console
+      const R = rows(), s = Math.min(W * .2, (H - R.tools) * .4);
+      return {l: [W * .15, R.pad, s * .62], r: [W * .4, R.pad, s * .62], j: [W * .78, R.pad, s * .82]};
+    }
+    const s = Math.min(W, H) * .16, y = H - s * .9;
     return {l: [s * .85, y, s * .55], r: [s * 2.05, y, s * .55], j: [W - s * .95, y, s * .65]};
   };
   function readTouches(list) {
     touch.l = touch.r = touch.j = false;
     const z = zones();
     for (const p of list.values()) {
+      // Anywhere in the console counts: left quarter runs left, the next
+      // quarter runs right, the right half jumps. Thumbs need not aim.
+      if (portrait && p.y > consoleY) { const f = p.x / cv.clientWidth; touch[f < .28 ? 'l' : f < .56 ? 'r' : 'j'] = true; continue; }
       for (const k of ['l', 'r', 'j']) { const [x, y, rad] = z[k]; if (Math.hypot(p.x - x, p.y - y) < rad * 1.5) touch[k] = true; }
       if (!touch.l && !touch.r && !touch.j) { if (p.x > cv.clientWidth * .5) touch.j = true; }
     }
@@ -893,7 +909,14 @@
   let bumps = [], stepAt = 0, seedStreak = 0, lastSeedAt = -99;
   // Sound lives in assets/pip-audio.js; the simulation only names events.
   // Nothing sounds while a ghost is rebuilt or the planner imagines.
-  const sfx = (name, o) => { if (!ghostSim && typeof PipAudio !== 'undefined') PipAudio.fx(name, o); };
+  const BUZZ = {stomp: 12, tumble: 30, spring: 10, grow: 16, arrive: [12, 60, 12], smash: 14};
+  const sfx = (name, o) => {
+    if (ghostSim) return;
+    if (typeof PipAudio !== 'undefined') PipAudio.fx(name, o);
+    // A light tap on the hand for a person playing by touch, where supported.
+    const ms = name === 'land' ? (o && o.impact > 4 ? 6 : 0) : BUZZ[name];
+    if (ms && human && usingTouch && typeof navigator !== 'undefined' && navigator.vibrate) try { navigator.vibrate(ms); } catch (_) {}
+  };
   function surface() {
     if (pl.on) return biomeAt(pl.x) === 'sky' ? 'cloud' : 'wood';
     const id = tileAt(Math.floor((pl.x + 6) / TS), Math.floor((pl.y + pl.h + 1) / TS));
@@ -1015,10 +1038,11 @@
     get(k) { try { return JSON.parse(localStorage.getItem(k)); } catch (_) { return null; } },
     set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (_) {} }
   };
+  let bestToday = 0;
   function saveBest() {
     if (ghostSim || !run || worldMode !== 'daily' || seed !== dailySeed(day) || run.human < 300) return;
     const b = store.get('pip-run:best');
-    if (!b || b.day !== day || run.m > b.m) store.set('pip-run:best', {day, m: run.m, code: encodeRun(run)});
+    if (!b || b.day !== day || run.m > b.m) { store.set('pip-run:best', {day, m: run.m, code: encodeRun(run)}); bestToday = run.m; }
   }
   function bestGhost() {
     const b = store.get('pip-run:best'), r = b && b.day === day && decodeRun(b.code);
@@ -1027,6 +1051,7 @@
   function start() {
     const h = (location.hash || '').slice(1), shared = h.startsWith('r=') ? decodeRun(h.slice(2)) : null;
     day = today(); ghost = null; toast = null;
+    { const b = store.get('pip-run:best'); bestToday = b && b.day === day ? b.m : 0; }
     if (shared) { worldMode = 'friend'; ghost = buildGhost(shared, 'friend'); reset(shared.seed); }
     else if (h.startsWith('new')) { worldMode = 'random'; reset((Math.random() * 1e9) | 0); }
     else { worldMode = 'daily'; ghost = bestGhost(); reset(dailySeed(day)); }
@@ -1083,16 +1108,25 @@
   const shownBig = () => growing && Math.floor(growing / 4) % 2 ? !big : big;
   const pipVisual = () => (shownBig() ? 40 : 30);
   let dpr = 1, S = 1, viewW = 400, ox = 0, oy = 0, tileCache = new Map();
+  // Portrait (phones): the stage sits right under the host page's bar with
+  // larger tiles, and a console below holds the journey strip, the tools,
+  // the buttons and, once someone plays, the thumb pad.
+  const CONSOLE = 210, EMBEDDED = (() => { try { return window.parent !== window; } catch (_) { return true; } })();
+  let portrait = false, consoleY = 0;
   function layout() {
     const W = cv.clientWidth, H = cv.clientHeight;
     dpr = Math.min(devicePixelRatio || 1, 2);
     cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr);
-    // At least 16 tiles across (14 in portrait, where the stage sits above the touch pad).
-    const k = Math.min(H / VIEW_H, W / ((H > W ? 14 : 16) * TS));
+    portrait = H > W;
+    // At least 16 tiles across in landscape; in portrait 12 or more, as tall
+    // as the console allows (tall phones get the largest tiles).
+    const top = portrait ? (EMBEDDED ? 60 : 10) : 0;
+    const k = portrait ? Math.max(.5, Math.min((H - top - CONSOLE) / VIEW_H, W / (12 * TS))) : Math.min(H / VIEW_H, W / (16 * TS));
     const tsd = Math.max(8, Math.round(TS * k * dpr));
     S = tsd / TS; viewW = cv.width / S;
     const bandH = VIEW_H * S;
-    oy = Math.round(H > W ? (cv.height - bandH) * .32 : (cv.height - bandH) / 2); ox = 0;
+    oy = portrait ? Math.round(top * dpr) : Math.round((cv.height - bandH) / 2); ox = 0;
+    consoleY = (oy + bandH) / dpr;
     tileCache = new Map(); farCache = null;
   }
   function tileCanvas(id, top, biome = 'meadow', under = false) {
@@ -1744,7 +1778,7 @@
       const bandH = VIEW_H * S, bar = bandH * .07;
       ctx.fillStyle = 'rgba(12,20,24,.42)'; ctx.fillRect(0, oy, W, bar); ctx.fillRect(0, oy + bandH - bar, W, bar);
     }
-    {
+    if (!portrait) {
       const span = REGION * CW * TS, region = Math.floor(pl.x / span), next = BIOMES[regionBiome(region + 1)].mark, m2 = Math.max(0, Math.round(((region + 1) * span - pl.x) / TS));
       ctx.font = `600 ${u * .72}px system-ui,-apple-system,sans-serif`; ctx.textAlign = 'right';
       const line = `${next} · ${m2} m ›`, yy = y + u * (marks.length && !human ? 2.35 : 1.25);
@@ -1769,7 +1803,11 @@
       // Centred in the space right of the director's toolbar when it is showing.
       const land = cv.clientHeight <= cv.clientWidth, bar = !human && !replay ? toolbar() : null, acts = land ? actions() : [];
       const left = bar && land ? (bar[2].x + bar[2].w + 120) * dpr : 0, right = acts.length ? acts[acts.length - 1].x * dpr - u * .6 : W;
-      const tw = ctx.measureText(msg).width + u * 1.6, mid = left ? Math.max(left + tw / 2, (left + right) / 2) : Math.min(W / 2, right - tw / 2), bx = mid - tw / 2, by = oy + VIEW_H * S - u * 2.4;
+      let tw = ctx.measureText(msg).width + u * 1.6;
+      const room = portrait ? W - u * 1.4 : (right - left) - u;
+      if (tw > room) { const k = Math.max(.6, room / tw); ctx.font = `500 ${u * .82 * k}px system-ui,-apple-system,sans-serif`; tw = ctx.measureText(msg).width + u * 1.6 * k; }
+      const mid = portrait ? W / 2 : left ? Math.max(left + tw / 2, (left + right) / 2) : Math.min(W / 2, right - tw / 2), bx = mid - tw / 2;
+      const by = portrait ? (human ? rows().tools + 4 : rows().hint) * dpr - u * .65 : oy + VIEW_H * S - u * 2.4;
       ctx.fillStyle = 'rgba(28,52,60,.55)'; ctx.beginPath(); ctx.roundRect(bx, by, tw, u * 1.3, u * .65); ctx.fill();
       ctx.fillStyle = '#fffbea'; ctx.fillText(msg, mid, by + u * .66);
     }
@@ -1789,6 +1827,43 @@
         ctx.fillStyle = 'rgba(40,60,60,.6)'; ctx.font = `${rad * dpr * .8}px system-ui`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(glyph, x * dpr, yy * dpr + 1);
       }
     }
+  }
+  // The portrait console: a panel under the stage, and the chapter's journey
+  // strip: where Pip is between the last landmark and the next, and the ghost.
+  function drawConsole() {
+    if (!portrait) return;
+    const y0 = Math.round(consoleY * dpr), W = cv.width, H = cv.height, accent = {meadow: '#9be06a', frost: '#bfe4ff', sky: '#e7dcff', caves: '#a98bf5'}[biomeAt(pl.x)];
+    const g = ctx.createLinearGradient(0, y0, 0, H); g.addColorStop(0, '#22343d'); g.addColorStop(1, '#152127');
+    ctx.save(); ctx.fillStyle = g; ctx.fillRect(0, y0, W, H - y0);
+    ctx.globalAlpha = .75; ctx.fillStyle = accent; ctx.fillRect(0, y0, W, Math.max(2, dpr * 1.5)); ctx.globalAlpha = 1;
+    const d = dpr, yc = rows().strip, span = REGION * CW * TS, r = Math.floor(pl.x / span), f = clamp(0, pl.x / span - r, 1);
+    const left = 14 * d, right = W - 46 * d, ty = (yc + 34) * d, at = q => left + (right - left) * q;
+    ctx.textBaseline = 'middle'; ctx.font = `600 ${12 * d}px system-ui,-apple-system,sans-serif`;
+    ctx.textAlign = 'left'; ctx.fillStyle = '#ffe9a8'; ctx.fillText(`Chapter ${r + 1} · ${BIOMES[regionBiome(r)].name}`, left, (yc + 5) * d);
+    ctx.textAlign = 'right'; ctx.fillStyle = '#d9ecf0'; ctx.fillText(`${BIOMES[regionBiome(r + 1)].mark} · ${Math.max(0, Math.round(((r + 1) * span - pl.x) / TS))} m`, right, (yc + 5) * d);
+    ctx.fillStyle = 'rgba(255,255,255,.14)'; ctx.beginPath(); ctx.roundRect(left, ty - 2.5 * d, right - left, 5 * d, 2.5 * d); ctx.fill();
+    ctx.fillStyle = accent; ctx.beginPath(); ctx.roundRect(left, ty - 2.5 * d, Math.max(5 * d, (right - left) * f), 5 * d, 2.5 * d); ctx.fill();
+    const gp = ghostAt(Math.min(frameNo, ghost ? ghost.frames.length : 0));
+    if (gp) { const q = gp.x / span - r; if (q >= -.02) { ctx.globalAlpha = .85; ctx.fillStyle = '#9fd8ff'; ctx.beginPath(); ctx.arc(at(clamp(0, q, 1)), ty, 4.5 * d, 0, 7); ctx.fill(); ctx.globalAlpha = 1; } }
+    if (sheet.complete && sheet.naturalWidth) ctx.drawImage(sheet, 0, 0, FRAME_W, FRAME_H, at(f) - 7.5 * d, ty - 17 * d, 15 * d, 18.75 * d);
+    else { ctx.fillStyle = '#3f8a6a'; ctx.beginPath(); ctx.arc(at(f), ty, 6 * d, 0, 7); ctx.fill(); }
+    ctx.translate(right + 24 * d, ty + 9 * d); landmarkArt(regionBiome(r + 1), .17 * d, frameNo);
+    ctx.restore();
+    // Spare room (tall phones, nobody on the thumb pad): the chapter so far.
+    const free = rows().hint + 26, Hc = cv.clientHeight;
+    if (Hc - free < 64 || (human && usingTouch)) return;
+    seen = seen || new Set(store.get('pip-run:seen') || []);
+    const best = worldMode === 'daily' ? [bestToday ? `${bestToday} m` : '—', 'your best today'] : ghost ? [`${ghost.m} m`, worldMode === 'friend' ? 'their run' : 'ghost'] : [`${Math.floor(maxX / TS)} m`, 'this run'];
+    const cells = [[`★ ${seeds - journey.seeds0}`, 'seeds this chapter'], [clock(Math.max(0, frameNo - journey.start) / RATE), 'in this chapter'], [`${seen.size} / ${Object.keys(FINDS).length}`, 'found'], best];
+    const cy = (free + Math.min(Hc - 12, free + 90)) / 2, cw = (cv.clientWidth - 24) / cells.length;
+    ctx.save(); ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    cells.forEach(([v, label], i) => {
+      const x = (12 + cw * (i + .5)) * d;
+      ctx.fillStyle = 'rgba(255,255,255,.05)'; ctx.beginPath(); ctx.roundRect(x - (cw / 2 - 4) * d, (cy - 26) * d, (cw - 8) * d, 52 * d, 10 * d); ctx.fill();
+      ctx.fillStyle = '#fffbea'; ctx.font = `700 ${16 * d}px system-ui,-apple-system,sans-serif`; ctx.fillText(v, x, (cy - 7) * d);
+      ctx.fillStyle = '#9fb8bf'; ctx.font = `500 ${10 * d}px system-ui,-apple-system,sans-serif`; ctx.fillText(label, x, (cy + 13) * d);
+    });
+    ctx.restore();
   }
   // Tool icons, drawn at any size (screen or world).
   function toolIcon(id, x, y, size, alpha = 1) {
@@ -1865,7 +1940,7 @@
       const live = {pl, facing, anim, landedAt, dead, inv, cam, enemies, parts, bumps, frameNo, sq, skidding, big, growing, items};
       ({pl, facing, anim, landedAt, dead, inv, cam, enemies, parts, bumps, frameNo, sq, skidding, big, growing, items} = snap);
       composite(() => scene(snap.arcs, snap.at));
-      ctx.setTransform(1, 0, 0, 1, 0, 0); drawHud();
+      ctx.setTransform(1, 0, 0, 1, 0, 0); drawConsole(); drawHud();
       ({pl, facing, anim, landedAt, dead, inv, cam, enemies, parts, bumps, frameNo, sq, skidding, big, growing, items} = live);
       return;
     }
@@ -1877,7 +1952,7 @@
     for (const e of enemies) if (e.px !== undefined) { e.x = lerp(e.px, e.x); e.y = lerp(e.py, e.y); }
     composite(() => scene(plan && plan.arcs, plan ? plan.at : 0));
     ({pl, cam} = live); enemies.forEach((e, i) => { [e.x, e.y] = ex[i]; }); drawT = null;
-    ctx.setTransform(1, 0, 0, 1, 0, 0); drawTitle(); drawCard(); drawChapter(); drawHud();
+    ctx.setTransform(1, 0, 0, 1, 0, 0); drawConsole(); drawTitle(); drawCard(); drawChapter(); drawHud();
   }
 
   /* ---------------- loop ---------------- */
