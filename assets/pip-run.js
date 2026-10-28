@@ -435,7 +435,7 @@
     const bio = biomeAt(x);
     for (let i = 0; i < n; i++) {
       const s = (i % 2 ? 1 : -1) * (.35 + (i * 7 % 5) * .22) * power, up = (.5 + (i * 3 % 4) * .3) * power, life = 26 + i % 3 * 7;
-      if (m === 'ice' || bio === 'frost') parts.push({x: x + s * 1.5, y: y - .5, vx: s, vy: -up, life: life + 6, l0: life + 6, col: '#ffffff', r: 2 + i % 3 * .8, soft: true, g: .035, drag: .92});
+      if (bio === 'frost') parts.push({x: x + s * 1.5, y: y - .5, vx: s, vy: -up, life: life + 6, l0: life + 6, col: '#ffffff', r: 2 + i % 3 * .8, soft: true, g: .035, drag: .92});
       else if (m === 'cloud') parts.push({x: x + s * 2, y: y - 1, vx: s * .8, vy: -up * .5, life: life + 10, l0: life + 10, col: '#f4f0ff', r: 2.6 + i % 3, soft: true, g: -.012, drag: .9});
       else if (bio === 'caves') parts.push({x: x + s * 2.5, y: y - 1 - i % 3, vx: ((i * 37 + frameNo) % 11 - 5) * .09, vy: -(.2 + (i * 53 + frameNo) % 7 * .09), life: 50 + i % 4 * 14, l0: 50 + i % 4 * 14, col: ['#8ff7de', '#c9a8ff', '#a5fbe8'][i % 3], r: .9, glow: true, g: -.006, drag: .97});
       else if (m === 'grass' && i % 2) parts.push({x, y: y - 1, vx: s * 1.2, vy: -up * 1.6, life: 34, l0: 34, col: ['#7cc24e', '#a6dc6a', '#5aa83f'][i % 3], r: 1.1, leaf: true, spin: s, g: .06, drag: .95});
@@ -447,7 +447,7 @@
   function stepFx(st) {
     const m = surface(), x = pl.x + 6 + (st % 2 ? 1.5 : -1.5), y = pl.y + pl.h, bio = biomeAt(x);
     if (bio !== 'meadow' || st % 2) kick(x, y, 1, .7, m);
-    if (!pl.on && (m === 'ice' || m === 'cloud' || (bio === 'caves' && m === 'stone'))) { prints.push({x, y, at: frameNo, m: bio === 'caves' ? 'moss' : m}); if (prints.length > 40) prints.shift(); }
+    if (!pl.on && (m === 'snow' || m === 'cloud' || m === 'moss')) { prints.push({x, y, at: frameNo, m}); if (prints.length > 40) prints.shift(); }
     if (m === 'grass') {
       const tx = Math.floor(x / TS), ty = Math.floor((y + 1) / TS), hf = hash(seed ^ 0xf10, tx * 16 + ty), fx = tx * TS + 3 + (hf >>> 3) % 10;
       if (hf % 5 === 0 && Math.abs(fx - x) < 5) {
@@ -875,7 +875,7 @@
     if (pl.x < cam) { pl.x = cam; pl.vx = Math.max(0, pl.vx); }
     if (inp.r && !inp.l) facing = 1; else if (inp.l && !inp.r) facing = -1;
     anim += Math.abs(pl.vx);
-    if (pl.ground && Math.abs(pl.vx) > .3) { const st = Math.floor(anim / ((shownBig() ? 1.5 : 1.15) * 8)); if (st !== stepAt) { stepAt = st; sfx('step', {surface: surface(), v: Math.abs(pl.vx) / P.max}); stepFx(st); } }
+    if (pl.ground && Math.abs(pl.vx) > .3) { const st = Math.floor(anim / (stride() / 2)); if (st !== stepAt) { stepAt = st; sfx('step', {surface: surface(), v: Math.abs(pl.vx) / P.max}); stepFx(st); } }
     sq *= .78;
     skidding = pl.ground && Math.abs(pl.vx) > 1 && (inp.l && pl.vx > 0 || inp.r && pl.vx < 0);
     if (ev.jumped) { sfx('jump'); sq = 1; kick(pl.x + 6, pl.y + pl.h, 4, 1, under); }
@@ -954,7 +954,7 @@
   function surface() {
     if (pl.on) return biomeAt(pl.x) === 'sky' ? 'cloud' : 'wood';
     const id = tileAt(Math.floor((pl.x + 6) / TS), Math.floor((pl.y + pl.h + 1) / TS));
-    if (id === EARTH) return {meadow: 'grass', frost: 'ice', sky: 'cloud', caves: 'stone'}[biomeAt(pl.x)];
+    if (id === EARTH) return {meadow: 'grass', frost: 'snow', sky: 'cloud', caves: 'moss'}[biomeAt(pl.x)];
     const pillar = (id === PIPE_L || id === PIPE_R) && biomeAt(pl.x) === 'caves';   // columns are stumps, or stone pillars in the caves
     return id === CRUMBLE && biomeAt(pl.x) === 'caves' ? 'crystal' : id === STONE || pillar ? 'stone' : 'wood';
   }
@@ -1162,7 +1162,7 @@
     const bandH = VIEW_H * S;
     oy = portrait ? Math.round(top * dpr) : Math.round((cv.height - bandH) / 2); ox = 0;
     consoleY = (oy + bandH) / dpr;
-    tileCache = new Map(); farCache = null; propCache.clear(); cloudCache.clear(); mtnCache = {}; lightCache = {};
+    tileCache = new Map(); farCache = null; propCache.clear(); cloudCache.clear(); mtnCache = {}; lightCache = {}; foreCache.clear();
   }
   function tileCanvas(id, top, biome = 'meadow', v = 0) {
     const key = id + ':' + (top ? 1 : 0) + (id === BRICK ? ':' + biome + v : id === CRUMBLE ? ':' + biome : '');
@@ -1727,8 +1727,118 @@
     const m = biomeMix();
     biomeBackground(m.a);
     if (m.w > 0) { ctx.save(); ctx.globalAlpha = m.w; biomeBackground(m.b); ctx.restore(); }
-    drawWonder();
     drawLandmark(m);
+    drawSkyTime(m);
+    drawWonder();
+  }
+  /* ---------------- time of day ----------------
+     The sun goes down as the journey goes on: day for the first chapters,
+     golden hour, dusk, a starry night with fireflies over the next meadow,
+     then dawn: one day every five regions. A function of distance, so ghosts
+     and replays see the same sky. Underground, the caves keep their own dark. */
+  const DAY = 5 * REGION * CW * TS;
+  const DAYKEYS = [[0, 'day'], [.46, 'day'], [.54, 'gold'], [.6, 'gold'], [.66, 'dusk'], [.72, 'night'], [.9, 'night'], [.95, 'dawn'], [1, 'day']];
+  function dayAt(x) {
+    const p = ((x / DAY) % 1 + 1) % 1, w = {day: 0, gold: 0, dusk: 0, night: 0, dawn: 0};
+    for (let i = 1; i < DAYKEYS.length; i++) if (p <= DAYKEYS[i][0]) {
+      const [a, ka] = DAYKEYS[i - 1], [b, kb] = DAYKEYS[i], f = (p - a) / (b - a), e = f * f * (3 - 2 * f);
+      w[ka] += 1 - e; w[kb] += e; break;
+    }
+    return w;
+  }
+  // Each phase's colour at the top, two thirds down and the foot of the sky,
+  // and over the world; a frame blends them into one wash for each.
+  const SKYWASH = {gold: [['255,168,84', .08], ['255,140,60', .3], ['255,140,60', .22]], dawn: [['255,182,196', .08], ['255,160,150', .3], ['255,160,150', .22]],
+    dusk: [['46,36,110', .5], ['160,80,140', .32], ['255,130,110', .26]], night: [['8,12,38', .74], ['12,20,56', .62], ['20,26,64', .55]]};
+  const WORLDWASH = {gold: ['255,150,70', .12], dawn: ['255,160,170', .09], dusk: ['84,52,132', .22], night: ['10,18,56', .4]};
+  function mixWash(list) {
+    let A = 0, r = 0, g = 0, b = 0;
+    for (const [w, c, a] of list) { const k = w * a; if (k <= 0) continue; const [cr, cg, cb] = c.split(',').map(Number); A += k; r += cr * k; g += cg * k; b += cb * k; }
+    return A > .005 ? `rgba(${r / A | 0},${g / A | 0},${b / A | 0},${Math.min(1, A).toFixed(3)})` : 'rgba(0,0,0,0)';
+  }
+  function drawSkyTime(m) {
+    const o = 1 - weightOf(m, 'caves'), d = dayAt(m.centre); if (o < .02 || d.day > .99) return;
+    const W = cv.width, H = cv.height, bandH = VIEW_H * S, t = drawT ?? frameNo, phases = ['gold', 'dawn', 'dusk', 'night'];
+    const q = ctx.createLinearGradient(0, oy, 0, oy + bandH);
+    [0, .6, 1].forEach((at, k) => q.addColorStop(at, mixWash(phases.map(ph => [d[ph] * o, ...SKYWASH[ph][k]]))));
+    ctx.fillStyle = q; ctx.fillRect(0, 0, W, portrait ? oy + bandH : H);   // the phone console covers the rest
+    // A low sun at golden hour (in the west) and at dawn (in the east).
+    for (const [a, sx, col] of [[d.gold * o, .84, '#ffc478'], [d.dawn * o, .14, '#ffd6aa']]) {
+      if (a < .01) continue;
+      blob(W * sx, oy + bandH * .6, bandH * .5, col, .5 * a);
+      ctx.globalAlpha = .85 * a; ctx.fillStyle = '#fff1cf'; ctx.beginPath(); ctx.arc(W * sx, oy + bandH * .6, 9 * S, 0, 7); ctx.fill(); ctx.globalAlpha = 1;
+    }
+    const n = d.night * o + d.dusk * o * .35;
+    if (n < .01) return;
+    for (let i = 0; i < 70; i++) {   // stars, a little twinkle, almost still
+      const x = ((i * 157.3 - cam * S * .02) % W + W) % W, y = (oy + bandH * .62) * ((i * 61 % 97) / 97) ** 1.3, tw = .55 + .45 * Math.sin(t * (.03 + i % 5 * .01) + i);
+      ctx.globalAlpha = n * tw * (.5 + (i % 3) * .25); ctx.fillStyle = i % 7 ? '#ffffff' : '#ffe9b0'; ctx.beginPath(); ctx.arc(x, y, (.35 + (i % 4) * .18) * S, 0, 7); ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+    const mx = W * .6, my = oy + bandH * .22;   // the moon, clear of the HUD's corners
+    blob(mx, my, 34 * S, '#dfe8ff', .45 * n);
+    ctx.globalAlpha = n; ctx.fillStyle = '#f6f2e4'; ctx.beginPath(); ctx.arc(mx, my, 7.5 * S, 0, 7); ctx.fill();
+    ctx.fillStyle = 'rgba(196,190,170,.55)'; for (const [dx, dy, r] of [[-2.4, -1.5, 1.6], [2, 1.8, 1.2], [1.2, -3, .8]]) { ctx.beginPath(); ctx.arc(mx + dx * S, my + dy * S, r * S, 0, 7); ctx.fill(); }
+    ctx.globalAlpha = 1;
+  }
+  // Over the world itself: a warm or cool grade, Pip's own warm glow after
+  // sunset, and fireflies over the meadow at night.
+  function drawDusk(m) {
+    const o = 1 - weightOf(m, 'caves'), d = dayAt(m.centre); if (o < .02 || d.day > .99) return;
+    const W = cv.width, bandH = VIEW_H * S, t = drawT ?? frameNo;
+    ctx.fillStyle = mixWash(Object.entries(WORLDWASH).map(([ph, [c, a]]) => [d[ph] * o, c, a])); ctx.fillRect(0, oy, W, bandH);
+    const dark = (d.night + d.dusk * .5) * o; if (dark < .02) return;
+    if (!dead) {
+      const [px, py] = W2D(pl.x + 6, pl.y + pl.h * .45);
+      ctx.globalCompositeOperation = 'lighter'; blob(px, py, 48 * S, '#ffd9a0', .3 * dark); ctx.globalCompositeOperation = 'source-over';
+    }
+    const ff = d.night * weightOf(m, 'meadow');
+    for (let i = 0; ff > .02 && i < 22; i++) {
+      const x = (((i * 83.7 - cam * .9 + Math.sin(t * .011 + i) * 30) * S) % (W + 60) + W + 60) % (W + 60) - 30, y = oy + bandH * (.32 + (i * 37 % 50) / 100) + Math.sin(t * .017 + i * 2) * 10 * S;
+      const a = ff * (.35 + .65 * Math.max(0, Math.sin(t * .05 + i * 1.7))), wx = cam + x / S, wy = (y - oy) / S;
+      if (tileAt(Math.floor(wx / TS), Math.floor(wy / TS))) continue;   // only in the open air
+      blob(x, y, 5 * S, '#fff2a0', .8 * a); ctx.globalAlpha = a; ctx.fillStyle = '#fffbe0'; ctx.beginPath(); ctx.arc(x, y, .7 * S, 0, 7); ctx.fill(); ctx.globalAlpha = 1;
+    }
+  }
+  /* ---------------- foreground ----------------
+     Out-of-focus plants pass close to the camera at the foot of the stage,
+     faster than the world, for depth; they thin out around Pip. Painted small
+     and drawn four times larger: the blur of a close, unfocused lens. */
+  const foreCache = new Map();
+  function foreSprite(biome, v) {
+    const key = biome + v + ':' + S; if (foreCache.has(key)) return foreCache.get(key);
+    const W = 64, H = 48, q = .25 * S, c2 = document.createElement('canvas'); c2.width = Math.max(4, Math.round(W * q)); c2.height = Math.max(4, Math.round(H * q));
+    const g = c2.getContext('2d'), r = rng(0xf0e + v * 31 + biome.length * 7); g.scale(c2.width / W, c2.height / H);
+    const blade = (x, h, lean, w, col) => { g.fillStyle = col; g.beginPath(); g.moveTo(x - w, H); g.quadraticCurveTo(x + lean * .3, H - h * .6, x + lean, H - h); g.quadraticCurveTo(x + lean * .3 + w * .4, H - h * .55, x + w, H); g.fill(); };
+    const dot = (x, y, rad, col) => { g.fillStyle = col; g.beginPath(); g.arc(x, y, rad, 0, 7); g.fill(); };
+    if (biome === 'meadow' || biome === 'frost') {
+      const frost = biome === 'frost', cols = frost ? ['#7f95b0', '#a8bcd2', '#62789a', '#c9d8e8'] : ['#2f6b2a', '#3f8a35', '#24541e', '#4f9c3d'];
+      if (frost) { g.fillStyle = '#e8f1fa'; g.beginPath(); g.ellipse(32, H, 30, 9, 0, 0, 7); g.fill(); }
+      for (let i = 0; i < 26; i++) { const x = 32 + (r() - .5) * 42; blade(x, 16 + r() * 28 * (1 - Math.abs(x - 32) / 40), (x - 32) * .45 + (r() - .5) * 10, 1.6 + r(), cols[i % 4]); }
+      if (!frost && v % 2) for (let i = 0; i < 3; i++) dot(18 + i * 13 + r() * 6, 8 + r() * 12, 2.6 + r() * 1.5, ['#f6b6cf', '#ffe08a', '#ffffff'][(i + v) % 3]);
+      if (frost) for (let i = 0; i < 8; i++) dot(10 + r() * 44, 14 + r() * 20, .8 + r(), '#ffffff');
+    } else if (biome === 'sky') {
+      for (let i = 0; i < 7; i++) { const x = 8 + i * 8 + r() * 4, rad = 8 + Math.sin(i / 6 * Math.PI) * 9 + r() * 3; dot(x, H - rad * .5, rad, i % 2 ? '#ffffff' : '#f1edfb'); }
+      g.fillStyle = 'rgba(190,180,230,.45)'; g.fillRect(0, H - 6, W, 6);
+    } else {
+      g.fillStyle = '#14101f'; g.beginPath(); g.moveTo(10, H); g.lineTo(22 + v * 3, 10 + v * 4); g.lineTo(30, H); g.moveTo(26, H); g.lineTo(40, 20); g.lineTo(52, H); g.fill();
+      dot(22 + v * 3, 11 + v * 4, 2.2, '#5ff2d8'); dot(40, 21, 1.8, '#b48bff');
+    }
+    foreCache.set(key, c2); return c2;
+  }
+  function drawFore(m) {
+    const W = cv.width, base = oy + VIEW_H * S, par = 1.45, step = 120, [px] = W2D(pl.x + 6, 0);
+    for (const id of new Set([m.a, m.b])) {
+      const wgt = weightOf(m, id); if (wgt < .02) continue;
+      for (let i = Math.floor((cam * par - 90) / step), u; (u = i * step) < cam * par + W / S + 90; i++) {
+        const h = hash(seed ^ 0xf07, i); if (h % 5 < 2) continue;
+        const spr = foreSprite(id, h % 3), sc = .8 + (h >>> 4) % 5 * .12, w = 64 * S * sc, hh = 48 * S * sc, x = (u + (h >>> 8) % 50 - cam * par) * S;
+        ctx.globalAlpha = wgt * (.3 + .6 * clamp(0, (Math.abs(x + w / 2 - px) - 18 * S) / (40 * S), 1));
+        if (h & 64) { ctx.save(); ctx.translate(x + w, 0); ctx.scale(-1, 1); ctx.drawImage(spr, 0, base - hh + 6 * S, w, hh); ctx.restore(); }
+        else ctx.drawImage(spr, x, base - hh + 6 * S, w, hh);
+      }
+    }
+    ctx.globalAlpha = 1;
   }
   /* ---------------- wonders ----------------
      Most regions hold one rare sight in the sky, seeded and never the same
@@ -1941,7 +2051,8 @@
   function drawLight(m) {
     for (const id of new Set([m.a, m.b])) {
       const w = weightOf(m, id); if (w < .02 || !LIGHT[id]) continue;
-      ctx.globalAlpha = w; ctx.drawImage(lightLayer(id), 0, oy, cv.width, VIEW_H * S); ctx.globalAlpha = 1;
+      const d = dayAt(m.centre), a = w * (1 - d.night - d.dusk * .5); if (a < .08) continue;   // the sun's bloom goes with the sun
+      ctx.globalAlpha = a; ctx.drawImage(lightLayer(id), 0, oy, cv.width, VIEW_H * S); ctx.globalAlpha = 1;
     }
   }
   // Caves are dark: Pip, crystals, seeds and star blocks carry light.
@@ -2153,6 +2264,65 @@
     ctx.save(); ctx.globalAlpha = a; ctx.fillStyle = '#fffbea'; ctx.beginPath(); ctx.arc(x, y, r, 0, 7); ctx.fill();
     ctx.fillStyle = '#c0582f'; ctx.font = `700 ${r * 1.5}px system-ui`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText('!', x, y + r * .08); ctx.restore();
   }
+  /* Running and standing, Pip's legs are drawn rather than taken from the
+     painted frames: those were cut-outs, and stepped faster than the screen
+     refreshes they flickered instead of striding. One continuous phase, from
+     the distance run, drives both legs half a cycle apart: a boot plants and
+     sweeps back under the hip, the heel rolls up, the leg swings through with
+     the knee forward and reaches for the next step; the body dips at mid-stance
+     and rises between steps. The painted body (and the air, landing and skid
+     poses) stay as painted. Sprite pixels, feet at the origin. */
+  const STRIDE = 20;   // world px per full cycle (two steps), small Pip
+  const stride = () => STRIDE * (shownBig() ? 4 / 3 : 1);
+  let torso = null;
+  function torsoSprite() {   // frame 0 above the hips, clear of its cut-out legs
+    if (torso) return torso;
+    const c2 = document.createElement('canvas'); c2.width = FRAME_W; c2.height = 252;
+    const g = c2.getContext('2d');
+    g.beginPath(); g.rect(0, 0, FRAME_W, 212); g.ellipse(100, 223, 54, 25, 0, 0, Math.PI * 2); g.clip();
+    g.drawImage(sheet, 0, 0, FRAME_W, 252, 0, 0, FRAME_W, 252);
+    return (torso = c2);
+  }
+  const LEG = {thigh: 17, shin: 16, ankle: 19, hip: -55};
+  // Where a boot is, this far through its cycle: ahead of the hip at contact,
+  // behind it at push-off (heel rolling up), lifted and swinging through after.
+  function footAt(u, A, lift) {
+    if (u < .5) return [A * (1 - 4 * u), 0, u < .08 ? -.2 * (1 - u / .08) : u > .36 ? .45 * (u - .36) / .14 : 0];
+    const s = (u - .5) * 2, e = s * s * (3 - 2 * s);
+    return [-A + 2 * A * e, -lift * Math.sin(Math.PI * s), .45 * (1 - e) - .2 * e];
+  }
+  function drawLeg(hx, hy, [fx, fy, rot], far) {
+    const a = LEG.thigh, b = LEG.shin, ax = hx + fx - Math.max(0, rot) * 6, ay = fy - LEG.ankle - Math.max(0, rot) * 9;   // fx is from the hip
+    let dx = ax - hx, dy = ay - hy, d = Math.hypot(dx, dy);
+    if (d > a + b - .5) { const k = (a + b - .5) / d; dx *= k; dy *= k; d = a + b - .5; }
+    const base = Math.atan2(dy, dx), bend = Math.acos(clamp(-1, (a * a + d * d - b * b) / (2 * a * d), 1));
+    const kx = hx + a * Math.cos(base - bend), ky = hy + a * Math.sin(base - bend), ex = hx + dx, ey = hy + dy;
+    ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+    ctx.strokeStyle = far ? '#c8a58c' : '#efd0b4'; ctx.lineWidth = 23; ctx.beginPath(); ctx.moveTo(hx, hy); ctx.lineTo(kx, ky); ctx.lineTo(ex, ey); ctx.stroke();
+    ctx.strokeStyle = far ? 'rgba(255,236,220,.18)' : 'rgba(255,248,238,.6)'; ctx.lineWidth = 6; ctx.beginPath(); ctx.moveTo(hx - 5, hy); ctx.lineTo(kx - 5, ky - 1); ctx.lineTo(ex - 5, ey - 1); ctx.stroke();
+    ctx.strokeStyle = far ? 'rgba(60,30,30,.25)' : 'rgba(150,96,80,.35)'; ctx.lineWidth = 5; ctx.beginPath(); ctx.moveTo(hx + 7, hy + 2); ctx.lineTo(kx + 7, ky + 2); ctx.lineTo(ex + 7, ey); ctx.stroke();
+    // The boot: a big rounded toe, a dark sole, a gloss on the toe cap.
+    ctx.save(); ctx.translate(ex, ey); ctx.rotate(rot); ctx.scale(1.25, 1.25);
+    const g = ctx.createLinearGradient(0, -12, 0, 12); g.addColorStop(0, far ? '#b0612a' : '#e3903f'); g.addColorStop(.55, far ? '#7a380e' : '#bf5e1a'); g.addColorStop(1, far ? '#512304' : '#7a3508');
+    ctx.fillStyle = g; ctx.beginPath(); ctx.moveTo(-11, -9); ctx.quadraticCurveTo(-17, 2, -12, 10); ctx.lineTo(22, 10); ctx.quadraticCurveTo(33, 10, 31, 1);
+    ctx.quadraticCurveTo(28, -9, 11, -8); ctx.quadraticCurveTo(5, -12, -2, -12); ctx.closePath(); ctx.fill();
+    ctx.fillStyle = far ? '#3d1904' : '#5a2706'; ctx.beginPath(); ctx.roundRect(-13, 7.2, 45, 4.2, 2); ctx.fill();
+    ctx.fillStyle = far ? 'rgba(255,190,130,.22)' : 'rgba(255,206,150,.62)'; ctx.beginPath(); ctx.ellipse(17, -3, 9, 3.4, -.18, 0, 7); ctx.fill();
+    ctx.fillStyle = far ? 'rgba(255,220,180,.1)' : 'rgba(255,226,190,.35)'; ctx.beginPath(); ctx.ellipse(-5, -9.5, 7, 2.2, 0, 0, 7); ctx.fill();
+    ctx.restore();
+  }
+  function drawRunner(phase, k) {
+    // k: 0 standing .. 1 full speed (longer strides, higher swing). The body
+    // sits as high as the planted boot allows, so it dips as the legs spread
+    // at each contact and rises as they pass.
+    const A = 3 + 18 * k, lift = 3 + 12 * k, back = footAt((phase + .5) % 1, A, lift), front = footAt(phase % 1, A, lift);
+    const plant = (phase % 1) < .5 ? front : back, L = (LEG.thigh + LEG.shin) * .97;
+    const dip = -LEG.hip - LEG.ankle - Math.sqrt(Math.max(0, L * L - plant[0] * plant[0]));
+    const bob = Math.max(0, dip), hips = [[-46, LEG.hip + bob], [-8, LEG.hip + 1 + bob]];
+    drawLeg(hips[0][0], hips[0][1], back, true);
+    ctx.drawImage(torsoSprite(), -122, -300 + bob);
+    drawLeg(hips[1][0], hips[1][1], front, false);
+  }
   function drawPip() {
     if (inv && !dead && Math.floor(inv / 4) % 2) return;
     const [x, y] = W2D(pl.x + P.w / 2, pl.y + pl.h + 1);
@@ -2161,8 +2331,7 @@
     else if (!pl.ground) f = pl.vy < -2.5 ? 17 : pl.vy < 1.2 ? 18 : 19;
     else if (skidding) f = 21;                       // braced crouch reads as a skid
     else if (frameNo - landedAt < 5) f = 20;
-    else if (Math.abs(pl.vx) < .12) f = 0;
-    else f = Math.floor(anim / (shownBig() ? 1.5 : 1.15)) % 16;
+    else f = -1;                                     // standing or running: drawn legs
     const sc = pipVisual() / 295 * S, sx = 1 - .13 * sq, sy = 1 + .15 * sq;
     // Lean into speed on the ground, brace against a skid.
     const lean = dead ? 0 : pl.ground ? (skidding ? -.12 : .06 * Math.min(1, Math.abs(pl.vx) / P.max)) : .04;
@@ -2170,7 +2339,10 @@
     if (!dead && pl.ground) { ctx.fillStyle = 'rgba(40,30,20,.22)'; ctx.beginPath(); ctx.ellipse(0, -S * .4, 8 * S * (shownBig() ? 1.25 : 1), 1.8 * S, 0, 0, 7); ctx.fill(); }
     if (dead) ctx.rotate(Math.min(Math.PI, dead * .08));
     ctx.scale(facing, 1); ctx.rotate(lean); ctx.scale(sx * sc, sy * sc);
-    if (sheet.complete && sheet.naturalWidth) ctx.drawImage(sheet, f * FRAME_W, 0, FRAME_W, FRAME_H, -122, -300, FRAME_W, FRAME_H);
+    if (sheet.complete && sheet.naturalWidth) {
+      if (f < 0) drawRunner(anim / stride(), clamp(0, Math.abs(pl.vx) / 1.2, 1));
+      else ctx.drawImage(sheet, f * FRAME_W, 0, FRAME_W, FRAME_H, -122, -300, FRAME_W, FRAME_H);
+    }
     else { ctx.fillStyle = '#4fae9a'; ctx.beginPath(); ctx.arc(0, -200, 90, Math.PI, 0); ctx.fill(); ctx.fillStyle = '#f2c9a0'; ctx.fillRect(-55, -200, 110, 190); }
     ctx.restore();
   }
@@ -2241,14 +2413,14 @@
     ctx.globalAlpha = 1;
   }
   // Footprints pressed into snow and cloud; in the caves, moss that glows where Pip stepped.
-  const PRINT_LIFE = {ice: 900, cloud: 260, moss: 300};
+  const PRINT_LIFE = {snow: 900, cloud: 260, moss: 300};
   function drawPrints() {
     const t = drawT ?? frameNo;
     for (const k of prints) {
       const age = t - k.at, f = 1 - age / PRINT_LIFE[k.m]; if (age < 0 || f <= 0) continue;
       const [x, y] = W2D(k.x, k.y); if (x < -20 || x > cv.width + 20) continue;
       if (k.m === 'moss') { blob(x, y, 7 * S, '#8ff7de', .8 * f * f); continue; }
-      ctx.fillStyle = k.m === 'ice' ? `rgba(84,118,168,${(.38 * f).toFixed(3)})` : `rgba(150,140,206,${(.3 * f).toFixed(3)})`;
+      ctx.fillStyle = k.m === 'snow' ? `rgba(84,118,168,${(.38 * f).toFixed(3)})` : `rgba(150,140,206,${(.3 * f).toFixed(3)})`;
       ctx.beginPath(); ctx.ellipse(x, y + .9 * S, 2.3 * S, .75 * S, 0, 0, 7); ctx.fill();
       ctx.fillStyle = `rgba(255,255,255,${(.5 * f).toFixed(3)})`; ctx.beginPath(); ctx.ellipse(x + .4 * S, y + 1.7 * S, 2 * S, .4 * S, 0, 0, 7); ctx.fill();
     }
@@ -2293,7 +2465,10 @@
         const [, , sw, sh, H] = PROP[p.kind], w = H * sw / sh, cx = p.x * TS + 8 + ((p.hv >>> 5) % 7 - 3), top = p.s * TS + 3 - H, snow = p.kind === 'pine';
         const [sx] = W2D(cx, 0); if (sx < -w * S || sx > cv.width + w * S) return;
         const key = ch.ci * 64 + i, last = rustle.get(key);
-        if (!dead && Math.abs(pl.x + 6 - cx) < 20 && pl.y + pl.h > top + H * .4 && (last === undefined || t - last > 240 || t < last)) rustle.set(key, t);
+        if (!dead && Math.abs(pl.x + 6 - cx) < 20 && pl.y + pl.h > top + H * .4 && (last === undefined || t - last > 240 || t < last)) {
+          rustle.set(key, t);
+          if (!replay && typeof PipAudio !== 'undefined') PipAudio.fx('rustle', {snow});
+        }
         const since = rustle.has(key) ? t - rustle.get(key) : -1;
         for (let j = 0; j < (since >= 0 && since < 170 ? 10 : 3); j++) {
           const burst = j >= 3, P = 460 + j * 70, off = hash(p.hv, j) % P, ph = burst ? (since - (j - 3) * 9) / 150 : ((t + off) % P) / P;
@@ -2471,7 +2646,7 @@
     drawBackground(); drawDestination(); drawTiles(); drawPrints(); drawGrass(); drawLeaves(); drawMovers(); drawCrystals(); drawSeeds(); drawMarks();
     drawItems();
     for (const e of enemies) drawEnemy(e);
-    drawGhost(); drawPip(); drawParts(); drawWeather(m); drawLight(m); drawDarkness(m);
+    drawGhost(); drawPip(); drawParts(); drawWeather(m); drawFore(m); drawDusk(m); drawLight(m); drawDarkness(m);
     if (!human || replay) drawThoughts(arcs, at);
     drawWary(); drawDirectorWorld();
   }
@@ -2528,7 +2703,8 @@
     if (acc > 1) acc = 1;
     if (typeof PipAudio !== 'undefined') {
       const m = biomeMix(), biomes = {}; biomes[m.a] = 1 - m.w; biomes[m.b] = (biomes[m.b] || 0) + m.w;
-      PipAudio.update({biomes, biome: m.w > .5 ? m.b : m.a, tension, wind: biomeAt(pl.x) === 'sky' ? windAt(pl.x) : 0, dt});
+      const d = dayAt(pl.x);
+      PipAudio.update({biomes, biome: m.w > .5 ? m.b : m.a, tension, wind: biomeAt(pl.x) === 'sky' ? windAt(pl.x) : 0, night: d.night + d.dusk * .5, dt});
     }
     render(); raf = requestAnimationFrame(frame);
   }
@@ -2549,7 +2725,7 @@
   if (playing) raf = requestAnimationFrame(frame);
   // Test hook: lets the smoke test drive the simulation without a browser clock.
   window.__pipRun = {tick, reset, state: () => ({pl, enemies, seeds, maxX, dead, human, cam, viewW}), GAP, layout, tileAt: (x, y) => tileAt(x, y),
-    art: ci => { const ch = chunk(ci); return ch && {art: chunkArt(ch, Math.round(TS * S)), biome: ch.biome}; }, render: () => render(), fx: () => ({parts: parts.length, prints: prints.length, rustled: rustle.size}),
+    art: ci => { const ch = chunk(ci); return ch && {art: chunkArt(ch, Math.round(TS * S)), biome: ch.biome}; }, render: () => render(), fx: () => ({parts: parts.length, prints: prints.length, rustled: rustle.size}), dayAt,
     scores: () => { const th = enemies.filter(e => e.state !== 'dead' && e.state !== 'squash' && Math.abs(e.x - pl.x) < 260); return OPTIONS.map(o => [o.dir, o.wait, o.hold, Math.round(simulate(o, th).score)]); },
     actions: () => actions(),
     tile: (x, y, v) => setTile(x, y, v),
