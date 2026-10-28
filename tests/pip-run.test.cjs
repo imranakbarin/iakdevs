@@ -7,7 +7,17 @@ const page = fs.readFileSync(path.join(root, 'pip-run.html'), 'utf8');
 assert.match(page, /assets\/pip-run\.js\?v=\d+/);
 assert.match(fs.readFileSync(path.join(root, 'index.html'), 'utf8'), /<option value="pip">Pip Run<\/option>/, 'mode is listed in the app');
 
-const ctx2d = new Proxy({}, {get: (_, k) => k === 'createLinearGradient' || k === 'createRadialGradient' ? () => ({addColorStop() {}}) : k === 'measureText' ? () => ({width: 10}) : () => {}, set: () => true});
+// In strict mode every drawing call is checked the way a browser would: finite
+// numbers, no negative radii (canvas throws on those).
+let strict = false, drawn = 0;
+const check = (k, a) => {
+  if (!strict) return;
+  drawn++;
+  a.forEach(v => { if (typeof v === 'number') assert.ok(Number.isFinite(v), `${k}(${a.join(', ')})`); });
+  const radii = {arc: [2], ellipse: [2, 3], createRadialGradient: [2, 5]}[k] || [];
+  for (const i of radii) assert.ok(a[i] >= 0, `${k} with a negative radius: (${a.join(', ')})`);
+};
+const ctx2d = new Proxy({}, {get: (_, k) => k === 'createLinearGradient' || k === 'createRadialGradient' ? (...a) => { check(k, a); return {addColorStop() {}}; } : k === 'measureText' ? () => ({width: 10}) : (...a) => check(k, a), set: () => true});
 const canvas = () => ({getContext: () => ctx2d, clientWidth: 1363, clientHeight: 936, width: 0, height: 0, addEventListener() {}, setPointerCapture() {}});
 const game = canvas();
 const sandbox = {
@@ -99,4 +109,23 @@ for (const seed of [3, 11]) {
   xs.forEach(([x, y], i) => { const p = G.ghost.at(i + 1); assert.ok(p.x === x && p.y === y, `ghost diverged at frame ${i + 1}`); });
   for (const bad of ['', 'x', '1.zz', '2.1.a0.1.AA', '1.1.a0.1.A*']) assert.equal(G.ghost.decode(bad), null, `rejects ${bad}`);
 }
-console.log('Pip Run PASS: jump-sized gaps, finite physics, demo player progresses through 4 seeded worlds, reaches each chapter’s destination, clears block rows that run up to a gap, and gets past ferries, lifts, crumble bridges, floating steps and podspitters, referee refuses traps and accepted walls stay passable, shared runs replay exactly as ghosts.');
+// The painted world: every biome's ground, stone and stumps paint with sane
+// geometry, once per chunk, and again only after a tile of theirs changes.
+{
+  const biomes = new Set();
+  strict = true;
+  for (const seed of [1, 5]) {
+    G.reset(seed);
+    for (let ci = 0; ci < 50; ci++) {
+      drawn = 0; const r = G.art(ci);
+      biomes.add(r.biome);
+      assert.ok(drawn > 200 && r.art.y0 >= 0 && r.art.y0 < 15, `seed ${seed} chunk ${ci} (${r.biome}): painted ${drawn} calls from row ${r.art.y0}`);
+    }
+  }
+  strict = false;
+  assert.deepEqual([...biomes].sort(), ['caves', 'frost', 'meadow', 'sky'], 'all four biomes painted');
+  G.reset(2); const a = G.art(1).art;
+  assert.equal(G.art(1).art, a, 'a chunk is painted once');
+  G.tile(24 + 5, 14, 0); assert.notEqual(G.art(1).art, a, 'and repainted when its ground changes');
+}
+console.log('Pip Run PASS: jump-sized gaps, finite physics, demo player progresses through 4 seeded worlds, reaches each chapter’s destination, clears block rows that run up to a gap, and gets past ferries, lifts, crumble bridges, floating steps and podspitters, referee refuses traps and accepted walls stay passable, shared runs replay exactly as ghosts, and the painted ground of all four biomes draws with sane geometry, once per chunk.');
