@@ -45,6 +45,8 @@ Inputs are recorded on the scene clock, so paused redraws remain pixel-identical
 
 `pip-run.html` + `assets/pip-run.js` (~40 KB of source, 13 KB gzipped) is a real game rather than an animation:
 
+- **Hero:** Pip is original pixel art drawn in code (16×23 sprite pixels): sun-yellow explorer cap with a seed sprout, big eyes, sky-blue tunic, leather belt, brown boots and a red scarf rendered as a live ribbon. Frames: idle/blink, a four-step run, jump, fall, skid and tumble, with squash and stretch on landing and take-off.
+
 - **Physics:** fixed 60 Hz with sub-pixel motion; acceleration, skids, variable jump height (hold to jump higher), coyote time and jump buffering.
 - **World:** an endless seeded tile world from a chunk grammar (runs, gaps, steps, pipes, stone pyramids, block tiers). Gap widths come from simulating the jump arc, so every stretch is clearable; difficulty ramps with distance.
 - **Creatures:** Mossbud walks and turns at walls; Shellback snail turns at ledges and retreats into a kickable shell that bowls others over; Puddlehop leaps toward Pip on a timer; Puffwing bobs through the air. Stomp them, or bump blocks from below to knock them off.
