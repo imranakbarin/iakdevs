@@ -235,16 +235,52 @@
       }
     }
   }
+  // The same image geometry is shared by the mushroom renderer and Pip's
+  // contact path. This prevents the "bounce" from happening in empty air.
+  function springGeometry(chapter){
+    const propScale=Math.max(.46,Math.min(.86,Math.min(W/590,H/1030)*.91));
+    const pipScale=Math.max(.49,Math.min(.90,Math.min(W/540,H/980)*.87));
+    const height=133*propScale/.72;
+    const width=height*((bounceCap.naturalWidth||169)/(bounceCap.naturalHeight||128));
+    const compression=.15;
+    const contactLift=(height+6+9*pipScale)/pipScale;
+    return {chapter,worldX:chapter*CHAPTER+385,height,width,pipScale,
+      compression,contactLift,springDepth:height*compression/pipScale};
+  }
+  function springCompression(p){
+    if(p<367||p>410)return 0;
+    return p<=385?smooth((p-367)/18):1-smooth((p-385)/25);
+  }
+  function springBounceAt(p,chapter){
+    const g=springGeometry(chapter);
+    const points=[
+      [195,0],[269,g.contactLift+30],[315,g.contactLift+68],
+      [357,g.contactLift+20],[385,g.contactLift-g.springDepth],
+      [401,g.contactLift+14],[452,g.contactLift+100],
+      [478,g.contactLift+98],[498,g.contactLift+65],[550,0]
+    ];
+    if(p<=195||p>=550)return {lift:0,compression:0,contact:false};
+    let lift=0;
+    for(let i=1;i<points.length;i++){
+      if(p<=points[i][0]){
+        const [x0,y0]=points[i-1],[x1,y1]=points[i];
+        lift=y0+(y1-y0)*smooth((p-x0)/(x1-x0));
+        break;
+      }
+    }
+    return {lift,compression:springCompression(p),
+      contact:p>=378&&p<=399};
+  }
   function poseAt(x){
     const chapter=Math.floor(x/CHAPTER),kind=stunts[((chapter%stunts.length)+stunts.length)%stunts.length];
     const p=x-chapter*CHAPTER;
     const u=minmax(0,(p-195)/355,1),active=p>=195&&p<=550;
     const wave=Math.sin(PI*u),ease=smooth(u);
-    let lift=0,spin=0,squash=1,lean=0,glide=false;
+    let lift=0,spin=0,squash=1,lean=0,glide=false,spring=null;
     if(active){
       if(kind==='hop')lift=65*wave;
       if(kind==='dash')lean=.23*wave;
-      if(kind==='bounce')lift=139*wave+32*Math.sin(2*PI*u)**2;
+      if(kind==='bounce'){spring=springBounceAt(p,chapter);lift=spring.lift;}
       if(kind==='flip'){lift=116*wave;spin=TAU*ease;}
       if(kind==='slide')squash=1-.47*wave*wave;
       if(kind==='glide'){lift=138*wave;glide=true;}
@@ -253,7 +289,7 @@
       if(kind==='twirl'){lift=103*wave;spin=TAU*ease;}
       if(kind==='longjump'){lift=124*wave;lean=.17*wave;}
     }
-    return {kind,active,u,lift,spin,squash,lean,glide};
+    return {kind,active,u,lift,spin,squash,lean,glide,spring};
   }
   // Timing envelopes are derived only from travel distance, so the transition
   // looks identical after frame drops, tab resumes, and on different screens.
@@ -369,8 +405,13 @@
       const x=W*.34 +i*CHAPTER+385-world;
       if(x<-150||x>W+150)continue;
       if(bounceCap.complete&&bounceCap.naturalWidth){
-        const h=(kind==='bounce'?133:86)*figureScale/.72;
-        const w=h*(bounceCap.naturalWidth/bounceCap.naturalHeight);
+        // One reused cinematic mushroom image: the cap compresses at the
+        // precise world coordinate where Pip's boots touch it, then rebounds.
+        const g=kind==='bounce'?springGeometry(i):null;
+        const contact=g?springCompression(world-i*CHAPTER):0;
+        const h=g?g.height*(1-g.compression*contact):86*figureScale/.72;
+        const w=g?g.width*(1+.075*contact):
+          h*(bounceCap.naturalWidth/bounceCap.naturalHeight);
         ctx.save();ctx.globalAlpha=.95;
         ctx.drawImage(bounceCap,x-w*.5,ground()-h+4,w,h);
         ctx.restore();
@@ -418,6 +459,17 @@
     }
     // Distinct authored silhouettes, not the entire picture spinning in midair.
     if(pose.kind==='slide')return 21;
+    if(pose.kind==='bounce'){
+      const p=195+pose.u*355;
+      if(p<269)return 17;
+      if(p<357)return 18;
+      if(p<382)return 19;
+      if(p<401)return 20;
+      if(p<432)return 16;
+      if(p<480)return 18;
+      if(p<525)return 19;
+      return 20;
+    }
     if(pose.u<.16)return 16;   // anticipation and push-off
     if(pose.u<.38)return 17;   // rising
     if(pose.u<.64)return 18;   // legs tucked at apex
