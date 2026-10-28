@@ -2458,13 +2458,26 @@
   const STRIDE = 25;   // world px per full cycle (two steps), small Pip: about six steps a second at full speed
   const stride = () => STRIDE * (shownBig() ? 4 / 3 : 1);
   let torso = null;
-  function torsoSprite() {   // frame 0 above the hips, clear of its cut-out legs
+  // The front arm (sleeve and fist) swings from the shoulder: it is lifted off
+  // frame 0 into its own sprite, and the body keeps the shoulder end of it so
+  // no gap opens as the arm turns. Sprite pixels.
+  const ARM = {x: 150, y: 186, poly: [[144, 172], [160, 169], [192, 175], [215, 180], [218, 198], [214, 218], [187, 220], [165, 211], [148, 207], [141, 190]]};
+  let armImg = null;
+  const armPath = (g, from = 0) => { g.beginPath(); ARM.poly.filter(([x]) => x >= from).forEach(([x, y], i) => i ? g.lineTo(x, y) : g.moveTo(x, y)); g.closePath(); };
+  function torsoSprite() {   // frame 0 above the hips, clear of its cut-out legs and its forearm
     if (torso) return torso;
     const c2 = document.createElement('canvas'); c2.width = FRAME_W; c2.height = 252;
     const g = c2.getContext('2d');
-    g.beginPath(); g.rect(0, 0, FRAME_W, 212); g.ellipse(100, 223, 54, 25, 0, 0, Math.PI * 2); g.clip();
-    g.drawImage(sheet, 0, 0, FRAME_W, 252, 0, 0, FRAME_W, 252);
+    g.save(); g.beginPath(); g.rect(0, 0, FRAME_W, 212); g.ellipse(100, 223, 54, 25, 0, 0, Math.PI * 2); g.clip();
+    g.drawImage(sheet, 0, 0, FRAME_W, 252, 0, 0, FRAME_W, 252); g.restore();
+    g.globalCompositeOperation = 'destination-out'; armPath(g, 160); g.fill();
     return (torso = c2);
+  }
+  function armSprite() {
+    if (armImg) return armImg;
+    const c2 = document.createElement('canvas'); c2.width = FRAME_W; c2.height = 252;
+    const g = c2.getContext('2d'); armPath(g); g.clip(); g.drawImage(sheet, 0, 0, FRAME_W, 252, 0, 0, FRAME_W, 252);
+    return (armImg = c2);
   }
   const LEG = {thigh: 19, shin: 18, ankle: 19, hip: -55};
   // A running stride, not a walk: a short contact (under a third of the cycle
@@ -2498,30 +2511,52 @@
     ctx.fillStyle = far ? 'rgba(255,220,180,.1)' : 'rgba(255,226,190,.35)'; ctx.beginPath(); ctx.ellipse(-5, -9.5, 7, 2.2, 0, 0, 7); ctx.fill();
     ctx.restore();
   }
-  function drawRunner(phase, k) {
+  function runPose(phase, k) {
     // k: 0 standing .. 1 full speed. The legs are on the ground half the time
     // when walking, under a third at a run, so at speed there is a moment with
     // both feet off the ground: the body rises then, and sinks at mid-stance.
+    // The arm swings against the near leg: back as that foot reaches forward.
     const A = 3 + 22 * k, lift = 3 + 10 * k, D = .5 - .18 * k, uf = phase % 1, ub = (phase + .5) % 1;
     const front = footAt(uf, A, lift, D), back = footAt(ub, A, lift, D), L = (LEG.thigh + LEG.shin) * .97;
     const plant = uf < D ? front : ub < D ? back : null, p = uf < D ? uf / D : ub < D ? ub / D : -1;
     let bob;
     if (plant) bob = Math.max((2 + 3 * k) * Math.sin(Math.PI * p), -LEG.hip - LEG.ankle - Math.sqrt(Math.max(0, L * L - plant[0] * plant[0])));
     else bob = -(1 + 4 * k) * Math.sin(Math.PI * ((phase % .5) - D) / (.5 - D));
-    const sway = .035 * k * Math.sin(2 * Math.PI * phase);   // the shoulders turn a little with the stride
+    return [front, back, bob, .4 * k * Math.cos(2 * Math.PI * phase) - .04 * k, .035 * k * Math.sin(2 * Math.PI * phase)];
+  }
+  // Off the run cycle the same drawn legs take a pose: [near foot, far foot,
+  // body drop, arm, shoulder turn]; feet as [x from the hip, y from the soles'
+  // line, boot angle]. In the air the pose follows the vertical speed: knee
+  // up and the other leg trailing on the rise, tucked at the top, reaching
+  // down for the ground on the way down.
+  const POSE = {
+    rise: [[13, -24, -.35], [-21, -9, .95], 0, -.55, 0],
+    apex: [[9, -19, -.1], [-10, -17, .55], 0, -.4, 0],
+    fall: [[11, -3, -.25], [-13, -7, .35], 0, -.75, 0],
+    land: [[12, 0, 0], [-12, 0, .1], 10, .3, 0],
+    skid: [[25, 0, -.35], [-6, 0, .25], 7, -.6, -.04],
+    tumble: [[16, -21, -.6], [-17, -15, .9], 0, -1, 0]
+  };
+  const mixPose = (a, b, t) => a.map((v, i) => Array.isArray(v) ? mixPose(v, b[i], t) : v + (b[i] - v) * t);
+  function drawBody([front, back, bob, arm, sway]) {
     drawLeg(-30, LEG.hip + 1 + bob, back, true);
-    ctx.save(); ctx.translate(-24, -60 + bob); ctx.rotate(sway); ctx.drawImage(torsoSprite(), -98, -240); ctx.restore();
+    ctx.save(); ctx.translate(-24, -60 + bob); ctx.rotate(sway); ctx.translate(-98, -240);
+    ctx.drawImage(torsoSprite(), 0, 0);
+    ctx.translate(ARM.x, ARM.y); ctx.rotate(arm); ctx.drawImage(armSprite(), -ARM.x, -ARM.y);
+    ctx.restore();
     drawLeg(-18, LEG.hip + bob, front, false);
   }
   function drawPip() {
     if (inv && !dead && Math.floor(inv / 4) % 2) return;
     const [x, y] = W2D(pl.x + P.w / 2, pl.y + pl.h + 1);
-    let f;
-    if (dead) f = 18;
-    else if (!pl.ground) f = pl.vy < -2.5 ? 17 : pl.vy < 1.2 ? 18 : 19;
-    else if (skidding) f = 21;                       // braced crouch reads as a skid
-    else if (frameNo - landedAt < 5) f = 20;
-    else f = -1;                                     // standing or running: drawn legs
+    // One drawn body in every pose (the painted frames' cut-out legs no longer
+    // show): running, in the air by vertical speed, landing, skidding, tumbling.
+    let pose;
+    if (dead) pose = POSE.tumble;
+    else if (!pl.ground) { const t = clamp(0, (pl.vy + 3) / 5, 1); pose = t < .5 ? mixPose(POSE.rise, POSE.apex, t * 2) : mixPose(POSE.apex, POSE.fall, (t - .5) * 2); }
+    else if (skidding) pose = POSE.skid;
+    else if (frameNo - landedAt < 6) pose = mixPose(POSE.land, runPose(anim / stride(), clamp(0, Math.abs(pl.vx) / 1.2, 1)), (frameNo - landedAt) / 6);
+    else pose = runPose(anim / stride(), clamp(0, Math.abs(pl.vx) / 1.2, 1));
     const sc = pipVisual() / 295 * S, sx = 1 - .13 * sq, sy = 1 + .15 * sq;
     // Lean into speed on the ground, brace against a skid.
     const lean = dead ? 0 : pl.ground ? (skidding ? -.12 : .11 * Math.min(1, Math.abs(pl.vx) / P.max)) : .04;
@@ -2529,10 +2564,7 @@
     if (!dead && pl.ground) { ctx.fillStyle = 'rgba(40,30,20,.22)'; ctx.beginPath(); ctx.ellipse(0, -S * .4, 8 * S * (shownBig() ? 1.25 : 1), 1.8 * S, 0, 0, 7); ctx.fill(); }
     if (dead) ctx.rotate(Math.min(Math.PI, dead * .08));
     ctx.scale(facing, 1); ctx.rotate(lean); ctx.scale(sx * sc, sy * sc);
-    if (sheet.complete && sheet.naturalWidth) {
-      if (f < 0) drawRunner(anim / stride(), clamp(0, Math.abs(pl.vx) / 1.2, 1));
-      else ctx.drawImage(sheet, f * FRAME_W, 0, FRAME_W, FRAME_H, -122, -300, FRAME_W, FRAME_H);
-    }
+    if (sheet.complete && sheet.naturalWidth) drawBody(pose);
     else { ctx.fillStyle = '#4fae9a'; ctx.beginPath(); ctx.arc(0, -200, 90, Math.PI, 0); ctx.fill(); ctx.fillStyle = '#f2c9a0'; ctx.fillRect(-55, -200, 110, 190); }
     ctx.restore();
   }
