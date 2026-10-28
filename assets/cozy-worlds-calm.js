@@ -58,7 +58,7 @@ window.CozyWorlds=(()=>{
     function closeMenus(focus=false){const was=menu;menu=null;$('#world-menu').hidden=$('#scene-menu').hidden=true;$('#worlds').setAttribute('aria-expanded','false');$('#scene').setAttribute('aria-expanded','false');dock.classList.remove('open');if(focus&&was)$(was==='scene'?'#scene':'#worlds').focus();wake();}
     function toggleMenu(next){const show=menu!==next;closeMenus();if(show){menu=next;$(next==='scene'?'#scene-menu':'#world-menu').hidden=false;$(next==='scene'?'#scene':'#worlds').setAttribute('aria-expanded','true');dock.classList.add('open');}}
     for(const s of SCENES){const b=document.createElement('button');b.type='button';b.textContent=s.name;b.dataset.scene=s.id;on(b,'click',()=>{closeMenus(true);choose(s);});$('#scene-menu').append(b);}
-    for(const [id,name] of [['art','World art'],['road','Road trip'],['zen','Zen garden']]){const b=document.createElement('button');b.type='button';b.textContent=name;on(b,'click',()=>{closeMenus();options.onExperienceChange?.(id);});$('#world-menu').append(b);}
+    for(const [id,name] of [['home','⌂ Today'],['art','World art'],['road','Road trip'],['zen','Zen garden']]){const b=document.createElement('button');b.type='button';b.textContent=name;on(b,'click',()=>{closeMenus();options.onExperienceChange?.(id);});$('#world-menu').append(b);}
     function update(){
       $('#scene span').textContent=scene.name;$('#scene').setAttribute('aria-label',`Choose a scene: ${scene.name}`);
       root.querySelectorAll('[data-scene]').forEach(b=>b.setAttribute('aria-current',String(b.dataset.scene===scene.id)));
