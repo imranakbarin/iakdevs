@@ -46,6 +46,27 @@ for (const seed of [1, 2, 5, 9]) {
   assert.ok(tumbles <= 6, `seed ${seed}: ${tumbles} tumbles`);
 }
 for (const id of ['ferry', 'lift', 'crumble', 'stairs', 'spitter']) assert.ok(passed.has(id), `the demo never got past a ${id}`);
+// A block row that runs right up to a gap's edge (the generator no longer
+// builds one, but a director can): the demo must not jump under the row and
+// bonk; it runs off the lip and leaps in the coyote window. Small and big.
+for (const grow of [false, true]) {
+  G.reset(7); if (grow) G.director.grow();
+  for (let x = 10; x <= 13; x++) G.tile(x, 8, 2);                 // bricks overhead
+  for (const x of [14, 15]) for (let y = 12; y < 15; y++) G.tile(x, y, 0);   // a 2-tile gap
+  let f = 0, fell = false;
+  while (G.state().pl.x < 17 * 16 && f < 900) { G.tick(); f++; fell = fell || !!G.state().dead; }
+  assert.ok(G.state().pl.x >= 17 * 16 && !fell, `${grow ? 'big' : 'small'} Pip ${fell ? 'fell into' : 'never crossed'} the gap under a block row`);
+}
+// Regression: on a phone-width screen, the 28 Oct 2026 daily world puts a
+// block row right up to a gap's edge (870 m, caves, big Pip). The demo used
+// to jump at the lip, bonk and retry forever; it now runs off the lip and
+// leaps in the coyote window.
+{
+  game.clientWidth = 390; G.layout(); G.reset(160565862);
+  let f = 0; while (G.state().maxX < 900 * 16 && f < 60 * 200) { G.tick(); f++; }
+  assert.ok(G.state().maxX >= 900 * 16, `phone daily world stalled at ${Math.round(G.state().maxX / 16)} m`);
+  game.clientWidth = 1363; G.layout();
+}
 // Director: placements are refereed. Walls are accepted only while Pip can
 // still get past them, and he then does.
 for (const seed of [3, 11]) {
@@ -78,4 +99,4 @@ for (const seed of [3, 11]) {
   xs.forEach(([x, y], i) => { const p = G.ghost.at(i + 1); assert.ok(p.x === x && p.y === y, `ghost diverged at frame ${i + 1}`); });
   for (const bad of ['', 'x', '1.zz', '2.1.a0.1.AA', '1.1.a0.1.A*']) assert.equal(G.ghost.decode(bad), null, `rejects ${bad}`);
 }
-console.log('Pip Run PASS: jump-sized gaps, finite physics, demo player progresses through 4 seeded worlds, reaches each chapter’s destination and gets past ferries, lifts, crumble bridges, floating steps and podspitters, referee refuses traps and accepted walls stay passable, shared runs replay exactly as ghosts.');
+console.log('Pip Run PASS: jump-sized gaps, finite physics, demo player progresses through 4 seeded worlds, reaches each chapter’s destination, clears block rows that run up to a gap, and gets past ferries, lifts, crumble bridges, floating steps and podspitters, referee refuses traps and accepted walls stay passable, shared runs replay exactly as ghosts.');

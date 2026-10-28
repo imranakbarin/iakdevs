@@ -19,7 +19,7 @@
   const P = {acc: .085, airAcc: .065, skid: .27, fric: .15, max: 1.75, jump: 6.6, jumpRun: .24,
     gHold: .36, g: .92, maxFall: 6.2, coyote: 6, buffer: 7, w: 12, h: 20};
   const EPS = 1e-3;
-  const EMPTY = 0, EARTH = 1, BRICK = 2, BLOCK = 3, USED = 4, PIPE_L = 5, STONE = 6, PIPE_R = 7, SPRING = 8, CEIL = 9, CRUMBLE = 10, SPITTER = 11;
+  const EMPTY = 0, EARTH = 1, BRICK = 2, BLOCK = 3, USED = 4, PIPE_L = 5, STONE = 6, PIPE_R = 7, SPRING = 8, CEIL = 9, CRUMBLE = 10, SPITTER = 11, BRIDGE = 12;
 
   const hash = (a, b) => { let h = Math.imul(a ^ 0x9e3779b9, 0x85ebca6b) ^ Math.imul((b + 0x632be5ab) | 0, 0xc2b2ae35); h ^= h >>> 16; h = Math.imul(h, 0x7feb352d); h ^= h >>> 15; return h >>> 0; };
   const rng = a => () => { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; };
@@ -201,6 +201,9 @@
       gen.h = h; chunks.set(ci, ch); prune(); return;
     }
     const feature = (id, c0) => ch.features.push({id, x: wx(c0)});
+    // Gap tables assume a run-up of about three clear tiles; after a pipe or
+    // other obstacle the run-up is shorter, so the gap is one tile narrower.
+    const shortRun = () => { let n = 0; for (let k = c - 1; k >= 0 && n < 3; k--, n++) if (!t[(ROWS - h) * CW + k] || t[(ROWS - h - 1) * CW + k]) break; return c >= 3 && n < 3 ? 1 : 0; };
     // One piece of route. Returns false when it did not fit (a short run
     // is laid instead), so the bag only remembers pieces that were placed.
     function piece(id, room) {
@@ -209,14 +212,16 @@
           const c0 = c, n = flat(4 + (r() * 5 | 0));
           if (n >= 4 && r() < .4 + .3 * d) { const kd = kinds(); kd === 'flier' ? ch.spawns.push({kind: kd, x: wx(c0 + 2), y: surface(h) - 56}) : enemy(kd, c0 + 1 + (r() * (n - 2) | 0), h); }
           if (n >= 4 && r() < .45) {
-            const row = ROWS - h - 4, len = 1 + (r() * Math.min(4, n - 1) | 0), s0 = c0 + 1;
+            // The row stops a tile short of the run's end: open sky to leap from
+            // before whatever comes next (a gap, a step up).
+            const row = ROWS - h - 4, len = 1 + (r() * Math.min(4, n - 2) | 0), s0 = c0 + 1;
             for (let i = 0; i < len; i++) set(s0 + i, row, r() < .45 ? BLOCK : BRICK);
             if (r() < .5) seedRow(s0, len, row - 2);
           } else if (r() < .35) seedRow(c0 + 1, Math.min(3, n - 1), ROWS - h - 2);
           return true;
         }
         case 'gap': {                                  // sized from the jump physics
-          const dh = [-2, -1, 0, 0, 1][r() * 5 | 0], h2 = H(h + dh), max = GAP[h2 - h] || 0;
+          const dh = [-2, -1, 0, 0, 1][r() * 5 | 0], h2 = H(h + dh), max = (GAP[h2 - h] || 0) - shortRun();
           if (max < 1 || room < 4 + max) break;
           const w = 1 + (r() * Math.min(max, 1 + Math.round(d * 2)) | 0);
           if (w > room - 3) break;
@@ -241,7 +246,7 @@
           return true;
         }
         case 'isles': {                                // extra gaps between sky islands
-          const h2 = H(h + [-1, 0, 1][r() * 3 | 0]), max = GAP[h2 - h] || 0;
+          const h2 = H(h + [-1, 0, 1][r() * 3 | 0]), max = (GAP[h2 - h] || 0) - shortRun();
           if (max < 1 || room < 4 + max) break;
           c += 1 + (r() * Math.min(max, 2) | 0); h = h2; flat(2 + (r() * 2 | 0));
           return true;
@@ -295,7 +300,7 @@
         }
         case 'stairs': {                               // floating stones rising over a pit
           const n = 3 + (r() < .5 ? 1 : 0), pit = 1 + (d > .5 && r() < .5 ? 1 : 0);
-          if (room < n * (pit + 1) + pit + 4 || h + n + 1 > 10) break;
+          if (room < n * (pit + 1) + pit + 4 || h + n + 1 > (caves ? B.hi + 1 : 10)) break;
           flat(2); feature('stairs', c);
           let hh = h;
           for (let i = 0; i < n; i++) { c += pit; hh++; set(c, ROWS - hh, STONE); if (i === n - 1) ch.seeds.push({x: wx(c) + 8, y: surface(hh) - 24, got: false}); c++; }
@@ -324,6 +329,10 @@
     while (c < lim) {
       const room = lim - c;
       if (room < 5) { flat(room); break; }
+      // Ground carried over from the previous region (sky islands sit high)
+      // steps back into this biome's range first: a cave roof leaves no room
+      // above high ground for pipes or steps.
+      if (h > B.hi || h < B.lo) { h = H(h); flat(2); continue; }
       let sum = 0;
       const wts = bag.map(q => { const w = q.w * (q.feature ? .6 + .8 * d : 1) * .3 ** gen.recent.filter(id => id === q.id).length; sum += w; return w; });
       let k = r() * sum, i = 0;
@@ -367,7 +376,7 @@
     big = false; growing = 0; items = []; if (typeof stats !== 'undefined') stats = {bumps: 0, sprouts: 0};
     if (typeof charges !== 'undefined') { tool = null; charges = 3; chargeT = 0; dirScore = 0; notes = []; placed = []; }
     title = null; lastRegion = -1; arrival = null; chapter = null; chapters = 0; journey = {start: 0, seeds0: 0, tumbles: 0, finds0: 0, arrived: -1};
-    plan = null; marks = []; risk = .25; tension = 0; wary = 0; stompTimes = []; history = []; moment = null; replay = null; lastReplay = -1e9; usedAt = new Map();
+    plan = null; stuckX = 0; stuckSince = 0; impatience = 0; progressX = 0; progressAt = 0; marks = []; risk = .25; tension = 0; wary = 0; stompTimes = []; history = []; moment = null; replay = null; lastReplay = -1e9; usedAt = new Map();
     simW = Math.round(viewW); run = {seed, w: simW, inputs: [], events: [], human: 0, m: 0};
     prev = {cam, x: pl.x, y: pl.y};
   }
@@ -478,9 +487,11 @@
       : {r: false, l: o.dir < 0, j: f < o.hold};
     const lift = liftPolicy(b);
     if (lift) return lift;
-    // Wait for open sky before leaping, unless the ground ends right underfoot:
-    // jumping under a block row bonks Pip's head and drops him short of the gap.
-    if (b.ground && st.auto <= 0 && danger(b, threats, tf) && (headroom(b) || !solid(Math.floor((b.x + b.w + 3) / TS), Math.floor((b.y + b.h + 2) / TS)))) st.auto = 15;
+    // Leap only under open sky: jumping under a block row bonks Pip's head and
+    // drops him short of the gap. Where the row runs right up to the edge, run
+    // off the lip and leap in the coyote window once clear (or, as a last
+    // resort, as the window closes).
+    if (st.auto <= 0 && (b.ground || b.coyote > 0) && danger(b, threats, tf) && (headroom(b) || (!b.ground && b.coyote <= 2))) st.auto = 15;
     return {r: true, l: false, j: st.auto-- > 0};
   }
   function headroom(b) {
@@ -495,7 +506,8 @@
     const b = {...pl}, stomped = new Set(), got = new Set(), st = {auto: 0}, pts = [[b.x + 6, b.y + 10]];
     const near = marks.filter(k => k.x > pl.x - 32 && k.x < pl.x + 260);
     let bonus = 0, sumX = 0, wary = 0, hit = false;
-    const end = (score, death) => { pts.push([b.x + 6, b.y + 10]); return {score, death, pts}; };
+    const lazy = impatience * (o.dir !== 1 ? 500 : o.wait * 10);
+    const end = (score, death) => { pts.push([b.x + 6, b.y + 10]); return {score: score - lazy, death, pts}; };
     // A tumble near the end of a rollout, while the simple default policy is
     // driving, is a risk rather than a certainty: Pip replans long before then.
     // Counting it as doom made "stand still" beat a clean jump available now.
@@ -560,7 +572,15 @@
     plan = {...OPTIONS[best], f: 0, st: {auto: 0}, arcs, tension: soon, at: frameNo};
     if (closeCall) noteMoment('close call');
   }
+  // Impatience: when every future ends in a fall, the one that falls latest
+  // scores best, and "wait a moment" would win forever. After ~3 s without
+  // progress, waiting and backing off are penalized more and more, so Pip
+  // commits to his best attempt (waiting for a lift is a forward plan, so it
+  // is unaffected).
+  let stuckX = 0, stuckSince = 0, impatience = 0;
   function demoInput() {
+    if (pl.x > stuckX + 24 || arrival) { stuckX = pl.x; stuckSince = frameNo; }
+    impatience = clamp(0, (frameNo - stuckSince - 150) / 150, 1);
     // Commit to a plan's own moves before reconsidering; replanning mid-plan
     // re-chose "jump in 5 frames" every 5 frames and the jump never came.
     const own = plan ? (plan.dir === 1 ? (plan.hold ? plan.wait + plan.hold + 2 : 0) : plan.wait) : 0;
@@ -717,6 +737,34 @@
     if (big) { shrink(); return; }     // a big Pip takes one hit and shrinks instead of tumbling
     gotcha(); remember(); sfx('tumble'); dead = 1; pl.vy = -5.2; pl.vx = 0; puff(pl.x + 6, pl.y + 10, '#fff4dc', 7); }
   // A tumble leaves a mark the planner steers around, and makes Pip warier for a while.
+  // After three falls into the same gap, a bridge grows across it at the
+  // height of the near lip. It is a world rule driven by the world's own
+  // state, so a ghost rebuild grows the same bridge at the same moment.
+  function helpBridge() {
+    const k = marks[marks.length - 1];
+    if (marks.filter(q => Math.abs(q.x - k.x) < 40).length < 3) return;
+    const top = x => { for (let y = 3; y < ROWS; y++) { const v = tileAt(x, y); if (v && v !== CEIL) return y; } return ROWS; };
+    const tx = Math.floor((k.x + 6) / TS);
+    let L = tx; while (L > tx - 8 && top(L) === ROWS) L--;
+    const row = top(L); if (row === ROWS) return;
+    let n = 0; for (let x = L + 1; x <= L + 10 && top(x) === ROWS; x++, n++) setTile(x, row, BRIDGE);
+    if (!n) return;
+    note('A bridge grows to help', (L + 1 + n / 2) * TS, row * TS - 6, '#c8f5b0'); sparkle((L + 1 + n / 2) * TS, row * TS); sfx('sprout');
+  }
+  let progressX = 0, progressAt = 0;
+  function carry() {
+    const top = x => { for (let y = 3; y < ROWS; y++) { const v = tileAt(x, y); if (v && v !== CEIL) return y; } return ROWS; };
+    for (let tx = Math.floor(maxX / TS) + 3, end = tx + 3 * CW; tx < end; tx++) {
+      const ch = chunk(Math.floor(tx / CW)), row = top(tx);
+      if (!ch || !ch.safe.has(tx - ch.ci * CW) || row === ROWS || enemies.some(e => Math.abs(e.x - tx * TS) < 64)) continue;
+      puff(pl.x + 6, pl.y + 10, '#ffffff', 8);
+      pl.x = tx * TS + 2; pl.y = row * TS - pl.h; pl.vx = pl.vy = 0; pl.on = null; cp = {x: pl.x, y: pl.y};
+      progressX = pl.x; progressAt = frameNo; plan = null;
+      note('A breeze carries Pip on', pl.x + 6, pl.y - 8, '#e6f6ff'); sparkle(pl.x + 6, pl.y + 6); sfx('find');
+      return;
+    }
+    progressAt = frameNo;   // nowhere safe yet: try again later
+  }
   function remember() { marks.push({x: pl.x, y: Math.min(pl.y, VIEW_H - P.h), at: frameNo}); risk = Math.min(1, risk + .35); journey.tumbles++; arrival = null; }
   const liveInput = () => arrival ? arrivalInput() : human ? humanInput() : demoInput();
   /* ---------------- journey ----------------
@@ -784,7 +832,7 @@
     if (ev.landed) { sfx('land', {impact: vy0}); sq = -1; landedAt = frameNo; puff(pl.x + 6, pl.y + pl.h, '#efdcb7', 5); }
     if (pl.ground && Math.abs(pl.vx) > 1.4 && (inp.l && pl.vx > 0 || inp.r && pl.vx < 0) && frameNo % 4 === 0) puff(pl.x + 6, pl.y + pl.h, '#efdcb7', 2);
     if (ev.bump) bump(ev.bump[0], ev.bump[1]);
-    if (pl.y > VIEW_H + 24) { if (!dead) { gotcha(); remember(); sfx('tumble'); } dead = 30; pl.vy = 0; if (big) { big = false; pl.h = P.h; pl.w = P.w; } }
+    if (pl.y > VIEW_H + 24) { if (!dead) { gotcha(); remember(); sfx('tumble'); helpBridge(); } dead = 30; pl.vy = 0; if (big) { big = false; pl.h = P.h; pl.w = P.w; } }
     if (inv) inv--;
     if (growing) growing--;
     if (ev.sprung) { sfx('spring'); sq = 1; bumps.push({tx: ev.sprung[0], ty: ev.sprung[1], t: 0}); puff(pl.x + 6, pl.y + pl.h, '#fff4dc', 5); assist(ev.sprung); }
@@ -795,6 +843,11 @@
       if (ch && ch.safe.has(tx - ch.ci * CW) && pl.x > cp.x + 64 && !enemies.some(e => Math.abs(e.x - pl.x) < 80)) cp = {x: pl.x, y: pl.y};
     }
     maxX = Math.max(maxX, pl.x);
+    // Last resort: the world never holds Pip for long. After 30 s without
+    // progress a breeze carries him on to the next safe ground. It depends
+    // only on the world's state, so ghosts replay it exactly.
+    if (maxX > progressX + 8) { progressX = maxX; progressAt = frameNo; }
+    else if (!dead && frameNo - progressAt > 60 * 30) carry();
     if (!ghostSim && run.inputs.length < RUN_MAX) { run.m = Math.floor(maxX / TS); if (frameNo % 300 === 0) saveBest(); }
     const region = Math.floor(pl.x / (REGION * CW * TS));
     if (region !== lastRegion) {
@@ -1062,6 +1115,13 @@
         if (biome === 'meadow') { g.fillStyle = '#6d4526'; for (const x of [2, 14]) { g.beginPath(); g.arc(x, 3.4, .7, 0, 7); g.fill(); } g.strokeStyle = 'rgba(109,69,38,.6)'; g.beginPath(); g.moveTo(0, 7); g.quadraticCurveTo(8, 11, 16, 7); g.stroke(); }
         else { g.fillStyle = 'rgba(255,255,255,.7)'; g.fillRect(2, 1.4, 5, .9); }
       }
+      tileCache.set(key, c2); return c2;
+    }
+    if (id === BRIDGE) {                         // a helping bridge: planks on vines
+      rr(0, 1, 16, 6, 1.2, '#7a5230'); rr(.6, 1.6, 14.8, 4.8, 1, grad('#d9a66a', '#a8743f'));
+      g.strokeStyle = '#4f9a45'; g.lineWidth = 1.1; g.beginPath(); g.moveTo(0, 1.4); g.quadraticCurveTo(8, 3.4, 16, 1.4); g.stroke();
+      g.fillStyle = '#6fbf4f'; for (const x of [3, 11]) { g.beginPath(); g.ellipse(x, 1.2, 2, 1, -.4, 0, 7); g.fill(); }
+      g.strokeStyle = 'rgba(79,154,69,.7)'; g.beginPath(); g.moveTo(2, 7); g.quadraticCurveTo(4, 11, 2, 14); g.moveTo(13, 7); g.quadraticCurveTo(11, 10, 13, 12); g.stroke();
       tileCache.set(key, c2); return c2;
     }
     if (id === SPITTER) {                        // Podspitter: a bulb that spits seed pods to the left
@@ -1861,6 +1921,8 @@
   window.__pipRun = {tick, reset, state: () => ({pl, enemies, seeds, maxX, dead, human, cam, viewW}), GAP, layout, tileAt: (x, y) => tileAt(x, y),
     scores: () => { const th = enemies.filter(e => e.state !== 'dead' && e.state !== 'squash' && Math.abs(e.x - pl.x) < 260); return OPTIONS.map(o => [o.dir, o.wait, o.hold, Math.round(simulate(o, th).score)]); },
     actions: () => actions(),
+    tile: (x, y, v) => setTile(x, y, v),
+    rollout: i => { const th = enemies.filter(e => e.state !== 'dead' && e.state !== 'squash' && Math.abs(e.x - pl.x) < 260); const r = simulate(OPTIONS[i], th); return {o: OPTIONS[i], score: r.score, death: r.death, pts: r.pts}; },
     journey: () => ({chapters, arrival: !!arrival, chapter: chapter && {...chapter}}), stats: () => stats, biomeAt: x => biomeAt(x), GAPS, features: () => [...chunks.values()].flatMap(ch => ch.features), wonder: r => regionWonder(r),
     debug: () => ({tension, risk, marks: marks.length, replay: !!replay, zoom, big, items: items.length}),
     director: {arm: t => { tool = t; }, refill: () => { charges = 3; }, place: (tx, ty) => place(tx, ty), grow, info: () => ({tool, charges, dirScore, notes: notes.map(n => n.text)})},
