@@ -128,6 +128,26 @@ for (const seed of [3, 11]) {
   assert.equal(G.art(1).art, a, 'a chunk is painted once');
   G.tile(24 + 5, 14, 0); assert.notEqual(G.art(1).art, a, 'and repainted when its ground changes');
 }
+// Painted trees, rocks and cottages stand on level, unbroken ground under
+// their whole base and a tile beyond: never over an edge or by a ledge.
+{
+  const FOOT = {cottage: 4, oak: 3, rock: 2, pine: 2}, kinds = {};
+  for (const seed of [1, 2, 3, 5]) {
+    G.reset(seed);
+    for (let ci = 0; ci < 48; ci++) {
+      G.art(ci);
+      for (const q of G.props(ci)) {
+        kinds[q.kind] = (kinds[q.kind] || 0) + 1;
+        const tx = ci * 24 + q.x;
+        for (let d = -FOOT[q.kind]; d <= FOOT[q.kind]; d++) {
+          let y = 0; while (y < 15 && !G.tileAt(tx + d, y)) y++;
+          assert.ok(y === q.s && G.tileAt(tx + d, y) === 1, `seed ${seed}: a ${q.kind} at tile ${tx} stands by uneven ground at ${tx + d} (row ${y}, not ${q.s})`);
+        }
+      }
+    }
+  }
+  for (const k of ['oak', 'pine', 'rock']) assert.ok(kinds[k] > 3, `some ${k}s are placed (${JSON.stringify(kinds)})`);
+}
 // Pip touches the world: whole frames render with sane geometry in every
 // biome while footfalls kick up particles and leave prints in snow, cloud and
 // glowing moss (none in meadow grass).
