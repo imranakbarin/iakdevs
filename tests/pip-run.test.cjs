@@ -41,6 +41,7 @@ for (const seed of [1, 2, 5, 9]) {
     if (f % (60 * 15) === 0) { assert.ok(s.maxX > last + 300, `seed ${seed}: progress stalled near ${Math.round(s.maxX / 16)} m`); last = s.maxX; }
   }
   const m = Math.round(G.state().maxX / 16);
+  assert.ok(G.journey().chapters >= 1, `seed ${seed}: never reached a destination`);
   assert.ok(m > secs * 5, `seed ${seed}: demo reached only ${m} m in ${secs} s`);
   assert.ok(tumbles <= 6, `seed ${seed}: ${tumbles} tumbles`);
 }
@@ -77,4 +78,4 @@ for (const seed of [3, 11]) {
   xs.forEach(([x, y], i) => { const p = G.ghost.at(i + 1); assert.ok(p.x === x && p.y === y, `ghost diverged at frame ${i + 1}`); });
   for (const bad of ['', 'x', '1.zz', '2.1.a0.1.AA', '1.1.a0.1.A*']) assert.equal(G.ghost.decode(bad), null, `rejects ${bad}`);
 }
-console.log('Pip Run PASS: jump-sized gaps, finite physics, demo player progresses through 4 seeded worlds and past ferries, lifts, crumble bridges, floating steps and podspitters, referee refuses traps and accepted walls stay passable, shared runs replay exactly as ghosts.');
+console.log('Pip Run PASS: jump-sized gaps, finite physics, demo player progresses through 4 seeded worlds, reaches each chapter’s destination and gets past ferries, lifts, crumble bridges, floating steps and podspitters, referee refuses traps and accepted walls stay passable, shared runs replay exactly as ghosts.');

@@ -177,6 +177,8 @@
     {id: 'ferry', w: 1.5, from: 2, feature: true}, {id: 'stairs', w: 1.2, from: 2, feature: true}, {id: 'crumble', w: 1.5, from: 3, feature: true},
     {id: 'spitter', w: 1.2, from: 5, feature: true}, {id: 'lift', w: 1.4, from: 4, feature: true, not: ['sky', 'caves']}
   ];
+  const PLAZA = 11;   // tiles of quiet ground before each region's end
+  const gateX = r => (r + 1) * REGION * CW * TS - 4 * TS;
   function generate() {
     const ci = ++gen.ci, r = rng(hash(seed, ci)), d = Math.min(1, ci / 16), biome = biomeOfChunk(ci), B = BIOMES[biome], GAP = GAPS[biome];
     const sky = biome === 'sky', caves = biome === 'caves';
@@ -188,7 +190,8 @@
     const surface = h => (ROWS - h) * TS;
     const wx = c => (ci * CW + c) * TS;
     let c = 0, h = H(gen.h);
-    const flat = n => { n = Math.min(n, CW - c); for (let i = 0; i < n; i++) { col(c, h); if (i > 0 && i < n - 1) ch.safe.add(c); c++; } return n; };
+    let lim = CW;   // pieces stop short of the plaza at a region's end
+    const flat = n => { n = Math.min(n, lim - c); for (let i = 0; i < n; i++) { col(c, h); if (i > 0 && i < n - 1) ch.safe.add(c); c++; } return n; };
     const seedRow = (c0, n, row) => { for (let i = 0; i < n; i++) ch.seeds.push({x: wx(c0 + i) + 8, y: row * TS + 8, got: false}); };
     const enemy = (kind, c0, hh) => ch.spawns.push({kind, x: wx(c0) + 1, y: surface(hh) - 14});
     const kinds = () => { const k = r(); return d > .5 && k < .2 ? 'flier' : d > .3 && k < .4 ? 'hopper' : d > .15 && k < .65 ? 'snail' : 'walker'; };
@@ -311,14 +314,26 @@
     // Pieces are dealt from a bag that remembers what came recently, so the
     // route keeps changing; set pieces unlock as the run goes on.
     const bag = PIECES.filter(q => ci >= q.from && (!q.only || q.only.includes(biome)) && !(q.not || []).includes(biome));
-    while (c < CW) {
-      const room = CW - c;
+    // Each region ends at its destination: a flat, quiet plaza where the next
+    // region's landmark stands (see the journey section). The next region
+    // starts with a short flat run too.
+    const last = ci % REGION === REGION - 1, first = ci % REGION === 0;
+    if (first) flat(6);
+    if (last) lim = CW - PLAZA;
+    while (c < lim) {
+      const room = lim - c;
       if (room < 5) { flat(room); break; }
       let sum = 0;
       const wts = bag.map(q => { const w = q.w * (q.feature ? .6 + .8 * d : 1) * .3 ** gen.recent.filter(id => id === q.id).length; sum += w; return w; });
       let k = r() * sum, i = 0;
       while (i < bag.length - 1 && k > wts[i]) k -= wts[i++];
       if (piece(bag[i].id, room)) { gen.recent.push(bag[i].id); if (gen.recent.length > 6) gen.recent.shift(); }
+    }
+    if (first) ch.spawns = ch.spawns.filter(q => q.x > wx(10));
+    if (last) {
+      lim = CW; flat(CW - c);
+      ch.spawns = ch.spawns.filter(q => q.x < wx(CW - PLAZA - 3));
+      ch.plants = ch.plants.filter(q => q.tx * TS < wx(CW - PLAZA - 6));
     }
     if (caves) {
       // A jagged roof (always at least six tiles above the floor) and glowing crystals.
@@ -350,7 +365,7 @@
     enemies = []; parts = []; seeds = 0; cam = 0; cp = {x: 40, y: pl.y}; maxX = 40; dead = 0; inv = 0; landedAt = -99; anim = 0; facing = 1; frameNo = 0;
     big = false; growing = 0; items = []; if (typeof stats !== 'undefined') stats = {bumps: 0, sprouts: 0};
     if (typeof charges !== 'undefined') { tool = null; charges = 3; chargeT = 0; dirScore = 0; notes = []; placed = []; }
-    title = null; lastRegion = -1;
+    title = null; lastRegion = -1; arrival = null; chapter = null; chapters = 0; journey = {start: 0, seeds0: 0, tumbles: 0, finds0: 0, arrived: -1};
     plan = null; marks = []; risk = .25; tension = 0; wary = 0; stompTimes = []; history = []; moment = null; replay = null; lastReplay = -1e9; usedAt = new Map();
     simW = Math.round(viewW); run = {seed, w: simW, inputs: [], events: [], human: 0, m: 0};
     prev = {cam, x: pl.x, y: pl.y};
@@ -364,8 +379,12 @@
         vy: 0, ground: false, state: 'walk', t: hash(s.x, 7) % 97, period: 80 + hash(s.x, 9) % 50});
     }
   }
+  // Plazas are quiet: creatures turn back at their edges (a world rule, so
+  // ghosts and the planner see the same world).
+  const quiet = x => { const span = REGION * CW * TS, k = x - Math.floor(x / span) * span; return x > span && (k > span - PLAZA * TS || k < 8 * TS); };
   function updateEnemy(e) {
     e.t++;
+    if ((e.state === 'walk' || e.kind === 'flier') && e.kind !== 'pod' && quiet(e.x + 7 + e.vx * 8) && !quiet(e.x + 7)) { e.vx = -e.vx; if (e.dir) e.dir = -e.dir; }
     if (e.state === 'dead') { e.vy += .35; e.y += e.vy; e.x += e.vx; return e.y < VIEW_H + 80; }
     if (e.state === 'squash') return e.t < 34;
     if (e.kind === 'flier') { e.x += e.vx; e.y = e.baseY + dsin(e.t * .045) * 20; return e.x > cam - 64; }
@@ -693,8 +712,38 @@
     if (big) { shrink(); return; }     // a big Pip takes one hit and shrinks instead of tumbling
     gotcha(); remember(); dead = 1; pl.vy = -5.2; pl.vx = 0; puff(pl.x + 6, pl.y + 10, '#fff4dc', 7); }
   // A tumble leaves a mark the planner steers around, and makes Pip warier for a while.
-  function remember() { marks.push({x: pl.x, y: Math.min(pl.y, VIEW_H - P.h), at: frameNo}); risk = Math.min(1, risk + .35); }
-  const liveInput = () => human ? humanInput() : demoInput();
+  function remember() { marks.push({x: pl.x, y: Math.min(pl.y, VIEW_H - P.h), at: frameNo}); risk = Math.min(1, risk + .35); journey.tumbles++; arrival = null; }
+  const liveInput = () => arrival ? arrivalInput() : human ? humanInput() : demoInput();
+  /* ---------------- journey ----------------
+     Each region is a chapter that ends at the next region's landmark. Pip
+     slows to a walk across the plaza, reaches it and hops, and a card sums
+     the chapter up. The walk goes through the input log like any other
+     input, so ghosts replay it exactly. */
+  let arrival = null, chapter = null, journey = {start: 0, seeds0: 0, tumbles: 0, finds0: 0, arrived: -1}, chapters = 0;
+  function arrivalInput() {
+    const a = arrival; a.t++;
+    const held = human ? humanInput() : null;
+    if (a.phase === 'walk') {
+      if (pl.x + 6 >= a.gx) { a.phase = 'cheer'; a.t = 0; arrive(); }
+      return {l: false, r: pl.vx < .9, j: false};
+    }
+    if (a.t > 80 || (held && held.j && a.t > 30)) { arrival = null; plan = null; return held || demoInput(); }
+    return {l: false, r: false, j: a.t >= 10 && a.t < 16};
+  }
+  function arrive() {
+    const r = arrival.region, next = BIOMES[regionBiome(r + 1)];
+    seen = seen || new Set(store.get('pip-run:seen') || []);
+    let vs = '';
+    if (ghost) {
+      const i = ghost.frames.findIndex(g => g.x + 6 >= arrival.gx);
+      if (i >= 0) { const d = Math.round((frameNo - i - 1) / RATE); vs = d === 0 ? 'Level with the ghost here' : `${Math.abs(d)} s ${d < 0 ? 'ahead of' : 'behind'} the ghost here`; }
+    }
+    chapter = {t: 0, num: r + 1, done: BIOMES[regionBiome(r)].name, mark: next.mark, next: next.name, sub: next.sub,
+      seeds: seeds - journey.seeds0, time: (frameNo - journey.start) / RATE, tumbles: journey.tumbles, finds: seen.size - journey.finds0, vs};
+    journey.arrived = r; chapters++;
+    for (let k = 0; k < 4; k++) sparkle(arrival.gx + 8 + (k - 1.5) * 18, pl.y - 10 - (k % 2) * 14);
+  }
+  const clock = sec => `${Math.floor(sec / 60)}:${String(Math.floor(sec % 60)).padStart(2, '0')}`;
   let prev = {cam: 0, x: 0, y: 0};
   function tick(src = liveInput) {
     if (replay) replay = null;   // only headless callers tick during a replay; the live loop pauses
@@ -742,7 +791,15 @@
     maxX = Math.max(maxX, pl.x);
     if (!ghostSim && run.inputs.length < RUN_MAX) { run.m = Math.floor(maxX / TS); if (frameNo % 300 === 0) saveBest(); }
     const region = Math.floor(pl.x / (REGION * CW * TS));
-    if (region !== lastRegion) { lastRegion = region; title = {id: regionBiome(region), t: 0}; }
+    if (region !== lastRegion) {
+      lastRegion = region; title = {id: regionBiome(region), t: chapter ? Math.min(0, chapter.t - 240) : 0};
+      journey = {start: frameNo, seeds0: seeds, tumbles: 0, finds0: seen ? seen.size : 0, arrived: journey.arrived};
+    }
+    if (!ghostSim && !arrival && !dead && pl.ground && journey.arrived !== region) {
+      const gx = gateX(region);
+      if (pl.x > gx - 7 * TS && pl.x < gx) { arrival = {region, gx, phase: 'walk', t: 0}; plan = null; }
+    }
+    if (chapter && ++chapter.t > 300) chapter = null;
     if (title && ++title.t > 210) title = null;
     if (!ghostSim) {
       const ci = Math.floor(pl.x / (CW * TS)), span = REGION * CW * TS, wd = regionWonder(region);
@@ -1234,7 +1291,7 @@
   let seen = null, card = null;
   function discover(id) {
     seen = seen || new Set(store.get('pip-run:seen') || []);
-    if (seen.has(id) || card) return;
+    if (seen.has(id) || card || chapter) return;
     seen.add(id); store.set('pip-run:seen', [...seen]); card = {id, t: 0};
   }
   function drawCard() {
@@ -1289,10 +1346,39 @@
   }
   function drawLandmark(m) {
     const span = REGION * CW * TS, lx = (m.region + 1) * span, dist = lx - m.centre;
-    if (dist > span * .92 || dist < -260) return;
+    if (dist > span * .92 || dist < 420) return;
     const near = 1 - Math.max(0, dist) / span, x = (viewW * .66 + dist * .1) * S, y = oy + VIEW_H * S * .8;
-    ctx.save(); ctx.translate(x, y); ctx.globalAlpha = .9 * Math.min(1, (span * .92 - dist) / 300) * Math.min(1, (dist + 260) / 200);
+    ctx.save(); ctx.translate(x, y); ctx.globalAlpha = .9 * Math.min(1, (span * .92 - dist) / 300) * Math.min(1, (dist - 420) / 260);
     landmarkArt(regionBiome(m.region + 1), (.45 + .65 * near) * S, frameNo);
+    ctx.restore();
+  }
+  // The destination itself, full size and standing on the plaza.
+  function drawDestination() {
+    const span = REGION * CW * TS, r0 = Math.floor((cam + viewW / 2) / span);
+    for (const r of [r0 - 1, r0]) {
+      const gx = gateX(r), [x] = W2D(gx + 8, 0);
+      if (r < 0 || x < -200 * S || x > cv.width + 200 * S) continue;
+      const tx = Math.floor((gx + 8) / TS); let gy = 4; while (gy < ROWS && !solid(tx, gy)) gy++;
+      ctx.save(); ctx.translate(x, W2D(0, gy * TS)[1]); landmarkArt(regionBiome(r + 1), S * .95, frameNo); ctx.restore();
+    }
+  }
+  function drawChapter() {
+    if (!chapter || replay) return;
+    const c = chapter, a = Math.max(0, Math.min(1, c.t / 20, (240 - c.t) / 30)), u = Math.max(13, 8.5 * S);
+    if (a <= 0) return;
+    const lines = [
+      [`CHAPTER ${c.num} · ${c.done.toUpperCase()}`, 700, .62, '#ffd36a'],
+      [`${c.mark} reached`, 800, 1.45, '#fffbea'],
+      [`★ ${c.seeds} seeds   ·   ${clock(c.time)}   ·   ${c.tumbles} ${c.tumbles === 1 ? 'tumble' : 'tumbles'}${c.finds ? `   ·   ${c.finds} new ${c.finds === 1 ? 'find' : 'finds'}` : ''}`, 600, .8, '#e6f2f2'],
+      ...(c.vs ? [[c.vs, 600, .74, '#cfe9ff']] : []),
+      [`Next: ${c.next} — ${c.sub}`, 500, .74, '#d9ecf0']
+    ];
+    ctx.save(); ctx.globalAlpha = a; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    let w = 0; for (const [t, wt, k] of lines) { ctx.font = `${wt} ${u * k}px system-ui,-apple-system,sans-serif`; w = Math.max(w, ctx.measureText(t).width); }
+    const h = lines.reduce((q, l) => q + u * l[2] * 1.55, 0) + u * 1.4, x = cv.width / 2, y = Math.max(oy + VIEW_H * S * .2, 80 * dpr);
+    ctx.fillStyle = 'rgba(22,42,52,.74)'; ctx.beginPath(); ctx.roundRect(x - w / 2 - u * 1.4, y, w + u * 2.8, h, u * .9); ctx.fill();
+    let yy = y + u * .7;
+    for (const [t, wt, k, col] of lines) { ctx.font = `${wt} ${u * k}px system-ui,-apple-system,sans-serif`; yy += u * k * .78; ctx.fillStyle = col; ctx.fillText(t, x, yy); yy += u * k * .77; }
     ctx.restore();
   }
   let title = null, lastRegion = -1;
@@ -1674,7 +1760,7 @@
   }
   function scene(arcs, at) {
     const m = biomeMix();
-    drawBackground(); drawTiles(); drawMovers(); drawCrystals(); drawSeeds(); drawMarks();
+    drawBackground(); drawDestination(); drawTiles(); drawMovers(); drawCrystals(); drawSeeds(); drawMarks();
     drawItems();
     for (const e of enemies) drawEnemy(e);
     drawGhost(); drawPip(); drawParts(); drawWeather(m); drawDarkness(m);
@@ -1695,7 +1781,7 @@
     ctx = main;
   }
   function render() {
-    zoom += ((replay ? 1.16 : 1 + .09 * tension) - zoom) * .08;
+    zoom += ((replay ? 1.16 : arrival && arrival.phase === 'cheer' ? 1.1 : 1 + .09 * tension) - zoom) * .08;
     if (replay) {
       const snap = replay.frames[Math.min(replay.frames.length - 1, Math.floor(replay.i))];
       const live = {pl, facing, anim, landedAt, dead, inv, cam, enemies, parts, bumps, frameNo, sq, skidding, big, growing, items};
@@ -1713,7 +1799,7 @@
     for (const e of enemies) if (e.px !== undefined) { e.x = lerp(e.px, e.x); e.y = lerp(e.py, e.y); }
     composite(() => scene(plan && plan.arcs, plan ? plan.at : 0));
     ({pl, cam} = live); enemies.forEach((e, i) => { [e.x, e.y] = ex[i]; }); drawT = null;
-    ctx.setTransform(1, 0, 0, 1, 0, 0); drawTitle(); drawCard(); drawHud();
+    ctx.setTransform(1, 0, 0, 1, 0, 0); drawTitle(); drawCard(); drawChapter(); drawHud();
   }
 
   /* ---------------- loop ---------------- */
@@ -1751,7 +1837,7 @@
   // Test hook: lets the smoke test drive the simulation without a browser clock.
   window.__pipRun = {tick, reset, state: () => ({pl, enemies, seeds, maxX, dead, human, cam, viewW}), GAP, layout, tileAt: (x, y) => tileAt(x, y),
     scores: () => { const th = enemies.filter(e => e.state !== 'dead' && e.state !== 'squash' && Math.abs(e.x - pl.x) < 260); return OPTIONS.map(o => [o.dir, o.wait, o.hold, Math.round(simulate(o, th).score)]); },
-    stats: () => stats, biomeAt: x => biomeAt(x), GAPS, features: () => [...chunks.values()].flatMap(ch => ch.features), wonder: r => regionWonder(r),
+    journey: () => ({chapters, arrival: !!arrival, chapter: chapter && {...chapter}}), stats: () => stats, biomeAt: x => biomeAt(x), GAPS, features: () => [...chunks.values()].flatMap(ch => ch.features), wonder: r => regionWonder(r),
     debug: () => ({tension, risk, marks: marks.length, replay: !!replay, zoom, big, items: items.length}),
     director: {arm: t => { tool = t; }, refill: () => { charges = 3; }, place: (tx, ty) => place(tx, ty), grow, info: () => ({tool, charges, dirScore, notes: notes.map(n => n.text)})},
     ghost: {encode: () => encodeRun(run), decode: decodeRun, race: code => { const r = decodeRun(code), live = seed; ghost = r && buildGhost(r, 'friend'); reset(live); return ghost; }, at: f => ghostAt(f), run: () => run}};
