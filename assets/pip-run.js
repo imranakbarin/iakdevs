@@ -1328,8 +1328,9 @@
   const WONDERS = {meadow: ['whale', 'lanterns', 'balloons', 'meteors'], frost: ['aurora', 'meteors', 'whale'], sky: ['whale', 'balloons', 'lanterns'], caves: []};
   function regionWonder(r) {
     const raw = q => { const list = WONDERS[regionBiome(q)]; return q < 1 || !list.length || hash(seed ^ 0x40d, q) % 10 < 3 ? null : list[hash(seed ^ 0x40e, q) % list.length]; };
+    // Compared with the previous region's final choice, so neighbours never match.
     const w = raw(r);
-    if (!w || w !== raw(r - 1)) return w;
+    if (!w || w !== (r > 1 ? regionWonder(r - 1) : null)) return w;
     const list = WONDERS[regionBiome(r)]; return list[(list.indexOf(w) + 1) % list.length];
   }
   function drawWonder() {

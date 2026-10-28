@@ -41,6 +41,10 @@ Inputs are recorded on the scene clock, so paused redraws remain pixel-identical
 
 `assets/art-ambience.js` adds slow mist veils, cloud shadows and water glints to the painterly live-art styles (Kangra, Japan, China, Mexico). Mushroom Island's `assets/mushroom-life.js` animates the painted kingdom (mist, lamps, townsfolk, flocks, light shafts) and gives Pip's run star seeds to collect, a fairy companion and butterflies that lift off as he passes.
 
+## World art wonders
+
+`assets/art-wonders.js` cuts each endless live landscape into long stretches (about a minute and a half of drifting). Most hold one rare sight, seeded and never the same twice in a row: a migrating flock, kites on the wind (strings down to the land), or a passing shower that leaves a rainbow once the cloud has gone by; fireflies when the theme is dark; petals on the wind in Japan, rising lanterns in China and papel picado garlands in Mexico. Each is drawn in the style's own ink and palette (Warli in white line), as a pure function of seed, stretch and scene time, so a paused redraw is unchanged. A quiet italic line under the style's name says what is passing. `tests/art-wonders.test.cjs` checks the no-repeat rule, every kind per style and deterministic drawing.
+
 ## Zen garden: raking and visitors
 
 Drag across the sand to rake it: a five-tine rake follows your finger or pointer, carved with the same ridges and troughs as the steel ball's trail (a quiet hint says so on the first visit), and the garden renews with the next pattern as usual. A tap on the water still ripples it. About once a minute a small bird lands on the rim of the sand bed, hops in leaving tiny footprints, pecks and flies off (tap near it and it leaves sooner); by day a dragonfly hovers and darts over the lily pads. Raking by hand has its own sand hiss when sound is on.
