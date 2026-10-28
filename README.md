@@ -8,6 +8,7 @@ A standalone canvas experience at https://imranakbarin.github.io/iakdevs/.
 - **Road trip** — distance-based perspective road with weather, five environments, a touring car and at most one other vehicle. An animated drive, not a traffic simulator.
 - **Zen garden** — raked-sand patterns over painted gardens.
 - **Cozy Worlds** — calming illustrated scenes.
+- **Pip Run** — a small original platformer you can play (`#pip-run`).
 
 ## Deep links
 
@@ -39,6 +40,17 @@ Inputs are recorded on the scene clock, so paused redraws remain pixel-identical
 ## Ambience
 
 `assets/art-ambience.js` adds slow mist veils, cloud shadows and water glints to the painterly live-art styles (Kangra, Japan, China, Mexico). Mushroom Island's `assets/mushroom-life.js` animates the painted kingdom (mist, lamps, townsfolk, flocks, light shafts) and gives Pip's run star seeds to collect, a fairy companion and butterflies that lift off as he passes.
+
+## Pip Run
+
+`pip-run.html` + `assets/pip-run.js` (~40 KB of source, 13 KB gzipped) is a real game rather than an animation:
+
+- **Physics:** fixed 60 Hz with sub-pixel motion; acceleration, skids, variable jump height (hold to jump higher), coyote time and jump buffering.
+- **World:** an endless seeded tile world from a chunk grammar (runs, gaps, steps, pipes, stone pyramids, block tiers). Gap widths come from simulating the jump arc, so every stretch is clearable; difficulty ramps with distance.
+- **Creatures:** Mossbud walks and turns at walls; Shellback snail turns at ledges and retreats into a kickable shell that bowls others over; Puddlehop leaps toward Pip on a timer; Puffwing bobs through the air. Stomp them, or bump blocks from below to knock them off.
+- **Demo player:** when idle it presses the same buttons a person would. Every few frames it simulates ~40 candidate plans for 1.6 s against the real physics and predicted creature motion (including hopper arcs), then continues each rollout with a default policy (run, and leap where ground ends or a wall/creature is ahead, waiting for headroom under block rows). Average-position scoring and plan commitment stop it from procrastinating. Any key or tap hands control to the player; 9 s idle hands it back.
+- **Controls:** ← → / A D to run, Space / ↑ / W / Z to jump. On touch: a pad below the stage.
+- `tests/pip-run.test.cjs` checks the gap table, finite physics and steady demo progress on four worlds.
 
 ## Rendering notes
 

@@ -235,3 +235,9 @@ Scoped edits only; Mushroom Island integration untouched:
   - All derived from `clock`/`world`, so frames are reproducible.
 - Observed, not changed (your file): the textured terrace shows a faint vertical seam where `texturedLedge` repeats (visible around x≈720 at 1363×936). Mirroring alternate tiles or cross-fading the overlap would hide it.
 - World art: new `assets/art-ambience.js` (mist, cloud shadows, water glints for Kangra/Japan/China/Mexico), installed next to `ArtPresence.install()`.
+
+## Claude follow-up (Pip Run)
+
+New, self-contained mode: `pip-run.html` + `assets/pip-run.js` (+ `tests/pip-run.test.cjs`). Reuses `assets/pip-full-run-22.webp` and `assets/mushroom-cinematic-kingdom.webp` read-only. Shared `index.html` anchors touched, mirroring the Mushroom integration:
+- CSS block `.pip-mode …` and `#pip-host` right after the Mushroom CSS; `<div id="pip-host">` with `#pip-frame` before `#c`; `<option value="pip">Pip Run</option>`.
+- `requestedPip` (`#pip-run`), `pipFrame`/`pipMotion` (posts `{type:'pip:motion',playing}`), play button and "New world" handling, `pip` flag in `modeBtn.onchange`, and `'pip'` added beside `'mushroom'` in the `drawScene`/`frame` early returns and the init lines.
