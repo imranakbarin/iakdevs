@@ -25,6 +25,13 @@
   const toward = (v, t, d) => v < t ? Math.min(t, v + d) : Math.max(t, v - d);
   const clamp = (a, x, b) => Math.max(a, Math.min(b, x));
   const overlap = (a, b) => a.x < b.x + b.w && a.x + a.w > b.x && a.y < b.y + b.h && a.y + a.h > b.y;
+  // Sine from plain arithmetic: Math.sin may differ in the last bit between
+  // engines, and a run must replay exactly from its input log on any browser.
+  const dsin = x => {
+    x -= Math.round(x / (2 * Math.PI)) * 2 * Math.PI;
+    if (x > Math.PI / 2) x = Math.PI - x; else if (x < -Math.PI / 2) x = -Math.PI - x;
+    const q = x * x; return x * (1 - q / 6 * (1 - q / 20 * (1 - q / 42 * (1 - q / 72))));
+  };
 
   /* ---------------- physics ---------------- */
   let tileAt = () => EMPTY;
@@ -77,7 +84,7 @@
   const biomeOfChunk = ci => regionBiome(Math.floor(ci / REGION));
   const biomeAt = x => biomeOfChunk(Math.floor(x / (CW * TS)));
   // Wind gusts vary along the route: + pushes Pip forward, - is a headwind.
-  const windAt = x => Math.sin(x * .0042 + (seed % 97));
+  const windAt = x => dsin(x * .0042 + (seed % 97));
 
   // One frame of player physics. Shared verbatim by the player and the planner.
   function stepBody(b, inp, R = RULES[biomeAt(b.x)], gust) {
@@ -235,6 +242,9 @@
   /* ---------------- actors ---------------- */
   let pl, enemies, parts, seeds, cam, cp, maxX, dead, inv, landedAt, anim, facing, frameNo;
   let sq = 0, skidding = false, big = false, growing = 0, items = [];
+  // simW is the width the simulation sees (camera lead, spawn range). It is
+  // logged with the run, so a ghost replays with the sharer's screen, not yours.
+  let simW = 400, run = null, ghostSim = null, ghost = null;
   let marks = [], risk = .25, tension = 0, wary = 0, stompTimes = [], history = [], moment = null, replay = null, lastReplay = -1e9, usedAt = new Map();
   function reset(newSeed) {
     seed = newSeed; chunks = new Map(); gen = {ci: -1, h: 3};
@@ -245,6 +255,7 @@
     if (typeof charges !== 'undefined') { tool = null; charges = 3; chargeT = 0; dirScore = 0; notes = []; placed = []; }
     title = null; lastRegion = -1;
     plan = null; marks = []; risk = .25; tension = 0; wary = 0; stompTimes = []; history = []; moment = null; replay = null; lastReplay = -1e9; usedAt = new Map();
+    simW = Math.round(viewW); run = {seed, w: simW, inputs: [], events: [], human: 0, m: 0};
   }
   function spawnUpTo(xRight) {
     for (let ci = Math.max(0, Math.floor(cam / (CW * TS)) - 1); ci <= Math.floor(xRight / (CW * TS)); ci++) {
@@ -259,7 +270,7 @@
     e.t++;
     if (e.state === 'dead') { e.vy += .35; e.y += e.vy; e.x += e.vx; return e.y < VIEW_H + 80; }
     if (e.state === 'squash') return e.t < 34;
-    if (e.kind === 'flier') { e.x += e.vx; e.y = e.baseY + Math.sin(e.t * .045) * 20; return e.x > cam - 64; }
+    if (e.kind === 'flier') { e.x += e.vx; e.y = e.baseY + dsin(e.t * .045) * 20; return e.x > cam - 64; }
     if (e.kind === 'hopper') {
       e.vx = e.ground ? 0 : e.dir || -.8;
       if (e.ground && e.t % e.period === 0) { e.vy = -5.4; e.dir = pl.x < e.x ? -.8 : .8; e.ground = false; }
@@ -295,7 +306,7 @@
   // Where a creature will be f frames from now, from its own rules: fliers bob,
   // hoppers leap on a timer toward Pip, everything else keeps its heading.
   function predict(e, f) {
-    if (e.kind === 'flier') return [e.x + e.vx * f, e.baseY + Math.sin((e.t + f) * .045) * 20];
+    if (e.kind === 'flier') return [e.x + e.vx * f, e.baseY + dsin((e.t + f) * .045) * 20];
     if (e.kind === 'hopper') {
       const gY = e.gY ?? e.y, dir = pl.x < e.x ? -.8 : .8;
       let u, x0 = e.x;
@@ -425,6 +436,18 @@
     const y = H > W ? top + bandH + size * .35 : top + bandH - size - 12;
     return TOOLS.map((t, i) => ({...t, x: 12 + i * (size + gap), y, w: size, h: size}));
   }
+  // Share and restart sit at the opposite end of the toolbar's row. Hidden while
+  // someone plays by touch: that corner is the jump button then.
+  function actions() {
+    if (replay || (human && usingTouch)) return [];
+    // In portrait the row is too narrow for both, so they go on a row below.
+    const bar = toolbar(), h = Math.round(bar[0].h * .72), W = cv.clientWidth, y = cv.clientHeight <= W ? bar[0].y + (bar[0].h - h) / 2 : bar[0].y + bar[0].h + 12;
+    main.font = `600 ${Math.round(h * .38)}px system-ui,-apple-system,sans-serif`;
+    let x = W - 12;
+    return [['share', '⤴ Share run'], ['restart', ghost ? '↺ Race again' : '↺ Restart']].map(([id, label]) => {
+      const w = Math.round(main.measureText(label).width + h * .9); x -= w; const b = {id, label, x, y, w, h}; x -= 8; return b;
+    });
+  }
   // Screen point to tile, undoing the tension push-in when it is active.
   function cellAt(clientX, clientY) {
     const r = cv.getBoundingClientRect();
@@ -447,24 +470,26 @@
     const reason = why(tool, tx, ty);
     if (reason) { note(reason, tx * TS + 8, ty * TS, '#ffd9cf'); return; }
     if (charges < 1) { note('Recharging…', tx * TS + 8, ty * TS, '#ffd9cf'); return; }
-    const before = imagine();
-    let undo;
-    if (tool === 'creature') {
-      const gy = groundBelow(tx, ty), e = {kind: 'walker', x: tx * TS + 1, y: (gy + 1) * TS - 14, baseY: 0, w: 14, h: 14, vx: -.5, vy: 0, ground: true, state: 'walk', t: 0, period: 99, director: true};
-      enemies.push(e); undo = () => enemies.splice(enemies.indexOf(e), 1);
-    } else { setTile(tx, ty, tool === 'spring' ? SPRING : BRICK); undo = () => setTile(tx, ty, EMPTY); }
-    const after = imagine();
+    const before = imagine(), undo = applyPlacement(tool, tx, ty), after = imagine();
     // Unfair is either certain doom or a trap: no surviving future gets past a
     // spot that some future could get past before.
     const past = r => r.arcs.some(a => a.death < 0 && a.pts[a.pts.length - 1][0] > tx * TS + 20);
     if (after.arcs[after.best].death >= 0) { undo(); note('Too cruel — Pip couldn’t survive that', tx * TS + 8, ty * TS, '#ff9f8f'); return; }
     if (past(before) && !past(after)) { undo(); note('Too cruel — that would trap Pip', tx * TS + 8, ty * TS, '#ff9f8f'); return; }
     charges--;
+    logEvent({f: frameNo + 1, k: tool[0], x: tx, y: ty});   // it is in the world from the next tick on
     placed.push({kind: tool, tx, ty, x: tx * TS + 8, frame: frameNo});
     const rerouted = after.best !== before.best, cost = Math.max(0, before.arcs[before.best].score - after.arcs[after.best].score);
     const pts = rerouted ? Math.round(20 + Math.min(80, cost * .5)) : 5;
     dirScore += pts; note(rerouted ? `Pip reroutes +${pts}` : `Pip shrugs it off +${pts}`, tx * TS + 8, ty * TS);
     sparkle(tx * TS + 8, ty * TS + 8); plan = null;   // replan now: the thought lines visibly change
+  }
+  function applyPlacement(kind, tx, ty) {
+    if (kind === 'creature') {
+      const gy = groundBelow(tx, ty), e = {kind: 'walker', x: tx * TS + 1, y: (gy + 1) * TS - 14, baseY: 0, w: 14, h: 14, vx: -.5, vy: 0, ground: true, state: 'walk', t: 0, period: 99, director: true};
+      enemies.push(e); return () => enemies.splice(enemies.indexOf(e), 1);
+    }
+    setTile(tx, ty, kind === 'spring' ? SPRING : BRICK); return () => setTile(tx, ty, EMPTY);
   }
   function gotcha() {
     if (human) return;
@@ -494,6 +519,7 @@
   const takeOver = () => { if (!human) { human = true; hintUntil = performance.now() + 6000; } idleSince = performance.now(); };
   addEventListener('keydown', e => {
     const k = e.code;
+    if (k === 'KeyR' && !e.repeat) { restart(); return; }
     if (!human) {
       const t = TOOLS.find(q => q.key === k);
       if (t) { tool = tool === t.id ? null : t.id; return; }
@@ -516,7 +542,7 @@
     }
   }
   const pointers = new Map();
-  cv.addEventListener('pointerdown', e => { if (e.pointerType !== 'mouse') usingTouch = true; if (!human && directorPointer(e)) return; if (e.pointerType === 'mouse') { takeOver(); return; } usingTouch = true; try { cv.setPointerCapture(e.pointerId); } catch (_) {} pointers.set(e.pointerId, {x: e.offsetX, y: e.offsetY}); readTouches(pointers); takeOver(); });
+  cv.addEventListener('pointerdown', e => { if (e.pointerType !== 'mouse') usingTouch = true; const a = actions().find(b => e.offsetX >= b.x && e.offsetX <= b.x + b.w && e.offsetY >= b.y && e.offsetY <= b.y + b.h); if (a) { (a.id === 'share' ? shareRun : restart)(); return; } if (!human && directorPointer(e)) return; if (e.pointerType === 'mouse') { takeOver(); return; } usingTouch = true; try { cv.setPointerCapture(e.pointerId); } catch (_) {} pointers.set(e.pointerId, {x: e.offsetX, y: e.offsetY}); readTouches(pointers); takeOver(); });
   cv.addEventListener('pointermove', e => { if (e.pointerType === 'mouse' && !e.buttons) hover = tool ? cellAt(e.clientX, e.clientY) : null; if (pointers.has(e.pointerId)) { pointers.set(e.pointerId, {x: e.offsetX, y: e.offsetY}); readTouches(pointers); } });
   const lift = e => { pointers.delete(e.pointerId); readTouches(pointers); };
   cv.addEventListener('pointerup', lift); cv.addEventListener('pointercancel', lift);
@@ -540,21 +566,27 @@
     gotcha(); remember(); dead = 1; pl.vy = -5.2; pl.vx = 0; puff(pl.x + 6, pl.y + 10, '#fff4dc', 7); }
   // A tumble leaves a mark the planner steers around, and makes Pip warier for a while.
   function remember() { marks.push({x: pl.x, y: Math.min(pl.y, VIEW_H - P.h), at: frameNo}); risk = Math.min(1, risk + .35); }
-  function tick() {
+  const liveInput = () => human ? humanInput() : demoInput();
+  function tick(src = liveInput) {
     if (replay) replay = null;   // only headless callers tick during a replay; the live loop pauses
     frameNo++;
+    if (ghostSim) replayEvents();
+    else { const w = Math.round(viewW); if (w !== simW) { simW = w; logEvent({f: frameNo, k: 'w', w}); } }
     risk = Math.max(.25, risk - .0002); if (wary) wary--;
     tension += ((human || !plan || dead ? 0 : plan.tension) - tension) * .06;
     directorTick();
     if (human) tool = null;
-    record();
+    if (!ghostSim) record();
     if (dead) {
       dead++; pl.vy = Math.min(6, pl.vy + .3); pl.y += pl.vy;
-      if (dead > 75) { pl.x = cp.x; pl.y = cp.y - 4; pl.vx = pl.vy = 0; dead = 0; inv = 110; cam = Math.min(cam, Math.max(0, cp.x - viewW * .3)); plan = null; enemies = enemies.filter(e => Math.abs(e.x - cp.x) > 90 || e.kind === 'flier'); }
+      if (dead > 75) { pl.x = cp.x; pl.y = cp.y - 4; pl.vx = pl.vy = 0; dead = 0; inv = 110; cam = Math.min(cam, Math.max(0, cp.x - simW * .3)); plan = null; enemies = enemies.filter(e => Math.abs(e.x - cp.x) > 90 || e.kind === 'flier'); }
       return;
     }
-    const inp = human ? humanInput() : demoInput();
-    if (!human && (keys.size || pointers.size)) takeOver();
+    const inp = src();
+    if (!ghostSim) {
+      if (!human && (keys.size || pointers.size)) takeOver();
+      if (run.inputs.length < RUN_MAX) { run.inputs.push((inp.l ? 1 : 0) | (inp.r ? 2 : 0) | (inp.j ? 4 : 0)); if (human) run.human++; }
+    }
     const ev = stepBody(pl, inp);
     if (pl.x < cam) { pl.x = cam; pl.vx = Math.max(0, pl.vx); }
     if (inp.r && !inp.l) facing = 1; else if (inp.l && !inp.r) facing = -1;
@@ -576,11 +608,12 @@
       if (ch && ch.safe.has(tx - ch.ci * CW) && pl.x > cp.x + 64 && !enemies.some(e => Math.abs(e.x - pl.x) < 80)) cp = {x: pl.x, y: pl.y};
     }
     maxX = Math.max(maxX, pl.x);
+    if (!ghostSim && run.inputs.length < RUN_MAX) { run.m = Math.floor(maxX / TS); if (frameNo % 300 === 0) saveBest(); }
     const region = Math.floor(pl.x / (REGION * CW * TS));
     if (region !== lastRegion) { lastRegion = region; title = {id: regionBiome(region), t: 0}; }
     if (title && ++title.t > 210) title = null;
-    cam = Math.max(cam, pl.x - viewW * .38);
-    spawnUpTo(cam + viewW + 48);
+    cam = Math.max(cam, pl.x - simW * .38);
+    spawnUpTo(cam + simW + 48);
     enemies = enemies.filter(updateEnemy);
     for (const e of enemies) {
       if (e.state === 'dead' || e.state === 'squash' || !overlap(pl, e)) continue;
@@ -619,6 +652,108 @@
       moment = null;
     }
   }
+
+  /* ---------------- ghosts ----------------
+     A run is its seed, the simulation width and one 3-bit input per tick, plus
+     the director's placements. The engine is deterministic, so that log
+     rebuilds the run exactly: it travels in a link and races as a ghost. */
+  const RUN_MAX = 60 * 180;   // the first three minutes of a run are kept
+  function logEvent(e) { if (!ghostSim && run.inputs.length < RUN_MAX) run.events.push(e); }
+  function replayEvents() {
+    const evs = ghostSim.events;
+    while (ghostSim.ev < evs.length && evs[ghostSim.ev].f <= frameNo) {
+      const e = evs[ghostSim.ev++];
+      if (e.k === 'w') simW = e.w; else applyPlacement({b: 'brick', c: 'creature', s: 'spring'}[e.k], e.x, e.y);
+    }
+  }
+  function buildGhost(r, label) {
+    ghostSim = {events: r.events, ev: 0};
+    reset(r.seed); simW = r.w;
+    const frames = []; let i = 0;
+    const src = () => { const c = r.inputs[i++]; return {l: !!(c & 1), r: !!(c & 2), j: !!(c & 4)}; };
+    try {
+      while (i < r.inputs.length && frames.length < RUN_MAX + 600) {
+        tick(src);
+        frames.push({x: pl.x, y: pl.y, h: pl.h, w: pl.w, vx: pl.vx, vy: pl.vy, ground: pl.ground, facing, anim, landedAt, dead, inv, sq, skidding, big, growing, m: Math.floor(maxX / TS)});
+      }
+    } finally { ghostSim = null; }
+    return {frames, label, m: frames.length ? frames[frames.length - 1].m : 0, seed: r.seed};
+  }
+  const ghostAt = f => ghost && ghost.frames[Math.min(f, ghost.frames.length) - 1];
+  const B64 = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_';
+  // Inputs are run-length coded: 3 bits of buttons and 5 bits of repeat count
+  // per byte, written six bits to a character.
+  function encodeRun(r) {
+    const bytes = [];
+    for (let i = 0; i < r.inputs.length;) { const c = r.inputs[i]; let n = 1; while (n < 32 && r.inputs[i + n] === c) n++; bytes.push(c | (n - 1) << 3); i += n; }
+    let bits = '', out = '';
+    for (const b of bytes) bits += b.toString(2).padStart(8, '0');
+    for (let i = 0; i < bits.length; i += 6) out += B64[parseInt(bits.slice(i, i + 6).padEnd(6, '0'), 2)];
+    const ev = r.events.map(e => e.k === 'w' ? `w${e.f.toString(36)}-${e.w.toString(36)}` : `${e.k}${e.f.toString(36)}-${e.x.toString(36)}-${e.y.toString(36)}`).join('_');
+    return ['1', (r.seed >>> 0).toString(36), r.w.toString(36), bytes.length.toString(36), out].join('.') + (ev ? '.' + ev : '');
+  }
+  function decodeRun(code) {
+    const [v, sd, w, nb, data = '', ev = ''] = String(code).split('.');
+    if (v !== '1' || !w || !nb || !/^[0-9a-z]+$/.test(sd + w + nb) || /[^A-Za-z0-9_-]/.test(data)) return null;
+    let bits = ''; for (const ch of data) bits += B64.indexOf(ch).toString(2).padStart(6, '0');
+    const inputs = [];
+    for (let i = 0, n = parseInt(nb, 36); i < n; i++) { const b = parseInt(bits.slice(i * 8, i * 8 + 8), 2); if (!(b >= 0)) return null; for (let k = 0; k <= b >> 3; k++) inputs.push(b & 7); }
+    const events = [];
+    for (const t of ev ? ev.split('_') : []) {
+      const k = t[0], a = t.slice(1).split('-').map(q => parseInt(q, 36));
+      if (a.some(q => !Number.isFinite(q))) return null;
+      if (k === 'w' && a.length === 2) events.push({f: a[0], k, w: a[1]});
+      else if ('bcs'.includes(k) && a.length === 3) events.push({f: a[0], k, x: a[1], y: a[2]});
+      else return null;
+    }
+    const r = {seed: parseInt(sd, 36), w: parseInt(w, 36), inputs, events};
+    return inputs.length && r.w >= 100 && r.w <= 4000 ? r : null;
+  }
+
+  // The default world is the day's (UTC), so everyone gets the same one; a
+  // person's best run of the day is kept on this device and raced as a ghost.
+  let worldMode = 'daily', day = '', toast = null;
+  const today = () => new Date().toISOString().slice(0, 10);
+  const dailySeed = d => hash(+d.replace(/-/g, ''), 0xda1) % 1e9;
+  const store = {
+    get(k) { try { return JSON.parse(localStorage.getItem(k)); } catch (_) { return null; } },
+    set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (_) {} }
+  };
+  function saveBest() {
+    if (ghostSim || !run || worldMode !== 'daily' || seed !== dailySeed(day) || run.human < 300) return;
+    const b = store.get('pip-run:best');
+    if (!b || b.day !== day || run.m > b.m) store.set('pip-run:best', {day, m: run.m, code: encodeRun(run)});
+  }
+  function bestGhost() {
+    const b = store.get('pip-run:best'), r = b && b.day === day && decodeRun(b.code);
+    return r && r.seed === dailySeed(day) ? buildGhost(r, 'best') : null;
+  }
+  function start() {
+    const h = (location.hash || '').slice(1), shared = h.startsWith('r=') ? decodeRun(h.slice(2)) : null;
+    day = today(); ghost = null; toast = null;
+    if (shared) { worldMode = 'friend'; ghost = buildGhost(shared, 'friend'); reset(shared.seed); }
+    else if (h.startsWith('new')) { worldMode = 'random'; reset((Math.random() * 1e9) | 0); }
+    else { worldMode = 'daily'; ghost = bestGhost(); reset(dailySeed(day)); }
+    render();
+  }
+  function restart() {
+    const sd = seed;
+    if (worldMode === 'daily') { saveBest(); ghost = bestGhost(); }
+    reset(sd); toast = {text: ghost ? 'Go! Race the ghost' : 'Same world, fresh start', until: performance.now() + 2500};
+  }
+  // The link opens the same world with this run as the ghost.
+  function shareRun() {
+    if (run.inputs.length < 120) { toast = {text: 'Run a little first, then share', until: performance.now() + 2500}; return; }
+    const code = encodeRun(run), text = `Race my Pip Run: ${run.m} m`;
+    let url = '';
+    try { if (parent !== window && parent.location.origin === location.origin) { parent.history.replaceState(null, '', '#pip-run-' + code); url = parent.location.href; } } catch (_) {}
+    if (!url) { history.replaceState(null, '', '#r=' + code); url = location.href; }
+    const done = t => { toast = {text: t, until: performance.now() + 3200}; };
+    if (navigator.share && (usingTouch || matchMedia('(pointer:coarse)').matches)) navigator.share({title: 'Pip Run', text, url}).then(() => done('Shared — they race your ghost'), () => {});
+    else if (navigator.clipboard) navigator.clipboard.writeText(url).then(() => done('Link copied — friends race your ghost'), () => done('Link is in the address bar'));
+    else done('Link is in the address bar');
+  }
+
   // The Golden Sprout rises from its block, then slides along and bounces off walls.
   function updateItem(it) {
     it.t++;
@@ -1033,6 +1168,36 @@
     else { ctx.fillStyle = '#4fae9a'; ctx.beginPath(); ctx.arc(0, -200, 90, Math.PI, 0); ctx.fill(); ctx.fillStyle = '#f2c9a0'; ctx.fillRect(-55, -200, 110, 190); }
     ctx.restore();
   }
+  // The ghost is the same painted Pip, see-through, drawn from its recorded pose.
+  function drawGhost() {
+    if (!ghost || !ghost.frames.length) return;
+    const fin = ghost.frames[ghost.frames.length - 1], done = frameNo > ghost.frames.length;
+    if (done) {   // where the ghost's run ended: a little flag
+      const [x, y] = W2D(fin.x + 6, fin.y + fin.h);
+      if (x < -40 || x > cv.width + 40) return;
+      ctx.save(); ctx.globalAlpha = .75; ctx.strokeStyle = '#fffbea'; ctx.lineWidth = Math.max(1.5, S * .5);
+      ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x, y - 30 * S); ctx.stroke();
+      ctx.fillStyle = '#9fd8ff'; ctx.beginPath(); ctx.moveTo(x, y - 30 * S); ctx.lineTo(x + 13 * S, y - 26 * S); ctx.lineTo(x, y - 22 * S); ctx.fill();
+      ctx.font = `700 ${Math.max(11, 5.5 * S)}px system-ui,-apple-system,sans-serif`; ctx.textAlign = 'center'; ctx.fillStyle = '#fffbea'; ctx.fillText(`${ghost.m} m`, x, y - 33 * S);
+      ctx.restore(); return;
+    }
+    const g = ghostAt(frameNo); if (!g) return;
+    const live = {pl, facing, anim, landedAt, dead, inv, sq, skidding, big, growing};
+    pl = {...pl, x: g.x, y: g.y, w: g.w, h: g.h, vx: g.vx, vy: g.vy, ground: g.ground};
+    ({facing, anim, landedAt, dead, inv, sq, skidding, big, growing} = g);
+    const [x, y] = W2D(pl.x + 6, pl.y - 6);
+    ctx.save(); ctx.globalAlpha = .4;
+    if (x > cv.width - 6) {   // ahead and off screen: a marker on the edge
+      ctx.globalAlpha = .85; ctx.fillStyle = '#9fd8ff'; ctx.font = `700 ${Math.max(12, 6 * S)}px system-ui,-apple-system,sans-serif`; ctx.textAlign = 'right';
+      ctx.fillText(`ghost +${Math.round((g.x - live.pl.x) / TS)} m ›`, cv.width - 8, Math.max(oy + 60 * S, y));
+    } else {
+      ctx.filter = 'saturate(.35) brightness(1.3)'; drawPip(); ctx.filter = 'none';
+      ctx.globalAlpha = .7; ctx.fillStyle = '#e6f6ff'; ctx.font = `600 ${Math.max(10, 4.6 * S)}px system-ui,-apple-system,sans-serif`; ctx.textAlign = 'center';
+      ctx.fillText(ghost.label === 'best' ? 'your best' : 'ghost', x, y - (pipVisual() - 14) * S);
+    }
+    ctx.restore();
+    ({pl, facing, anim, landedAt, dead, inv, sq, skidding, big, growing} = live);
+  }
   function drawItems() {
     for (const it of items) {
       const [x, y] = W2D(it.x + 6, it.y + 12), s = S, glow = ctx.createRadialGradient(x, y - 6 * s, 0, x, y - 6 * s, 14 * s);
@@ -1057,6 +1222,18 @@
     const y = oy + pad + u * .6;
     star(pad + u * .6, y, u * .55, 0);
     ctx.fillStyle = 'rgba(30,40,40,.55)'; ctx.fillText(String(seeds), pad + u * 1.55 + 1, y + 1); ctx.fillStyle = '#fffbea'; ctx.fillText(String(seeds), pad + u * 1.55, y);
+    {
+      const when = new Date(day + 'T12:00:00Z').toLocaleDateString(undefined, {month: 'short', day: 'numeric', timeZone: 'UTC'});
+      const lines = [[worldMode === 'friend' ? 'Racing a shared run' : worldMode === 'daily' ? `Today’s world · ${when}` : 'Random world', '#ffe9a8']];
+      if (ghost) {
+        const who = ghost.label === 'best' ? 'your best' : 'the ghost', m = Math.floor(maxX / TS), g = ghostAt(frameNo);
+        if (frameNo > ghost.frames.length) lines.push(m > ghost.m ? [`Beat ${who}: ${ghost.m} m`, '#b8f5b0'] : [`${who[0].toUpperCase() + who.slice(1)} reached ${ghost.m} m`, '#cfe9ff']);
+        else if (g) { const d = m - g.m; lines.push(d > 0 ? [`▲ ${d} m ahead of ${who}`, '#b8f5b0'] : d < 0 ? [`▼ ${-d} m behind ${who}`, '#ffc9b8'] : [`Level with ${who}`, '#fffbea']); }
+      } else if (worldMode === 'daily' && human) lines.push(['Your best today becomes a ghost', '#fffbea']);
+      ctx.font = `600 ${u * .72}px system-ui,-apple-system,sans-serif`; ctx.textAlign = 'left';
+      lines.forEach(([t, c], i) => { const yy = y + u * (1.25 + i * 1.05); ctx.fillStyle = 'rgba(30,40,40,.5)'; ctx.fillText(t, pad + 1, yy + 1); ctx.fillStyle = c; ctx.fillText(t, pad, yy); });
+      ctx.font = `600 ${u}px system-ui,-apple-system,sans-serif`;
+    }
     const dist = Math.floor(maxX / TS) + ' m';
     ctx.textAlign = 'right'; ctx.fillStyle = 'rgba(30,40,40,.55)'; ctx.fillText(dist, W - pad + 1, y + 1); ctx.fillStyle = '#fffbea'; ctx.fillText(dist, W - pad, y);
     ctx.textAlign = 'center';
@@ -1080,17 +1257,25 @@
     ctx.textAlign = 'center';
     const coarse = usingTouch || matchMedia('(pointer:coarse)').matches;
     drawDirectorHud(); ctx.textAlign = 'center'; ctx.font = `600 ${u}px system-ui,-apple-system,sans-serif`;
-    const msg = replay ? `Replay · ${replay.kind}` : !human ? (tool ? (coarse ? 'Tap just ahead of Pip to place · tap the tool again to cancel' : 'Click just ahead of Pip to place · Esc to cancel')
+    const msg = toast && performance.now() < toast.until ? toast.text : replay ? `Replay · ${replay.kind}` : !human ? (tool ? (coarse ? 'Tap just ahead of Pip to place · tap the tool again to cancel' : 'Click just ahead of Pip to place · Esc to cancel')
       : coarse ? 'Challenge Pip with a tool below · or tap the stage to play' : 'Challenge Pip: pick a tool (1 2 3) · or ← → Space to play')
       : performance.now() < hintUntil ? (usingTouch ? 'Hold right to run · tap jump, hold to jump higher' : '← → run · Space to jump, hold for higher') : '';
     if (msg) {
       ctx.font = `500 ${u * .82}px system-ui,-apple-system,sans-serif`;
       // Near the bottom of the stage: the host page's control bar sits at the top.
       // Centred in the space right of the director's toolbar when it is showing.
-      const bar = !human && !replay ? toolbar() : null, left = bar && cv.clientHeight <= cv.clientWidth ? (bar[2].x + bar[2].w + 120) * dpr : 0;
-      const tw = ctx.measureText(msg).width + u * 1.6, mid = left ? Math.max(left + tw / 2, (left + W) / 2) : W / 2, bx = mid - tw / 2, by = oy + VIEW_H * S - u * 2.4;
+      const land = cv.clientHeight <= cv.clientWidth, bar = !human && !replay ? toolbar() : null, acts = land ? actions() : [];
+      const left = bar && land ? (bar[2].x + bar[2].w + 120) * dpr : 0, right = acts.length ? acts[acts.length - 1].x * dpr - u * .6 : W;
+      const tw = ctx.measureText(msg).width + u * 1.6, mid = left ? Math.max(left + tw / 2, (left + right) / 2) : Math.min(W / 2, right - tw / 2), bx = mid - tw / 2, by = oy + VIEW_H * S - u * 2.4;
       ctx.fillStyle = 'rgba(28,52,60,.55)'; ctx.beginPath(); ctx.roundRect(bx, by, tw, u * 1.3, u * .65); ctx.fill();
       ctx.fillStyle = '#fffbea'; ctx.fillText(msg, mid, by + u * .66);
+    }
+    for (const b of actions()) {
+      const d = dpr;
+      ctx.fillStyle = b.id === 'share' ? 'rgba(255,236,170,.92)' : 'rgba(255,250,238,.82)'; ctx.beginPath(); ctx.roundRect(b.x * d, b.y * d, b.w * d, b.h * d, b.h * d / 2); ctx.fill();
+      ctx.lineWidth = Math.max(1.5, d); ctx.strokeStyle = 'rgba(28,52,60,.3)'; ctx.stroke();
+      ctx.fillStyle = '#23404a'; ctx.font = `600 ${Math.round(b.h * .38) * d}px system-ui,-apple-system,sans-serif`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.fillText(b.label, (b.x + b.w / 2) * d, (b.y + b.h / 2) * d + d);
     }
     ctx.restore();
     if (usingTouch && human) {
@@ -1153,7 +1338,7 @@
     drawBackground(); drawTiles(); drawCrystals(); drawSeeds(); drawMarks();
     drawItems();
     for (const e of enemies) drawEnemy(e);
-    drawPip(); drawParts(); drawWeather(m); drawDarkness(m);
+    drawGhost(); drawPip(); drawParts(); drawWeather(m); drawDarkness(m);
     if (!human || replay) drawThoughts(arcs, at);
     drawWary(); drawDirectorWorld();
   }
@@ -1208,12 +1393,16 @@
   document.addEventListener('visibilitychange', () => { visible = !document.hidden; last = 0; if (visible && playing && !raf) raf = requestAnimationFrame(frame); });
   addEventListener('resize', () => { layout(); render(); });
   sheet.onload = backdrop.onload = () => { if (!playing) render(); };
-  layout(); reset((Math.random() * 1e9) | 0); render();
+  addEventListener('hashchange', start);
+  addEventListener('pagehide', saveBest);
+  document.addEventListener('visibilitychange', () => { if (document.hidden) saveBest(); });
+  layout(); start();
   if (playing) raf = requestAnimationFrame(frame);
   // Test hook: lets the smoke test drive the simulation without a browser clock.
   window.__pipRun = {tick, reset, state: () => ({pl, enemies, seeds, maxX, dead, human, cam, viewW}), GAP, layout, tileAt: (x, y) => tileAt(x, y),
     scores: () => { const th = enemies.filter(e => e.state !== 'dead' && e.state !== 'squash' && Math.abs(e.x - pl.x) < 260); return OPTIONS.map(o => [o.dir, o.wait, o.hold, Math.round(simulate(o, th).score)]); },
     stats: () => stats, biomeAt: x => biomeAt(x), GAPS,
     debug: () => ({tension, risk, marks: marks.length, replay: !!replay, zoom, big, items: items.length}),
-    director: {arm: t => { tool = t; }, refill: () => { charges = 3; }, place: (tx, ty) => place(tx, ty), grow, info: () => ({tool, charges, dirScore, notes: notes.map(n => n.text)})}};
+    director: {arm: t => { tool = t; }, refill: () => { charges = 3; }, place: (tx, ty) => place(tx, ty), grow, info: () => ({tool, charges, dirScore, notes: notes.map(n => n.text)})},
+    ghost: {encode: () => encodeRun(run), decode: decodeRun, race: code => { const r = decodeRun(code), live = seed; ghost = r && buildGhost(r, 'friend'); reset(live); return ghost; }, at: f => ghostAt(f), run: () => run}};
 })();

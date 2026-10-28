@@ -15,7 +15,7 @@ const sandbox = {
   Image: class { constructor() { this.complete = false; this.naturalWidth = 0; } },
   matchMedia: () => ({matches: false, addEventListener() {}}),
   addEventListener() {}, requestAnimationFrame: () => 0, cancelAnimationFrame() {},
-  performance: {now: () => 0}, devicePixelRatio: 1, location: {origin: 'http://x'}, Math, Set, Map, Uint8Array
+  performance: {now: () => 0}, devicePixelRatio: 1, location: {origin: 'http://x', hash: ''}, Math, Set, Map, Uint8Array
 };
 sandbox.window = sandbox;
 vm.runInNewContext(fs.readFileSync(path.join(root, 'assets/pip-run.js'), 'utf8'), sandbox);
@@ -54,4 +54,21 @@ for (const seed of [3, 11]) {
   let passed = false; for (let f = 0; f < 60 * 12 && !passed; f++) { G.tick(); passed = G.state().pl.x > tx * 16 + 24; }
   assert.ok(passed, `seed ${seed}: Pip could not get past an accepted wall`);
 }
-console.log('Pip Run PASS: jump-sized gaps, finite physics, demo player progresses through 4 seeded worlds, referee refuses traps and accepted walls stay passable.');
+// Ghosts: a run's input log, with a director placement and a resize in it,
+// round-trips through a link and rebuilds the run exactly, frame for frame.
+{
+  G.reset(5); const xs = [];
+  for (let f = 1; f <= 60 * 120; f++) {
+    if (f === 400) { const s = G.state(); G.director.arm('brick'); G.director.refill(); G.director.place(Math.floor((s.pl.x + 64) / 16), Math.floor((s.pl.y + s.pl.h - 1) / 16)); }
+    if (f === 2000 || f === 4000) { game.clientWidth = f === 2000 ? 800 : 1363; G.layout(); }
+    G.tick(); const s = G.state(); xs.push([s.pl.x, s.pl.y]);
+  }
+  const run = G.ghost.run(), code = G.ghost.encode();
+  assert.ok(run.events.some(e => e.k === 'b') && run.events.some(e => e.k === 'w'), 'placement and resize are logged');
+  assert.ok(/^[\w.-]+$/.test(code) && code.length < 2500, `link-safe, compact code (${code.length} chars)`);
+  const g = G.ghost.race(code);
+  assert.equal(g.frames.length, xs.length, 'ghost covers the run');
+  xs.forEach(([x, y], i) => { const p = G.ghost.at(i + 1); assert.ok(p.x === x && p.y === y, `ghost diverged at frame ${i + 1}`); });
+  for (const bad of ['', 'x', '1.zz', '2.1.a0.1.AA', '1.1.a0.1.A*']) assert.equal(G.ghost.decode(bad), null, `rejects ${bad}`);
+}
+console.log('Pip Run PASS: jump-sized gaps, finite physics, demo player progresses through 4 seeded worlds, referee refuses traps and accepted walls stay passable, shared runs replay exactly as ghosts.');
