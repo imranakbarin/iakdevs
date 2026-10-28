@@ -1,5 +1,19 @@
 # HANDOFF — Mushroom Island (October 26, 2026)
 
+## v9 — Step 1: grounded running rhythm (October 27, 2026)
+
+**Scope:** The user approved improving Mushroom Island **one change at a time**. This step adjusts only Pip's *ordinary running*, and intentionally does not introduce obstacles, physics, new backgrounds, or change the approved authored character sprite.
+
+- Branch: `feature/pip-foot-contact-rhythm-v9-20261027` based on master `ac31f327829a734864911384a32e6ace2baa6b24` (v8.1 flicker fix).
+- `assets/mushroom-cinematic.js`: the 16-frame authored running atlas now advances every 9 world pixels instead of 12, giving a more natural ~0.93-second alternating-stride loop at 155px/sec world speed. Introduced pure `gaitAt(world)` for deterministic frame and alternate-foot contact timing. The character's global vertical running bob was removed so the boots stay on the same grass/dirt baseline rather than bouncing the entire body. Decorative dust appears briefly at actual alternate footfall timing, not continuously.
+- The one-full-opacity-sprite-per-frame flicker fix from v8.1 is preserved; 6 separate action poses are unchanged; original 16 run poses and all cinematic background/foreground assets are unchanged.
+- `mushroom-island.html` requests `mushroom-cinematic.js?v=10` to bust the cached script.
+- `tests/mushroom-cinematic.test.cjs`: runs existing artwork, ten-stunt and pause/visibility tests and now checks the exact 16-pose/144px cycle, left/right contact separation at 72px, empty midstride contact, wrap continuity, safe long-run index, and no whole-sprite vertical bob. Tested against the actual branch source using mock Canvas rendering.
+- **Visual acceptance outstanding:** Real desktop/mobile watch-through including feet on terrain, pace, and visible contact dust. Do not claim this pass introduces authentic foot IK, rendered rigging, new physics, or that a mocked test proves the perceived quality. If the cadence feels too fast, revert only `RUN_STRIDE_PX` (9 -> 12), keeping the grounded baseline and frame fix.
+- Next task only **after reviewing this step**: improve takeoff-to-landing pose quality or introduce a *single* art-matched hurdle, according to the user's feedback. Avoid bundling several changes.
+
+---
+
 ## v8.1 — Fix flashing during Pip's pose transitions (October 27, 2026)
 
 - User reported visible flickering after the v8 animation polish.

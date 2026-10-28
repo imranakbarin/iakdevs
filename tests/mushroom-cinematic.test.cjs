@@ -10,7 +10,7 @@ const js = fs.readFileSync(path.join(root,'assets/mushroom-cinematic.js'),'utf8'
 const image = fs.readFileSync(path.join(root,'assets/mushroom-cinematic-kingdom.webp'));
 const matchedAssets=['pip-cinematic-run.webp','pip-full-run-22.webp','mushroom-terrace-cinematic.webp','mushroom-bounce-cinematic.webp'];
 for(const a of matchedAssets){const b=fs.readFileSync(path.join(root,'assets',a));assert.ok(b.length>3000&&b.subarray(0,4).toString()==='RIFF'&&b.subarray(8,12).toString()==='WEBP',a+' must be self-hosted WebP');}
-assert.match(page, /assets\/mushroom-cinematic\.js\?v=9/);
+assert.match(page, /assets\/mushroom-cinematic\.js\?v=10/);
 assert.match(page, /id="island"/);
 assert.ok(image.length>100000&&image.subarray(0,4).toString()==='RIFF'&&image.subarray(8,12).toString()==='WEBP','real authored kingdom art is included');
 new vm.Script(js,{filename:'mushroom-cinematic.js'});
@@ -66,7 +66,7 @@ class MockImage{
 // Inject internal pose exposure in test only, not in the deployed build.
 const marker="  palace.src='assets/mushroom-cinematic-kingdom.webp';";
 assert.equal(js.split(marker).length,2);
-const code=js.replace(marker,'  window.__probe={poseAt,pipFrame,animationAt,spriteFrame,render,setWorld:x=>{world=x;render();}};\n'+marker);
+const code=js.replace(marker,'  window.__probe={poseAt,pipFrame,gaitAt,animationAt,spriteFrame,render,setWorld:x=>{world=x;render();}};\n'+marker);
 vm.runInNewContext(code,{window:win,document:doc,Image:MockImage,matchMedia:()=>reduced,
  location:{origin:'https://unit.example'},requestAnimationFrame:raf,cancelAnimationFrame:cancel,console,Math},{timeout:3000});
 const kinds=new Set();
@@ -86,10 +86,33 @@ assert.deepEqual([...kinds].sort(),[...names].sort());
 // not repeat a gently rocked static torso.
 const runningFrames=new Set();
 for(let n=0;n<16;n++){
- win.__probe.setWorld(n*12+22);
+ win.__probe.setWorld(n*9+22);
  runningFrames.add(win.__probe.pipFrame({active:false,kind:'hop'}));
 }
 assert.equal(runningFrames.size,16,'all 16 articulated contact/passing/push-off frames accessible');
+// The full opposing-leg cycle takes 144px; ground beats are 72px apart.
+const gait=win.__probe.gaitAt;
+assert.equal(gait(0).frame,0,'first grounded contact');
+assert.equal(gait(8*9).frame,8,'opposite foot contact halfway through');
+assert.equal(gait(16*9).frame,0,'cycle resets after exactly 144px');
+assert.ok(gait(0).contact>.99&&gait(8*9).contact>.99,'two grounded footfalls');
+assert.ok(gait(4*9).contact<.01&&gait(12*9).contact<.01,'no hovering dust midstride');
+assert.ok(Math.abs(gait(0).contact-gait(16*9).contact)<1e-9,'no contact discontinuity at wrap');
+for(const x of [0,11,33,70,140,225,513,10000]){
+ const a=gait(x);
+ assert.ok(Number.isFinite(a.phase)&&a.frame>=0&&a.frame<16,'stable long-run cycle');
+ assert.ok(a.contact>=0&&a.contact<=1,'bounded foot contact');
+}
+for(const fps of [30,60,120]){
+ const worldAtFiveSeconds=155*5;
+ const poseAtDistance=gait(worldAtFiveSeconds);
+ assert.equal(poseAtDistance.frame,gait(worldAtFiveSeconds).frame,
+   'frame-rate independent distance-synchronized steps at '+fps+' fps');
+}
+assert.match(js,/ctx\.translate\(x,groundY-lift\+footInset\)/,
+  'foot baseline is fixed; no whole-character bob in grounded run');
+assert.ok(!js.includes('Math.abs(Math.sin(runPhase*2))'),
+  'artificial run bob removed');
 for(const [u,expected] of [[.08,16],[.25,17],[.5,18],[.75,19],[.97,20]]){
  assert.equal(win.__probe.pipFrame({active:true,kind:'hop',u}),expected,'dedicated airborne pose');
 }
@@ -162,4 +185,4 @@ hidden=false;events['d:visibilitychange']();assert.equal(queue.size,1,'visible t
 assert.ok(cancelled>0);
 assert.equal(alphaStack.length,0,'canvas transforms and alpha all restored');
 assert.equal(ctx.globalAlpha,1,'no fading or leaking opacity between frames');
-console.log('Mushroom v8.1 FLICKER FIX PASS: 16 distance-synced moving-limb run frames, 6 takeoff/air/landing/slide poses, matched cinematic ground, 4 viewports, secure play/pause.');
+console.log('Mushroom v9 FOOT CONTACT PASS: 16 distance-synced moving-limb run frames, 6 takeoff/air/landing/slide poses, matched cinematic ground, 4 viewports, secure play/pause.');
