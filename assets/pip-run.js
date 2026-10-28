@@ -7,7 +7,8 @@
  *   turns at ledges and retreats into a kickable shell, a hopper and a flier.
  * - When nobody plays, a demo player takes over. It presses the same buttons
  *   a person would and plans each move by simulating the real physics ahead.
- * Original characters and art; no franchise assets, audio or tracking.
+ * Original characters and art; no franchise assets or tracking. Sound is
+ * synthesized in assets/pip-audio.js (no audio files).
  */
 (() => {
   'use strict';
@@ -591,7 +592,9 @@
     const bar = toolbar(), h = Math.round(bar[0].h * .72), W = cv.clientWidth, y = cv.clientHeight <= W ? bar[0].y + (bar[0].h - h) / 2 : bar[0].y + bar[0].h + 12;
     main.font = `600 ${Math.round(h * .38)}px system-ui,-apple-system,sans-serif`;
     let x = W - 12;
-    return [['share', '⤴ Share run'], ['restart', ghost ? '↺ Race again' : '↺ Restart']].map(([id, label]) => {
+    const list = [['share', '⤴ Share run'], ['restart', ghost ? '↺ Race again' : '↺ Restart']];
+    if (typeof PipAudio !== 'undefined') list.push(['sound', PipAudio.label()]);
+    return list.map(([id, label]) => {
       const w = Math.round(main.measureText(label).width + h * .9); x -= w; const b = {id, label, x, y, w, h}; x -= 8; return b;
     });
   }
@@ -615,21 +618,21 @@
   }
   function place(tx, ty) {
     const reason = why(tool, tx, ty);
-    if (reason) { note(reason, tx * TS + 8, ty * TS, '#ffd9cf'); return; }
-    if (charges < 1) { note('Recharging…', tx * TS + 8, ty * TS, '#ffd9cf'); return; }
+    if (reason) { sfx('refuse'); note(reason, tx * TS + 8, ty * TS, '#ffd9cf'); return; }
+    if (charges < 1) { sfx('refuse'); note('Recharging…', tx * TS + 8, ty * TS, '#ffd9cf'); return; }
     const before = imagine(), undo = applyPlacement(tool, tx, ty), after = imagine();
     // Unfair is either certain doom or a trap: no surviving future gets past a
     // spot that some future could get past before.
     const past = r => r.arcs.some(a => a.death < 0 && a.pts[a.pts.length - 1][0] > tx * TS + 20);
-    if (after.arcs[after.best].death >= 0) { undo(); note('Too cruel — Pip couldn’t survive that', tx * TS + 8, ty * TS, '#ff9f8f'); return; }
-    if (past(before) && !past(after)) { undo(); note('Too cruel — that would trap Pip', tx * TS + 8, ty * TS, '#ff9f8f'); return; }
+    if (after.arcs[after.best].death >= 0) { undo(); sfx('refuse'); note('Too cruel — Pip couldn’t survive that', tx * TS + 8, ty * TS, '#ff9f8f'); return; }
+    if (past(before) && !past(after)) { undo(); sfx('refuse'); note('Too cruel — that would trap Pip', tx * TS + 8, ty * TS, '#ff9f8f'); return; }
     charges--;
     logEvent({f: frameNo + 1, k: tool[0], x: tx, y: ty});   // it is in the world from the next tick on
     placed.push({kind: tool, tx, ty, x: tx * TS + 8, frame: frameNo});
     const rerouted = after.best !== before.best, cost = Math.max(0, before.arcs[before.best].score - after.arcs[after.best].score);
     const pts = rerouted ? Math.round(20 + Math.min(80, cost * .5)) : 5;
     dirScore += pts; note(rerouted ? `Pip reroutes +${pts}` : `Pip shrugs it off +${pts}`, tx * TS + 8, ty * TS);
-    sparkle(tx * TS + 8, ty * TS + 8); plan = null;   // replan now: the thought lines visibly change
+    sfx('place'); sparkle(tx * TS + 8, ty * TS + 8); plan = null;   // replan now: the thought lines visibly change
   }
   function applyPlacement(kind, tx, ty) {
     if (kind === 'creature') {
@@ -641,7 +644,7 @@
   function gotcha() {
     if (human) return;
     const p = placed.find(q => frameNo - q.frame < 300 && Math.abs(q.x - pl.x) < 80);
-    if (p) { placed.splice(placed.indexOf(p), 1); dirScore += 150; note('Gotcha! +150', pl.x + 6, pl.y - 6, '#ffd36a'); }
+    if (p) { placed.splice(placed.indexOf(p), 1); dirScore += 150; sfx('gotcha'); note('Gotcha! +150', pl.x + 6, pl.y - 6, '#ffd36a'); }
   }
   function assist([tx, ty]) {
     if (human) return;
@@ -666,6 +669,7 @@
   const takeOver = () => { if (!human) { human = true; hintUntil = performance.now() + 6000; } idleSince = performance.now(); };
   addEventListener('keydown', e => {
     const k = e.code;
+    if (typeof PipAudio !== 'undefined') { PipAudio.unlock(); if (k === 'KeyM' && !e.repeat) { PipAudio.cycle(); return; } }
     if (k === 'KeyR' && !e.repeat) { restart(); return; }
     if (!human) {
       const t = TOOLS.find(q => q.key === k);
@@ -689,7 +693,7 @@
     }
   }
   const pointers = new Map();
-  cv.addEventListener('pointerdown', e => { if (e.pointerType !== 'mouse') usingTouch = true; const a = actions().find(b => e.offsetX >= b.x && e.offsetX <= b.x + b.w && e.offsetY >= b.y && e.offsetY <= b.y + b.h); if (a) { (a.id === 'share' ? shareRun : restart)(); return; } if (!human && directorPointer(e)) return; if (e.pointerType === 'mouse') { takeOver(); return; } usingTouch = true; try { cv.setPointerCapture(e.pointerId); } catch (_) {} pointers.set(e.pointerId, {x: e.offsetX, y: e.offsetY}); readTouches(pointers); takeOver(); });
+  cv.addEventListener('pointerdown', e => { if (e.pointerType !== 'mouse') usingTouch = true; const a = actions().find(b => e.offsetX >= b.x && e.offsetX <= b.x + b.w && e.offsetY >= b.y && e.offsetY <= b.y + b.h); if (typeof PipAudio !== 'undefined') PipAudio.unlock(); if (a) { (a.id === 'share' ? shareRun : a.id === 'sound' ? PipAudio.cycle : restart)(); return; } if (!human && directorPointer(e)) return; if (e.pointerType === 'mouse') { takeOver(); return; } usingTouch = true; try { cv.setPointerCapture(e.pointerId); } catch (_) {} pointers.set(e.pointerId, {x: e.offsetX, y: e.offsetY}); readTouches(pointers); takeOver(); });
   cv.addEventListener('pointermove', e => { if (e.pointerType === 'mouse' && !e.buttons) hover = tool ? cellAt(e.clientX, e.clientY) : null; if (pointers.has(e.pointerId)) { pointers.set(e.pointerId, {x: e.offsetX, y: e.offsetY}); readTouches(pointers); } });
   const lift = e => { pointers.delete(e.pointerId); readTouches(pointers); };
   cv.addEventListener('pointerup', lift); cv.addEventListener('pointercancel', lift);
@@ -703,14 +707,15 @@
 
   /* ---------------- simulation tick ---------------- */
   function grow() {
+    sfx(big ? 'seed' : 'grow', {streak: 5});
     if (big) { seeds += 5; sparkle(pl.x + 6, pl.y); return; }
     big = true; growing = 36; pl.y -= 9; pl.h = P.h + 9; pl.w = P.w + 2; sparkle(pl.x + 6, pl.y + 8);
   }
-  function shrink() { big = false; growing = 36; pl.y += 9; pl.h = P.h; pl.w = P.w; inv = 110; puff(pl.x + 6, pl.y + 10, '#fff4dc', 7); }
+  function shrink() { sfx('shrink'); big = false; growing = 36; pl.y += 9; pl.h = P.h; pl.w = P.w; inv = 110; puff(pl.x + 6, pl.y + 10, '#fff4dc', 7); }
   function die() {
     if (dead || inv) return;
     if (big) { shrink(); return; }     // a big Pip takes one hit and shrinks instead of tumbling
-    gotcha(); remember(); dead = 1; pl.vy = -5.2; pl.vx = 0; puff(pl.x + 6, pl.y + 10, '#fff4dc', 7); }
+    gotcha(); remember(); sfx('tumble'); dead = 1; pl.vy = -5.2; pl.vx = 0; puff(pl.x + 6, pl.y + 10, '#fff4dc', 7); }
   // A tumble leaves a mark the planner steers around, and makes Pip warier for a while.
   function remember() { marks.push({x: pl.x, y: Math.min(pl.y, VIEW_H - P.h), at: frameNo}); risk = Math.min(1, risk + .35); journey.tumbles++; arrival = null; }
   const liveInput = () => arrival ? arrivalInput() : human ? humanInput() : demoInput();
@@ -740,7 +745,7 @@
     }
     chapter = {t: 0, num: r + 1, done: BIOMES[regionBiome(r)].name, mark: next.mark, next: next.name, sub: next.sub,
       seeds: seeds - journey.seeds0, time: (frameNo - journey.start) / RATE, tumbles: journey.tumbles, finds: seen.size - journey.finds0, vs};
-    journey.arrived = r; chapters++;
+    journey.arrived = r; chapters++; sfx('arrive');
     for (let k = 0; k < 4; k++) sparkle(arrival.gx + 8 + (k - 1.5) * 18, pl.y - 10 - (k % 2) * 14);
   }
   const clock = sec => `${Math.floor(sec / 60)}:${String(Math.floor(sec % 60)).padStart(2, '0')}`;
@@ -767,21 +772,22 @@
       if (run.inputs.length < RUN_MAX) { run.inputs.push((inp.l ? 1 : 0) | (inp.r ? 2 : 0) | (inp.j ? 4 : 0)); if (human) run.human++; }
     }
     simNow = frameNo;   // the planner may have moved it while imagining
-    const ev = stepBody(pl, inp);
+    const vy0 = pl.vy, ev = stepBody(pl, inp);
     crumbleTick();
     if (pl.x < cam) { pl.x = cam; pl.vx = Math.max(0, pl.vx); }
     if (inp.r && !inp.l) facing = 1; else if (inp.l && !inp.r) facing = -1;
     anim += Math.abs(pl.vx);
+    if (pl.ground && Math.abs(pl.vx) > .3) { const st = Math.floor(anim / ((shownBig() ? 1.5 : 1.15) * 8)); if (st !== stepAt) { stepAt = st; sfx('step', {surface: surface(), v: Math.abs(pl.vx) / P.max}); } }
     sq *= .78;
     skidding = pl.ground && Math.abs(pl.vx) > 1 && (inp.l && pl.vx > 0 || inp.r && pl.vx < 0);
-    if (ev.jumped) { sq = 1; puff(pl.x + 6, pl.y + pl.h, '#f3e2c0', 4); }
-    if (ev.landed) { sq = -1; landedAt = frameNo; puff(pl.x + 6, pl.y + pl.h, '#efdcb7', 5); }
+    if (ev.jumped) { sfx('jump'); sq = 1; puff(pl.x + 6, pl.y + pl.h, '#f3e2c0', 4); }
+    if (ev.landed) { sfx('land', {impact: vy0}); sq = -1; landedAt = frameNo; puff(pl.x + 6, pl.y + pl.h, '#efdcb7', 5); }
     if (pl.ground && Math.abs(pl.vx) > 1.4 && (inp.l && pl.vx > 0 || inp.r && pl.vx < 0) && frameNo % 4 === 0) puff(pl.x + 6, pl.y + pl.h, '#efdcb7', 2);
     if (ev.bump) bump(ev.bump[0], ev.bump[1]);
-    if (pl.y > VIEW_H + 24) { if (!dead) { gotcha(); remember(); } dead = 30; pl.vy = 0; if (big) { big = false; pl.h = P.h; pl.w = P.w; } }
+    if (pl.y > VIEW_H + 24) { if (!dead) { gotcha(); remember(); sfx('tumble'); } dead = 30; pl.vy = 0; if (big) { big = false; pl.h = P.h; pl.w = P.w; } }
     if (inv) inv--;
     if (growing) growing--;
-    if (ev.sprung) { sq = 1; bumps.push({tx: ev.sprung[0], ty: ev.sprung[1], t: 0}); puff(pl.x + 6, pl.y + pl.h, '#fff4dc', 5); assist(ev.sprung); }
+    if (ev.sprung) { sfx('spring'); sq = 1; bumps.push({tx: ev.sprung[0], ty: ev.sprung[1], t: 0}); puff(pl.x + 6, pl.y + pl.h, '#fff4dc', 5); assist(ev.sprung); }
     items = items.filter(updateItem);
     // A safe, grounded spot becomes the next respawn point.
     if (pl.ground) {
@@ -815,23 +821,32 @@
       if (e.state === 'dead' || e.state === 'squash' || !overlap(pl, e)) continue;
       const stomp = pl.vy > 0 && pl.y + pl.h - e.y < 9;
       if (e.state === 'shell') {
-        e.state = 'slide'; e.vx = pl.x + 6 < e.x + 7 ? 3.6 : -3.6; inv = Math.max(inv, 12);
+        e.state = 'slide'; e.vx = pl.x + 6 < e.x + 7 ? 3.6 : -3.6; inv = Math.max(inv, 12); sfx('bump');
         if (stomp) pl.vy = -4.4;
       } else if (stomp) {
         if (e.kind === 'snail') { e.state = 'shell'; e.vx = 0; e.h = 12; e.y += 2; }
         else if (e.kind === 'flier') { e.state = 'dead'; e.vy = 0; e.vx = 0; }
         else { e.state = 'squash'; e.t = 0; }
         pl.vy = inp.j ? -6.4 : -4.4; pl.jumping = inp.j; puff(e.x + 7, e.y + 4, '#fff4dc', 6);
-        stompTimes = stompTimes.filter(t => frameNo - t < 100); stompTimes.push(frameNo); if (stompTimes.length >= 2) noteMoment('stomp chain');
+        sfx('stomp'); stompTimes = stompTimes.filter(t => frameNo - t < 100); stompTimes.push(frameNo); if (stompTimes.length >= 2) noteMoment('stomp chain');
       } else die();
     }
     for (const ch of chunks.values()) for (const s of ch.seeds)
-      if (!s.got && Math.abs(s.x - pl.x - 6) < 11 && Math.abs(s.y - pl.y - 10) < 14) { s.got = true; s.gotAt = frameNo; seeds++; sparkle(s.x, s.y); }
+      if (!s.got && Math.abs(s.x - pl.x - 6) < 11 && Math.abs(s.y - pl.y - 10) < 14) { s.got = true; s.gotAt = frameNo; seeds++; seedStreak = frameNo - lastSeedAt < 50 ? seedStreak + 1 : 0; lastSeedAt = frameNo; sfx('seed', {streak: seedStreak}); sparkle(s.x, s.y); }
     parts = parts.filter(p => { p.x += p.vx; p.y += p.vy; p.vy += p.star ? 0 : .08; p.vx *= .96; return --p.life > 0; });
     for (const b of bumps) b.t++;
     bumps = bumps.filter(b => b.t < 10);
   }
-  let bumps = [];
+  let bumps = [], stepAt = 0, seedStreak = 0, lastSeedAt = -99;
+  // Sound lives in assets/pip-audio.js; the simulation only names events.
+  // Nothing sounds while a ghost is rebuilt or the planner imagines.
+  const sfx = (name, o) => { if (!ghostSim && typeof PipAudio !== 'undefined') PipAudio.fx(name, o); };
+  function surface() {
+    if (pl.on) return biomeAt(pl.x) === 'sky' ? 'cloud' : 'wood';
+    const id = tileAt(Math.floor((pl.x + 6) / TS), Math.floor((pl.y + pl.h + 1) / TS));
+    if (id === EARTH) return {meadow: 'grass', frost: 'ice', sky: 'cloud', caves: 'stone'}[biomeAt(pl.x)];
+    return id === CRUMBLE && biomeAt(pl.x) === 'caves' ? 'crystal' : id === STONE || id === PIPE_L || id === PIPE_R ? 'stone' : 'wood';
+  }
   // Crumble planks start to go once Pip stands on them, fall half a second
   // later and grow back after a while (or at once when Pip respawns).
   function crumbleTick() {
@@ -842,6 +857,7 @@
     }
     for (const [k, at] of crumbleFall) if (frameNo >= at) {
       const tx = Math.floor(k / 64), ty = k - tx * 64;
+      if (Math.abs(tx * TS - pl.x) < 320) sfx('crumble');
       crumbleFall.delete(k); setTile(tx, ty, EMPTY); regrow.push({tx, ty, at: frameNo + 480});
       for (let q = 0; q < 3; q++) parts.push({x: tx * TS + 3 + q * 5, y: ty * TS + 6, vx: (q - 1) * .4, vy: .4 + q * .3, life: 40, col: crumbleCol(tx), r: 2.2, debris: true});
     }
@@ -859,7 +875,7 @@
       const px = p.tx * TS;
       if ((frameNo + p.ph) % 160 === 0 && px > pl.x + 110 && px - pl.x < 300) {
         enemies.push({kind: 'pod', x: px - 10, y: p.ty * TS + 3, baseY: 0, w: 10, h: 10, vx: -1.05, vy: 0, ground: false, state: 'walk', t: 0, period: 99});
-        p.fired = frameNo; puff(px - 2, p.ty * TS + 8, '#e8d6a0', 3);
+        p.fired = frameNo; sfx('spit'); puff(px - 2, p.ty * TS + 8, '#e8d6a0', 3);
       }
     }
   }
@@ -993,6 +1009,8 @@
   let stats = {bumps: 0, sprouts: 0};
   function bump(tx, ty) {
     const id = tileAt(tx, ty);
+    if (id === BRICK && big) sfx('smash');
+    else { sfx('bump'); if (id === BLOCK) sfx(hash(seed ^ 0x5b0, tx * 31 + ty) % 3 === 0 ? 'sprout' : 'seed', {streak: 2}); }
     if (id === BLOCK) stats.bumps++;
     if (id === BLOCK && hash(seed ^ 0x5b0, tx * 31 + ty) % 3 === 0) { setTile(tx, ty, USED); usedAt.set(tx + ',' + ty, frameNo); items.push({x: tx * TS + 2, y: ty * TS, w: 12, h: 12, vx: 0, vy: 0, rise: 14, ground: false, t: 0}); stats.sprouts++; bumps.push({tx, ty, t: 0}); return; }
     if (id === BRICK && big) { setTile(tx, ty, EMPTY); for (let k = 0; k < 4; k++) parts.push({x: tx * TS + 4 + (k % 2) * 8, y: ty * TS + 4 + (k >> 1) * 8, vx: (k % 2 ? 1.6 : -1.6), vy: -3.2 - (k >> 1), life: 40, col: '#c9693f', r: 2.4, debris: true}); return; }
@@ -1292,7 +1310,7 @@
   function discover(id) {
     seen = seen || new Set(store.get('pip-run:seen') || []);
     if (seen.has(id) || card || chapter) return;
-    seen.add(id); store.set('pip-run:seen', [...seen]); card = {id, t: 0};
+    seen.add(id); store.set('pip-run:seen', [...seen]); card = {id, t: 0}; sfx('find');
   }
   function drawCard() {
     if (!card || replay) return;
@@ -1818,15 +1836,20 @@
     let n = 0;
     while (!replay && acc >= 1 && n < 6) { tick(); acc -= 1; n++; }
     if (acc > 1) acc = 1;
+    if (typeof PipAudio !== 'undefined') {
+      const m = biomeMix(), biomes = {}; biomes[m.a] = 1 - m.w; biomes[m.b] = (biomes[m.b] || 0) + m.w;
+      PipAudio.update({biomes, biome: m.w > .5 ? m.b : m.a, tension, wind: biomeAt(pl.x) === 'sky' ? windAt(pl.x) : 0, dt});
+    }
     render(); raf = requestAnimationFrame(frame);
   }
+  const hush = () => { if (typeof PipAudio !== 'undefined') PipAudio.pause(!playing || !visible); };
   function setPlaying(on) {
-    playing = Boolean(on); last = 0;
+    playing = Boolean(on); last = 0; hush();
     if (raf) { cancelAnimationFrame(raf); raf = 0; }
     if (playing && visible) raf = requestAnimationFrame(frame); else render();
   }
   addEventListener('message', e => { if (e.origin === location.origin && e.data && e.data.type === 'pip:motion') setPlaying(e.data.playing); });
-  document.addEventListener('visibilitychange', () => { visible = !document.hidden; last = 0; if (visible && playing && !raf) raf = requestAnimationFrame(frame); });
+  document.addEventListener('visibilitychange', () => { visible = !document.hidden; last = 0; hush(); if (visible && playing && !raf) raf = requestAnimationFrame(frame); });
   addEventListener('resize', () => { layout(); render(); });
   sheet.onload = backdrop.onload = () => { if (!playing) render(); };
   addEventListener('hashchange', start);
@@ -1837,6 +1860,7 @@
   // Test hook: lets the smoke test drive the simulation without a browser clock.
   window.__pipRun = {tick, reset, state: () => ({pl, enemies, seeds, maxX, dead, human, cam, viewW}), GAP, layout, tileAt: (x, y) => tileAt(x, y),
     scores: () => { const th = enemies.filter(e => e.state !== 'dead' && e.state !== 'squash' && Math.abs(e.x - pl.x) < 260); return OPTIONS.map(o => [o.dir, o.wait, o.hold, Math.round(simulate(o, th).score)]); },
+    actions: () => actions(),
     journey: () => ({chapters, arrival: !!arrival, chapter: chapter && {...chapter}}), stats: () => stats, biomeAt: x => biomeAt(x), GAPS, features: () => [...chunks.values()].flatMap(ch => ch.features), wonder: r => regionWonder(r),
     debug: () => ({tension, risk, marks: marks.length, replay: !!replay, zoom, big, items: items.length}),
     director: {arm: t => { tool = t; }, refill: () => { charges = 3; }, place: (tx, ty) => place(tx, ty), grow, info: () => ({tool, charges, dirScore, notes: notes.map(n => n.text)})},
