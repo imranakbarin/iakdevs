@@ -111,7 +111,7 @@ input[type=range]{width:80px;accent-color:#E63B2E}
 <canvas id="c" aria-label="Endlessly scrolling art landscape inspired by traditional painting"></canvas>
 <div class="ui"><div class="bar" id="scene-controls">
   <h1>Infinite scroll</h1>
-<select id="mode" aria-label="Experience"><option value="art">World art</option><option value="road">Road trip</option><option value="zen">Zen garden</option><option value="cozy">Cozy Worlds</option><option value="mushroom">Mushroom Island</option><option value="pip">Pip Run</option></select>
+<select id="mode" aria-label="Experience"><option value="home">⌂ Today</option><option value="art" selected>World art</option><option value="road">Road trip</option><option value="zen">Zen garden</option><option value="cozy">Cozy Worlds</option><option value="mushroom">Mushroom Island</option><option value="pip">Pip Run</option></select>
   <input id="sty" type="hidden" value="gond">
   <select id="place" aria-label="Road trip place" hidden><option value="auto">Places · Auto</option><option value="0">Mountain pass</option><option value="1">Desert highway</option><option value="2">Forest trail</option><option value="3">Coastal drive</option><option value="4">City outskirts</option></select>
 <button id="traffic" hidden aria-pressed="true">Traffic on</button>
@@ -147,6 +147,7 @@ input[type=range]{width:80px;accent-color:#E63B2E}
 <script src="assets/art-presence.js?v=1"></script>
 <script src="assets/art-ambience.js?v=1"></script>
 <script src="assets/art-wonders.js?v=1"></script>
+<script src="assets/home.js?v=1"></script>
 <script src="assets/road-journey.js?v=1"></script>
 <script src="assets/world-sound.js?v=2"></script>
 <script src="assets/kangra-world.js?v=3"></script>
@@ -2130,7 +2131,7 @@ function pipMotion(on){if(pipFrame.getAttribute('src'))pipFrame.contentWindow?.p
 pipFrame.addEventListener('load',()=>{pipMotion(modeBtn.value==='pip'&&playing);if(modeBtn.value==='pip')pipFrame.contentWindow?.document.getElementById('game')?.focus();});
 let cozyPromise=null;
 function openCozy(){
- if(!cozyPromise)cozyPromise=Promise.all(['assets/cozy-scene-motion.js?v=1','assets/cozy-worlds-calm.js?v=2'].map(src=>new Promise((resolve,reject)=>{const js=document.createElement('script');js.src=src;js.onload=resolve;js.onerror=()=>{js.remove();reject(new Error('Scene script unavailable'));};document.head.append(js);})));
+ if(!cozyPromise)cozyPromise=Promise.all(['assets/cozy-scene-motion.js?v=1','assets/cozy-worlds-calm.js?v=3'].map(src=>new Promise((resolve,reject)=>{const js=document.createElement('script');js.src=src;js.onload=resolve;js.onerror=()=>{js.remove();reject(new Error('Scene script unavailable'));};document.head.append(js);})));
  cozyPromise.then(()=>{if(modeBtn.value==='cozy')CozyWorlds.mount(document.getElementById('cozy-host'),{onMotionChange(value){playing=value;syncPlay();},onExperienceChange(value){modeBtn.value=value;modeBtn.onchange();}});}).catch(()=>{if(modeBtn.value==='cozy')document.getElementById('cozy-host').innerHTML='<p class="cozy-error">The scene could not load. Please refresh.</p>';cozyPromise=null;});
 }
 modeBtn.onchange=()=>{
@@ -2252,7 +2253,7 @@ if(requestedZen||requestedRoad||requestedCozy||requestedMushroom||requestedPip){
 // Editing the hash (or following a deep link in the same tab) opens that world;
 // the app's own replaceState calls never fire hashchange.
 addEventListener('hashchange',()=>location.reload());
-ArtAmbience.install();ArtWonders.install();ArtPresence.install();WorldSound.install();
+ArtAmbience.install();ArtWonders.install();ArtPresence.install();WorldSound.install();Home.install();
 motionPreference.addEventListener('change',e=>{if(e.matches){playing=false;syncPlay();if(modeBtn.value==='cozy')window.CozyWorlds?.pause();wakeScene();}});
 wakeScene();
 </script>

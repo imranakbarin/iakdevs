@@ -260,3 +260,7 @@ New modules `assets/road-journey.js` and `assets/world-sound.js` (+ `tests/world
 
 New `assets/art-wonders.js` (+ `tests/art-wonders.test.cjs`) wraps every `STYLES[key].anim` (like `ArtAmbience`) and appends a `#art-moment` line inside `#art-caption`. Shared `index.html` anchors touched: its script tag after `art-ambience.js`, `ArtWonders.install()` after `ArtAmbience.install()`, and the art-mode bar CSS now also shows `#sound` (`:not(#sound)` in the hide rule, `#sound:not([hidden])` in the display rule, `order:3` after `#play`, and the 600px font rule).
 
+## Claude follow-up (Today home screen)
+
+New `assets/home.js` (loaded after `art-wonders.js`, before the inline script, so it can read the first hash). It wraps `modeBtn.onchange` in `Home.install()` (called last, after `WorldSound.install()`): choosing the `home` option shows the overlay and puts the menu back on the current mode, so `modeBtn.value` is never left as `home`. Shared anchors touched: `<option value="home">⌂ Today</option>` first in `#mode` with `selected` moved to World art; the script tag; the install call; Cozy Worlds' own menu (`assets/cozy-worlds-calm.js`, now `?v=3`) lists `⌂ Today` first. The overlay pauses the scene through `playBtn.click()` and resumes it the same way.
+

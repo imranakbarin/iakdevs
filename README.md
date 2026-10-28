@@ -2,6 +2,10 @@
 
 A standalone canvas experience at https://imranakbarin.github.io/iakdevs/.
 
+## Today (home screen)
+
+A visit without a link opens **Today** (`assets/home.js`): a card per experience with a small moving preview (Pip running through his kingdom, World art cycling through traditions, the touring car on the road, the garden, the reading nook) and what you have done there, read from what each experience already keeps on the device: Pip's best on today's world and the sights found, Road trip postcards collected, whether you have raked the garden. Tap a card to step in; **⌂ Today** in the experience menu (and in Cozy Worlds' own menu) brings you back, and Esc or ✕ returns to where you were. The scene behind pauses while it is open. Links to an experience still go straight there; `#today` opens it.
+
 ## Modes
 
 - **World art** — endless living paintings: Gond, Warli, Madhubani, Kangra, Japanese, Chinese and Mexican folk-art inspired. Live art uses each tradition's procedural chunk grammar; Artworks → Painting uses the authored panoramas in `assets/art-*-living.webp` (see `assets/living-art-notes.md`).
@@ -12,7 +16,7 @@ A standalone canvas experience at https://imranakbarin.github.io/iakdevs/.
 
 ## Deep links
 
-`#<style>-<seed>` opens a style at a seed, e.g. `#gond-12345`, `#warli-7`. Prefix `painting-` for the painted panorama (`#painting-kangra-3`). `#zen-…`, `#road-…` and `#cozy-…` open the other modes. Seeds vary the starting layout; they do not regenerate painted panoramas. Editing the hash in an open tab loads that world.
+`#<style>-<seed>` opens a style at a seed, e.g. `#gond-12345`, `#warli-7`. Prefix `painting-` for the painted panorama (`#painting-kangra-3`). `#zen-…`, `#road-…` and `#cozy-…` open the other modes; `#today` (or no hash) opens the home screen. Seeds vary the starting layout; they do not regenerate painted panoramas. Editing the hash in an open tab loads that world.
 
 ## Gond benchmark
 
