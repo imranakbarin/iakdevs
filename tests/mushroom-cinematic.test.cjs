@@ -178,6 +178,18 @@ for(const [width,height] of [[1170,650],[390,844],[844,390],[1440,900]]){
  assert.ok(Math.abs(footY-atContact.y)<.01,
    'Pip feet land on cap top exactly at '+width+'x'+height);
  assert.ok(pose.spring.contact,'contact phase available to stunt poses');
+ // The boots must remain above the dynamically compressed cap throughout
+ // their shared x-overlap; merely matching at the exact center is insufficient.
+ for(let p=335;p<=417;p++){
+   const q=win.__probe.springCompression(p);
+   const capWidth=geo.width*(1+.075*q);
+   if(Math.abs(p-385)>capWidth*.35)continue;
+   const top=groundY-geo.height*(1-geo.compression*q)+4;
+   const foot=groundY+10+9*geo.pipScale-
+     win.__probe.poseAt(base+p).lift*geo.pipScale;
+   assert.ok(foot<=top+1,
+     'Pip must not sink through the cap at '+width+'x'+height+' p='+p);
+ }
  assert.ok(win.__probe.poseAt(base+315).lift>pose.lift+25,'arrival jump clears the cap');
  assert.ok(win.__probe.poseAt(base+452).lift>pose.lift+25,'spring launches a second arc');
  // C0 continuity and no negative height across entire bounce and landing.
