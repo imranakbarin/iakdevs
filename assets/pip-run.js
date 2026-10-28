@@ -75,7 +75,7 @@
   /* ---------------- biomes ----------------
      The run passes through regions with their own rules. The rules live in the
      shared physics below, so the planner adapts to them without special cases. */
-  const REGION = 6;                                   // chunks per region (~144 m)
+  const REGION = 12;                                  // chunks per region (~288 m, about a minute)
   const BIOMES = {
     meadow: {name: 'Mushroom Meadow', sub: 'Run, jump, gather star seeds', mark: 'Mushroom Gate', rules: {}, lo: 2, hi: 7},
     frost: {name: 'Frost Ridge', sub: 'Ice is slick: skids run long', mark: 'Frost Spire', rules: {fric: .022, acc: .055, skid: .07, airAcc: .06}, lo: 2, hi: 7},
@@ -174,8 +174,8 @@
     {id: 'run', w: 24, from: 1}, {id: 'gap', w: 22, from: 1}, {id: 'step', w: 14, from: 1}, {id: 'tier', w: 16, from: 1},
     {id: 'pipe', w: 12, from: 1, not: ['sky']}, {id: 'pyramid', w: 12, from: 1, not: ['caves']},
     {id: 'pad', w: 12, from: 1, only: ['sky']}, {id: 'isles', w: 10, from: 1, only: ['sky']},
-    {id: 'ferry', w: 3, from: 2, feature: true}, {id: 'stairs', w: 2.5, from: 2, feature: true}, {id: 'crumble', w: 3, from: 3, feature: true},
-    {id: 'spitter', w: 2.5, from: 5, feature: true}, {id: 'lift', w: 2.5, from: 4, feature: true, not: ['sky', 'caves']}
+    {id: 'ferry', w: 1.5, from: 2, feature: true}, {id: 'stairs', w: 1.2, from: 2, feature: true}, {id: 'crumble', w: 1.5, from: 3, feature: true},
+    {id: 'spitter', w: 1.2, from: 5, feature: true}, {id: 'lift', w: 1.4, from: 4, feature: true, not: ['sky', 'caves']}
   ];
   function generate() {
     const ci = ++gen.ci, r = rng(hash(seed, ci)), d = Math.min(1, ci / 16), biome = biomeOfChunk(ci), B = BIOMES[biome], GAP = GAPS[biome];
@@ -353,6 +353,7 @@
     title = null; lastRegion = -1;
     plan = null; marks = []; risk = .25; tension = 0; wary = 0; stompTimes = []; history = []; moment = null; replay = null; lastReplay = -1e9; usedAt = new Map();
     simW = Math.round(viewW); run = {seed, w: simW, inputs: [], events: [], human: 0, m: 0};
+    prev = {cam, x: pl.x, y: pl.y};
   }
   function spawnUpTo(xRight) {
     for (let ci = Math.max(0, Math.floor(cam / (CW * TS)) - 1); ci <= Math.floor(xRight / (CW * TS)); ci++) {
@@ -694,8 +695,10 @@
   // A tumble leaves a mark the planner steers around, and makes Pip warier for a while.
   function remember() { marks.push({x: pl.x, y: Math.min(pl.y, VIEW_H - P.h), at: frameNo}); risk = Math.min(1, risk + .35); }
   const liveInput = () => human ? humanInput() : demoInput();
+  let prev = {cam: 0, x: 0, y: 0};
   function tick(src = liveInput) {
     if (replay) replay = null;   // only headless callers tick during a replay; the live loop pauses
+    if (!ghostSim) { prev = {cam, x: pl.x, y: pl.y}; for (const e of enemies) { e.px = e.x; e.py = e.y; } }
     frameNo++;
     if (ghostSim) replayEvents();
     else { const w = Math.round(viewW); if (w !== simW) { simW = w; logEvent({f: frameNo, k: 'w', w}); } }
@@ -1354,9 +1357,10 @@
   }
   const W2D = (x, y) => [ox + x * S - camDev(), oy + y * S];
   // Ferries and lifts, dressed for their biome. Lifts show their rails.
+  let drawT = null;   // fractional tick time while drawing between ticks
   function drawMovers() {
     for (const ch of chunks.values()) for (const m of ch.movers) {
-      const [mx, my] = moverAt(m, frameNo), [x, y] = W2D(mx, my), s = S, w = m.w * s, b = biomeAt(m.x);
+      const [mx, my] = moverAt(m, drawT ?? frameNo), [x, y] = W2D(mx, my), s = S, w = m.w * s, b = biomeAt(m.x);
       if (x > cv.width + 40 || x + w + m.ax * s < -40) continue;
       ctx.save();
       if (m.kind === 'lift') {
@@ -1448,17 +1452,18 @@
   }
   function drawThoughts(arcs, at) {
     if (!arcs) return;
-    const fade = Math.max(.4, 1 - (frameNo - at) / 45), lw = Math.max(1.2, S * .42);
+    // Kept quiet: a soft chosen path and only the closest alternatives, faint.
+    const fade = Math.max(.3, 1 - (frameNo - at) / 40), lw = Math.max(1, S * .34);
     ctx.save(); ctx.lineCap = 'round'; ctx.lineJoin = 'round';
     for (const pass of [0, 1]) for (const a of arcs) {
-      if ((pass === 1) !== a.chosen) continue;
+      if ((pass === 1) !== a.chosen || (!a.chosen && a.rank > .2)) continue;
       const dead = a.death >= 0;
-      const al = (a.chosen ? .95 : dead ? .22 + .3 * (1 - a.rank) : .08 + .26 * (1 - a.rank)) * fade;
+      const al = (a.chosen ? .5 : dead ? .1 + .12 * (1 - a.rank) : .05 + .1 * (1 - a.rank)) * fade;
       const path = () => { ctx.beginPath(); a.pts.forEach(([x, y], i) => { const [sx, sy] = W2D(x, y); i ? ctx.lineTo(sx, sy) : ctx.moveTo(sx, sy); }); };
       // A dark under-stroke keeps the lines readable over the bright painting.
-      path(); ctx.strokeStyle = `rgba(24,36,44,${(a.chosen ? .55 : .22) * al})`; ctx.lineWidth = (a.chosen ? lw * 2.4 : lw) + lw * 1.4; ctx.stroke();
+      path(); ctx.strokeStyle = `rgba(24,36,44,${(a.chosen ? .3 : .12) * al})`; ctx.lineWidth = (a.chosen ? lw * 1.8 : lw) + lw; ctx.stroke();
       path(); ctx.strokeStyle = a.chosen ? `rgba(255,226,130,${al})` : dead ? `rgba(255,112,96,${al})` : `rgba(255,255,255,${al})`;
-      ctx.lineWidth = a.chosen ? lw * 2.4 : lw; ctx.stroke();
+      ctx.lineWidth = a.chosen ? lw * 1.8 : lw; ctx.stroke();
       if (dead) { const [ex, ey] = W2D(...a.pts[a.pts.length - 1]), r = S * 1.6; ctx.beginPath(); ctx.moveTo(ex - r, ey - r); ctx.lineTo(ex + r, ey + r); ctx.moveTo(ex + r, ey - r); ctx.lineTo(ex - r, ey + r); ctx.stroke(); }
     }
     ctx.restore();
@@ -1513,7 +1518,9 @@
       ctx.font = `700 ${Math.max(11, 5.5 * S)}px system-ui,-apple-system,sans-serif`; ctx.textAlign = 'center'; ctx.fillStyle = '#fffbea'; ctx.fillText(`${ghost.m} m`, x, y - 33 * S);
       ctx.restore(); return;
     }
-    const g = ghostAt(frameNo); if (!g) return;
+    const g1 = ghostAt(frameNo); if (!g1) return;
+    const g0 = drawT !== null && ghostAt(frameNo - 1), k = drawT !== null ? drawT - frameNo + 1 : 1;
+    const g = g0 && Math.abs(g1.x - g0.x) < 48 ? {...g1, x: g0.x + (g1.x - g0.x) * k, y: g0.y + (g1.y - g0.y) * k} : g1;
     const live = {pl, facing, anim, landedAt, dead, inv, sq, skidding, big, growing};
     pl = {...pl, x: g.x, y: g.y, w: g.w, h: g.h, vx: g.vx, vy: g.vy, ground: g.ground};
     ({facing, anim, landedAt, dead, inv, sq, skidding, big, growing} = g);
@@ -1698,12 +1705,22 @@
       ({pl, facing, anim, landedAt, dead, inv, cam, enemies, parts, bumps, frameNo, sq, skidding, big, growing, items} = live);
       return;
     }
+    // Draw between the last two ticks; a jump of more than a few tiles is a
+    // respawn or a restart, shown as is.
+    const k = clamp(0, acc, 1), lerp = (a, b) => Math.abs(b - a) > 48 ? b : a + (b - a) * k;
+    const live = {pl, cam}, ex = enemies.map(e => [e.x, e.y]);
+    pl = {...pl, x: lerp(prev.x, pl.x), y: lerp(prev.y, pl.y)}; cam = lerp(prev.cam, cam); drawT = frameNo - 1 + k;
+    for (const e of enemies) if (e.px !== undefined) { e.x = lerp(e.px, e.x); e.y = lerp(e.py, e.y); }
     composite(() => scene(plan && plan.arcs, plan ? plan.at : 0));
+    ({pl, cam} = live); enemies.forEach((e, i) => { [e.x, e.y] = ex[i]; }); drawT = null;
     ctx.setTransform(1, 0, 0, 1, 0, 0); drawTitle(); drawCard(); drawHud();
   }
 
   /* ---------------- loop ---------------- */
   let playing = !matchMedia('(prefers-reduced-motion: reduce)').matches, visible = !document.hidden, raf = 0, last = 0, acc = 0;
+  // The simulation runs at 46 ticks a second (a calmer clock than 60); the
+  // renderer interpolates between ticks, so motion stays smooth at any rate.
+  const RATE = 46;
   function frame(now) {
     raf = 0;
     if (!playing || !visible) return;
@@ -1711,9 +1728,10 @@
     if (replay) {
       if (human) replay = null;
       else { replay.i += dt * 60 * .5; if (replay.i >= replay.frames.length) replay = null; }
-    } else acc += dt * (1 - .45 * tension);
+    } else acc += dt * RATE * (1 - .45 * tension);
     let n = 0;
-    while (!replay && acc >= 1 / 60 && n < 6) { tick(); acc -= 1 / 60; n++; }
+    while (!replay && acc >= 1 && n < 6) { tick(); acc -= 1; n++; }
+    if (acc > 1) acc = 1;
     render(); raf = requestAnimationFrame(frame);
   }
   function setPlaying(on) {

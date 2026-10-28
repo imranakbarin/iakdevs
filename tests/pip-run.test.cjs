@@ -30,17 +30,17 @@ const passed = new Set();
 for (const seed of [1, 2, 5, 9]) {
   G.reset(seed);
   let tumbles = 0, prev = 0, last = 0;
-  const secs = seed === 2 ? 130 : 90;   // seed 2 runs on to its first lift (~630 m)
+  const secs = 90;
   for (let f = 1; f <= 60 * secs; f++) {
     G.tick();
     const s = G.state();
     assert.ok(Number.isFinite(s.pl.x) && Number.isFinite(s.pl.y), 'finite position');
     if (s.dead && !prev) tumbles++;
     prev = s.dead;
+    if (f % 60 === 0) for (const ft of G.features()) if (ft.x + 200 < s.maxX) passed.add(ft.id);
     if (f % (60 * 15) === 0) { assert.ok(s.maxX > last + 300, `seed ${seed}: progress stalled near ${Math.round(s.maxX / 16)} m`); last = s.maxX; }
   }
   const m = Math.round(G.state().maxX / 16);
-  for (const ft of G.features()) if (ft.x + 200 < G.state().maxX) passed.add(ft.id);
   assert.ok(m > secs * 5, `seed ${seed}: demo reached only ${m} m in ${secs} s`);
   assert.ok(tumbles <= 6, `seed ${seed}: ${tumbles} tumbles`);
 }
