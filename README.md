@@ -41,6 +41,14 @@ Inputs are recorded on the scene clock, so paused redraws remain pixel-identical
 
 `assets/art-ambience.js` adds slow mist veils, cloud shadows and water glints to the painterly live-art styles (Kangra, Japan, China, Mexico). Mushroom Island's `assets/mushroom-life.js` animates the painted kingdom (mist, lamps, townsfolk, flocks, light shafts) and gives Pip's run star seeds to collect, a fairy companion and butterflies that lift off as he passes.
 
+## Road trip journey
+
+`assets/road-journey.js` turns the drive into a trip between named places (original names). Each stretch heads for a town in the next landscape and the status line counts down to it ("Saltwind Bay in 1.2 km"). Arriving, as the new landscape takes over, shows a postcard: the town, how far you came from the last one and the weather on the way, stamped into a trip log kept on this device ("Stamp 6 of 20"). With a fixed place, towns come every stretch within it. It only reads the road's state.
+
+## Soundscapes
+
+`assets/world-sound.js` gives World art, Road trip and Zen garden sound, synthesized with WebAudio (no audio files). Road trip: an engine that follows the speed and pulls harder when overtaking, road and wind noise, rain, night crickets, waves on the coast, birds in the forest, a far horn in the city and a whoosh as an oncoming car passes. Zen garden: sand hissing under the steel ball (it follows the ball's speed), the bamboo fountain, a splash where you tap the pond, now and then a wind chime or a singing bowl, crickets and frogs by moonlight. World art: river and wind beds, birds and insects, and every so often a short phrase in a voice suited to the tradition (a breathy flute for the Indian styles, plucked strings for Japan and China, a guitar-like pluck for Mexico). Off by default: **♪** in the bar (or M); the choice is remembered and resumes on the first tap. Cozy Worlds, Mushroom Island and Pip Run keep their own sound, so the button hides there. `tests/world-sound.test.cjs` covers both modules.
+
 ## Pip Run
 
 `pip-run.html` + `assets/pip-run.js` (~40 KB of source, 13 KB gzipped) is a real game rather than an animation:

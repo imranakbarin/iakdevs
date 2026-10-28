@@ -50,15 +50,15 @@ input[type=range]{width:80px;accent-color:#E63B2E}
 
 /* The artwork owns the viewport; secondary controls open on demand. */
 .ui{padding:10px;z-index:5}.bar{gap:8px;padding:7px 10px;border-radius:12px;background:rgba(20,44,35,.95);color:#f4ead0;box-shadow:0 5px 22px #10281e25;max-width:calc(100vw - 40px)}
-.bar>:where(:not(#mode):not(#play):not(#settings)){display:none!important}
+.bar>:where(:not(#mode):not(#play):not(#settings):not(#sound)){display:none!important}
 .bar #mode{order:0;min-width:150px;font:500 14px/1.4 system-ui;background:transparent;border:0;color:inherit;padding:8px 10px}.bar #play{order:1}.bar #settings{order:2}
-.bar #play,.bar #settings{font:500 14px/1.4 system-ui;border:0;padding:8px 12px;min-height:38px;background:transparent}
+.bar #play,.bar #settings,.bar #sound{font:500 14px/1.4 system-ui;border:0;padding:8px 12px;min-height:38px;background:transparent}.bar #sound{order:1;color:inherit}
 .bar select option{background:#203b30;color:#f4ead0}
 .controls-open .bar{max-width:640px}.controls-open .bar>:not([hidden]){display:initial!important;order:3}.controls-open .bar label{display:flex!important}.controls-open .bar > h1:not([hidden]),.controls-open .bar > #seed:not([hidden]){display:none!important}
 .controls-open .bar select:not([hidden]){background:#203b30;color:#f4ead0;border-color:#e8ddbd55;min-height:36px}.bar input[type=range]{accent-color:#c8bd8a}
 .controls-open .bar #mode{order:0}.controls-open .bar #play{order:1}.controls-open .bar #settings{order:2;background:#ffffff14}.controls-open .bar select,.controls-open .bar button{border-color:#e8ddbd40;color:#f4ead0}
 .controls-open .bar #mode{flex:1 1 45%}
-@media(max-width:600px){.ui{padding:0}.bar,.zen-mode .bar{box-sizing:border-box;width:100%;max-width:none;border:0;border-radius:0;justify-content:space-between;gap:2px;padding:5px 8px;min-height:52px}.bar #mode{min-width:0;flex:1;padding:7px 6px;font-size:14px}.bar #play,.bar #settings{font-size:13px;padding:7px 10px}.controls-open .bar{padding-bottom:14px;border-radius:0 0 14px 14px;justify-content:center;gap:8px}.controls-open .bar #mode{flex:1 1 40%}.controls-open .bar select{max-width:calc(50% - 12px);font-size:13px!important}.controls-open .bar label{flex-basis:45%;justify-content:center}.controls-open .bar input{width:86px}.controls-open .bar #settings{margin-left:auto}#trip-status{font-size:11px;bottom:14px!important;padding:6px 12px!important}.fab{margin:8px}}
+@media(max-width:600px){.ui{padding:0}.bar,.zen-mode .bar{box-sizing:border-box;width:100%;max-width:none;border:0;border-radius:0;justify-content:space-between;gap:2px;padding:5px 8px;min-height:52px}.bar #mode{min-width:0;flex:1;padding:7px 6px;font-size:14px}.bar #play,.bar #settings,.bar #sound{font-size:13px;padding:7px 10px}.controls-open .bar{padding-bottom:14px;border-radius:0 0 14px 14px;justify-content:center;gap:8px}.controls-open .bar #mode{flex:1 1 40%}.controls-open .bar select{max-width:calc(50% - 12px);font-size:13px!important}.controls-open .bar label{flex-basis:45%;justify-content:center}.controls-open .bar input{width:86px}.controls-open .bar #settings{margin-left:auto}#trip-status{font-size:11px;bottom:14px!important;padding:6px 12px!important}.fab{margin:8px}}
 /* A quiet gallery for the living paintings; road and garden controls stay independent. */
 .art-mode .bar{background:rgba(246,239,224,.94);color:#302c25;border:1px solid #5c514d22;box-shadow:0 8px 30px #30251b14;border-radius:16px;gap:6px;flex-wrap:nowrap;width:auto;max-width:calc(100vw - 24px);padding:5px 7px}
 .art-mode .bar > :not(#mode):not(#play):not(#art-browse){display:none!important}
@@ -120,6 +120,7 @@ input[type=range]{width:80px;accent-color:#E63B2E}
   <select id="zen-pattern" aria-label="Sand pattern" hidden><option value="spiral">Spiral</option><option value="petals">Lotus petals</option><option value="waves">Flowing waves</option><option value="random">Random · Freeform</option></select>
   <span id="seed"></span>
   <button id="play">Pause</button>
+  <button id="sound" aria-pressed="false" title="Sound (M)">♪ Sound off</button>
   <button id="art-browse" aria-label="Choose artwork">Artworks</button>
   <button id="settings" aria-expanded="false" aria-controls="scene-controls">Settings</button>
   <label>Speed <input id="spd" type="range" min="0" max="200" value="40"></label>
@@ -145,6 +146,8 @@ input[type=range]{width:80px;accent-color:#E63B2E}
 <script src="assets/creature-mind.js?v=2"></script>
 <script src="assets/art-presence.js?v=1"></script>
 <script src="assets/art-ambience.js?v=1"></script>
+<script src="assets/road-journey.js?v=1"></script>
+<script src="assets/world-sound.js?v=1"></script>
 <script src="assets/kangra-world.js?v=3"></script>
 <script src="assets/art-depth.js?v=11"></script>
 <script src="assets/art-finishing.js?v=2"></script>
@@ -1833,7 +1836,8 @@ function roadFrame(t,dt,c=ctx,placeOverride=null){
   const stopNames=[['Alpine café','Scenic campsite','Valley overlook'],['Desert rest stop','Windmill','Canyon overlook'],['Woodland lodge','Forest campsite','Forest overlook'],['Lighthouse','Coastal café','Ocean overlook'],['Corner café','Farm market','City overlook']];
   const feature=RoadIllustration.routeFeatures(journey,dominant).find(f=>f.z>.08&&f.z<1);
   const stop=feature?' · '+(feature.type==='gateway'?'Stone gateway':'River bridge')+' ahead':upcoming?' · '+stopNames[dominant][upcoming.variant]+' ahead':'';
-  const tripLabel=(names||p.name)+' · '+({sun:'Sunny',sunset:'Sunset',rain:'Rain',fog:'Fog',snow:'Snow',night:'Night'})[we]+' · '+tripCue+stop;
+  const tripLabel=typeof RoadJourney!=='undefined'?RoadJourney.update({dt:delta,km:journey*42/1000,speed:42*speed/40,dominant,auto:document.getElementById('place').value==='auto',phase:roadPlaceTransition.autoTime/44,weights:a,weather:we,names:names||p.name,cue:tripCue,stop,places})
+   :(names||p.name)+' · '+({sun:'Sunny',sunset:'Sunset',rain:'Rain',fog:'Fog',snow:'Snow',night:'Night'})[we]+' · '+tripCue+stop;
   const status=document.getElementById('trip-status');if(status.textContent!==tripLabel)status.textContent=tripLabel;
   return;
  }
@@ -2144,6 +2148,7 @@ modeBtn.onchange=()=>{
  for(const id of ['zen-garden','zen-atmosphere','zen-fullscreen'])document.getElementById(id).hidden=!zen;
  if(zen!==wasZen)layout();
  for(const id of ['place','weather','trip-status','traffic'])document.getElementById(id).hidden=!road;
+ document.getElementById('sound').hidden=cozy||mushroom||pip;   // those modes have their own sound
  document.querySelector('h1').textContent=pip?'Pip Run':mushroom?'Mushroom Island':cozy?'Cozy Worlds':zen?'Zen garden':'Infinite scroll';
  document.getElementById('new').textContent=pip?'New world':mushroom?'Restart island':cozy?'Reading nook':zen?'Smooth sand':road?'New landscape':'Another view';
  cv.setAttribute('aria-label',zen?'An illustrated garden with a steel ball drawing in sand, swimming koi, falling petals, swaying branches, flowing bamboo water and a steaming spring':road?'Infinite illustrated road trip through changing places and weather':'Endlessly scrolling world art landscape');
@@ -2246,7 +2251,7 @@ if(requestedZen||requestedRoad||requestedCozy||requestedMushroom||requestedPip){
 // Editing the hash (or following a deep link in the same tab) opens that world;
 // the app's own replaceState calls never fire hashchange.
 addEventListener('hashchange',()=>location.reload());
-ArtAmbience.install();ArtPresence.install();
+ArtAmbience.install();ArtPresence.install();WorldSound.install();
 motionPreference.addEventListener('change',e=>{if(e.matches){playing=false;syncPlay();if(modeBtn.value==='cozy')window.CozyWorlds?.pause();wakeScene();}});
 wakeScene();
 </script>
