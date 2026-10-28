@@ -268,8 +268,15 @@
         break;
       }
     }
-    return {lift,compression:springCompression(p),
-      contact:p>=378&&p<=399};
+    // The soft cap is an actual landing surface in this authored sequence.
+    // Clamp Pip's boot height against its compressed top throughout the
+    // center section, not just at a single central frame, so no feet pass
+    // through the mushroom between animation frames.
+    const compression=springCompression(p);
+    const capHalfWidth=g.width*(1+.075*compression)*.35;
+    if(Math.abs(p-385)<=capHalfWidth)
+      lift=Math.max(lift,g.contactLift-g.springDepth*compression);
+    return {lift,compression,contact:p>=378&&p<=399};
   }
   function poseAt(x){
     const chapter=Math.floor(x/CHAPTER),kind=stunts[((chapter%stunts.length)+stunts.length)%stunts.length];
