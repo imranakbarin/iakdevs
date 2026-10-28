@@ -1410,15 +1410,30 @@
       g.fillStyle = lin(0, y, 0, y + len, 'rgba(255,255,255,.95)', 'rgba(170,215,250,.25)');
       g.beginPath(); g.moveTo(x - w, y); g.quadraticCurveTo(x - w * .3, y + len * .5, x, y + len); g.quadraticCurveTo(x + w * .3, y + len * .5, x + w, y); g.fill();
     };
+    if (bio === 'sky') for (let y = 0; y < ROWS; y++) for (let x = 0; x < CW;) {
+      // One cloud mass billows under each island: a scalloped edge, deeper in
+      // the middle, rounding off at the ends, lit above and lavender below.
+      if (!(mass(x, y) && !mass(x, y + 1))) { x++; continue; }
+      let b = x; while (b < CW && mass(b, y) && !mass(b, y + 1)) b++;
+      const XA = x * TS - (mass(x - 1, y) ? 0 : 2), XB = b * TS + (mass(b, y) ? 0 : 2), Yb = (y + 1) * TS, endL = !mass(x - 1, y), endR = !mass(b, y);
+      const depth = X => { const w = wx0 + X, taper = Math.min(1, endL ? (X - XA) / 10 : 1, endR ? (XB - X) / 10 : 1);
+        return Math.max(0, taper) * (3.2 + 2.4 * (.5 + .5 * Math.sin(w * .06 + y)) + 1.8 * Math.abs(Math.sin(w * Math.PI / 9))); };
+      g.beginPath(); g.moveTo(XA, Yb - 4);
+      for (let X = XA; X <= XB; X += 1.5) g.lineTo(X, Yb + depth(X));
+      g.lineTo(XB, Yb - 4); g.closePath();
+      g.fillStyle = lin(0, Yb - 4, 0, Yb + 8, '#fbfaff', '#cbc2ec'); g.fill();
+      g.strokeStyle = 'rgba(255,255,255,.7)'; g.lineWidth = .6; g.beginPath();
+      for (let X = XA + 2; X <= XB - 2; X += 1.5) { const d = depth(X) - 1.6; X === XA + 2 ? g.moveTo(X, Yb + d * .55) : g.lineTo(X, Yb + d * .55); } g.stroke();
+      x = b;
+    }
     for (let y = 0; y < ROWS; y++) for (let x = 0; x < CW; x++) if (mass(x, y) && !mass(x, y + 1)) {
       const X = x * TS, Yb = (y + 1) * TS, hu = hv(x, y, 0xd0d);
-      if (bio === 'sky') { g.fillStyle = lin(0, Yb - 3, 0, Yb + 5, '#f4f1fc', 'rgba(205,198,236,0)'); g.fillRect(X - 1, Yb - 3, TS + 2, 8); }   // a soft cloud base the puffs grow from
       for (let i = 0; i < 3; i++) {
         const hq = hash(hu, i), sx = X + 2 + i * 5 + (hq % 30) / 10 + (bio === 'sky' ? (hq >>> 12) % 9 - 4 : 0);
         if (bio === 'meadow' && hq % 3 === 0) { g.strokeStyle = 'rgba(70,40,20,.7)'; g.lineWidth = .55; g.beginPath(); g.moveTo(sx, Yb - 1); g.quadraticCurveTo(sx + 1.4, Yb + 2, sx + .4, Yb + 2 + (hq >>> 4) % 5); g.stroke(); }
         else if (bio === 'frost' && hq % 4) icicle(sx, Yb - .6, 2.5 + (hq >>> 4) % 7, .9 + (hq >>> 8) % 3 * .3);
-        else if (bio === 'sky' && (i !== 1 || hq % 4 === 0)) {
-          const r = 3.6 + (hq >>> 4) % 9 * .62, cy = Yb - 2.2 + (hq >>> 8) % 5 * .7, q = g.createRadialGradient(sx - r * .35, cy - r * .5, 0, sx, cy, r * 1.05);
+        else if (bio === 'sky' && hq % 7 === 0) {   // now and then a puff hangs below the billow
+          const r = 2.2 + (hq >>> 4) % 4 * .5, cy = Yb + 4 + (hq >>> 8) % 3, q = g.createRadialGradient(sx - r * .35, cy - r * .5, 0, sx, cy, r * 1.05);
           q.addColorStop(0, '#ffffff'); q.addColorStop(.55, '#ece8fa'); q.addColorStop(1, '#bdb3e4');
           g.fillStyle = q; g.beginPath(); g.arc(sx, cy, r, 0, 7); g.fill();
         } else if (bio === 'caves' && hq % 3 !== 2) {
@@ -1698,7 +1713,7 @@
           ctx.globalAlpha = a; ctx.drawImage(spr, x, y - spr.height * sc, spr.width * sc, spr.height * sc); ctx.globalAlpha = 1;
         }
       }
-      for (const [par, base, sc, salt] of [[.42, .88, .9, 0x71], [.6, .97, 1.25, 0x72]]) {   // a sea of cumulus
+      for (const [par, base, sc, salt] of [[.42, .93, .62, 0x71], [.6, 1.0, .85, 0x72]]) {   // a sea of cumulus
         const y0 = oy + bandH * base, step = 64;
         ctx.fillStyle = vgrad(y0 - 4 * S, H, '#f6f3fd', '#d9d2f0'); ctx.fillRect(0, y0 - 4 * S, W, H - y0 + 4 * S);
         for (let i = Math.floor((cam * par - 140) / step), u; (u = i * step) < cam * par + W / S + 40; i++) {
@@ -1781,7 +1796,7 @@
     ctx.fillStyle = q; ctx.fillRect(0, 0, W, portrait ? oy + bandH : H);   // the phone console covers the rest
     // A low sun at golden hour (in the west) and at dawn (in the east).
     for (const [a, sx, col] of [[d.gold * o, .84, '#ffc478'], [d.dawn * o, .14, '#ffd6aa']]) {
-      if (a < .01) continue;
+      if (a < .01 || o < .95) continue;   // no low sun by a cave mouth
       blob(W * sx, oy + bandH * .6, bandH * .5, col, .5 * a);
       ctx.globalAlpha = .85 * a; ctx.fillStyle = '#fff1cf'; ctx.beginPath(); ctx.arc(W * sx, oy + bandH * .6, 9 * S, 0, 7); ctx.fill(); ctx.globalAlpha = 1;
     }
@@ -1830,7 +1845,7 @@
       const frost = biome === 'frost', cols = frost ? ['#7f95b0', '#a8bcd2', '#62789a', '#c9d8e8'] : ['#2f6b2a', '#3f8a35', '#24541e', '#4f9c3d'];
       if (frost) { g.fillStyle = '#e8f1fa'; g.beginPath(); g.ellipse(32, H, 30, 9, 0, 0, 7); g.fill(); }
       for (let i = 0; i < 26; i++) { const x = 32 + (r() - .5) * 42; blade(x, 16 + r() * 28 * (1 - Math.abs(x - 32) / 40), (x - 32) * .45 + (r() - .5) * 10, 1.6 + r(), cols[i % 4]); }
-      if (!frost && v % 2) for (let i = 0; i < 3; i++) dot(18 + i * 13 + r() * 6, 8 + r() * 12, 2.6 + r() * 1.5, ['#f6b6cf', '#ffe08a', '#ffffff'][(i + v) % 3]);
+      if (!frost && v % 2) for (let i = 0; i < 3; i++) dot(18 + i * 13 + r() * 6, 10 + r() * 12, 2 + r(), ['#9a6a7c', '#9a8a4a', '#8a9a7a'][(i + v) % 3]);
       if (frost) for (let i = 0; i < 8; i++) dot(10 + r() * 44, 14 + r() * 20, .8 + r(), '#ffffff');
     } else if (biome === 'sky') {
       for (let i = 0; i < 7; i++) { const x = 8 + i * 8 + r() * 4, rad = 8 + Math.sin(i / 6 * Math.PI) * 9 + r() * 3; dot(x, H - rad * .5, rad, i % 2 ? '#ffffff' : '#f1edfb'); }
@@ -1847,8 +1862,8 @@
       const wgt = weightOf(m, id); if (wgt < .02) continue;
       for (let i = Math.floor((cam * par - 90) / step), u; (u = i * step) < cam * par + W / S + 90; i++) {
         const h = hash(seed ^ 0xf07, i); if (h % 5 < 2) continue;
-        const spr = foreSprite(id, h % 3), sc = .8 + (h >>> 4) % 5 * .12, w = 64 * S * sc, hh = 48 * S * sc, x = (u + (h >>> 8) % 50 - cam * par) * S;
-        ctx.globalAlpha = wgt * (.3 + .6 * clamp(0, (Math.abs(x + w / 2 - px) - 18 * S) / (40 * S), 1));
+        const spr = foreSprite(id, h % 3), sc = .6 + (h >>> 4) % 5 * .1, w = 64 * S * sc, hh = 48 * S * sc, x = (u + (h >>> 8) % 50 - cam * par) * S;
+        ctx.globalAlpha = wgt * (.2 + .45 * clamp(0, (Math.abs(x + w / 2 - px) - 18 * S) / (40 * S), 1));
         if (h & 64) { ctx.save(); ctx.translate(x + w, 0); ctx.scale(-1, 1); ctx.drawImage(spr, 0, base - hh + 6 * S, w, hh); ctx.restore(); }
         else ctx.drawImage(spr, x, base - hh + 6 * S, w, hh);
       }
@@ -2021,9 +2036,17 @@
      sparkle move. Units: x -65..65, y up from the ground (negative in canvas). */
   const LM = {u: 4, w: 130, h: 175, foot: 12};
   let lmCache = {};
-  function landmarkSprite(id) {
-    const key = id + (propsImg.naturalWidth ? '+' : '');
+  function landmarkSprite(id, far) {
+    const key = id + (propsImg.naturalWidth ? '+' : '') + (far ? 'far' : '');
     if (lmCache[key]) return lmCache[key];
+    if (far) {   // far away: hazed into the sky, its foot lost in the distance
+      const near = landmarkSprite(id), c3 = document.createElement('canvas'); c3.width = near.width; c3.height = near.height;
+      const g = c3.getContext('2d'), H = c3.height, foot = (LM.h - LM.foot) / LM.h * H;
+      g.drawImage(near, 0, 0); g.globalCompositeOperation = 'source-atop'; g.fillStyle = 'rgba(214,228,244,.42)'; g.fillRect(0, 0, c3.width, H);
+      g.globalCompositeOperation = 'destination-out'; const q = g.createLinearGradient(0, foot - H * .3, 0, foot); q.addColorStop(0, 'rgba(0,0,0,0)'); q.addColorStop(1, 'rgba(0,0,0,1)');
+      g.fillStyle = q; g.fillRect(0, foot - H * .3, c3.width, H);
+      return (lmCache[key] = c3);
+    }
     const U = LM.u, c2 = document.createElement('canvas'); c2.width = LM.w * U; c2.height = LM.h * U;
     const g = c2.getContext('2d'); g.setTransform(U, 0, 0, U, LM.w / 2 * U, (LM.h - LM.foot) * U); g.lineCap = 'round'; g.lineJoin = 'round';
     const lin = (x0, y0, x1, y1, stops) => { const q = g.createLinearGradient(x0, y0, x1, y1); stops.forEach((c, i) => q.addColorStop(i / (stops.length - 1), c)); return q; };
@@ -2031,7 +2054,6 @@
     const poly = (pts, fill) => { g.fillStyle = fill; g.beginPath(); pts.forEach(([x, y], i) => i ? g.lineTo(x, y) : g.moveTo(x, y)); g.closePath(); g.fill(); };
     const glint = (x, y, r) => { g.fillStyle = 'rgba(255,255,255,.9)'; g.beginPath(); g.moveTo(x - r, y); g.lineTo(x, y - r * .25); g.lineTo(x + r, y); g.lineTo(x, y + r * .25); g.moveTo(x, y - r); g.lineTo(x + r * .25, y); g.lineTo(x, y + r); g.lineTo(x - r * .25, y); g.fill(); };
     if (id === 'meadow') {                   // Mushroom Gate: two giant mushrooms and a flowering arch
-      g.fillStyle = lin(0, -6, 0, 8, ['#8cc95e', '#4f8f3a', '#3a6d2b']); g.beginPath(); g.ellipse(0, 2, 62, 9, 0, 0, Math.PI * 2); g.fill();
       for (const sd of [-1, 1]) {
         const cx = sd * 34;
         g.fillStyle = rad(cx, 0, 16, ['rgba(30,40,20,.35)', 'rgba(30,40,20,0)']); g.fillRect(cx - 18, -6, 36, 10);
@@ -2074,8 +2096,6 @@
       shard(0, 150, 19, 0);
       g.fillStyle = rad(0, -70, 26, ['rgba(220,248,255,.55)', 'rgba(150,215,250,.15)', 'rgba(150,215,250,0)']); g.fillRect(-26, -100, 52, 60);
       g.strokeStyle = 'rgba(255,255,255,.5)'; g.lineWidth = .4; g.beginPath(); g.moveTo(-6, -40); g.lineTo(-2, -62); g.lineTo(-7, -80); g.moveTo(5, -96); g.lineTo(2, -112); g.stroke();
-      g.fillStyle = lin(0, -9, 0, 9, ['#ffffff', '#e4eef9', '#b8cde6']);
-      g.beginPath(); g.moveTo(-62, 6); g.quadraticCurveTo(-50, -10, -32, -4); g.quadraticCurveTo(-18, -12, -2, -5); g.quadraticCurveTo(14, -12, 30, -4); g.quadraticCurveTo(50, -11, 62, 6); g.closePath(); g.fill();
       for (const [x, y, r] of [[-12, -124, 3], [7, -86, 2.2], [-30, -50, 1.8], [30, -60, 2], [44, -24, 1.6]]) glint(x, y, r);
     } else if (id === 'sky') {                // Sky Harbor: a floating island with a pier and a docked airship
       g.fillStyle = lin(0, -32, 0, 24, ['#c9bff0', '#9a8bd2', '#6a5aa8', '#4c3f86']);
@@ -2099,7 +2119,6 @@
       g.fillStyle = '#ffd98a'; for (const x of [-6, 2, 10, 18]) { g.beginPath(); g.roundRect(ax + x, ay + 21.5, 4, 3, .8); g.fill(); }
       g.fillStyle = '#4a2e18'; g.fillRect(ax - 13, ay + 21, 3, 4); g.fillStyle = 'rgba(220,220,230,.8)'; g.beginPath(); g.ellipse(ax - 13.5, ay + 23, 1.2, 5, 0, 0, Math.PI * 2); g.fill();
     } else {                                   // Crystal Heart: a great faceted crystal among smaller ones
-      g.fillStyle = lin(0, -6, 0, 10, ['#3a3156', '#1f1a30', '#120f1d']); g.beginPath(); g.ellipse(0, 3, 54, 10, 0, 0, Math.PI * 2); g.fill();
       const gem = (x, h, w, cols) => {
         poly([[x - w, 0], [x - w * .45, -h * .78], [x, -h], [x + w * .05, 0]], lin(x - w, -h * .5, x, -h * .5, [cols[0], cols[1]]));
         poly([[x + w * .05, 0], [x, -h], [x + w * .5, -h * .74], [x + w, 0]], lin(x, -h * .5, x + w, -h * .5, [cols[2], cols[3]]));
@@ -2126,11 +2145,11 @@
     else if (id === 'frost') blob(-12 * s, -124 * s, 6 * s, '#ffffff', .4 + .5 * Math.max(0, Math.sin(t * .07)));
   }
   function drawLandmark(m) {
-    const span = REGION * CW * TS, lx = (m.region + 1) * span, dist = lx - m.centre;
-    if (dist > span * .92 || dist < 420) return;
-    const near = 1 - Math.max(0, dist) / span, x = (viewW * .66 + dist * .1) * S, y = oy + VIEW_H * S * .8;
-    ctx.save(); ctx.translate(x, y); ctx.globalAlpha = .9 * Math.min(1, (span * .92 - dist) / 300) * Math.min(1, (dist - 420) / 260);
-    landmarkArt(regionBiome(m.region + 1), (.45 + .65 * near) * S, frameNo);
+    const span = REGION * CW * TS, lx = (m.region + 1) * span, dist = lx - m.centre, open = 1 - weightOf(m, 'caves');
+    if (dist > span * .92 || dist < 420 || open < .05) return;   // underground there is no horizon
+    const near = 1 - Math.max(0, dist) / span, x = (viewW * .66 + dist * .1) * S, y = oy + VIEW_H * S * .7, s = (.3 + .35 * near) * S, id = regionBiome(m.region + 1);
+    ctx.save(); ctx.translate(x, y); ctx.globalAlpha = open * .85 * Math.min(1, (span * .92 - dist) / 300) * Math.min(1, (dist - 420) / 260);
+    ctx.drawImage(landmarkSprite(id, true), -LM.w / 2 * s, -(LM.h - LM.foot) * s - (id === 'sky' ? Math.sin(frameNo * .03) * 3 * s : 0), LM.w * s, LM.h * s);
     ctx.restore();
   }
   // The destination itself, full size and standing on the plaza.
@@ -2140,7 +2159,10 @@
       const gx = gateX(r), [x] = W2D(gx + 8, 0);
       if (r < 0 || x < -200 * S || x > cv.width + 200 * S) continue;
       const tx = Math.floor((gx + 8) / TS); let gy = 4; while (gy < ROWS && !solid(tx, gy)) gy++;
-      ctx.save(); ctx.translate(x, W2D(0, gy * TS)[1]); landmarkArt(regionBiome(r + 1), S * .95, frameNo); ctx.restore();
+      const id = regionBiome(r + 1);
+      ctx.save(); ctx.translate(x, W2D(0, gy * TS)[1]);
+      if (id !== 'sky') { ctx.fillStyle = 'rgba(30,22,16,.22)'; ctx.beginPath(); ctx.ellipse(0, 0, 50 * S, 4 * S, 0, 0, 7); ctx.fill(); }   // it stands on the plaza
+      landmarkArt(id, S * .95, frameNo); ctx.restore();
     }
   }
   function drawChapter() {
@@ -2216,7 +2238,7 @@
     }
   }
   function drawDarkness(m) {
-    const w = weightOf(m, 'caves'); if (w < .02) return;
+    const w0 = weightOf(m, 'caves'), w = w0 * w0 * (3 - 2 * w0); if (w < .02) return;   // the dark deepens once inside the cave mouth
     if (!darkBuf || darkBuf.width !== cv.width || darkBuf.height !== cv.height) { darkBuf = document.createElement('canvas'); darkBuf.width = cv.width; darkBuf.height = cv.height; }
     const g = darkBuf.getContext('2d'); g.setTransform(1, 0, 0, 1, 0, 0); g.globalCompositeOperation = 'source-over'; g.clearRect(0, 0, cv.width, cv.height);
     g.fillStyle = `rgba(4,5,14,${(.88 * w).toFixed(3)})`; g.fillRect(0, 0, cv.width, cv.height);
@@ -2420,7 +2442,7 @@
      the knee forward and reaches for the next step; the body dips at mid-stance
      and rises between steps. The painted body (and the air, landing and skid
      poses) stay as painted. Sprite pixels, feet at the origin. */
-  const STRIDE = 18;   // world px per full cycle (two steps), small Pip
+  const STRIDE = 25;   // world px per full cycle (two steps), small Pip: about six steps a second at full speed
   const stride = () => STRIDE * (shownBig() ? 4 / 3 : 1);
   let torso = null;
   function torsoSprite() {   // frame 0 above the hips, clear of its cut-out legs
@@ -2467,7 +2489,7 @@
     // k: 0 standing .. 1 full speed. The legs are on the ground half the time
     // when walking, under a third at a run, so at speed there is a moment with
     // both feet off the ground: the body rises then, and sinks at mid-stance.
-    const A = 3 + 19 * k, lift = 3 + 11 * k, D = .5 - .2 * k, uf = phase % 1, ub = (phase + .5) % 1;
+    const A = 3 + 22 * k, lift = 3 + 10 * k, D = .5 - .18 * k, uf = phase % 1, ub = (phase + .5) % 1;
     const front = footAt(uf, A, lift, D), back = footAt(ub, A, lift, D), L = (LEG.thigh + LEG.shin) * .97;
     const plant = uf < D ? front : ub < D ? back : null, p = uf < D ? uf / D : ub < D ? ub / D : -1;
     let bob;
@@ -2842,9 +2864,9 @@
 
   /* ---------------- loop ---------------- */
   let playing = !matchMedia('(prefers-reduced-motion: reduce)').matches, visible = !document.hidden, raf = 0, last = 0, acc = 0;
-  // The simulation runs at 46 ticks a second (a calmer clock than 60); the
+  // The simulation runs at 40 ticks a second (a calmer clock than 60); the
   // renderer interpolates between ticks, so motion stays smooth at any rate.
-  const RATE = 46;
+  const RATE = 40;
   function frame(now) {
     raf = 0;
     if (!playing || !visible) return;
