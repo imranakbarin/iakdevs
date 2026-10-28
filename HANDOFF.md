@@ -242,3 +242,13 @@ New, self-contained mode: `pip-run.html` + `assets/pip-run.js` (+ `tests/pip-run
 - CSS block `.pip-mode …` and `#pip-host` right after the Mushroom CSS; `<div id="pip-host">` with `#pip-frame` before `#c`; `<option value="pip">Pip Run</option>`.
 - `requestedPip` (`#pip-run`), `pipFrame`/`pipMotion` (posts `{type:'pip:motion',playing}`), play button and "New world" handling, `pip` flag in `modeBtn.onchange`, and `'pip'` added beside `'mushroom'` in the `drawScene`/`frame` early returns and the init lines.
 - Release 4 (ghost links): `let pipShared` next to `requestedPip` holds the code from `#pip-run-<code>`; the frame opens `pip-run.html#r=<code>`, `modeBtn.onchange` keeps `#pip-run-<code>` in the address bar, and "New world" clears it and loads `pip-run.html#new-<time>` (a random world; the frame reacts to `hashchange`). `#pip-frame` has `allow="fullscreen; clipboard-write; web-share"`. The frame's Share button writes `#pip-run-<code>` into the parent's address bar (same origin only). Daily best lives in `localStorage['pip-run:best']`.
+
+## Claude follow-up (Road trip journey and soundscapes)
+
+New modules `assets/road-journey.js` and `assets/world-sound.js` (+ `tests/world-sound.test.cjs`). Both only read the page's own globals (`modeBtn`, `playing`, `speed`, `drag`, `journey`, `tripCue`, `roadAtmosphere`, `roadPlaceTransition`, `RoadTraffic`, `zenDistance`, `zenGarden`, `zenRipples`, `#sty`). Shared `index.html` anchors touched:
+- CSS: `#sound` added to the always-visible bar items (`.bar>:where(:not(#mode):not(#play):not(#settings):not(#sound))`) and to the `#play/#settings` button styles (desktop and the 600px media query).
+- `<button id="sound">` right after `#play`; script tags for both modules after `art-ambience.js`.
+- `modeBtn.onchange`: `#sound` is hidden for cozy, mushroom and pip (they have their own sound).
+- `roadFrame`: `tripLabel` comes from `RoadJourney.update({...})` when the module is present (old label as the fallback).
+- Init: `WorldSound.install()` after `ArtPresence.install()`.
+
