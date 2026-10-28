@@ -169,6 +169,7 @@
 
   /* ---------------- actors ---------------- */
   let pl, enemies, parts, seeds, cam, cp, maxX, dead, inv, landedAt, anim, facing, frameNo;
+  let sq = 0, skidding = false;
   let marks = [], risk = .25, tension = 0, wary = 0, stompTimes = [], history = [], moment = null, replay = null, lastReplay = -1e9, usedAt = new Map();
   function reset(newSeed) {
     seed = newSeed; chunks = new Map(); gen = {ci: -1, h: 3};
@@ -375,8 +376,10 @@
     if (pl.x < cam) { pl.x = cam; pl.vx = Math.max(0, pl.vx); }
     if (inp.r && !inp.l) facing = 1; else if (inp.l && !inp.r) facing = -1;
     anim += Math.abs(pl.vx);
-    if (ev.jumped) puff(pl.x + 6, pl.y + P.h, '#f3e2c0', 4);
-    if (ev.landed) { landedAt = frameNo; puff(pl.x + 6, pl.y + P.h, '#efdcb7', 5); }
+    sq *= .78;
+    skidding = pl.ground && Math.abs(pl.vx) > 1 && (inp.l && pl.vx > 0 || inp.r && pl.vx < 0);
+    if (ev.jumped) { sq = 1; puff(pl.x + 6, pl.y + P.h, '#f3e2c0', 4); }
+    if (ev.landed) { sq = -1; landedAt = frameNo; puff(pl.x + 6, pl.y + P.h, '#efdcb7', 5); }
     if (pl.ground && Math.abs(pl.vx) > 1.4 && (inp.l && pl.vx > 0 || inp.r && pl.vx < 0) && frameNo % 4 === 0) puff(pl.x + 6, pl.y + P.h, '#efdcb7', 2);
     if (ev.bump) bump(ev.bump[0], ev.bump[1]);
     if (pl.y > VIEW_H + 24) { if (!dead) remember(); dead = 30; pl.vy = 0; }
@@ -418,7 +421,7 @@
     moment = {kind, at: frameNo};
   }
   function record() {
-    history.push({frameNo, pl: {...pl}, facing, anim, landedAt, dead, inv, cam, enemies: enemies.map(e => ({...e})),
+    history.push({frameNo, pl: {...pl}, facing, anim, landedAt, dead, inv, cam, sq, skidding, enemies: enemies.map(e => ({...e})),
       parts: parts.map(q => ({...q})), bumps: bumps.map(q => ({...q})), arcs: plan && plan.arcs, at: plan && plan.at});
     if (history.length > 360) history.shift();
     if (moment && !human && frameNo - moment.at > 50 && pl.ground && !dead) {
@@ -437,8 +440,37 @@
   }
 
   /* ---------------- rendering ---------------- */
-  const sheet = new Image(), backdrop = new Image();
-  sheet.src = 'assets/pip-full-run-22.webp'; backdrop.src = 'assets/mushroom-cinematic-kingdom.webp';
+  const backdrop = new Image();
+  backdrop.src = 'assets/mushroom-cinematic-kingdom.webp';
+
+  /* ---------------- Pip: original pixel-art hero ----------------
+     Sun-yellow explorer cap with a seed sprout, big eyes, sky-blue tunic,
+     leather belt, brown boots and a red scarf (drawn as a live ribbon).
+     16 x 23 sprite pixels, rendered once per frame at a whole-number scale. */
+  const HERO_PAL = {K: '#1d2033', Y: '#ffc93c', y: '#e0951a', G: '#5cc44f', g: '#2f8a3a', S: '#ffd2a8', s: '#e39e74', W: '#ffffff',
+    B: '#2e8fe0', b: '#1c5fa8', R: '#f2484e', r: '#b52e3c', N: '#7a4630', n: '#4f2c1f', L: '#c9853f', M: '#c0504a'};
+  const HERO = {
+    stand: '.......KK......./......KGGK....../.....KGGgK....../....KKKKKKKK..../...KYYYYYYYYK.../..KYYYYYYYYYYK../..KYYYYYYYYYYYK./.KNyyyyyyyyyyyyK/.KNSSSSSSWWSWWK./.KNsSSSSSWKSWKK./.KsSSSSSSWKSWKK./.KsSSSSSSSSSSSsK/..KsSSSSRSSSSSK./...KKsSSSSMMKK../...KRRRRRRRRK.../..KBRRrBBBBBBK../.KSKBBBBBBBBKSK./.KSKBBBLLBBBKSK./..KKbBBBBBBbKK../....KbbKKbbK..../....KNNK.KNNK.../...KNNNK.KNNNK../...KKKKK.KKKKK..',
+    blink: '.......KK......./......KGGK....../.....KGGgK....../....KKKKKKKK..../...KYYYYYYYYK.../..KYYYYYYYYYYK../..KYYYYYYYYYYYK./.KNyyyyyyyyyyyyK/.KNSSSSSSSSSSSK./.KNsSSSSSKKSKKK./.KsSSSSSSSSSSSK./.KsSSSSSSSSSSSsK/..KsSSSSRSSSSSK./...KKsSSSSMMKK../...KRRRRRRRRK.../..KBRRrBBBBBBK../.KSKBBBBBBBBKSK./.KSKBBBLLBBBKSK./..KKbBBBBBBbKK../....KbbKKbbK..../....KNNK.KNNK.../...KNNNK.KNNNK../...KKKKK.KKKKK..',
+    runA: '.......KK......./......KGGK....../.....KGGgK....../....KKKKKKKK..../...KYYYYYYYYK.../..KYYYYYYYYYYK../..KYYYYYYYYYYYK./.KNyyyyyyyyyyyyK/.KNSSSSSSWWSWWK./.KNsSSSSSWKSWKK./.KsSSSSSSWKSWKK./.KsSSSSSSSSSSSsK/..KsSSSSRSSSSSK./...KKsSSSSMMKK../...KRRRRRRRRK.../..KBRRrBBBBBBK../..KBBBBBBBBBKSK./.KSKBBBLLBBBKK../..KKbBBBBBBbK.../...KbbKKKBBBK.../..KNNK...KBNNK../.KNNNK....KNNNK./.KKKK......KKKK.',
+    runB: '.......KK......./......KGGK....../.....KGGgK....../....KKKKKKKK..../...KYYYYYYYYK.../..KYYYYYYYYYYK../..KYYYYYYYYYYYK./.KNyyyyyyyyyyyyK/.KNSSSSSSWWSWWK./.KNsSSSSSWKSWKK./.KsSSSSSSWKSWKK./.KsSSSSSSSSSSSsK/..KsSSSSRSSSSSK./...KKsSSSSMMKK../...KRRRRRRRRK.../..KBRRrBBBBBBK../..KSKBBBBBBKSK../..KSKBBLLBBKSK../...KKBBBBBBKK.../....KbbbBBBK..../.....KNNNNK...../....KNNNNNNK..../....KKKKKKKK....',
+    runC: '.......KK......./......KGGK....../.....KGGgK....../....KKKKKKKK..../...KYYYYYYYYK.../..KYYYYYYYYYYK../..KYYYYYYYYYYYK./.KNyyyyyyyyyyyyK/.KNSSSSSSWWSWWK./.KNsSSSSSWKSWKK./.KsSSSSSSWKSWKK./.KsSSSSSSSSSSSsK/..KsSSSSRSSSSSK./...KKsSSSSMMKK../...KRRRRRRRRK.../..KBRRrBBBBBBK../.KSKBBBBBBBBBK../..KKBBBLLBBBKSK./...KbBBBBBBbKK../...KBBBKKKbbK.../..KNNBK...KNNK../.KNNNK....KNNNK./.KKKK......KKKK.',
+    jump: '.......KK......./......KGGK....../.....KGGgK....../....KKKKKKKK..../...KYYYYYYYYK.../..KYYYYYYYYYYK../..KYYYYYYYYYYYK./.KNyyyyyyyyyyyyK/.KNSSSSSSWWSWWK./.KNsSSSSSWKSWKK./.KsSSSSSSWKSWKK./.KsSSSSSSSSSSSsK/..KsSSSSRSSSSSK./...KKsSSSSMMKK../..KSKRRRRRRK.KSK/..KSRRrBBBBBBKSK/...KBBBBBBBBBK../...KBBBLLBBBK.../...KbBBBBBBbK.../..KNbbbKKbbbK.../..KNNNK..KNNK.../..KKKK..KNNNK.../.........KKKK...',
+    fall: '.......KK......./......KGGK....../.....KGGgK....../....KKKKKKKK..../...KYYYYYYYYK.../..KYYYYYYYYYYK../..KYYYYYYYYYYYK./.KNyyyyyyyyyyyyK/.KNSSSSSSWWSWWK./.KNsSSSSSWKSWKK./.KsSSSSSSWKSWKK./.KsSSSSSSSSSSSsK/..KsSSSSRSSSSSK./...KKsSSSSMMKK../...KRRRRRRRRK.../KSKBRRrBBBBBBKSK/KKBBBBBBBBBBBBKK/...KBBBLLBBBK.../...KbBBBBBBbK.../...KbbK..KbbK.../..KNNK....KNNK../.KNNNK....KNNNK./.KKKK......KKKK.',
+    skid: '.......KK......./......KGGK....../.....KGGgK....../....KKKKKKKK..../...KYYYYYYYYK.../..KYYYYYYYYYYK../..KYYYYYYYYYYYK./.KNyyyyyyyyyyyyK/.KNSSSSSSWWSWWK./.KNsSSSSSWKSWKK./.KsSSSSSSWKSWKK./.KsSSSSSSSSSSSsK/..KsSSSSRSSSSSK./...KKsSSSSMMKK../...KRRRRRRRRK.../..KBRRrBBBBBBK../.KSKBBBBBBBBKSK./.KSKBBBLLBBBKSK./..KKbBBBBBBbKK../...KbbK..KbbbK../..KNNK....KNNNK./.KNNNK....KNNNNK/.KKKKK....KKKKKK',
+    hurt: '.......KK......./......KGGK....../.....KGGgK....../....KKKKKKKK..../...KYYYYYYYYK.../..KYYYYYYYYYYK../..KYYYYYYYYYYYK./.KNyyyyyyyyyyyyK/.KNSSSSSSKSKSKK./.KNsSSSSSSKSKSK./.KsSSSSSSKSKSKK./.KsSSSSSSSSSSSsK/..KsSSSSRSSKKSK./...KKsSSSSSSKK../KSKKRRRRRRRRKKSK/KSKBRRrBBBBBBKSK/..KBBBBBBBBBBK../...KBBBLLBBBK.../...KbBBBBBBbK.../....KbbKKbbK..../....KNNK.KNNK.../...KNNNK.KNNNK../...KKKKK.KKKKK..'
+  };
+  const heroCache = new Map();
+  const heroPx = () => Math.max(1, Math.round(1.3 * S));
+  function heroFrame(name) {
+    const p = heroPx(), key = name + ':' + p;
+    if (heroCache.has(key)) return heroCache.get(key);
+    const rows = HERO[name].split('/'), c2 = document.createElement('canvas');
+    c2.width = 16 * p; c2.height = rows.length * p;
+    const g = c2.getContext('2d');
+    rows.forEach((row, y) => [...row].forEach((ch, x) => { if (HERO_PAL[ch]) { g.fillStyle = HERO_PAL[ch]; g.fillRect(x * p, y * p, p, p); } }));
+    heroCache.set(key, c2); return c2;
+  }
   let dpr = 1, S = 1, viewW = 400, ox = 0, oy = 0, tileCache = new Map();
   function layout() {
     const W = cv.clientWidth, H = cv.clientHeight;
@@ -450,7 +482,7 @@
     S = tsd / TS; viewW = cv.width / S;
     const bandH = VIEW_H * S;
     oy = Math.round(H > W ? (cv.height - bandH) * .32 : (cv.height - bandH) / 2); ox = 0;
-    tileCache = new Map(); farCache = null;
+    tileCache = new Map(); farCache = null; heroCache.clear();
   }
   function tileCanvas(id, top) {
     const key = id + ':' + (top ? 1 : 0);
@@ -604,13 +636,12 @@
     ctx.restore();
   }
   function drawMarks() {
-    if (!sheet.complete || !sheet.naturalWidth) return;
-    const sc = 30 / 295 * S;
+    const img = heroFrame('hurt'), p = heroPx();
     for (const k of marks) {
       const [x, y] = W2D(k.x + P.w / 2, k.y + P.h + 1);
       if (x < -60 || x > cv.width + 60) continue;
-      ctx.save(); ctx.globalAlpha = .2 + .06 * Math.sin(frameNo * .05 + k.at); ctx.translate(x, y); ctx.scale(sc, sc);
-      ctx.drawImage(sheet, 19 * 244, 0, 244, 305, -122, -300, 244, 305); ctx.restore();
+      ctx.save(); ctx.globalAlpha = .2 + .06 * Math.sin(frameNo * .05 + k.at);
+      ctx.drawImage(img, Math.round(x - 8 * p), Math.round(y - img.height)); ctx.restore();
     }
   }
   function drawWary() {
@@ -621,22 +652,36 @@
   }
   function drawPip() {
     if (inv && !dead && Math.floor(inv / 4) % 2) return;
-    const [x, y] = W2D(pl.x + P.w / 2, pl.y + P.h + 1);
+    const [x, y] = W2D(pl.x + P.w / 2, pl.y + P.h + 1), p = heroPx();
     let f;
-    if (dead) f = 18;
-    else if (!pl.ground) f = pl.vy < -2 ? 17 : pl.vy < 1.5 ? 18 : 19;
-    else if (frameNo - landedAt < 5) f = 20;
-    else if (Math.abs(pl.vx) < .12) f = 0;
-    else f = Math.floor(anim / 1.15) % 16;
-    const sc = 30 / 295 * S;
-    ctx.save(); ctx.translate(x, y);
-    if (dead) { ctx.rotate(Math.min(Math.PI, dead * .08)); }
-    ctx.scale(facing * sc, sc);
-    ctx.fillStyle = 'rgba(40,30,20,.22)';
-    if (!dead && pl.ground) { ctx.beginPath(); ctx.ellipse(0, -2, 70, 14, 0, 0, 7); ctx.fill(); }
-    if (sheet.complete && sheet.naturalWidth) ctx.drawImage(sheet, f * 244, 0, 244, 305, -122, -300, 244, 305);
-    else { ctx.fillStyle = '#4fae9a'; ctx.beginPath(); ctx.arc(0, -200, 90, Math.PI, 0); ctx.fill(); ctx.fillStyle = '#f2c9a0'; ctx.fillRect(-55, -200, 110, 190); }
+    if (dead) f = 'hurt';
+    else if (!pl.ground) f = pl.vy < 0 ? 'jump' : 'fall';
+    else if (skidding) f = 'skid';
+    else if (Math.abs(pl.vx) < .12) f = frameNo % 210 < 7 ? 'blink' : 'stand';
+    else f = ['runA', 'runB', 'runC', 'runB'][Math.floor(anim / 6) % 4];
+    const img = heroFrame(f), bob = f === 'runB' ? -p : 0;
+    // Squash on landing, stretch on take-off, anchored at the feet.
+    const sx = 1 - .13 * sq, sy = 1 + .15 * sq;
+    ctx.save(); ctx.translate(Math.round(x), Math.round(y));
+    if (!dead && pl.ground) { ctx.fillStyle = 'rgba(40,30,20,.22)'; ctx.beginPath(); ctx.ellipse(0, -p * .4, 7 * p, 1.6 * p, 0, 0, 7); ctx.fill(); }
+    if (dead) ctx.rotate(Math.min(Math.PI, dead * .08));
+    ctx.scale(facing * sx, sy);
+    scarf(p, -img.height + bob, f);
+    ctx.drawImage(img, -8 * p, -img.height + bob);
     ctx.restore();
+  }
+  // The scarf streams behind Pip, longer and livelier the faster he runs.
+  function scarf(p, top, f) {
+    const speed = Math.min(1, Math.abs(pl.vx) / P.max + (pl.ground ? 0 : .5)), ax = -4.6 * p, ay = top + 14.5 * p;
+    const pts = [[ax, ay]];
+    for (let i = 1; i <= 4; i++) {
+      const wave = Math.sin(frameNo * .32 - i * .9) * (.4 + i * .32) * p * (.35 + speed);
+      pts.push([ax - i * 2.3 * p * (.55 + .45 * speed), ay + wave + i * (1 - speed) * 1.3 * p + (f === 'jump' ? i * .5 * p : 0)]);
+    }
+    const path = () => { ctx.beginPath(); pts.forEach(([x, y], i) => i ? ctx.lineTo(x, y) : ctx.moveTo(x, y)); };
+    ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+    path(); ctx.strokeStyle = HERO_PAL.K; ctx.lineWidth = 2.8 * p; ctx.stroke();
+    path(); ctx.strokeStyle = HERO_PAL.R; ctx.lineWidth = 1.3 * p; ctx.stroke();
   }
   function drawParts() {
     for (const p of parts) {
@@ -704,16 +749,15 @@
     main.drawImage(buf, cx - cx * zoom, fy - fy * zoom, cv.width * zoom, cv.height * zoom);
     ctx = main;
   }
-  const LIVE = ['pl', 'facing', 'anim', 'landedAt', 'dead', 'inv', 'cam', 'enemies', 'parts', 'bumps', 'frameNo'];
   function render() {
     zoom += ((replay ? 1.16 : 1 + .09 * tension) - zoom) * .08;
     if (replay) {
       const snap = replay.frames[Math.min(replay.frames.length - 1, Math.floor(replay.i))];
-      const live = {pl, facing, anim, landedAt, dead, inv, cam, enemies, parts, bumps, frameNo};
-      ({pl, facing, anim, landedAt, dead, inv, cam, enemies, parts, bumps, frameNo} = snap);
+      const live = {pl, facing, anim, landedAt, dead, inv, cam, enemies, parts, bumps, frameNo, sq, skidding};
+      ({pl, facing, anim, landedAt, dead, inv, cam, enemies, parts, bumps, frameNo, sq, skidding} = snap);
       composite(() => scene(snap.arcs, snap.at));
       ctx.setTransform(1, 0, 0, 1, 0, 0); drawHud();
-      ({pl, facing, anim, landedAt, dead, inv, cam, enemies, parts, bumps, frameNo} = live);
+      ({pl, facing, anim, landedAt, dead, inv, cam, enemies, parts, bumps, frameNo, sq, skidding} = live);
       return;
     }
     composite(() => scene(plan && plan.arcs, plan ? plan.at : 0));
@@ -742,7 +786,7 @@
   addEventListener('message', e => { if (e.origin === location.origin && e.data && e.data.type === 'pip:motion') setPlaying(e.data.playing); });
   document.addEventListener('visibilitychange', () => { visible = !document.hidden; last = 0; if (visible && playing && !raf) raf = requestAnimationFrame(frame); });
   addEventListener('resize', () => { layout(); render(); });
-  sheet.onload = backdrop.onload = () => { if (!playing) render(); };
+  backdrop.onload = () => { if (!playing) render(); };
   layout(); reset((Math.random() * 1e9) | 0); render();
   if (playing) raf = requestAnimationFrame(frame);
   // Test hook: lets the smoke test drive the simulation without a browser clock.
