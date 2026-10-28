@@ -256,3 +256,7 @@ New modules `assets/road-journey.js` and `assets/world-sound.js` (+ `tests/world
 
 `assets/zen-garden.js` (now `?v=12`) gains `zenRakeStart/Move/End`, `zenScare`, `zenVisitors`, `zenHint` (drawn at the end of `zenFrame`). Shared `index.html` anchors touched: the canvas `pointerdown` zen branch (scare the bird, else start a rake on the sand, else ripple), a zen branch at the top of `pointermove` (`zenRakeMove`), and `zenRakeEnd()` in `endDrag`/`cancelArtDrag`. `world-sound.js` is `?v=2`.
 
+## Claude follow-up (World art wonders)
+
+New `assets/art-wonders.js` (+ `tests/art-wonders.test.cjs`) wraps every `STYLES[key].anim` (like `ArtAmbience`) and appends a `#art-moment` line inside `#art-caption`. Shared `index.html` anchors touched: its script tag after `art-ambience.js`, `ArtWonders.install()` after `ArtAmbience.install()`, and the art-mode bar CSS now also shows `#sound` (`:not(#sound)` in the hide rule, `#sound:not([hidden])` in the display rule, `order:3` after `#play`, and the 600px font rule).
+
