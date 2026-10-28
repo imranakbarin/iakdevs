@@ -128,4 +128,23 @@ for (const seed of [3, 11]) {
   assert.equal(G.art(1).art, a, 'a chunk is painted once');
   G.tile(24 + 5, 14, 0); assert.notEqual(G.art(1).art, a, 'and repainted when its ground changes');
 }
-console.log('Pip Run PASS: jump-sized gaps, finite physics, demo player progresses through 4 seeded worlds, reaches each chapter’s destination, clears block rows that run up to a gap, and gets past ferries, lifts, crumble bridges, floating steps and podspitters, referee refuses traps and accepted walls stay passable, shared runs replay exactly as ghosts, and the painted ground of all four biomes draws with sane geometry, once per chunk.');
+// Pip touches the world: whole frames render with sane geometry in every
+// biome while footfalls kick up particles and leave prints in snow, cloud and
+// glowing moss (none in meadow grass).
+{
+  G.reset(5); const prints = {};
+  strict = true;
+  for (let f = 0; f < 60 * 200; f++) {
+    G.tick();
+    if (f % 20) continue;
+    drawn = 0; G.render();
+    const b = G.biomeAt(G.state().pl.x);
+    assert.ok(drawn > 300, `a whole frame draws (${drawn} calls in ${b})`);
+    prints[b] = Math.max(prints[b] || 0, G.fx().prints);
+  }
+  strict = false;
+  assert.deepEqual(Object.keys(prints).sort(), ['caves', 'frost', 'meadow', 'sky'], 'rendered in all four biomes');
+  assert.equal(prints.meadow, 0, 'no prints in grass');
+  for (const b of ['frost', 'sky', 'caves']) assert.ok(prints[b] >= 10, `footprints in ${b} (${prints[b]})`);
+}
+console.log('Pip Run PASS: jump-sized gaps, finite physics, demo player progresses through 4 seeded worlds, reaches each chapter’s destination, clears block rows that run up to a gap, and gets past ferries, lifts, crumble bridges, floating steps and podspitters, referee refuses traps and accepted walls stay passable, shared runs replay exactly as ghosts, the painted ground of all four biomes draws with sane geometry, once per chunk, and whole frames render in every biome with footprints in snow, cloud and moss.');
