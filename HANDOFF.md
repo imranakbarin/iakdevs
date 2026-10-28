@@ -1,5 +1,20 @@
 # HANDOFF — Mushroom Island (October 26, 2026)
 
+## Step 3 — Cinematic spring-mushroom contact and rebound (October 27, 2026)
+
+**Approved progression:** Step 1 grounded run (PR #71), step 2 single fallen log (PR #72). Improve **one existing spring mushroom interaction only**, not an obstacle pack.
+
+- Branch: `feature/mushroom-spring-contact-20261027` from `master` commit `29d6bf95fc110d190cf4160aaabb636deab8cec3`.
+- `assets/mushroom-cinematic.js`: reuse the **existing original rendered cap** `mushroom-bounce-cinematic.webp` instead of introducing unmatched vector props or a new asset. `springGeometry(chapter)` calculates the exact mushroom image size, heel-to-cap elevation and center position using the same desktop/portrait/landscape scaling as Pip. The cap image compresses 15% vertically while widening ~7.5%, keeping its base grounded; it returns to its original dimensions after the impact.
+- `springBounceAt(local,chapter)` replaces only the **bounce chapter's old single sine-wave arc** with an authored two-stage path: leap onto cap, descend/press it at local x=385, rebound upward, and land back on terrain at x=550. Boot height is constrained against the compressed cap surface throughout the actual shared x-overlap; no tunneling or passing through. `pipFrame` uses the previously authored rising/contact/push-off/tucked/landing frames without blending complete-body sprites (v8.1 flicker fix preserved).
+- The log from step 2, 16-frame approved grounded run, other nine stunt families, background, terrain, ambience, pause/resume and same-origin messaging are unchanged.
+- `mushroom-island.html`: JS version `?v=12` invalidates the previous cached scene.
+- `tests/mushroom-cinematic.test.cjs`: verifies center/world coordinates, bottom-rooted cap sprite, actual 15% compression and rebound, exact boot-to-cap contact, absence of penetration across the overlap, two positive vertical arcs, no one-pixel height teleports, correct frame stages and complete prior smoke suite on 1170×650, 390×844, 844×390, 1440×900.
+- **Honest limitation:** this is synchronized deterministic *authored animation*, not a fully rigged 3D character or general real-time collision physics. Tests simulate Canvas draw calls, but visual acceptance on actual Chrome/Safari/iPhone and real FPS are not verified. Watch spring contact for integrated materials and silhouette before any next hurdle.
+- No edits to main `index.html` or Claude's other worlds. Preserve PR #71 and #72 as baseline if a visual regression is reported.
+
+---
+
 ## Step 2 — One grounded cinematic fallen log (October 27, 2026)
 
 **Scope:** The running cadence from PR #71 was accepted. Add only **one hurdle design**, a fallen mossy log in the authored hop chapter, and preserve everything else.
