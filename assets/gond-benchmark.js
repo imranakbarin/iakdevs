@@ -128,7 +128,7 @@ const GondBenchmark = (() => {
     for(const j of[index-1,index+1]){
       const o=animalOf(j);
       if((o.kind==='tiger')===(me.kind==='tiger'))continue;
-      const ox=CreatureMind.wander(o.mind,t).x,d=Math.abs(ox-x);
+      const ox=CreatureMind.wander(o.mind,t-ArtPresence.lag(o.mind.key)).x,d=Math.abs(ox-x);
       if(me.kind==='tiger'){const v=CreatureMind.proximity(d,230,400);if(v>cr){cr=v;toward=ox;}}
       else{const v=CreatureMind.proximity(d,250,430);if(v>al){al=v;toward=ox;}}
     }
@@ -259,10 +259,13 @@ const GondBenchmark = (() => {
       const me=animalOf(index);
       act((c,t,q)=>{
         if(!artVisible(x0+CW/2,CW/2+180))return;
-        const s=CreatureMind.wander(me.mind,t),w=awareness(index,me,s.x,t);
-        const watch=s.resting&&w.toward!==null&&Math.max(w.al,w.cr)>.35;
-        me.sp.draw(c,s.x,q,{t,ph:s.ph,m:s.m,dir:watch?(w.toward>s.x?1:-1):s.dir,
-          k:me.k,g:s.env,idle:s.idle,al:w.al,cr:w.cr});
+        // The viewer counts as one more neighbour: prey stop and look, the tiger
+        // watches, and a peacock that is watched displays its fan.
+        const s=ArtPresence.creature(me.mind,t),w=awareness(index,me,s.x,t),you=s.notice;
+        const watch=s.resting&&w.toward!==null&&Math.max(w.al,w.cr)>.35&&you<.3;
+        const peacock=me.kind==='peacock',al=peacock||me.kind==='tiger'?w.al:Math.max(w.al,you*.9);
+        me.sp.draw(c,s.x,q,{t,ph:s.ph,m:s.m,dir:watch?(w.toward>s.x?1:-1):s.dir,k:me.k,
+          g:peacock?Math.max(s.env,you):s.env,idle:peacock&&you>.2?0:s.idle,al,cr:w.cr});
       });
 
       // Water creatures and glints stay below the actual RIVER boundary.
@@ -284,7 +287,7 @@ const GondBenchmark = (() => {
         act((c,t,q)=>{
           const spots=[...perches(index),...perches(index+1)];
           if(spots.length<2)return;
-          const b=CreatureMind.flight({key,spots,speed:120,period:16,lift:24},t);
+          const b=ArtPresence.perch({key,spots,speed:120,period:16,lift:24},t);
           if(!artVisible(b.x,80))return;
           if(b.flying)bird(c,b.x,b.y,b.dir,.55,q,true,Math.sin(t*13+ph));
           else{

@@ -133,11 +133,13 @@ input[type=range]{width:80px;accent-color:#E63B2E}
 <script src="assets/road-rural.js?v=4"></script>
 <script src="assets/road-vehicles.js?v=8"></script>
 <script src="assets/road-weather-light.js?v=2"></script>
-<script src="assets/creature-mind.js?v=1"></script>
+<script src="assets/creature-mind.js?v=2"></script>
+<script src="assets/art-presence.js?v=1"></script>
+<script src="assets/art-ambience.js?v=1"></script>
 <script src="assets/kangra-world.js?v=3"></script>
-<script src="assets/art-depth.js?v=10"></script>
+<script src="assets/art-depth.js?v=11"></script>
 <script src="assets/art-finishing.js?v=2"></script>
-<script src="assets/gond-benchmark.js?v=3"></script>
+<script src="assets/gond-benchmark.js?v=4"></script>
 <script>
 const requestedZen=location.hash.startsWith('#zen-'),requestedRoad=location.hash.startsWith('#road-'),requestedCozy=location.hash.startsWith('#cozy-'),requestedMushroom=location.hash.startsWith('#mushroom-island');
 let artPresentation=location.hash.startsWith('#painting-')?'painted':'live';
@@ -584,7 +586,7 @@ STYLES.warli={name:'Warli',
     else if(z==='farmyard'){const hx=freeSpot(r,x0,occ);add(3,(c,q)=>wHut(c,hx,q));hens(hx);cart();if(r()<.6){const tx=freeSpot(r,x0,occ);add(3,(c,q)=>wTree(c,tx,q));}}
     else if(z==='fields'){const px=x0+60+r()*(CW-260);occ.push(px+40,px+120);act((c,t,q)=>wPlough(c,px,q,t));if(r()<.7){const tx=freeSpot(r,x0,occ);add(3,(c,q)=>wTree(c,tx,q));}}
     else{for(let k=0,n=2+(r()*2|0);k<n;k++){const tx=x0+(k+.2+r()*.6)*CW/n;occ.push(tx);add(3,(c,q)=>wTree(c,tx,q));}}
-    if(z!=='festival'&&r()<(z==='forest'?.8:.4)){const ax=freeSpot(r,x0,occ),mind={key:hash(seed^0x3a1,(r()*4294967296)>>>0),lo:ax-60,hi:ax+60,speed:8,stride:20,period:12};act((c,t,q)=>{const s=CreatureMind.wander(mind,t);wAnimal(c,s.x,q,s.ph,s.dir,undefined,s.m);});}
+    if(z!=='festival'&&r()<(z==='forest'?.8:.4)){const ax=freeSpot(r,x0,occ),mind={key:hash(seed^0x3a1,(r()*4294967296)>>>0),lo:ax-60,hi:ax+60,speed:8,stride:20,period:12};act((c,t,q)=>{const s=ArtPresence.creature(mind,t);wAnimal(c,s.x,q,s.ph,s.dir,undefined,s.m);});}
     for(let k=r()<.4?0:1+(r()*3|0);k>0;k--){const fx=x0+r()*CW,fy=RIVER+14+r()*(H-RIVER-26),ph=r()*TAU,sp=.3+r()*.2;act((c,t)=>{const v=t*sp+ph;wFish(c,fx+Math.sin(v)*60,fy,sdir(Math.cos(v)));});}
     // An upper village register varies with the activity below; festivals stay special.
     add(2,(c,q)=>{
@@ -961,7 +963,7 @@ STYLES.kangra={name:'Kangra miniature',
     });
 
     if(z==='palace'||z==='riverside'){const mind={key:hash(seed^0x6f1,Math.round(x0/CW)),lo:x0+395,hi:x0+505,speed:5,stride:9,period:20};
-      act((c,t)=>{const s=CreatureMind.wander(mind,t),x=s.x;kFigure(c,x,gy(x)+4,.78,'#b64f43',s.ph,s.dir);kFigure(c,x+24,gy(x+24)+4,.73,'#ddaf57',s.ph+.8*s.m,s.dir);});}
+      act((c,t)=>{const s=ArtPresence.creature(mind,t),x=s.x;kFigure(c,x,gy(x)+4,.78,'#b64f43',s.ph,s.dir);kFigure(c,x+24,gy(x+24)+4,.73,'#ddaf57',s.ph+.8*s.m,s.dir);});}
     if(e>.15)for(let k=(z==='pasture'||z==='palace')&&r()<.5?1:0;k>0;k--){const hx=x0+r()*CW,hy=gy(hx)-30-r()*80,ph=r()*TAU,pr=pick(r,[['#f3c64f','#e0553e'],['#ffffff','#7fa9cf'],['#f2a4b8','#ffffff']]);act((c,t)=>flutter(c,t,hx,hy,ph,pr[0],pr[1],'k',.6));}
     if(n>.45)act((c,t,q)=>fireflies(c,x0,t,q,12,300,RIVER-12,n),false,true);
   }};
@@ -974,7 +976,7 @@ function loopC(c,x0,v){const [x,a]=loopP(x0,v);c.globalAlpha=a;return x;}
 function artVisible(x,pad){return x>=camX-pad&&x<=camX+cv.clientWidth/S+pad;}
 // Animals choose where to go and when to rest instead of pacing a fixed track.
 function walkA(t,ax,L,sp,p0,stride,fn){
-  const s=CreatureMind.wander({key:hash(seed^0x3a1,(p0*4294967296)>>>0),lo:ax-L/2,hi:ax+L/2,speed:sp,stride,period:Math.max(7,L/sp*1.7)},t);
+  const s=ArtPresence.creature({key:hash(seed^0x3a1,(p0*4294967296)>>>0),lo:ax-L/2,hi:ax+L/2,speed:sp,stride,period:Math.max(7,L/sp*1.7)},t);
   fn(s.x,{t,ph:s.ph,dir:s.dir,m:s.m,k:p0*17,g:s.env,idle:s.idle});
 }
 function butterfly(c,x,y,s,fl,A,B,mode,dir=1,tilt=0){
@@ -2150,7 +2152,7 @@ function drawScene(dt){
   if(modeBtn.value==='zen'){zenFrame(dt);return;}
   if(modeBtn.value==='road'){roadFrame(SceneMotion.time*1000,dt);return;}
   const painted=artPresentation==='painted';
-  const target=playing&&!drag?(painted?12.8:26):0;
+  const target=playing&&!drag?(painted?12.8:26)*(1-.7*ArtPresence.level(SceneMotion.time)):0;
   vel+=(target-vel)*(1-Math.exp(-dt*2.6));if(!drag&&playing)camX+=vel*dt;
   if(painted){LivingArt.draw(ctx,document.getElementById('sty').value,cv.width,cv.height,camX,SceneMotion.time,dt,seed);return;}
   ArtDepth.prepare(document.getElementById('sty').value);
@@ -2225,6 +2227,7 @@ if(requestedZen||requestedRoad||requestedCozy||requestedMushroom){modeBtn.value=
 // Editing the hash (or following a deep link in the same tab) opens that world;
 // the app's own replaceState calls never fire hashchange.
 addEventListener('hashchange',()=>location.reload());
+ArtAmbience.install();ArtPresence.install();
 motionPreference.addEventListener('change',e=>{if(e.matches){playing=false;syncPlay();if(modeBtn.value==='cozy')window.CozyWorlds?.pause();wakeScene();}});
 wakeScene();
 </script>

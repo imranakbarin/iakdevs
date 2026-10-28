@@ -10,7 +10,7 @@ const js = fs.readFileSync(path.join(root,'assets/mushroom-cinematic.js'),'utf8'
 const image = fs.readFileSync(path.join(root,'assets/mushroom-cinematic-kingdom.webp'));
 const matchedAssets=['pip-cinematic-run.webp','pip-full-run-22.webp','mushroom-terrace-cinematic.webp','mushroom-bounce-cinematic.webp'];
 for(const a of matchedAssets){const b=fs.readFileSync(path.join(root,'assets',a));assert.ok(b.length>3000&&b.subarray(0,4).toString()==='RIFF'&&b.subarray(8,12).toString()==='WEBP',a+' must be self-hosted WebP');}
-assert.match(page, /assets\/mushroom-cinematic\.js\?v=12/);
+assert.match(page, /assets\/mushroom-cinematic\.js\?v=13/);
 assert.match(js,/assets\/mossy-fallen-log\.svg/,'one local hurdle sprite');
 assert.match(page, /id="island"/);
 assert.ok(image.length>100000&&image.subarray(0,4).toString()==='RIFF'&&image.subarray(8,12).toString()==='WEBP','real authored kingdom art is included');

@@ -565,9 +565,16 @@
     if(!ctx||!canvas.width)return;
     ctx.setTransform(dpr,0,0,dpr,0,0);
     background();waterMotion();skyLife();
+    // Optional life layer (assets/mushroom-life.js): kingdom ambience behind the
+    // route, star seeds/butterflies/companion around Pip. Absent → no-op.
+    const life=window.MushroomLife,state=life&&{W,H,clock,world,plate:info.plate,ground:ground(),
+      pipX:W*.34,poseAt:animationAt,ready:loadState==='ready'};
+    life?.back(ctx,state);
     cinematicTerrace();cinematicSetPieces();cinematicLog();
     const characterX=W*.34;
+    life?.beforePip(ctx,state);
     cinematicPip(characterX,ground()+10,animationAt(world));
+    life?.front(ctx,state);
     // Soft corner falloff integrates the photographically rich kingdom plate
     // and the sculpted foreground land without masking readable detail.
     const v=ctx.createRadialGradient(W*.5,H*.48,Math.min(W,H)*.32,W*.5,H*.48,Math.max(W,H)*.89);
