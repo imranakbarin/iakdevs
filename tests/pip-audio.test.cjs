@@ -50,17 +50,23 @@ A.cycle(); assert.equal(A.mode(), 1); assert.equal(store['pip-run:sound'], 'fx')
 A.cycle(); assert.equal(A.mode(), 2); assert.equal(store['pip-run:sound'], 'music');
 
 // Every effect builds a valid graph.
-for (const name of ['step', 'jump', 'land', 'seed', 'bump', 'smash', 'sprout', 'grow', 'shrink', 'stomp', 'spring', 'tumble', 'crumble', 'spit', 'arrive', 'find', 'place', 'refuse', 'gotcha', 'ui'])
-  for (const o of [{}, {surface: 'grass'}, {surface: 'ice'}, {surface: 'cloud'}, {surface: 'crystal'}, {surface: 'wood'}, {surface: 'stone'}, {impact: 9, streak: 12, v: 1}]) A.fx(name, o);
+for (const name of ['step', 'jump', 'land', 'seed', 'bump', 'smash', 'sprout', 'grow', 'shrink', 'stomp', 'spring', 'tumble', 'crumble', 'spit', 'arrive', 'find', 'place', 'refuse', 'gotcha', 'ui', 'rustle'])
+  for (const o of [{}, {surface: 'grass'}, {surface: 'snow'}, {surface: 'moss'}, {surface: 'ice'}, {surface: 'cloud'}, {surface: 'crystal'}, {surface: 'wood'}, {surface: 'stone'}, {snow: true}, {impact: 9, streak: 12, v: 1}]) A.fx(name, o);
 
 // Thirty seconds of ambience and score across all biomes and tensions.
 const before = count.started;
 for (let i = 0; i < 1800; i++) {
   const k = ['meadow', 'frost', 'sky', 'caves'][Math.floor(i / 450)];
   clock.t += 1 / 60;
-  A.update({biomes: {[k]: 1}, biome: k, tension: (i % 600) / 600, wind: Math.sin(i / 90), dt: 1 / 60});
+  A.update({biomes: {[k]: 1}, biome: k, tension: (i % 600) / 600, wind: Math.sin(i / 90), night: (i % 450) / 450, dt: 1 / 60});
 }
 assert.ok(count.started - before > 60, `score and details played (${count.started - before} voices)`);
+// A meadow night is alive with crickets.
+A.cycle(); A.cycle(); assert.equal(A.mode(), 1, 'effects without the score');
+const dusk = count.started;
+for (let i = 0; i < 600; i++) { clock.t += 1 / 60; A.update({biomes: {meadow: 1}, biome: 'meadow', tension: 0, wind: 0, night: 1, dt: 1 / 60}); }
+assert.ok(count.started - dusk > 12, `crickets at night (${count.started - dusk} voices in 10 s)`);
+A.cycle();
 A.pause(true); const paused = count.started; A.update({biomes: {meadow: 1}, biome: 'meadow', tension: 0, wind: 0, dt: 1}); A.fx('jump');
 assert.equal(count.started, paused, 'silent while paused'); A.pause(false);
 
@@ -73,4 +79,4 @@ for (const name of ['step', 'jump', 'land', 'seed', 'bump', 'arrive']) assert.ok
 const total = Object.values(heard).reduce((a, b) => a + b, 0), code = G.ghost.encode();
 G.ghost.race(code);
 assert.equal(Object.values(heard).reduce((a, b) => a + b, 0), total, 'ghost rebuild is silent');
-console.log(`Pip Run sound PASS: 20 effects build valid graphs, ambience and score over 4 biomes (${count.started} voices), off by default and remembered, silent while paused, game voices ${Object.keys(heard).length} event kinds, ghost rebuilds are silent.`);
+console.log(`Pip Run sound PASS: 21 effects build valid graphs, ambience and score over 4 biomes, crickets after sunset (${count.started} voices), off by default and remembered, silent while paused, game voices ${Object.keys(heard).length} event kinds, ghost rebuilds are silent.`);

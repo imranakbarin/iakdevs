@@ -22,7 +22,7 @@ const canvas = () => ({getContext: () => ctx2d, clientWidth: 1363, clientHeight:
 const game = canvas();
 const sandbox = {
   document: {getElementById: () => game, createElement: () => canvas(), hidden: false, addEventListener() {}},
-  Image: class { constructor() { this.complete = false; this.naturalWidth = 0; } },
+  Image: class { constructor() { this.complete = true; this.naturalWidth = this.naturalHeight = 64; } },   // 'loaded', so every painted path is drawn
   matchMedia: () => ({matches: false, addEventListener() {}}),
   addEventListener() {}, requestAnimationFrame: () => 0, cancelAnimationFrame() {},
   performance: {now: () => 0}, devicePixelRatio: 1, location: {origin: 'http://x', hash: ''}, Math, Set, Map, Uint8Array

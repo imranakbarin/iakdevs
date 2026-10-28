@@ -4,6 +4,7 @@
  *   landings, seeds that climb a scale as you chain them, springs, stomps);
  * - each biome has a quiet ambience bed with occasional details: birds in the
  *   meadow, ice tinkles on the ridge, wind chimes in the sky, drips in caves;
+ *   after sunset the birds give way to crickets and now and then an owl;
  * - an optional, sparse score: a pad and a slow melody in each biome's own
  *   key and voice, a little fuller when the planner is tense.
  * Off by default, and browsers only allow sound after a tap or key anyway.
@@ -57,6 +58,8 @@ const PipAudio = (() => {
     step({surface, v = 1}, t) {
       const k = .5 + .5 * v;
       if (surface === 'grass') hiss({t, type: 'lowpass', f: 900, d: .035, peak: .045 * k});
+      else if (surface === 'snow') { for (let i = 0; i < 3; i++) hiss({t: t + i * .012, f: 1100 + rnd() * 900, q: 2.5, d: .018, peak: .03 * k}); hiss({t, type: 'lowpass', f: 500, d: .04, peak: .02 * k}); }
+      else if (surface === 'moss') { hiss({t, type: 'lowpass', f: 450, d: .05, peak: .035 * k}); tone(hz(84 + [0, 4, 7, 11][rnd() * 4 | 0]), {t: t + .01, d: .25, peak: .004 * k}); }
       else if (surface === 'ice') { hiss({t, f: 3200, q: 2, d: .025, peak: .04 * k}); tone(2200 + rnd() * 600, {t, d: .02, peak: .006 * k}); }
       else if (surface === 'cloud') hiss({t, type: 'lowpass', f: 350, d: .05, peak: .04 * k});
       else if (surface === 'crystal') { tone(hz(84 + [0, 3, 5, 7, 10][rnd() * 5 | 0]), {t, d: .08, peak: .008 * k}); hiss({t, type: 'highpass', f: 4000, d: .02, peak: .015 * k}); }
@@ -81,7 +84,8 @@ const PipAudio = (() => {
     place(o, t) { tone(600, {t, d: .06, peak: .05, slide: 1.4}); },
     refuse(o, t) { tone(190, {t, type: 'triangle', d: .14, peak: .05, slide: .8}); },
     gotcha(o, t) { arp([0, 7, 12], 784, .07, .045, t); },
-    ui(o, t) { tone(880, {t, d: .05, peak: .04}); }
+    ui(o, t) { tone(880, {t, d: .05, peak: .04}); },
+    rustle({snow}, t) { for (let i = 0; i < 5; i++) hiss({t: t + i * .045 + rnd() * .03, f: snow ? 5200 : 3000 + rnd() * 1800, q: 1.2, d: .07, peak: snow ? .012 : .02}); }
   };
   function fx(name, o) {
     if (!ac || !mode || paused || ac.state !== 'running' || !FX[name]) return;
@@ -106,6 +110,12 @@ const PipAudio = (() => {
     sky: [.12, t => { for (let i = 0; i < 3; i++) bell(hz(88 + [0, 2, 4, 7, 9][rnd() * 5 | 0]), t + i * .16 + rnd() * .05, .015, 1.2, ambBus); }],
     caves: [.3, t => { const f = 900 + rnd() * 700; tone(f, {t, d: .09, peak: .035, slide: .45, to: ambBus}); tone(f, {t: t + .28, d: .09, peak: .012, slide: .45, to: ambBus}); }]
   };
+
+  // After sunset, outdoors: crickets, and now and then an owl.
+  const NIGHT = [
+    [.6, t => { const f = 4300 + rnd() * 500; for (let i = 0; i < 3; i++) tone(f, {t: t + i * .055, d: .03, peak: .006, to: ambBus}); }],
+    [.035, t => { tone(380, {t, type: 'triangle', a: .05, d: .32, peak: .012, slide: .9, to: ambBus}); tone(360, {t: t + .45, type: 'triangle', a: .05, d: .45, peak: .01, slide: .88, to: ambBus}); }]
+  ];
 
   /* ---------------- score ---------------- */
   const KEYS = {
@@ -143,7 +153,7 @@ const PipAudio = (() => {
     }
   }
 
-  // Once per drawn frame: s = {biomes: {meadow: weight, ...}, biome, tension, wind, dt}.
+  // Once per drawn frame: s = {biomes: {meadow: weight, ...}, biome, tension, wind, night, dt}.
   function update(s) {
     if (!ac || !mode || paused || ac.state !== 'running') return;
     const t = ac.currentTime;
@@ -152,7 +162,9 @@ const PipAudio = (() => {
     for (const k of Object.keys(amb)) amb[k].g.gain.setTargetAtTime((s.biomes[k] || 0) * LEVEL[k] * (k === 'sky' ? .6 + .6 * Math.abs(s.wind) : 1), t, .6);
     amb.frost.flt.frequency.setTargetAtTime(900 + 500 * Math.sin(t * .4), t, .3);
     amb.sky.flt.frequency.setTargetAtTime(500 + 400 * Math.abs(s.wind), t, .3);
-    for (const [k, [rate, play]] of Object.entries(DETAIL)) if (rnd() < rate * s.dt * (s.biomes[k] || 0)) play(t + .02);
+    const night = s.night || 0, outdoors = 1 - (s.biomes.caves || 0);
+    for (const [k, [rate, play]] of Object.entries(DETAIL)) if (rnd() < rate * s.dt * (s.biomes[k] || 0) * (k === 'meadow' ? 1 - night : 1)) play(t + .02);
+    for (const [rate, play] of NIGHT) if (rnd() < rate * s.dt * night * outdoors) play(t + .02);
     if (mode === 2) score(s, t);
   }
   function apply() {
