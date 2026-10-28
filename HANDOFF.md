@@ -252,3 +252,7 @@ New modules `assets/road-journey.js` and `assets/world-sound.js` (+ `tests/world
 - `roadFrame`: `tripLabel` comes from `RoadJourney.update({...})` when the module is present (old label as the fallback).
 - Init: `WorldSound.install()` after `ArtPresence.install()`.
 
+## Claude follow-up (Zen garden raking and visitors)
+
+`assets/zen-garden.js` (now `?v=12`) gains `zenRakeStart/Move/End`, `zenScare`, `zenVisitors`, `zenHint` (drawn at the end of `zenFrame`). Shared `index.html` anchors touched: the canvas `pointerdown` zen branch (scare the bird, else start a rake on the sand, else ripple), a zen branch at the top of `pointermove` (`zenRakeMove`), and `zenRakeEnd()` in `endDrag`/`cancelArtDrag`. `world-sound.js` is `?v=2`.
+

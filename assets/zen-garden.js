@@ -432,5 +432,109 @@ function zenFrame(dt){
  if(zenCycle>8)zenTrace.style.opacity=String(1-Math.min(1,(zenCycle-8)/6));
  if(zenAtmosphere)zenCanopy(c,L,zenClock);
  zenBall(c,L);
- if(zenAtmosphere){zenPond(c,L,zenClock);zenFountain(c,L,zenClock);zenSpringWater(c,L,zenClock);zenAtmosphereLayer(c,L,zenClock,dt);}
+ if(zenAtmosphere){zenPond(c,L,zenClock);zenFountain(c,L,zenClock);zenSpringWater(c,L,zenClock);zenAtmosphereLayer(c,L,zenClock,dt);zenVisitors(c,L,zenClock,playing?dt:0);}
+ zenHint(c,L);
+}
+// Raking: a drag that starts on the sand pulls a five-tine rake after the
+// finger, carved with the same ridges and troughs as the ball's trail. The
+// garden renews with the next pattern as usual. zenRakeLen feeds the sound.
+let zenRake=null,zenRakeLen=0;
+function zenSandPoint(x,y){
+ const L=zenComposition(cv.clientWidth,cv.clientHeight),inner=L.r*.885,sx=550+(x-L.cx)/inner*550,sy=550+(y-L.cy)/inner*550;
+ return Math.hypot(sx-550,sy-550)<515?{x:sx,y:sy}:null;
+}
+function zenRakeStart(x,y){const p=zenSandPoint(x,y);if(!p)return false;zenRake={last:p,n:null};zenHintSeen();return true;}
+function zenRakeMove(x,y){
+ if(!zenRake)return;
+ const p=zenSandPoint(x,y),a=zenRake.last;
+ if(!p){zenRake.last=null;zenRake.n=null;return;}
+ if(!a){zenRake.last=p;return;}
+ const dx=p.x-a.x,dy=p.y-a.y,len=Math.hypot(dx,dy);if(len<5)return;
+ const n={x:-dy/len,y:dx/len},m=zenRake.n||n;
+ zc.lineCap='round';zc.lineJoin='round';
+ for(const [width,color,ox,oy] of [[7,'rgba(255,246,215,.42)',1.2,1.2],[4.5,'rgba(94,67,39,.36)',-.6,-.6],[2.2,'rgba(103,77,44,.32)',0,0],[.9,'rgba(255,249,224,.8)',2,2]]){
+  zc.strokeStyle=color;zc.lineWidth=width;zc.beginPath();
+  for(let k=-2;k<=2;k++){const o=k*9;zc.moveTo(a.x+m.x*o+ox,a.y+m.y*o+oy);zc.lineTo(p.x+n.x*o+ox,p.y+n.y*o+oy);}
+  zc.stroke();
+ }
+ zenRake.n=n;zenRake.last=p;zenRakeLen+=len;zenTrace.style.opacity='1';
+}
+function zenRakeEnd(){zenRake=null;}
+// The first visit shows how: a quiet line under the garden, once per device.
+let zenHintUntil=null;
+function zenHintSeen(){zenHintUntil=0;try{localStorage.setItem('zen-rake-hint','1');}catch(_){}}
+function zenHint(c,L){
+ if(zenHintUntil===null){let seen=false;try{seen=!!localStorage.getItem('zen-rake-hint');}catch(_){}zenHintUntil=seen?0:SceneMotion.time+7;}
+ if(SceneMotion.time>zenHintUntil)return;
+ const a=Math.min(1,(zenHintUntil-SceneMotion.time)/1.2),msg='Drag across the sand to rake it',y=L.cy+L.r*1.04;
+ c.save();c.globalAlpha=a;c.font='500 14px system-ui,-apple-system,sans-serif';c.textAlign='center';c.textBaseline='middle';
+ const w=c.measureText(msg).width+28;c.fillStyle='rgba(28,52,44,.72)';c.beginPath();c.roundRect(L.cx-w/2,y-15,w,30,15);c.fill();
+ c.fillStyle='#f4ead0';c.fillText(msg,L.cx,y);c.restore();
+}
+/* Visitors. About once a minute a small bird lands on the rim of the sand,
+   hops in leaving tiny footprints, pecks and flies off (a tap nearby sends it
+   off sooner). By day a dragonfly hovers and darts over the pond. */
+let zenBird=null,zenNextBird=12,zenFly=null;
+function zenScare(x,y){if(!zenBird||zenBird.phase==='out'||Math.hypot(x-zenBird.sx,y-zenBird.sy)>60)return false;zenBird.phase='out';zenBird.t=0;zenBird.from={x:zenBird.x,y:zenBird.y};return true;}
+function zenVisitors(c,L,t,dt){
+ const s=Math.max(1,L.r/140),inner=L.r*.885;
+ if(!zenBird&&dt&&(zenNextBird-=dt)<=0){
+  const a=-Math.PI*(.15+Math.random()*.7),rim={x:L.cx+Math.cos(a)*L.r*.96,y:L.cy+Math.sin(a)*L.r*.96},side=Math.cos(a)<0?-1:1;
+  zenBird={phase:'in',t:0,a,x:rim.x+side*L.w*.5,y:rim.y-L.h*.45,from:{x:rim.x+side*L.w*.5,y:rim.y-L.h*.45},rim,hops:2+(Math.random()*2|0),face:-side,peck:0};
+ }
+ const b=zenBird;
+ if(b){
+  b.t+=dt;
+  const ease=u=>u<.5?2*u*u:1-2*(1-u)*(1-u);
+  if(b.phase==='in'){const u=Math.min(1,b.t/1.8),e=ease(u);b.x=b.from.x+(b.rim.x-b.from.x)*e;b.y=b.from.y+(b.rim.y-b.from.y)*e-Math.sin(u*Math.PI)*30*s;if(u>=1){b.phase='rest';b.t=0;}}
+  else if(b.phase==='rest'){b.peck=Math.max(0,Math.sin(b.t*9))*(b.t>.6?1:0);if(b.t>1.4){if(b.hops>0){b.phase='hop';b.t=0;b.from={x:b.x,y:b.y};const d=inner*(.07+Math.random()*.05),ang=Math.atan2(L.cy-b.y,L.cx-b.x)+(Math.random()-.5)*.9;b.to={x:b.x+Math.cos(ang)*d,y:b.y+Math.sin(ang)*d};b.face=Math.cos(ang)<0?-1:1;b.hops--;}else{b.phase='out';b.t=0;b.from={x:b.x,y:b.y};}}}
+  else if(b.phase==='hop'){const u=Math.min(1,b.t/.42);b.x=b.from.x+(b.to.x-b.from.x)*u;b.y=b.from.y+(b.to.y-b.from.y)*u-Math.sin(u*Math.PI)*9*s;b.peck=0;
+   if(u>=1){b.phase='rest';b.t=0;const q={x:550+(b.x-L.cx)/inner*550,y:550+(b.y-L.cy)/inner*550};if(Math.hypot(q.x-550,q.y-550)<500)zenPrint(q,b.face);}}
+  else if(b.phase==='out'){const u=Math.min(1,b.t/1.6),side=b.face;b.x=b.from.x+side*u*u*L.w*.55;b.y=b.from.y-(u*1.4-u*u*.4)*L.h*.5;if(u>=1){zenBird=null;zenNextBird=45+Math.random()*30;}}
+  if(zenBird)zenDrawBird(c,b.x,b.y,s,b.face,b.phase==='in'||b.phase==='out'?t:null,b.peck);
+  if(zenBird){b.sx=b.x;b.sy=b.y;}
+ }
+ if(zenGarden==='moon')return;
+ // The dragonfly: a hover with a little drift, then a quick dart to a new spot over the water.
+ const pond=L.portrait?{x:.42,y:.84,w:.4,h:.1}:{x:.78,y:.24,w:.13,h:.18};
+ if(!zenFly)zenFly={x:L.w*(pond.x+pond.w/2),y:L.h*(pond.y+pond.h/2),tx:0,ty:0,hold:1,dart:0};
+ const f=zenFly;
+ if(dt){
+  if(f.dart>0){f.dart-=dt;f.x+=(f.tx-f.x)*Math.min(1,dt*9);f.y+=(f.ty-f.y)*Math.min(1,dt*9);}
+  else if((f.hold-=dt)<=0){f.tx=L.w*(pond.x+Math.random()*pond.w);f.ty=L.h*(pond.y+Math.random()*pond.h);f.dart=.45;f.hold=1.4+Math.random()*2.6;}
+ }
+ zenDrawFly(c,f.x+Math.sin(t*2.3)*2*s,f.y+Math.cos(t*1.7)*1.5*s,s*.9,Math.atan2(f.ty-f.y,f.tx-f.x||1),t);
+}
+function zenPrint(q,face){
+ zc.save();zc.translate(q.x,q.y);zc.rotate(face>0?0:Math.PI);zc.lineCap='round';
+ for(const [w,col,o] of [[1.6,'rgba(94,67,39,.45)',0],[.7,'rgba(255,249,224,.7)',.8]])for(const dy of [-3.5,3.5]){
+  zc.strokeStyle=col;zc.lineWidth=w;zc.beginPath();
+  for(const ang of [-.5,0,.5]){zc.moveTo(o,dy+o);zc.lineTo(o+Math.cos(ang)*4.5,dy+o+Math.sin(ang)*4.5);}
+  zc.moveTo(o,dy+o);zc.lineTo(o-2.5,dy+o);zc.stroke();
+ }
+ zc.restore();
+}
+function zenDrawBird(c,x,y,s,face,flapT,peck){
+ c.save();c.translate(x,y);c.scale(face*s,s);
+ if(flapT===null){c.fillStyle='rgba(60,50,35,.2)';c.beginPath();c.ellipse(1,1,7,2,0,0,Math.PI*2);c.fill();}
+ c.strokeStyle='#4a3a2a';c.lineWidth=1;c.beginPath();c.moveTo(-1,-2);c.lineTo(-2,1);c.moveTo(2,-2);c.lineTo(2,1);c.stroke();
+ c.save();c.translate(0,-7);c.rotate(peck*.5);
+ c.fillStyle='#8a6a4a';c.beginPath();c.moveTo(-9,-1);c.lineTo(-15,-4);c.lineTo(-14,0);c.closePath();c.fill();
+ c.fillStyle='#9b7b58';c.beginPath();c.ellipse(-1,0,8,5.2,-.15,0,Math.PI*2);c.fill();
+ c.fillStyle='#f1e6cf';c.beginPath();c.ellipse(1,2,5.2,3,0,0,Math.PI*2);c.fill();
+ c.fillStyle='#5a4532';c.beginPath();c.arc(6,-4,3.6,0,Math.PI*2);c.fill();
+ c.fillStyle='#e0a24a';c.beginPath();c.moveTo(9.3,-4.4);c.lineTo(12.4,-3.6);c.lineTo(9.3,-2.8);c.fill();
+ c.fillStyle='#fff';c.beginPath();c.arc(7,-4.8,.9,0,Math.PI*2);c.fill();c.fillStyle='#1d1610';c.beginPath();c.arc(7.2,-4.8,.5,0,Math.PI*2);c.fill();
+ const flap=flapT===null?0:Math.sin(flapT*28);
+ c.fillStyle='#7a5c3e';c.beginPath();c.moveTo(-5,-1);c.quadraticCurveTo(-1,-9-flap*7,4,-2);c.closePath();c.fill();
+ c.restore();c.restore();
+}
+function zenDrawFly(c,x,y,s,ang,t){
+ c.save();c.translate(x,y);c.rotate(ang);c.scale(s,s);
+ const flick=.55+.45*Math.abs(Math.sin(t*60));
+ c.fillStyle=`rgba(240,250,255,${.5*flick})`;c.strokeStyle='rgba(150,190,200,.55)';c.lineWidth=.4;
+ for(const [dx,dy,rx,ry,r] of [[1,-4,6,1.8,-.35],[1,4,6,1.8,.35],[-2,-3.6,5,1.6,-.6],[-2,3.6,5,1.6,.6]]){c.beginPath();c.ellipse(dx,dy,rx,ry,r,0,Math.PI*2);c.fill();c.stroke();}
+ c.fillStyle='#3fb3c2';c.beginPath();c.ellipse(-6,0,8,1.4,0,0,Math.PI*2);c.fill();
+ c.fillStyle='#2a8794';c.beginPath();c.arc(3,0,1.9,0,Math.PI*2);c.fill();
+ c.restore();
 }

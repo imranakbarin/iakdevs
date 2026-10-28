@@ -98,11 +98,14 @@ const WorldSound = (() => {
   }
 
   /* ---------------- zen garden ---------------- */
-  let zenPrev = null, zenV = 0, ripples = 0;
+  let zenPrev = null, zenV = 0, ripples = 0, rakePrev = null, rakeV = 0;
   function zen(L, dt, t) {
     const d = typeof zenDistance === 'number' ? zenDistance : 0, v = zenPrev === null || d < zenPrev ? 0 : (d - zenPrev) / Math.max(dt, 1e-3);
     zenPrev = d; zenV += (v - zenV) * Math.min(1, dt * 3);
-    L.sand = .09 * clamp(0, zenV / 34, 1.6);
+    // Raking by hand hisses too.
+    const r = typeof zenRakeLen === 'number' ? zenRakeLen : 0, rv = rakePrev === null || r < rakePrev ? 0 : (r - rakePrev) / Math.max(dt, 1e-3);
+    rakePrev = r; rakeV += (rv - rakeV) * Math.min(1, dt * 6);
+    L.sand = .09 * clamp(0, zenV / 34, 1.6) + .07 * clamp(0, rakeV / 300, 1.5);
     set(beds.sand.flt.frequency, 2400 + 600 * clamp(0, zenV / 34, 1.5), t);
     L.fountain = .045 * (.8 + .2 * Math.sin(t * 7.3) * Math.sin(t * 3.1));
     const g = typeof zenGarden === 'string' ? zenGarden : 'moss';
