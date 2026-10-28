@@ -45,7 +45,9 @@ Inputs are recorded on the scene clock, so paused redraws remain pixel-identical
 
 `pip-run.html` + `assets/pip-run.js` (~40 KB of source, 13 KB gzipped) is a real game rather than an animation:
 
-- **Hero:** Pip is original pixel art drawn in code (16×23 sprite pixels): sun-yellow explorer cap with a seed sprout, big eyes, sky-blue tunic, leather belt, brown boots and a red scarf rendered as a live ribbon. Frames: idle/blink, a four-step run, jump, fall, skid and tumble, with squash and stretch on landing and take-off.
+- **Hero feel:** the painted Pip with classic platformer feel: squash and stretch, a braced skid pose, a forward lean at speed and distinct take-off/apex/landing poses.
+- **Golden Sprout:** some star blocks release a sprout that slides and drops; catching it makes Pip bigger. Big Pip smashes bricks from below and takes one hit (shrinking, with a flicker) instead of tumbling. The planner values bumping star blocks and predicts a sprout's slide-and-drop, so the demo grows in most runs.
+- **Director (viewers vs. the AI):** while the demo plays, pick a tool (brick, creature, spring; keys 1 2 3 or the round buttons) and place it just ahead of Pip; 3 charges recharge every 6 s. The planner referees each placement by imagining Pip's futures with it: if every future tumbles, or no surviving future gets past a spot that one could before (a trap), it is refused as "Too cruel". Accepted placements force a visible replan and score: a reroute earns 20–100, a tumble on a fair trap "Gotcha! +150", and Pip using your spring +40. Springs are part of the shared physics, so the AI can use them.
 
 - **Physics:** fixed 60 Hz with sub-pixel motion; acceleration, skids, variable jump height (hold to jump higher), coyote time and jump buffering.
 - **World:** an endless seeded tile world from a chunk grammar (runs, gaps, steps, pipes, stone pyramids, block tiers). Gap widths come from simulating the jump arc, so every stretch is clearable; difficulty ramps with distance.

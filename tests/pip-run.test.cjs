@@ -41,4 +41,17 @@ for (const seed of [1, 2, 5, 9]) {
   assert.ok(m > 550, `seed ${seed}: demo reached only ${m} m in 90 s`);
   assert.ok(tumbles <= 6, `seed ${seed}: ${tumbles} tumbles`);
 }
-console.log('Pip Run PASS: jump-sized gaps, finite physics, demo player progresses through 4 seeded worlds.');
+// Director: placements are refereed. Walls are accepted only while Pip can
+// still get past them, and he then does.
+for (const seed of [3, 11]) {
+  G.reset(seed); for (let f = 0; f < 400; f++) G.tick();
+  const D = G.director; D.arm('brick');
+  const s = G.state(), tx = Math.floor((s.pl.x + 48) / 16), feet = Math.floor((s.pl.y + s.pl.h - 1) / 16);
+  for (let k = 0; k < 6; k++) { D.refill(); D.place(tx, feet - k); }
+  const notes = D.info().notes;
+  assert.ok(notes.some(n => n.startsWith('Too cruel')), `seed ${seed}: the referee refused nothing (${notes})`);
+  assert.ok(D.info().dirScore > 0, 'accepted placements score');
+  let passed = false; for (let f = 0; f < 60 * 12 && !passed; f++) { G.tick(); passed = G.state().pl.x > tx * 16 + 24; }
+  assert.ok(passed, `seed ${seed}: Pip could not get past an accepted wall`);
+}
+console.log('Pip Run PASS: jump-sized gaps, finite physics, demo player progresses through 4 seeded worlds, referee refuses traps and accepted walls stay passable.');
