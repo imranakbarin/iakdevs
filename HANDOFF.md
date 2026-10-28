@@ -1,5 +1,19 @@
 # HANDOFF — Mushroom Island (October 26, 2026)
 
+## Step 2 — One grounded cinematic fallen log (October 27, 2026)
+
+**Scope:** The running cadence from PR #71 was accepted. Add only **one hurdle design**, a fallen mossy log in the authored hop chapter, and preserve everything else.
+
+- Branch: `feature/mushroom-one-cinematic-log-20261027` from master `a7ca9e038e6a1f3fdb3ae5cd804b646cea8cae53`.
+- New `assets/mossy-fallen-log.svg`: original self-hosted, transparent scenic log prop with warm directional bark highlights, textured wood rings, moss, soft contact shadow and grass details. Rendered as an image rather than adding a separate vector obstacle drawing system. It should visually belong to the cinematic terrain; actual iPhone/browser visual approval remains required.
+- `assets/mushroom-cinematic.js`: `logGeometry(chapter)` shares log location, size and effective body clearance across canvas rendering and tests. `cinematicLog()` paints a log **only in existing hop chapters** at world coordinate `chapter*750+385`, behind Pip, rooted at `ground()+13`. No change to original hop arc, running poses or scrolling. First encounter after approximately 2.5 seconds of running; repeats every ten chapters (~48 seconds).
+- `mushroom-island.html` bumps `mushroom-cinematic.js?v=11` to avoid cached script.
+- `tests/mushroom-cinematic.test.cjs` checks loading of the SVG, its unique placement, no appearance in other stunt chapters, return in the next hop chapter, shared terrain coordinates, and silhouette clearance throughout the hop on desktop/portrait/landscape sizes. Existing frame/opacity, 16-frame gait, pause/visibility and all-stunt regression tests still pass.
+- **Honest status:** this is a precisely synchronized *authored jump*, not a new real-time collision physics engine. The rejected v6 simulated physics and mismatched vector obstacles remain disabled. The SVG obstacle has not yet received physical iPhone/desktop browser visual sign-off. Review composition and light matching before adding another obstacle.
+- No other worlds or main `index.html` edits. Retain PR #71 as the known-good run baseline. Next step waits on visual review of this single obstacle.
+
+---
+
 ## v9 — Step 1: grounded running rhythm (October 27, 2026)
 
 **Scope:** The user approved improving Mushroom Island **one change at a time**. This step adjusts only Pip's *ordinary running*, and intentionally does not introduce obstacles, physics, new backgrounds, or change the approved authored character sprite.

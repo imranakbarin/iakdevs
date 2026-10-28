@@ -11,6 +11,8 @@
   const renderedPip = new Image(), texturedLedge = new Image(), bounceCap = new Image();
   // 16 true opposing-stride poses plus six separate jump/landing/crouch poses.
   const runningPip = new Image();
+  // One original, light-matched scenic obstacle. No new obstacle engine.
+  const fallenLog = new Image();
   const PIP_FRAME_W=244, PIP_FRAME_H=305, PIP_FRAMES=8, RUN_FRAMES=16, RUN_TOTAL=22, RUN_STRIDE_PX=9;
   const TAU=Math.PI*2, PI=Math.PI, SPEED=155, CHAPTER=750;
   const stunts=['hop','dash','bounce','flip','slide','glide','vault','cartwheel','twirl','longjump'];
@@ -375,6 +377,29 @@
       }else softMushroom(x,ground()-8,kind==='bounce'?.70:.45,i);
     }
   }
+  // The single log belongs to the hop chapter only. Its physical silhouette
+  // and drawing share one deterministic size and x-coordinate.
+  function logGeometry(chapter){
+    const scale=minmax(.68,Math.min(W/780,H/850),1.03);
+    return {chapter,worldX:chapter*CHAPTER+385,
+      scale,width:118*scale,height:53.5*scale,
+      bodyHeight:28*scale,bodyHalfWidth:47*scale};
+  }
+  function cinematicLog(){
+    // Only authored hop passages receive this specific fallen trunk, spaced
+    // ten chapters apart. All other actions and scenery remain untouched.
+    if(!fallenLog.complete||fallenLog.naturalWidth!==640)return;
+    const first=Math.floor((world-W*.4-130)/CHAPTER)-1;
+    const last=Math.ceil((world+W*.7+130)/CHAPTER)+1;
+    for(let i=first;i<=last;i++){
+      if(stunts[((i%stunts.length)+stunts.length)%stunts.length]!=='hop')continue;
+      const log=logGeometry(i);
+      const sx=W*.34+log.worldX-world;
+      if(sx<-log.width||sx>W+log.width)continue;
+      ctx.drawImage(fallenLog,sx-log.width/2,ground()+13-log.height,
+        log.width,log.height);
+    }
+  }
   // One complete 16-pose cycle spans 144 world pixels. The planted boot
   // stays on a fixed ground baseline; visual cadence comes from the authored
   // opposing-leg poses rather than translating the entire figure up and down.
@@ -481,7 +506,7 @@
     if(!ctx||!canvas.width)return;
     ctx.setTransform(dpr,0,0,dpr,0,0);
     background();waterMotion();skyLife();
-    cinematicTerrace();cinematicSetPieces();
+    cinematicTerrace();cinematicSetPieces();cinematicLog();
     const characterX=W*.34;
     cinematicPip(characterX,ground()+10,animationAt(world));
     // Soft corner falloff integrates the photographically rich kingdom plate
@@ -532,6 +557,8 @@
   runningPip.src='assets/pip-full-run-22.webp';
   texturedLedge.src='assets/mushroom-terrace-cinematic.webp';
   bounceCap.src='assets/mushroom-bounce-cinematic.webp';
+  fallenLog.onload=()=>render();fallenLog.onerror=()=>render();
+  fallenLog.src='assets/mossy-fallen-log.svg';
 
   resize();if(playing)raf=requestAnimationFrame(frame);
   // Minimal test-only hooks may be injected by the smoke harness; production
