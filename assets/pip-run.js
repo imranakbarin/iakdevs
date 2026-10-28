@@ -1327,12 +1327,17 @@
     const out = [], kinds = PROPS_IN[ch.biome]; if (!kinds) return out;
     const end = ch.ci % REGION === REGION - 1 ? CW - PLAZA - 3 : CW - 3;
     const surf = x => { for (let y = 0; y < ROWS; y++) { const v = at(x, y); if (v !== EMPTY) return v === EARTH ? y : -1; } return -1; };
+    // Each stands only where the ground is level and unbroken under its whole
+    // base and a tile beyond (a cottage needs nine tiles, an oak seven), never
+    // by an edge or squeezed between a ledge and a gap.
+    const FOOT = {cottage: 4, oak: 3, rock: 2, pine: 2};
+    // (within this chunk, whose ground is known before its neighbours are made)
+    const level = (x, s, n) => { for (let d = -n; d <= n; d++) if (surf(x + d) !== s) return false; return true; };
     for (let x = 2 + hash(seed ^ 0x9a0, ch.ci) % 4; x <= end;) {
       const s = surf(x), hv = hash(seed ^ 0x9a1, ch.ci * CW + x);
-      if (s >= 7 && surf(x - 1) === s && surf(x + 1) === s && hv % 4) {
-        const kind = ch.biome === 'meadow' && (hv >>> 11) % 11 === 0 && !out.some(p => p.kind === 'cottage') ? 'cottage' : kinds[(hv >>> 3) % kinds.length];
-        out.push({x, s, kind, hv}); x += 9 + (hv >>> 7) % 7;
-      }
+      const roomy = ch.biome === 'meadow' && (hv >>> 11) % 5 === 0 && !out.some(p => p.kind === 'cottage') && x - FOOT.cottage >= 0 && x + FOOT.cottage < CW && level(x, s, FOOT.cottage);
+      const kind = roomy ? 'cottage' : kinds[(hv >>> 3) % kinds.length];
+      if (s >= 7 && hv % 4 && x - FOOT[kind] >= 0 && x + FOOT[kind] < CW && level(x, s, FOOT[kind])) { out.push({x, s, kind, hv}); x += 9 + (hv >>> 7) % 7; }
       else x++;
     }
     return out;
@@ -1576,7 +1581,7 @@
     if (props.length) {
       g.globalCompositeOperation = 'destination-over';
       for (const p of props) {
-        const spr = propSprite(p.kind, bio, k), w = spr.width / k, hh = spr.height / k, X = p.x * TS + 8 - w / 2 + ((p.hv >>> 5) % 7 - 3), Y = p.s * TS + 3 - hh;
+        const spr = propSprite(p.kind, bio, k), w = spr.width / k, hh = spr.height / k, X = p.x * TS + 8 - w / 2 + ((p.hv >>> 5) % 5 - 2), Y = p.s * TS + 3 - hh;
         if (p.hv & 1) { g.save(); g.translate(X + w, Y); g.scale(-1, 1); g.drawImage(spr, 0, 0, w, hh); g.restore(); } else g.drawImage(spr, X, Y, w, hh);
       }
       g.globalCompositeOperation = 'source-over';
@@ -1593,14 +1598,14 @@
   let farCache = null;
   function farLayer() {
     if (!backdrop.complete || !backdrop.naturalWidth) return null;
-    const h = Math.round(VIEW_H * S * 1.05), w = Math.round(h * backdrop.naturalWidth / backdrop.naturalHeight);
+    const h = Math.round(VIEW_H * S * 1.26), w = Math.round(h * backdrop.naturalWidth / backdrop.naturalHeight);   // wide enough that a screen shows it once
     if (farCache && farCache.height === h) return farCache;
     farCache = document.createElement('canvas'); farCache.width = w; farCache.height = h;
     const g = farCache.getContext('2d');
     g.filter = `blur(${Math.max(1, S * .35).toFixed(1)}px) saturate(.82) brightness(1.06)`; g.drawImage(backdrop, 0, 0, w, h); g.filter = 'none';
     const haze = g.createLinearGradient(0, 0, 0, h); haze.addColorStop(0, 'rgba(226,242,248,.32)'); haze.addColorStop(.55, 'rgba(238,240,228,.48)'); haze.addColorStop(1, 'rgba(244,236,214,.72)');
     g.fillStyle = haze; g.fillRect(0, 0, w, h);
-    return farCache;
+    return (farCache = seamless(farCache));
   }
 
   // Which biome the camera is in, and how far it has blended into the next one
@@ -1632,7 +1637,7 @@
     const [tint, mist] = kind === 'sky' ? ['rgba(176,206,242,.62)', '240,248,255'] : kind === 'caves' ? ['rgba(26,20,44,.86)', '20,16,34'] : ['rgba(198,218,246,.36)', '238,245,252'];
     g.fillStyle = tint; g.fillRect(0, 0, w, h);
     const q = g.createLinearGradient(0, h * .3, 0, h); q.addColorStop(0, `rgba(${mist},0)`); q.addColorStop(.6, `rgba(${mist},.6)`); q.addColorStop(1, `rgba(${mist},.95)`); g.fillStyle = q; g.fillRect(0, 0, w, h);
-    return (mtnCache[kind] = c2);
+    return (mtnCache[kind] = seamless(c2));
   }
   // A cumulus: lit tops, a lavender underside, a flat base.
   function cloudSprite(v) {
@@ -1649,12 +1654,20 @@
     const q = g.createLinearGradient(0, 24, 0, 38); q.addColorStop(0, 'rgba(160,150,210,0)'); q.addColorStop(1, 'rgba(160,150,210,.4)'); g.fillStyle = q; g.fillRect(0, 0, 100, 44);
     cloudCache.set(key, c2); return c2;
   }
-  // An image tiled sideways with every other copy mirrored, so it never shows a seam.
-  function mirrored(img, par, y) {
-    const W = cv.width, w = img.width, off = (cam * S * par) % (2 * w);
-    for (let x = -off - 2 * w, i = 0; x < W + w; x += w, i++) {
-      ctx.save(); ctx.translate(x + (i % 2 ? w : 0), y); ctx.scale(i % 2 ? -1 : 1, 1); ctx.drawImage(img, 0, 0); ctx.restore();
-    }
+  // A painting made to repeat sideways: its two ends cross-dissolve over a
+  // fifth of its width, so copies join without a seam (mirroring every other
+  // copy showed a centre line and fused shapes into symmetrical ones).
+  function seamless(src, frac = .2) {
+    const w = src.width, h = src.height, ov = Math.round(w * frac), W2 = w - ov, out = document.createElement('canvas'), tail = document.createElement('canvas');
+    out.width = W2; out.height = h; tail.width = ov; tail.height = h;
+    const t = tail.getContext('2d'); t.drawImage(src, W2, 0, ov, h, 0, 0, ov, h);
+    t.globalCompositeOperation = 'destination-in'; const q = t.createLinearGradient(0, 0, ov, 0); q.addColorStop(0, 'rgba(0,0,0,1)'); q.addColorStop(1, 'rgba(0,0,0,0)'); t.fillStyle = q; t.fillRect(0, 0, ov, h);
+    const g = out.getContext('2d'); g.drawImage(src, 0, 0); g.drawImage(tail, 0, 0);
+    return out;
+  }
+  function tiled(img, par, y) {
+    const W = cv.width, w = img.width, x0 = -Math.round(((cam * S * par) % w + w) % w);
+    for (let x = x0; x < W; x += w) ctx.drawImage(img, x, y);
   }
   const ridgeY = (u, base, amp, k, jag) => { const n = noise(u, k); return oy + VIEW_H * S * base - (jag ? Math.abs(n) * 1.6 - .3 : n) * amp * S; };
   function biomeBackground(id) {
@@ -1664,13 +1677,13 @@
     if (id === 'meadow') {
       fill([[0, '#8fcdf2'], [.6, '#d8eef0'], [1, '#f4e6c8']]);
       const far = farLayer();
-      if (far) mirrored(far, .12, oy - bandH * .02);   // the painted kingdom far away, softened once
+      if (far) tiled(far, .12, oy - bandH * .1);   // the painted kingdom far away, softened once
       ctx.fillStyle = '#4c2d1a'; ctx.fillRect(0, oy + bandH, W, H - oy - bandH);
     } else if (id === 'frost') {
       fill([[0, '#a3c4e8'], [.5, '#dce8f6'], [1, '#f4f8fd']]);
       glow(W * .78, oy + bandH * .16, bandH * .55, 'rgba(255,250,232,.85)');
       const mt = mtnLayer('frost');
-      if (mt) mirrored(mt, .07, oy + bandH * .7 - mt.height);
+      if (mt) tiled(mt, .07, oy + bandH * .7 - mt.height);
       else { ridge(.1, .5, 46, '#e9f0f8', 1.3, true); ridge(.2, .64, 38, '#c9d9eb', 2.7, true); }
       // A near ridge of snow with painted pines along it.
       ridge(.3, .66, 18, vgrad(oy + bandH * .56, oy + bandH, '#f2f7fc', '#c4d5e8'), 4.1, true);
@@ -1687,7 +1700,7 @@
       fill([[0, '#58a8ee'], [.55, '#bfe2ff'], [1, '#f0f8ff']]);
       glow(W * .2, oy + bandH * .1, bandH * .6, 'rgba(255,244,214,.75)');
       const mt = mtnLayer('sky');   // the world far below, through a gap in the clouds
-      if (mt) mirrored(mt, .03, oy + bandH * .86 - mt.height);
+      if (mt) tiled(mt, .03, oy + bandH * .86 - mt.height);
       const sea = (par, base, a, shade) => {
         ctx.fillStyle = vgrad(oy + bandH * (base - .08), oy + bandH, `rgba(255,255,255,${a})`, `rgba(${shade},${a})`); ctx.beginPath(); ctx.moveTo(0, H);
         for (let x = 0; x <= W + 12; x += 12) { const wx = x / S + cam * par + frameNo * .08; ctx.lineTo(x, oy + bandH * base - (Math.abs(Math.sin(wx * .045)) * 12 + Math.sin(wx * .011) * 6) * S); }
@@ -1730,8 +1743,8 @@
       }
       const rock = mtnLayer('caves');   // the far walls: painted crags, darkened, hanging from the roof and rising from the floor
       if (rock) {
-        ctx.save(); ctx.translate(0, oy + bandH * .34); ctx.scale(1, -1); mirrored(rock, .1, 0); ctx.restore();
-        mirrored(rock, .14, oy + bandH * .86 - rock.height);
+        ctx.save(); ctx.translate(0, oy + bandH * .34); ctx.scale(1, -1); tiled(rock, .1, 0); ctx.restore();
+        tiled(rock, .14, oy + bandH * .86 - rock.height);
       } else { ridge(.12, .2, 26, vgrad(oy, oy + bandH * .3, '#120f20', '#1d1830'), 5.2, true, true); ridge(.12, .82, 24, vgrad(oy + bandH * .6, oy + bandH, '#221c38', '#141120'), 6.1, true); }
       ridge(.26, .9, 18, vgrad(oy + bandH * .7, oy + bandH, '#2a2342', '#17131f'), 7.4, true);
       for (let i = Math.floor((cam * .26 - 80) / 90), u; (u = i * 90) < cam * .26 + W / S + 80; i++) {   // crystal clusters glowing in the dark
@@ -2902,7 +2915,7 @@
   if (playing) raf = requestAnimationFrame(frame);
   // Test hook: lets the smoke test drive the simulation without a browser clock.
   window.__pipRun = {tick, reset, state: () => ({pl, enemies, seeds, maxX, dead, human, cam, viewW}), GAP, layout, tileAt: (x, y) => tileAt(x, y),
-    art: ci => { const ch = chunk(ci); return ch && {art: chunkArt(ch, Math.round(TS * S)), biome: ch.biome}; }, render: () => render(), fx: () => ({parts: parts.length, prints: prints.length, rustled: rustle.size}), dayAt,
+    art: ci => { const ch = chunk(ci); return ch && {art: chunkArt(ch, Math.round(TS * S)), biome: ch.biome}; }, props: ci => { const ch = chunk(ci); return ch && ch.props ? ch.props.map(q => ({...q})) : []; }, render: () => render(), fx: () => ({parts: parts.length, prints: prints.length, rustled: rustle.size}), dayAt,
     scores: () => { const th = enemies.filter(e => e.state !== 'dead' && e.state !== 'squash' && Math.abs(e.x - pl.x) < 260); return OPTIONS.map(o => [o.dir, o.wait, o.hold, Math.round(simulate(o, th).score)]); },
     actions: () => actions(),
     tile: (x, y, v) => setTile(x, y, v),
