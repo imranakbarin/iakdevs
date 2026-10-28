@@ -50,6 +50,10 @@ Inputs are recorded on the scene clock, so paused redraws remain pixel-identical
 - **Creatures:** Mossbud walks and turns at walls; Shellback snail turns at ledges and retreats into a kickable shell that bowls others over; Puddlehop leaps toward Pip on a timer; Puffwing bobs through the air. Stomp them, or bump blocks from below to knock them off.
 - **Demo player:** when idle it presses the same buttons a person would. Every few frames it simulates ~40 candidate plans for 1.6 s against the real physics and predicted creature motion (including hopper arcs), then continues each rollout with a default policy (run, and leap where ground ends or a wall/creature is ahead, waiting for headroom under block rows). Average-position scoring and plan commitment stop it from procrastinating. Any key or tap hands control to the player; 9 s idle hands it back.
 - **Controls:** ← → / A D to run, Space / ↑ / W / Z to jump. On touch: a pad below the stage.
+- **Visible mind:** in demo play, each replan's rollouts are drawn as arcs: white futures, red ones that end in a tumble (with a break), gold for the chosen path.
+- **Planner-driven drama:** tension (the share of imagined futures that tumble within 40 frames) eases time down to ~0.55× and pushes the camera in; nothing is scripted.
+- **Instant replays:** a 6 s ring of recorded frames; close calls (a lethal option within 12 frames was avoided) and stomp chains replay at half speed with letterbox bars, at most every 30 s.
+- **Memory:** each tumble leaves a faint ghost mark. Rollouts near a mark keep a wider berth and avoid retracing it, a "!" shows when Pip approaches one, and a risk level rises after tumbles and relaxes with clean distance (≈2.4 tumbles per 3 min, down from ≈3.6).
 - `tests/pip-run.test.cjs` checks the gap table, finite physics and steady demo progress on four worlds.
 
 ## Rendering notes
