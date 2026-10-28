@@ -163,7 +163,7 @@ for(const [width,height] of [[1170,650],[390,844],[844,390],[1440,900]]){
    const drawn=springDraws.slice(before);
    assert.equal(drawn.length,1,'one original mushroom cap at '+width+'x'+height);
    const art=drawn[0];
-   assert.ok(Math.abs((art.x+art.w/2)-width*.34)<.001,'cap at Pip lane when centered at '+p);
+   assert.ok(Math.abs((art.x+art.w/2)-(width*.34+385-p))<.001,'cap follows world-space lane at '+p);
    assert.ok(Math.abs((art.y+art.h)-(groundY+4))<.001,'mushroom base rooted to terrain at '+p);
    return art;
  };
