@@ -11,7 +11,9 @@
   const renderedPip = new Image(), texturedLedge = new Image(), bounceCap = new Image();
   // 16 true opposing-stride poses plus six separate jump/landing/crouch poses.
   const runningPip = new Image();
-  const PIP_FRAME_W=244, PIP_FRAME_H=305, PIP_FRAMES=8, RUN_FRAMES=16, RUN_TOTAL=22, RUN_STRIDE_PX=12;
+  // One original, light-matched scenic obstacle. No new obstacle engine.
+  const fallenLog = new Image();
+  const PIP_FRAME_W=244, PIP_FRAME_H=305, PIP_FRAMES=8, RUN_FRAMES=16, RUN_TOTAL=22, RUN_STRIDE_PX=9;
   const TAU=Math.PI*2, PI=Math.PI, SPEED=155, CHAPTER=750;
   const stunts=['hop','dash','bounce','flip','slide','glide','vault','cartwheel','twirl','longjump'];
   const minmax=(a,x,b)=>Math.max(a,Math.min(b,x));
@@ -233,16 +235,59 @@
       }
     }
   }
+  // The same image geometry is shared by the mushroom renderer and Pip's
+  // contact path. This prevents the "bounce" from happening in empty air.
+  function springGeometry(chapter){
+    const propScale=Math.max(.46,Math.min(.86,Math.min(W/590,H/1030)*.91));
+    const pipScale=Math.max(.49,Math.min(.90,Math.min(W/540,H/980)*.87));
+    const height=133*propScale/.72;
+    const width=height*((bounceCap.naturalWidth||169)/(bounceCap.naturalHeight||128));
+    const compression=.15;
+    const contactLift=(height+6+9*pipScale)/pipScale;
+    return {chapter,worldX:chapter*CHAPTER+385,height,width,pipScale,
+      compression,contactLift,springDepth:height*compression/pipScale};
+  }
+  function springCompression(p){
+    if(p<367||p>410)return 0;
+    return p<=385?smooth((p-367)/18):1-smooth((p-385)/25);
+  }
+  function springBounceAt(p,chapter){
+    const g=springGeometry(chapter);
+    const points=[
+      [195,0],[269,g.contactLift+30],[315,g.contactLift+68],
+      [357,g.contactLift+20],[385,g.contactLift-g.springDepth],
+      [401,g.contactLift+14],[452,g.contactLift+100],
+      [478,g.contactLift+98],[498,g.contactLift+65],[550,0]
+    ];
+    if(p<=195||p>=550)return {lift:0,compression:0,contact:false};
+    let lift=0;
+    for(let i=1;i<points.length;i++){
+      if(p<=points[i][0]){
+        const [x0,y0]=points[i-1],[x1,y1]=points[i];
+        lift=y0+(y1-y0)*smooth((p-x0)/(x1-x0));
+        break;
+      }
+    }
+    // The soft cap is an actual landing surface in this authored sequence.
+    // Clamp Pip's boot height against its compressed top throughout the
+    // center section, not just at a single central frame, so no feet pass
+    // through the mushroom between animation frames.
+    const compression=springCompression(p);
+    const capHalfWidth=g.width*(1+.075*compression)*.35;
+    if(Math.abs(p-385)<=capHalfWidth)
+      lift=Math.max(lift,g.contactLift-g.springDepth*compression);
+    return {lift,compression,contact:p>=378&&p<=399};
+  }
   function poseAt(x){
     const chapter=Math.floor(x/CHAPTER),kind=stunts[((chapter%stunts.length)+stunts.length)%stunts.length];
     const p=x-chapter*CHAPTER;
     const u=minmax(0,(p-195)/355,1),active=p>=195&&p<=550;
     const wave=Math.sin(PI*u),ease=smooth(u);
-    let lift=0,spin=0,squash=1,lean=0,glide=false;
+    let lift=0,spin=0,squash=1,lean=0,glide=false,spring=null;
     if(active){
       if(kind==='hop')lift=65*wave;
       if(kind==='dash')lean=.23*wave;
-      if(kind==='bounce')lift=139*wave+32*Math.sin(2*PI*u)**2;
+      if(kind==='bounce'){spring=springBounceAt(p,chapter);lift=spring.lift;}
       if(kind==='flip'){lift=116*wave;spin=TAU*ease;}
       if(kind==='slide')squash=1-.47*wave*wave;
       if(kind==='glide'){lift=138*wave;glide=true;}
@@ -251,7 +296,7 @@
       if(kind==='twirl'){lift=103*wave;spin=TAU*ease;}
       if(kind==='longjump'){lift=124*wave;lean=.17*wave;}
     }
-    return {kind,active,u,lift,spin,squash,lean,glide};
+    return {kind,active,u,lift,spin,squash,lean,glide,spring};
   }
   // Timing envelopes are derived only from travel distance, so the transition
   // looks identical after frame drops, tab resumes, and on different screens.
@@ -367,25 +412,71 @@
       const x=W*.34 +i*CHAPTER+385-world;
       if(x<-150||x>W+150)continue;
       if(bounceCap.complete&&bounceCap.naturalWidth){
-        const h=(kind==='bounce'?133:86)*figureScale/.72;
-        const w=h*(bounceCap.naturalWidth/bounceCap.naturalHeight);
+        // One reused cinematic mushroom image: the cap compresses at the
+        // precise world coordinate where Pip's boots touch it, then rebounds.
+        const g=kind==='bounce'?springGeometry(i):null;
+        const contact=g?springCompression(world-i*CHAPTER):0;
+        const h=g?g.height*(1-g.compression*contact):86*figureScale/.72;
+        const w=g?g.width*(1+.075*contact):
+          h*(bounceCap.naturalWidth/bounceCap.naturalHeight);
         ctx.save();ctx.globalAlpha=.95;
         ctx.drawImage(bounceCap,x-w*.5,ground()-h+4,w,h);
         ctx.restore();
       }else softMushroom(x,ground()-8,kind==='bounce'?.70:.45,i);
     }
   }
+  // The single log belongs to the hop chapter only. Its physical silhouette
+  // and drawing share one deterministic size and x-coordinate.
+  function logGeometry(chapter){
+    const scale=minmax(.68,Math.min(W/780,H/850),1.03);
+    return {chapter,worldX:chapter*CHAPTER+385,
+      scale,width:118*scale,height:53.5*scale,
+      bodyHeight:28*scale,bodyHalfWidth:47*scale};
+  }
+  function cinematicLog(){
+    // Only authored hop passages receive this specific fallen trunk, spaced
+    // ten chapters apart. All other actions and scenery remain untouched.
+    if(!fallenLog.complete||fallenLog.naturalWidth!==640)return;
+    const first=Math.floor((world-W*.4-130)/CHAPTER)-1;
+    const last=Math.ceil((world+W*.7+130)/CHAPTER)+1;
+    for(let i=first;i<=last;i++){
+      if(stunts[((i%stunts.length)+stunts.length)%stunts.length]!=='hop')continue;
+      const log=logGeometry(i);
+      const sx=W*.34+log.worldX-world;
+      if(sx<-log.width||sx>W+log.width)continue;
+      ctx.drawImage(fallenLog,sx-log.width/2,ground()+13-log.height,
+        log.width,log.height);
+    }
+  }
+  // One complete 16-pose cycle spans 144 world pixels. The planted boot
+  // stays on a fixed ground baseline; visual cadence comes from the authored
+  // opposing-leg poses rather than translating the entire figure up and down.
+  // The two soft footfalls are eight frames apart.
+  function gaitAt(x,step=RUN_STRIDE_PX){
+    const phase=((x/step)%RUN_FRAMES+RUN_FRAMES)%RUN_FRAMES;
+    const frame=Math.floor(phase);
+    const strikeDistance=Math.min(
+      Math.abs(phase),Math.abs(phase-8),Math.abs(phase-RUN_FRAMES));
+    const contact=smooth(1-strikeDistance/1.55);
+    return {phase,frame,contact,foot:frame<8?'front':'back'};
+  }
   function pipFrame(pose){
-    const progress=((world%(RUN_FRAMES*RUN_STRIDE_PX))+
-      RUN_FRAMES*RUN_STRIDE_PX)%(RUN_FRAMES*RUN_STRIDE_PX);
     if(!pose.active||pose.kind==='dash'){
-      const distancePerFrame=pose.kind==='dash'?9:RUN_STRIDE_PX;
-      return Math.floor(world/distancePerFrame)%RUN_FRAMES < 0
-        ? (Math.floor(world/distancePerFrame)%RUN_FRAMES)+RUN_FRAMES
-        : Math.floor(world/distancePerFrame)%RUN_FRAMES;
+      return gaitAt(world,pose.kind==='dash'?RUN_STRIDE_PX*.8:RUN_STRIDE_PX).frame;
     }
     // Distinct authored silhouettes, not the entire picture spinning in midair.
     if(pose.kind==='slide')return 21;
+    if(pose.kind==='bounce'){
+      const p=195+pose.u*355;
+      if(p<269)return 17;
+      if(p<357)return 18;
+      if(p<382)return 19;
+      if(p<401)return 20;
+      if(p<432)return 16;
+      if(p<480)return 18;
+      if(p<525)return 19;
+      return 20;
+    }
     if(pose.u<.16)return 16;   // anticipation and push-off
     if(pose.u<.38)return 17;   // rising
     if(pose.u<.64)return 18;   // legs tucked at apex
@@ -397,8 +488,7 @@
   // two overlapping translucent full-body sprites, which visibly flickered.
   // Use time/ground easing for softness instead of body-image transparency.
   function spriteFrame(pose){
-    const stride=pose.kind==='dash'?9:RUN_STRIDE_PX;
-    const run=((Math.floor(world/stride)%RUN_FRAMES)+RUN_FRAMES)%RUN_FRAMES;
+    const run=gaitAt(world,pose.kind==='dash'?RUN_STRIDE_PX*.8:RUN_STRIDE_PX).frame;
     if(!pose.active){
       if((pose.recovery||0)>.5)return pose.kind==='slide'?21:20;
       if((pose.anticipation||0)>.72)return pose.kind==='slide'?21:16;
@@ -421,14 +511,12 @@
     shadow.addColorStop(1,'rgba(55,49,42,0)');
     ctx.fillStyle=shadow;ctx.fillRect(x-70*s,groundY-21*s,140*s,53*s);
     const newSheet=runningPip.complete&&runningPip.naturalWidth===PIP_FRAME_W*RUN_TOTAL;
-    // Tie leg cadence to horizontal travel, not elapsed time; torso stays stable.
-    const runPhase=(world/(RUN_FRAMES*RUN_STRIDE_PX))*TAU;
-    // A planted foot stays visually anchored through preparation and recovery.
-    const anchored=Math.max(pose.anticipation||0,pose.recovery||0);
-    const bob=pose.active?0:Math.abs(Math.sin(runPhase*2))*2.1*s*(1-anchored);
+    // Lock the sprite's heel line to the same ground height throughout the
+    // 16 run frames. Former time-driven bob was lifting planted shoes off the
+    // terrain and causing visible vertical jitter.
     const lift=pose.lift*s;
     const footInset=newSheet?9*s:0;
-    ctx.translate(x,groundY-lift-bob+footInset);
+    ctx.translate(x,groundY-lift+footInset);
     ctx.translate(0,-143*s);
     // Limit pitch to a small authored pose transition. No full-body waving.
     ctx.rotate(pose.active?Math.max(-.09,Math.min(.09,pose.lean)):0);
@@ -462,11 +550,14 @@
           `rgba(248,228,192,${a})`);
       }
     }
-    // Dust is tinted by the same golden sunlight, no cartoon particle stream.
-    if(!pose.active){
-      for(let k=0;k<2;k++){
-        const a=.17-k*.06;
-        oval(x-(17+k*18)*s,groundY-(8+k*3)*s,7*s,2.4*s,`rgba(253,232,185,${a})`);
+    // A soft contact fleck appears only as alternating feet meet the ground;
+    // perpetual dust clouds made the character look like it was gliding.
+    if(!pose.active && !(pose.anticipation>.02) && !(pose.recovery>.02)){
+      const strike=gaitAt(world).contact;
+      if(strike>.015){
+        const a=(.095*strike).toFixed(3);
+        oval(x-17*s,groundY-5*s,5.5*s,1.8*s,
+          `rgba(251,228,184,${a})`);
       }
     }
   }
@@ -479,7 +570,7 @@
     const life=window.MushroomLife,state=life&&{W,H,clock,world,plate:info.plate,ground:ground(),
       pipX:W*.34,poseAt:animationAt,ready:loadState==='ready'};
     life?.back(ctx,state);
-    cinematicTerrace();cinematicSetPieces();
+    cinematicTerrace();cinematicSetPieces();cinematicLog();
     const characterX=W*.34;
     life?.beforePip(ctx,state);
     cinematicPip(characterX,ground()+10,animationAt(world));
@@ -532,6 +623,8 @@
   runningPip.src='assets/pip-full-run-22.webp';
   texturedLedge.src='assets/mushroom-terrace-cinematic.webp';
   bounceCap.src='assets/mushroom-bounce-cinematic.webp';
+  fallenLog.onload=()=>render();fallenLog.onerror=()=>render();
+  fallenLog.src='assets/mossy-fallen-log.svg';
 
   resize();if(playing)raf=requestAnimationFrame(frame);
   // Minimal test-only hooks may be injected by the smoke harness; production

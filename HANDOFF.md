@@ -1,5 +1,48 @@
 # HANDOFF — Mushroom Island (October 26, 2026)
 
+## Step 3 — Cinematic spring-mushroom contact and rebound (October 27, 2026)
+
+**Approved progression:** Step 1 grounded run (PR #71), step 2 single fallen log (PR #72). Improve **one existing spring mushroom interaction only**, not an obstacle pack.
+
+- Branch: `feature/mushroom-spring-contact-20261027` from `master` commit `29d6bf95fc110d190cf4160aaabb636deab8cec3`.
+- `assets/mushroom-cinematic.js`: reuse the **existing original rendered cap** `mushroom-bounce-cinematic.webp` instead of introducing unmatched vector props or a new asset. `springGeometry(chapter)` calculates the exact mushroom image size, heel-to-cap elevation and center position using the same desktop/portrait/landscape scaling as Pip. The cap image compresses 15% vertically while widening ~7.5%, keeping its base grounded; it returns to its original dimensions after the impact.
+- `springBounceAt(local,chapter)` replaces only the **bounce chapter's old single sine-wave arc** with an authored two-stage path: leap onto cap, descend/press it at local x=385, rebound upward, and land back on terrain at x=550. Boot height is constrained against the compressed cap surface throughout the actual shared x-overlap; no tunneling or passing through. `pipFrame` uses the previously authored rising/contact/push-off/tucked/landing frames without blending complete-body sprites (v8.1 flicker fix preserved).
+- The log from step 2, 16-frame approved grounded run, other nine stunt families, background, terrain, ambience, pause/resume and same-origin messaging are unchanged.
+- `mushroom-island.html`: JS version `?v=12` invalidates the previous cached scene.
+- `tests/mushroom-cinematic.test.cjs`: verifies center/world coordinates, bottom-rooted cap sprite, actual 15% compression and rebound, exact boot-to-cap contact, absence of penetration across the overlap, two positive vertical arcs, no one-pixel height teleports, correct frame stages and complete prior smoke suite on 1170×650, 390×844, 844×390, 1440×900.
+- **Honest limitation:** this is synchronized deterministic *authored animation*, not a fully rigged 3D character or general real-time collision physics. Tests simulate Canvas draw calls, but visual acceptance on actual Chrome/Safari/iPhone and real FPS are not verified. Watch spring contact for integrated materials and silhouette before any next hurdle.
+- No edits to main `index.html` or Claude's other worlds. Preserve PR #71 and #72 as baseline if a visual regression is reported.
+
+---
+
+## Step 2 — One grounded cinematic fallen log (October 27, 2026)
+
+**Scope:** The running cadence from PR #71 was accepted. Add only **one hurdle design**, a fallen mossy log in the authored hop chapter, and preserve everything else.
+
+- Branch: `feature/mushroom-one-cinematic-log-20261027` from master `a7ca9e038e6a1f3fdb3ae5cd804b646cea8cae53`.
+- New `assets/mossy-fallen-log.svg`: original self-hosted, transparent scenic log prop with warm directional bark highlights, textured wood rings, moss, soft contact shadow and grass details. Rendered as an image rather than adding a separate vector obstacle drawing system. It should visually belong to the cinematic terrain; actual iPhone/browser visual approval remains required.
+- `assets/mushroom-cinematic.js`: `logGeometry(chapter)` shares log location, size and effective body clearance across canvas rendering and tests. `cinematicLog()` paints a log **only in existing hop chapters** at world coordinate `chapter*750+385`, behind Pip, rooted at `ground()+13`. No change to original hop arc, running poses or scrolling. First encounter after approximately 2.5 seconds of running; repeats every ten chapters (~48 seconds).
+- `mushroom-island.html` bumps `mushroom-cinematic.js?v=11` to avoid cached script.
+- `tests/mushroom-cinematic.test.cjs` checks loading of the SVG, its unique placement, no appearance in other stunt chapters, return in the next hop chapter, shared terrain coordinates, and silhouette clearance throughout the hop on desktop/portrait/landscape sizes. Existing frame/opacity, 16-frame gait, pause/visibility and all-stunt regression tests still pass.
+- **Honest status:** this is a precisely synchronized *authored jump*, not a new real-time collision physics engine. The rejected v6 simulated physics and mismatched vector obstacles remain disabled. The SVG obstacle has not yet received physical iPhone/desktop browser visual sign-off. Review composition and light matching before adding another obstacle.
+- No other worlds or main `index.html` edits. Retain PR #71 as the known-good run baseline. Next step waits on visual review of this single obstacle.
+
+---
+
+## v9 — Step 1: grounded running rhythm (October 27, 2026)
+
+**Scope:** The user approved improving Mushroom Island **one change at a time**. This step adjusts only Pip's *ordinary running*, and intentionally does not introduce obstacles, physics, new backgrounds, or change the approved authored character sprite.
+
+- Branch: `feature/pip-foot-contact-rhythm-v9-20261027` based on master `ac31f327829a734864911384a32e6ace2baa6b24` (v8.1 flicker fix).
+- `assets/mushroom-cinematic.js`: the 16-frame authored running atlas now advances every 9 world pixels instead of 12, giving a more natural ~0.93-second alternating-stride loop at 155px/sec world speed. Introduced pure `gaitAt(world)` for deterministic frame and alternate-foot contact timing. The character's global vertical running bob was removed so the boots stay on the same grass/dirt baseline rather than bouncing the entire body. Decorative dust appears briefly at actual alternate footfall timing, not continuously.
+- The one-full-opacity-sprite-per-frame flicker fix from v8.1 is preserved; 6 separate action poses are unchanged; original 16 run poses and all cinematic background/foreground assets are unchanged.
+- `mushroom-island.html` requests `mushroom-cinematic.js?v=10` to bust the cached script.
+- `tests/mushroom-cinematic.test.cjs`: runs existing artwork, ten-stunt and pause/visibility tests and now checks the exact 16-pose/144px cycle, left/right contact separation at 72px, empty midstride contact, wrap continuity, safe long-run index, and no whole-sprite vertical bob. Tested against the actual branch source using mock Canvas rendering.
+- **Visual acceptance outstanding:** Real desktop/mobile watch-through including feet on terrain, pace, and visible contact dust. Do not claim this pass introduces authentic foot IK, rendered rigging, new physics, or that a mocked test proves the perceived quality. If the cadence feels too fast, revert only `RUN_STRIDE_PX` (9 -> 12), keeping the grounded baseline and frame fix.
+- Next task only **after reviewing this step**: improve takeoff-to-landing pose quality or introduce a *single* art-matched hurdle, according to the user's feedback. Avoid bundling several changes.
+
+---
+
 ## v8.1 — Fix flashing during Pip's pose transitions (October 27, 2026)
 
 - User reported visible flickering after the v8 animation polish.

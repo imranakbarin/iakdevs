@@ -1,0 +1,91 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="640" height="290" viewBox="0 0 640 290">
+<defs>
+  <linearGradient id="wood" x1=".1" y1="0" x2=".75" y2="1">
+    <stop offset="0" stop-color="#eed2a8"/>
+    <stop offset=".13" stop-color="#cba37f"/>
+    <stop offset=".41" stop-color="#9c765f"/>
+    <stop offset=".75" stop-color="#6c5149"/>
+    <stop offset="1" stop-color="#3b3b42"/>
+  </linearGradient>
+  <linearGradient id="moss" x1=".25" y1="0" x2=".7" y2="1">
+    <stop offset="0" stop-color="#b6d994"/>
+    <stop offset=".3" stop-color="#779f70"/>
+    <stop offset=".73" stop-color="#466d59"/>
+    <stop offset="1" stop-color="#344e4b"/>
+  </linearGradient>
+  <linearGradient id="end" x1="0" y1="0" x2="1" y2=".3">
+    <stop offset="0" stop-color="#e5c39a"/>
+    <stop offset=".45" stop-color="#c28d70"/>
+    <stop offset=".9" stop-color="#795d58"/>
+    <stop offset="1" stop-color="#665660"/>
+  </linearGradient>
+  <radialGradient id="softshadow">
+    <stop offset="0" stop-color="#3b3935" stop-opacity=".55"/>
+    <stop offset=".6" stop-color="#3b3935" stop-opacity=".18"/>
+    <stop offset="1" stop-color="#3b3935" stop-opacity="0"/>
+  </radialGradient>
+  <filter id="grain" x="-20%" y="-35%" width="140%" height="170%">
+    <feTurbulence type="fractalNoise" baseFrequency=".032 .12" numOctaves="3" seed="14" result="n"/>
+    <feColorMatrix in="n" type="saturate" values="0"/>
+    <feComposite in2="SourceGraphic" operator="in"/>
+    <feBlend in="SourceGraphic" mode="multiply"/>
+  </filter>
+  <filter id="blur"><feGaussianBlur stdDeviation="5"/></filter>
+  <clipPath id="barkclip">
+    <path d="M90 118 C135 89 228 77 353 81 C466 89 537 106 566 129 C586 148 578 184 557 205 C497 238 402 237 279 227 C166 225 98 203 88 171 Z"/>
+  </clipPath>
+</defs>
+<!-- Image-like diffused contact shadow; transparent surroundings -->
+<ellipse cx="322" cy="237" rx="273" ry="32" fill="url(#softshadow)"/>
+<!-- Uneven old fallen trunk, no cartoon outline -->
+<path d="M90 118 C135 89 228 77 353 81 C466 89 537 106 566 129 C586 148 578 184 557 205 C497 238 402 237 279 227 C166 225 98 203 88 171 Z" fill="url(#wood)"/>
+<g clip-path="url(#barkclip)">
+  <path d="M98 122 C194 101 275 95 399 105 C471 113 535 134 563 153" stroke="#f1d3ae" stroke-width="21" opacity=".31" fill="none" filter="url(#blur)"/>
+  <path d="M91 182 C200 223 366 224 524 208" stroke="#382d34" stroke-width="24" opacity=".36" fill="none" filter="url(#blur)"/>
+  <path d="M100 145 C173 119 235 129 345 126 C426 123 488 147 551 163" stroke="#f4d6a8" stroke-width="5" opacity=".25" fill="none"/>
+  <g stroke-linecap="round" fill="none">
+    <path d="M132 145 C222 128 289 142 379 151 S508 176 553 168" stroke="#5e463d" stroke-width="4" opacity=".55"/>
+    <path d="M121 162 C209 146 301 163 398 169 S517 197 552 184" stroke="#4a3839" stroke-width="6" opacity=".32"/>
+    <path d="M126 181 C221 169 330 192 457 200" stroke="#f1c69a" stroke-width="3" opacity=".36"/>
+    <path d="M155 206 C230 196 318 206 425 217" stroke="#3c3b3f" stroke-width="5" opacity=".34"/>
+    <path d="M166 123 L187 150 M256 119 L267 173 M353 118 L363 175 M458 135 L440 193 M496 148 L482 178" stroke="#684f47" stroke-width="3" opacity=".32"/>
+  </g>
+  <path d="M91 119 C170 91 253 89 336 92 S486 106 548 131 C474 131 423 133 350 130 C253 128 180 122 94 137 Z" fill="url(#moss)" opacity=".94"/>
+  <path d="M101 118 C180 88 266 87 351 97 C440 104 513 122 547 135" stroke="#c2d69b" stroke-width="10" opacity=".37" fill="none" filter="url(#blur)"/>
+  <path d="M104 127 C167 104 262 98 333 104 C420 111 506 125 547 144" stroke="#486b53" stroke-width="8" opacity=".5" fill="none"/>
+  <g fill="#a4c98d" opacity=".83">
+    <ellipse cx="157" cy="113" rx="19" ry="5" transform="rotate(-13 157 113)"/>
+    <ellipse cx="213" cy="108" rx="24" ry="6"/>
+    <ellipse cx="285" cy="108" rx="32" ry="7"/>
+    <ellipse cx="380" cy="112" rx="27" ry="6"/>
+    <ellipse cx="464" cy="124" rx="22" ry="5"/>
+  </g>
+  <g fill="#e6d6a9" opacity=".48">
+    <ellipse cx="154" cy="167" rx="9" ry="2"/>
+    <ellipse cx="310" cy="188" rx="10" ry="2"/>
+    <ellipse cx="449" cy="167" rx="8" ry="2"/>
+  </g>
+</g>
+<!-- Exposed end grain, textured concentric growth rings -->
+<ellipse cx="88" cy="150" rx="48" ry="53" fill="#6f5651" transform="rotate(-5 88 150)" opacity=".33"/>
+<ellipse cx="88" cy="148" rx="45" ry="51" fill="url(#end)" transform="rotate(-5 88 148)"/>
+<ellipse cx="87" cy="148" rx="32" ry="38" fill="none" stroke="#9e6d60" stroke-width="4" opacity=".7" transform="rotate(-6 87 148)"/>
+<ellipse cx="89" cy="149" rx="22" ry="26" fill="none" stroke="#dfbb94" stroke-width="3" opacity=".7" transform="rotate(8 89 149)"/>
+<ellipse cx="89" cy="147" rx="10" ry="13" fill="#a47a6a" opacity=".77"/>
+<path d="M65 121 Q73 125 83 131 M101 173 L120 182" stroke="#825e52" stroke-width="3" opacity=".45" fill="none"/>
+<!-- Moss and grounded branches at the ends -->
+<path d="M50 215 C63 193 67 170 66 157 M48 211 Q44 185 31 171" stroke="#56715c" stroke-width="7" stroke-linecap="round" fill="none"/>
+<path d="M567 202 C583 185 590 176 601 174" stroke="#66584f" stroke-width="9" stroke-linecap="round" fill="none"/>
+<g fill="#799f70">
+  <ellipse cx="78" cy="223" rx="23" ry="8"/><ellipse cx="529" cy="229" rx="29" ry="10"/>
+  <ellipse cx="45" cy="225" rx="17" ry="7"/><ellipse cx="569" cy="224" rx="20" ry="8"/>
+</g>
+<g stroke="#7aa77c" stroke-width="3" stroke-linecap="round" opacity=".85">
+  <path d="M53 223 Q49 210 39 205 M56 222 Q62 204 75 200 M521 226 Q508 208 503 204 M559 224 Q565 205 576 196"/>
+</g>
+<!-- Golden diffuse top-light and tiny patches of lichen -->
+<g fill="#d9d9a6" opacity=".66">
+  <ellipse cx="183" cy="108" rx="5" ry="2.3"/><ellipse cx="314" cy="101" rx="8" ry="3"/>
+  <ellipse cx="422" cy="114" rx="6" ry="2.6"/><ellipse cx="265" cy="136" rx="4" ry="2"/>
+</g>
+</svg>
