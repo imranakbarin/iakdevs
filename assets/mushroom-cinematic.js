@@ -11,7 +11,7 @@
   const renderedPip = new Image(), texturedLedge = new Image(), bounceCap = new Image();
   // 16 true opposing-stride poses plus six separate jump/landing/crouch poses.
   const runningPip = new Image();
-  const PIP_FRAME_W=244, PIP_FRAME_H=305, PIP_FRAMES=8, RUN_FRAMES=16, RUN_TOTAL=22, RUN_STRIDE_PX=12;
+  const PIP_FRAME_W=244, PIP_FRAME_H=305, PIP_FRAMES=8, RUN_FRAMES=16, RUN_TOTAL=22, RUN_STRIDE_PX=9;
   const TAU=Math.PI*2, PI=Math.PI, SPEED=155, CHAPTER=750;
   const stunts=['hop','dash','bounce','flip','slide','glide','vault','cartwheel','twirl','longjump'];
   const minmax=(a,x,b)=>Math.max(a,Math.min(b,x));
@@ -375,14 +375,21 @@
       }else softMushroom(x,ground()-8,kind==='bounce'?.70:.45,i);
     }
   }
+  // One complete 16-pose cycle spans 144 world pixels. The planted boot
+  // stays on a fixed ground baseline; visual cadence comes from the authored
+  // opposing-leg poses rather than translating the entire figure up and down.
+  // The two soft footfalls are eight frames apart.
+  function gaitAt(x,step=RUN_STRIDE_PX){
+    const phase=((x/step)%RUN_FRAMES+RUN_FRAMES)%RUN_FRAMES;
+    const frame=Math.floor(phase);
+    const strikeDistance=Math.min(
+      Math.abs(phase),Math.abs(phase-8),Math.abs(phase-RUN_FRAMES));
+    const contact=smooth(1-strikeDistance/1.55);
+    return {phase,frame,contact,foot:frame<8?'front':'back'};
+  }
   function pipFrame(pose){
-    const progress=((world%(RUN_FRAMES*RUN_STRIDE_PX))+
-      RUN_FRAMES*RUN_STRIDE_PX)%(RUN_FRAMES*RUN_STRIDE_PX);
     if(!pose.active||pose.kind==='dash'){
-      const distancePerFrame=pose.kind==='dash'?9:RUN_STRIDE_PX;
-      return Math.floor(world/distancePerFrame)%RUN_FRAMES < 0
-        ? (Math.floor(world/distancePerFrame)%RUN_FRAMES)+RUN_FRAMES
-        : Math.floor(world/distancePerFrame)%RUN_FRAMES;
+      return gaitAt(world,pose.kind==='dash'?RUN_STRIDE_PX*.8:RUN_STRIDE_PX).frame;
     }
     // Distinct authored silhouettes, not the entire picture spinning in midair.
     if(pose.kind==='slide')return 21;
@@ -397,8 +404,7 @@
   // two overlapping translucent full-body sprites, which visibly flickered.
   // Use time/ground easing for softness instead of body-image transparency.
   function spriteFrame(pose){
-    const stride=pose.kind==='dash'?9:RUN_STRIDE_PX;
-    const run=((Math.floor(world/stride)%RUN_FRAMES)+RUN_FRAMES)%RUN_FRAMES;
+    const run=gaitAt(world,pose.kind==='dash'?RUN_STRIDE_PX*.8:RUN_STRIDE_PX).frame;
     if(!pose.active){
       if((pose.recovery||0)>.5)return pose.kind==='slide'?21:20;
       if((pose.anticipation||0)>.72)return pose.kind==='slide'?21:16;
@@ -421,14 +427,12 @@
     shadow.addColorStop(1,'rgba(55,49,42,0)');
     ctx.fillStyle=shadow;ctx.fillRect(x-70*s,groundY-21*s,140*s,53*s);
     const newSheet=runningPip.complete&&runningPip.naturalWidth===PIP_FRAME_W*RUN_TOTAL;
-    // Tie leg cadence to horizontal travel, not elapsed time; torso stays stable.
-    const runPhase=(world/(RUN_FRAMES*RUN_STRIDE_PX))*TAU;
-    // A planted foot stays visually anchored through preparation and recovery.
-    const anchored=Math.max(pose.anticipation||0,pose.recovery||0);
-    const bob=pose.active?0:Math.abs(Math.sin(runPhase*2))*2.1*s*(1-anchored);
+    // Lock the sprite's heel line to the same ground height throughout the
+    // 16 run frames. Former time-driven bob was lifting planted shoes off the
+    // terrain and causing visible vertical jitter.
     const lift=pose.lift*s;
     const footInset=newSheet?9*s:0;
-    ctx.translate(x,groundY-lift-bob+footInset);
+    ctx.translate(x,groundY-lift+footInset);
     ctx.translate(0,-143*s);
     // Limit pitch to a small authored pose transition. No full-body waving.
     ctx.rotate(pose.active?Math.max(-.09,Math.min(.09,pose.lean)):0);
@@ -462,11 +466,14 @@
           `rgba(248,228,192,${a})`);
       }
     }
-    // Dust is tinted by the same golden sunlight, no cartoon particle stream.
-    if(!pose.active){
-      for(let k=0;k<2;k++){
-        const a=.17-k*.06;
-        oval(x-(17+k*18)*s,groundY-(8+k*3)*s,7*s,2.4*s,`rgba(253,232,185,${a})`);
+    // A soft contact fleck appears only as alternating feet meet the ground;
+    // perpetual dust clouds made the character look like it was gliding.
+    if(!pose.active && !(pose.anticipation>.02) && !(pose.recovery>.02)){
+      const strike=gaitAt(world).contact;
+      if(strike>.015){
+        const a=(.095*strike).toFixed(3);
+        oval(x-17*s,groundY-5*s,5.5*s,1.8*s,
+          `rgba(251,228,184,${a})`);
       }
     }
   }
