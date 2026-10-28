@@ -11,7 +11,8 @@
  */
 (() => {
   'use strict';
-  const cv = document.getElementById('game'), ctx = cv.getContext('2d');
+  const cv = document.getElementById('game'), main = cv.getContext('2d');
+  let ctx = main;   // swapped to an offscreen buffer while the camera pushes in
   const TS = 16, ROWS = 15, CW = 24, VIEW_H = ROWS * TS;
   // Logical pixels per 1/60 s frame.
   const P = {acc: .1, airAcc: .075, skid: .27, fric: .15, max: 2.25, jump: 6.6, jumpRun: .24,
@@ -168,12 +169,13 @@
 
   /* ---------------- actors ---------------- */
   let pl, enemies, parts, seeds, cam, cp, maxX, dead, inv, landedAt, anim, facing, frameNo;
+  let marks = [], risk = .25, tension = 0, wary = 0, stompTimes = [], history = [], moment = null, replay = null, lastReplay = -1e9, usedAt = new Map();
   function reset(newSeed) {
     seed = newSeed; chunks = new Map(); gen = {ci: -1, h: 3};
     chunk(0);
     pl = {x: 40, y: (ROWS - 3) * TS - P.h, vx: 0, vy: 0, w: P.w, h: P.h, ground: false, jprev: false, buf: 0, coyote: 0, jumping: false};
     enemies = []; parts = []; seeds = 0; cam = 0; cp = {x: 40, y: pl.y}; maxX = 40; dead = 0; inv = 0; landedAt = -99; anim = 0; facing = 1; frameNo = 0;
-    plan = null;
+    plan = null; marks = []; risk = .25; tension = 0; wary = 0; stompTimes = []; history = []; moment = null; replay = null; lastReplay = -1e9; usedAt = new Map();
   }
   function spawnUpTo(xRight) {
     for (let ci = Math.max(0, Math.floor(cam / (CW * TS)) - 1); ci <= Math.floor(xRight / (CW * TS)); ci++) {
@@ -258,37 +260,54 @@
       for (let ty = top - 3; ty < top; ty++) if (solid(tx, ty)) return false;
     return true;
   }
+  // One imagined future: its score, the frame it would end in a tumble (if
+  // any) and a sparse path for the thought overlay.
   function simulate(o, threats) {
-    const b = {...pl}, stomped = new Set(), got = new Set(), st = {auto: 0};
-    let bonus = 0, sumX = 0;
+    const b = {...pl}, stomped = new Set(), got = new Set(), st = {auto: 0}, pts = [[b.x + 6, b.y + 10]];
+    const near = marks.filter(k => k.x > pl.x - 32 && k.x < pl.x + 260);
+    let bonus = 0, sumX = 0, wary = 0;
+    const end = (score, death) => { pts.push([b.x + 6, b.y + 10]); return {score, death, pts}; };
     for (let f = 0; f < 96; f++) {
       stepBody(b, policy(o, f, b, st, threats, f));
       if (b.x < cam) { b.x = cam; b.vx = Math.max(0, b.vx); }
       sumX += b.x;
-      if (b.y > VIEW_H) return -1e6 + f * 100;
+      if (f % 4 === 3) pts.push([b.x + 6, b.y + 10]);
+      if (b.y > VIEW_H) return end(-1e6 + f * 100, f);
+      // Near a remembered tumble Pip keeps a wider berth and avoids retracing it.
+      const mk = near.find(k => Math.abs(k.x - b.x) < 56);
+      const m = mk ? 1 + 3 * risk : 0;
+      if (mk && Math.abs(mk.x - b.x) < 14 && Math.abs(mk.y - b.y) < 18) wary += 1.2 * (1 + risk);
       for (const e of threats) {
         if (stomped.has(e)) continue;
-        const [ex, ey] = predict(e, f), m = 0;
+        const [ex, ey] = predict(e, f);
         if (b.x < ex + e.w + m && b.x + b.w > ex - m && b.y < ey + e.h + m && b.y + b.h > ey - m) {
           if (e.state === 'shell') continue;
-          if (b.vy > 0 && b.y + b.h - ey < 9) { stomped.add(e); b.vy = -4.4; bonus += 35; }
-          else return -1e6 + f * 100;
+          if (b.vy > 0 && b.y + b.h - ey < 9) { stomped.add(e); b.vy = -4.4; bonus += 35 * (1 - .5 * risk); }
+          else return end(-1e6 + f * 100, f);
         }
       }
-      for (const s of seedsNear) if (!got.has(s) && Math.abs(s.x - b.x - 6) < 11 && Math.abs(s.y - b.y - 10) < 14) { got.add(s); bonus += 25; }
+      for (const s of seedsNear) if (!got.has(s) && Math.abs(s.x - b.x - 6) < 11 && Math.abs(s.y - b.y - 10) < 14) { got.add(s); bonus += 25 * (1 - .4 * risk); }
     }
     // Average position rewards moving now: otherwise "wait, then go" ties with
     // "go" on every replan and Pip procrastinates forever.
-    return b.x - pl.x + (sumX / 96 - pl.x) + bonus + (b.ground ? 8 : 0) - o.hold * .15;
+    return end(b.x - pl.x + (sumX / 96 - pl.x) + bonus + (b.ground ? 8 : 0) - o.hold * .15 - wary, -1);
   }
   let seedsNear = [];
   function think() {
     const threats = enemies.filter(e => e.state !== 'dead' && e.state !== 'squash' && Math.abs(e.x - pl.x) < 260);
     seedsNear = [];
     for (const ch of chunks.values()) for (const s of ch.seeds) if (!s.got && s.x > pl.x - 16 && s.x < pl.x + 200) seedsNear.push(s);
-    let best = OPTIONS[0], bs = -Infinity;
-    for (const o of OPTIONS) { const s = simulate(o, threats); if (s > bs) { bs = s; best = o; } }
-    plan = {...best, f: 0, st: {auto: 0}};
+    let best = 0;
+    const arcs = OPTIONS.map(o => simulate(o, threats));
+    arcs.forEach((a, i) => { if (a.score > arcs[best].score) best = i; });
+    // Tension: how many imagined futures end in a tumble soon. It drives slow
+    // motion and the camera, so drama comes from the planner, not a script.
+    const soon = arcs.filter(a => a.death >= 0 && a.death < 40).length / arcs.length;
+    const closeCall = arcs[best].death < 0 && arcs.some(a => a.death >= 0 && a.death <= 12);
+    const order = arcs.map((a, i) => i).sort((i, j) => arcs[j].score - arcs[i].score);
+    arcs.forEach((a, i) => { a.rank = order.indexOf(i) / (arcs.length - 1); a.chosen = i === best; });
+    plan = {...OPTIONS[best], f: 0, st: {auto: 0}, arcs, tension: soon, at: frameNo};
+    if (closeCall) noteMoment('close call');
   }
   function demoInput() {
     // Commit to a plan's own moves before reconsidering; replanning mid-plan
@@ -296,6 +315,8 @@
     const own = plan ? (plan.dir === 1 ? (plan.hold ? plan.wait + plan.hold + 2 : 0) : plan.wait) : 0;
     if (!plan || (pl.ground && plan.f >= Math.max(5, own)) || plan.f >= Math.max(22, own + 8)) think();
     const live = enemies.filter(e => e.state !== 'dead' && e.state !== 'squash');
+    // Approaching a remembered tumble: a little "!" while Pip thinks it over.
+    if (plan.f === 0) wary = marks.some(k => k.x > pl.x + 8 && k.x < pl.x + 90) ? 40 : wary;
     return policy(plan, plan.f++, pl, plan.st, live, 0);
   }
 
@@ -335,9 +356,14 @@
   }
 
   /* ---------------- simulation tick ---------------- */
-  function die() { if (dead || inv) return; dead = 1; pl.vy = -5.2; pl.vx = 0; puff(pl.x + 6, pl.y + 10, '#fff4dc', 7); }
+  function die() { if (dead || inv) return; remember(); dead = 1; pl.vy = -5.2; pl.vx = 0; puff(pl.x + 6, pl.y + 10, '#fff4dc', 7); }
+  // A tumble leaves a mark the planner steers around, and makes Pip warier for a while.
+  function remember() { marks.push({x: pl.x, y: Math.min(pl.y, VIEW_H - P.h), at: frameNo}); risk = Math.min(1, risk + .35); }
   function tick() {
     frameNo++;
+    risk = Math.max(.25, risk - .0002); if (wary) wary--;
+    tension += ((human || !plan || dead ? 0 : plan.tension) - tension) * .06;
+    record();
     if (dead) {
       dead++; pl.vy = Math.min(6, pl.vy + .3); pl.y += pl.vy;
       if (dead > 75) { pl.x = cp.x; pl.y = cp.y - 4; pl.vx = pl.vy = 0; dead = 0; inv = 110; cam = Math.min(cam, Math.max(0, cp.x - viewW * .3)); plan = null; enemies = enemies.filter(e => Math.abs(e.x - cp.x) > 90 || e.kind === 'flier'); }
@@ -353,7 +379,7 @@
     if (ev.landed) { landedAt = frameNo; puff(pl.x + 6, pl.y + P.h, '#efdcb7', 5); }
     if (pl.ground && Math.abs(pl.vx) > 1.4 && (inp.l && pl.vx > 0 || inp.r && pl.vx < 0) && frameNo % 4 === 0) puff(pl.x + 6, pl.y + P.h, '#efdcb7', 2);
     if (ev.bump) bump(ev.bump[0], ev.bump[1]);
-    if (pl.y > VIEW_H + 24) { dead = 30; pl.vy = 0; }
+    if (pl.y > VIEW_H + 24) { if (!dead) remember(); dead = 30; pl.vy = 0; }
     if (inv) inv--;
     // A safe, grounded spot becomes the next respawn point.
     if (pl.ground) {
@@ -375,18 +401,35 @@
         else if (e.kind === 'flier') { e.state = 'dead'; e.vy = 0; e.vx = 0; }
         else { e.state = 'squash'; e.t = 0; }
         pl.vy = inp.j ? -6.4 : -4.4; pl.jumping = inp.j; puff(e.x + 7, e.y + 4, '#fff4dc', 6);
+        stompTimes = stompTimes.filter(t => frameNo - t < 100); stompTimes.push(frameNo); if (stompTimes.length >= 2) noteMoment('stomp chain');
       } else die();
     }
     for (const ch of chunks.values()) for (const s of ch.seeds)
-      if (!s.got && Math.abs(s.x - pl.x - 6) < 11 && Math.abs(s.y - pl.y - 10) < 14) { s.got = true; seeds++; sparkle(s.x, s.y); }
+      if (!s.got && Math.abs(s.x - pl.x - 6) < 11 && Math.abs(s.y - pl.y - 10) < 14) { s.got = true; s.gotAt = frameNo; seeds++; sparkle(s.x, s.y); }
     parts = parts.filter(p => { p.x += p.vx; p.y += p.vy; p.vy += p.star ? 0 : .08; p.vx *= .96; return --p.life > 0; });
     for (const b of bumps) b.t++;
     bumps = bumps.filter(b => b.t < 10);
   }
   let bumps = [];
+  // Highlights come from the planner (a close call) or play (a stomp chain).
+  // Replays re-render recorded frames, so they look exactly like the live run.
+  function noteMoment(kind) {
+    if (human || replay || moment || frameNo - lastReplay < 1800) return;
+    moment = {kind, at: frameNo};
+  }
+  function record() {
+    history.push({frameNo, pl: {...pl}, facing, anim, landedAt, dead, inv, cam, enemies: enemies.map(e => ({...e})),
+      parts: parts.map(q => ({...q})), bumps: bumps.map(q => ({...q})), arcs: plan && plan.arcs, at: plan && plan.at});
+    if (history.length > 360) history.shift();
+    if (moment && !human && frameNo - moment.at > 50 && pl.ground && !dead) {
+      const frames = history.filter(h => h.frameNo >= moment.at - 80 && h.frameNo <= moment.at + 36);
+      if (frames.length > 40) { replay = {frames, i: 0, kind: moment.kind}; lastReplay = frameNo; }
+      moment = null;
+    }
+  }
   function bump(tx, ty) {
     const id = tileAt(tx, ty);
-    if (id === BLOCK) { setTile(tx, ty, USED); seeds++; parts.push({x: tx * TS + 8, y: ty * TS - 4, vx: 0, vy: -3, life: 26, col: '#ffe08a', r: 3, star: true, seed: true}); sparkle(tx * TS + 8, ty * TS - 8); }
+    if (id === BLOCK) { setTile(tx, ty, USED); usedAt.set(tx + ',' + ty, frameNo); seeds++; parts.push({x: tx * TS + 8, y: ty * TS - 4, vx: 0, vy: -3, life: 26, col: '#ffe08a', r: 3, star: true, seed: true}); sparkle(tx * TS + 8, ty * TS - 8); }
     if (id === BLOCK || id === BRICK || id === USED) bumps.push({tx, ty, t: 0});
     if (id === BRICK) puff(tx * TS + 8, ty * TS, '#e9b28a', 4, -1);
     // Creatures standing on a bumped block are knocked off, as on any good stage.
@@ -482,7 +525,8 @@
   function drawTiles() {
     const cd = camDev(), n = Math.round(TS * S), t0 = Math.floor(cam / TS) - 1, t1 = t0 + Math.ceil(viewW / TS) + 2;
     for (let tx = t0; tx <= t1; tx++) for (let ty = 0; ty < ROWS; ty++) {
-      const id = tileAt(tx, ty); if (!id) continue;
+      let id = tileAt(tx, ty); if (!id) continue;
+      if (replay && id === USED && (usedAt.get(tx + ',' + ty) ?? -1) > frameNo) id = BLOCK;
       const b = bumps.find(q => q.tx === tx && q.ty === ty), lift = b ? Math.sin(b.t / 10 * Math.PI) * 4 * S : 0;
       ctx.drawImage(tileCanvas(id, tileAt(tx, ty - 1) === EMPTY), ox + tx * n - cd, oy + ty * n - lift);
       if (id === BLOCK) { const a = .25 + .25 * Math.sin(frameNo * .08 + tx); ctx.fillStyle = `rgba(255,255,230,${a.toFixed(3)})`; ctx.fillRect(ox + tx * n - cd + n * .12, oy + ty * n + n * .1 - lift, n * .76, n * .08); }
@@ -491,7 +535,7 @@
   const W2D = (x, y) => [ox + x * S - camDev(), oy + y * S];
   function drawSeeds() {
     for (const ch of chunks.values()) for (const s of ch.seeds) {
-      if (s.got) continue;
+      if (s.got && !(replay && s.gotAt > frameNo)) continue;
       const [x, y] = W2D(s.x, s.y + Math.sin(frameNo * .06 + s.x * .1) * 1.5);
       if (x < -20 || x > cv.width + 20) continue;
       star(x, y, 5.2 * S, frameNo * .03 + s.x);
@@ -542,6 +586,39 @@
     }
     ctx.restore();
   }
+  function drawThoughts(arcs, at) {
+    if (!arcs) return;
+    const fade = Math.max(.4, 1 - (frameNo - at) / 45), lw = Math.max(1.2, S * .42);
+    ctx.save(); ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+    for (const pass of [0, 1]) for (const a of arcs) {
+      if ((pass === 1) !== a.chosen) continue;
+      const dead = a.death >= 0;
+      const al = (a.chosen ? .95 : dead ? .22 + .3 * (1 - a.rank) : .08 + .26 * (1 - a.rank)) * fade;
+      const path = () => { ctx.beginPath(); a.pts.forEach(([x, y], i) => { const [sx, sy] = W2D(x, y); i ? ctx.lineTo(sx, sy) : ctx.moveTo(sx, sy); }); };
+      // A dark under-stroke keeps the lines readable over the bright painting.
+      path(); ctx.strokeStyle = `rgba(24,36,44,${(a.chosen ? .55 : .22) * al})`; ctx.lineWidth = (a.chosen ? lw * 2.4 : lw) + lw * 1.4; ctx.stroke();
+      path(); ctx.strokeStyle = a.chosen ? `rgba(255,226,130,${al})` : dead ? `rgba(255,112,96,${al})` : `rgba(255,255,255,${al})`;
+      ctx.lineWidth = a.chosen ? lw * 2.4 : lw; ctx.stroke();
+      if (dead) { const [ex, ey] = W2D(...a.pts[a.pts.length - 1]), r = S * 1.6; ctx.beginPath(); ctx.moveTo(ex - r, ey - r); ctx.lineTo(ex + r, ey + r); ctx.moveTo(ex + r, ey - r); ctx.lineTo(ex - r, ey + r); ctx.stroke(); }
+    }
+    ctx.restore();
+  }
+  function drawMarks() {
+    if (!sheet.complete || !sheet.naturalWidth) return;
+    const sc = 30 / 295 * S;
+    for (const k of marks) {
+      const [x, y] = W2D(k.x + P.w / 2, k.y + P.h + 1);
+      if (x < -60 || x > cv.width + 60) continue;
+      ctx.save(); ctx.globalAlpha = .2 + .06 * Math.sin(frameNo * .05 + k.at); ctx.translate(x, y); ctx.scale(sc, sc);
+      ctx.drawImage(sheet, 19 * 244, 0, 244, 305, -122, -300, 244, 305); ctx.restore();
+    }
+  }
+  function drawWary() {
+    if (!wary || human || dead) return;
+    const [x, y] = W2D(pl.x + P.w / 2 + 6, pl.y - 12), r = 4.2 * S, a = Math.min(1, wary / 10);
+    ctx.save(); ctx.globalAlpha = a; ctx.fillStyle = '#fffbea'; ctx.beginPath(); ctx.arc(x, y, r, 0, 7); ctx.fill();
+    ctx.fillStyle = '#c0582f'; ctx.font = `700 ${r * 1.5}px system-ui`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText('!', x, y + r * .08); ctx.restore();
+  }
   function drawPip() {
     if (inv && !dead && Math.floor(inv / 4) % 2) return;
     const [x, y] = W2D(pl.x + P.w / 2, pl.y + P.h + 1);
@@ -578,7 +655,19 @@
     const dist = Math.floor(maxX / TS) + ' m';
     ctx.textAlign = 'right'; ctx.fillStyle = 'rgba(30,40,40,.55)'; ctx.fillText(dist, W - pad + 1, y + 1); ctx.fillStyle = '#fffbea'; ctx.fillText(dist, W - pad, y);
     ctx.textAlign = 'center';
-    const msg = !human ? (usingTouch || matchMedia('(pointer:coarse)').matches ? 'Demo · tap to play' : 'Demo · press ← → and Space to play')
+    if (replay) {
+      const bandH = VIEW_H * S, bar = bandH * .07;
+      ctx.fillStyle = 'rgba(12,20,24,.42)'; ctx.fillRect(0, oy, W, bar); ctx.fillRect(0, oy + bandH - bar, W, bar);
+    }
+    if (!human && marks.length) {
+      ctx.font = `500 ${u * .7}px system-ui,-apple-system,sans-serif`; ctx.textAlign = 'right';
+      const note = `remembers ${marks.length} ${marks.length === 1 ? 'spot' : 'spots'}${risk > .45 ? ' · careful' : ''}`;
+      ctx.fillStyle = 'rgba(30,40,40,.5)'; ctx.fillText(note, W - pad + 1, y + u * 1.25 + 1); ctx.fillStyle = '#fffbea'; ctx.fillText(note, W - pad, y + u * 1.25);
+      ctx.font = `600 ${u}px system-ui,-apple-system,sans-serif`;
+    }
+    ctx.textAlign = 'center';
+    const coarse = usingTouch || matchMedia('(pointer:coarse)').matches;
+    const msg = replay ? `Replay · ${replay.kind}` : !human ? (coarse ? 'Demo · lines are futures Pip imagines · tap to play' : 'Demo · lines are futures Pip imagines · ← → Space to play')
       : performance.now() < hintUntil ? (usingTouch ? 'Hold right to run · tap jump, hold to jump higher' : '← → run · Space to jump, hold for higher') : '';
     if (msg) {
       ctx.font = `500 ${u * .82}px system-ui,-apple-system,sans-serif`;
@@ -597,11 +686,38 @@
       }
     }
   }
-  function render() {
-    ctx.setTransform(1, 0, 0, 1, 0, 0);
-    drawBackground(); drawTiles(); drawSeeds();
+  function scene(arcs, at) {
+    drawBackground(); drawTiles(); drawSeeds(); drawMarks();
+    if (!human || replay) drawThoughts(arcs, at);
     for (const e of enemies) drawEnemy(e);
-    drawPip(); drawParts(); drawHud();
+    drawPip(); drawParts(); drawWary();
+  }
+  // The camera eases in on Pip during tense moments and replays. The scene is
+  // drawn unscaled to a buffer and composited, so tiles never show seams.
+  let zoom = 1, buf = null;
+  function composite(drawScene) {
+    if (zoom < 1.003) { ctx = main; main.setTransform(1, 0, 0, 1, 0, 0); drawScene(); return; }
+    if (!buf || buf.width !== cv.width || buf.height !== cv.height) { buf = document.createElement('canvas'); buf.width = cv.width; buf.height = cv.height; }
+    ctx = buf.getContext('2d'); ctx.setTransform(1, 0, 0, 1, 0, 0); drawScene();
+    const [fx, fy] = W2D(pl.x + 6, pl.y + 4), cx = cv.width * .38 + (fx - cv.width * .38) * .5;
+    main.setTransform(1, 0, 0, 1, 0, 0);
+    main.drawImage(buf, cx - cx * zoom, fy - fy * zoom, cv.width * zoom, cv.height * zoom);
+    ctx = main;
+  }
+  const LIVE = ['pl', 'facing', 'anim', 'landedAt', 'dead', 'inv', 'cam', 'enemies', 'parts', 'bumps', 'frameNo'];
+  function render() {
+    zoom += ((replay ? 1.16 : 1 + .09 * tension) - zoom) * .08;
+    if (replay) {
+      const snap = replay.frames[Math.min(replay.frames.length - 1, Math.floor(replay.i))];
+      const live = {pl, facing, anim, landedAt, dead, inv, cam, enemies, parts, bumps, frameNo};
+      ({pl, facing, anim, landedAt, dead, inv, cam, enemies, parts, bumps, frameNo} = snap);
+      composite(() => scene(snap.arcs, snap.at));
+      ctx.setTransform(1, 0, 0, 1, 0, 0); drawHud();
+      ({pl, facing, anim, landedAt, dead, inv, cam, enemies, parts, bumps, frameNo} = live);
+      return;
+    }
+    composite(() => scene(plan && plan.arcs, plan ? plan.at : 0));
+    ctx.setTransform(1, 0, 0, 1, 0, 0); drawHud();
   }
 
   /* ---------------- loop ---------------- */
@@ -609,9 +725,13 @@
   function frame(now) {
     raf = 0;
     if (!playing || !visible) return;
-    const dt = last ? Math.min(.1, (now - last) / 1000) : 0; last = now; acc += dt;
+    const dt = last ? Math.min(.1, (now - last) / 1000) : 0; last = now;
+    if (replay) {
+      if (human) replay = null;
+      else { replay.i += dt * 60 * .5; if (replay.i >= replay.frames.length) replay = null; }
+    } else acc += dt * (1 - .45 * tension);
     let n = 0;
-    while (acc >= 1 / 60 && n < 6) { tick(); acc -= 1 / 60; n++; }
+    while (!replay && acc >= 1 / 60 && n < 6) { tick(); acc -= 1 / 60; n++; }
     render(); raf = requestAnimationFrame(frame);
   }
   function setPlaying(on) {
@@ -627,5 +747,6 @@
   if (playing) raf = requestAnimationFrame(frame);
   // Test hook: lets the smoke test drive the simulation without a browser clock.
   window.__pipRun = {tick, reset, state: () => ({pl, enemies, seeds, maxX, dead, human, cam, viewW}), GAP, layout, tileAt: (x, y) => tileAt(x, y),
-    scores: () => { const th = enemies.filter(e => e.state !== 'dead' && e.state !== 'squash' && Math.abs(e.x - pl.x) < 260); return OPTIONS.map(o => [o.dir, o.wait, o.hold, Math.round(simulate(o, th))]); }};
+    scores: () => { const th = enemies.filter(e => e.state !== 'dead' && e.state !== 'squash' && Math.abs(e.x - pl.x) < 260); return OPTIONS.map(o => [o.dir, o.wait, o.hold, Math.round(simulate(o, th).score)]); },
+    debug: () => ({tension, risk, marks: marks.length, replay: !!replay, zoom})};
 })();
