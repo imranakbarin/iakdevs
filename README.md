@@ -41,6 +41,10 @@ Inputs are recorded on the scene clock, so paused redraws remain pixel-identical
 
 `assets/art-ambience.js` adds slow mist veils, cloud shadows and water glints to the painterly live-art styles (Kangra, Japan, China, Mexico). Mushroom Island's `assets/mushroom-life.js` animates the painted kingdom (mist, lamps, townsfolk, flocks, light shafts) and gives Pip's run star seeds to collect, a fairy companion and butterflies that lift off as he passes.
 
+## Zen garden: raking and visitors
+
+Drag across the sand to rake it: a five-tine rake follows your finger or pointer, carved with the same ridges and troughs as the steel ball's trail (a quiet hint says so on the first visit), and the garden renews with the next pattern as usual. A tap on the water still ripples it. About once a minute a small bird lands on the rim of the sand bed, hops in leaving tiny footprints, pecks and flies off (tap near it and it leaves sooner); by day a dragonfly hovers and darts over the lily pads. Raking by hand has its own sand hiss when sound is on.
+
 ## Road trip journey
 
 `assets/road-journey.js` turns the drive into a trip between named places (original names). Each stretch heads for a town in the next landscape and the status line counts down to it ("Saltwind Bay in 1.2 km"). Arriving, as the new landscape takes over, shows a postcard: the town, how far you came from the last one and the weather on the way, stamped into a trip log kept on this device ("Stamp 6 of 20"). With a fixed place, towns come every stretch within it. It only reads the road's state.

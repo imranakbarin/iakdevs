@@ -138,7 +138,7 @@ input[type=range]{width:80px;accent-color:#E63B2E}
 <script src="assets/road-traffic.js?v=4"></script>
 <script src="assets/world-atmosphere.js?v=2"></script>
 <script src="assets/zen-steel-gpu.js?v=2"></script>
-<script src="assets/zen-garden.js?v=11"></script>
+<script src="assets/zen-garden.js?v=12"></script>
 <script src="assets/road-illustration.js?v=12"></script>
 <script src="assets/road-rural.js?v=4"></script>
 <script src="assets/road-vehicles.js?v=8"></script>
@@ -147,7 +147,7 @@ input[type=range]{width:80px;accent-color:#E63B2E}
 <script src="assets/art-presence.js?v=1"></script>
 <script src="assets/art-ambience.js?v=1"></script>
 <script src="assets/road-journey.js?v=1"></script>
-<script src="assets/world-sound.js?v=1"></script>
+<script src="assets/world-sound.js?v=2"></script>
 <script src="assets/kangra-world.js?v=3"></script>
 <script src="assets/art-depth.js?v=11"></script>
 <script src="assets/art-finishing.js?v=2"></script>
@@ -2096,10 +2096,10 @@ playBtn.onclick=()=>{playing=!playing;syncPlay();if(modeBtn.value==='cozy'&&wind
 document.getElementById('spd').oninput=e=>speed=+e.target.value;
 document.getElementById('new').onclick=()=>{if(modeBtn.value==='pip'){pipShared='';pipFrame.src='pip-run.html#new-'+Date.now();history.replaceState(null,'',location.pathname+location.search+'#pip-run');return;}if(modeBtn.value==='mushroom'){document.getElementById('mushroom-frame').src='mushroom-island.html';return;}if(modeBtn.value==='zen'){zenReset();return;}if(modeBtn.value==='art'){setSeed(Math.random()*1e6|0);camX=(seed%3-1)*1300;return;}journey=0;roadObjectThemes.clear();roadPlaceTransition.autoTime=0;roadPlaceTransition.current=null;roadPlaceTransition.selection=null;roadAtmosphere.autoTime=0;roadAtmosphere.current=null;roadAtmosphere.selection=null;tripDrive.x=speed/40;tripDrive.v=0;SceneMotion.resetLane();RoadTraffic.reset();setSeed(Math.random()*1e6|0);};
 document.getElementById('sty').onchange=e=>setSeed(seed,e.target.value);
-cv.addEventListener('pointerdown',e=>{if(modeBtn.value==='zen'){zenRippleAt(e.clientX,e.clientY);wakeScene();return;}drag={x:e.clientX,c:camX,lx:e.clientX,lt:performance.now()};dragV=0;cv.setPointerCapture(e.pointerId);cv.style.cursor='grabbing';});
-cv.addEventListener('pointermove',e=>{if(!drag)return;camX=drag.c-(e.clientX-drag.x)/S;const now=performance.now(),dtm=Math.max(1,now-drag.lt);dragV=dragV*.6+(-(e.clientX-drag.lx)/S/dtm*1000)*.4;drag.lx=e.clientX;drag.lt=now;});
-const endDrag=()=>{if(drag&&performance.now()-drag.lt<90)vel=Math.max(-2500,Math.min(2500,dragV));drag=null;cv.style.cursor='';};
-function cancelArtDrag(){drag=null;dragV=0;vel=0;cv.style.cursor='';}
+cv.addEventListener('pointerdown',e=>{if(modeBtn.value==='zen'){if(!zenScare(e.clientX,e.clientY)){if(zenRakeStart(e.clientX,e.clientY))cv.setPointerCapture(e.pointerId);else zenRippleAt(e.clientX,e.clientY);}wakeScene();return;}drag={x:e.clientX,c:camX,lx:e.clientX,lt:performance.now()};dragV=0;cv.setPointerCapture(e.pointerId);cv.style.cursor='grabbing';});
+cv.addEventListener('pointermove',e=>{if(modeBtn.value==='zen'){zenRakeMove(e.clientX,e.clientY);return;}if(!drag)return;camX=drag.c-(e.clientX-drag.x)/S;const now=performance.now(),dtm=Math.max(1,now-drag.lt);dragV=dragV*.6+(-(e.clientX-drag.lx)/S/dtm*1000)*.4;drag.lx=e.clientX;drag.lt=now;});
+const endDrag=()=>{zenRakeEnd();if(drag&&performance.now()-drag.lt<90)vel=Math.max(-2500,Math.min(2500,dragV));drag=null;cv.style.cursor='';};
+function cancelArtDrag(){zenRakeEnd();drag=null;dragV=0;vel=0;cv.style.cursor='';}
 cv.addEventListener('pointerup',endDrag);cv.addEventListener('pointercancel',cancelArtDrag);
 cv.addEventListener('lostpointercapture',()=>{if(drag)cancelArtDrag();});
 cv.addEventListener('wheel',e=>{if(modeBtn.value==='zen')return;wakeScene();camX+=(Math.abs(e.deltaX)>Math.abs(e.deltaY)?e.deltaX:e.deltaY)/S;e.preventDefault();},{passive:false});
