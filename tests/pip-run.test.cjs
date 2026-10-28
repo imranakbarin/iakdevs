@@ -25,11 +25,13 @@ assert.ok(G, 'test hook exposed');
 // Gaps are sized from the jump itself, and always leave something to clear.
 assert.ok(G.GAP[0] >= 2 && G.GAP[-2] >= G.GAP[0] && G.GAP[1] >= 1, 'gap table follows the jump arc');
 
-// The demo player crosses generated worlds steadily.
+// The demo player crosses generated worlds steadily, set pieces included.
+const passed = new Set();
 for (const seed of [1, 2, 5, 9]) {
   G.reset(seed);
   let tumbles = 0, prev = 0, last = 0;
-  for (let f = 1; f <= 60 * 90; f++) {
+  const secs = seed === 2 ? 130 : 90;   // seed 2 runs on to its first lift (~630 m)
+  for (let f = 1; f <= 60 * secs; f++) {
     G.tick();
     const s = G.state();
     assert.ok(Number.isFinite(s.pl.x) && Number.isFinite(s.pl.y), 'finite position');
@@ -38,13 +40,17 @@ for (const seed of [1, 2, 5, 9]) {
     if (f % (60 * 15) === 0) { assert.ok(s.maxX > last + 300, `seed ${seed}: progress stalled near ${Math.round(s.maxX / 16)} m`); last = s.maxX; }
   }
   const m = Math.round(G.state().maxX / 16);
-  assert.ok(m > 550, `seed ${seed}: demo reached only ${m} m in 90 s`);
+  for (const ft of G.features()) if (ft.x + 200 < G.state().maxX) passed.add(ft.id);
+  assert.ok(m > secs * 5, `seed ${seed}: demo reached only ${m} m in ${secs} s`);
   assert.ok(tumbles <= 6, `seed ${seed}: ${tumbles} tumbles`);
 }
+for (const id of ['ferry', 'lift', 'crumble', 'stairs', 'spitter']) assert.ok(passed.has(id), `the demo never got past a ${id}`);
 // Director: placements are refereed. Walls are accepted only while Pip can
 // still get past them, and he then does.
 for (const seed of [3, 11]) {
-  G.reset(seed); for (let f = 0; f < 400; f++) G.tick();
+  // Wait until Pip runs on level ground, so the wall stands on that ground.
+  const level = () => { const s = G.state(), tx = Math.floor((s.pl.x + 48) / 16), feet = Math.floor((s.pl.y + s.pl.h - 1) / 16); return s.pl.ground && !s.pl.on && [-3, -2, -1, 0, 1].every(d => G.tileAt(tx + d, feet + 1) && !G.tileAt(tx + d, feet)); };
+  G.reset(seed); for (let f = 0; f < 400 || !level(); f++) G.tick();
   const D = G.director; D.arm('brick');
   const s = G.state(), tx = Math.floor((s.pl.x + 48) / 16), feet = Math.floor((s.pl.y + s.pl.h - 1) / 16);
   for (let k = 0; k < 6; k++) { D.refill(); D.place(tx, feet - k); }
@@ -71,4 +77,4 @@ for (const seed of [3, 11]) {
   xs.forEach(([x, y], i) => { const p = G.ghost.at(i + 1); assert.ok(p.x === x && p.y === y, `ghost diverged at frame ${i + 1}`); });
   for (const bad of ['', 'x', '1.zz', '2.1.a0.1.AA', '1.1.a0.1.A*']) assert.equal(G.ghost.decode(bad), null, `rejects ${bad}`);
 }
-console.log('Pip Run PASS: jump-sized gaps, finite physics, demo player progresses through 4 seeded worlds, referee refuses traps and accepted walls stay passable, shared runs replay exactly as ghosts.');
+console.log('Pip Run PASS: jump-sized gaps, finite physics, demo player progresses through 4 seeded worlds and past ferries, lifts, crumble bridges, floating steps and podspitters, referee refuses traps and accepted walls stay passable, shared runs replay exactly as ghosts.');
