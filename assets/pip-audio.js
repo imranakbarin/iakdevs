@@ -118,7 +118,11 @@ const PipAudio = (() => {
     sprout(o, t) { arp([0, 4, 7, 12], 659, .07, .05, t); },
     grow(o, t) { arp([0, 4, 7, 12, 16], 523, .06, .05, t); },
     shrink(o, t) { arp([12, 7, 4, 0], 523, .06, .04, t); },
-    stomp(o, t) { tone(420, {t, d: .12, peak: .11, slide: .4}); hiss({t, type: 'lowpass', f: 600, d: .05, peak: .04}); },
+    stomp({chain = 1}, t) {   // a thump and a squish, a boing, and a chime that climbs with a chain of stomps
+      tone(95, {t, d: .1, peak: .12, slide: .6}); hiss({t, type: 'lowpass', f: 900, f2: 250, d: .09, peak: .07});
+      tone(260, {t: t + .01, type: 'triangle', d: .16, peak: .07, slide: 2.3});
+      bell(659 * 2 ** (SEED[Math.min(chain, 8) - 1] / 12), t + .04, .045, .45);
+    },
     spring(o, t) { tone(200, {t, d: .32, peak: .09, slide: 3.2}); tone(300, {t, type: 'triangle', d: .22, peak: .03, slide: 2.4}); },
     tumble(o, t) { tone(660, {t, type: 'triangle', d: .6, peak: .05, slide: .35}); },
     crumble(o, t) { hiss({t, f: 500, f2: 180, q: 2, d: .2, peak: .07}); tone(140 + rnd() * 40, {t, type: 'triangle', d: .05, peak: .03}); },
@@ -142,6 +146,15 @@ const PipAudio = (() => {
 
   /* ---------------- ambience ---------------- */
   const LEVEL = {meadow: .14, frost: .07, sky: .09, caves: .2, coast: .16};
+  let spellBeds = null;
+  // A spell of weather, now and then: thunder far off in a squall, chimes of
+  // light in a sunbreak, drops echoing in the caves.
+  const SPELLS = {
+    squall: [.05, t => { hiss({t, type: 'lowpass', f: 160, f2: 60, a: .3, d: 2.4, peak: .07, to: ambBus}); tone(48, {t, a: .4, d: 2, peak: .03, to: ambBus}); }],
+    sunbreak: [.35, t => { for (let i = 0; i < 4; i++) bell(hz(91 + [0, 4, 7, 11, 12][rnd() * 5 | 0]), t + i * .09, .01, 1.1, ambBus); }],
+    drip: [1.2, t => { const f = 1100 + rnd() * 900; tone(f, {t, d: .07, peak: .03, slide: .5, to: ambBus}); tone(f * .98, {t: t + .32, d: .07, peak: .011, slide: .5, to: ambBus}); }],
+    shower: [.4, t => hiss({t, f: 5200 + rnd() * 2000, q: 2, d: .03, peak: .012, to: ambBus})]
+  };
   function buildAmbience() {
     const bed = (type, f, q) => {
       const s = ac.createBufferSource(), flt = ac.createBiquadFilter(), g = gain(0, ambBus);
@@ -149,6 +162,7 @@ const PipAudio = (() => {
       s.connect(flt); flt.connect(g); s.start(); return {g, flt};
     };
     amb = {meadow: bed('lowpass', 380, .5), frost: bed('bandpass', 900, .7), sky: bed('bandpass', 600, .4), caves: bed('lowpass', 180, .7), coast: bed('lowpass', 520, .6)};
+    spellBeds = {rain: bed('bandpass', 2600, .45), gust: bed('bandpass', 520, 1.1)};   // weather: rain on everything, wind that howls
     for (const f of [55, 82.4]) { const o = ac.createOscillator(), g = gain(.05, amb.caves.g); o.frequency.value = f; o.connect(g); o.start(); }
   }
   // Occasional details, at a rate per second, scaled by how present the biome is.
@@ -214,6 +228,11 @@ const PipAudio = (() => {
     amb.frost.flt.frequency.setTargetAtTime(900 + 500 * Math.sin(t * .4), t, .3);
     amb.sky.flt.frequency.setTargetAtTime(500 + 400 * Math.abs(s.wind), t, .3);
     amb.coast.flt.frequency.setTargetAtTime(380 + 700 * swell, t, .4);
+    const sp = s.spell || {}, w = sp.w || 0, wet = sp.kind === 'shower' ? .2 : sp.kind === 'squall' ? .3 : 0;
+    spellBeds.rain.g.gain.setTargetAtTime(wet * w, t, .8);
+    spellBeds.gust.g.gain.setTargetAtTime((sp.kind === 'blizzard' ? .22 : sp.kind === 'squall' ? .08 : 0) * w, t, .8);
+    spellBeds.gust.flt.frequency.setTargetAtTime(420 + 380 * (.5 + .5 * Math.sin(t * .7) * Math.sin(t * .31)), t, .3);
+    if (SPELLS[sp.kind] && rnd() < SPELLS[sp.kind][0] * s.dt * w) SPELLS[sp.kind][1](t + .02);
     const night = s.night || 0, outdoors = 1 - (s.biomes.caves || 0);
     for (const [k, [rate, play]] of Object.entries(DETAIL)) if (rnd() < rate * s.dt * (s.biomes[k] || 0) * (k === 'meadow' ? 1 - night : 1)) play(t + .02);
     for (const [rate, play] of NIGHT) if (rnd() < rate * s.dt * night * outdoors) play(t + .02);

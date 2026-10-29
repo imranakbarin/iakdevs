@@ -20,7 +20,9 @@ const check = (k, a) => {
 const ctx2d = new Proxy({}, {get: (_, k) => k === 'createLinearGradient' || k === 'createRadialGradient' ? (...a) => { check(k, a); return {addColorStop() {}}; } : k === 'measureText' ? () => ({width: 10}) : (...a) => check(k, a), set: () => true});
 const canvas = () => ({getContext: () => ctx2d, clientWidth: 1363, clientHeight: 936, width: 0, height: 0, addEventListener() {}, setPointerCapture() {}});
 const game = canvas();
+const kept = {};
 const sandbox = {
+  localStorage: {getItem: k => kept[k] ?? null, setItem: (k, v) => { kept[k] = String(v); }, removeItem: k => { delete kept[k]; }},
   document: {getElementById: () => game, createElement: () => canvas(), hidden: false, addEventListener() {}},
   Image: class { constructor() { this.complete = true; this.naturalWidth = this.naturalHeight = 64; } },   // 'loaded', so every painted path is drawn
   matchMedia: () => ({matches: false, addEventListener() {}}),
@@ -195,6 +197,48 @@ for (const seed of [3, 11]) {
   assert.ok(!prints.meadow, `no prints on grass (${prints.meadow && prints.meadow.size})`);
   for (const b of ['frost', 'sky', 'caves', 'coast']) assert.ok(prints[b] && prints[b].size >= 10, `footprints in ${b} (${prints[b] && prints[b].size})`);
 }
+// Passing weather is a function of distance alone (the same for everyone on a
+// seed, and for ghosts): never in the first region, never over a plaza, one
+// kind per biome; and the frames it draws (rain, snow, light, drips, puddles,
+// a rainbow) have sane geometry.
+{
+  const kinds = {};
+  for (const sd of [1, 2, 3, 4, 5, 6, 7, 8]) {
+    G.reset(sd);
+    for (let x = 0; x < 10 * 4608; x += 32) {
+      const a = G.weatherAt(x), b = G.weatherAt(x), f = x / 4608 % 1;
+      assert.deepEqual(a, b, 'weather is a function of distance');
+      assert.ok(a.w >= 0 && a.w <= 1 && a.after >= 0 && a.after <= 1, `weather weights in range (${JSON.stringify(a)})`);
+      if (x < 4608 || f > .9) assert.equal(a.w + a.after, 0, `clear in the first region and over the plaza (x ${x})`);
+      if (a.w > .5) { kinds[a.kind] = (kinds[a.kind] || 0) + 1; assert.equal(a.kind, {meadow: 'shower', frost: 'blizzard', coast: 'squall', sky: 'sunbreak', caves: 'drip'}[G.biomeAt(x)]); }
+    }
+  }
+  assert.deepEqual(Object.keys(kinds).sort(), ['blizzard', 'drip', 'shower', 'squall', 'sunbreak'], `every kind of weather comes along (${JSON.stringify(kinds)})`);
+  strict = true;
+  for (const sd of [1, 2, 3, 4, 5, 6, 7, 8]) {
+    G.reset(sd); const seen = new Set();
+    for (let f = 0; f < 60 * 400 && seen.size < 3; f++) { G.tick(); const w = G.weatherAt(G.state().pl.x); if ((w.w > .8 || w.after > .8) && f % 15 === 0) { drawn = 0; G.render(); assert.ok(drawn > 300, 'a whole frame draws under the weather'); seen.add(w.kind + (w.after > .8 ? '+after' : '')); } }
+  }
+  strict = false;
+}
+// Stomps land with a ring and star sparks.
+{
+  G.reset(5); let rings = 0, sparks = 0;
+  for (let f = 0; f < 60 * 120; f++) { G.tick(); const x = G.fx(); rings = Math.max(rings, x.rings); sparks = Math.max(sparks, x.sparks); }
+  assert.ok(rings >= 1 && sparks >= 5, `a stomp throws a ring and sparks (${rings} rings, ${sparks} sparks)`);
+}
+// The journey book stamps each landmark reached, on this device; a ghost
+// rebuild (which replays a run) does not stamp anything. The book draws.
+{
+  for (const k of Object.keys(kept)) delete kept[k];
+  G.reset(1);
+  for (let f = 0; f < 60 * 200 && G.journey().chapters < 1; f++) G.tick();
+  const b1 = G.book(); assert.ok(b1 && b1.coast && b1.coast.visits === 1 && b1.coast.best > 0, `the Lighthouse is stamped (${JSON.stringify(b1)})`);
+  const code = G.ghost.encode(); G.ghost.race(code);
+  assert.equal(G.book().coast.visits, 1, 'a ghost rebuild stamps nothing');
+  strict = true; G.openBook(); drawn = 0; G.render(); strict = false;
+  assert.ok(G.bookOpen() && drawn > 200, `the book draws (${drawn} calls)`);
+}
 // Resolution follows the device: frames slower than about 50 a second drop a
 // step (a smaller canvas the browser scales up), a step that does not help is
 // taken back, and then it settles.
@@ -208,4 +252,4 @@ for (const seed of [3, 11]) {
   assert.ok(G.quality().settled); feed(40); assert.equal(G.quality().level, 1, 'and then it settles');
   strict = true; drawn = 0; G.render(); strict = false; assert.ok(drawn > 300, `and still draws whole frames (${drawn} calls)`);
 }
-console.log('Pip Run PASS: jump-sized gaps, finite physics, demo player progresses through 4 seeded worlds, reaches each chapter’s destination and plays its landmark scene, clears block rows that run up to a gap, and gets past ferries, lifts, crumble bridges, floating steps and podspitters, referee refuses traps and accepted walls stay passable, shared runs replay exactly as ghosts, the painted ground of all four biomes draws with sane geometry, once per chunk, route dressing stands on level ground, whole frames render in every biome with footprints in snow, cloud and moss, and the resolution steps down on a slow device.');
+console.log('Pip Run PASS: jump-sized gaps, finite physics, demo player progresses through 4 seeded worlds, reaches each chapter’s destination and plays its landmark scene, clears block rows that run up to a gap, and gets past ferries, lifts, crumble bridges, floating steps and podspitters, referee refuses traps and accepted walls stay passable, shared runs replay exactly as ghosts, the painted ground of all four biomes draws with sane geometry, once per chunk, route dressing stands on level ground, whole frames render in every biome with footprints in snow, cloud and moss, the weather comes and goes with sane geometry, stomps ring and spark, the journey book stamps landmarks (not in ghost rebuilds), and the resolution steps down on a slow device.');
