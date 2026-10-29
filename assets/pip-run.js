@@ -3295,6 +3295,7 @@
     // Painted behind what is there, so the last drawn lies lowest: knuckle
     // creases and the thumb over the knuckles, over the palm, over its outline.
     g.globalCompositeOperation = 'destination-over';
+    g.save(); g.translate(68, 168); g.scale(1.28, 1.28); g.translate(-68, -168);   // about the size of the front fist, a little smaller for being further off
     const skin = (x, y, r, stops) => { const q = g.createRadialGradient(x - r * .35, y - r * .4, r * .1, x, y, r); stops.forEach((c, i) => q.addColorStop(i / (stops.length - 1), c)); return q; };
     g.strokeStyle = 'rgba(140,66,30,.55)'; g.lineWidth = .9;
     for (const y of [163.6, 168.2, 172.8]) { g.beginPath(); g.moveTo(50.5, y); g.quadraticCurveTo(54, y + .6, 56.5, y + .2); g.stroke(); }   // creases between the curled fingers
@@ -3303,6 +3304,7 @@
     g.fillStyle = skin(58, 166, 10.5, ['#ffdcb6', '#f3a874', '#c9733f']); g.beginPath(); g.ellipse(59, 168, 9.6, 8.8, 0, 0, Math.PI * 2); g.fill();
     g.fillStyle = '#e09862'; g.beginPath(); g.ellipse(68, 168, 6, 7.4, 0, 0, Math.PI * 2); g.fill();   // the wrist, reaching into the sleeve
     g.fillStyle = 'rgba(120,52,22,.55)'; g.beginPath(); g.ellipse(57.4, 168.2, 11.6, 10, 0, 0, Math.PI * 2); g.fill();   // its outline
+    g.restore();
     g.globalCompositeOperation = 'source-over';
     return (torso = c2);
   }
