@@ -407,7 +407,7 @@
     big = false; growing = 0; items = []; if (typeof stats !== 'undefined') stats = {bumps: 0, sprouts: 0};
     if (typeof charges !== 'undefined') { tool = null; charges = 3; chargeT = 0; dirScore = 0; notes = []; placed = []; }
     title = null; lastRegion = -1; arrival = null; chapter = null; chapters = 0; celebrated.clear(); journey = {start: 0, seeds0: 0, tumbles: 0, finds0: 0, arrived: -1};
-    plan = null; stuckX = 0; stuckSince = 0; impatience = 0; progressX = 0; progressAt = 0; marks = []; risk = .25; tension = 0; wary = 0; stompTimes = []; history = []; moment = null; replay = null; lastReplay = -1e9; usedAt = new Map();
+    plan = null; stuckX = 0; stuckSince = 0; impatience = 0; progressX = 0; progressAt = 0; marks = []; hitStop = 0; jolt = -99; risk = .25; tension = 0; wary = 0; stompTimes = []; history = []; moment = null; replay = null; lastReplay = -1e9; usedAt = new Map();
     simW = Math.round(viewW); run = {seed, w: simW, inputs: [], events: [], human: 0, m: 0};
     prev = {cam, x: pl.x, y: pl.y};
   }
@@ -452,6 +452,22 @@
   }
 
   /* ---------------- effects ---------------- */
+  // A stomp lands with a ring of impact, star sparks and dust; a Mossbud's
+  // leaf pops off, a Puffwing bursts into feathers, a shell clacks. A chain of
+  // stomps counts itself above the creature. (Particles come from the
+  // simulation, so replays and ghosts show them; the hit-stop and the jolt of
+  // the view are the render loop's, so they change nothing it computes.)
+  let hitStop = 0, jolt = -99;
+  function stompFx(e, chain) {
+    const x = e.x + 7, y = e.y + 4;
+    parts.push({x, y: y + 2, vx: 0, vy: 0, life: 16, l0: 16, ring: true, r: e.kind === 'snail' ? 9 : 13, col: '#fffbea', g: 0, drag: 1});
+    for (let i = 0; i < 7; i++) { const a = -Math.PI / 2 + (i - 3) * .45, v = 2.2 + i % 3 * .5; parts.push({x, y, vx: Math.cos(a) * v, vy: Math.sin(a) * v - .6, life: 20 + i % 3 * 4, l0: 26, spark: true, r: 2.2 + i % 2, col: i % 2 ? '#ffe9a0' : '#ffffff', g: .1, drag: .92}); }
+    puff(x, e.y + e.h, '#fff4dc', 6);
+    if (e.kind === 'walker') parts.push({x: x + 1, y: y - 8, vx: .7, vy: -2.6, life: 70, l0: 70, col: '#7cc24e', r: 2.2, leaf: true, spin: .5, g: .05, drag: .97});
+    if (e.kind === 'flier') for (let i = 0; i < 8; i++) parts.push({x: x + (i - 4) * 1.5, y, vx: (i - 3.5) * .45, vy: -1.2 - i % 3 * .4, life: 60 + i * 4, l0: 90, col: i % 2 ? '#ffe3ee' : '#ffffff', r: 1.5, leaf: true, spin: (i % 2 ? 1 : -1) * .3, g: .025, drag: .96});
+    if (chain >= 2) parts.push({x, y: y - 16, vx: 0, vy: -.55, life: 46, l0: 46, text: '×' + chain, r: 8 + Math.min(4, chain), col: ['#fffbea', '#ffe08a', '#ffb86a', '#ff8a8a'][Math.min(3, chain - 2)], g: 0, drag: 1});
+    if (!ghostSim) { hitStop = Math.min(4, 2 + chain); jolt = frameNo; }
+  }
   function puff(x, y, col, n, up = 1) { for (let i = 0; i < n; i++) { const a = Math.PI * (1 + i / (n - 1 || 1)) * up; parts.push({x, y, vx: Math.cos(a) * (1 + i % 3 * .5), vy: Math.sin(a) * 1.2 - .4, life: 26 + i % 4 * 4, col, r: 1.6 + i % 3 * .6}); } }
   // What a footfall throws up depends on the ground: dust and grass clippings,
   // snow, cloud, or glowing spores in the caves.
@@ -679,6 +695,7 @@
     let x = W - 12;
     const list = [['share', '⤴ Share run'], ['restart', ghost ? '↺ Race again' : '↺ Restart']];
     if (typeof PipAudio !== 'undefined') list.push(['sound', PipAudio.label()]);
+    list.push(['book', '✉ Journey']);
     const out = list.map(([id, label]) => {
       const w = Math.round(main.measureText(label).width + h * .9); x -= w; const b = {id, label, x, y, w, h}; x -= 8; return b;
     });
@@ -758,6 +775,8 @@
     const k = e.code;
     if (typeof PipAudio !== 'undefined') { PipAudio.unlock(); if (k === 'KeyM' && !e.repeat) { PipAudio.cycle(); return; } }
     if (k === 'KeyR' && !e.repeat) { restart(); return; }
+    if (k === 'KeyB' && !e.repeat) { book ? book = null : openBook(); return; }
+    if (book && k === 'Escape') { book = null; return; }
     if (!human) {
       const t = TOOLS.find(q => q.key === k);
       if (t) { tool = tool === t.id ? null : t.id; return; }
@@ -788,7 +807,7 @@
     }
   }
   const pointers = new Map();
-  cv.addEventListener('pointerdown', e => { if (e.pointerType !== 'mouse') usingTouch = true; const a = actions().find(b => e.offsetX >= b.x && e.offsetX <= b.x + b.w && e.offsetY >= b.y && e.offsetY <= b.y + b.h); if (typeof PipAudio !== 'undefined') PipAudio.unlock(); if (a) { (a.id === 'share' ? shareRun : a.id === 'sound' ? PipAudio.cycle : restart)(); return; } if (!human && directorPointer(e)) return; if (e.pointerType === 'mouse') { takeOver(); return; } usingTouch = true; try { cv.setPointerCapture(e.pointerId); } catch (_) {} pointers.set(e.pointerId, {x: e.offsetX, y: e.offsetY}); readTouches(pointers); takeOver(); });
+  cv.addEventListener('pointerdown', e => { if (e.pointerType !== 'mouse') usingTouch = true; const a = actions().find(b => e.offsetX >= b.x && e.offsetX <= b.x + b.w && e.offsetY >= b.y && e.offsetY <= b.y + b.h); if (typeof PipAudio !== 'undefined') PipAudio.unlock(); if (book) { book = null; return; } if (a) { (a.id === 'share' ? shareRun : a.id === 'sound' ? PipAudio.cycle : a.id === 'book' ? openBook : restart)(); return; } if (!human && directorPointer(e)) return; if (e.pointerType === 'mouse') { takeOver(); return; } usingTouch = true; try { cv.setPointerCapture(e.pointerId); } catch (_) {} pointers.set(e.pointerId, {x: e.offsetX, y: e.offsetY}); readTouches(pointers); takeOver(); });
   cv.addEventListener('pointermove', e => { if (e.pointerType === 'mouse' && !e.buttons) hover = tool ? cellAt(e.clientX, e.clientY) : null; if (pointers.has(e.pointerId)) { pointers.set(e.pointerId, {x: e.offsetX, y: e.offsetY}); readTouches(pointers); } });
   const lift = e => { pointers.delete(e.pointerId); readTouches(pointers); };
   cv.addEventListener('pointerup', lift); cv.addEventListener('pointercancel', lift);
@@ -869,10 +888,23 @@
     }
     chapter = {t: 0, num: r + 1, done: BIOMES[regionBiome(r)].name, mark: next.mark, next: next.name, sub: next.sub,
       seeds: seeds - journey.seeds0, time: (frameNo - journey.start) / RATE, tumbles: journey.tumbles, finds: seen.size - journey.finds0, vs};
+    if (!ghostSim) chapter.stamp = stampBook(regionBiome(r + 1), chapter.time, journey.played > (frameNo - journey.start) / 2);
     journey.arrived = r; chapters++; sfx('arrive', {mark: regionBiome(r + 1)}); celebrated.set(r, frameNo);
     for (let k = 0; k < 4; k++) sparkle(arrival.gx + 8 + (k - 1.5) * 18, pl.y - 10 - (k % 2) * 14);
   }
   const clock = sec => `${Math.floor(sec / 60)}:${String(Math.floor(sec % 60)).padStart(2, '0')}`;
+  /* ---------------- the journey book ----------------
+     Each landmark reached is stamped into a book kept on this device: when it
+     was first reached, how often, the best time to it from the chapter's start,
+     and the best when a person played most of that chapter. */
+  const BOOK = ['meadow', 'frost', 'sky', 'caves', 'coast'];
+  function stampBook(id, time, mine) {
+    const b = store.get('pip-run:book') || {}, e = b[id] || {first: new Date().toISOString().slice(0, 10), visits: 0, best: null, mine: null};
+    const first = !b[id], better = e.best === null || time < e.best, mineBetter = mine && (e.mine === null || time < e.mine);
+    e.visits++; if (better) e.best = time; if (mineBetter) e.mine = time;
+    b[id] = e; store.set('pip-run:book', b);
+    return first ? 'new' : mineBetter ? 'mine' : better ? 'best' : null;
+  }
   let prev = {cam: 0, x: 0, y: 0};
   function tick(src = liveInput) {
     if (replay) replay = null;   // only headless callers tick during a replay; the live loop pauses
@@ -932,8 +964,9 @@
     const region = Math.floor(pl.x / (REGION * CW * TS));
     if (region !== lastRegion) {
       lastRegion = region; title = {id: regionBiome(region), t: chapter ? Math.min(0, chapter.t - CARD - 240) : 0};
-      journey = {start: frameNo, seeds0: seeds, tumbles: 0, finds0: seen ? seen.size : 0, arrived: journey.arrived};
+      journey = {start: frameNo, seeds0: seeds, tumbles: 0, finds0: seen ? seen.size : 0, arrived: journey.arrived, played: 0};
     }
+    if (human) journey.played = (journey.played || 0) + 1;   // how much of this chapter a person played
     if (!ghostSim && !arrival && !dead && pl.ground && journey.arrived !== region) {
       const gx = gateX(region);
       if (pl.x > gx - 7 * TS && pl.x < gx) { arrival = {region, gx, phase: 'walk', t: 0}; plan = null; }
@@ -944,6 +977,7 @@
       const ci = Math.floor(pl.x / (CW * TS)), span = REGION * CW * TS, wd = regionWonder(region);
       for (const ch of [chunks.get(ci), chunks.get(ci + 1)]) if (ch) for (const ft of ch.features) if (ft.x - pl.x < 170 && ft.x - pl.x > -40) discover(ft.id);
       if (wd && pl.x / span - region > .25) discover(wd);
+      const sp = weatherAt(pl.x); if (sp.kind && sp.w > .6) discover(sp.kind);
       if (card && ++card.t > 300) card = null;
     }
     cam = Math.max(cam, pl.x - simW * .38);
@@ -957,11 +991,13 @@
         e.state = 'slide'; e.vx = pl.x + 6 < e.x + 7 ? 3.6 : -3.6; inv = Math.max(inv, 12); sfx('bump');
         if (stomp) pl.vy = -4.4;
       } else if (stomp) {
-        if (e.kind === 'snail') { e.state = 'shell'; e.vx = 0; e.h = 12; e.y += 2; }
+        if (e.kind === 'snail') { e.state = 'shell'; e.vx = 0; e.h = 12; e.y += 2; e.shellAt = frameNo; }
         else if (e.kind === 'flier') { e.state = 'dead'; e.vy = 0; e.vx = 0; }
         else { e.state = 'squash'; e.t = 0; }
-        pl.vy = inp.j ? -6.4 : -4.4; pl.jumping = inp.j; puff(e.x + 7, e.y + 4, '#fff4dc', 6);
-        sfx('stomp'); stompTimes = stompTimes.filter(t => frameNo - t < 100); stompTimes.push(frameNo); if (stompTimes.length >= 2) noteMoment('stomp chain');
+        pl.vy = inp.j ? -6.4 : -4.4; pl.jumping = inp.j; sq = 1.2;
+        stompTimes = stompTimes.filter(t => frameNo - t < 100); stompTimes.push(frameNo);
+        stompFx(e, stompTimes.length);
+        sfx('stomp', {chain: stompTimes.length}); if (stompTimes.length >= 2) noteMoment('stomp chain');
       } else die();
     }
     for (const ch of chunks.values()) for (const s of ch.seeds)
@@ -2133,7 +2169,8 @@
         }
       }
       // The surf where the sea meets the beach: seen only in the gaps.
-      const yw = oy + WATER_Y * S, foam = X => yw + (Math.sin((X / S + cam) * .09 + frameNo * .05) * 1.2 + Math.sin((X / S + cam) * .031 - frameNo * .03) * 1.6) * S;
+      const swell = 1 + 1.6 * (weatherAt(cam + viewW / 2).kind === 'squall' ? weatherAt(cam + viewW / 2).w : 0);   // a squall heaves the surf
+      const yw = oy + WATER_Y * S, foam = X => yw + (Math.sin((X / S + cam) * .09 + frameNo * .05) * 1.2 + Math.sin((X / S + cam) * .031 - frameNo * .03) * 1.6) * S * swell;
       ctx.fillStyle = vgrad(yw - 2 * S, oy + bandH, '#4f8fb6', '#1f557c'); ctx.beginPath(); ctx.moveTo(0, H);
       for (let X = 0; X <= W + 8; X += 8) ctx.lineTo(X, foam(X)); ctx.lineTo(W, H); ctx.fill();
       ctx.strokeStyle = 'rgba(255,255,255,.8)'; ctx.lineWidth = Math.max(1, S * .7); ctx.beginPath();
@@ -2194,7 +2231,97 @@
     }
     drawLandmark(m);
     drawSkyTime(m);
+    drawSpellSky();
     drawWonder();
+  }
+  /* ---------------- passing weather ----------------
+     Most regions after the first get one passing spell of weather, seeded and
+     a function of distance like the hour (ghosts and replays see the same
+     sky): a shower in the meadow that leaves puddles and then a rainbow, a
+     blizzard on the ridge, a squall at the coast with a heavy surf, a sunbreak
+     over the sky isles, rain dripping from the cave roof. Drawn and heard only:
+     the rules stay the region's. */
+  const SPELL = {meadow: 'shower', frost: 'blizzard', coast: 'squall', sky: 'sunbreak', caves: 'drip'};
+  function weatherAt(x) {
+    const span = REGION * CW * TS, r = Math.floor(x / span), f = x / span - r, kind = SPELL[regionBiome(r)];
+    if (r < 1 || hash(seed ^ 0x3e7, r) % 10 < 3) return {kind: null, w: 0, after: 0};
+    const h = hash(seed ^ 0x3e8, r), a = .1 + h % 25 / 100, b = a + .26 + (h >>> 5) % 10 / 100, ramp = .06;   // from a to b, fractions of the region (a rainbow after clears before the plaza)
+    const w = smoothstep((f - a) / ramp) * (1 - smoothstep((f - b + ramp) / ramp));
+    const after = kind === 'shower' ? smoothstep((f - b + ramp) / ramp) * (1 - smoothstep((f - b - .14) / .06)) : 0;   // the rainbow, once it clears
+    return {kind, w, after};
+  }
+  // The sky under a spell: storm cloud darkening it, a blizzard's white-out, a rainbow.
+  function drawSpellSky() {
+    const sp = weatherAt(cam + viewW / 2), W = cv.width, bandH = VIEW_H * S, d = dayAt(cam + viewW / 2);
+    if (sp.w > .01 && sp.kind !== 'drip' && sp.kind !== 'sunbreak') {
+      const [top, foot, a] = sp.kind === 'blizzard' ? ['236,242,250', '250,252,255', .5] : sp.kind === 'squall' ? ['70,80,104', '120,128,146', .55] : ['96,110,132', '150,160,172', .42];
+      const q = ctx.createLinearGradient(0, oy, 0, oy + bandH); q.addColorStop(0, `rgba(${top},${(a * sp.w).toFixed(3)})`); q.addColorStop(1, `rgba(${foot},${(a * .6 * sp.w).toFixed(3)})`);
+      ctx.fillStyle = q; ctx.fillRect(0, oy, W, bandH);
+    }
+    if (sp.after > .01) {   // a rainbow, small and high, fading as the sky clears
+      const a = .32 * sp.after * (1 - d.night - .6 * d.dusk); if (a < .01) return;
+      const cx = W * .62, cy = oy + bandH * .78, r0 = bandH * .5, lw = bandH * .011;
+      ctx.save(); ctx.globalAlpha = a; ctx.lineWidth = lw;
+      ['#ff5a5a', '#ffa64d', '#ffe066', '#7ad66a', '#5ab4ff', '#6a7cff', '#b07aff'].forEach((c, i) => { ctx.strokeStyle = c; ctx.beginPath(); ctx.arc(cx, cy, r0 - i * lw, Math.PI * 1.08, Math.PI * 1.92); ctx.stroke(); });
+      ctx.restore();
+    }
+  }
+  // Rain, snow, light and drips over the world.
+  function drawSpell(late = false) {   // late: after the cave dark, where drips catch what light there is
+    const sp = weatherAt(cam + viewW / 2), w = sp.w; if (w < .01 || late !== (sp.kind === 'drip')) return;
+    const W = cv.width, bandH = VIEW_H * S, t = drawT ?? frameNo;
+    const ground = sx => { const tx = Math.floor((cam + sx / S) / TS); for (let ty = 1; ty < ROWS; ty++) if (solid(tx, ty) && !solid(tx, ty - 1)) return oy + ty * TS * S; return -1; };
+    ctx.save();
+    if (sp.kind === 'shower' || sp.kind === 'squall') {
+      const n = Math.round((sp.kind === 'squall' ? 150 : 90) * w), slant = (sp.kind === 'squall' ? 7 : 3) * S, len = (sp.kind === 'squall' ? 15 : 12) * S;
+      ctx.strokeStyle = 'rgba(214,228,244,.55)'; ctx.lineWidth = Math.max(1, S * .3); ctx.beginPath();
+      for (let i = 0; i < n; i++) { const x = ((i * 97.3 + t * slant * .5 - cam * S * .9) % (W + 60) + W + 60) % (W + 60) - 30, y = oy + ((i * 53.7 + t * (9 + i % 3) * S) % (bandH + len)) - len; ctx.moveTo(x, y); ctx.lineTo(x + slant * .4, y + len); }
+      ctx.stroke();
+      ctx.fillStyle = 'rgba(230,240,252,.7)';   // splashes on the ground
+      for (let i = 0; i < Math.round(26 * w); i++) {
+        const sx = (hash(i * 31, Math.floor(t / 5)) % 1000) / 1000 * W, gy = ground(sx), q = (t % 5) / 5; if (gy < 0) continue;
+        for (const dx of [-1, 1]) { ctx.beginPath(); ctx.arc(sx + dx * (1 + q * 2.5) * S, gy - (1.5 * Math.sin(Math.PI * q)) * S, .55 * S, 0, 7); ctx.fill(); }
+      }
+    } else if (sp.kind === 'blizzard') {
+      ctx.fillStyle = `rgba(246,250,255,${(.26 * w).toFixed(3)})`; ctx.fillRect(0, oy, W, bandH);   // white-out
+      ctx.strokeStyle = 'rgba(255,255,255,.8)'; ctx.lineWidth = Math.max(1, S * .45); ctx.beginPath();
+      for (let i = 0; i < Math.round(140 * w); i++) { const x = ((i * 131.7 - t * (6 + i % 4) * S - cam * S * .6) % (W + 80) + W + 80) % (W + 80) - 40, y = oy + ((i * 71.3 + t * (1.5 + i % 3 * .6) * S + Math.sin(t * .05 + i) * 10 * S) % bandH); ctx.moveTo(x, y); ctx.lineTo(x + (3 + i % 3 * 2) * S, y - .6 * S); }
+      ctx.stroke();
+    } else if (sp.kind === 'sunbreak') {
+      ctx.globalCompositeOperation = 'lighter';
+      for (let i = 0; i < 5; i++) {   // shafts of light through the clouds, slowly turning
+        const x0 = ((i * 287 + 140 - cam * S * .08) % (W + 400) + W + 400) % (W + 400) - 200, sw = (24 + i % 3 * 14) * S, lean = (60 + i * 9) * S, a = w * (.1 + .06 * Math.sin(t * .02 + i * 1.7));
+        const q = ctx.createLinearGradient(0, oy, 0, oy + bandH); q.addColorStop(0, `rgba(255,244,210,${a.toFixed(3)})`); q.addColorStop(1, 'rgba(255,244,210,0)');
+        ctx.fillStyle = q; ctx.beginPath(); ctx.moveTo(x0, oy); ctx.lineTo(x0 + sw, oy); ctx.lineTo(x0 + sw * 2.2 + lean, oy + bandH); ctx.lineTo(x0 + lean, oy + bandH); ctx.fill();
+      }
+      ctx.globalCompositeOperation = 'source-over';
+      for (let i = 0; i < Math.round(24 * w); i++) { const x = ((i * 157 - cam * S * .3) % W + W) % W, y = oy + bandH * ((i * 37 % 80) / 100) + Math.sin(t * .03 + i) * 8 * S, a = Math.max(0, Math.sin(t * .07 + i * 1.3)) * .8 * w; ctx.fillStyle = `rgba(255,250,220,${a.toFixed(2)})`; ctx.beginPath(); ctx.arc(x, y, .7 * S, 0, 7); ctx.fill(); }
+    } else if (sp.kind === 'drip') {
+      ctx.fillStyle = 'rgba(190,232,255,.6)'; ctx.strokeStyle = 'rgba(190,232,255,.45)'; ctx.lineWidth = Math.max(1, S * .35);
+      for (let i = 0; i < Math.round(22 * w); i++) {   // drops fall from the roof and ring where they land
+        const sx = (hash(i * 17, 3) % 1000) / 1000 * W, tx = Math.floor((cam + sx / S) / TS); let ty = 0; while (ty < ROWS && solid(tx, ty)) ty++;
+        const top = oy + ty * TS * S, gy = ground(sx); if (gy < 0 || gy <= top) continue;
+        const per = 70 + i % 5 * 9, q = ((t + i * 23) % per) / per, fall = q < .7 ? q / .7 : 1, y = top + (gy - top) * fall * fall;
+        if (q < .7) { ctx.beginPath(); ctx.ellipse(sx, y, .6 * S, 1.3 * S, 0, 0, 7); ctx.fill(); }
+        else { const k = (q - .7) / .3; ctx.globalAlpha = 1 - k; ctx.beginPath(); ctx.ellipse(sx, gy - .3 * S, (1 + k * 6) * S, (.4 + k * 1.2) * S, 0, 0, 7); ctx.stroke(); ctx.globalAlpha = 1; }
+      }
+    }
+    ctx.restore();
+  }
+  // Puddles on the turf during a shower and for a while after, rippling while it rains.
+  function drawPuddles() {
+    const x0 = cam - TS, x1 = cam + viewW + TS, t = drawT ?? frameNo;
+    for (const ch of chunks.values()) {
+      if (!ch.tops || ch.biome !== 'meadow' && ch.biome !== 'coast') continue;
+      for (const [tx, ty] of ch.tops) {
+        if (tx * TS > x1 || tx * TS + TS < x0 || hash(seed ^ 0x9dd, tx) % 4) continue;
+        const sp = weatherAt(tx * TS), wet = Math.max(sp.w, sp.after); if (wet < .03) continue;
+        const [x, y] = W2D(tx * TS + 8, ty * TS + 1.6), rx = (4 + hash(seed, tx) % 4) * S * Math.min(1, wet * 1.6);
+        ctx.fillStyle = `rgba(150,184,214,${(.6 * wet).toFixed(3)})`; ctx.beginPath(); ctx.ellipse(x, y, rx, 1.1 * S, 0, 0, 7); ctx.fill();
+        ctx.fillStyle = `rgba(240,248,255,${(.5 * wet).toFixed(3)})`; ctx.fillRect(x - rx * .5, y - .5 * S, rx * .6, Math.max(1, .3 * S));
+        if (sp.w > .2) { const q = ((t + tx * 13) % 36) / 36; ctx.strokeStyle = `rgba(240,248,255,${(.6 * (1 - q) * sp.w).toFixed(3)})`; ctx.lineWidth = Math.max(1, S * .25); ctx.beginPath(); ctx.ellipse(x + (hash(tx, 5) % 5 - 2) * S, y, rx * q, rx * q * .25, 0, 0, 7); ctx.stroke(); }
+      }
+    }
   }
   /* ---------------- time of day ----------------
      The sun goes down as the journey goes on: day for the first chapters,
@@ -2439,7 +2566,8 @@
   const FINDS = {
     ferry: ['Drift ferry', 'Ride it across the gap'], lift: ['Lift', 'Ride it up to the high ledge'], crumble: ['Crumble bridge', 'Keep moving: it won’t hold'],
     stairs: ['Floating steps', 'Hop up, stone by stone'], spitter: ['Podspitter', 'Jump its seed pods, or stomp them'],
-    whale: ['A sky whale', 'Look up'], lanterns: ['Lantern rise', 'Look up'], balloons: ['Balloon drift', 'Look up'], meteors: ['Meteor shower', 'Look up'], aurora: ['Aurora', 'Look up']
+    whale: ['A sky whale', 'Look up'], lanterns: ['Lantern rise', 'Look up'], balloons: ['Balloon drift', 'Look up'], meteors: ['Meteor shower', 'Look up'], aurora: ['Aurora', 'Look up'],
+    shower: ['Passing shower', 'Puddles, then a rainbow'], blizzard: ['Blizzard', 'Snow on the wind'], squall: ['Sea squall', 'Rain and a heavy surf'], sunbreak: ['Sunbreak', 'Light through the clouds'], drip: ['Cave rain', 'Dripping from the roof']
   };
   let seen = null, card = null;
   function discover(id) {
@@ -2709,6 +2837,7 @@
       [`${c.mark} reached`, 800, 1.45, '#fffbea'],
       [`★ ${c.seeds} seeds   ·   ${clock(c.time)}   ·   ${c.tumbles} ${c.tumbles === 1 ? 'tumble' : 'tumbles'}${c.finds ? `   ·   ${c.finds} new ${c.finds === 1 ? 'find' : 'finds'}` : ''}`, 600, .8, '#e6f2f2'],
       ...(c.vs ? [[c.vs, 600, .74, '#cfe9ff']] : []),
+      ...(c.stamp ? [[c.stamp === 'new' ? `✉ A new postcard for your journey book` : c.stamp === 'mine' ? `✉ Your best time to the ${c.mark}` : `✉ Pip's best time to the ${c.mark}`, 700, .74, '#ffe08a']] : []),
       [`Next: ${c.next} — ${c.sub}`, 500, .74, '#d9ecf0']
     ];
     ctx.save(); ctx.globalAlpha = a; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
@@ -2985,14 +3114,21 @@
       cols.forEach((c, i) => q.addColorStop(i / (cols.length - 1), c)); ctx.fillStyle = q; ctx.beginPath(); ctx.ellipse(cx, cy, rx, ry, 0, 0, 7); ctx.fill();
     };
     const rim = (cx, cy, rx, ry, col) => { ctx.strokeStyle = col; ctx.lineWidth = .9 * s; ctx.beginPath(); ctx.ellipse(cx, cy, rx - .6 * s, ry - .6 * s, 0, L > 0 ? -.6 : Math.PI - 1.2, L > 0 ? 1.2 : Math.PI + .6); ctx.stroke(); };
-    const eye = (ex, ey, k = 1) => {   // looking ahead, or at Pip when he is near; squeezed shut by a fright
+    const eye = (ex, ey, k = 1) => {   // looking ahead, or at Pip when he is near; squeezed shut by a fright; spirals when stomped
+      if (flat) { ctx.strokeStyle = '#2b2018'; ctx.lineWidth = .7 * s * k; ctx.beginPath(); for (let a = 0; a < 10; a += .4) { const rr = (.2 + a * .17) * s * k; ctx.lineTo(ex + Math.cos(a + st * .6) * rr, ey + Math.sin(a + st * .6) * rr); } ctx.stroke(); return; }
       const px = ex + (-.6 + (lookX * .9 + .6) * near) * s * k, py = ey + (.3 + (lookY * .8 - .3) * near) * s * k, sq = 1 - .55 * shock;
       ctx.fillStyle = '#fffaf0'; ctx.beginPath(); ctx.ellipse(ex, ey, 2 * s * k, 2.4 * s * k * sq, 0, 0, 7); ctx.fill();
       ctx.fillStyle = '#2b2018'; ctx.beginPath(); ctx.ellipse(px, py, 1.15 * s * k, 1.15 * s * k * sq, 0, 0, 7); ctx.fill();
       ctx.fillStyle = '#ffffff'; ctx.beginPath(); ctx.arc(px - .35 * s * k, py - .55 * s * k * sq, .45 * s * k, 0, 7); ctx.fill();
     };
     const blush = (bx, by) => { ctx.fillStyle = 'rgba(255,128,128,.32)'; ctx.beginPath(); ctx.ellipse(bx, by, 1.6 * s, .9 * s, 0, 0, 7); ctx.fill(); };
-    if (e.state === 'squash') { ball(0, -2 * s, 8 * s, 2.6 * s, ['#b98a58', '#8a5e38', '#5e3e24']); ctx.restore(); return; }
+    const flat = e.state === 'squash' && e.kind !== 'pod', st = e.t;
+    if (e.state === 'squash' && !flat) { ball(0, -2 * s, 8 * s, 2.6 * s, ['#b98a58', '#8a5e38', '#5e3e24']); ctx.restore(); return; }
+    if (flat) {   // squashed flat with a wobble, fading into a poof at the end
+      const k = Math.min(1, st / 4), wob = st > 4 ? Math.sin(st * .9) * .08 * Math.max(0, 1 - (st - 4) / 14) : 0;
+      ctx.scale(1 + .45 * k + wob, 1 - .52 * k - wob); ctx.globalAlpha *= st > 22 ? Math.max(0, 1 - (st - 22) / 10) : 1;
+    }
+    if (e.state === 'shell' && e.shellAt !== undefined && frameNo - e.shellAt < 22) { const q = (frameNo - e.shellAt) / 22; ctx.rotate(Math.sin(q * Math.PI * 4) * .25 * (1 - q)); }   // the shell wobbles
     if (e.kind === 'pod') {             // a spiky seed pod, spinning as it flies
       ctx.translate(0, -5 * s); ctx.rotate(-e.t * .18);
       ctx.fillStyle = '#6b4424'; ctx.beginPath(); for (let k = 0; k < 12; k++) { const a = k * Math.PI / 6, rr = (k % 2 ? 3.6 : 6.4) * s; ctx.lineTo(Math.cos(a) * rr, Math.sin(a) * rr); } ctx.fill();
@@ -3053,6 +3189,12 @@
       eye(-3 * s, -8.5 * s); blush(-2.4 * s, -5.4 * s);
     }
     ctx.restore();
+    if (flat && st > 3 && st < 26) {   // stars going round its head
+      ctx.save(); ctx.globalAlpha = Math.min(1, (26 - st) / 6); ctx.fillStyle = '#ffe9a0';
+      for (let i = 0; i < 3; i++) { const a = st * .28 + i * 2.09, sx = x + w / 2 + Math.cos(a) * 8 * s, sy = y + h - 9 * s + Math.sin(a) * 2.4 * s;
+        ctx.save(); ctx.translate(sx, sy); ctx.rotate(st * .2); ctx.beginPath(); for (let k = 0; k < 10; k++) { const rr = (k % 2 ? .9 : 2.2) * s; ctx.lineTo(Math.cos(k * Math.PI / 5) * rr, Math.sin(k * Math.PI / 5) * rr); } ctx.fill(); ctx.restore(); }
+      ctx.restore();
+    }
   }
   function drawThoughts(arcs, at) {
     if (!arcs) return;
@@ -3283,6 +3425,11 @@
     for (const p of parts) {
       const [x, y] = W2D(p.x, p.y), a = Math.min(1, p.life / 14);
       if (p.seed) { star(x, y, 5 * S * a, frameNo * .2); continue; }
+      if (p.ring) { const q = 1 - p.life / p.l0; ctx.strokeStyle = p.col; ctx.globalAlpha = (1 - q) * .9; ctx.lineWidth = Math.max(1, (2.6 - 2 * q) * S); ctx.beginPath(); ctx.ellipse(x, y, p.r * (.4 + q) * S, p.r * (.4 + q) * .45 * S, 0, 0, 7); ctx.stroke(); ctx.globalAlpha = 1; continue; }
+      if (p.spark) { ctx.globalAlpha = a; ctx.fillStyle = p.col; ctx.save(); ctx.translate(x, y); ctx.rotate(p.life * .3); const k = p.r * S * (.5 + .5 * a); ctx.beginPath(); for (let i = 0; i < 8; i++) { const rr = i % 2 ? k * .3 : k; ctx.lineTo(Math.cos(i * Math.PI / 4) * rr, Math.sin(i * Math.PI / 4) * rr); } ctx.fill(); ctx.restore(); ctx.globalAlpha = 1; continue; }
+      if (p.text) { const q = 1 - p.life / p.l0, k = q < .15 ? q / .15 * 1.25 : 1.25 - Math.min(.25, (q - .15) * 2);
+        ctx.globalAlpha = Math.min(1, p.life / 12); ctx.font = `900 ${p.r * S * k}px system-ui,-apple-system,sans-serif`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+        ctx.lineWidth = Math.max(2, S * .9); ctx.strokeStyle = 'rgba(50,30,20,.7)'; ctx.strokeText(p.text, x, y); ctx.fillStyle = p.col; ctx.fillText(p.text, x, y); ctx.globalAlpha = 1; continue; }
       if (p.soft) { blob(x, y, p.r * S * (1.2 + (1 - p.life / p.l0) * 1.4), p.col, .85 * a); continue; }
       if (p.glow) blob(x, y, p.r * S * 5, p.col, .6 * a);
       ctx.globalAlpha = a; ctx.fillStyle = p.col;
@@ -3542,10 +3689,10 @@
   }
   function scene(arcs, at) {
     const m = biomeMix();
-    drawBackground(); drawDestination(); drawTiles(); drawPrints(); drawGrass(); drawLeaves(); drawMovers(); drawCrystals(); drawSeeds(); drawMarks();
+    drawBackground(); drawDestination(); drawTiles(); drawPrints(); drawPuddles(); drawGrass(); drawLeaves(); drawMovers(); drawCrystals(); drawSeeds(); drawMarks();
     drawItems();
     for (const e of enemies) drawEnemy(e);
-    drawGhost(); drawPip(); drawParts(); drawWeather(m); drawFore(m); drawGrade(m); drawDusk(m); drawDarkness(m);
+    drawGhost(); drawPip(); drawParts(); drawWeather(m); drawSpell(); drawFore(m); drawGrade(m); drawDusk(m); drawDarkness(m); drawSpell(true);
     if (!human || replay) drawThoughts(arcs, at);
     drawWary(); drawDirectorWorld();
   }
@@ -3553,13 +3700,15 @@
   // drawn unscaled to a buffer and composited, so tiles never show seams.
   let zoom = 1, buf = null;
   function composite(drawScene) {
+    const jt = (drawT ?? frameNo) - jolt, jy = jt >= 0 && jt < 10 ? 2.6 * S * (1 - jt / 10) ** 2 * Math.cos(jt * 2.2) : 0;
+    if (zoom < 1.003 && jy) { const k = 1 + 2 * Math.abs(jy) / cv.height; view = {zoom: 1, cx: 0, fy: 0}; ctx = main; main.setTransform(k, 0, 0, k, -(k - 1) * cv.width / 2, jy - (k - 1) * cv.height / 2); drawScene(); main.setTransform(1, 0, 0, 1, 0, 0); return; }
     if (zoom < 1.003) { view = {zoom: 1, cx: 0, fy: 0}; ctx = main; main.setTransform(1, 0, 0, 1, 0, 0); drawScene(); return; }
     if (!buf || buf.width !== cv.width || buf.height !== cv.height) { buf = document.createElement('canvas'); buf.width = cv.width; buf.height = cv.height; }
     ctx = buf.getContext('2d'); ctx.setTransform(1, 0, 0, 1, 0, 0); drawScene();
     const [fx, fy] = W2D(pl.x + 6, pl.y + 4), cx = cv.width * .38 + (fx - cv.width * .38) * .5;
     view = {zoom, cx, fy};
     main.setTransform(1, 0, 0, 1, 0, 0);
-    main.drawImage(buf, cx - cx * zoom, fy - fy * zoom, cv.width * zoom, cv.height * zoom);
+    main.drawImage(buf, cx - cx * zoom, fy - fy * zoom + jy, cv.width * zoom, cv.height * zoom);
     ctx = main;
   }
   function render() {
@@ -3581,9 +3730,53 @@
     for (const e of enemies) if (e.px !== undefined) { e.x = lerp(e.px, e.x); e.y = lerp(e.py, e.y); }
     composite(() => scene(plan && plan.arcs, plan ? plan.at : 0));
     ({pl, cam} = live); enemies.forEach((e, i) => { [e.x, e.y] = ex[i]; }); drawT = null;
-    ctx.setTransform(1, 0, 0, 1, 0, 0); drawConsole(); drawTitle(); drawCard(); drawChapter(); drawHud();
+    ctx.setTransform(1, 0, 0, 1, 0, 0); drawConsole(); drawTitle(); drawCard(); drawChapter(); drawHud(); drawBook();
   }
 
+  // The book: a page of five postcards, one per landmark, stamped once reached.
+  let book = null;
+  function openBook() { book = {t: 0}; render(); }
+  const CARD_SKY = {meadow: ['#8fcdf2', '#f4e6c8'], frost: ['#a3c4e8', '#f4f8fd'], sky: ['#58a8ee', '#f0f8ff'], caves: ['#1b1630', '#3a2f5a'], coast: ['#c9a2c6', '#ffd39c']};
+  function drawBook() {
+    if (!book) return;
+    const W = cv.width, H = cv.height, d = dpr, data = store.get('pip-run:book') || {}, a = Math.min(1, ++book.t / 8), F = (wt, px) => `${wt} ${px * d}px system-ui,-apple-system,sans-serif`;
+    seen = seen || new Set(store.get('pip-run:seen') || []);
+    ctx.save(); ctx.globalAlpha = a; ctx.fillStyle = 'rgba(12,18,24,.82)'; ctx.fillRect(0, 0, W, H);
+    const cols = W / d >= 980 ? 5 : W / d >= 600 ? 3 : 2, rows = Math.ceil(BOOK.length / cols), gap = 14 * d, top = 74 * d;
+    const cw = Math.min(200 * d, (W - gap * (cols + 1)) / cols, ((H - top - 24 * d) / rows - gap) / 1.36), chh = cw * 1.36, x0 = (W - cols * cw - (cols - 1) * gap) / 2;
+    const got = BOOK.filter(id => data[id]).length;
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillStyle = '#fffbea'; ctx.font = F(800, 22); ctx.fillText('Journey book', W / 2, top - 46 * d);
+    ctx.fillStyle = '#cfe0e4'; ctx.font = F(500, 12); ctx.fillText(`${got} of ${BOOK.length} landmarks · ${seen.size} of ${Object.keys(FINDS).length} sights found · tap or B to close`, W / 2, top - 22 * d);
+    BOOK.forEach((id, i) => {
+      const x = x0 + (i % cols) * (cw + gap) + (Math.floor(i / cols) === rows - 1 ? (cols * rows - BOOK.length) * (cw + gap) / 2 : 0), y = top + Math.floor(i / cols) * (chh + gap), e = data[id], B = BIOMES[id];
+      ctx.save(); ctx.translate(x, y);
+      ctx.fillStyle = 'rgba(0,0,0,.35)'; ctx.beginPath(); ctx.roundRect(3 * d, 4 * d, cw, chh, 8 * d); ctx.fill();
+      ctx.fillStyle = e ? '#fbf6ea' : '#9aa3a6'; ctx.beginPath(); ctx.roundRect(0, 0, cw, chh, 8 * d); ctx.fill();
+      const px = cw * .07, pw = cw - px * 2, ph = chh * .66;   // the picture
+      const q = ctx.createLinearGradient(0, px, 0, px + ph); q.addColorStop(0, CARD_SKY[id][0]); q.addColorStop(1, CARD_SKY[id][1]);
+      ctx.save(); ctx.beginPath(); ctx.roundRect(px, px, pw, ph, 5 * d); ctx.clip(); ctx.fillStyle = q; ctx.fillRect(px, px, pw, ph);
+      const k = ph * .86 / LM.h; ctx.globalAlpha = e ? 1 : .22; ctx.drawImage(landmarkSprite(id), cw / 2 - LM.w * k / 2, px + ph - LM.h * k, LM.w * k, LM.h * k); ctx.globalAlpha = 1;
+      if (!e) { ctx.fillStyle = 'rgba(40,46,52,.45)'; ctx.fillRect(px, px, pw, ph); ctx.fillStyle = '#eef2f2'; ctx.font = F(800, 30); ctx.fillText('?', cw / 2, px + ph * .45); }
+      ctx.restore();
+      if (e) {   // a stamp with a perforated edge, and the postmark over it
+        const sw = cw * .2, sx = cw - px - sw - 4 * d, sy = px + 4 * d;
+        ctx.fillStyle = '#ffffff'; ctx.fillRect(sx, sy, sw, sw * 1.15);
+        ctx.fillStyle = CARD_SKY[id][0]; ctx.fillRect(sx + sw * .14, sy + sw * .14, sw * .72, sw * .87);
+        ctx.fillStyle = CARD_SKY[id][1]; ctx.font = F(900, Math.round(sw / d * .5)); ctx.fillText(B.mark[0], sx + sw / 2, sy + sw * .6);
+        ctx.fillStyle = q; for (let j = 0; j < 5; j++) for (const [ex, ey] of [[sx + sw * (j + .5) / 5, sy], [sx + sw * (j + .5) / 5, sy + sw * 1.15]]) { ctx.beginPath(); ctx.arc(ex, ey, sw * .045, 0, 7); ctx.fill(); }
+        ctx.strokeStyle = 'rgba(70,52,90,.6)'; ctx.lineWidth = Math.max(1, .9 * d); ctx.beginPath(); ctx.arc(sx - sw * .15, sy + sw * .75, sw * .42, 0, 7); ctx.stroke();
+        const [yy, mm, dd] = e.first.split('-'); ctx.fillStyle = 'rgba(70,52,90,.75)'; ctx.font = F(800, Math.max(6, Math.round(sw / d * .2)));
+        ctx.fillText(`${+dd} ${['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'][+mm - 1]}`, sx - sw * .15, sy + sw * .68); ctx.fillText(yy, sx - sw * .15, sy + sw * .88);
+      }
+      const ty = px + ph + (chh - px - ph) * .34;
+      ctx.fillStyle = e ? '#3a2a1c' : '#e8eced'; ctx.font = F(800, Math.max(10, Math.round(cw / d * .085))); ctx.fillText(B.mark, cw / 2, ty);
+      ctx.fillStyle = e ? '#6b5a48' : '#e0e6e7'; ctx.font = F(600, Math.max(9, Math.round(cw / d * .062)));
+      ctx.fillText(e ? `${e.visits}× · best ${clock(e.best)}${e.mine !== null ? ` · yours ${clock(e.mine)}` : ''}` : 'Not yet reached', cw / 2, ty + chh * .085);
+      ctx.restore();
+    });
+    ctx.restore();
+  }
   /* ---------------- loop ---------------- */
   let playing = !matchMedia('(prefers-reduced-motion: reduce)').matches, visible = !document.hidden, raf = 0, last = 0, acc = 0;
   // The simulation runs at 40 ticks a second (a calmer clock than 60); the
@@ -3594,17 +3787,19 @@
     if (!playing || !visible) return;
     if (last) paced(now - last);
     const dt = last ? Math.min(.1, (now - last) / 1000) : 0; last = now;
-    if (replay) {
+    if (book) {}   // the book is open: the run waits
+    else if (replay) {
       if (human) replay = null;
       else { replay.i += dt * 60 * .5; if (replay.i >= replay.frames.length) replay = null; }
-    } else acc += dt * RATE * (1 - .45 * tension);
+    } else if (hitStop > 0) hitStop--;   // a stomp holds the clock for a few frames
+    else acc += dt * RATE * (1 - .45 * tension);
     let n = 0;
     while (!replay && acc >= 1 && n < 6) { tick(); acc -= 1; n++; }
     if (acc > 1) acc = 1;
     if (typeof PipAudio !== 'undefined') {
       const m = biomeMix(), biomes = {}; biomes[m.a] = 1 - m.w; biomes[m.b] = (biomes[m.b] || 0) + m.w;
       const d = dayAt(pl.x);
-      PipAudio.update({biomes, biome: m.w > .5 ? m.b : m.a, tension, wind: biomeAt(pl.x) === 'sky' ? windAt(pl.x) : 0, night: d.night + d.dusk * .5, dt});
+      PipAudio.update({biomes, biome: m.w > .5 ? m.b : m.a, tension, wind: biomeAt(pl.x) === 'sky' ? windAt(pl.x) : 0, night: d.night + d.dusk * .5, spell: weatherAt(pl.x), dt});
     }
     render(); raf = requestAnimationFrame(frame);
   }
@@ -3625,7 +3820,7 @@
   if (playing) raf = requestAnimationFrame(frame);
   // Test hook: lets the smoke test drive the simulation without a browser clock.
   window.__pipRun = {tick, reset, state: () => ({pl, enemies, seeds, maxX, dead, human, cam, viewW}), GAP, layout, tileAt: (x, y) => tileAt(x, y),
-    art: ci => { const ch = chunk(ci); return ch && {art: chunkArt(ch, Math.round(TS * S)), biome: ch.biome}; }, props: ci => { const ch = chunk(ci); return ch && ch.props ? ch.props.map(q => ({...q})) : []; }, dressing: ci => { const ch = chunk(ci); return ch && ch.dressing ? ch.dressing.list.map(q => ({...q})) : []; }, celebrated: () => [...celebrated.keys()], render: () => render(), lookAt, tension: () => tension, pace: ms => paced(ms), quality: () => ({level: pace.level, settled: pace.settled, windows: pace.windows, dpr, width: cv.width}), fx: () => ({parts: parts.length, prints: prints.length, printList: prints.map(q => ({...q})), rustled: rustle.size}), dayAt,
+    art: ci => { const ch = chunk(ci); return ch && {art: chunkArt(ch, Math.round(TS * S)), biome: ch.biome}; }, props: ci => { const ch = chunk(ci); return ch && ch.props ? ch.props.map(q => ({...q})) : []; }, dressing: ci => { const ch = chunk(ci); return ch && ch.dressing ? ch.dressing.list.map(q => ({...q})) : []; }, celebrated: () => [...celebrated.keys()], render: () => render(), lookAt, weatherAt, book: () => store.get('pip-run:book'), bookOpen: () => !!book, openBook, tension: () => tension, pace: ms => paced(ms), quality: () => ({level: pace.level, settled: pace.settled, windows: pace.windows, dpr, width: cv.width}), fx: () => ({parts: parts.length, rings: parts.filter(q => q.ring).length, sparks: parts.filter(q => q.spark).length, prints: prints.length, printList: prints.map(q => ({...q})), rustled: rustle.size}), dayAt,
     scores: () => { const th = enemies.filter(e => e.state !== 'dead' && e.state !== 'squash' && Math.abs(e.x - pl.x) < 260); return OPTIONS.map(o => [o.dir, o.wait, o.hold, Math.round(simulate(o, th).score)]); },
     actions: () => actions(),
     tile: (x, y, v) => setTile(x, y, v),

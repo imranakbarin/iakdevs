@@ -63,7 +63,7 @@ const before = count.started;
 for (let i = 0; i < 1800; i++) {
   const k = ['meadow', 'frost', 'sky', 'caves', 'coast'][Math.floor(i / 360)];
   clock.t += 1 / 60;
-  A.update({biomes: {[k]: 1}, biome: k, tension: (i % 600) / 600, wind: Math.sin(i / 90), night: (i % 450) / 450, dt: 1 / 60});
+  A.update({biomes: {[k]: 1}, biome: k, tension: (i % 600) / 600, wind: Math.sin(i / 90), night: (i % 450) / 450, spell: {kind: ['shower', 'blizzard', 'sunbreak', 'drip', 'squall'][Math.floor(i / 360)], w: (i % 360) / 360}, dt: 1 / 60});
 }
 assert.ok(count.started - before > 60, `score and details played (${count.started - before} voices)`);
 // A meadow night is alive with crickets.
@@ -84,4 +84,4 @@ for (const name of ['step', 'jump', 'land', 'seed', 'bump', 'arrive']) assert.ok
 const total = Object.values(heard).reduce((a, b) => a + b, 0), code = G.ghost.encode();
 G.ghost.race(code);
 assert.equal(Object.values(heard).reduce((a, b) => a + b, 0), total, 'ghost rebuild is silent');
-console.log(`Pip Run sound PASS: 22 effects build valid graphs, five landmark scenes sound distinct, ambience and score over 5 biomes, crickets after sunset (${count.started} voices), off by default and remembered, silent while paused, game voices ${Object.keys(heard).length} event kinds, ghost rebuilds are silent.`);
+console.log(`Pip Run sound PASS: 22 effects build valid graphs, five landmark scenes sound distinct, ambience, weather and score over 5 biomes, crickets after sunset (${count.started} voices), off by default and remembered, silent while paused, game voices ${Object.keys(heard).length} event kinds, ghost rebuilds are silent.`);
