@@ -108,7 +108,7 @@ for (const seed of [3, 11]) {
   const g = G.ghost.race(code);
   assert.equal(g.frames.length, xs.length, 'ghost covers the run');
   xs.forEach(([x, y], i) => { const p = G.ghost.at(i + 1); assert.ok(p.x === x && p.y === y, `ghost diverged at frame ${i + 1}`); });
-  for (const bad of ['', 'x', '1.zz', '2.1.a0.1.AA', '1.1.a0.1.A*']) assert.equal(G.ghost.decode(bad), null, `rejects ${bad}`);
+  for (const bad of ['', 'x', '2.zz', '3.1.a0.1.AA', '1.1.a0.1.AA', '2.1.a0.1.A*']) assert.equal(G.ghost.decode(bad), null, `rejects ${bad}`);
 }
 // The painted world: every biome's ground, stone and stumps paint with sane
 // geometry, once per chunk, and again only after a tile of theirs changes.
@@ -124,7 +124,7 @@ for (const seed of [3, 11]) {
     }
   }
   strict = false;
-  assert.deepEqual([...biomes].sort(), ['caves', 'frost', 'meadow', 'sky'], 'all four biomes painted');
+  assert.deepEqual([...biomes].sort(), ['caves', 'coast', 'frost', 'meadow', 'sky'], 'all five biomes painted');
   G.reset(2); const a = G.art(1).art;
   assert.equal(G.art(1).art, a, 'a chunk is painted once');
   G.tile(24 + 5, 14, 0); assert.notEqual(G.art(1).art, a, 'and repainted when its ground changes');
@@ -153,8 +153,8 @@ for (const seed of [3, 11]) {
 // ground with three tiles of headroom under its whole width, inside its chunk, clear of the bigger props
 // and of each other; every region opens with a signpost.
 {
-  const DFOOT = {fence: 3, mushrooms: 1, lamp: 1, flowers: 1, snowman: 1, pond: 3, bunting: 3, pinwheel: 1, glowcaps: 1, sign: 1, well: 2}, kinds = {};
-  for (const seed of [1, 2, 3, 5]) {
+  const DFOOT = {fence: 3, mushrooms: 1, lamp: 1, flowers: 1, snowman: 1, pond: 3, bunting: 3, pinwheel: 1, glowcaps: 1, sign: 1, well: 2, palm: 1, shells: 1, sandcastle: 1, umbrella: 1, driftwood: 2, boat: 3}, ROOM = {palm: 5}, kinds = {};
+  for (const seed of [1, 2, 3, 4, 5, 11]) {
     G.reset(seed);
     for (let ci = 0; ci < 48; ci++) {
       G.art(ci);
@@ -164,7 +164,7 @@ for (const seed of [3, 11]) {
         const n = DFOOT[q.kind], tx = ci * 24 + q.x;
         assert.ok(q.x - n >= 0 && q.x + n < 24, `seed ${seed}: a ${q.kind} at tile ${tx} hangs over its chunk`);
         for (let d = -n; d <= n; d++) {
-          const col = [1, 2, 3].map(k => G.tileAt(tx + d, q.s - k));
+          const col = Array.from({length: ROOM[q.kind] || 3}, (_, k) => G.tileAt(tx + d, q.s - k - 1));
           assert.ok(G.tileAt(tx + d, q.s) === 1 && col.every(t => !t), `seed ${seed}: a ${q.kind} at tile ${tx} stands by uneven ground or under a ledge at ${tx + d} (${col})`);
         }
         for (const p of props) assert.ok(Math.abs(p.x - q.x) > n + 2, `seed ${seed}: a ${q.kind} at tile ${tx} crowds a ${p.kind}`);
@@ -172,15 +172,16 @@ for (const seed of [3, 11]) {
       }
     }
   }
-  for (const k of ['sign', 'fence', 'mushrooms', 'snowman', 'pond', 'bunting', 'glowcaps']) assert.ok(kinds[k] > 1, `some ${k} dressing is placed (${JSON.stringify(kinds)})`);
+  for (const k of ['sign', 'fence', 'mushrooms', 'snowman', 'pond', 'bunting', 'glowcaps', 'palm', 'boat']) assert.ok(kinds[k] > 1, `some ${k} dressing is placed (${JSON.stringify(kinds)})`);
+  for (const k of ['shells', 'sandcastle', 'umbrella', 'driftwood']) assert.ok(kinds[k] >= 1, `a ${k} on the beach (${JSON.stringify(kinds)})`);
 }
 // Pip touches the world: whole frames render with sane geometry in every
-// biome while footfalls kick up particles and leave prints in snow, cloud and
-// glowing moss (none in meadow grass).
+// biome while footfalls kick up particles and leave prints in snow, cloud,
+// sand and glowing moss (none in meadow grass).
 {
-  G.reset(5); const prints = {}, seen = {};
+  G.reset(1); const prints = {}, seen = {};
   strict = true;
-  for (let f = 0; f < 60 * 200; f++) {
+  for (let f = 0; f < 60 * 270; f++) {
     G.tick();
     if (f % 20) continue;
     drawn = 0; G.render();
@@ -190,9 +191,9 @@ for (const seed of [3, 11]) {
     for (const q of G.fx().printList) { const look = G.lookAt(q.x); (prints[look] = prints[look] || new Set()).add(q.x + ':' + q.at); }
   }
   strict = false;
-  assert.deepEqual(Object.keys(seen).sort(), ['caves', 'frost', 'meadow', 'sky'], 'rendered in all four biomes');
+  assert.deepEqual(Object.keys(seen).sort(), ['caves', 'coast', 'frost', 'meadow', 'sky'], 'rendered in all five biomes');
   assert.ok(!prints.meadow, `no prints on grass (${prints.meadow && prints.meadow.size})`);
-  for (const b of ['frost', 'sky', 'caves']) assert.ok(prints[b] && prints[b].size >= 10, `footprints in ${b} (${prints[b] && prints[b].size})`);
+  for (const b of ['frost', 'sky', 'caves', 'coast']) assert.ok(prints[b] && prints[b].size >= 10, `footprints in ${b} (${prints[b] && prints[b].size})`);
 }
 // Resolution follows the device: frames slower than about 50 a second drop a
 // step (a smaller canvas the browser scales up), a step that does not help is

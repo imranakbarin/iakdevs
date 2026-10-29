@@ -51,6 +51,8 @@ const PipAudio = (() => {
     tone(f, {t, d, peak, to}); tone(f * 2.76, {t, d: d * .4, peak: peak * .22, to}); tone(f * 5.4, {t, d: d * .15, peak: peak * .07, to});
   }
   const arp = (notes, base, gap, peak, t) => notes.forEach((n, i) => bell(base * 2 ** (n / 12), t + i * gap, peak, .6));
+  // A gull's cry: a falling, wavering call.
+  function gull(t, peak, to = fxBus) { tone(1500 + rnd() * 300, {t, type: 'triangle', a: .02, d: .22, peak, slide: .62, to}); tone(1300 + rnd() * 200, {t: t + .26, type: 'triangle', a: .02, d: .16, peak: peak * .7, slide: .7, to}); }
   // A filtered oscillator: horns and hums.
   function brass(f, {t, type = 'sawtooth', cut = 700, a = .06, d = .5, peak = .05, slide = 0, to = fxBus}) {
     const o = ac.createOscillator(), flt = ac.createBiquadFilter(), g = gain(0, to);
@@ -81,6 +83,12 @@ const PipAudio = (() => {
       lfo.type = 'square'; lfo.frequency.setValueAtTime(14, t + .3); lfo.frequency.exponentialRampToValueAtTime(22, t + 3.6); lfo.connect(depth);
       s.connect(flt); flt.connect(g); env(g, t + .3, .6, .03, 3); s.start(t + .3); s.stop(t + 4); lfo.start(t + .3); lfo.stop(t + 4);
     },
+    coast(t) {    // the lighthouse: its foghorn, the lamp's chime, the gulls taking off
+      brass(98, {t: t + .1, a: .15, d: 1.5, peak: .05, cut: 420}); brass(147, {t: t + .1, a: .15, d: 1.5, peak: .02, cut: 420});
+      bell(hz(88), t + .45, .03, 1.4); bell(hz(95), t + .5, .02, 1.2);
+      for (let i = 0; i < 4; i++) gull(t + .55 + i * .28 + rnd() * .08, .022);
+      hiss({t: t + .2, type: 'lowpass', f: 600, f2: 1400, a: .8, d: 1.6, peak: .03});
+    },
     caves(t) {    // the heart: a low hum that swells as its rings pulse out
       tone(55, {t, a: 1.2, d: 2.4, peak: .05}); tone(82.4, {t, a: 1.2, d: 2.4, peak: .025}); tone(110, {t: t + .4, type: 'triangle', a: 1, d: 2, peak: .012});
       [0, .7, 1.4].forEach((dt, i) => { tone(hz(69 - i * 5), {t: t + .05 + dt, a: .02, d: 1.1, peak: .03, slide: .7}); bell(hz(81 + [0, 3, 7][i]), t + .05 + dt, .02, 1.2); });
@@ -97,6 +105,7 @@ const PipAudio = (() => {
       else if (surface === 'moss') { hiss({t, type: 'lowpass', f: 450, d: .05, peak: .035 * k}); tone(hz(84 + [0, 4, 7, 11][rnd() * 4 | 0]), {t: t + .01, d: .25, peak: .004 * k}); }
       else if (surface === 'ice') { hiss({t, f: 3200, q: 2, d: .025, peak: .04 * k}); tone(2200 + rnd() * 600, {t, d: .02, peak: .006 * k}); }
       else if (surface === 'cloud') hiss({t, type: 'lowpass', f: 350, d: .05, peak: .04 * k});
+      else if (surface === 'sand') { hiss({t, f: 1500 + rnd() * 500, q: 1.2, d: .045, peak: .022 * k}); hiss({t, type: 'lowpass', f: 420, d: .05, peak: .028 * k}); }
       else if (surface === 'crystal') { tone(hz(84 + [0, 3, 5, 7, 10][rnd() * 5 | 0]), {t, d: .08, peak: .008 * k}); hiss({t, type: 'highpass', f: 4000, d: .02, peak: .015 * k}); }
       else if (surface === 'wood') { tone(170 + rnd() * 30, {t, type: 'triangle', d: .03, peak: .035 * k}); hiss({t, f: 900, q: 2, d: .03, peak: .025 * k}); }
       else hiss({t, f: 1500, q: 1.5, d: .03, peak: .035 * k});
@@ -113,6 +122,7 @@ const PipAudio = (() => {
     spring(o, t) { tone(200, {t, d: .32, peak: .09, slide: 3.2}); tone(300, {t, type: 'triangle', d: .22, peak: .03, slide: 2.4}); },
     tumble(o, t) { tone(660, {t, type: 'triangle', d: .6, peak: .05, slide: .35}); },
     crumble(o, t) { hiss({t, f: 500, f2: 180, q: 2, d: .2, peak: .07}); tone(140 + rnd() * 40, {t, type: 'triangle', d: .05, peak: .03}); },
+    splash(o, t) { hiss({t, type: 'lowpass', f: 2400, f2: 300, d: .5, peak: .09}); for (let i = 0; i < 4; i++) tone(500 + rnd() * 500, {t: t + .08 + i * .07, d: .06, peak: .012, slide: 1.8}); },
     spit(o, t) { hiss({t, f: 2400, q: 1.5, d: .06, peak: .04}); tone(480, {t, d: .05, peak: .02, slide: .6}); },
     arrive({mark}, t) {
       if (SCENES[mark]) { SCENES[mark](t); arp([0, 4, 7, 12], 523, .12, .035, t + (mark === 'frost' ? 2.3 : .05)); }   // the scene leads, the fanfare answers
@@ -131,14 +141,14 @@ const PipAudio = (() => {
   }
 
   /* ---------------- ambience ---------------- */
-  const LEVEL = {meadow: .14, frost: .07, sky: .09, caves: .2};
+  const LEVEL = {meadow: .14, frost: .07, sky: .09, caves: .2, coast: .16};
   function buildAmbience() {
     const bed = (type, f, q) => {
       const s = ac.createBufferSource(), flt = ac.createBiquadFilter(), g = gain(0, ambBus);
       s.buffer = noise; s.loop = true; flt.type = type; flt.frequency.value = f; flt.Q.value = q;
       s.connect(flt); flt.connect(g); s.start(); return {g, flt};
     };
-    amb = {meadow: bed('lowpass', 380, .5), frost: bed('bandpass', 900, .7), sky: bed('bandpass', 600, .4), caves: bed('lowpass', 180, .7)};
+    amb = {meadow: bed('lowpass', 380, .5), frost: bed('bandpass', 900, .7), sky: bed('bandpass', 600, .4), caves: bed('lowpass', 180, .7), coast: bed('lowpass', 520, .6)};
     for (const f of [55, 82.4]) { const o = ac.createOscillator(), g = gain(.05, amb.caves.g); o.frequency.value = f; o.connect(g); o.start(); }
   }
   // Occasional details, at a rate per second, scaled by how present the biome is.
@@ -146,6 +156,7 @@ const PipAudio = (() => {
     meadow: [.22, t => { const f = 2600 + rnd() * 1400; for (let i = 0, n = 2 + (rnd() * 3 | 0); i < n; i++) tone(f * (1 + rnd() * .1), {t: t + i * .09, d: .06, peak: .02, slide: 1.25, to: ambBus}); }],
     frost: [.18, t => bell(hz(96 + [0, 2, 3, 7, 9][rnd() * 5 | 0]), t, .012, .7, ambBus)],
     sky: [.12, t => { for (let i = 0; i < 3; i++) bell(hz(88 + [0, 2, 4, 7, 9][rnd() * 5 | 0]), t + i * .16 + rnd() * .05, .015, 1.2, ambBus); }],
+    coast: [.14, t => gull(t, .012, ambBus)],
     caves: [.3, t => { const f = 900 + rnd() * 700; tone(f, {t, d: .09, peak: .035, slide: .45, to: ambBus}); tone(f, {t: t + .28, d: .09, peak: .012, slide: .45, to: ambBus}); }]
   };
 
@@ -160,7 +171,8 @@ const PipAudio = (() => {
     meadow: {root: 60, scale: [0, 2, 4, 7, 9], chords: [[0, 4, 7], [5, 9, 12], [9, 12, 16], [7, 11, 14]], voice: 'pluck'},
     frost: {root: 62, scale: [0, 2, 3, 7, 9], chords: [[0, 3, 7], [5, 9, 12], [3, 7, 10], [7, 10, 14]], voice: 'bell'},
     sky: {root: 65, scale: [0, 2, 4, 6, 9], chords: [[0, 4, 7], [2, 6, 9], [0, 4, 7], [7, 11, 14]], voice: 'flute'},
-    caves: {root: 57, scale: [0, 3, 5, 7, 10], chords: [[0, 3, 7], [8, 12, 15], [5, 8, 12], [7, 10, 14]], voice: 'mallet'}
+    caves: {root: 57, scale: [0, 3, 5, 7, 10], chords: [[0, 3, 7], [8, 12, 15], [5, 8, 12], [7, 10, 14]], voice: 'mallet'},
+    coast: {root: 64, scale: [0, 2, 4, 7, 9], chords: [[0, 4, 7], [9, 12, 16], [5, 9, 12], [7, 11, 14]], voice: 'pluck'}
   };
   const STEP = 60 / 76 / 2;   // eighth notes at 76 bpm
   let nextStep = 0, step = 0, deg = 7, key = 'meadow';
@@ -197,9 +209,11 @@ const PipAudio = (() => {
     const t = ac.currentTime;
     ambBus.gain.setTargetAtTime(1, t, .5);
     musBus.gain.setTargetAtTime(mode === 2 ? .5 * (1 + .4 * s.tension) : 0, t, .5);
-    for (const k of Object.keys(amb)) amb[k].g.gain.setTargetAtTime((s.biomes[k] || 0) * LEVEL[k] * (k === 'sky' ? .6 + .6 * Math.abs(s.wind) : 1), t, .6);
+    const swell = .5 + .5 * Math.sin(t * .55) * Math.sin(t * .23 + 1);   // waves rolling in and drawing back
+    for (const k of Object.keys(amb)) amb[k].g.gain.setTargetAtTime((s.biomes[k] || 0) * LEVEL[k] * (k === 'sky' ? .6 + .6 * Math.abs(s.wind) : k === 'coast' ? .35 + .65 * swell : 1), t, k === 'coast' ? .4 : .6);
     amb.frost.flt.frequency.setTargetAtTime(900 + 500 * Math.sin(t * .4), t, .3);
     amb.sky.flt.frequency.setTargetAtTime(500 + 400 * Math.abs(s.wind), t, .3);
+    amb.coast.flt.frequency.setTargetAtTime(380 + 700 * swell, t, .4);
     const night = s.night || 0, outdoors = 1 - (s.biomes.caves || 0);
     for (const [k, [rate, play]] of Object.entries(DETAIL)) if (rnd() < rate * s.dt * (s.biomes[k] || 0) * (k === 'meadow' ? 1 - night : 1)) play(t + .02);
     for (const [rate, play] of NIGHT) if (rnd() < rate * s.dt * night * outdoors) play(t + .02);
