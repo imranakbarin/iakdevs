@@ -52,6 +52,7 @@ for (const seed of [1, 2, 5, 9]) {
   }
   const m = Math.round(G.state().maxX / 16);
   assert.ok(G.journey().chapters >= 1, `seed ${seed}: never reached a destination`);
+  assert.ok(G.celebrated().length >= G.journey().chapters, `seed ${seed}: every arrival plays its landmark scene`);
   assert.ok(m > secs * 5, `seed ${seed}: demo reached only ${m} m in ${secs} s`);
   assert.ok(tumbles <= 6, `seed ${seed}: ${tumbles} tumbles`);
 }
@@ -148,6 +149,31 @@ for (const seed of [3, 11]) {
   }
   for (const k of ['oak', 'pine', 'rock']) assert.ok(kinds[k] > 3, `some ${k}s are placed (${JSON.stringify(kinds)})`);
 }
+// Route dressing (fences, signposts, wells, ponds, snowmen...) sits on level
+// ground with three tiles of headroom under its whole width, inside its chunk, clear of the bigger props
+// and of each other; every region opens with a signpost.
+{
+  const DFOOT = {fence: 3, mushrooms: 1, lamp: 1, flowers: 1, snowman: 1, pond: 3, bunting: 3, pinwheel: 1, glowcaps: 1, sign: 1, well: 2}, kinds = {};
+  for (const seed of [1, 2, 3, 5]) {
+    G.reset(seed);
+    for (let ci = 0; ci < 48; ci++) {
+      G.art(ci);
+      const props = G.props(ci), dress = G.dressing(ci);
+      for (const q of dress) {
+        kinds[q.kind] = (kinds[q.kind] || 0) + 1;
+        const n = DFOOT[q.kind], tx = ci * 24 + q.x;
+        assert.ok(q.x - n >= 0 && q.x + n < 24, `seed ${seed}: a ${q.kind} at tile ${tx} hangs over its chunk`);
+        for (let d = -n; d <= n; d++) {
+          const col = [1, 2, 3].map(k => G.tileAt(tx + d, q.s - k));
+          assert.ok(G.tileAt(tx + d, q.s) === 1 && col.every(t => !t), `seed ${seed}: a ${q.kind} at tile ${tx} stands by uneven ground or under a ledge at ${tx + d} (${col})`);
+        }
+        for (const p of props) assert.ok(Math.abs(p.x - q.x) > n + 2, `seed ${seed}: a ${q.kind} at tile ${tx} crowds a ${p.kind}`);
+        for (const o of dress) if (o !== q) assert.ok(Math.abs(o.x - q.x) > Math.max(n, DFOOT[o.kind]), `seed ${seed}: a ${q.kind} and a ${o.kind} overlap at tile ${tx}`);
+      }
+    }
+  }
+  for (const k of ['sign', 'fence', 'mushrooms', 'snowman', 'pond', 'bunting', 'glowcaps']) assert.ok(kinds[k] > 1, `some ${k} dressing is placed (${JSON.stringify(kinds)})`);
+}
 // Pip touches the world: whole frames render with sane geometry in every
 // biome while footfalls kick up particles and leave prints in snow, cloud and
 // glowing moss (none in meadow grass).
@@ -167,4 +193,4 @@ for (const seed of [3, 11]) {
   assert.equal(prints.meadow, 0, 'no prints in grass');
   for (const b of ['frost', 'sky', 'caves']) assert.ok(prints[b] >= 10, `footprints in ${b} (${prints[b]})`);
 }
-console.log('Pip Run PASS: jump-sized gaps, finite physics, demo player progresses through 4 seeded worlds, reaches each chapter’s destination, clears block rows that run up to a gap, and gets past ferries, lifts, crumble bridges, floating steps and podspitters, referee refuses traps and accepted walls stay passable, shared runs replay exactly as ghosts, the painted ground of all four biomes draws with sane geometry, once per chunk, and whole frames render in every biome with footprints in snow, cloud and moss.');
+console.log('Pip Run PASS: jump-sized gaps, finite physics, demo player progresses through 4 seeded worlds, reaches each chapter’s destination and plays its landmark scene, clears block rows that run up to a gap, and gets past ferries, lifts, crumble bridges, floating steps and podspitters, referee refuses traps and accepted walls stay passable, shared runs replay exactly as ghosts, the painted ground of all four biomes draws with sane geometry, once per chunk, route dressing stands on level ground, and whole frames render in every biome with footprints in snow, cloud and moss.');
