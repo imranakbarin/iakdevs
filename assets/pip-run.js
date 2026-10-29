@@ -382,7 +382,7 @@
     enemies = []; parts = []; prints = []; rustle.clear(); seeds = 0; cam = 0; cp = {x: 40, y: pl.y}; maxX = 40; dead = 0; inv = 0; landedAt = -99; anim = 0; facing = 1; frameNo = 0;
     big = false; growing = 0; items = []; if (typeof stats !== 'undefined') stats = {bumps: 0, sprouts: 0};
     if (typeof charges !== 'undefined') { tool = null; charges = 3; chargeT = 0; dirScore = 0; notes = []; placed = []; }
-    title = null; lastRegion = -1; arrival = null; chapter = null; chapters = 0; journey = {start: 0, seeds0: 0, tumbles: 0, finds0: 0, arrived: -1};
+    title = null; lastRegion = -1; arrival = null; chapter = null; chapters = 0; celebrated.clear(); journey = {start: 0, seeds0: 0, tumbles: 0, finds0: 0, arrived: -1};
     plan = null; stuckX = 0; stuckSince = 0; impatience = 0; progressX = 0; progressAt = 0; marks = []; risk = .25; tension = 0; wary = 0; stompTimes = []; history = []; moment = null; replay = null; lastReplay = -1e9; usedAt = new Map();
     simW = Math.round(viewW); run = {seed, w: simW, inputs: [], events: [], human: 0, m: 0};
     prev = {cam, x: pl.x, y: pl.y};
@@ -823,6 +823,7 @@
      the chapter up. The walk goes through the input log like any other
      input, so ghosts replay it exactly. */
   let arrival = null, chapter = null, journey = {start: 0, seeds0: 0, tumbles: 0, finds0: 0, arrived: -1}, chapters = 0;
+  const celebrated = new Map();   // region -> the tick Pip reached its landmark
   function arrivalInput() {
     const a = arrival; a.t++;
     const held = human ? humanInput() : null;
@@ -843,7 +844,7 @@
     }
     chapter = {t: 0, num: r + 1, done: BIOMES[regionBiome(r)].name, mark: next.mark, next: next.name, sub: next.sub,
       seeds: seeds - journey.seeds0, time: (frameNo - journey.start) / RATE, tumbles: journey.tumbles, finds: seen.size - journey.finds0, vs};
-    journey.arrived = r; chapters++; sfx('arrive');
+    journey.arrived = r; chapters++; sfx('arrive'); celebrated.set(r, frameNo);
     for (let k = 0; k < 4; k++) sparkle(arrival.gx + 8 + (k - 1.5) * 18, pl.y - 10 - (k % 2) * 14);
   }
   const clock = sec => `${Math.floor(sec / 60)}:${String(Math.floor(sec % 60)).padStart(2, '0')}`;
@@ -901,14 +902,14 @@
     if (!ghostSim && run.inputs.length < RUN_MAX) { run.m = Math.floor(maxX / TS); if (frameNo % 300 === 0) saveBest(); }
     const region = Math.floor(pl.x / (REGION * CW * TS));
     if (region !== lastRegion) {
-      lastRegion = region; title = {id: regionBiome(region), t: chapter ? Math.min(0, chapter.t - 240) : 0};
+      lastRegion = region; title = {id: regionBiome(region), t: chapter ? Math.min(0, chapter.t - CARD - 240) : 0};
       journey = {start: frameNo, seeds0: seeds, tumbles: 0, finds0: seen ? seen.size : 0, arrived: journey.arrived};
     }
     if (!ghostSim && !arrival && !dead && pl.ground && journey.arrived !== region) {
       const gx = gateX(region);
       if (pl.x > gx - 7 * TS && pl.x < gx) { arrival = {region, gx, phase: 'walk', t: 0}; plan = null; }
     }
-    if (chapter && ++chapter.t > 300) chapter = null;
+    if (chapter && ++chapter.t > CARD + 300) chapter = null;
     if (title && ++title.t > 210) title = null;
     if (!ghostSim) {
       const ci = Math.floor(pl.x / (CW * TS)), span = REGION * CW * TS, wd = regionWonder(region);
@@ -1357,6 +1358,142 @@
     }
     return out;
   }
+  // Small things along the way, painted with the ground: picket fences,
+  // mushrooms, a flowering bush, lamp posts, a well beside a cottage; snowmen
+  // and frozen ponds on the ridge; bunting and pinwheels in the sky; glowing
+  // caps in the caves; and early in each region a signpost naming the landmark
+  // ahead. Each needs level ground under its whole footprint, clear of the
+  // trees and of each other.
+  const DRESS = {meadow: ['fence', 'mushrooms', 'lamp', 'flowers', 'mushrooms'], frost: ['snowman', 'pond', 'lamp', 'fence', 'snowman', 'pond'], sky: ['bunting', 'pinwheel', 'lamp', 'pinwheel'], caves: ['glowcaps', 'lamp', 'glowcaps']};
+  const DFOOT = {fence: 3, mushrooms: 1, lamp: 1, flowers: 1, snowman: 1, pond: 3, bunting: 3, pinwheel: 1, glowcaps: 1, sign: 1, well: 2};
+  function chunkDressing(ch, at, props) {
+    const out = [], kinds = DRESS[ch.biome]; if (!kinds) return out;
+    const floor = x => { for (let y = ROWS - 1; y > 0; y--) if (at(x, y) === EARTH && at(x, y - 1) === EMPTY) return y; return -1; };
+    const level = (x, s, n) => { if (x - n < 0 || x + n >= CW) return false; for (let d = -n; d <= n; d++) if (floor(x + d) !== s || at(x + d, s - 2) !== EMPTY || at(x + d, s - 3) !== EMPTY) return false; return true; };   // with 3 tiles of headroom
+    const clear = (x, n) => props.every(p => Math.abs(p.x - x) > n + 2) && out.every(d => Math.abs(d.x - x) > n + DFOOT[d.kind] + 1);
+    const end = ch.ci % REGION === REGION - 1 ? CW - PLAZA - 3 : CW - 2;
+    const put = (x, kind) => {
+      const s = floor(x);
+      if (s < 5 || x > end || !level(x, s, DFOOT[kind]) || !clear(x, DFOOT[kind])) return false;
+      out.push({x, s, kind, hv: hash(seed ^ 0xd7e, ch.ci * CW + x)}); return true;
+    };
+    if (ch.ci % REGION === 1) for (let x = 3; x < 14 && !put(x, 'sign'); x++);
+    for (const p of props) if (p.kind === 'cottage') put(p.x + 6, 'well') || put(p.x - 6, 'well');
+    // One wide piece (fence, pond, bunting) wherever it fits, then small ones.
+    const wide = kinds.filter(k => DFOOT[k] >= 3), cv = hash(seed ^ 0xd81, ch.ci);
+    if (wide.length && cv % 3) for (let x = 4 + cv % 6; x <= end && !put(x, wide[(cv >>> 3) % wide.length]); x++);
+    const small = kinds.filter(k => DFOOT[k] < 3);
+    for (let x = 2 + hash(seed ^ 0xd7f, ch.ci) % 5; x <= end; x++) {
+      const hv = hash(seed ^ 0xd80, ch.ci * CW + x);
+      if (hv % 5 === 0 && put(x, small[(hv >>> 4) % small.length])) x += 6;
+    }
+    return out;
+  }
+  function paintDressing(g, d, bio, mark) {
+    const X = d.x * TS + 8, Y = d.s * TS + 2, h = d.hv, R = (x, y, r, stops, fx = x, fy = y) => radial(g, x, y, r, stops, fx, fy);
+    const disc = (x, y, rx, ry, fill) => { g.fillStyle = fill; g.beginPath(); g.ellipse(x, y, rx, ry, 0, 0, Math.PI * 2); g.fill(); };
+    const mushroom = (x, sz, red) => {
+      g.fillStyle = grad(g, x - sz * .2, 0, x + sz * .2, 0, ['#fff8ea', '#e8d6b6']); g.beginPath(); g.roundRect(x - sz * .17, Y - sz * .85, sz * .34, sz * .85, sz * .1); g.fill();
+      g.fillStyle = R(x, Y - sz * .82, sz * .8, red ? ['#ffa98a', '#e4553f', '#a8321f'] : ['#e6b480', '#b07440', '#6e4422'], x - sz * .25, Y - sz * 1.1);
+      g.beginPath(); g.ellipse(x, Y - sz * .8, sz * .72, sz * .5, 0, Math.PI, Math.PI * 2); g.fill();
+      if (red) for (const [dx, dy, r] of [[-.3, -1.02, .1], [.15, -1.12, .12], [.4, -.92, .08]]) disc(x + dx * sz, Y + dy * sz, r * sz, r * sz * .8, '#fff8ec');
+    };
+    switch (d.kind) {
+      case 'fence': {
+        const frost = bio === 'frost', wood = frost ? ['#c4b8aa', '#8a7a6c', '#5e5248'] : ['#dcae7a', '#a87446', '#6e4626'], w = 70;
+        for (const ry of [-11.5, -5]) { g.fillStyle = grad(g, 0, Y + ry - 1.3, 0, Y + ry + 1.3, [wood[0], wood[2]]); g.beginPath(); g.roundRect(X - w / 2, Y + ry - 1.3, w, 2.6, 1); g.fill(); }
+        for (let i = 0; i < 6; i++) {
+          const px = X - w / 2 + 3 + i * (w - 6) / 5, ph = 15 + hash(h, i) % 3, lean = (hash(h, i + 9) % 5 - 2) * .03;
+          g.save(); g.translate(px, Y); g.rotate(lean);
+          g.fillStyle = grad(g, -1.9, 0, 1.9, 0, wood); g.beginPath(); g.moveTo(-1.9, 0); g.lineTo(-1.9, -ph + 2); g.lineTo(0, -ph); g.lineTo(1.9, -ph + 2); g.lineTo(1.9, 0); g.closePath(); g.fill();
+          g.strokeStyle = 'rgba(60,34,16,.35)'; g.lineWidth = .3; g.beginPath(); g.moveTo(-.4, -ph + 3); g.lineTo(-.2, -2); g.stroke();
+          if (frost) disc(0, -ph + .8, 2.5, 1.2, '#ffffff'); else if (hash(h, i + 20) % 3 === 0) disc(0, -2.2, 2.4, 1.6, '#5f9e3c');
+          g.restore();
+        }
+        break;
+      }
+      case 'mushrooms': for (const [dx, sz, red] of [[-5, 6, h % 2], [1.5, 8.5, 1], [7, 5, 0]]) mushroom(X + dx, sz, red); break;
+      case 'flowers': {
+        for (const [dx, dy, r] of [[-6, -4, 4.5], [0, -6, 5.5], [6, -4, 4.5], [-3, -2, 4], [3, -2, 4]]) disc(X + dx, Y + dy, r, r * .85, R(X + dx, Y + dy, r, ['#8fd35a', '#4f9a3a', '#2f6a28'], X + dx - r * .3, Y + dy - r * .4));
+        for (let i = 0; i < 7; i++) { const hq = hash(h, i), fx = X - 7 + hq % 14, fy = Y - 3 - (hq >>> 5) % 7; disc(fx, fy, 1.3, 1.3, ['#f6a8c4', '#ffe08a', '#ffffff', '#c9a8ff'][i % 4]); disc(fx, fy, .45, .45, '#e8a020'); }
+        break;
+      }
+      case 'lamp': {
+        const [pole, light] = bio === 'sky' ? [['#ffe9a8', '#c8922a'], '#ffd98a'] : bio === 'caves' ? [['#6a6090', '#2c2640'], '#8ff7de'] : [['#6a6a72', '#2c2c34'], '#ffd27a'];
+        g.fillStyle = R(X, Y - 26, 12, [light + 'aa', light + '00']); g.fillRect(X - 12, Y - 38, 24, 24);
+        g.fillStyle = grad(g, X - 1.2, 0, X + 1.2, 0, pole); g.fillRect(X - 1.1, Y - 24, 2.2, 24); g.fillRect(X - 2.6, Y - 2, 5.2, 2);
+        g.fillStyle = grad(g, 0, Y - 30, 0, Y - 22, ['#ffffff', light]); g.beginPath(); g.roundRect(X - 3, Y - 30, 6, 7, 1.2); g.fill();
+        g.fillStyle = pole[1]; g.beginPath(); g.moveTo(X - 4, Y - 30); g.lineTo(X, Y - 33.5); g.lineTo(X + 4, Y - 30); g.fill(); g.fillRect(X - 3.4, Y - 23.4, 6.8, 1);
+        break;
+      }
+      case 'snowman': {
+        const snow = (y, r) => disc(X, y, r, r, R(X, y, r * 1.1, ['#ffffff', '#eef4fa', '#a9bcd4'], X - r * .4, y - r * .45));
+        snow(Y - 6.5, 7.2); snow(Y - 16.5, 5.2); snow(Y - 24.2, 3.8);
+        g.strokeStyle = '#6b4424'; g.lineWidth = .6; g.beginPath(); g.moveTo(X - 4.5, Y - 17); g.lineTo(X - 10, Y - 21); g.lineTo(X - 11.5, Y - 23); g.moveTo(X + 4.5, Y - 17); g.lineTo(X + 10, Y - 20); g.lineTo(X + 12, Y - 19); g.stroke();
+        g.fillStyle = grad(g, 0, Y - 21, 0, Y - 19, ['#e8484f', '#a8262c']); g.beginPath(); g.roundRect(X - 4.4, Y - 21.3, 8.8, 2.2, 1); g.fill(); g.fillRect(X + 1.5, Y - 20, 2, 5);
+        for (const [dx, dy, r] of [[-1.3, -25, .5], [1.3, -25, .5], [0, -15, .55], [0, -12, .55], [0, -8, .55]]) disc(X + dx, Y + dy, r, r, '#2b2420');
+        g.fillStyle = '#f08a2a'; g.beginPath(); g.moveTo(X + .6, Y - 24); g.lineTo(X + 4.6, Y - 23.3); g.lineTo(X + .6, Y - 22.8); g.fill();
+        g.fillStyle = '#2b2420'; g.fillRect(X - 3.4, Y - 28.6, 6.8, 1); g.fillRect(X - 2.3, Y - 32.6, 4.6, 4);
+        break;
+      }
+      case 'pond': {   // a frozen pond lying on the snow
+        const y = d.s * TS + 1.2;
+        disc(X, y, 31, 2.6, grad(g, 0, y - 2.6, 0, y + 2.6, ['#f4fbff', '#a8d4f0', '#7fb2dc']));
+        g.strokeStyle = 'rgba(255,255,255,.9)'; g.lineWidth = .45; for (const [x0, x1] of [[-20, -8], [-2, 6], [10, 22]]) { g.beginPath(); g.moveTo(X + x0, y - .6); g.lineTo(X + x1, y - 1.2); g.stroke(); }
+        g.strokeStyle = 'rgba(90,130,180,.45)'; g.lineWidth = .35; g.beginPath(); g.ellipse(X, y, 31, 2.6, 0, 0, Math.PI * 2); g.stroke();
+        break;
+      }
+      case 'bunting': {
+        const pole = ['#ffe9a8', '#c8922a'], cols = ['#ff7a6b', '#7fc8ff', '#ffd36a', '#6fd59b', '#c9a8ff', '#ffb347', '#ff9fd2'];
+        for (const px of [X - 30, X + 30]) { g.fillStyle = grad(g, px - 1, 0, px + 1, 0, pole); g.fillRect(px - .9, Y - 26, 1.8, 26); disc(px, Y - 26.5, 1.4, 1.4, '#ffd36a'); }
+        const sag = t => [X - 30 + 60 * t, Y - 25 + 10 * t * (1 - t) * 4 * .6];
+        g.strokeStyle = '#8a6a44'; g.lineWidth = .4; g.beginPath(); for (let t = 0; t <= 1.001; t += .05) { const [x, y] = sag(t); t ? g.lineTo(x, y) : g.moveTo(x, y); } g.stroke();
+        for (let i = 0; i < 7; i++) { const [x, y] = sag((i + .5) / 7), c = cols[(i + h) % 7]; g.fillStyle = grad(g, x - 3, y, x + 3, y + 6, [c, c + 'aa']); g.beginPath(); g.moveTo(x - 3, y); g.lineTo(x + 3, y); g.lineTo(x, y + 6); g.closePath(); g.fill(); }
+        break;
+      }
+      case 'pinwheel': {
+        g.fillStyle = grad(g, X - .8, 0, X + .8, 0, ['#e8d0a0', '#8a6a44']); g.fillRect(X - .7, Y - 18, 1.4, 18);
+        const cols = ['#ff7a6b', '#7fc8ff', '#ffd36a', '#6fd59b'], rot = (h % 100) / 100 * Math.PI;
+        for (let k = 0; k < 4; k++) { const a = rot + k * Math.PI / 2; g.save(); g.translate(X, Y - 19); g.rotate(a); g.fillStyle = grad(g, 0, 0, 6, 0, [cols[k], cols[k] + '99']); g.beginPath(); g.moveTo(0, 0); g.quadraticCurveTo(4, -4.5, 6.5, -1); g.lineTo(0, 0); g.fill(); g.restore(); }
+        disc(X, Y - 19, .9, .9, '#fff6d8');
+        break;
+      }
+      case 'glowcaps': {
+        g.fillStyle = R(X, Y - 8, 22, ['rgba(120,255,230,.42)', 'rgba(120,255,230,.12)', 'rgba(120,255,230,0)']); g.fillRect(X - 22, Y - 30, 44, 32);
+        for (const [dx, sz, lean] of [[-8, 7, -.12], [3.5, 5, .1], [0, 11, .02], [8, 8, .14], [-3, 4.5, -.05]]) {
+          g.save(); g.translate(X + dx, Y); g.rotate(lean);
+          g.fillStyle = grad(g, -sz * .09, 0, sz * .09, 0, ['#e8fff8', '#8fcfc0']); g.beginPath(); g.roundRect(-sz * .09, -sz, sz * .18, sz, sz * .05); g.fill();
+          g.fillStyle = R(0, -sz, sz * .75, ['#f0fffb', '#7ff7dc', '#26a88e'], -sz * .2, -sz * 1.25); g.beginPath(); g.ellipse(0, -sz, sz * .62, sz * .42, 0, Math.PI, Math.PI * 2); g.fill();
+          g.fillStyle = 'rgba(20,90,80,.35)'; g.fillRect(-sz * .6, -sz - .2, sz * 1.2, .5);
+          g.restore();
+        }
+        for (let i = 0; i < 5; i++) disc(X - 12 + hash(h, i) % 24, Y - 6 - hash(h, i + 5) % 18, .55, .55, 'rgba(190,255,240,.85)');
+        break;
+      }
+      case 'sign': {   // a signpost: the landmark this region leads to
+        g.fillStyle = grad(g, X - 1.3, 0, X + 1.3, 0, ['#c08a58', '#6e4626']); g.fillRect(X - 1.2, Y - 22, 2.4, 22);
+        g.fillStyle = '#5a3a22'; g.beginPath(); g.moveTo(X - 15, Y - 22); g.lineTo(X + 13, Y - 22); g.lineTo(X + 17, Y - 18); g.lineTo(X + 13, Y - 14); g.lineTo(X - 15, Y - 14); g.closePath(); g.fill();
+        g.fillStyle = grad(g, 0, Y - 21.5, 0, Y - 14.5, ['#e6b67e', '#a87446']); g.beginPath(); g.moveTo(X - 14.4, Y - 21.4); g.lineTo(X + 12.7, Y - 21.4); g.lineTo(X + 16.1, Y - 18); g.lineTo(X + 12.7, Y - 14.6); g.lineTo(X - 14.4, Y - 14.6); g.closePath(); g.fill();
+        g.font = '700 4.2px Georgia, serif'; g.textAlign = 'center'; g.textBaseline = 'middle';
+        const tw = g.measureText(mark).width, k = tw > 25 ? 25 / tw : 1;
+        g.save(); g.translate(X - .6, Y - 17.9); g.scale(k, 1); g.fillStyle = 'rgba(255,240,210,.5)'; g.fillText(mark, .2, .3); g.fillStyle = '#4a2c16'; g.fillText(mark, 0, 0); g.restore();
+        disc(X - 13, Y - 18, .45, .45, '#3a2412'); disc(X + 11.5, Y - 18, .45, .45, '#3a2412');
+        if (bio === 'frost') { g.fillStyle = '#ffffff'; g.beginPath(); g.ellipse(X - 1, Y - 22, 15, 1.2, 0, Math.PI, Math.PI * 2); g.fill(); }
+        break;
+      }
+      case 'well': {
+        g.fillStyle = grad(g, X - 9, 0, X + 9, 0, ['#c9c2b4', '#9a9282', '#6e685c']); g.beginPath(); g.roundRect(X - 9, Y - 9, 18, 9, 1.5); g.fill();
+        g.strokeStyle = 'rgba(60,56,48,.45)'; g.lineWidth = .4; for (const y of [-6, -3]) { g.beginPath(); g.moveTo(X - 9, Y + y); g.lineTo(X + 9, Y + y); g.stroke(); }
+        for (let i = 0; i < 6; i++) { const x = X - 7.5 + i * 3 + (i % 2) * 1.5; g.beginPath(); g.moveTo(x, Y - 9); g.lineTo(x, Y - 6); g.stroke(); }
+        disc(X, Y - 9, 8.6, 1.6, '#2a2620');
+        g.fillStyle = grad(g, 0, 0, 0, 1, ['#8a5a36', '#5a3a22']); g.fillRect(X - 8.4, Y - 24, 1.8, 15); g.fillRect(X + 6.6, Y - 24, 1.8, 15);
+        g.fillStyle = grad(g, 0, Y - 30, 0, Y - 22, ['#e07a4a', '#a8401f']); g.beginPath(); g.moveTo(X - 12, Y - 22); g.lineTo(X, Y - 30); g.lineTo(X + 12, Y - 22); g.closePath(); g.fill();
+        g.strokeStyle = '#6b4424'; g.lineWidth = .6; g.beginPath(); g.moveTo(X - 7, Y - 20); g.lineTo(X + 7, Y - 20); g.moveTo(X + 2, Y - 20); g.lineTo(X + 2, Y - 15); g.stroke();
+        g.fillStyle = grad(g, 0, Y - 15, 0, Y - 12, ['#a07040', '#6a4424']); g.beginPath(); g.roundRect(X + .4, Y - 15, 3.2, 3, .6); g.fill();
+        break;
+      }
+    }
+  }
   function paintChunk(ch, n) {
     const k = n / TS, M = 1, bio = ch.biome, P = PAINT[bio], wx0 = ch.ci * CW * TS, L = chunks.get(ch.ci - 1), R = chunks.get(ch.ci + 1);
     // Tiles around this chunk: the rock goes on above a cave roof and below the band.
@@ -1373,7 +1510,9 @@
     // the empty sky above costs nothing to draw.
     const props = propsImg.complete && propsImg.naturalWidth ? (ch.props = ch.props || chunkProps(ch, at)) : [];
     let y0 = ROWS; for (let y = 0; y < ROWS && y0 === ROWS; y++) for (let x = 0; x < CW; x++) if (STATIC.has(at(x, y))) { y0 = y; break; }
+    const dress = ch.dressing && ch.dressing.n === props.length ? ch.dressing.list : (ch.dressing = {n: props.length, list: chunkDressing(ch, at, props)}).list;
     y0 = Math.max(0, y0 - 1); for (const p of props) y0 = Math.max(0, Math.min(y0, Math.floor((p.s * TS + 3 - PROP[p.kind][4]) / TS)));
+    for (const d of dress) y0 = Math.max(0, Math.min(y0, Math.floor((d.s * TS - 36) / TS)));
     const c2 = document.createElement('canvas'); c2.width = (CW + 2 * M) * n; c2.height = Math.max(1, ROWS - y0) * n;
     const g = c2.getContext('2d'), lin = (x0, y0, x1, y1, a, b) => { const q = g.createLinearGradient(x0, y0, x1, y1); q.addColorStop(0, a); q.addColorStop(1, b); return q; };
     g.setTransform(k, 0, 0, k, M * n, -y0 * n); g.lineCap = 'round'; g.lineJoin = 'round';
@@ -1591,6 +1730,17 @@
           if (hh > 1 && h % 2) { const fy = Y + 10 + h % 8; g.fillStyle = '#e0a860'; g.beginPath(); g.ellipse(X + W - 2, fy, 4, 1.6, -.15, Math.PI, 0); g.fill(); g.fillStyle = '#f6d39a'; g.beginPath(); g.ellipse(X + W - 2.4, fy - .5, 3, .7, -.15, Math.PI, 0); g.fill(); }
         }
       }
+    }
+    // 5b. The small things along the way: a frozen pond lies on the snow; the
+    //     rest stand behind the turf, painted on their own layer first so each
+    //     one's parts stack in order.
+    const mark = BIOMES[regionBiome(Math.floor(ch.ci / REGION) + 1)].mark;
+    for (const d of dress) if (d.kind === 'pond') paintDressing(g, d, bio, mark);
+    if (dress.some(d => d.kind !== 'pond')) {
+      const dc = document.createElement('canvas'); dc.width = c2.width; dc.height = c2.height;
+      const dg = dc.getContext('2d'); dg.setTransform(k, 0, 0, k, M * n, -y0 * n); dg.lineCap = 'round'; dg.lineJoin = 'round';
+      for (const d of dress) if (d.kind !== 'pond') paintDressing(dg, d, bio, mark);
+      g.save(); g.setTransform(1, 0, 0, 1, 0, 0); g.globalCompositeOperation = 'destination-over'; g.drawImage(dc, 0, 0); g.restore();
     }
     // 6. Painted trees and rocks, standing behind everything above.
     if (props.length) {
@@ -2070,7 +2220,7 @@
     if (far) {   // far away: hazed into the sky, its foot lost in the distance
       const near = landmarkSprite(id), c3 = document.createElement('canvas'); c3.width = near.width; c3.height = near.height;
       const g = c3.getContext('2d'), H = c3.height, foot = (LM.h - LM.foot) / LM.h * H;
-      g.drawImage(near, 0, 0); g.globalCompositeOperation = 'source-atop'; g.fillStyle = 'rgba(214,228,244,.42)'; g.fillRect(0, 0, c3.width, H);
+      g.drawImage(near, 0, 0); if (id === 'sky') g.drawImage(landmarkSprite('airship'), 0, 0); g.globalCompositeOperation = 'source-atop'; g.fillStyle = 'rgba(214,228,244,.42)'; g.fillRect(0, 0, c3.width, H);
       g.globalCompositeOperation = 'destination-out'; const q = g.createLinearGradient(0, foot - H * .3, 0, foot); q.addColorStop(0, 'rgba(0,0,0,0)'); q.addColorStop(1, 'rgba(0,0,0,1)');
       g.fillStyle = q; g.fillRect(0, foot - H * .3, c3.width, H);
       return (lmCache[key] = c3);
@@ -2135,7 +2285,8 @@
       if (propsImg.naturalWidth) for (const [x, sc] of [[-36, .26], [-22, .2]]) { const spr = propSprite('oak', 'sky', 1), w = spr.width * sc, h = spr.height * sc; g.drawImage(spr, x - w / 2, -31 - h + 2, w, h); }
       g.fillStyle = lin(0, -38, 0, -34, ['#a87048', '#6b4228']); g.fillRect(22, -38.5, 40, 3);
       g.fillStyle = '#5a3a22'; for (const x of [26, 40, 54]) g.fillRect(x, -36, 1.6, 10);
-      // The airship: a shaded envelope with seams, fins, a gondola with lit windows.
+    }
+    if (id === 'airship') {                    // the airship docked at Sky Harbor: its own sprite, so it can sail away
       const ax = 8, ay = -92;
       g.strokeStyle = '#6b4a34'; g.lineWidth = .7; g.beginPath(); for (const [x0, x1] of [[-12, -6], [8, 6], [26, 20]]) { g.moveTo(ax + x0, ay + 10); g.lineTo(ax + x1, ay + 20); } g.stroke();
       poly([[ax - 30, ay - 2], [ax - 42, ay - 13], [ax - 38, ay - 1], [ax - 42, ay + 10]], lin(ax - 42, ay - 13, ax - 30, ay + 10, ['#f2c27a', '#c47a32']));
@@ -2146,7 +2297,7 @@
       g.fillStyle = lin(0, ay + 19, 0, ay + 28, ['#b57a4a', '#7a4a28', '#5a3418']); g.beginPath(); g.roundRect(ax - 10, ay + 19, 34, 9, 2.5); g.fill();
       g.fillStyle = '#ffd98a'; for (const x of [-6, 2, 10, 18]) { g.beginPath(); g.roundRect(ax + x, ay + 21.5, 4, 3, .8); g.fill(); }
       g.fillStyle = '#4a2e18'; g.fillRect(ax - 13, ay + 21, 3, 4); g.fillStyle = 'rgba(220,220,230,.8)'; g.beginPath(); g.ellipse(ax - 13.5, ay + 23, 1.2, 5, 0, 0, Math.PI * 2); g.fill();
-    } else {                                   // Crystal Heart: a great faceted crystal among smaller ones
+    } else if (id === 'caves') {               // Crystal Heart: a great faceted crystal among smaller ones
       const gem = (x, h, w, cols) => {
         poly([[x - w, 0], [x - w * .45, -h * .78], [x, -h], [x + w * .05, 0]], lin(x - w, -h * .5, x, -h * .5, [cols[0], cols[1]]));
         poly([[x + w * .05, 0], [x, -h], [x + w * .5, -h * .74], [x + w, 0]], lin(x, -h * .5, x + w, -h * .5, [cols[2], cols[3]]));
@@ -2165,12 +2316,57 @@
     }
     return (lmCache[key] = c2);
   }
-  function landmarkArt(id, s, t) {
-    const bob = id === 'sky' ? Math.sin(t * .03) * 3 * s : 0;
-    if (id === 'caves') blob(0, -62 * s, 72 * s, '#c896ff', .35 + .25 * Math.sin(t * .06));   // the heart's glow, behind it
-    ctx.drawImage(landmarkSprite(id), -LM.w / 2 * s, -(LM.h - LM.foot) * s - bob, LM.w * s, LM.h * s);
-    if (id === 'meadow') blob(0, -78 * s, 12 * s, '#ffd66e', .45 + .25 * Math.sin(t * .1));   // the lantern
-    else if (id === 'frost') blob(-12 * s, -124 * s, 6 * s, '#ffffff', .4 + .5 * Math.max(0, Math.sin(t * .07)));
+  // A landmark's moment when Pip reaches it (cel: ticks since): the gate's caps
+  // bounce and its arch bursts into petals, light climbs the spire and glints
+  // burst from it, the airship casts off and sails away (and stays gone), the
+  // heart pulses rings of light. Drawn from the time of arrival alone.
+  const CEL = 150, CARD = 70;   // scene length; the chapter card waits this long
+  function landmarkArt(id, s, t, cel = -1) {
+    const p = cel >= 0 ? Math.min(1, cel / CEL) : -1, bob = id === 'sky' ? Math.sin(t * .03) * 3 * s : 0, sec = cel / RATE;
+    const draw = (spr, sx = 1, sy = 1, dx = 0, dy = 0) => ctx.drawImage(spr, -LM.w / 2 * s * sx + dx, -(LM.h - LM.foot) * s * sy - bob + dy, LM.w * s * sx, LM.h * s * sy);
+    if (id === 'caves') {
+      blob(0, -62 * s, 72 * s, '#c896ff', .35 + .25 * Math.sin(t * .06) + (p >= 0 ? .5 * Math.sin(Math.PI * p) : 0));   // the heart's glow, behind it
+      if (p >= 0) for (let k = 0; k < 3; k++) { const q = p * 1.6 - k * .3; if (q <= 0 || q >= 1) continue;
+        ctx.strokeStyle = `rgba(236,214,255,${(.7 * (1 - q)).toFixed(3)})`; ctx.lineWidth = (3 - 2 * q) * s; ctx.beginPath(); ctx.arc(0, -62 * s, (20 + 110 * q) * s, 0, 7); ctx.stroke(); }
+    }
+    if (id === 'meadow' && p >= 0 && p < 1) { const b = Math.sin(p * Math.PI * 5) * (1 - p) * .07; draw(landmarkSprite(id), 1 + b * .6, 1 - b); }
+    else draw(landmarkSprite(id));
+    if (id === 'sky' && p < 1) {   // cast off: rise, lean into the turn, sail off to the right, fade into the distance
+      const e = p < 0 ? 0 : p * p, a = p < .7 ? 1 : 1 - (p - .7) / .3;
+      ctx.save(); ctx.globalAlpha *= a; ctx.translate(8 * s + e * 190 * s, -92 * s - bob - e * 120 * s); ctx.rotate(-.1 * Math.sin(Math.PI * Math.min(1, p * 1.4)) * (p >= 0 ? 1 : 0));
+      ctx.translate(-8 * s, 92 * s + bob); draw(landmarkSprite('airship'));
+      if (p >= 0) { ctx.fillStyle = 'rgba(230,230,240,.55)'; ctx.beginPath(); ctx.ellipse(-5.5 * s, -69 * s - bob, 1.6 * s, 6 * s * Math.abs(Math.sin(t * .9)), 0, 0, 7); ctx.fill(); }   // the propeller, spinning
+      ctx.restore();
+    }
+    if (id === 'meadow') {
+      blob(0, -78 * s, 12 * s, '#ffd66e', .45 + .25 * Math.sin(t * .1) + (p >= 0 ? .4 * (1 - p) : 0));   // the lantern
+      if (p >= 0 && p < 1) {   // the gate opens: its doorway fills with warm light and the arch bursts into petals
+        blob(0, -36 * s, 46 * s, '#ffe3a0', .7 * Math.sin(Math.PI * Math.min(1, p * 1.3)));
+        for (let i = 0; i < 40; i++) {
+          const h = hash(0x9e7a1, i), a = -Math.PI / 2 + ((h % 1000) / 1000 - .5) * 2.8, v = 45 + (h >>> 10) % 60, x = Math.cos(a) * v * sec * 1.3, y = -82 + Math.sin(a) * v * sec * 1.3 + 30 * sec * sec;
+          ctx.save(); ctx.globalAlpha *= Math.min(1, (1 - p) * 2.5); ctx.translate(x * s, y * s); ctx.rotate(sec * (3 + i % 4)); ctx.scale(1, Math.abs(Math.cos(sec * (4 + i % 3))) * .8 + .2);
+          ctx.fillStyle = ['#f6a8c4', '#ffe08a', '#ffffff', '#ffc2d8', '#ff8fb0'][i % 5]; ctx.beginPath(); ctx.ellipse(0, 0, 3.4 * s, 1.8 * s, 0, 0, 7); ctx.fill(); ctx.restore();
+        }
+      }
+    } else if (id === 'frost') {
+      blob(-12 * s, -124 * s, 6 * s, '#ffffff', .4 + .5 * Math.max(0, Math.sin(t * .07)));
+      if (p >= 0 && p < 1) {   // light climbs the spire and it flares; a beam stands from its tip and star glints burst out
+        const c = Math.min(1, p * 1.6), f = Math.sin(Math.PI * c);
+        ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha *= .55 * f; draw(landmarkSprite(id)); ctx.restore();
+        blob(-6 * s, -(8 + 120 * c) * s, 30 * s, '#bfeaff', .9 * f);
+        const q = Math.max(0, (p - .4) / .6), tip = -126 * s;
+        if (q > 0) {
+          ctx.save(); ctx.globalAlpha *= Math.sin(Math.PI * q) * .8;
+          ctx.fillStyle = grad(ctx, 0, tip - 200 * s, 0, tip, ['rgba(220,245,255,0)', 'rgba(230,248,255,.9)']); ctx.beginPath(); ctx.moveTo(-12 * s - 3 * s, tip); ctx.lineTo(-12 * s - 9 * s, tip - 200 * s); ctx.lineTo(-12 * s + 9 * s, tip - 200 * s); ctx.lineTo(-12 * s + 3 * s, tip); ctx.fill();
+          ctx.restore();
+          for (let i = 0; i < 14; i++) {
+            const a = i / 14 * Math.PI * 2 + .2, r = (6 + 80 * Math.sqrt(q)) * s, gx = -12 * s + Math.cos(a) * r, gy = tip + Math.sin(a) * r * .75, k = (5 - 3 * q) * s;
+            ctx.save(); ctx.globalAlpha *= 1 - q; ctx.fillStyle = '#ffffff'; ctx.translate(gx, gy); ctx.rotate(q * 2);
+            ctx.beginPath(); ctx.moveTo(0, -k); ctx.lineTo(k * .22, -k * .22); ctx.lineTo(k, 0); ctx.lineTo(k * .22, k * .22); ctx.lineTo(0, k); ctx.lineTo(-k * .22, k * .22); ctx.lineTo(-k, 0); ctx.lineTo(-k * .22, -k * .22); ctx.fill(); ctx.restore();
+          }
+        }
+      }
+    }
   }
   function drawLandmark(m) {
     const span = REGION * CW * TS, lx = (m.region + 1) * span, dist = lx - m.centre, open = 1 - weightOf(m, 'caves');
@@ -2190,12 +2386,13 @@
       const id = regionBiome(r + 1);
       ctx.save(); ctx.translate(x, W2D(0, gy * TS)[1]);
       if (id !== 'sky') { ctx.fillStyle = 'rgba(30,22,16,.22)'; ctx.beginPath(); ctx.ellipse(0, 0, 50 * S, 4 * S, 0, 0, 7); ctx.fill(); }   // it stands on the plaza
-      landmarkArt(id, S * .95, frameNo); ctx.restore();
+      const at = celebrated.get(r), cel = at === undefined || frameNo < at ? -1 : frameNo - at;
+      landmarkArt(id, S * .95, frameNo, cel); ctx.restore();
     }
   }
   function drawChapter() {
     if (!chapter || replay) return;
-    const c = chapter, a = Math.max(0, Math.min(1, c.t / 20, (240 - c.t) / 30)), u = Math.max(13, 8.5 * S);
+    const c = chapter, a = Math.max(0, Math.min(1, (c.t - CARD) / 20, (CARD + 240 - c.t) / 30)), u = Math.max(13, 8.5 * S);   // after the landmark's scene has played
     if (a <= 0) return;
     const lines = [
       [`CHAPTER ${c.num} · ${c.done.toUpperCase()}`, 700, .62, '#ffd36a'],
@@ -2206,7 +2403,7 @@
     ];
     ctx.save(); ctx.globalAlpha = a; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
     let w = 0; for (const [t, wt, k] of lines) { ctx.font = `${wt} ${u * k}px system-ui,-apple-system,sans-serif`; w = Math.max(w, ctx.measureText(t).width); }
-    const h = lines.reduce((q, l) => q + u * l[2] * 1.55, 0) + u * 1.4, x = cv.width / 2, y = Math.max(oy + VIEW_H * S * .2, 80 * dpr);
+    const h = lines.reduce((q, l) => q + u * l[2] * 1.55, 0) + u * 1.4, x = cv.width / 2, y = Math.max(oy + VIEW_H * S * .1, 76 * dpr);
     ctx.fillStyle = 'rgba(22,42,52,.74)'; ctx.beginPath(); ctx.roundRect(x - w / 2 - u * 1.4, y, w + u * 2.8, h, u * .9); ctx.fill();
     let yy = y + u * .7;
     for (const [t, wt, k, col] of lines) { ctx.font = `${wt} ${u * k}px system-ui,-apple-system,sans-serif`; yy += u * k * .78; ctx.fillStyle = col; ctx.fillText(t, x, yy); yy += u * k * .77; }
@@ -3026,7 +3223,7 @@
   if (playing) raf = requestAnimationFrame(frame);
   // Test hook: lets the smoke test drive the simulation without a browser clock.
   window.__pipRun = {tick, reset, state: () => ({pl, enemies, seeds, maxX, dead, human, cam, viewW}), GAP, layout, tileAt: (x, y) => tileAt(x, y),
-    art: ci => { const ch = chunk(ci); return ch && {art: chunkArt(ch, Math.round(TS * S)), biome: ch.biome}; }, props: ci => { const ch = chunk(ci); return ch && ch.props ? ch.props.map(q => ({...q})) : []; }, render: () => render(), fx: () => ({parts: parts.length, prints: prints.length, rustled: rustle.size}), dayAt,
+    art: ci => { const ch = chunk(ci); return ch && {art: chunkArt(ch, Math.round(TS * S)), biome: ch.biome}; }, props: ci => { const ch = chunk(ci); return ch && ch.props ? ch.props.map(q => ({...q})) : []; }, dressing: ci => { const ch = chunk(ci); return ch && ch.dressing ? ch.dressing.list.map(q => ({...q})) : []; }, celebrated: () => [...celebrated.keys()], render: () => render(), fx: () => ({parts: parts.length, prints: prints.length, rustled: rustle.size}), dayAt,
     scores: () => { const th = enemies.filter(e => e.state !== 'dead' && e.state !== 'squash' && Math.abs(e.x - pl.x) < 260); return OPTIONS.map(o => [o.dir, o.wait, o.hold, Math.round(simulate(o, th).score)]); },
     actions: () => actions(),
     tile: (x, y, v) => setTile(x, y, v),
