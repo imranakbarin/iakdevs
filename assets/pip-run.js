@@ -3265,6 +3265,26 @@
     g.save(); g.beginPath(); g.rect(0, 0, FRAME_W, 212); g.ellipse(100, 223, 54, 25, 0, 0, Math.PI * 2); g.clip();
     g.drawImage(sheet, 0, 0, FRAME_W, 252, 0, 0, FRAME_W, 252); g.restore();
     g.globalCompositeOperation = 'destination-out'; armPath(g, 160); g.fill();
+    // The painting cuts the back hand off square (it ran past the frame's edge):
+    // the cut skin is lifted and a rounded fist painted in, behind the sleeve.
+    const img = g.getImageData && g.getImageData(48, 152, 26, 32);
+    if (img && img.data) {
+      const d = img.data;
+      for (let i = 0; i < d.length; i += 4) {   // the skin and its pale edge go; the sleeve's saturated purple stays
+        const r = d[i], gg = d[i + 1], b = d[i + 2], mx = Math.max(r, gg, b), sat = mx ? (mx - Math.min(r, gg, b)) / mx : 0;
+        if (d[i + 3] > 0 && ((r > 140 && r >= b) || (mx > 165 && sat < .28) || (mx > 105 && sat < .2))) d[i + 3] = 0;
+      }
+      g.globalCompositeOperation = 'source-over'; g.putImageData(img, 48, 152);
+    }
+    g.globalCompositeOperation = 'destination-over';
+    const fist = g.createRadialGradient(54, 163, 1, 59, 168, 11); fist.addColorStop(0, '#ffe3c2'); fist.addColorStop(.55, '#f7bc8c'); fist.addColorStop(1, '#d88a5a');
+    g.strokeStyle = 'rgba(150,80,40,.45)'; g.lineWidth = .8;
+    for (const [y0, y1] of [[162, 165.5], [166, 169.5], [170, 173.5]]) { g.beginPath(); g.moveTo(51.5, y0); g.quadraticCurveTo(53.5, (y0 + y1) / 2, 51.8, y1); g.stroke(); }   // curled fingers
+    g.fillStyle = '#f2b283'; g.beginPath(); g.ellipse(60, 160.5, 4.6, 3, -.2, 0, Math.PI * 2); g.fill();   // the thumb over them
+    g.fillStyle = fist; g.beginPath(); g.ellipse(59, 168, 10, 8.6, 0, 0, Math.PI * 2); g.fill();
+    g.fillStyle = '#e8a272'; g.beginPath(); g.ellipse(68, 168, 6, 7.4, 0, 0, Math.PI * 2); g.fill();   // the wrist, reaching into the sleeve
+    g.fillStyle = 'rgba(150,80,40,.35)'; g.beginPath(); g.ellipse(59.4, 168.2, 10.6, 9.2, 0, 0, Math.PI * 2); g.fill();   // a soft outline
+    g.globalCompositeOperation = 'source-over';
     return (torso = c2);
   }
   function armSprite() {
