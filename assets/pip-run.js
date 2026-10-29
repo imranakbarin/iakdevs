@@ -2169,7 +2169,20 @@
       ctx.fillStyle = '#1b172a'; ctx.fillRect(0, oy + bandH, W, H - oy - bandH);
     }
   }
+  // On a dense screen (twice the CSS pixels or more) the sky and everything far
+  // off is painted at half resolution and stretched: it is soft and hazed
+  // anyway, and it is a quarter of the pixels.
+  let bgBuf = null;
   function drawBackground() {
+    const half = dpr >= 1.5, stage = ctx;
+    if (half) {
+      const w = Math.ceil(cv.width / 2), h = Math.ceil(cv.height / 2);
+      if (!bgBuf || bgBuf.width !== w || bgBuf.height !== h) { bgBuf = document.createElement('canvas'); bgBuf.width = w; bgBuf.height = h; }
+      ctx = bgBuf.getContext('2d'); ctx.setTransform(.5, 0, 0, .5, 0, 0);
+    }
+    try { farBackground(); } finally { if (half) { ctx = stage; ctx.drawImage(bgBuf, 0, 0, cv.width, cv.height); } }
+  }
+  function farBackground() {
     const m = biomeMix();
     biomeBackground(m.a);
     if (m.w > 0) {
