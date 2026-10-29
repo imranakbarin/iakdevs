@@ -2703,16 +2703,27 @@
     if (e.ground && e.state !== 'dead' && e.kind !== 'pod') { ctx.fillStyle = 'rgba(30,20,10,.22)'; ctx.beginPath(); ctx.ellipse(0, -.2 * s, 7.5 * s, 1.5 * s, 0, 0, 7); ctx.fill(); }
     if (e.state === 'dead') { ctx.rotate(Math.PI); ctx.translate(0, h); }
     if (flip) ctx.scale(-1, 1);
+    // Creatures notice Pip. This is drawn only (the simulation and the planner
+    // never see it): eyes follow him when he is close, and a landing beside them,
+    // a friend stomped or a shell sliding by makes them flinch.
+    const dx = pl.x + 6 - (e.x + 7), dy = pl.y + pl.h * .4 - (e.y + 4), near = dead || e.state === 'dead' ? 0 : smoothstep((92 - Math.hypot(dx, dy)) / 60);
+    const since = frameNo - landedAt, flinch = !dead && since >= 0 && since < 22 && Math.abs(dx) < 60 && Math.abs(dy) < 44 ? 1 - since / 22 : 0;
+    let startle = 0;
+    for (const o of enemies) if (o !== e && Math.abs(o.x - e.x) < 110) startle = Math.max(startle, o.state === 'squash' ? 1 - o.t / 34 : o.state === 'slide' && Math.abs(o.x - e.x) < 64 ? .8 : 0);
+    const shock = Math.max(flinch, startle), lookX = clamp(-1, dx / 36, 1) * L, lookY = clamp(-1, dy / 36, 1);
+    const hop = startle > 0 && startle < 1 ? Math.sin(Math.PI * (1 - startle)) * 3 * s : 0;   // a jump of fright
+    if (e.state === 'walk' && e.kind !== 'pod') { ctx.translate(0, -hop); ctx.scale(1 + .12 * shock, 1 - .14 * shock); }
     // Painted shading: lit from the upper left of the world whichever way a creature faces.
     const ball = (cx, cy, rx, ry, cols) => {
       const q = ctx.createRadialGradient(cx - rx * .38 * L, cy - ry * .45, rx * .08, cx, cy, Math.max(rx, ry) * 1.05);
       cols.forEach((c, i) => q.addColorStop(i / (cols.length - 1), c)); ctx.fillStyle = q; ctx.beginPath(); ctx.ellipse(cx, cy, rx, ry, 0, 0, 7); ctx.fill();
     };
     const rim = (cx, cy, rx, ry, col) => { ctx.strokeStyle = col; ctx.lineWidth = .9 * s; ctx.beginPath(); ctx.ellipse(cx, cy, rx - .6 * s, ry - .6 * s, 0, L > 0 ? -.6 : Math.PI - 1.2, L > 0 ? 1.2 : Math.PI + .6); ctx.stroke(); };
-    const eye = (ex, ey, k = 1) => {
-      ctx.fillStyle = '#fffaf0'; ctx.beginPath(); ctx.ellipse(ex, ey, 2 * s * k, 2.4 * s * k, 0, 0, 7); ctx.fill();
-      ctx.fillStyle = '#2b2018'; ctx.beginPath(); ctx.arc(ex - .6 * s * k, ey + .3 * s * k, 1.15 * s * k, 0, 7); ctx.fill();
-      ctx.fillStyle = '#ffffff'; ctx.beginPath(); ctx.arc(ex - .95 * s * k, ey - .25 * s * k, .45 * s * k, 0, 7); ctx.fill();
+    const eye = (ex, ey, k = 1) => {   // looking ahead, or at Pip when he is near; squeezed shut by a fright
+      const px = ex + (-.6 + (lookX * .9 + .6) * near) * s * k, py = ey + (.3 + (lookY * .8 - .3) * near) * s * k, sq = 1 - .55 * shock;
+      ctx.fillStyle = '#fffaf0'; ctx.beginPath(); ctx.ellipse(ex, ey, 2 * s * k, 2.4 * s * k * sq, 0, 0, 7); ctx.fill();
+      ctx.fillStyle = '#2b2018'; ctx.beginPath(); ctx.ellipse(px, py, 1.15 * s * k, 1.15 * s * k * sq, 0, 0, 7); ctx.fill();
+      ctx.fillStyle = '#ffffff'; ctx.beginPath(); ctx.arc(px - .35 * s * k, py - .55 * s * k * sq, .45 * s * k, 0, 7); ctx.fill();
     };
     const blush = (bx, by) => { ctx.fillStyle = 'rgba(255,128,128,.32)'; ctx.beginPath(); ctx.ellipse(bx, by, 1.6 * s, .9 * s, 0, 0, 7); ctx.fill(); };
     if (e.state === 'squash') { ball(0, -2 * s, 8 * s, 2.6 * s, ['#b98a58', '#8a5e38', '#5e3e24']); ctx.restore(); return; }
@@ -2729,7 +2740,7 @@
       for (const dx of [-3.6, 0, 3.6]) { ctx.beginPath(); ctx.moveTo(dx * s, -12.6 * s); ctx.quadraticCurveTo(dx * 1.35 * s, -7 * s, dx * s, -1.4 * s); ctx.stroke(); }
       rim(0, -7 * s, 7.5 * s, 6.6 * s, 'rgba(255,214,150,.55)');
       const lf = ctx.createLinearGradient(0, -16 * s, 0, -13 * s); lf.addColorStop(0, '#b6ee7a'); lf.addColorStop(1, '#4f9a3a');
-      ctx.fillStyle = lf; ctx.beginPath(); ctx.ellipse(1.5 * s, -14.6 * s, 3.6 * s, 1.7 * s, -.6 + step * .1, 0, 7); ctx.fill();
+      ctx.fillStyle = lf; ctx.beginPath(); ctx.ellipse(1.5 * s, -14.6 * s, 3.6 * s, 1.7 * s, -.6 + step * .1 - .45 * near + .3 * shock, 0, 7); ctx.fill();
       ctx.strokeStyle = 'rgba(40,90,30,.6)'; ctx.lineWidth = .4 * s; ctx.beginPath(); ctx.moveTo(-.6 * s, -13.2 * s); ctx.lineTo(3.6 * s, -16 * s); ctx.stroke();
       eye(-3 * s, -8 * s); eye(1.8 * s, -8 * s); blush(-4.8 * s, -5.2 * s); blush(3.6 * s, -5.2 * s);
     } else if (e.kind === 'snail') {    // Shellback snail: retreats into a kickable shell
@@ -2740,27 +2751,28 @@
         }
         ctx.fillStyle = 'rgba(255,255,255,.4)'; ctx.beginPath(); ctx.ellipse(-1.6 * L * s, -10.8 * s, 2.2 * s, 1 * s, -.5 * L, 0, 7); ctx.fill();
       };
-      if (e.state === 'walk') {
+      if (e.state === 'walk') {   // shy: the head draws back under the shell as Pip comes close
+        const r = Math.max(shock, near * .75), hx = 5.2 * r * s, st = 1 - .65 * r;
         const body = ctx.createLinearGradient(0, -5 * s, 0, 0); body.addColorStop(0, '#d2f4e2'); body.addColorStop(1, '#7fb99c');
-        ctx.fillStyle = body; ctx.beginPath(); ctx.ellipse(-3 * s, -2.2 * s, 7.5 * s, 2.4 * s, 0, 0, 7); ctx.fill();
-        ctx.beginPath(); ctx.ellipse(-7.5 * s, -5 * s, 2.3 * s, 3.5 * s, -.3, 0, 7); ctx.fill();
-        ctx.strokeStyle = 'rgba(255,255,255,.55)'; ctx.lineWidth = .5 * s; ctx.beginPath(); ctx.moveTo(-9 * s, -3.6 * s); ctx.quadraticCurveTo(-4 * s, -4.8 * s, 3 * s, -3.4 * s); ctx.stroke();
-        ctx.strokeStyle = '#7fb39a'; ctx.lineWidth = .9 * s; ctx.beginPath(); ctx.moveTo(-8 * s, -8 * s); ctx.lineTo(-9.5 * s, -11.5 * s); ctx.stroke();
-        ctx.fillStyle = '#7fb39a'; ctx.beginPath(); ctx.arc(-9.5 * s, -11.6 * s, .7 * s, 0, 7); ctx.fill();
-        eye(-8 * s, -5.5 * s);
+        ctx.fillStyle = body; ctx.beginPath(); ctx.ellipse(-3 * s + hx * .5, -2.2 * s, (7.5 - 2.6 * r) * s, 2.4 * s, 0, 0, 7); ctx.fill();
+        ctx.beginPath(); ctx.ellipse(-7.5 * s + hx, -5 * s, 2.3 * s, 3.5 * s, -.3, 0, 7); ctx.fill();
+        ctx.strokeStyle = 'rgba(255,255,255,.55)'; ctx.lineWidth = .5 * s; ctx.beginPath(); ctx.moveTo(-9 * s + hx, -3.6 * s); ctx.quadraticCurveTo(-4 * s + hx * .5, -4.8 * s, 3 * s, -3.4 * s); ctx.stroke();
+        ctx.strokeStyle = '#7fb39a'; ctx.lineWidth = .9 * s; ctx.beginPath(); ctx.moveTo(-8 * s + hx, -8 * s); ctx.lineTo(-8 * s + hx - 1.5 * s * st, -8 * s - 3.5 * s * st); ctx.stroke();
+        ctx.fillStyle = '#7fb39a'; ctx.beginPath(); ctx.arc(-8 * s + hx - 1.5 * s * st, -8.1 * s - 3.5 * s * st, .7 * s, 0, 7); ctx.fill();
+        eye(-8 * s + hx, -5.5 * s);
       }
       shell();
     } else if (e.kind === 'hopper') {   // Puddlehop: a round frog that leaps toward you
-      const crouch = e.ground ? 1 : .8;
+      const crouch = (e.ground ? 1 : .8) * (1 - .15 * shock), puff = near * (.5 + .5 * Math.sin(e.t * .35)) ** 2;   // croaking at Pip
       for (const sd of [-1, 1]) ball(sd * 5.5 * s, -1.4 * s, 3.2 * s, 1.6 * s, ['#5fb878', '#3f8d58', '#2a6a40']);
       ball(0, -6 * s * crouch, 7.5 * s, 6 * s * crouch, ['#a6eab4', '#55ad6e', '#2c744a']);
       ctx.fillStyle = 'rgba(30,90,50,.35)'; for (const [sx, sy, r] of [[2.5, -9, 1.3], [4.6, -6.5, .9], [.6, -11, .8]]) { ctx.beginPath(); ctx.arc(sx * s, sy * s * crouch, r * s, 0, 7); ctx.fill(); }
-      ball(-1 * s, -3.8 * s, 4.6 * s, 2.9 * s, ['#fbffe6', '#d8f2b4', '#b3dc8e']);
+      ball(-1 * s, -3.8 * s, 4.6 * s * (1 + .25 * puff), 2.9 * s * (1 + .5 * puff), ['#fbffe6', '#d8f2b4', '#b3dc8e']);
       rim(0, -6 * s * crouch, 7.5 * s, 6 * s * crouch, 'rgba(230,255,200,.5)');
       eye(-3.5 * s, -11 * s * crouch); eye(2.5 * s, -11 * s * crouch);
       ctx.fillStyle = 'rgba(255,255,255,.35)'; ctx.beginPath(); ctx.ellipse(-3 * L * s, -8.8 * s * crouch, 1.8 * s, .8 * s, -.4 * L, 0, 7); ctx.fill();
     } else {                             // Puffwing: a fluffy flier
-      const flap = Math.sin(e.t * .3) * .8;
+      const flap = Math.sin(e.t * .3) * (.8 + .4 * near + .4 * shock);
       for (const sd of [-1, 1]) {
         ctx.save(); ctx.translate(sd * 5 * s, -8 * s); ctx.rotate(sd * flap);
         const wg = ctx.createLinearGradient(0, -2 * s, 0, 2.2 * s); wg.addColorStop(0, '#ffe3ee'); wg.addColorStop(1, '#e48fb4');
@@ -2779,7 +2791,15 @@
   function drawThoughts(arcs, at) {
     if (!arcs) return;
     // Kept quiet: a soft chosen path and only the closest alternatives, faint.
-    const fade = Math.max(.3, 1 - (frameNo - at) / 40), lw = Math.max(1, S * .34);
+    // They glow when the planner is tense (and in replays, which show its
+    // thinking), fade out a few tiles ahead of Pip so they do not run across
+    // the scenery, and give way to a landmark's scene.
+    let since = 1e9; for (const t of celebrated.values()) if (frameNo >= t) since = Math.min(since, frameNo - t);
+    const show = replay ? 1 : (.3 + .7 * smoothstep(tension / .45)) * (arrival ? 0 : smoothstep((since - CEL) / 40));
+    const fade = Math.max(.3, 1 - (frameNo - at) / 40) * show, lw = Math.max(1, S * .34);
+    if (fade < .01) return;
+    const x0 = W2D(pl.x + 6, 0)[0], x1 = W2D(pl.x + 6 + 8 * TS, 0)[0], reach = x => 1 - smoothstep((x - x0) / (x1 - x0));
+    const ink = (rgb, a) => { const q = ctx.createLinearGradient(x0, 0, x1, 0); q.addColorStop(0, `rgba(${rgb},${a})`); q.addColorStop(1, `rgba(${rgb},0)`); return q; };
     ctx.save(); ctx.lineCap = 'round'; ctx.lineJoin = 'round';
     for (const pass of [0, 1]) for (const a of arcs) {
       if ((pass === 1) !== a.chosen || (!a.chosen && a.rank > .2)) continue;
@@ -2787,10 +2807,13 @@
       const al = (a.chosen ? .5 : dead ? .1 + .12 * (1 - a.rank) : .05 + .1 * (1 - a.rank)) * fade;
       const path = () => { ctx.beginPath(); a.pts.forEach(([x, y], i) => { const [sx, sy] = W2D(x, y); i ? ctx.lineTo(sx, sy) : ctx.moveTo(sx, sy); }); };
       // A dark under-stroke keeps the lines readable over the bright painting.
-      path(); ctx.strokeStyle = `rgba(24,36,44,${(a.chosen ? .3 : .12) * al})`; ctx.lineWidth = (a.chosen ? lw * 1.8 : lw) + lw; ctx.stroke();
-      path(); ctx.strokeStyle = a.chosen ? `rgba(255,226,130,${al})` : dead ? `rgba(255,112,96,${al})` : `rgba(255,255,255,${al})`;
+      path(); ctx.strokeStyle = ink('24,36,44', (a.chosen ? .3 : .12) * al); ctx.lineWidth = (a.chosen ? lw * 1.8 : lw) + lw; ctx.stroke();
+      path(); ctx.strokeStyle = ink(a.chosen ? '255,226,130' : dead ? '255,112,96' : '255,255,255', al);
       ctx.lineWidth = a.chosen ? lw * 1.8 : lw; ctx.stroke();
-      if (dead) { const [ex, ey] = W2D(...a.pts[a.pts.length - 1]), r = S * 1.6; ctx.beginPath(); ctx.moveTo(ex - r, ey - r); ctx.lineTo(ex + r, ey + r); ctx.moveTo(ex + r, ey - r); ctx.lineTo(ex - r, ey + r); ctx.stroke(); }
+      if (dead) {
+        const [ex, ey] = W2D(...a.pts[a.pts.length - 1]), r = S * 1.6; ctx.strokeStyle = `rgba(255,112,96,${(al * reach(ex)).toFixed(3)})`;
+        ctx.beginPath(); ctx.moveTo(ex - r, ey - r); ctx.lineTo(ex + r, ey + r); ctx.moveTo(ex + r, ey - r); ctx.lineTo(ex - r, ey + r); ctx.stroke();
+      }
     }
     ctx.restore();
   }
@@ -3309,7 +3332,7 @@
   if (playing) raf = requestAnimationFrame(frame);
   // Test hook: lets the smoke test drive the simulation without a browser clock.
   window.__pipRun = {tick, reset, state: () => ({pl, enemies, seeds, maxX, dead, human, cam, viewW}), GAP, layout, tileAt: (x, y) => tileAt(x, y),
-    art: ci => { const ch = chunk(ci); return ch && {art: chunkArt(ch, Math.round(TS * S)), biome: ch.biome}; }, props: ci => { const ch = chunk(ci); return ch && ch.props ? ch.props.map(q => ({...q})) : []; }, dressing: ci => { const ch = chunk(ci); return ch && ch.dressing ? ch.dressing.list.map(q => ({...q})) : []; }, celebrated: () => [...celebrated.keys()], render: () => render(), lookAt, pace: ms => paced(ms), quality: () => ({level: pace.level, settled: pace.settled, windows: pace.windows, dpr, width: cv.width}), fx: () => ({parts: parts.length, prints: prints.length, printList: prints.map(q => ({...q})), rustled: rustle.size}), dayAt,
+    art: ci => { const ch = chunk(ci); return ch && {art: chunkArt(ch, Math.round(TS * S)), biome: ch.biome}; }, props: ci => { const ch = chunk(ci); return ch && ch.props ? ch.props.map(q => ({...q})) : []; }, dressing: ci => { const ch = chunk(ci); return ch && ch.dressing ? ch.dressing.list.map(q => ({...q})) : []; }, celebrated: () => [...celebrated.keys()], render: () => render(), lookAt, tension: () => tension, pace: ms => paced(ms), quality: () => ({level: pace.level, settled: pace.settled, windows: pace.windows, dpr, width: cv.width}), fx: () => ({parts: parts.length, prints: prints.length, printList: prints.map(q => ({...q})), rustled: rustle.size}), dayAt,
     scores: () => { const th = enemies.filter(e => e.state !== 'dead' && e.state !== 'squash' && Math.abs(e.x - pl.x) < 260); return OPTIONS.map(o => [o.dir, o.wait, o.hold, Math.round(simulate(o, th).score)]); },
     actions: () => actions(),
     tile: (x, y, v) => setTile(x, y, v),
