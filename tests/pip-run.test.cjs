@@ -178,7 +178,7 @@ for (const seed of [3, 11]) {
 // biome while footfalls kick up particles and leave prints in snow, cloud and
 // glowing moss (none in meadow grass).
 {
-  G.reset(5); const prints = {};
+  G.reset(5); const prints = {}, seen = {};
   strict = true;
   for (let f = 0; f < 60 * 200; f++) {
     G.tick();
@@ -186,11 +186,12 @@ for (const seed of [3, 11]) {
     drawn = 0; G.render();
     const b = G.biomeAt(G.state().pl.x);
     assert.ok(drawn > 300, `a whole frame draws (${drawn} calls in ${b})`);
-    prints[b] = Math.max(prints[b] || 0, G.fx().prints);
+    seen[b] = true;
+    for (const q of G.fx().printList) { const look = G.lookAt(q.x); (prints[look] = prints[look] || new Set()).add(q.x + ':' + q.at); }
   }
   strict = false;
-  assert.deepEqual(Object.keys(prints).sort(), ['caves', 'frost', 'meadow', 'sky'], 'rendered in all four biomes');
-  assert.equal(prints.meadow, 0, 'no prints in grass');
-  for (const b of ['frost', 'sky', 'caves']) assert.ok(prints[b] >= 10, `footprints in ${b} (${prints[b]})`);
+  assert.deepEqual(Object.keys(seen).sort(), ['caves', 'frost', 'meadow', 'sky'], 'rendered in all four biomes');
+  assert.ok(!prints.meadow, `no prints on grass (${prints.meadow && prints.meadow.size})`);
+  for (const b of ['frost', 'sky', 'caves']) assert.ok(prints[b] && prints[b].size >= 10, `footprints in ${b} (${prints[b] && prints[b].size})`);
 }
 console.log('Pip Run PASS: jump-sized gaps, finite physics, demo player progresses through 4 seeded worlds, reaches each chapter’s destination and plays its landmark scene, clears block rows that run up to a gap, and gets past ferries, lifts, crumble bridges, floating steps and podspitters, referee refuses traps and accepted walls stay passable, shared runs replay exactly as ghosts, the painted ground of all four biomes draws with sane geometry, once per chunk, route dressing stands on level ground, and whole frames render in every biome with footprints in snow, cloud and moss.');

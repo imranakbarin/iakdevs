@@ -95,6 +95,27 @@
   }
   const biomeOfChunk = ci => regionBiome(Math.floor(ci / REGION));
   const biomeAt = x => biomeOfChunk(Math.floor(x / (CW * TS)));
+  // Where two regions meet, the ground's look blends across 16 tiles around
+  // the border (the rules stay the chunk's own): the soil crossfades and the
+  // cap (grass, snow, cloud, moss) gives way in ragged patches.
+  const BLEND = [-7, 9];   // tiles from the border
+  function borderOf(ci) {
+    const pos = ci % REGION, r = Math.floor(ci / REGION);
+    if (pos === REGION - 1 && regionBiome(r + 1) !== regionBiome(r)) return {other: regionBiome(r + 1), xb: (ci + 1) * CW * TS, before: true};
+    if (pos === 0 && r > 0 && regionBiome(r - 1) !== regionBiome(r)) return {other: regionBiome(r - 1), xb: ci * CW * TS, before: false};
+    return null;
+  }
+  const smoothstep = q => (q = clamp(0, q, 1)) * q * (3 - 2 * q);
+  // How much the soil at world x looks like the next region's, and whether the
+  // cap on top of tile tx is already the next region's (in patches a few tiles long).
+  const nextSoil = (x, xb) => smoothstep((x - xb - BLEND[0] * TS) / ((BLEND[1] - BLEND[0]) * TS));
+  const patchNoise = tx => { const u = tx / 2.5, i = Math.floor(u), f = u - i, v = j => hash(seed ^ 0xb0d, i + j) % 1000 / 1000; return v(0) + (v(1) - v(0)) * f * f * (3 - 2 * f); };
+  const nextCap = (tx, xb) => nextSoil(tx * TS + 8, xb) > .15 + .7 * patchNoise(tx);
+  // The biome the ground at x looks like, for footsteps, prints and grass.
+  function lookAt(x) {
+    const tx = Math.floor(x / TS), ci = Math.floor(tx / CW), b = borderOf(ci), own = biomeOfChunk(ci);
+    return b && nextCap(tx, b.xb) === b.before ? b.other : own;
+  }
   // Wind gusts vary along the route: + pushes Pip forward, - is a headwind.
   const windAt = x => dsin(x * .0042 + (seed % 97));
 
@@ -432,7 +453,7 @@
   // What a footfall throws up depends on the ground: dust and grass clippings,
   // snow, cloud, or glowing spores in the caves.
   function kick(x, y, n, power = 1, m = surface()) {
-    const bio = biomeAt(x);
+    const bio = lookAt(x);
     for (let i = 0; i < n; i++) {
       const s = (i % 2 ? 1 : -1) * (.35 + (i * 7 % 5) * .22) * power, up = (.5 + (i * 3 % 4) * .3) * power, life = 26 + i % 3 * 7;
       if (bio === 'frost') parts.push({x: x + s * 1.5, y: y - .5, vx: s, vy: -up, life: life + 6, l0: life + 6, col: '#ffffff', r: 2 + i % 3 * .8, soft: true, g: .035, drag: .92});
@@ -445,7 +466,7 @@
   // Each footfall: a little kick, a footprint in snow or cloud (the moss
   // lights up under Pip's boots in the caves), petals where he runs through flowers.
   function stepFx(st) {
-    const m = surface(), x = pl.x + 6 + (st % 2 ? 1.5 : -1.5), y = pl.y + pl.h, bio = biomeAt(x);
+    const x = pl.x + 6 + (st % 2 ? 1.5 : -1.5), m = surface(x), y = pl.y + pl.h, bio = lookAt(x);
     if (bio !== 'meadow' || st % 2) kick(x, y, 1, .7, m);
     if (!pl.on && (m === 'snow' || m === 'cloud' || m === 'moss')) { prints.push({x, y, at: frameNo, m}); if (prints.length > 40) prints.shift(); }
     if (m === 'grass') {
@@ -844,7 +865,7 @@
     }
     chapter = {t: 0, num: r + 1, done: BIOMES[regionBiome(r)].name, mark: next.mark, next: next.name, sub: next.sub,
       seeds: seeds - journey.seeds0, time: (frameNo - journey.start) / RATE, tumbles: journey.tumbles, finds: seen.size - journey.finds0, vs};
-    journey.arrived = r; chapters++; sfx('arrive'); celebrated.set(r, frameNo);
+    journey.arrived = r; chapters++; sfx('arrive', {mark: regionBiome(r + 1)}); celebrated.set(r, frameNo);
     for (let k = 0; k < 4; k++) sparkle(arrival.gx + 8 + (k - 1.5) * 18, pl.y - 10 - (k % 2) * 14);
   }
   const clock = sec => `${Math.floor(sec / 60)}:${String(Math.floor(sec % 60)).padStart(2, '0')}`;
@@ -952,10 +973,10 @@
     const ms = name === 'land' ? (o && o.impact > 4 ? 6 : 0) : BUZZ[name];
     if (ms && human && usingTouch && typeof navigator !== 'undefined' && navigator.vibrate) try { navigator.vibrate(ms); } catch (_) {}
   };
-  function surface() {
+  function surface(fx = pl.x + 6) {
     if (pl.on) return biomeAt(pl.x) === 'sky' ? 'cloud' : 'wood';
-    const id = tileAt(Math.floor((pl.x + 6) / TS), Math.floor((pl.y + pl.h + 1) / TS));
-    if (id === EARTH) return {meadow: 'grass', frost: 'snow', sky: 'cloud', caves: 'moss'}[biomeAt(pl.x)];
+    const id = tileAt(Math.floor(fx / TS), Math.floor((pl.y + pl.h + 1) / TS));
+    if (id === EARTH) return {meadow: 'grass', frost: 'snow', sky: 'cloud', caves: 'moss'}[lookAt(fx)];
     const pillar = (id === PIPE_L || id === PIPE_R) && biomeAt(pl.x) === 'caves';   // columns are stumps, or stone pillars in the caves
     return id === CRUMBLE && biomeAt(pl.x) === 'caves' ? 'crystal' : id === STONE || pillar ? 'stone' : 'wood';
   }
@@ -1495,7 +1516,7 @@
     }
   }
   function paintChunk(ch, n) {
-    const k = n / TS, M = 1, bio = ch.biome, P = PAINT[bio], wx0 = ch.ci * CW * TS, L = chunks.get(ch.ci - 1), R = chunks.get(ch.ci + 1);
+    const k = n / TS, M = 1, bio = ch.biome, wx0 = ch.ci * CW * TS, L = chunks.get(ch.ci - 1), R = chunks.get(ch.ci + 1);
     // Tiles around this chunk: the rock goes on above a cave roof and below the band.
     const at = (x, y) => {
       if (y < 0) return bio === 'caves' && ch.t[clamp(0, x, CW - 1)] === CEIL ? CEIL : EMPTY;
@@ -1514,222 +1535,254 @@
     y0 = Math.max(0, y0 - 1); for (const p of props) y0 = Math.max(0, Math.min(y0, Math.floor((p.s * TS + 3 - PROP[p.kind][4]) / TS)));
     for (const d of dress) y0 = Math.max(0, Math.min(y0, Math.floor((d.s * TS - 36) / TS)));
     const c2 = document.createElement('canvas'); c2.width = (CW + 2 * M) * n; c2.height = Math.max(1, ROWS - y0) * n;
-    const g = c2.getContext('2d'), lin = (x0, y0, x1, y1, a, b) => { const q = g.createLinearGradient(x0, y0, x1, y1); q.addColorStop(0, a); q.addColorStop(1, b); return q; };
-    g.setTransform(k, 0, 0, k, M * n, -y0 * n); g.lineCap = 'round'; g.lineJoin = 'round';
-    // 1. The ground mass, rounded where two faces are open.
-    g.fillStyle = '#000';
-    for (let y = 0; y < ROWS; y++) for (let x = 0; x < CW; x++) if (mass(x, y)) {
-      const up = !mass(x, y - 1), dn = !mass(x, y + 1), lf = !mass(x - 1, y), rt = !mass(x + 1, y), r = 3.5;
-      g.beginPath(); g.roundRect(x * TS, y * TS, TS, TS, [up && lf ? r : 0, up && rt ? r : 0, dn && rt ? r : 0, dn && lf ? r : 0]); g.fill();
-    }
-    // 2. Inside it: soil darkening with depth, strata and speckle (all in world
-    //    coordinates, so neighbouring chunks meet without a seam).
-    g.globalCompositeOperation = 'source-atop';
-    const dg = g.createLinearGradient(0, 3 * TS, 0, ROWS * TS); dg.addColorStop(0, P.soil[0]); dg.addColorStop(.45, P.soil[1]); dg.addColorStop(1, P.soil[2]);
-    g.fillStyle = dg; g.fillRect(-TS, 0, (CW + 2) * TS, ROWS * TS);
-    for (let i = 0; i < 10; i++) {
-      const yb = 2 * TS + i * 21 + hash(seed ^ 0x57a, i) % 9;
-      g.strokeStyle = P.strata[i % 2]; g.lineWidth = 1.6 + (i % 3) * 1.4; g.beginPath();
-      for (let X = -TS; X <= (CW + 1) * TS; X += 4) { const w = wx0 + X; g.lineTo(X, yb + Math.sin(w * .045 + i * 1.7) * 2.2 + Math.sin(w * .012 + i) * 4); }
-      g.stroke();
-    }
-    const pat = g.createPattern && g.createPattern(grainTile(n), 'repeat');
-    if (pat) { g.save(); g.setTransform(1, 0, 0, 1, 0, 0); g.globalAlpha = P.grain; g.fillStyle = pat; g.fillRect(0, 0, c2.width, c2.height); g.restore(); }
-    const pebble = (x, y, r) => {
-      g.fillStyle = P.pebble[2]; g.beginPath(); g.ellipse(x + .35, y + .45, r * 1.15, r * .85, 0, 0, 7); g.fill();
-      const q = g.createRadialGradient(x - r * .4, y - r * .4, 0, x, y, r * 1.2); q.addColorStop(0, P.pebble[0]); q.addColorStop(1, P.pebble[1]);
-      g.fillStyle = q; g.beginPath(); g.ellipse(x, y, r * 1.1, r * .8, 0, 0, 7); g.fill();
-    };
-    const clear = 'rgba(0,0,0,0)', shades = {lf: lin(0, 0, 4.5, 0, P.lit, clear), rt: lin(TS, 0, TS - 6, 0, P.shade, clear), dn: lin(0, TS, 0, TS - 6, P.shade, clear), ao: lin(0, P.depth - 1, 0, P.depth + 6, P.ao, clear)};
-    for (let y = 0; y < ROWS; y++) for (let x = 0; x < CW; x++) if (mass(x, y)) {
-      const X = x * TS, Y = y * TS, up = !mass(x, y - 1), dn = !mass(x, y + 1), lf = !mass(x - 1, y), rt = !mass(x + 1, y), h = hv(x, y, 0x9eb), top = up ? 8 : 0;
-      for (let q = 0; q < 2; q++) { const hq = h >>> (q * 9); if (hq % 7 > 1) continue; pebble(X + 2.5 + (hq >>> 3) % 11, Y + top + 2.5 + (hq >>> 6) % (12 - top), .7 + (hq >>> 10) % 4 * .4); }
-      if (bio === 'meadow' && up && h % 3 === 0) {          // roots under the turf
-        const rx = X + 3 + (h >>> 4) % 10; g.strokeStyle = 'rgba(58,32,16,.55)'; g.lineWidth = .6;
-        g.beginPath(); g.moveTo(rx, Y + 4); g.quadraticCurveTo(rx + 2.5, Y + 8, rx + 1, Y + 10 + (h >>> 8) % 4); g.moveTo(rx + 1.3, Y + 7.5); g.quadraticCurveTo(rx - 1.5, Y + 9, rx - 2, Y + 11); g.stroke();
-      }
-      if (bio === 'sky' && h % 4 === 1) {                   // gold veins
-        g.strokeStyle = 'rgba(236,186,92,.6)'; g.lineWidth = .55; g.beginPath(); const vy = Y + 5 + (h >>> 4) % 8;
-        g.moveTo(X, vy); g.bezierCurveTo(X + 5, vy - 2.5, X + 10, vy + 2.5, X + 16, vy - 1); g.stroke();
-        g.fillStyle = 'rgba(255,236,170,.9)'; g.beginPath(); g.arc(X + 4 + (h >>> 7) % 8, vy - .6, .45, 0, 7); g.fill();
-      }
-      if ((bio === 'frost' || bio === 'caves') && !up && h % 9 === 2) {   // ice or crystal set in the rock
-        const cx = X + 4 + (h >>> 4) % 8, cy = Y + 4 + (h >>> 8) % 8, col = bio === 'frost' ? ['rgba(235,250,255,.95)', 'rgba(150,205,240,.8)'] : [['#9ffbe6', '#2fb79c'], ['#e2d2ff', '#8f62e0'], ['#ffd0ec', '#d06aa8']][h % 3];
-        if (bio === 'caves') { const q = g.createRadialGradient(cx, cy, 0, cx, cy, 6); q.addColorStop(0, col[0] + '66'); q.addColorStop(1, col[0] + '00'); g.fillStyle = q; g.fillRect(cx - 6, cy - 6, 12, 12); }
-        g.fillStyle = lin(cx - 2, cy - 3, cx + 2, cy + 3, col[0], col[1]); g.beginPath(); g.moveTo(cx, cy - 3.2); g.lineTo(cx + 1.6, cy); g.lineTo(cx, cy + 2.6); g.lineTo(cx - 1.6, cy); g.fill();
-      }
-      // Lit and shaded faces: one gradient each, moved from tile to tile.
-      const face = (on, q, fx, fy, fw, fh) => { if (!on) return; g.translate(X, Y); g.fillStyle = q; g.fillRect(fx, fy, fw, fh); g.translate(-X, -Y); };
-      face(lf, shades.lf, 0, 0, 4.5, TS); face(rt, shades.rt, TS - 6, 0, 6, TS); face(dn, shades.dn, 0, TS - 6, TS, 6);
-      face(up && at(x, y) === EARTH, shades.ao, 0, 0, TS, P.depth + 6);
-    }
-    g.globalCompositeOperation = 'source-over';
-    // 3. Under overhangs and roofs: roots, icicles, cloud fringe, stalactites.
-    const icicle = (x, y, len, w = 1) => {
-      g.fillStyle = lin(0, y, 0, y + len, 'rgba(255,255,255,.95)', 'rgba(170,215,250,.25)');
-      g.beginPath(); g.moveTo(x - w, y); g.quadraticCurveTo(x - w * .3, y + len * .5, x, y + len); g.quadraticCurveTo(x + w * .3, y + len * .5, x + w, y); g.fill();
-    };
-    if (bio === 'sky') for (let y = 0; y < ROWS; y++) for (let x = 0; x < CW;) {
-      // One cloud mass billows under each island: a scalloped edge, deeper in
-      // the middle, rounding off at the ends, lit above and lavender below.
-      if (!(mass(x, y) && !mass(x, y + 1))) { x++; continue; }
-      let b = x; while (b < CW && mass(b, y) && !mass(b, y + 1)) b++;
-      const XA = x * TS - (mass(x - 1, y) ? 0 : 2), XB = b * TS + (mass(b, y) ? 0 : 2), Yb = (y + 1) * TS, endL = !mass(x - 1, y), endR = !mass(b, y);
-      const depth = X => { const w = wx0 + X, taper = Math.min(1, endL ? (X - XA) / 10 : 1, endR ? (XB - X) / 10 : 1);
-        return Math.max(0, taper) * (3.2 + 2.4 * (.5 + .5 * Math.sin(w * .06 + y)) + 1.8 * Math.abs(Math.sin(w * Math.PI / 9))); };
-      g.beginPath(); g.moveTo(XA, Yb - 4);
-      for (let X = XA; X <= XB; X += 1.5) g.lineTo(X, Yb + depth(X));
-      g.lineTo(XB, Yb - 4); g.closePath();
-      g.fillStyle = lin(0, Yb - 4, 0, Yb + 8, '#fbfaff', '#cbc2ec'); g.fill();
-      g.strokeStyle = 'rgba(255,255,255,.7)'; g.lineWidth = .6; g.beginPath();
-      for (let X = XA + 2; X <= XB - 2; X += 1.5) { const d = depth(X) - 1.6; X === XA + 2 ? g.moveTo(X, Yb + d * .55) : g.lineTo(X, Yb + d * .55); } g.stroke();
-      x = b;
-    }
-    for (let y = 0; y < ROWS; y++) for (let x = 0; x < CW; x++) if (mass(x, y) && !mass(x, y + 1)) {
-      const X = x * TS, Yb = (y + 1) * TS, hu = hv(x, y, 0xd0d);
-      for (let i = 0; i < 3; i++) {
-        const hq = hash(hu, i), sx = X + 2 + i * 5 + (hq % 30) / 10 + (bio === 'sky' ? (hq >>> 12) % 9 - 4 : 0);
-        if (bio === 'meadow' && hq % 3 === 0) { g.strokeStyle = 'rgba(70,40,20,.7)'; g.lineWidth = .55; g.beginPath(); g.moveTo(sx, Yb - 1); g.quadraticCurveTo(sx + 1.4, Yb + 2, sx + .4, Yb + 2 + (hq >>> 4) % 5); g.stroke(); }
-        else if (bio === 'frost' && hq % 4) icicle(sx, Yb - .6, 2.5 + (hq >>> 4) % 7, .9 + (hq >>> 8) % 3 * .3);
-        else if (bio === 'sky' && hq % 7 === 0) {   // now and then a puff hangs below the billow
-          const r = 2.2 + (hq >>> 4) % 4 * .5, cy = Yb + 4 + (hq >>> 8) % 3, q = g.createRadialGradient(sx - r * .35, cy - r * .5, 0, sx, cy, r * 1.05);
-          q.addColorStop(0, '#ffffff'); q.addColorStop(.55, '#ece8fa'); q.addColorStop(1, '#bdb3e4');
-          g.fillStyle = q; g.beginPath(); g.arc(sx, cy, r, 0, 7); g.fill();
-        } else if (bio === 'caves' && hq % 3 !== 2) {
-          const len = 3 + (hq >>> 6) % 9, w = 1.4 + (hq >>> 10) % 3 * .6;
-          g.fillStyle = lin(0, Yb, 0, Yb + len, P.soil[1], P.soil[2]); g.beginPath(); g.moveTo(sx - w, Yb - .5); g.quadraticCurveTo(sx - w * .3, Yb + len * .5, sx, Yb + len); g.quadraticCurveTo(sx + w * .3, Yb + len * .5, sx + w, Yb - .5); g.fill();
-          g.strokeStyle = 'rgba(170,150,255,.28)'; g.lineWidth = .35; g.beginPath(); g.moveTo(sx - w * .8, Yb); g.quadraticCurveTo(sx - w * .3, Yb + len * .5, sx, Yb + len); g.stroke();
-          if (hq % 5 === 0) { g.fillStyle = 'rgba(140,255,230,.85)'; g.beginPath(); g.arc(sx, Yb + len + .9, .5, 0, 7); g.fill(); }
+    const g = c2.getContext('2d'), border = borderOf(ch.ci);
+    // Steps 1-5 paint the ground in one biome's look (a border chunk is painted
+    // in both and blended below).
+    const ground = (g, bio, {base = true, caps = true, keep = null, seam = false, lo = 0, hi = CW, crop = 0} = {}) => {
+      const P = PAINT[bio], lin = (x0, y0, x1, y1, a, b) => { const q = g.createLinearGradient(x0, y0, x1, y1); q.addColorStop(0, a); q.addColorStop(1, b); return q; };
+      g.setTransform(k, 0, 0, k, (M - crop) * n, -y0 * n);   // crop: the canvas starts that many tiles in g.lineCap = 'round'; g.lineJoin = 'round';
+      if (base) {
+        // 1. The ground mass, rounded where two faces are open.
+        g.fillStyle = '#000';
+        for (let y = 0; y < ROWS; y++) for (let x = lo; x < hi; x++) if (mass(x, y)) {
+          const up = !mass(x, y - 1), dn = !mass(x, y + 1), lf = !mass(x - 1, y), rt = !mass(x + 1, y), r = 3.5;
+          g.beginPath(); g.roundRect(x * TS, y * TS, TS, TS, [up && lf ? r : 0, up && rt ? r : 0, dn && rt ? r : 0, dn && lf ? r : 0]); g.fill();
         }
-      }
-    }
-    // 4. The cap: grass, snow, cloud or glowing moss, overhanging open edges.
-    const flower = (fx, fy, v) => {
-      const kind = v % 3, hgt = 2 + v % 2 * 1.2, cx = fx + .2, cy = fy - hgt;
-      g.strokeStyle = '#3f8a30'; g.lineWidth = .45; g.beginPath(); g.moveTo(fx, fy + 1); g.quadraticCurveTo(fx + .5, fy - hgt * .5, cx, cy); g.stroke();
-      if (kind === 0) {
-        g.fillStyle = '#fffaf0'; for (let p = 0; p < 5; p++) { const an = p * 1.2566 + v; g.beginPath(); g.ellipse(cx + Math.cos(an) * .95, cy + Math.sin(an) * .95, .75, .5, an, 0, 7); g.fill(); }
-        g.fillStyle = '#f5c03a'; g.beginPath(); g.arc(cx, cy, .55, 0, 7); g.fill();
-      } else if (kind === 1) {
-        g.fillStyle = '#ffd23f'; for (let p = 0; p < 5; p++) { const an = p * 1.2566; g.beginPath(); g.arc(cx + Math.cos(an) * .7, cy + Math.sin(an) * .7, .6, 0, 7); g.fill(); }
-        g.fillStyle = '#e39a17'; g.beginPath(); g.arc(cx, cy, .4, 0, 7); g.fill();
-      } else {
-        g.fillStyle = '#f29ab8'; for (const [dx, dy] of [[-.5, 0], [.5, 0], [0, -.6]]) { g.beginPath(); g.arc(cx + dx, cy + dy, .55, 0, 7); g.fill(); }
-        g.fillStyle = '#fff0f5'; g.beginPath(); g.arc(cx - .2, cy - .3, .2, 0, 7); g.fill();
-      }
-    };
-    const glowcap = (fx, fy, v) => {
-      const hgt = 2 + v % 3 * .8, q = g.createRadialGradient(fx, fy - hgt, 0, fx, fy - hgt, 5); q.addColorStop(0, 'rgba(120,255,230,.45)'); q.addColorStop(1, 'rgba(120,255,230,0)');
-      g.fillStyle = q; g.fillRect(fx - 5, fy - hgt - 5, 10, 10);
-      g.strokeStyle = '#cfeee6'; g.lineWidth = .6; g.beginPath(); g.moveTo(fx, fy + .8); g.lineTo(fx, fy - hgt); g.stroke();
-      g.fillStyle = '#6ff5d6'; g.beginPath(); g.ellipse(fx, fy - hgt, 1.6, 1, 0, Math.PI, 0); g.fill();
-      g.fillStyle = '#e6fff9'; g.beginPath(); g.arc(fx - .5, fy - hgt - .5, .3, 0, 7); g.fill();
-    };
-    const wave = X => { const w = wx0 + X, b3 = Math.floor(w / 3), f = w / 3 - b3; return Math.sin(w * .71) * .4 + Math.sin(w * .23 + 1.3) * .75 + (hash(seed ^ 0xd21, b3) % 7 === 0 ? 1.8 * Math.sin(Math.PI * f) : 0); };
-    const crest = X => {                         // the top edge: flat turf, snow lumps, cloud billows
-      const w = wx0 + X;
-      if (bio === 'frost') return -.6 - Math.max(0, Math.sin(w * .42 + Math.sin(w * .09) * 2)) * 1.1;
-      if (bio === 'sky') { const b6 = Math.floor(w / 6), f = w / 6 - b6; return -.4 - Math.sqrt(Math.max(0, 1 - (f * 2 - 1) ** 2)) * (1.1 + hash(seed ^ 0x5c1, b6) % 3 * .55); }
-      return -.6;
-    };
-    const cap = (a, b, y) => {
-      const XA = a * TS, XB = b * TS, Y = y * TS, d = P.depth, lipL = !mass(a - 1, y), lipR = !mass(b, y), dl = 1 + hv(a, y, 0x11) % 4, dr = 1 + hv(b, y, 0x12) % 4;
-      g.beginPath();
-      if (lipL) { g.moveTo(XA - 1.3, Y + d + dl); g.quadraticCurveTo(XA - 2.2, Y + .6, XA + 1, Y + crest(XA + 1)); } else g.moveTo(XA, Y + crest(XA));
-      for (let X = XA + 1.5; X < XB - 1; X += 1.5) g.lineTo(X, Y + crest(X));
-      if (lipR) { g.lineTo(XB - 1, Y + crest(XB - 1)); g.quadraticCurveTo(XB + 2.2, Y + .6, XB + 1.3, Y + d + dr); g.quadraticCurveTo(XB + .6, Y + d + dr + 1.6, XB - 1.6, Y + d + wave(XB - 1.6)); }
-      else { g.lineTo(XB, Y + crest(XB)); g.lineTo(XB, Y + d + wave(XB)); }
-      for (let X = XB - 3; X > XA + 1.6; X -= 1.5) g.lineTo(X, Y + d + wave(X));
-      if (lipL) { g.lineTo(XA + 1.6, Y + d + wave(XA + 1.6)); g.quadraticCurveTo(XA - .6, Y + d + dl + 1.6, XA - 1.3, Y + d + dl); } else g.lineTo(XA, Y + d + wave(XA));
-      g.closePath();
-      const q = g.createLinearGradient(0, Y - 2.5, 0, Y + d + 3); q.addColorStop(0, P.cap[0]); q.addColorStop(.28, P.cap[1]); q.addColorStop(.68, P.cap[2]); q.addColorStop(1, P.cap[3]);
-      g.fillStyle = q; g.fill();
-      if (bio === 'frost') { if (lipR) for (const o of [-.4, .9]) icicle(XB + o, Y + d + dr - .4, 2 + hv(b, y, 0x1c1 + o * 8) % 5, .8); if (lipL) icicle(XA - .6, Y + d + dl - .4, 2 + hv(a, y, 0x1c2) % 5, .8); }
-      for (let x = a; x < b; x++) {
-        const X = x * TS, hf = hv(x, y, 0xf10);
-        const blade = (bx, by, bh, lean, col, w = .6) => { g.fillStyle = col; g.beginPath(); g.moveTo(bx - w, by); g.quadraticCurveTo(bx + lean * .4, by - bh * .55, bx + lean, by - bh); g.quadraticCurveTo(bx + lean * .3 + .25, by - bh * .45, bx + w, by); g.fill(); };
-        if (P.blade) for (let i = 0; i < 8; i++) {   // blades of grass (tufts of moss) along the top
-          const hb = hash(hv(x, y, 0xb1a), i), bx = X + i * 2 + (hb % 10) * .16, bh = (bio === 'caves' ? 1 : 1.8) + (hb >>> 4) % 10 * (bio === 'caves' ? .24 : .3), lean = ((hb >>> 8) % 11 - 5) * .15;
-          blade(bx, Y + 1.3, bh, lean, P.blade[(hb >>> 12) % 4]);
+        // 2. Inside it: soil darkening with depth, strata and speckle (all in world
+        //    coordinates, so neighbouring chunks meet without a seam).
+        g.globalCompositeOperation = 'source-atop';
+        const dg = g.createLinearGradient(0, 3 * TS, 0, ROWS * TS); dg.addColorStop(0, P.soil[0]); dg.addColorStop(.45, P.soil[1]); dg.addColorStop(1, P.soil[2]);
+        g.fillStyle = dg; g.fillRect(-TS, 0, (CW + 2) * TS, ROWS * TS);
+        for (let i = 0; i < 10; i++) {
+          const yb = 2 * TS + i * 21 + hash(seed ^ 0x57a, i) % 9;
+          g.strokeStyle = P.strata[i % 2]; g.lineWidth = 1.6 + (i % 3) * 1.4; g.beginPath();
+          for (let X = -TS; X <= (CW + 1) * TS; X += 4) { const w = wx0 + X; g.lineTo(X, yb + Math.sin(w * .045 + i * 1.7) * 2.2 + Math.sin(w * .012 + i) * 4); }
+          g.stroke();
         }
-        if (bio === 'meadow') {
-          const ht = hv(x, y, 0x7f7);
-          if (ht % 3 === 0) { const tx = X + 2 + ht % 12; for (const [dl, hh, c] of [[-1.6, 3.6, 0], [0, 5, 2], [1.7, 3.9, 1], [.6, 4.4, 3]]) blade(tx + dl * .6, Y + 1.2, hh + (ht >>> 6) % 3 * .5, dl, P.blade[c], .7); }
-          for (let i = 0; i < 6; i++) {             // brush strokes through the turf
-            const hs = hash(ht, i), sx = X + 1 + i * 2.6 + hs % 2, sy = Y + 1.6 + (hs >>> 3) % 3;
-            g.strokeStyle = hs % 3 ? 'rgba(52,108,38,.45)' : 'rgba(226,250,160,.55)'; g.lineWidth = .5; g.beginPath(); g.moveTo(sx, sy + 2); g.quadraticCurveTo(sx + .4, sy + .8, sx + .2 + (hs >>> 6) % 3 * .3, sy); g.stroke();
+        const pat = g.createPattern && g.createPattern(grainTile(n), 'repeat');
+        if (pat) { g.save(); g.setTransform(1, 0, 0, 1, 0, 0); g.globalAlpha = P.grain; g.fillStyle = pat; g.fillRect(0, 0, c2.width, c2.height); g.restore(); }
+        const pebble = (x, y, r) => {
+          g.fillStyle = P.pebble[2]; g.beginPath(); g.ellipse(x + .35, y + .45, r * 1.15, r * .85, 0, 0, 7); g.fill();
+          const q = g.createRadialGradient(x - r * .4, y - r * .4, 0, x, y, r * 1.2); q.addColorStop(0, P.pebble[0]); q.addColorStop(1, P.pebble[1]);
+          g.fillStyle = q; g.beginPath(); g.ellipse(x, y, r * 1.1, r * .8, 0, 0, 7); g.fill();
+        };
+        const clear = 'rgba(0,0,0,0)', shades = {lf: lin(0, 0, 4.5, 0, P.lit, clear), rt: lin(TS, 0, TS - 6, 0, P.shade, clear), dn: lin(0, TS, 0, TS - 6, P.shade, clear), ao: lin(0, P.depth - 1, 0, P.depth + 6, P.ao, clear)};
+        for (let y = 0; y < ROWS; y++) for (let x = lo; x < hi; x++) if (mass(x, y)) {
+          const X = x * TS, Y = y * TS, up = !mass(x, y - 1), dn = !mass(x, y + 1), lf = !mass(x - 1, y), rt = !mass(x + 1, y), h = hv(x, y, 0x9eb), top = up ? 8 : 0;
+          for (let q = 0; q < 2; q++) { const hq = h >>> (q * 9); if (hq % 7 > 1) continue; pebble(X + 2.5 + (hq >>> 3) % 11, Y + top + 2.5 + (hq >>> 6) % (12 - top), .7 + (hq >>> 10) % 4 * .4); }
+          if (bio === 'meadow' && up && h % 3 === 0) {          // roots under the turf
+            const rx = X + 3 + (h >>> 4) % 10; g.strokeStyle = 'rgba(58,32,16,.55)'; g.lineWidth = .6;
+            g.beginPath(); g.moveTo(rx, Y + 4); g.quadraticCurveTo(rx + 2.5, Y + 8, rx + 1, Y + 10 + (h >>> 8) % 4); g.moveTo(rx + 1.3, Y + 7.5); g.quadraticCurveTo(rx - 1.5, Y + 9, rx - 2, Y + 11); g.stroke();
+          }
+          if (bio === 'sky' && h % 4 === 1) {                   // gold veins
+            g.strokeStyle = 'rgba(236,186,92,.6)'; g.lineWidth = .55; g.beginPath(); const vy = Y + 5 + (h >>> 4) % 8;
+            g.moveTo(X, vy); g.bezierCurveTo(X + 5, vy - 2.5, X + 10, vy + 2.5, X + 16, vy - 1); g.stroke();
+            g.fillStyle = 'rgba(255,236,170,.9)'; g.beginPath(); g.arc(X + 4 + (h >>> 7) % 8, vy - .6, .45, 0, 7); g.fill();
+          }
+          if ((bio === 'frost' || bio === 'caves') && !up && h % 9 === 2) {   // ice or crystal set in the rock
+            const cx = X + 4 + (h >>> 4) % 8, cy = Y + 4 + (h >>> 8) % 8, col = bio === 'frost' ? ['rgba(235,250,255,.95)', 'rgba(150,205,240,.8)'] : [['#9ffbe6', '#2fb79c'], ['#e2d2ff', '#8f62e0'], ['#ffd0ec', '#d06aa8']][h % 3];
+            if (bio === 'caves') { const q = g.createRadialGradient(cx, cy, 0, cx, cy, 6); q.addColorStop(0, col[0] + '66'); q.addColorStop(1, col[0] + '00'); g.fillStyle = q; g.fillRect(cx - 6, cy - 6, 12, 12); }
+            g.fillStyle = lin(cx - 2, cy - 3, cx + 2, cy + 3, col[0], col[1]); g.beginPath(); g.moveTo(cx, cy - 3.2); g.lineTo(cx + 1.6, cy); g.lineTo(cx, cy + 2.6); g.lineTo(cx - 1.6, cy); g.fill();
+          }
+          // Lit and shaded faces: one gradient each, moved from tile to tile.
+          const face = (on, q, fx, fy, fw, fh) => { if (!on) return; g.translate(X, Y); g.fillStyle = q; g.fillRect(fx, fy, fw, fh); g.translate(-X, -Y); };
+          face(lf, shades.lf, 0, 0, 4.5, TS); face(rt, shades.rt, TS - 6, 0, 6, TS); face(dn, shades.dn, 0, TS - 6, TS, 6);
+          face(up && at(x, y) === EARTH, shades.ao, 0, 0, TS, P.depth + 6);
+        }
+        g.globalCompositeOperation = 'source-over';
+      }
+      const icicle = (x, y, len, w = 1) => {
+        g.fillStyle = lin(0, y, 0, y + len, 'rgba(255,255,255,.95)', 'rgba(170,215,250,.25)');
+        g.beginPath(); g.moveTo(x - w, y); g.quadraticCurveTo(x - w * .3, y + len * .5, x, y + len); g.quadraticCurveTo(x + w * .3, y + len * .5, x + w, y); g.fill();
+      };
+      if (base) {
+        // 3. Under overhangs and roofs: roots, icicles, cloud fringe, stalactites.
+        if (bio === 'sky') for (let y = 0; y < ROWS; y++) for (let x = lo; x < hi;) {
+          // One cloud mass billows under each island: a scalloped edge, deeper in
+          // the middle, rounding off at the ends, lit above and lavender below.
+          if (!(mass(x, y) && !mass(x, y + 1))) { x++; continue; }
+          let b = x; while (b < CW && mass(b, y) && !mass(b, y + 1)) b++;
+          const XA = x * TS - (mass(x - 1, y) ? 0 : 2), XB = b * TS + (mass(b, y) ? 0 : 2), Yb = (y + 1) * TS, endL = !mass(x - 1, y), endR = !mass(b, y);
+          const depth = X => { const w = wx0 + X, taper = Math.min(1, endL ? (X - XA) / 10 : 1, endR ? (XB - X) / 10 : 1);
+            return Math.max(0, taper) * (3.2 + 2.4 * (.5 + .5 * Math.sin(w * .06 + y)) + 1.8 * Math.abs(Math.sin(w * Math.PI / 9))); };
+          g.beginPath(); g.moveTo(XA, Yb - 4);
+          for (let X = XA; X <= XB; X += 1.5) g.lineTo(X, Yb + depth(X));
+          g.lineTo(XB, Yb - 4); g.closePath();
+          g.fillStyle = lin(0, Yb - 4, 0, Yb + 8, '#fbfaff', '#cbc2ec'); g.fill();
+          g.strokeStyle = 'rgba(255,255,255,.7)'; g.lineWidth = .6; g.beginPath();
+          for (let X = XA + 2; X <= XB - 2; X += 1.5) { const d = depth(X) - 1.6; X === XA + 2 ? g.moveTo(X, Yb + d * .55) : g.lineTo(X, Yb + d * .55); } g.stroke();
+          x = b;
+        }
+        for (let y = 0; y < ROWS; y++) for (let x = lo; x < hi; x++) if (mass(x, y) && !mass(x, y + 1)) {
+          const X = x * TS, Yb = (y + 1) * TS, hu = hv(x, y, 0xd0d);
+          for (let i = 0; i < 3; i++) {
+            const hq = hash(hu, i), sx = X + 2 + i * 5 + (hq % 30) / 10 + (bio === 'sky' ? (hq >>> 12) % 9 - 4 : 0);
+            if (bio === 'meadow' && hq % 3 === 0) { g.strokeStyle = 'rgba(70,40,20,.7)'; g.lineWidth = .55; g.beginPath(); g.moveTo(sx, Yb - 1); g.quadraticCurveTo(sx + 1.4, Yb + 2, sx + .4, Yb + 2 + (hq >>> 4) % 5); g.stroke(); }
+            else if (bio === 'frost' && hq % 4) icicle(sx, Yb - .6, 2.5 + (hq >>> 4) % 7, .9 + (hq >>> 8) % 3 * .3);
+            else if (bio === 'sky' && hq % 7 === 0) {   // now and then a puff hangs below the billow
+              const r = 2.2 + (hq >>> 4) % 4 * .5, cy = Yb + 4 + (hq >>> 8) % 3, q = g.createRadialGradient(sx - r * .35, cy - r * .5, 0, sx, cy, r * 1.05);
+              q.addColorStop(0, '#ffffff'); q.addColorStop(.55, '#ece8fa'); q.addColorStop(1, '#bdb3e4');
+              g.fillStyle = q; g.beginPath(); g.arc(sx, cy, r, 0, 7); g.fill();
+            } else if (bio === 'caves' && hq % 3 !== 2) {
+              const len = 3 + (hq >>> 6) % 9, w = 1.4 + (hq >>> 10) % 3 * .6;
+              g.fillStyle = lin(0, Yb, 0, Yb + len, P.soil[1], P.soil[2]); g.beginPath(); g.moveTo(sx - w, Yb - .5); g.quadraticCurveTo(sx - w * .3, Yb + len * .5, sx, Yb + len); g.quadraticCurveTo(sx + w * .3, Yb + len * .5, sx + w, Yb - .5); g.fill();
+              g.strokeStyle = 'rgba(170,150,255,.28)'; g.lineWidth = .35; g.beginPath(); g.moveTo(sx - w * .8, Yb); g.quadraticCurveTo(sx - w * .3, Yb + len * .5, sx, Yb + len); g.stroke();
+              if (hq % 5 === 0) { g.fillStyle = 'rgba(140,255,230,.85)'; g.beginPath(); g.arc(sx, Yb + len + .9, .5, 0, 7); g.fill(); }
+            }
           }
         }
-        if (bio === 'meadow') {
-          for (let i = 0; i < 2; i++) { const hb = hash(hv(x, y, 0xb1b), i); if (hb % 3) continue; const bx = X + 3 + (hb >>> 3) % 10, by = Y + d + wave(bx) - .6, bl = 1.2 + (hb >>> 8) % 4 * .5; g.strokeStyle = P.cap[3]; g.lineWidth = .55; g.beginPath(); g.moveTo(bx, by); g.quadraticCurveTo(bx + .5, by + bl * .6, bx + .2, by + bl); g.stroke(); }
-          if (hf % 5 === 0) flower(X + 3 + (hf >>> 3) % 10, Y - .6, hf >>> 7);
-        } else if (bio === 'caves' && hf % 6 === 0) glowcap(X + 3 + (hf >>> 3) % 10, Y - .3, hf >>> 7);
-        else if (bio === 'frost') for (let i = 0; i < 2; i++) {   // sparkle in the snow
-          const hs = hash(hf, i); if (hs % 2) continue; const sx = X + 2 + hs % 12, sy = Y + .6 + (hs >>> 4) % 4;
-          g.fillStyle = 'rgba(255,255,255,.95)'; g.fillRect(sx - .9, sy - .15, 1.8, .3); g.fillRect(sx - .15, sy - .9, .3, 1.8);
-          g.fillStyle = 'rgba(160,215,255,.85)'; g.beginPath(); g.arc(sx, sy, .3, 0, 7); g.fill();
-        } else if (bio === 'sky' && hf % 3 === 0) { g.fillStyle = 'rgba(255,214,120,.9)'; g.beginPath(); g.arc(X + 3 + hf % 10, Y + 2.2 + (hf >>> 4) % 2, .5, 0, 7); g.fill(); }
+      }
+      if (caps) {
+        // 4. The cap: grass, snow, cloud or glowing moss, overhanging open edges.
+        const flower = (fx, fy, v) => {
+          const kind = v % 3, hgt = 2 + v % 2 * 1.2, cx = fx + .2, cy = fy - hgt;
+          g.strokeStyle = '#3f8a30'; g.lineWidth = .45; g.beginPath(); g.moveTo(fx, fy + 1); g.quadraticCurveTo(fx + .5, fy - hgt * .5, cx, cy); g.stroke();
+          if (kind === 0) {
+            g.fillStyle = '#fffaf0'; for (let p = 0; p < 5; p++) { const an = p * 1.2566 + v; g.beginPath(); g.ellipse(cx + Math.cos(an) * .95, cy + Math.sin(an) * .95, .75, .5, an, 0, 7); g.fill(); }
+            g.fillStyle = '#f5c03a'; g.beginPath(); g.arc(cx, cy, .55, 0, 7); g.fill();
+          } else if (kind === 1) {
+            g.fillStyle = '#ffd23f'; for (let p = 0; p < 5; p++) { const an = p * 1.2566; g.beginPath(); g.arc(cx + Math.cos(an) * .7, cy + Math.sin(an) * .7, .6, 0, 7); g.fill(); }
+            g.fillStyle = '#e39a17'; g.beginPath(); g.arc(cx, cy, .4, 0, 7); g.fill();
+          } else {
+            g.fillStyle = '#f29ab8'; for (const [dx, dy] of [[-.5, 0], [.5, 0], [0, -.6]]) { g.beginPath(); g.arc(cx + dx, cy + dy, .55, 0, 7); g.fill(); }
+            g.fillStyle = '#fff0f5'; g.beginPath(); g.arc(cx - .2, cy - .3, .2, 0, 7); g.fill();
+          }
+        };
+        const glowcap = (fx, fy, v) => {
+          const hgt = 2 + v % 3 * .8, q = g.createRadialGradient(fx, fy - hgt, 0, fx, fy - hgt, 5); q.addColorStop(0, 'rgba(120,255,230,.45)'); q.addColorStop(1, 'rgba(120,255,230,0)');
+          g.fillStyle = q; g.fillRect(fx - 5, fy - hgt - 5, 10, 10);
+          g.strokeStyle = '#cfeee6'; g.lineWidth = .6; g.beginPath(); g.moveTo(fx, fy + .8); g.lineTo(fx, fy - hgt); g.stroke();
+          g.fillStyle = '#6ff5d6'; g.beginPath(); g.ellipse(fx, fy - hgt, 1.6, 1, 0, Math.PI, 0); g.fill();
+          g.fillStyle = '#e6fff9'; g.beginPath(); g.arc(fx - .5, fy - hgt - .5, .3, 0, 7); g.fill();
+        };
+        const wave = X => { const w = wx0 + X, b3 = Math.floor(w / 3), f = w / 3 - b3; return Math.sin(w * .71) * .4 + Math.sin(w * .23 + 1.3) * .75 + (hash(seed ^ 0xd21, b3) % 7 === 0 ? 1.8 * Math.sin(Math.PI * f) : 0); };
+        const crest = X => {                         // the top edge: flat turf, snow lumps, cloud billows
+          const w = wx0 + X;
+          if (bio === 'frost') return -.6 - Math.max(0, Math.sin(w * .42 + Math.sin(w * .09) * 2)) * 1.1;
+          if (bio === 'sky') { const b6 = Math.floor(w / 6), f = w / 6 - b6; return -.4 - Math.sqrt(Math.max(0, 1 - (f * 2 - 1) ** 2)) * (1.1 + hash(seed ^ 0x5c1, b6) % 3 * .55); }
+          return -.6;
+        };
+        const cap = (a, b, y, seamL = false, seamR = false) => {
+          const XA = a * TS, XB = b * TS, Y = y * TS, d = P.depth, edgeL = !mass(a - 1, y), edgeR = !mass(b, y), lipL = edgeL || seamL, lipR = edgeR || seamR, dl = 1 + hv(a, y, 0x11) % 4, dr = 1 + hv(b, y, 0x12) % 4;
+          g.beginPath();
+          if (lipL) { g.moveTo(XA - 1.3, Y + d + dl); g.quadraticCurveTo(XA - 2.2, Y + .6, XA + 1, Y + crest(XA + 1)); } else g.moveTo(XA, Y + crest(XA));
+          for (let X = XA + 1.5; X < XB - 1; X += 1.5) g.lineTo(X, Y + crest(X));
+          if (lipR) { g.lineTo(XB - 1, Y + crest(XB - 1)); g.quadraticCurveTo(XB + 2.2, Y + .6, XB + 1.3, Y + d + dr); g.quadraticCurveTo(XB + .6, Y + d + dr + 1.6, XB - 1.6, Y + d + wave(XB - 1.6)); }
+          else { g.lineTo(XB, Y + crest(XB)); g.lineTo(XB, Y + d + wave(XB)); }
+          for (let X = XB - 3; X > XA + 1.6; X -= 1.5) g.lineTo(X, Y + d + wave(X));
+          if (lipL) { g.lineTo(XA + 1.6, Y + d + wave(XA + 1.6)); g.quadraticCurveTo(XA - .6, Y + d + dl + 1.6, XA - 1.3, Y + d + dl); } else g.lineTo(XA, Y + d + wave(XA));
+          g.closePath();
+          const q = g.createLinearGradient(0, Y - 2.5, 0, Y + d + 3); q.addColorStop(0, P.cap[0]); q.addColorStop(.28, P.cap[1]); q.addColorStop(.68, P.cap[2]); q.addColorStop(1, P.cap[3]);
+          g.fillStyle = q; g.fill();
+          if (bio === 'frost') { if (edgeR) for (const o of [-.4, .9]) icicle(XB + o, Y + d + dr - .4, 2 + hv(b, y, 0x1c1 + o * 8) % 5, .8); if (edgeL) icicle(XA - .6, Y + d + dl - .4, 2 + hv(a, y, 0x1c2) % 5, .8); }
+          for (let x = a; x < b; x++) {
+            const X = x * TS, hf = hv(x, y, 0xf10);
+            const blade = (bx, by, bh, lean, col, w = .6) => { g.fillStyle = col; g.beginPath(); g.moveTo(bx - w, by); g.quadraticCurveTo(bx + lean * .4, by - bh * .55, bx + lean, by - bh); g.quadraticCurveTo(bx + lean * .3 + .25, by - bh * .45, bx + w, by); g.fill(); };
+            if (P.blade) for (let i = 0; i < 8; i++) {   // blades of grass (tufts of moss) along the top
+              const hb = hash(hv(x, y, 0xb1a), i), bx = X + i * 2 + (hb % 10) * .16, bh = (bio === 'caves' ? 1 : 1.8) + (hb >>> 4) % 10 * (bio === 'caves' ? .24 : .3), lean = ((hb >>> 8) % 11 - 5) * .15;
+              blade(bx, Y + 1.3, bh, lean, P.blade[(hb >>> 12) % 4]);
+            }
+            if (bio === 'meadow') {
+              const ht = hv(x, y, 0x7f7);
+              if (ht % 3 === 0) { const tx = X + 2 + ht % 12; for (const [dl, hh, c] of [[-1.6, 3.6, 0], [0, 5, 2], [1.7, 3.9, 1], [.6, 4.4, 3]]) blade(tx + dl * .6, Y + 1.2, hh + (ht >>> 6) % 3 * .5, dl, P.blade[c], .7); }
+              for (let i = 0; i < 6; i++) {             // brush strokes through the turf
+                const hs = hash(ht, i), sx = X + 1 + i * 2.6 + hs % 2, sy = Y + 1.6 + (hs >>> 3) % 3;
+                g.strokeStyle = hs % 3 ? 'rgba(52,108,38,.45)' : 'rgba(226,250,160,.55)'; g.lineWidth = .5; g.beginPath(); g.moveTo(sx, sy + 2); g.quadraticCurveTo(sx + .4, sy + .8, sx + .2 + (hs >>> 6) % 3 * .3, sy); g.stroke();
+              }
+            }
+            if (bio === 'meadow') {
+              for (let i = 0; i < 2; i++) { const hb = hash(hv(x, y, 0xb1b), i); if (hb % 3) continue; const bx = X + 3 + (hb >>> 3) % 10, by = Y + d + wave(bx) - .6, bl = 1.2 + (hb >>> 8) % 4 * .5; g.strokeStyle = P.cap[3]; g.lineWidth = .55; g.beginPath(); g.moveTo(bx, by); g.quadraticCurveTo(bx + .5, by + bl * .6, bx + .2, by + bl); g.stroke(); }
+              if (hf % 5 === 0) flower(X + 3 + (hf >>> 3) % 10, Y - .6, hf >>> 7);
+            } else if (bio === 'caves' && hf % 6 === 0) glowcap(X + 3 + (hf >>> 3) % 10, Y - .3, hf >>> 7);
+            else if (bio === 'frost') for (let i = 0; i < 2; i++) {   // sparkle in the snow
+              const hs = hash(hf, i); if (hs % 2) continue; const sx = X + 2 + hs % 12, sy = Y + .6 + (hs >>> 4) % 4;
+              g.fillStyle = 'rgba(255,255,255,.95)'; g.fillRect(sx - .9, sy - .15, 1.8, .3); g.fillRect(sx - .15, sy - .9, .3, 1.8);
+              g.fillStyle = 'rgba(160,215,255,.85)'; g.beginPath(); g.arc(sx, sy, .3, 0, 7); g.fill();
+            } else if (bio === 'sky' && hf % 3 === 0) { g.fillStyle = 'rgba(255,214,120,.9)'; g.beginPath(); g.arc(X + 3 + hf % 10, Y + 2.2 + (hf >>> 4) % 2, .5, 0, 7); g.fill(); }
+          }
+        };
+        // keep(x) picks the tiles this look covers; the next look's patches
+        // (seam) round over the previous one's and reach a tile into each neighbour.
+        const top = (x, y) => at(x, y) === EARTH && !mass(x, y - 1), x0 = seam ? -1 : 0, x1 = seam ? CW + 1 : CW;
+        for (let y = 0; y < ROWS; y++) for (let x = x0; x < x1;) {
+          if (!top(x, y) || (keep && !keep(x))) { x++; continue; }
+          let b = x; while (b < x1 && top(b, y) && (!keep || keep(b))) b++;
+          cap(x, b, y, seam && top(x - 1, y), seam && top(b, y));
+          x = b;
+        }
+      }
+      if (base) {
+        // 5. Stone blocks, each a little different, and stumps where the generator put columns.
+        const C = P.stone;
+        for (let y = 0; y < ROWS; y++) for (let x = lo; x < hi; x++) {
+          const id = at(x, y), X = x * TS, Y = y * TS, h = hv(x, y, 0x570), open = at(x, y - 1) === EMPTY;
+          if (id === STONE) {
+            g.fillStyle = C[3]; g.beginPath(); g.roundRect(X + .25, Y + .25, 15.5, 15.5, 2.2); g.fill();
+            const q = g.createLinearGradient(X, Y, X + 12, Y + 16); q.addColorStop(0, C[0]); q.addColorStop(.5, C[1]); q.addColorStop(1, C[2]);
+            g.fillStyle = q; g.beginPath(); g.roundRect(X + .9, Y + .9, 14.2, 14.2, 1.8); g.fill();
+            const j = (h % 7 - 3) * .03; if (j) { g.fillStyle = j > 0 ? `rgba(255,255,255,${j})` : `rgba(0,0,0,${-j})`; g.fill(); }
+            g.fillStyle = 'rgba(255,255,255,.38)'; g.fillRect(X + 1.8, Y + 1.2, 12.4, .9); g.fillRect(X + 1.2, Y + 1.8, .9, 11.6);
+            g.fillStyle = 'rgba(0,0,0,.2)'; g.fillRect(X + 1.8, Y + 13.9, 12.4, .9); g.fillRect(X + 13.9, Y + 1.8, .9, 12.4);
+            for (let i = 0; i < 5; i++) { const hs = hash(h, i); g.fillStyle = hs % 2 ? 'rgba(255,255,255,.3)' : 'rgba(0,0,0,.18)'; g.beginPath(); g.arc(X + 3 + hs % 10, Y + 3 + (hs >>> 5) % 10, .35 + (hs >>> 9) % 3 * .2, 0, 7); g.fill(); }
+            if (h % 4 === 0) { const cx = X + 4 + (h >>> 4) % 8; g.strokeStyle = 'rgba(0,0,0,.3)'; g.lineWidth = .45; g.beginPath(); g.moveTo(cx, Y + 1.5); g.lineTo(cx + 1.2, Y + 4.5); g.lineTo(cx - .4, Y + 7); g.lineTo(cx + .8, Y + 9.5); g.stroke(); }
+            if (bio === 'meadow' && open && h % 3) {        // moss on the open top
+              for (let i = 0; i < 4; i++) { const hm = hash(h, i + 9), mx = X + 2 + i * 4 + hm % 2; g.fillStyle = '#5c9a3a'; g.beginPath(); g.ellipse(mx, Y + 1.2, 2.5, 1.5 + (hm >>> 3) % 2 * .6, 0, 0, 7); g.fill(); g.fillStyle = '#93cf5a'; g.beginPath(); g.ellipse(mx - .4, Y + .7, 1.5, .7, 0, 0, 7); g.fill(); }
+            } else if (bio === 'frost' && open) {
+              g.fillStyle = lin(0, Y - 1.2, 0, Y + 3, '#ffffff', '#d5e5f6'); g.beginPath(); g.moveTo(X + .3, Y + 2.6); g.quadraticCurveTo(X - .2, Y - 1.2, X + 4, Y - 1); g.quadraticCurveTo(X + 8, Y - 1.8, X + 12, Y - 1); g.quadraticCurveTo(X + 16.2, Y - 1.2, X + 15.7, Y + 2.6); g.quadraticCurveTo(X + 8, Y + 3.6, X + .3, Y + 2.6); g.fill();
+            } else if (bio === 'sky') { g.strokeStyle = 'rgba(226,176,84,.6)'; g.lineWidth = .5; g.strokeRect(X + 3, Y + 3, 10, 10); }
+          } else if (id === PIPE_L && at(x, y - 1) !== PIPE_L) {
+            let hh = 0; while (at(x, y + hh) === PIPE_L) hh++;
+            const Hh = hh * TS, W = 32, frost = bio === 'frost', cave = bio === 'caves';
+            const B = cave ? ['#7a6f9c', '#554b78', '#3a3354', '#221d33'] : frost ? ['#b0a296', '#867868', '#5d5149', '#3c342f'] : ['#a77447', '#7f5334', '#5c3a22', '#382212'];
+            const sh = g.createRadialGradient(X + 16, Y + Hh, 0, X + 16, Y + Hh, 22); sh.addColorStop(0, 'rgba(20,10,4,.35)'); sh.addColorStop(1, 'rgba(20,10,4,0)'); g.fillStyle = sh; g.fillRect(X - 8, Y + Hh - 7, 48, 12);
+            const body = g.createLinearGradient(X, 0, X + W, 0); body.addColorStop(0, B[0]); body.addColorStop(.3, B[1]); body.addColorStop(.72, B[2]); body.addColorStop(1, B[3]);
+            g.fillStyle = body; g.beginPath(); g.moveTo(X + 1.5, Y + 3); g.lineTo(X + 1.5, Y + Hh - 3); g.quadraticCurveTo(X + 1, Y + Hh, X - 3, Y + Hh + 1.2); g.lineTo(X + W + 3, Y + Hh + 1.2); g.quadraticCurveTo(X + W - 1, Y + Hh, X + W - 1.5, Y + Hh - 3); g.lineTo(X + W - 1.5, Y + 3); g.closePath(); g.fill();
+            if (cave) for (let yy = Y + 9; yy < Y + Hh - 2; yy += 7) { g.strokeStyle = 'rgba(10,8,20,.35)'; g.lineWidth = .6; g.beginPath(); g.moveTo(X + 2, yy); g.quadraticCurveTo(X + 16, yy + 1.6, X + W - 2, yy); g.stroke(); }
+            else for (let i = 0; i < 9; i++) {           // bark furrows, catching the light on the left
+              const hb = hash(h, i), bx = X + 3.2 + i * 3.2 + (hb % 10) * .08;
+              g.strokeStyle = i < 3 ? 'rgba(255,228,190,.18)' : 'rgba(30,14,6,.42)'; g.lineWidth = .55 + (hb >>> 4) % 3 * .2;
+              g.beginPath(); g.moveTo(bx, Y + 6); for (let yy = Y + 8; yy <= Y + Hh; yy += 3) g.lineTo(bx + Math.sin(yy * .5 + i) * .5, yy); g.stroke();
+            }
+            g.fillStyle = B[2]; for (const [rx, rw] of [[X + 1, 5], [X + W - 1, 5], [X + 12, 4]]) { g.beginPath(); g.ellipse(rx, Y + Hh + 1, rw, 2.4, 0, Math.PI, 0); g.fill(); }
+            g.fillStyle = B[3]; g.beginPath(); g.ellipse(X + 16, Y + 3, 15, 3.6, 0, 0, 7); g.fill();
+            const face = g.createRadialGradient(X + 13, Y + 2.4, 0, X + 16, Y + 3, 14), fc = cave ? ['#9a8fc4', '#665c90', '#40395c'] : ['#f3d7a6', '#d3a46b', '#a87342'];
+            face.addColorStop(0, fc[0]); face.addColorStop(.6, fc[1]); face.addColorStop(1, fc[2]);
+            g.fillStyle = face; g.beginPath(); g.ellipse(X + 16, Y + 2.8, 13.6, 2.9, 0, 0, 7); g.fill();
+            if (!cave) { g.strokeStyle = 'rgba(140,84,40,.4)'; g.lineWidth = .4; for (const r of [3, 6.5, 10]) { g.beginPath(); g.ellipse(X + 16.3, Y + 2.85, r, r * .21, 0, 0, 7); g.stroke(); } }
+            if (frost) {                                   // a snow cap, drooping over the rim
+              g.fillStyle = lin(0, Y - 1.5, 0, Y + 6, '#ffffff', '#d3e3f5'); g.beginPath(); g.moveTo(X + .2, Y + 4); g.quadraticCurveTo(X - .5, Y - 1.4, X + 8, Y - 1.2); g.quadraticCurveTo(X + 16, Y - 2.4, X + 24, Y - 1.2); g.quadraticCurveTo(X + 32.5, Y - 1.4, X + 31.8, Y + 4);
+              g.quadraticCurveTo(X + 30, Y + 7.5, X + 27, Y + 5.6); g.quadraticCurveTo(X + 16, Y + 7, X + 6, Y + 5.6); g.quadraticCurveTo(X + 2, Y + 7.5, X + .2, Y + 4); g.fill();
+              for (const o of [4, 11, 21, 28]) icicle(X + o, Y + 6, 2 + hash(h, o) % 5, .8);
+            } else if (cave) {                             // crystals growing on the pillar
+              for (const [dx, hgt, w2, ci] of [[11, 9, 2.6, 0], [17, 13, 3.2, 1], [23, 7, 2.2, 2]]) {
+                const col = [['#9ffbe6', '#2fb79c'], ['#e2d2ff', '#8f62e0'], ['#ffd0ec', '#d06aa8']][(h + ci) % 3], gx = X + dx;
+                const q = g.createRadialGradient(gx, Y - hgt * .5, 0, gx, Y - hgt * .5, hgt); q.addColorStop(0, col[0] + '55'); q.addColorStop(1, col[0] + '00'); g.fillStyle = q; g.fillRect(gx - hgt, Y - hgt * 1.5, hgt * 2, hgt * 2);
+                g.fillStyle = lin(gx - w2, 0, gx + w2, 0, col[0], col[1]); g.beginPath(); g.moveTo(gx - w2, Y + 3); g.lineTo(gx, Y + 3 - hgt); g.lineTo(gx + w2, Y + 3); g.fill();
+              }
+            } else {                                       // moss on the rim, a shelf fungus on the side
+              for (let i = 0; i < 5; i++) { const hm = hash(h, i + 20), mx = X + 2 + i * 2.6 + hm % 2; g.fillStyle = '#5c9a3a'; g.beginPath(); g.ellipse(mx, Y + 3.6 + Math.abs(i - 2) * .4, 2.4, 1.4, 0, 0, 7); g.fill(); g.fillStyle = '#93cf5a'; g.beginPath(); g.ellipse(mx - .3, Y + 3, 1.4, .6, 0, 0, 7); g.fill(); }
+              if (hh > 1 && h % 2) { const fy = Y + 10 + h % 8; g.fillStyle = '#e0a860'; g.beginPath(); g.ellipse(X + W - 2, fy, 4, 1.6, -.15, Math.PI, 0); g.fill(); g.fillStyle = '#f6d39a'; g.beginPath(); g.ellipse(X + W - 2.4, fy - .5, 3, .7, -.15, Math.PI, 0); g.fill(); }
+            }
+          }
+        }
       }
     };
     ch.tops = [];
-    for (let y = 0; y < ROWS; y++) for (let x = 0; x < CW;) {
-      if (at(x, y) !== EARTH || mass(x, y - 1)) { x++; continue; }
-      let b = x; while (b < CW && at(b, y) === EARTH && !mass(b, y - 1)) b++;
-      cap(x, b, y); for (let q = x; q < b; q++) ch.tops.push([ch.ci * CW + q, y]);
-      x = b;
-    }
-    // 5. Stone blocks, each a little different, and stumps where the generator put columns.
-    const C = P.stone;
-    for (let y = 0; y < ROWS; y++) for (let x = 0; x < CW; x++) {
-      const id = at(x, y), X = x * TS, Y = y * TS, h = hv(x, y, 0x570), open = at(x, y - 1) === EMPTY;
-      if (id === STONE) {
-        g.fillStyle = C[3]; g.beginPath(); g.roundRect(X + .25, Y + .25, 15.5, 15.5, 2.2); g.fill();
-        const q = g.createLinearGradient(X, Y, X + 12, Y + 16); q.addColorStop(0, C[0]); q.addColorStop(.5, C[1]); q.addColorStop(1, C[2]);
-        g.fillStyle = q; g.beginPath(); g.roundRect(X + .9, Y + .9, 14.2, 14.2, 1.8); g.fill();
-        const j = (h % 7 - 3) * .03; if (j) { g.fillStyle = j > 0 ? `rgba(255,255,255,${j})` : `rgba(0,0,0,${-j})`; g.fill(); }
-        g.fillStyle = 'rgba(255,255,255,.38)'; g.fillRect(X + 1.8, Y + 1.2, 12.4, .9); g.fillRect(X + 1.2, Y + 1.8, .9, 11.6);
-        g.fillStyle = 'rgba(0,0,0,.2)'; g.fillRect(X + 1.8, Y + 13.9, 12.4, .9); g.fillRect(X + 13.9, Y + 1.8, .9, 12.4);
-        for (let i = 0; i < 5; i++) { const hs = hash(h, i); g.fillStyle = hs % 2 ? 'rgba(255,255,255,.3)' : 'rgba(0,0,0,.18)'; g.beginPath(); g.arc(X + 3 + hs % 10, Y + 3 + (hs >>> 5) % 10, .35 + (hs >>> 9) % 3 * .2, 0, 7); g.fill(); }
-        if (h % 4 === 0) { const cx = X + 4 + (h >>> 4) % 8; g.strokeStyle = 'rgba(0,0,0,.3)'; g.lineWidth = .45; g.beginPath(); g.moveTo(cx, Y + 1.5); g.lineTo(cx + 1.2, Y + 4.5); g.lineTo(cx - .4, Y + 7); g.lineTo(cx + .8, Y + 9.5); g.stroke(); }
-        if (bio === 'meadow' && open && h % 3) {        // moss on the open top
-          for (let i = 0; i < 4; i++) { const hm = hash(h, i + 9), mx = X + 2 + i * 4 + hm % 2; g.fillStyle = '#5c9a3a'; g.beginPath(); g.ellipse(mx, Y + 1.2, 2.5, 1.5 + (hm >>> 3) % 2 * .6, 0, 0, 7); g.fill(); g.fillStyle = '#93cf5a'; g.beginPath(); g.ellipse(mx - .4, Y + .7, 1.5, .7, 0, 0, 7); g.fill(); }
-        } else if (bio === 'frost' && open) {
-          g.fillStyle = lin(0, Y - 1.2, 0, Y + 3, '#ffffff', '#d5e5f6'); g.beginPath(); g.moveTo(X + .3, Y + 2.6); g.quadraticCurveTo(X - .2, Y - 1.2, X + 4, Y - 1); g.quadraticCurveTo(X + 8, Y - 1.8, X + 12, Y - 1); g.quadraticCurveTo(X + 16.2, Y - 1.2, X + 15.7, Y + 2.6); g.quadraticCurveTo(X + 8, Y + 3.6, X + .3, Y + 2.6); g.fill();
-        } else if (bio === 'sky') { g.strokeStyle = 'rgba(226,176,84,.6)'; g.lineWidth = .5; g.strokeRect(X + 3, Y + 3, 10, 10); }
-      } else if (id === PIPE_L && at(x, y - 1) !== PIPE_L) {
-        let hh = 0; while (at(x, y + hh) === PIPE_L) hh++;
-        const Hh = hh * TS, W = 32, frost = bio === 'frost', cave = bio === 'caves';
-        const B = cave ? ['#7a6f9c', '#554b78', '#3a3354', '#221d33'] : frost ? ['#b0a296', '#867868', '#5d5149', '#3c342f'] : ['#a77447', '#7f5334', '#5c3a22', '#382212'];
-        const sh = g.createRadialGradient(X + 16, Y + Hh, 0, X + 16, Y + Hh, 22); sh.addColorStop(0, 'rgba(20,10,4,.35)'); sh.addColorStop(1, 'rgba(20,10,4,0)'); g.fillStyle = sh; g.fillRect(X - 8, Y + Hh - 7, 48, 12);
-        const body = g.createLinearGradient(X, 0, X + W, 0); body.addColorStop(0, B[0]); body.addColorStop(.3, B[1]); body.addColorStop(.72, B[2]); body.addColorStop(1, B[3]);
-        g.fillStyle = body; g.beginPath(); g.moveTo(X + 1.5, Y + 3); g.lineTo(X + 1.5, Y + Hh - 3); g.quadraticCurveTo(X + 1, Y + Hh, X - 3, Y + Hh + 1.2); g.lineTo(X + W + 3, Y + Hh + 1.2); g.quadraticCurveTo(X + W - 1, Y + Hh, X + W - 1.5, Y + Hh - 3); g.lineTo(X + W - 1.5, Y + 3); g.closePath(); g.fill();
-        if (cave) for (let yy = Y + 9; yy < Y + Hh - 2; yy += 7) { g.strokeStyle = 'rgba(10,8,20,.35)'; g.lineWidth = .6; g.beginPath(); g.moveTo(X + 2, yy); g.quadraticCurveTo(X + 16, yy + 1.6, X + W - 2, yy); g.stroke(); }
-        else for (let i = 0; i < 9; i++) {           // bark furrows, catching the light on the left
-          const hb = hash(h, i), bx = X + 3.2 + i * 3.2 + (hb % 10) * .08;
-          g.strokeStyle = i < 3 ? 'rgba(255,228,190,.18)' : 'rgba(30,14,6,.42)'; g.lineWidth = .55 + (hb >>> 4) % 3 * .2;
-          g.beginPath(); g.moveTo(bx, Y + 6); for (let yy = Y + 8; yy <= Y + Hh; yy += 3) g.lineTo(bx + Math.sin(yy * .5 + i) * .5, yy); g.stroke();
-        }
-        g.fillStyle = B[2]; for (const [rx, rw] of [[X + 1, 5], [X + W - 1, 5], [X + 12, 4]]) { g.beginPath(); g.ellipse(rx, Y + Hh + 1, rw, 2.4, 0, Math.PI, 0); g.fill(); }
-        g.fillStyle = B[3]; g.beginPath(); g.ellipse(X + 16, Y + 3, 15, 3.6, 0, 0, 7); g.fill();
-        const face = g.createRadialGradient(X + 13, Y + 2.4, 0, X + 16, Y + 3, 14), fc = cave ? ['#9a8fc4', '#665c90', '#40395c'] : ['#f3d7a6', '#d3a46b', '#a87342'];
-        face.addColorStop(0, fc[0]); face.addColorStop(.6, fc[1]); face.addColorStop(1, fc[2]);
-        g.fillStyle = face; g.beginPath(); g.ellipse(X + 16, Y + 2.8, 13.6, 2.9, 0, 0, 7); g.fill();
-        if (!cave) { g.strokeStyle = 'rgba(140,84,40,.4)'; g.lineWidth = .4; for (const r of [3, 6.5, 10]) { g.beginPath(); g.ellipse(X + 16.3, Y + 2.85, r, r * .21, 0, 0, 7); g.stroke(); } }
-        if (frost) {                                   // a snow cap, drooping over the rim
-          g.fillStyle = lin(0, Y - 1.5, 0, Y + 6, '#ffffff', '#d3e3f5'); g.beginPath(); g.moveTo(X + .2, Y + 4); g.quadraticCurveTo(X - .5, Y - 1.4, X + 8, Y - 1.2); g.quadraticCurveTo(X + 16, Y - 2.4, X + 24, Y - 1.2); g.quadraticCurveTo(X + 32.5, Y - 1.4, X + 31.8, Y + 4);
-          g.quadraticCurveTo(X + 30, Y + 7.5, X + 27, Y + 5.6); g.quadraticCurveTo(X + 16, Y + 7, X + 6, Y + 5.6); g.quadraticCurveTo(X + 2, Y + 7.5, X + .2, Y + 4); g.fill();
-          for (const o of [4, 11, 21, 28]) icicle(X + o, Y + 6, 2 + hash(h, o) % 5, .8);
-        } else if (cave) {                             // crystals growing on the pillar
-          for (const [dx, hgt, w2, ci] of [[11, 9, 2.6, 0], [17, 13, 3.2, 1], [23, 7, 2.2, 2]]) {
-            const col = [['#9ffbe6', '#2fb79c'], ['#e2d2ff', '#8f62e0'], ['#ffd0ec', '#d06aa8']][(h + ci) % 3], gx = X + dx;
-            const q = g.createRadialGradient(gx, Y - hgt * .5, 0, gx, Y - hgt * .5, hgt); q.addColorStop(0, col[0] + '55'); q.addColorStop(1, col[0] + '00'); g.fillStyle = q; g.fillRect(gx - hgt, Y - hgt * 1.5, hgt * 2, hgt * 2);
-            g.fillStyle = lin(gx - w2, 0, gx + w2, 0, col[0], col[1]); g.beginPath(); g.moveTo(gx - w2, Y + 3); g.lineTo(gx, Y + 3 - hgt); g.lineTo(gx + w2, Y + 3); g.fill();
-          }
-        } else {                                       // moss on the rim, a shelf fungus on the side
-          for (let i = 0; i < 5; i++) { const hm = hash(h, i + 20), mx = X + 2 + i * 2.6 + hm % 2; g.fillStyle = '#5c9a3a'; g.beginPath(); g.ellipse(mx, Y + 3.6 + Math.abs(i - 2) * .4, 2.4, 1.4, 0, 0, 7); g.fill(); g.fillStyle = '#93cf5a'; g.beginPath(); g.ellipse(mx - .3, Y + 3, 1.4, .6, 0, 0, 7); g.fill(); }
-          if (hh > 1 && h % 2) { const fy = Y + 10 + h % 8; g.fillStyle = '#e0a860'; g.beginPath(); g.ellipse(X + W - 2, fy, 4, 1.6, -.15, Math.PI, 0); g.fill(); g.fillStyle = '#f6d39a'; g.beginPath(); g.ellipse(X + W - 2.4, fy - .5, 3, .7, -.15, Math.PI, 0); g.fill(); }
-        }
-      }
+    for (let y = 0; y < ROWS; y++) for (let x = 0; x < CW; x++) if (at(x, y) === EARTH && !mass(x, y - 1)) ch.tops.push([ch.ci * CW + x, y]);
+    if (!border) ground(g, bio);
+    else {
+      // The soil crossfades into the neighbour region's; then each look paints
+      // its cap where it lies, the next one's patches over the previous one's.
+      const [lo, hi] = border.before ? [CW + BLEND[0] - 1, CW] : [0, BLEND[1] + 1], c3 = document.createElement('canvas');   // only where it shows
+      c3.width = (hi - lo + 2) * n; c3.height = c2.height;
+      const g3 = c3.getContext('2d'), side = v => border.before ? v : 1 - v;
+      ground(g, bio, {caps: false}); ground(g3, border.other, {caps: false, lo, hi, crop: lo});
+      const fade = g3.createLinearGradient((lo - 1) * TS, 0, (hi + 1) * TS, 0);
+      for (let i = 0; i <= 8; i++) fade.addColorStop(i / 8, `rgba(0,0,0,${side(nextSoil(wx0 + (lo - 1 + i * (hi - lo + 2) / 8) * TS, border.xb)).toFixed(3)})`);
+      g3.globalCompositeOperation = 'destination-in'; g3.fillStyle = fade; g3.fillRect((lo - 1) * TS, 0, (hi - lo + 2) * TS, ROWS * TS);
+      g.save(); g.setTransform(1, 0, 0, 1, 0, 0); g.drawImage(c3, lo * n, 0); g.restore();
+      const [prev, next] = border.before ? [bio, border.other] : [border.other, bio], isNext = x => nextCap(ch.ci * CW + x, border.xb);
+      ground(g, prev, {base: false, keep: x => !isNext(x)}); ground(g, next, {base: false, keep: isNext, seam: true});
     }
     // 5b. The small things along the way: a frozen pond lies on the snow; the
     //     rest stand behind the turf, painted on their own layer first so each
@@ -2479,12 +2532,21 @@
     // Creature eyes glint in the dark.
     for (const e of enemies) { if (e.state === 'dead' || e.state === 'squash') continue; const [x, y] = W2D(e.x + 7, e.y + 5); if (x < -20 || x > cv.width + 20) continue; ctx.fillStyle = `rgba(255,240,170,${(.8 * w).toFixed(2)})`; for (const d of [-2.4, 2.4]) { ctx.beginPath(); ctx.arc(x + d * S, y, .9 * S, 0, 7); ctx.fill(); } }
   }
+  let paintAhead = 0;
   function drawTiles() {
     const cd = camDev(), n = Math.round(TS * S), t0 = Math.floor(cam / TS) - 1, t1 = t0 + Math.ceil(viewW / TS) + 2;
     const c0 = Math.floor(t0 / CW), c1 = Math.floor(t1 / CW);
     chunk(c1 + 1);   // the next chunk exists before this one is painted, so their edges meet
     for (let ci = Math.max(0, c0); ci <= c1; ci++) { const ch = chunk(ci); if (ch) { const art = chunkArt(ch, n); ctx.drawImage(art.c, ox + (ci * CW - 1) * n - cd, oy + art.y0 * n); } }
     for (const ch of chunks.values()) if (ch.art && (ch.ci < c0 - 1 || ch.ci > c1 + 1)) ch.art = null;   // off screen: let it go
+    // Paint the chunk ahead while the browser is idle, not in the frame it scrolls in.
+    const ahead = chunks.get(c1 + 1);
+    if (ahead && !ahead.art && !paintAhead && typeof setTimeout === 'function') {
+      paintAhead = (typeof requestIdleCallback === 'function' ? requestIdleCallback : f => setTimeout(f, 30))(() => {
+        paintAhead = 0; if (chunks.get(ahead.ci) !== ahead || ahead.art) return;
+        chunk(ahead.ci + 1); chunkArt(ahead, Math.round(TS * S));
+      }, {timeout: 400});
+    }
     for (let tx = t0; tx <= t1; tx++) for (let ty = 0; ty < ROWS; ty++) {
       let id = tileAt(tx, ty); if (!id || (tx >= 0 && STATIC.has(id))) continue;
       if (replay && id === USED && (usedAt.get(tx + ',' + ty) ?? -1) > frameNo) id = BLOCK;
@@ -2931,13 +2993,14 @@
     if (!dead) push.push([pl.x + 6, pl.y + pl.h, 1, t - landedAt]);
     for (const e of enemies) if (e.ground && e.state !== 'dead' && e.kind !== 'flier') push.push([e.x + 7, e.y + e.h, .6, 99]);
     for (const ch of chunks.values()) {
-      const cols = GRASS[ch.biome]; if (!cols || !ch.tops || !ch.art) continue;
+      const border = borderOf(ch.ci); if (!(GRASS[ch.biome] || border) || !ch.tops || !ch.art) continue;
       for (const [tx, ty] of ch.tops) {
         if (tx * TS > x1 || tx * TS + TS < x0) continue;
         const Y = ty * TS + 1.3;
         for (let i = 0; i < 3; i++) {
           const h = hash(seed ^ 0x6a5, tx * 4 + i); if (h % 3 === 0) continue;
-          const bx = tx * TS + 1.5 + i * 5.2 + (h >>> 12) % 40 / 10, bh = (ch.biome === 'caves' ? 1.8 : 2.4) + (h >>> 3) % 6 * .55;
+          const bx = tx * TS + 1.5 + i * 5.2 + (h >>> 12) % 40 / 10, look = border ? lookAt(bx) : ch.biome, cols = GRASS[look]; if (!cols) continue;
+          const bh = (look === 'caves' ? 1.8 : 2.4) + (h >>> 3) % 6 * .55;
           let a = Math.sin(t * .045 + bx * .09) * .2 + Math.sin(t * .13 + bx * .31) * .06;
           for (const [mx, my, k, since] of push) {
             const dx = bx - mx; if (Math.abs(my - Y) > 7 || Math.abs(dx) > 14) continue;
@@ -3223,7 +3286,7 @@
   if (playing) raf = requestAnimationFrame(frame);
   // Test hook: lets the smoke test drive the simulation without a browser clock.
   window.__pipRun = {tick, reset, state: () => ({pl, enemies, seeds, maxX, dead, human, cam, viewW}), GAP, layout, tileAt: (x, y) => tileAt(x, y),
-    art: ci => { const ch = chunk(ci); return ch && {art: chunkArt(ch, Math.round(TS * S)), biome: ch.biome}; }, props: ci => { const ch = chunk(ci); return ch && ch.props ? ch.props.map(q => ({...q})) : []; }, dressing: ci => { const ch = chunk(ci); return ch && ch.dressing ? ch.dressing.list.map(q => ({...q})) : []; }, celebrated: () => [...celebrated.keys()], render: () => render(), fx: () => ({parts: parts.length, prints: prints.length, rustled: rustle.size}), dayAt,
+    art: ci => { const ch = chunk(ci); return ch && {art: chunkArt(ch, Math.round(TS * S)), biome: ch.biome}; }, props: ci => { const ch = chunk(ci); return ch && ch.props ? ch.props.map(q => ({...q})) : []; }, dressing: ci => { const ch = chunk(ci); return ch && ch.dressing ? ch.dressing.list.map(q => ({...q})) : []; }, celebrated: () => [...celebrated.keys()], render: () => render(), lookAt, fx: () => ({parts: parts.length, prints: prints.length, printList: prints.map(q => ({...q})), rustled: rustle.size}), dayAt,
     scores: () => { const th = enemies.filter(e => e.state !== 'dead' && e.state !== 'squash' && Math.abs(e.x - pl.x) < 260); return OPTIONS.map(o => [o.dir, o.wait, o.hold, Math.round(simulate(o, th).score)]); },
     actions: () => actions(),
     tile: (x, y, v) => setTile(x, y, v),
