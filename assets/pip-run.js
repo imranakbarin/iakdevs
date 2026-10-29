@@ -18,7 +18,7 @@
   const WATER_Y = (ROWS - 1.3) * TS;   // the sea's surface on the coast, under the lowest beach
   // Logical pixels per 1/60 s frame.
   const P = {acc: .085, airAcc: .065, skid: .27, fric: .15, max: 1.75, jump: 6.6, jumpRun: .24,
-    gHold: .36, g: .92, maxFall: 6.2, coyote: 6, buffer: 7, w: 12, h: 20};
+    gHold: .36, g: .92, maxFall: 6.2, coyote: 6, buffer: 7, w: 12, h: 20, foot: 3};
   const EPS = 1e-3;
   const EMPTY = 0, EARTH = 1, BRICK = 2, BLOCK = 3, USED = 4, PIPE_L = 5, STONE = 6, PIPE_R = 7, SPRING = 8, CEIL = 9, CRUMBLE = 10, SPITTER = 11, BRIDGE = 12;
   // Tiles that never change in play: painted once per chunk (see paintChunk).
@@ -61,12 +61,18 @@
     }
     return false;
   }
+  // Pip stands on his feet, the middle of his body (b.foot in from each
+  // side): over an edge he slips off instead of standing on air with his
+  // boots over the hole. Creatures stand on their whole width.
   function moveY(b) {
     b.y += b.vy; b.ground = false;
     const l = Math.floor(b.x / TS), r = Math.floor((b.x + b.w - EPS) / TS);
     if (b.vy > 0) {
-      const ty = Math.floor((b.y + b.h - EPS) / TS);
-      for (let tx = l; tx <= r; tx++) if (solid(tx, ty)) { b.y = ty * TS - b.h; b.vy = 0; b.ground = true; return null; }
+      const ty = Math.floor((b.y + b.h - EPS) / TS), ft = b.foot || 0, fl = Math.floor((b.x + ft) / TS), fr = Math.floor((b.x + b.w - ft - EPS) / TS);
+      for (let tx = fl; tx <= fr; tx++) if (solid(tx, ty)) { b.y = ty * TS - b.h; b.vy = 0; b.ground = true; return null; }
+      // Off the edge: ease out from the lip instead of sliding down inside it.
+      if (fl > l && solid(l, ty)) b.x = Math.min((l + 1) * TS, b.x + 1.5);
+      else if (fr < r && solid(r, ty)) b.x = Math.max(r * TS - b.w, b.x - 1.5);
     } else if (b.vy < 0) {
       const ty = Math.floor(b.y / TS), cx = Math.floor((b.x + b.w / 2) / TS);
       let hit = null;
@@ -146,13 +152,13 @@
     b.on = null;
     if (falling) for (const m of moversNear(b.x)) {
       const [mx, my] = moverAt(m, simNow), py = moverAt(m, simNow - 1)[1];
-      if (b.x + b.w > mx + 1 && b.x < mx + m.w - 1 && prevBottom <= Math.max(my, py) + .5 && b.y + b.h >= my) { b.y = my - b.h; b.vy = 0; b.ground = true; b.on = m; break; }
+      if (b.x + b.w - (b.foot || 1) > mx && b.x + (b.foot || 1) < mx + m.w && prevBottom <= Math.max(my, py) + .5 && b.y + b.h >= my) { b.y = my - b.h; b.vy = 0; b.ground = true; b.on = m; break; }
     }
     // Springs are part of the shared physics, so the planner can use them too.
     let sprung = false;
     if (b.ground) {
       const ty = Math.floor((b.y + b.h + 1) / TS);
-      for (let tx = Math.floor(b.x / TS); tx <= Math.floor((b.x + b.w - EPS) / TS); tx++)
+      for (let tx = Math.floor((b.x + (b.foot || 0)) / TS); tx <= Math.floor((b.x + b.w - (b.foot || 0) - EPS) / TS); tx++)
         if (tileAt(tx, ty) === SPRING) { b.vy = -9.6; b.ground = false; b.coyote = 0; b.jumping = false; sprung = [tx, ty]; break; }
     }
     return {jumped, bump, landed: b.ground && !was, sprung};
@@ -420,7 +426,7 @@
   function reset(newSeed) {
     seed = newSeed; chunks = new Map(); gen = {ci: -1, h: 3, recent: []}; crumbleFall = new Map(); regrow = [];
     chunk(0);
-    pl = {x: 40, y: (ROWS - 3) * TS - P.h, vx: 0, vy: 0, w: P.w, h: P.h, ground: false, jprev: false, buf: 0, coyote: 0, jumping: false};
+    pl = {x: 40, y: (ROWS - 3) * TS - P.h, vx: 0, vy: 0, w: P.w, h: P.h, foot: P.foot, ground: false, jprev: false, buf: 0, coyote: 0, jumping: false};
     enemies = []; parts = []; prints = []; rustle.clear(); seeds = 0; cam = 0; cp = {x: 40, y: pl.y}; maxX = 40; dead = 0; inv = 0; landedAt = -99; anim = 0; facing = 1; frameNo = 0;
     big = false; growing = 0; items = []; if (typeof stats !== 'undefined') stats = {bumps: 0, sprouts: 0};
     if (typeof charges !== 'undefined') { tool = null; charges = 3; chargeT = 0; dirScore = 0; notes = []; placed = []; }
@@ -1194,7 +1200,7 @@
   function crumbleTick() {
     if (pl.ground && !pl.on) {
       const ty = Math.floor((pl.y + pl.h + 1) / TS);
-      for (let tx = Math.floor(pl.x / TS); tx <= Math.floor((pl.x + pl.w - EPS) / TS); tx++)
+      for (let tx = Math.floor((pl.x + pl.foot) / TS); tx <= Math.floor((pl.x + pl.w - pl.foot - EPS) / TS); tx++)
         if (tileAt(tx, ty) === CRUMBLE && !crumbleFall.has(tx * 64 + ty)) crumbleFall.set(tx * 64 + ty, frameNo + 30);
     }
     for (const [k, at] of crumbleFall) if (frameNo >= at) {
@@ -1275,11 +1281,11 @@
     for (const b of bytes) bits += b.toString(2).padStart(8, '0');
     for (let i = 0; i < bits.length; i += 6) out += B64[parseInt(bits.slice(i, i + 6).padEnd(6, '0'), 2)];
     const ev = r.events.map(e => e.k === 'w' ? `w${e.f.toString(36)}-${e.w.toString(36)}` : `${e.k}${e.f.toString(36)}-${e.x.toString(36)}-${e.y.toString(36)}`).join('_');
-    return ['4', (r.seed >>> 0).toString(36), r.w.toString(36), bytes.length.toString(36), out].join('.') + (ev ? '.' + ev : '');
+    return ['5', (r.seed >>> 0).toString(36), r.w.toString(36), bytes.length.toString(36), out].join('.') + (ev ? '.' + ev : '');
   }
   function decodeRun(code) {
     const [v, sd, w, nb, data = '', ev = ''] = String(code).split('.');
-    if (v !== '4' || !w || !nb || !/^[0-9a-z]+$/.test(sd + w + nb) || /[^A-Za-z0-9_-]/.test(data)) return null;
+    if (v !== '5' || !w || !nb || !/^[0-9a-z]+$/.test(sd + w + nb) || /[^A-Za-z0-9_-]/.test(data)) return null;
     let bits = ''; for (const ch of data) bits += B64.indexOf(ch).toString(2).padStart(6, '0');
     const inputs = [];
     for (let i = 0, n = parseInt(nb, 36); i < n; i++) { const b = parseInt(bits.slice(i * 8, i * 8 + 8), 2); if (!(b >= 0)) return null; for (let k = 0; k <= b >> 3; k++) inputs.push(b & 7); }
@@ -3359,6 +3365,60 @@
     for (const e of enemies) { if (e.state === 'dead' || e.state === 'squash') continue; const [x, y] = W2D(e.x + 7, e.y + 5); if (x < -20 || x > cv.width + 20) continue; ctx.fillStyle = `rgba(255,240,170,${(.8 * w).toFixed(2)})`; for (const d of [-2.4, 2.4]) { ctx.beginPath(); ctx.arc(x + d * S, y, .9 * S, 0, 7); ctx.fill(); } }
   }
   let paintAhead = 0;
+  /* ---------------- a touch of depth ----------------
+     Seen as if from just above, in perspective: every solid tile's exposed top
+     recedes a little into the screen, and its side shows toward the middle of
+     the view, so the faces turn as the view scrolls. Drawn behind the painted
+     tiles, so only the receding faces show; drawing only (the run, the
+     planner and ghosts never see it). */
+  const DEPTH = {up: 9, k: .055};   // how far a top recedes, and how far a back edge leans toward the middle per pixel from it
+  const faceCache = new Map();
+  function faceColors(id, bio) {
+    const key = id + ':' + bio; if (faceCache.has(key)) return faceCache.get(key);
+    const P = PAINT[bio] || PAINT.meadow, mix = (h, k) => { const c = typeof h === 'string' ? [1, 3, 5].map(i => parseInt(h.slice(i, i + 2), 16)) : h; return `rgb(${c.map(v => Math.round(k > 0 ? v + (255 - v) * k : v * (1 + k))).join(',')})`; };
+    let f;
+    if (id === EARTH) f = {top: [P.cap[1], P.cap[3]], side: [mix(P.soil[1], -.12), mix(P.soil[2], -.2)]};
+    else if (id === STONE) f = {top: [P.stone[0], P.stone[1]], side: [P.stone[2], P.stone[3]]};
+    else {   // bricks, blocks, planks: their own colours, from the painted tile's top and right edges
+      let top = [214, 150, 96], side = [120, 70, 40];
+      try {
+        const c = tileCanvas(id, true, bio, 0), g = c.getContext('2d'), n = c.width, a = g.getImageData(n >> 1, Math.max(1, n >> 4), 1, 1), b = g.getImageData(n - Math.max(2, n >> 4), n >> 1, 1, 1);
+        if (a && a.data && a.data[3] > 100) top = [...a.data].slice(0, 3);
+        if (b && b.data && b.data[3] > 100) side = [...b.data].slice(0, 3);
+      } catch (_) {}
+      f = {top: [mix(top, .12), mix(top, -.1)], side: [mix(side, -.25), mix(side, -.4)]};
+    }
+    faceCache.set(key, f); return f;
+  }
+  function drawDepth() {
+    const t0 = Math.floor(cam / TS) - 1, t1 = t0 + Math.ceil(viewW / TS) + 2, cols = t1 - t0 + 3, mid = cam + viewW / 2, up = DEPTH.up;
+    const lean = x => DEPTH.k * (mid - x);
+    // The solid tiles in view (and one column either side), read once.
+    const grid = new Uint8Array(cols * ROWS);
+    for (let c = 0; c < cols; c++) for (let ty = 0; ty < ROWS; ty++) { const tx = t0 - 1 + c, v = tileAt(tx, ty); if (v && v !== CEIL && solid(tx, ty)) grid[c * ROWS + ty] = v; }
+    const at = (c, ty) => ty < 0 || ty >= ROWS ? 0 : grid[c * ROWS + ty];
+    const tops = new Map(), sides = new Map();   // faces batched by colour (and row, for the tops), so each batch is one fill
+    for (let c = 1; c < cols - 1; c++) {
+      const tx = t0 - 1 + c, x0 = tx * TS, x1 = x0 + TS, l0 = lean(x0), l1 = lean(x1);
+      let bio = null;
+      for (let ty = 1; ty < ROWS; ty++) {
+        const id = at(c, ty);
+        if (!id || id === SPRING || id === PIPE_L || id === PIPE_R) continue;
+        const top = !at(c, ty - 1), thin = id === CRUMBLE || id === BRIDGE, right = !thin && l1 > 0 && !at(c + 1, ty), left = !thin && l0 < 0 && !at(c - 1, ty);
+        if (!top && !right && !left) continue;
+        if (!bio) { const ch = chunks.get(Math.floor(tx / CW)); bio = [lookAt(x0 + 8), ch ? ch.biome : 'meadow']; }
+        const f = faceColors(id, id === EARTH ? bio[0] : bio[1]), y0 = ty * TS, y1 = y0 + TS;
+        if (top) { let rows = tops.get(f); if (!rows) tops.set(f, rows = new Map()); let q = rows.get(ty); if (!q) rows.set(ty, q = []); q.push(x0, y0, x1, y0, x1 + l1, y0 - up, x0 + l0, y0 - up); }
+        if (right || left) { let q = sides.get(f); if (!q) sides.set(f, q = []); right ? q.push(x1, y0, x1 + l1, y0 - up, x1 + l1, y1 - up, x1, y1) : q.push(x0, y0, x0 + l0, y0 - up, x0 + l0, y1 - up, x0, y1); }
+      }
+    }
+    const cd = camDev(), path = q => { ctx.beginPath(); for (let i = 0; i < q.length; i += 8) { ctx.moveTo(ox + q[i] * S - cd, oy + q[i + 1] * S); for (let k = 2; k < 8; k += 2) ctx.lineTo(ox + q[i + k] * S - cd, oy + q[i + k + 1] * S); ctx.closePath(); } };
+    for (const [f, q] of sides) { path(q); ctx.fillStyle = f.side[0]; ctx.fill(); }   // sides first: a top in front of a side covers its upper edge
+    for (const [f, rows] of tops) for (const [ty, q] of rows) {
+      const g = ctx.createLinearGradient(0, oy + ty * TS * S, 0, oy + (ty * TS - up) * S);
+      g.addColorStop(0, f.top[0]); g.addColorStop(1, f.top[1]); path(q); ctx.fillStyle = g; ctx.fill();
+    }
+  }
   function drawTiles() {
     const cd = camDev(), n = Math.round(TS * S), t0 = Math.floor(cam / TS) - 1, t1 = t0 + Math.ceil(viewW / TS) + 2;
     const c0 = Math.floor(t0 / CW), c1 = Math.floor(t1 / CW);
@@ -3821,11 +3881,25 @@
     else if (skidding) pose = POSE.skid;
     else if (frameNo - landedAt < 6) pose = mixPose(POSE.land, runPose(anim / stride(), clamp(0, Math.abs(pl.vx) / 1.2, 1)), (frameNo - landedAt) / 6);
     else pose = runPose(anim / stride(), clamp(0, Math.abs(pl.vx) / 1.2, 1));
-    const sc = pipVisual() / 295 * S, sx = 1 - .13 * sq, sy = 1 + .15 * sq;
-    // Lean into speed on the ground, brace against a skid.
-    const lean = dead ? 0 : pl.ground ? (skidding ? -.12 : .11 * Math.min(1, Math.abs(pl.vx) / P.max)) : .04;
+    // Standing at an edge with nothing under his toes, he teeters, arms up.
+    let teeter = 0;
+    if (!dead && pl.ground && !pl.on && Math.abs(pl.vx) < .35) {
+      const row = Math.floor((pl.y + pl.h + 1) / TS), c = pl.x + pl.w / 2;
+      teeter = !solid(Math.floor((c + 4) / TS), row) ? 1 : !solid(Math.floor((c - 4) / TS), row) ? -1 : 0;
+      if (teeter) pose = mixPose(pose, POSE.apex, .6);
+    }
+    const sc = pipVisual() / 295 * S, sx = 1 - .13 * sq, sy = 1 + .15 * sq, t = drawT ?? frameNo;
+    // Lean into speed on the ground, brace against a skid, sway over an edge.
+    const lean = dead ? 0 : teeter ? teeter * facing * (.1 + .08 * Math.sin(t * .45)) : pl.ground ? (skidding ? -.12 : .11 * Math.min(1, Math.abs(pl.vx) / P.max)) : .04;
+    // His shadow lies on the ground's receding top, under him in the air too,
+    // smaller and fainter the higher he is.
+    if (!dead) {
+      const c = pl.x + pl.w / 2, from = Math.floor((pl.y + pl.h) / TS);
+      let gy = -1; for (let row = Math.max(0, from); row < ROWS && gy < 0; row++) if (solid(Math.floor(c / TS), row)) gy = row * TS;
+      const hgt = gy < 0 ? 999 : gy - (pl.y + pl.h), k = pl.ground || pl.on ? 1 : Math.max(0, 1 - hgt / 96);
+      if (k > .02) { const [sx0, sy0] = W2D(c, (pl.on ? pl.y + pl.h : gy) - DEPTH.up * .45); ctx.fillStyle = `rgba(40,30,20,${(.24 * k).toFixed(3)})`; ctx.beginPath(); ctx.ellipse(sx0, sy0, 8 * S * (shownBig() ? 1.25 : 1) * (.55 + .45 * k), 2.1 * S * (.55 + .45 * k), 0, 0, 7); ctx.fill(); }
+    }
     ctx.save(); ctx.translate(x, y);
-    if (!dead && pl.ground) { ctx.fillStyle = 'rgba(40,30,20,.22)'; ctx.beginPath(); ctx.ellipse(0, -S * .4, 8 * S * (shownBig() ? 1.25 : 1), 1.8 * S, 0, 0, 7); ctx.fill(); }
     if (dead) ctx.rotate(Math.min(Math.PI, dead * .08));
     ctx.scale(facing, 1); ctx.rotate(lean); ctx.scale(sx * sc, sy * sc);
     if (sheet.complete && sheet.naturalWidth) drawBody(pose);
@@ -4163,7 +4237,7 @@
   }
   function scene(arcs, at) {
     const m = biomeMix();
-    drawBackground(); drawDestination(); drawSeaLife(m); drawTiles(); drawPrints(); drawPuddles(); drawGrass(); drawLeaves(); drawButterflies(m); drawMovers(); drawCrystals(); drawSeeds(); drawMarks();
+    drawBackground(); drawSeaLife(m); drawDepth(); drawDestination(); drawTiles(); drawPrints(); drawPuddles(); drawGrass(); drawLeaves(); drawButterflies(m); drawMovers(); drawCrystals(); drawSeeds(); drawMarks();
     drawItems();
     for (const e of enemies) drawEnemy(e);
     drawGhost(); drawPip(); drawParts(); drawBats(m); drawWeather(m); drawSpell(); drawFore(m); drawGrade(m); drawDusk(m); drawDarkness(m); drawSpell(true);
