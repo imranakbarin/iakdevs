@@ -1214,7 +1214,7 @@
     const bandH = VIEW_H * S;
     oy = portrait ? Math.round(top * dpr) : Math.round((cv.height - bandH) / 2); ox = 0;
     consoleY = (oy + bandH) / dpr;
-    tileCache = new Map(); farCache = null; propCache.clear(); cloudCache.clear(); mtnCache = {}; lightCache = {}; foreCache.clear(); spriteCache.clear();
+    tileCache = new Map(); farCache = null; skyCache.clear(); textCache.clear(); gradeCache = null; propCache.clear(); cloudCache.clear(); mtnCache = {}; lightCache = {}; foreCache.clear(); spriteCache.clear();
   }
   function tileCanvas(id, top, biome = 'meadow', v = 0) {
     const key = id + ':' + (top ? 1 : 0) + (id === BRICK ? ':' + biome + v : id === CRUMBLE ? ':' + biome : '');
@@ -1967,11 +1967,13 @@
   }
   const weightOf = (m, id) => (m.a === id ? 1 - m.w : 0) + (m.b === id ? m.w : 0);
   const noise = (x, k) => Math.sin(x * .013 + k) * .6 + Math.sin(x * .037 + k * 2.1) * .3 + Math.sin(x * .091 + k * 3.3) * .1;
-  function ridge(par, base, amp, col, k, jag, fromTop) {
+  // A ridge filled from its crest to edge (the bottom of the stage by default:
+  // below it the letterbox is filled anyway, so no pixel is painted twice).
+  function ridge(par, base, amp, col, k, jag, fromTop, edge = fromTop ? oy : oy + VIEW_H * S) {
     const W = cv.width, bandH = VIEW_H * S, y0 = oy + bandH * base;
-    ctx.fillStyle = col; ctx.beginPath(); ctx.moveTo(0, fromTop ? 0 : cv.height);
+    ctx.fillStyle = col; ctx.beginPath(); ctx.moveTo(0, edge);
     for (let x = 0; x <= W + 10; x += 10) { const wx = x / S + cam * par, n = noise(wx, k); ctx.lineTo(x, y0 + (fromTop ? 1 : -1) * (jag ? Math.abs(n) * 1.6 - .3 : n) * amp * S); }
-    ctx.lineTo(W, fromTop ? 0 : cv.height); ctx.fill();
+    ctx.lineTo(W, edge); ctx.fill();
   }
   // Painted mountains, graded for frost (near, wintry) or sky (far below, hazy).
   let mtnCache = {};
@@ -2020,8 +2022,22 @@
     for (let x = x0; x < W; x += w) ctx.drawImage(img, x, y);
   }
   const ridgeY = (u, base, amp, k, jag) => { const n = noise(u, k); return oy + VIEW_H * S * base - (jag ? Math.abs(n) * 1.6 - .3 : n) * amp * S; };
+  // A biome's sky (its gradient and the sun's glow) changes only with the
+  // screen and, on the coast, the hour: painted once, small, and stretched, so
+  // it is one pass over the screen instead of two or three.
+  const skyCache = new Map();
+  function skyLayer(stops, glows) {
+    const W = cv.width, H = cv.height, key = `${W}x${H}:${JSON.stringify(stops)}:${JSON.stringify(glows)}`;
+    let c = skyCache.get(key); if (c) return c;
+    if (skyCache.size > 16) skyCache.clear();
+    c = document.createElement('canvas'); c.width = Math.max(8, Math.ceil(W / 4)); c.height = Math.max(8, Math.ceil(H / 4));
+    const g = c.getContext('2d'); g.scale(c.width / W, c.height / H);
+    const q = g.createLinearGradient(0, 0, 0, H); stops.forEach(([o, col]) => q.addColorStop(o, col)); g.fillStyle = q; g.fillRect(0, 0, W, H);
+    for (const [x, y, r, col] of glows) { const r2 = g.createRadialGradient(x, y, 0, x, y, r); r2.addColorStop(0, col); r2.addColorStop(1, col.replace(/[\d.]+\)$/, '0)')); g.fillStyle = r2; g.fillRect(x - r, y - r, r * 2, r * 2); }
+    skyCache.set(key, c); return c;
+  }
   function biomeBackground(id) {
-    const W = cv.width, H = cv.height, bandH = VIEW_H * S, fill = (stops) => { const q = ctx.createLinearGradient(0, 0, 0, H); stops.forEach(([o, c]) => q.addColorStop(o, c)); ctx.fillStyle = q; ctx.fillRect(0, 0, W, H); };
+    const W = cv.width, H = cv.height, bandH = VIEW_H * S, fill = (stops, glows = []) => ctx.drawImage(skyLayer(stops, glows), 0, 0, W, H);
     const vgrad = (y0, y1, a, b) => { const q = ctx.createLinearGradient(0, y0, 0, y1); q.addColorStop(0, a); q.addColorStop(1, b); return q; };
     const glow = (x, y, r, col) => { const q = ctx.createRadialGradient(x, y, 0, x, y, r); q.addColorStop(0, col); q.addColorStop(1, col.replace(/[\d.]+\)$/, '0)')); ctx.fillStyle = q; ctx.fillRect(x - r, y - r, r * 2, r * 2); };
     if (id === 'meadow') {
@@ -2030,8 +2046,7 @@
       if (far) tiled(far, .12, oy - bandH * .1);   // the painted kingdom far away, softened once
       ctx.fillStyle = '#4c2d1a'; ctx.fillRect(0, oy + bandH, W, H - oy - bandH);
     } else if (id === 'frost') {
-      fill([[0, '#a3c4e8'], [.5, '#dce8f6'], [1, '#f4f8fd']]);
-      glow(W * .78, oy + bandH * .16, bandH * .55, 'rgba(255,250,232,.85)');
+      fill([[0, '#a3c4e8'], [.5, '#dce8f6'], [1, '#f4f8fd']], [[W * .78, oy + bandH * .16, bandH * .55, 'rgba(255,250,232,.85)']]);
       const mt = mtnLayer('frost');
       if (mt) tiled(mt, .07, oy + bandH * .7 - mt.height);
       else { ridge(.1, .5, 46, '#e9f0f8', 1.3, true); ridge(.2, .64, 38, '#c9d9eb', 2.7, true); }
@@ -2047,8 +2062,7 @@
       }
       ctx.fillStyle = '#5c7498'; ctx.fillRect(0, oy + bandH, W, H - oy - bandH);
     } else if (id === 'sky') {
-      fill([[0, '#58a8ee'], [.55, '#bfe2ff'], [1, '#f0f8ff']]);
-      glow(W * .2, oy + bandH * .1, bandH * .6, 'rgba(255,244,214,.75)');
+      fill([[0, '#58a8ee'], [.55, '#bfe2ff'], [1, '#f0f8ff']], [[W * .2, oy + bandH * .1, bandH * .6, 'rgba(255,244,214,.75)']]);
       const mt = mtnLayer('sky');   // the world far below, through a gap in the clouds
       if (mt) tiled(mt, .03, oy + bandH * .86 - mt.height);
       const sea = (par, base, a, shade) => {
@@ -2088,9 +2102,8 @@
       // Sunset Coast: a warm sky over the sea, the sun low on the water with its
       // path of glitter, headlands far off and the swell rolling in to the beach.
       // The gaps between the dunes are sea, at the height of the surf below.
-      fill([[0, '#7f94d6'], [.28, '#c9a2c6'], [.48, '#f6b28e'], [.62, '#ffd39c'], [1, '#ffd39c']]);
       const hz = oy + bandH * .62, d = dayAt(cam + viewW / 2), lit = clamp(0, 1 - d.night - .6 * d.dusk, 1), sx = W * .7, sy = hz - bandH * .06, sr = bandH * .065;
-      glow(sx, sy, bandH * .55, `rgba(255,206,140,${(.5 * lit).toFixed(3)})`);
+      fill([[0, '#7f94d6'], [.28, '#c9a2c6'], [.48, '#f6b28e'], [.62, '#ffd39c'], [1, '#ffd39c']], [[sx, sy, bandH * .55, `rgba(255,206,140,${(.5 * Math.round(lit * 16) / 16).toFixed(3)})`]]);
       for (let i = Math.floor((cam * .04 - 400) / 230), u; (u = i * 230) < cam * .04 + W / S + 400; i++) {   // long clouds lit from below
         const hc = hash(seed ^ 0xc0a, i); if (hc % 3 === 0) continue;
         const x = (u + hc % 120 - cam * .04) * S, y = oy + bandH * (.12 + (hc >>> 5) % 30 / 100), rx = (70 + (hc >>> 9) % 90) * S, ry = (2.5 + (hc >>> 13) % 4) * S;
@@ -2101,8 +2114,8 @@
         const q = ctx.createRadialGradient(sx, sy, 0, sx, sy, sr); q.addColorStop(0, `rgba(255,250,228,${lit})`); q.addColorStop(.7, `rgba(255,222,150,${lit})`); q.addColorStop(1, 'rgba(255,190,120,0)');
         ctx.fillStyle = q; ctx.beginPath(); ctx.arc(sx, sy, sr, 0, 7); ctx.fill();
       }
-      ridge(.05, .615, 9, 'rgba(150,104,140,.75)', 8.3, false);   // headlands far off
-      ridge(.09, .625, 5, 'rgba(126,86,124,.8)', 9.7, false);
+      ridge(.05, .615, 9, 'rgba(150,104,140,.75)', 8.3, false, false, hz + 2 * S);   // headlands far off, down to the sea
+      ridge(.09, .625, 5, 'rgba(126,86,124,.8)', 9.7, false, false, hz + 2 * S);
       const sea = ctx.createLinearGradient(0, hz, 0, oy + bandH); sea.addColorStop(0, '#f4c49c'); sea.addColorStop(.18, '#c99aa6'); sea.addColorStop(.5, '#5f8fb4'); sea.addColorStop(1, '#2c6690');
       ctx.fillStyle = sea; ctx.fillRect(0, hz, W, H - hz);
       for (let i = 0; i < 44; i++) {   // the sun's path of glitter
@@ -2223,8 +2236,7 @@
   function drawDusk(m) {
     const o = 1 - weightOf(m, 'caves'), d = dayAt(m.centre); if (o < .02 || d.day > .99) return;
     const W = cv.width, bandH = VIEW_H * S, t = drawT ?? frameNo;
-    ctx.fillStyle = mixWash(Object.entries(WORLDWASH).map(([ph, [c, a]]) => [d[ph] * o, c, a])); ctx.fillRect(0, oy, W, bandH);
-    const dark = (d.night + d.dusk * .5) * o; if (dark < .02) return;
+    const dark = (d.night + d.dusk * .5) * o; if (dark < .02) return;   // (the wash itself is part of drawGrade)
     if (!dead) {
       const [px, py] = W2D(pl.x + 6, pl.y + pl.h * .45);
       ctx.globalCompositeOperation = 'lighter'; blob(px, py, 48 * S, '#ffd9a0', .3 * dark); ctx.globalCompositeOperation = 'source-over';
@@ -2740,15 +2752,27 @@
     g.fillStyle = v; g.fillRect(0, 0, w, h);
     lightCache[id] = {key, c: c2}; return c2;
   }
-  function drawLight(m) {
-    for (const id of new Set([m.a, m.b])) {
-      const w = weightOf(m, id); if (w < .02 || !LIGHT[id]) continue;
-      const d = dayAt(m.centre), a = w * (1 - d.night - d.dusk * .5); if (a < .08) continue;   // the sun's bloom goes with the sun
-      ctx.globalAlpha = a; ctx.drawImage(lightLayer(id), 0, oy, cv.width, VIEW_H * S); ctx.globalAlpha = 1;
+  // Over the world, the hour's wash and then each biome's bloom and vignette
+  // (the bloom goes with the sun). They are one layer, painted small and only
+  // when the hour or the biome mix moves on, so it is one pass over the stage.
+  let gradeCache = null;
+  function drawGrade(m) {
+    const d = dayAt(m.centre), o = 1 - weightOf(m, 'caves'), q = v => Math.round(v * 32) / 32;
+    const wash = o < .02 || d.day > .99 ? '' : mixWash(Object.entries(WORLDWASH).map(([ph, [c, a]]) => [q(d[ph] * o), c, a]));
+    const lights = [...new Set([m.a, m.b])].map(id => [id, LIGHT[id] ? q(weightOf(m, id) * (1 - d.night - d.dusk * .5)) : 0]).filter(([, a]) => a >= .08);
+    if (!wash && !lights.length) return;
+    const w = Math.max(16, Math.round(cv.width / 4)), h = Math.max(16, Math.round(VIEW_H * S / 4)), key = `${w}x${h}|${wash}|${lights.join(';')}`;
+    if (!gradeCache || gradeCache.key !== key) {
+      const c = gradeCache ? gradeCache.c : document.createElement('canvas'); c.width = w; c.height = h;   // resizing clears it
+      const g = c.getContext('2d');
+      if (wash) { g.fillStyle = wash; g.fillRect(0, 0, w, h); }
+      for (const [id, a] of lights) { g.globalAlpha = a; g.drawImage(lightLayer(id), 0, 0, w, h); }
+      gradeCache = {key, c};
     }
+    ctx.drawImage(gradeCache.c, 0, oy, cv.width, VIEW_H * S);
   }
   // Caves are dark: Pip, crystals, seeds and star blocks carry light.
-  let darkBuf = null;
+  let darkBuf = null, ghostBuf = null;
   function drawCrystals() {
     for (const ch of chunks.values()) for (const k of ch.crystals) {
       const [x, y] = W2D(k.x, k.y); if (x < -40 || x > cv.width + 40) continue;
@@ -2759,8 +2783,9 @@
   }
   function drawDarkness(m) {
     const w0 = weightOf(m, 'caves'), w = w0 * w0 * (3 - 2 * w0); if (w < .02) return;   // the dark deepens once inside the cave mouth
-    if (!darkBuf || darkBuf.width !== cv.width || darkBuf.height !== cv.height) { darkBuf = document.createElement('canvas'); darkBuf.width = cv.width; darkBuf.height = cv.height; }
-    const g = darkBuf.getContext('2d'); g.setTransform(1, 0, 0, 1, 0, 0); g.globalCompositeOperation = 'source-over'; g.clearRect(0, 0, cv.width, cv.height);
+    const dw = Math.ceil(cv.width / 2), dh = Math.ceil(cv.height / 2);   // half resolution: the dark is soft, and it is a quarter of the pixels
+    if (!darkBuf || darkBuf.width !== dw || darkBuf.height !== dh) { darkBuf = document.createElement('canvas'); darkBuf.width = dw; darkBuf.height = dh; }
+    const g = darkBuf.getContext('2d'); g.setTransform(.5, 0, 0, .5, 0, 0); g.globalCompositeOperation = 'source-over'; g.clearRect(0, 0, cv.width, cv.height);
     g.fillStyle = `rgba(4,5,14,${(.88 * w).toFixed(3)})`; g.fillRect(0, 0, cv.width, cv.height);
     g.globalCompositeOperation = 'destination-out';
     const hole = (x, y, r, a = 1) => { const q = g.createRadialGradient(x, y, 0, x, y, r); q.addColorStop(0, `rgba(0,0,0,${a})`); q.addColorStop(.55, `rgba(0,0,0,${a * .7})`); q.addColorStop(1, 'rgba(0,0,0,0)'); g.fillStyle = q; g.fillRect(x - r, y - r, r * 2, r * 2); };
@@ -2770,7 +2795,7 @@
     for (const it of items) { const [x, y] = W2D(it.x + 6, it.y + 6); hole(x, y, 26 * S); }
     for (const p of parts) if (p.glow) { const [x, y] = W2D(p.x, p.y); hole(x, y, 9 * S, .7 * Math.min(1, p.life / 14)); }
     for (const k of prints) { const age = frameNo - k.at; if (k.m === 'moss' && age >= 0 && age < PRINT_LIFE.moss) { const [x, y] = W2D(k.x, k.y); hole(x, y, 12 * S, .7 * (1 - age / PRINT_LIFE.moss)); } }
-    ctx.drawImage(darkBuf, 0, 0);
+    ctx.drawImage(darkBuf, 0, 0, cv.width, cv.height);
     // Creature eyes glint in the dark.
     for (const e of enemies) { if (e.state === 'dead' || e.state === 'squash') continue; const [x, y] = W2D(e.x + 7, e.y + 5); if (x < -20 || x > cv.width + 20) continue; ctx.fillStyle = `rgba(255,240,170,${(.8 * w).toFixed(2)})`; for (const d of [-2.4, 2.4]) { ctx.beginPath(); ctx.arc(x + d * S, y, .9 * S, 0, 7); ctx.fill(); } }
   }
@@ -3207,7 +3232,15 @@
       ctx.globalAlpha = .85; ctx.fillStyle = '#9fd8ff'; ctx.font = `700 ${Math.max(12, 6 * S)}px system-ui,-apple-system,sans-serif`; ctx.textAlign = 'right';
       ctx.fillText(`ghost +${Math.round((g.x - live.pl.x) / TS)} m ›`, cv.width - 8, Math.max(oy + 60 * S, y));
     } else {
-      ctx.filter = 'saturate(.35) brightness(1.3)'; drawPip(); ctx.filter = 'none';
+      // Drawn on a small buffer and greyed and lightened there, only over Pip
+      // himself (a canvas filter on the stage would cost a pass every frame).
+      const bw = Math.ceil(80 * S), bh = Math.ceil(90 * S), bx = Math.floor(x - bw / 2), by = Math.floor(y - 34 * S);
+      if (!ghostBuf || ghostBuf.width !== bw || ghostBuf.height !== bh) { ghostBuf = document.createElement('canvas'); ghostBuf.width = bw; ghostBuf.height = bh; }
+      const gb = ghostBuf.getContext('2d'), stage = ctx; gb.setTransform(1, 0, 0, 1, 0, 0); gb.globalCompositeOperation = 'source-over'; gb.globalAlpha = 1; gb.clearRect(0, 0, bw, bh);
+      gb.setTransform(1, 0, 0, 1, -bx, -by); ctx = gb; drawPip(); ctx = stage;
+      gb.setTransform(1, 0, 0, 1, 0, 0); gb.globalCompositeOperation = 'source-atop';
+      gb.globalAlpha = .45; gb.fillStyle = '#a2acb6'; gb.fillRect(0, 0, bw, bh); gb.globalAlpha = .22; gb.fillStyle = '#ffffff'; gb.fillRect(0, 0, bw, bh);
+      ctx.drawImage(ghostBuf, bx, by);
       ctx.globalAlpha = .7; ctx.fillStyle = '#e6f6ff'; ctx.font = `600 ${Math.max(10, 4.6 * S)}px system-ui,-apple-system,sans-serif`; ctx.textAlign = 'center';
       ctx.fillText(ghost.label === 'best' ? 'your best' : 'ghost', x, y - (pipVisual() - 14) * S);
     }
@@ -3317,12 +3350,31 @@
       });
     }
   }
+  // HUD words come from small cached images: text is the costly part of
+  // drawing a HUD, and most of these words stay the same from frame to frame.
+  const textCache = new Map();
+  function txt(t, x, y) {
+    t = String(t);
+    if (typeof ctx.fillStyle !== 'string') { ctx.fillText(t, x, y); return; }
+    const font = ctx.font, key = `${font}|${ctx.fillStyle}|${ctx.textBaseline}|${t}`;
+    let c = textCache.get(key);
+    if (!c) {
+      if (textCache.size > 300) textCache.clear();
+      const px = parseFloat((/([\d.]+)px/.exec(font) || [0, 16])[1]), w = Math.ceil(ctx.measureText(t).width) + 4, h = Math.ceil(px * 1.7) + 4;
+      const y0 = ctx.textBaseline === 'middle' ? h / 2 : ctx.textBaseline === 'top' ? 2 : Math.ceil(px * 1.25) + 2;
+      c = document.createElement('canvas'); c.width = Math.max(1, w); c.height = h; c.y0 = y0; c.tw = w - 4;
+      const g = c.getContext('2d'); g.font = font; g.textBaseline = ctx.textBaseline; g.textAlign = 'left'; g.fillStyle = ctx.fillStyle; g.fillText(t, 2, y0);
+      textCache.set(key, c);
+    }
+    const ax = ctx.textAlign === 'right' || ctx.textAlign === 'end' ? c.tw : ctx.textAlign === 'center' ? c.tw / 2 : 0;
+    ctx.drawImage(c, Math.round(x - ax - 2), Math.round(y - c.y0));
+  }
   function drawHud() {
     const W = cv.width, u = Math.max(12, 9 * S), pad = u * .9;
     ctx.save(); ctx.font = `600 ${u}px system-ui,-apple-system,sans-serif`; ctx.textBaseline = 'middle';
     const y = oy + pad + u * .6;
     star(pad + u * .6, y, u * .55, 0);
-    ctx.fillStyle = 'rgba(30,40,40,.55)'; ctx.fillText(String(seeds), pad + u * 1.55 + 1, y + 1); ctx.fillStyle = '#fffbea'; ctx.fillText(String(seeds), pad + u * 1.55, y);
+    ctx.fillStyle = 'rgba(30,40,40,.55)'; txt(String(seeds), pad + u * 1.55 + 1, y + 1); ctx.fillStyle = '#fffbea'; txt(String(seeds), pad + u * 1.55, y);
     {
       const when = new Date(day + 'T12:00:00Z').toLocaleDateString(undefined, {month: 'short', day: 'numeric', timeZone: 'UTC'});
       const lines = [[worldMode === 'friend' ? 'Racing a shared run' : worldMode === 'daily' ? `Today’s world · ${when}` : 'Random world', '#ffe9a8']];
@@ -3332,11 +3384,11 @@
         else if (g) { const d = m - g.m; lines.push(d > 0 ? [`▲ ${d} m ahead of ${who}`, '#b8f5b0'] : d < 0 ? [`▼ ${-d} m behind ${who}`, '#ffc9b8'] : [`Level with ${who}`, '#fffbea']); }
       } else if (worldMode === 'daily' && human) lines.push(['Your best today becomes a ghost', '#fffbea']);
       ctx.font = `600 ${u * .72}px system-ui,-apple-system,sans-serif`; ctx.textAlign = 'left';
-      lines.forEach(([t, c], i) => { const yy = y + u * (1.25 + i * 1.05); ctx.fillStyle = 'rgba(30,40,40,.5)'; ctx.fillText(t, pad + 1, yy + 1); ctx.fillStyle = c; ctx.fillText(t, pad, yy); });
+      lines.forEach(([t, c], i) => { const yy = y + u * (1.25 + i * 1.05); ctx.fillStyle = 'rgba(30,40,40,.5)'; txt(t, pad + 1, yy + 1); ctx.fillStyle = c; txt(t, pad, yy); });
       ctx.font = `600 ${u}px system-ui,-apple-system,sans-serif`;
     }
     const dist = Math.floor(maxX / TS) + ' m';
-    ctx.textAlign = 'right'; ctx.fillStyle = 'rgba(30,40,40,.55)'; ctx.fillText(dist, W - pad + 1, y + 1); ctx.fillStyle = '#fffbea'; ctx.fillText(dist, W - pad, y);
+    ctx.textAlign = 'right'; ctx.fillStyle = 'rgba(30,40,40,.55)'; txt(dist, W - pad + 1, y + 1); ctx.fillStyle = '#fffbea'; txt(dist, W - pad, y);
     ctx.textAlign = 'center';
     if (replay) {
       const bandH = VIEW_H * S, bar = bandH * .07;
@@ -3346,13 +3398,13 @@
       const span = REGION * CW * TS, region = Math.floor(pl.x / span), next = BIOMES[regionBiome(region + 1)].mark, m2 = Math.max(0, Math.round(((region + 1) * span - pl.x) / TS));
       ctx.font = `600 ${u * .72}px system-ui,-apple-system,sans-serif`; ctx.textAlign = 'right';
       const line = `${next} · ${m2} m ›`, yy = y + u * (marks.length && !human ? 2.35 : 1.25);
-      ctx.fillStyle = 'rgba(30,40,40,.5)'; ctx.fillText(line, W - pad + 1, yy + 1); ctx.fillStyle = '#ffe9a8'; ctx.fillText(line, W - pad, yy);
+      ctx.fillStyle = 'rgba(30,40,40,.5)'; txt(line, W - pad + 1, yy + 1); ctx.fillStyle = '#ffe9a8'; txt(line, W - pad, yy);
       ctx.font = `600 ${u}px system-ui,-apple-system,sans-serif`;
     }
     if (!human && marks.length) {
       ctx.font = `500 ${u * .7}px system-ui,-apple-system,sans-serif`; ctx.textAlign = 'right';
       const note = `remembers ${marks.length} ${marks.length === 1 ? 'spot' : 'spots'}${risk > .45 ? ' · careful' : ''}`;
-      ctx.fillStyle = 'rgba(30,40,40,.5)'; ctx.fillText(note, W - pad + 1, y + u * 1.25 + 1); ctx.fillStyle = '#fffbea'; ctx.fillText(note, W - pad, y + u * 1.25);
+      ctx.fillStyle = 'rgba(30,40,40,.5)'; txt(note, W - pad + 1, y + u * 1.25 + 1); ctx.fillStyle = '#fffbea'; txt(note, W - pad, y + u * 1.25);
       ctx.font = `600 ${u}px system-ui,-apple-system,sans-serif`;
     }
     ctx.textAlign = 'center';
@@ -3373,14 +3425,14 @@
       const mid = portrait ? W / 2 : left ? Math.max(left + tw / 2, (left + right) / 2) : Math.min(W / 2, right - tw / 2), bx = mid - tw / 2;
       const by = portrait ? (human ? rows().tools + 4 : rows().hint) * dpr - u * .65 : oy + VIEW_H * S - u * 2.4;
       ctx.fillStyle = 'rgba(28,52,60,.55)'; ctx.beginPath(); ctx.roundRect(bx, by, tw, u * 1.3, u * .65); ctx.fill();
-      ctx.fillStyle = '#fffbea'; ctx.fillText(msg, mid, by + u * .66);
+      ctx.fillStyle = '#fffbea'; txt(msg, mid, by + u * .66);
     }
     for (const b of actions()) {
       const d = dpr;
       ctx.fillStyle = b.id === 'share' ? 'rgba(255,236,170,.92)' : 'rgba(255,250,238,.82)'; ctx.beginPath(); ctx.roundRect(b.x * d, b.y * d, b.w * d, b.h * d, b.h * d / 2); ctx.fill();
       ctx.lineWidth = Math.max(1.5, d); ctx.strokeStyle = 'rgba(28,52,60,.3)'; ctx.stroke();
       ctx.fillStyle = '#23404a'; ctx.font = `600 ${Math.round(b.h * .38) * d}px system-ui,-apple-system,sans-serif`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-      ctx.fillText(b.label, (b.x + b.w / 2) * d, (b.y + b.h / 2) * d + d);
+      txt(b.label, (b.x + b.w / 2) * d, (b.y + b.h / 2) * d + d);
     }
     ctx.restore();
     if (usingTouch && human) {
@@ -3388,7 +3440,7 @@
       for (const [k, glyph] of [['l', '◀'], ['r', '▶'], ['j', '⤒']]) {
         const [x, yy, rad] = z[k];
         ctx.fillStyle = touch[k] ? 'rgba(255,250,235,.45)' : 'rgba(255,250,235,.22)'; ctx.beginPath(); ctx.arc(x * dpr, yy * dpr, rad * dpr, 0, 7); ctx.fill();
-        ctx.fillStyle = 'rgba(40,60,60,.6)'; ctx.font = `${rad * dpr * .8}px system-ui`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(glyph, x * dpr, yy * dpr + 1);
+        ctx.fillStyle = 'rgba(40,60,60,.6)'; ctx.font = `${rad * dpr * .8}px system-ui`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; txt(glyph, x * dpr, yy * dpr + 1);
       }
     }
   }
@@ -3403,8 +3455,8 @@
     const d = dpr, yc = rows().strip, span = REGION * CW * TS, r = Math.floor(pl.x / span), f = clamp(0, pl.x / span - r, 1);
     const left = 14 * d, right = W - 46 * d, ty = (yc + 34) * d, at = q => left + (right - left) * q;
     ctx.textBaseline = 'middle'; ctx.font = `600 ${12 * d}px system-ui,-apple-system,sans-serif`;
-    ctx.textAlign = 'left'; ctx.fillStyle = '#ffe9a8'; ctx.fillText(`Chapter ${r + 1} · ${BIOMES[regionBiome(r)].name}`, left, (yc + 5) * d);
-    ctx.textAlign = 'right'; ctx.fillStyle = '#d9ecf0'; ctx.fillText(`${BIOMES[regionBiome(r + 1)].mark} · ${Math.max(0, Math.round(((r + 1) * span - pl.x) / TS))} m`, right, (yc + 5) * d);
+    ctx.textAlign = 'left'; ctx.fillStyle = '#ffe9a8'; txt(`Chapter ${r + 1} · ${BIOMES[regionBiome(r)].name}`, left, (yc + 5) * d);
+    ctx.textAlign = 'right'; ctx.fillStyle = '#d9ecf0'; txt(`${BIOMES[regionBiome(r + 1)].mark} · ${Math.max(0, Math.round(((r + 1) * span - pl.x) / TS))} m`, right, (yc + 5) * d);
     ctx.fillStyle = 'rgba(255,255,255,.14)'; ctx.beginPath(); ctx.roundRect(left, ty - 2.5 * d, right - left, 5 * d, 2.5 * d); ctx.fill();
     ctx.fillStyle = accent; ctx.beginPath(); ctx.roundRect(left, ty - 2.5 * d, Math.max(5 * d, (right - left) * f), 5 * d, 2.5 * d); ctx.fill();
     const gp = ghostAt(Math.min(frameNo, ghost ? ghost.frames.length : 0));
@@ -3424,8 +3476,8 @@
     cells.forEach(([v, label], i) => {
       const x = (12 + cw * (i + .5)) * d;
       ctx.fillStyle = 'rgba(255,255,255,.05)'; ctx.beginPath(); ctx.roundRect(x - (cw / 2 - 4) * d, (cy - 26) * d, (cw - 8) * d, 52 * d, 10 * d); ctx.fill();
-      ctx.fillStyle = '#fffbea'; ctx.font = `700 ${16 * d}px system-ui,-apple-system,sans-serif`; ctx.fillText(v, x, (cy - 7) * d);
-      ctx.fillStyle = '#9fb8bf'; ctx.font = `500 ${10 * d}px system-ui,-apple-system,sans-serif`; ctx.fillText(label, x, (cy + 13) * d);
+      ctx.fillStyle = '#fffbea'; ctx.font = `700 ${16 * d}px system-ui,-apple-system,sans-serif`; txt(v, x, (cy - 7) * d);
+      ctx.fillStyle = '#9fb8bf'; ctx.font = `500 ${10 * d}px system-ui,-apple-system,sans-serif`; txt(label, x, (cy + 13) * d);
     });
     ctx.restore();
   }
@@ -3480,7 +3532,7 @@
     drawBackground(); drawDestination(); drawTiles(); drawPrints(); drawGrass(); drawLeaves(); drawMovers(); drawCrystals(); drawSeeds(); drawMarks();
     drawItems();
     for (const e of enemies) drawEnemy(e);
-    drawGhost(); drawPip(); drawParts(); drawWeather(m); drawFore(m); drawDusk(m); drawLight(m); drawDarkness(m);
+    drawGhost(); drawPip(); drawParts(); drawWeather(m); drawFore(m); drawGrade(m); drawDusk(m); drawDarkness(m);
     if (!human || replay) drawThoughts(arcs, at);
     drawWary(); drawDirectorWorld();
   }
@@ -3498,7 +3550,7 @@
     ctx = main;
   }
   function render() {
-    zoom += ((replay ? 1.16 : arrival && arrival.phase === 'cheer' ? 1.1 : 1 + .09 * tension) - zoom) * .08;
+    zoom += ((replay ? 1.16 : arrival && arrival.phase === 'cheer' ? 1.1 : 1 + .09 * Math.max(0, tension - .2) / .8) - zoom) * .08;
     if (replay) {
       const snap = replay.frames[Math.min(replay.frames.length - 1, Math.floor(replay.i))];
       const live = {pl, facing, anim, landedAt, dead, inv, cam, enemies, parts, bumps, frameNo, sq, skidding, big, growing, items};
