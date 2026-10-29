@@ -1170,9 +1170,31 @@
   // the buttons and, once someone plays, the thumb pad.
   const CONSOLE = 210, EMBEDDED = (() => { try { return window.parent !== window; } catch (_) { return true; } })();
   let portrait = false, consoleY = 0;
+  // Resolution follows the device. The canvas never holds more than MAXPX
+  // pixels (a 4K TV would otherwise fill some 8 million per pass), and when
+  // frames keep coming slower than about 50 a second it renders a step smaller
+  // and lets the browser scale it up. A step that does not help (a display that
+  // only runs at 30 Hz) is taken back. The level is remembered here for a week.
+  const MAXPX = 4e6, QUALITY = [1, .8, .64, .5];
+  const pace = (() => { const q = store.get('pip-run:quality'); return {level: q && Date.now() - q.at < 6048e5 ? clamp(0, q.level | 0, QUALITY.length - 1) : 0, gaps: [], sum: 0, skip: 1000, probe: 0, from: 0, windows: 0, settled: false}; })();
+  function paced(ms) {   // the gap before this frame, in ms; true when the resolution changed
+    if (pace.settled || !(ms > 0) || ms > 250) return false;
+    if (pace.skip > 0) { pace.skip -= ms; return false; }   // just after a change, caches are refilling
+    pace.gaps.push(ms); pace.sum += ms;
+    if (pace.sum < 1500 || pace.gaps.length < 20) return false;
+    const g = pace.gaps.sort((a, b) => a - b).slice(0, Math.ceil(pace.gaps.length * .95)), mean = g.reduce((a, b) => a + b, 0) / g.length;   // the odd hitch aside
+    pace.gaps = []; pace.sum = 0; pace.windows++;
+    let to = pace.level;
+    if (pace.probe && mean > pace.probe * .9) { to = pace.from; pace.settled = true; }
+    else if (mean > 20.5 && to < QUALITY.length - 1) { pace.from = to; to = Math.min(QUALITY.length - 1, to + (mean > 41 ? 2 : 1)); pace.probe = mean; }
+    else pace.probe = 0;
+    if (to === pace.level) return false;
+    pace.level = to; pace.skip = 1000; store.set('pip-run:quality', {level: to, at: Date.now()});
+    layout(); return true;
+  }
   function layout() {
     const W = cv.clientWidth, H = cv.clientHeight;
-    dpr = Math.min(devicePixelRatio || 1, 2);
+    dpr = Math.max(.5, Math.min(devicePixelRatio || 1, 2, Math.sqrt(MAXPX / Math.max(1, W * H))) * QUALITY[pace.level]);
     cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr);
     portrait = H > W;
     // At least 16 tiles across in landscape; in portrait 12 or more, as tall
@@ -3254,6 +3276,7 @@
   function frame(now) {
     raf = 0;
     if (!playing || !visible) return;
+    if (last) paced(now - last);
     const dt = last ? Math.min(.1, (now - last) / 1000) : 0; last = now;
     if (replay) {
       if (human) replay = null;
@@ -3286,7 +3309,7 @@
   if (playing) raf = requestAnimationFrame(frame);
   // Test hook: lets the smoke test drive the simulation without a browser clock.
   window.__pipRun = {tick, reset, state: () => ({pl, enemies, seeds, maxX, dead, human, cam, viewW}), GAP, layout, tileAt: (x, y) => tileAt(x, y),
-    art: ci => { const ch = chunk(ci); return ch && {art: chunkArt(ch, Math.round(TS * S)), biome: ch.biome}; }, props: ci => { const ch = chunk(ci); return ch && ch.props ? ch.props.map(q => ({...q})) : []; }, dressing: ci => { const ch = chunk(ci); return ch && ch.dressing ? ch.dressing.list.map(q => ({...q})) : []; }, celebrated: () => [...celebrated.keys()], render: () => render(), lookAt, fx: () => ({parts: parts.length, prints: prints.length, printList: prints.map(q => ({...q})), rustled: rustle.size}), dayAt,
+    art: ci => { const ch = chunk(ci); return ch && {art: chunkArt(ch, Math.round(TS * S)), biome: ch.biome}; }, props: ci => { const ch = chunk(ci); return ch && ch.props ? ch.props.map(q => ({...q})) : []; }, dressing: ci => { const ch = chunk(ci); return ch && ch.dressing ? ch.dressing.list.map(q => ({...q})) : []; }, celebrated: () => [...celebrated.keys()], render: () => render(), lookAt, pace: ms => paced(ms), quality: () => ({level: pace.level, settled: pace.settled, windows: pace.windows, dpr, width: cv.width}), fx: () => ({parts: parts.length, prints: prints.length, printList: prints.map(q => ({...q})), rustled: rustle.size}), dayAt,
     scores: () => { const th = enemies.filter(e => e.state !== 'dead' && e.state !== 'squash' && Math.abs(e.x - pl.x) < 260); return OPTIONS.map(o => [o.dir, o.wait, o.hold, Math.round(simulate(o, th).score)]); },
     actions: () => actions(),
     tile: (x, y, v) => setTile(x, y, v),
