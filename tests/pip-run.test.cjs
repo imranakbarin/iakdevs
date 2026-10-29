@@ -194,4 +194,17 @@ for (const seed of [3, 11]) {
   assert.ok(!prints.meadow, `no prints on grass (${prints.meadow && prints.meadow.size})`);
   for (const b of ['frost', 'sky', 'caves']) assert.ok(prints[b] && prints[b].size >= 10, `footprints in ${b} (${prints[b] && prints[b].size})`);
 }
-console.log('Pip Run PASS: jump-sized gaps, finite physics, demo player progresses through 4 seeded worlds, reaches each chapter’s destination and plays its landmark scene, clears block rows that run up to a gap, and gets past ferries, lifts, crumble bridges, floating steps and podspitters, referee refuses traps and accepted walls stay passable, shared runs replay exactly as ghosts, the painted ground of all four biomes draws with sane geometry, once per chunk, route dressing stands on level ground, and whole frames render in every biome with footprints in snow, cloud and moss.');
+// Resolution follows the device: frames slower than about 50 a second drop a
+// step (a smaller canvas the browser scales up), a step that does not help is
+// taken back, and then it settles.
+{
+  const feed = ms => { const w = G.quality().windows; for (let i = 0; i < 2000 && G.quality().windows === w; i++) G.pace(ms); };   // until one window is judged
+  const q0 = G.quality(); assert.equal(q0.level, 0);
+  feed(16.7); assert.equal(G.quality().level, 0, 'a smooth 60 fps keeps full resolution');
+  feed(33); const q1 = G.quality(); assert.equal(q1.level, 1, 'slow frames drop a step'); assert.ok(q1.width < q0.width, `and the canvas is smaller (${q1.width} < ${q0.width})`);
+  feed(24); assert.equal(G.quality().level, 2, 'better but still slow: another step');
+  feed(23); assert.equal(G.quality().level, 1, 'a step that does not help is taken back');
+  assert.ok(G.quality().settled); feed(40); assert.equal(G.quality().level, 1, 'and then it settles');
+  strict = true; drawn = 0; G.render(); strict = false; assert.ok(drawn > 300, `and still draws whole frames (${drawn} calls)`);
+}
+console.log('Pip Run PASS: jump-sized gaps, finite physics, demo player progresses through 4 seeded worlds, reaches each chapter’s destination and plays its landmark scene, clears block rows that run up to a gap, and gets past ferries, lifts, crumble bridges, floating steps and podspitters, referee refuses traps and accepted walls stay passable, shared runs replay exactly as ghosts, the painted ground of all four biomes draws with sane geometry, once per chunk, route dressing stands on level ground, whole frames render in every biome with footprints in snow, cloud and moss, and the resolution steps down on a slow device.');
