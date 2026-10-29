@@ -51,6 +51,21 @@ for (const seed of [1, 2, 3]) {
   }
   assert.ok(holes > 40 && narrow === 0, `seed ${seed}: ${narrow} of ${holes} holes are one tile wide`);
 }
+// A row of blocks leaves two clear tiles before the ground rises: with only
+// one, big Pip could not rise onto a two-tile step without bumping the step
+// or the blocks (the demo stalled there on the 29 Oct 2026 world).
+for (const seed of [1, 2, 3, 497663883]) {
+  G.reset(seed);
+  const top = (tx, below) => { for (let y = below + 1; y < 15; y++) { const v = G.tileAt(tx, y); if (v === 1 || (v >= 5 && v <= 7)) return y; } return 99; };
+  let ends = 0, tight = 0;
+  for (let tx = 24; tx < 24 * 200; tx++) for (let y = 1; y < 14; y++) {
+    const v = G.tileAt(tx, y), next = G.tileAt(tx + 1, y);
+    if (!(v >= 2 && v <= 4) || (next >= 2 && next <= 4)) continue;
+    ends++; const ground = top(tx, y);
+    if (ground < 99 && (top(tx + 1, y) < ground || top(tx + 2, y) < ground)) tight++;
+  }
+  assert.ok(ends > 30 && tight === 0, `seed ${seed}: ${tight} of ${ends} block rows end right before a rise`);
+}
 
 // The demo player crosses generated worlds steadily, set pieces included.
 const passed = new Set();
@@ -125,7 +140,7 @@ for (const seed of [3, 11]) {
   const g = G.ghost.race(code);
   assert.equal(g.frames.length, xs.length, 'ghost covers the run');
   xs.forEach(([x, y], i) => { const p = G.ghost.at(i + 1); assert.ok(p.x === x && p.y === y, `ghost diverged at frame ${i + 1}`); });
-  for (const bad of ['', 'x', '3.zz', '4.1.a0.1.AA', '2.1.a0.1.AA', '1.1.a0.1.AA', '3.1.a0.1.A*']) assert.equal(G.ghost.decode(bad), null, `rejects ${bad}`);
+  for (const bad of ['', 'x', '4.zz', '5.1.a0.1.AA', '3.1.a0.1.AA', '2.1.a0.1.AA', '1.1.a0.1.AA', '4.1.a0.1.A*']) assert.equal(G.ghost.decode(bad), null, `rejects ${bad}`);
 }
 // The painted world: every biome's ground, stone and stumps paint with sane
 // geometry, once per chunk, and again only after a tile of theirs changes.

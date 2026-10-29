@@ -254,9 +254,11 @@
           const c0 = c, n = flat(4 + (r() * 5 | 0));
           if (n >= 4 && r() < .4 + .3 * d) { const kd = kinds(); kd === 'flier' ? ch.spawns.push({kind: kd, x: wx(c0 + 2), y: surface(h) - 56}) : enemy(kd, c0 + 1 + (r() * (n - 2) | 0), h); }
           if (n >= 4 && r() < .45) {
-            // The row stops a tile short of the run's end: open sky to leap from
-            // before whatever comes next (a gap, a step up).
-            const row = ROWS - h - 4, len = 1 + (r() * Math.min(4, n - 2) | 0), s0 = c0 + 1;
+            // The row stops two tiles short of the run's end: open sky to leap
+            // from before whatever comes next. One tile was room enough before a
+            // gap, but not to rise two tiles onto a step (big Pip bumped the
+            // step's face or the blocks, and the demo stalled).
+            const row = ROWS - h - 4, len = 1 + (r() * Math.min(4, n - 3) | 0), s0 = c0 + 1;
             for (let i = 0; i < len; i++) set(s0 + i, row, r() < .45 ? BLOCK : BRICK);
             if (r() < .5) seedRow(s0, len, row - 2);
           } else if (r() < .35) seedRow(c0 + 1, Math.min(3, n - 1), ROWS - h - 2);
@@ -307,9 +309,9 @@
           flat(1);
           return true;
         }
-        case 'tier': {                                 // a block tier with seeds on top
-          if (room < 7) break;
-          const c0 = c; flat(6);
+        case 'tier': {                                 // a block tier with seeds on top (two clear tiles after it, as above)
+          if (room < 8) break;
+          const c0 = c; flat(7);
           const row = ROWS - h - 4;
           for (let i = 1; i <= 4; i++) set(c0 + i, row, i === 2 ? BLOCK : BRICK);
           if (r() < .6 && !caves) { set(c0 + 2, row - 4, BLOCK); seedRow(c0 + 1, 4, row - 1); }
@@ -1112,11 +1114,11 @@
       if (ch && ch.safe.has(tx - ch.ci * CW) && pl.x > cp.x + 64 && !enemies.some(e => Math.abs(e.x - pl.x) < 80)) cp = {x: pl.x, y: pl.y};
     }
     maxX = Math.max(maxX, pl.x);
-    // Last resort: the world never holds Pip for long. After 30 s without
+    // Last resort: the world never holds Pip for long. After 15 s without
     // progress a breeze carries him on to the next safe ground. It depends
     // only on the world's state, so ghosts replay it exactly.
     if (maxX > progressX + 8) { progressX = maxX; progressAt = frameNo; }
-    else if (!dead && frameNo - progressAt > 60 * 30) carry();
+    else if (!dead && frameNo - progressAt > RATE * 15) carry();
     if (!ghostSim && run.inputs.length < RUN_MAX) { run.m = Math.floor(maxX / TS); if (frameNo % 300 === 0) saveBest(); }
     const region = Math.floor(pl.x / (REGION * CW * TS));
     if (region !== lastRegion) {
@@ -1273,11 +1275,11 @@
     for (const b of bytes) bits += b.toString(2).padStart(8, '0');
     for (let i = 0; i < bits.length; i += 6) out += B64[parseInt(bits.slice(i, i + 6).padEnd(6, '0'), 2)];
     const ev = r.events.map(e => e.k === 'w' ? `w${e.f.toString(36)}-${e.w.toString(36)}` : `${e.k}${e.f.toString(36)}-${e.x.toString(36)}-${e.y.toString(36)}`).join('_');
-    return ['3', (r.seed >>> 0).toString(36), r.w.toString(36), bytes.length.toString(36), out].join('.') + (ev ? '.' + ev : '');
+    return ['4', (r.seed >>> 0).toString(36), r.w.toString(36), bytes.length.toString(36), out].join('.') + (ev ? '.' + ev : '');
   }
   function decodeRun(code) {
     const [v, sd, w, nb, data = '', ev = ''] = String(code).split('.');
-    if (v !== '3' || !w || !nb || !/^[0-9a-z]+$/.test(sd + w + nb) || /[^A-Za-z0-9_-]/.test(data)) return null;
+    if (v !== '4' || !w || !nb || !/^[0-9a-z]+$/.test(sd + w + nb) || /[^A-Za-z0-9_-]/.test(data)) return null;
     let bits = ''; for (const ch of data) bits += B64.indexOf(ch).toString(2).padStart(6, '0');
     const inputs = [];
     for (let i = 0, n = parseInt(nb, 36); i < n; i++) { const b = parseInt(bits.slice(i * 8, i * 8 + 8), 2); if (!(b >= 0)) return null; for (let k = 0; k <= b >> 3; k++) inputs.push(b & 7); }
