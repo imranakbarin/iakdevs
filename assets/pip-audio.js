@@ -126,6 +126,10 @@ const PipAudio = (() => {
     spring(o, t) { tone(200, {t, d: .32, peak: .09, slide: 3.2}); tone(300, {t, type: 'triangle', d: .22, peak: .03, slide: 2.4}); },
     tumble(o, t) { tone(660, {t, type: 'triangle', d: .6, peak: .05, slide: .35}); },
     crumble(o, t) { hiss({t, f: 500, f2: 180, q: 2, d: .2, peak: .07}); tone(140 + rnd() * 40, {t, type: 'triangle', d: .05, peak: .03}); },
+    talk({n = 12}, t) {   // Pip's voice: a soft babble, a syllable for every few letters
+      const k = Math.max(3, Math.min(9, Math.round(n / 4))), base = 560 + rnd() * 90;
+      for (let i = 0; i < k; i++) tone(base * 2 ** (([0, 2, 4, 5, 7][rnd() * 5 | 0] - 2) / 12), {t: t + i * .075, type: 'triangle', a: .006, d: .05, peak: .018, slide: rnd() < .5 ? 1.12 : .9});
+    },
     splash(o, t) { hiss({t, type: 'lowpass', f: 2400, f2: 300, d: .5, peak: .09}); for (let i = 0; i < 4; i++) tone(500 + rnd() * 500, {t: t + .08 + i * .07, d: .06, peak: .012, slide: 1.8}); },
     spit(o, t) { hiss({t, f: 2400, q: 1.5, d: .06, peak: .04}); tone(480, {t, d: .05, peak: .02, slide: .6}); },
     arrive({mark}, t) {

@@ -407,7 +407,7 @@
     big = false; growing = 0; items = []; if (typeof stats !== 'undefined') stats = {bumps: 0, sprouts: 0};
     if (typeof charges !== 'undefined') { tool = null; charges = 3; chargeT = 0; dirScore = 0; notes = []; placed = []; }
     title = null; lastRegion = -1; arrival = null; chapter = null; chapters = 0; celebrated.clear(); journey = {start: 0, seeds0: 0, tumbles: 0, finds0: 0, arrived: -1};
-    plan = null; stuckX = 0; stuckSince = 0; impatience = 0; progressX = 0; progressAt = 0; marks = []; hitStop = 0; jolt = -99; risk = .25; tension = 0; wary = 0; stompTimes = []; history = []; moment = null; replay = null; lastReplay = -1e9; usedAt = new Map();
+    plan = null; stuckX = 0; stuckSince = 0; impatience = 0; progressX = 0; progressAt = 0; marks = []; hitStop = 0; jolt = -99; speech = null; lastSaid = -1e9; talk = {human: false}; risk = .25; tension = 0; wary = 0; stompTimes = []; history = []; moment = null; replay = null; lastReplay = -1e9; usedAt = new Map();
     simW = Math.round(viewW); run = {seed, w: simW, inputs: [], events: [], human: 0, m: 0};
     prev = {cam, x: pl.x, y: pl.y};
   }
@@ -691,13 +691,15 @@
     // In portrait the row is too narrow for both, so they go on a row below.
     const bar = toolbar(), h = Math.round(bar[0].h * .72), W = cv.clientWidth, y = cv.clientHeight <= W ? bar[0].y + (bar[0].h - h) / 2 : bar[0].y + bar[0].h + 12;
     const font = main.font;   // measuring must not leak into whatever is drawn next
-    main.font = `600 ${Math.round(h * .38)}px system-ui,-apple-system,sans-serif`;
-    let x = W - 12;
     const list = [['share', '⤴ Share run'], ['restart', ghost ? '↺ Race again' : '↺ Restart']];
     if (typeof PipAudio !== 'undefined') list.push(['sound', PipAudio.label()]);
     list.push(['book', '✉ Journey']);
+    // Shrink the type (and the padding with it) until the row fits the width.
+    const room = portrait ? W - 24 : W * .62, width = f => { main.font = `600 ${Math.round(h * .38 * f)}px system-ui,-apple-system,sans-serif`; return list.reduce((a, [, l]) => a + main.measureText(l).width + h * .9 * f + 8, -8); };
+    let f = 1; while (f > .62 && width(f) > room) f -= .04;
+    let x = W - 12;
     const out = list.map(([id, label]) => {
-      const w = Math.round(main.measureText(label).width + h * .9); x -= w; const b = {id, label, x, y, w, h}; x -= 8; return b;
+      const w = Math.round(main.measureText(label).width + h * .9 * f); x -= w; const b = {id, label, x, y, w, h, f}; x -= 8; return b;
     });
     main.font = font;
     return out;
@@ -889,10 +891,127 @@
     chapter = {t: 0, num: r + 1, done: BIOMES[regionBiome(r)].name, mark: next.mark, next: next.name, sub: next.sub,
       seeds: seeds - journey.seeds0, time: (frameNo - journey.start) / RATE, tumbles: journey.tumbles, finds: seen.size - journey.finds0, vs};
     if (!ghostSim) chapter.stamp = stampBook(regionBiome(r + 1), chapter.time, journey.played > (frameNo - journey.start) / 2);
-    journey.arrived = r; chapters++; sfx('arrive', {mark: regionBiome(r + 1)}); celebrated.set(r, frameNo);
+    journey.arrived = r; chapters++; sfx('arrive', {mark: regionBiome(r + 1)}); celebrated.set(r, frameNo); say('arrive', {mark: next.mark}, 3);
     for (let k = 0; k < 4; k++) sparkle(arrival.gx + 8 + (k - 1.5) * 18, pl.y - 10 - (k % 2) * 14);
   }
   const clock = sec => `${Math.floor(sec / 60)}:${String(Math.floor(sec % 60)).padStart(2, '0')}`;
+  /* ---------------- Pip talks ----------------
+     Now and then Pip says something about what is going on: a new region,
+     the weather, a landmark coming into view, a stomp or a chain of them, a
+     tumble, growing, a ride, nightfall, the ghost he is racing, the person
+     who took over, a director's trick, or just what he sees. Each line is
+     picked fresh (the last few of each kind are not said again) and worded
+     from the moment, and the talk is spaced out so he is no chatterbox,
+     though a big moment can cut in. It is only shown and heard: nothing in
+     the simulation, the planner or a ghost depends on it. */
+  const LINES = {
+    enter_meadow: ['Home sweet meadow!', 'Smells like mushrooms and sunshine.', 'Back on the grass!', 'The meadow! My favourite.', 'Hello again, meadow!', 'Let’s go!'],
+    enter_frost: ['Brr! Ice under my boots.', 'Careful, it’s slippery!', 'My nose is cold already.', 'Snow! Wheee… slidey.', 'Frost Ridge. Hold on to your cap.'],
+    enter_sky: ['Whoa, the ground’s a long way down!', 'Islands in the sky!', 'The wind wants to carry me off.', 'Light as a feather up here.', 'Don’t look down. Don’t look down.'],
+    enter_caves: ['It’s so dark in here…', 'Good thing I glow a little.', 'Hello? …ello? …lo?', 'Crystals! Shiny.', 'Stay close to the light.'],
+    enter_coast: ['I can hear the sea!', 'Sand in my boots already.', 'The sun’s going down. So pretty.', 'Mind the waves!', 'Beach day!'],
+    w_shower: ['Rain! Puddles!', 'Pitter-patter, pitter-patter.', 'My cap makes a good umbrella.', 'Splash time!'],
+    w_blizzard: ['I can’t see my own cap!', 'Brrrrrr!', 'Snow in my eyes!', 'Hold on, it’s blowing a gale!'],
+    w_squall: ['Hold on to your mushroom!', 'Big waves today!', 'Was that thunder?', 'Soggy boots, here we go.'],
+    w_sunbreak: ['Ooh, sunbeams!', 'The clouds opened up!', 'Warm light, warm toes.', 'Look at the sky!'],
+    w_drip: ['Drip… drip… drop.', 'Cave rain? Is that a thing?', 'Something dripped on my cap.', 'Echo… echo…'],
+    rainbow: ['A rainbow! Make a wish!', 'Look, a rainbow!', 'After rain comes a rainbow.', 'All the colours!'],
+    sight: ['There it is: the {mark}!', 'I can see the {mark}!', 'Almost at the {mark}!', 'The {mark}! Not far now.'],
+    arrive: ['We made it to the {mark}!', 'Hello, {mark}!', 'Ta-da! The {mark}!', 'Chapter done. Onward!', 'Made it!'],
+    stomp: ['Boing!', 'Sorry, little guy!', 'Hop!', 'Excuse me!', 'Mind your head!', 'Pardon!'],
+    chain: ['Double bounce!', 'Two in a row!', 'Boing-boing!'],
+    chain3: ['{n} in a row!', 'Unstoppable!', 'Bouncy bouncy!', 'Can’t stop me now!', 'Stomp-o-rama!'],
+    tumble: ['Oof!', 'I meant to do that.', 'Ow, my cap!', 'Whoops!', 'That gap came out of nowhere.'],
+    tumble_again: ['Again? Really?', 'This gap has it in for me.', 'Tumble number {n}…', 'I’m learning. Slowly.', 'Okay, okay, one more try.'],
+    grow: ['I feel tall!', 'Super Pip!', 'Look how big I am!', 'Golden Sprout power!'],
+    shrink: ['Aw, I’m small again.', 'Lost my sprout…', 'Tiny Pip, still mighty!'],
+    spring: ['Wheee!', 'Up, up and away!', 'Boooing!', 'To the clouds!'],
+    ride_ferry: ['All aboard!', 'Ferry ride!', 'Smooth sailing.', 'No need to jump this one.'],
+    ride_lift: ['Going up!', 'Next floor: the top!', 'Up we go!'],
+    crumble: ['Quick, quick, quick!', 'Don’t break, don’t break…', 'These boards are wobbly!'],
+    splash: ['Splash! Brr.', 'That’s not sand!', 'So much for staying dry.', 'Glub glub.'],
+    smash: ['Crunch!', 'Who needs doors?', 'Brick? What brick?'],
+    seeds: ['{n} seeds and counting!', 'Seeds for days!', 'Shiny, shiny seeds.', 'My pockets are full!', '{n}! Not bad.'],
+    night: ['The stars are out.', 'Fireflies! Hello!', 'It’s getting late.', 'Night running is the best.'],
+    dawn: ['Morning already?', 'Look, the sun’s coming up!', 'Good morning, world!'],
+    ghost_ahead: ['Catch me if you can, ghost!', 'Ahead of {who}!', 'Too slow, ghost!'],
+    ghost_behind: ['Wait for me, ghost!', '{who} is getting away!', 'I’ll catch up!'],
+    yours: ['Your turn! Go easy on me.', 'You drive, I’ll run.', 'Oh! Someone’s steering.'],
+    mine: ['I’ll take it from here.', 'Back on autopilot!', 'My turn again!'],
+    placed: ['Hey! Who put that there?', 'A surprise, huh?', 'I see what you did there.'],
+    refused: ['Nice try!', 'Not today!', 'Too sneaky.'],
+    gotcha: ['You got me!', 'Sneaky!', 'Well played…'],
+    find: ['Ooh, look: {name}!', 'Something new: {name}!', '{Name}! Neat.', 'Never seen {name} before!'],
+    idle: ['Running is my favourite.', 'Where does this path go?', 'La la la…', 'I wonder what’s next.', 'Keep going, keep going.', 'Is it lunch yet?'],
+    idle_meadow: ['Smells like rain and mushrooms.', 'Look at all the flowers!', 'The kingdom looks busy today.', 'Hi, butterflies!'],
+    idle_frost: ['My toes are frozen.', 'Snowmen everywhere!', 'Ice skating, sort of.', 'I should’ve brought a scarf.'],
+    idle_sky: ['Bunting! Is it a party?', 'The fields look tiny down there.', 'Clouds are softer than they look.', 'Blossom petals everywhere!'],
+    idle_caves: ['Was that a bat?', 'The crystals hum. Listen.', 'Spooky… but sparkly.', 'I’ll follow the glowing moss.'],
+    idle_coast: ['I want a sandcastle too.', 'Seagulls! Hello!', 'Palm trees!', 'The sea goes on forever.']
+  };
+  let speech = null, lastSaid = -1e9, saidRecent = {}, talk = {human: false};
+  // priority: 3 big moments (they cut in), 2 events, 1 small talk (waits for a quiet spell)
+  function say(key, ctx = {}, prio = 2, chance = 1) {
+    const list = LINES[key];
+    if (ghostSim || replay || !list || Math.random() > chance) return;
+    const quiet = frameNo - lastSaid;
+    if (speech && frameNo - speech.at < speech.life && prio <= speech.prio && (frameNo - speech.at < 60 || prio < 3)) return;
+    if (prio === 1 && quiet < RATE * 14) return;
+    const used = saidRecent[key] = saidRecent[key] || [], pool = list.map((_, i) => i).filter(i => !used.includes(i));
+    const i = pool[Math.random() * pool.length | 0]; used.push(i); if (used.length > Math.min(list.length - 1, 6)) used.shift();
+    const text = list[i].replace(/\{(\w+)\}/g, (_, k) => ctx[k] ?? '');
+    speech = {text, at: frameNo, prio, life: Math.round(RATE * 2.4 + text.length * 2.4)}; lastSaid = frameNo;
+    sfx('talk', {n: text.length});
+  }
+  // What Pip notices on his own, once a tick (never while a ghost is rebuilt).
+  function listen() {
+    const span = REGION * CW * TS, region = Math.floor(pl.x / span), id = regionBiome(region), mark = BIOMES[regionBiome(region + 1)].mark;
+    if (talk.region !== region) { talk.region = region; talk.enter = frameNo + RATE * 2.5; }
+    if (talk.enter && frameNo >= talk.enter) { talk.enter = 0; say('enter_' + id, {}, 2); }
+    const sp = weatherAt(pl.x);
+    if (sp.kind && sp.w > .35 && talk.spell !== region) { talk.spell = region; say('w_' + sp.kind, {}, 2); }
+    if (sp.after > .5 && talk.bow !== region) { talk.bow = region; say('rainbow', {}, 2); }
+    const dist = gateX(region) - pl.x;
+    if (dist < 70 * TS && dist > 30 * TS && talk.sight !== region) { talk.sight = region; say('sight', {mark}, 2); }
+    const d = dayAt(pl.x), outdoors = id !== 'caves';
+    if (d.night > .5 && !talk.night) { talk.night = true; if (outdoors) say('night', {}, 2); }
+    if (talk.night && d.night < .2 && d.dawn > .3) { talk.night = false; if (outdoors) say('dawn', {}, 2); }
+    if (pl.on && pl.on !== talk.on && frameNo - (talk.rode || -1e9) > RATE * 20) { talk.rode = frameNo; say('ride_' + pl.on.kind, {}, 2, .6); }   // once a ride, and not every ride
+    if (pl.on) talk.on = pl.on;
+    if (seeds >= (talk.seeds || 30)) { talk.seeds = (talk.seeds || 30) + 30; say('seeds', {n: seeds}, 1); }
+    if (human !== talk.human) { say(human ? 'yours' : 'mine', {}, 2); talk.human = human; }
+    if (ghost && frameNo % RATE === 0 && frameNo <= ghost.frames.length) {
+      const g = ghostAt(frameNo), lead = g ? Math.sign(Math.floor(maxX / TS) - g.m) : 0, who = ghost.label === 'best' ? 'your best' : 'the ghost';
+      if (lead && lead !== talk.lead) { if (talk.lead !== undefined) say(lead > 0 ? 'ghost_ahead' : 'ghost_behind', {who}, 2, .7); talk.lead = lead; }
+    }
+    if (!dead && !arrival && frameNo > RATE * 12 && frameNo - lastSaid > (talk.idle || RATE * 25)) { talk.idle = RATE * (22 + Math.random() * 18); say(Math.random() < .65 ? 'idle_' + id : 'idle', {mark}, 1); }
+  }
+  // Pip's words in a bubble over his head, typed out as he says them.
+  function drawSpeech() {
+    if (!speech || replay) return;
+    const age = (drawT ?? frameNo) - speech.at; if (age > speech.life || age < 0) { if (age > speech.life) speech = null; return; }
+    const u = Math.max(12, 6.4 * S), pad = u * .55, lh = u * 1.22, maxW = Math.min(cv.width * .44, u * 17);
+    ctx.save(); ctx.font = `700 ${u}px system-ui,-apple-system,sans-serif`; ctx.textBaseline = 'middle'; ctx.textAlign = 'left';
+    const lines = []; let line = '';
+    for (const word of speech.text.split(' ')) { const t = line ? line + ' ' + word : word; if (line && ctx.measureText(t).width > maxW) { lines.push(line); line = word; } else line = t; }
+    lines.push(line);
+    const w = Math.max(...lines.map(l => ctx.measureText(l).width)) + pad * 2, h = lines.length * lh + pad * 1.4;
+    const [px, py] = W2D(pl.x + 6, pl.y - 4), k = age < 6 ? .6 + .4 * (age / 6) ** .6 : 1, a = Math.min(1, age / 4, (speech.life - age) / 10);
+    let bx = clamp(8 * dpr, px - w * .3, cv.width - w - 8 * dpr), by = py - h - 9 * S;
+    const below = by < oy + 6 * dpr; if (below) by = py + (big ? 46 : 36) * S;
+    ctx.globalAlpha = a; ctx.translate(px, below ? by : by + h); ctx.scale(k, k); ctx.translate(-px, -(below ? by : by + h));
+    ctx.fillStyle = 'rgba(20,30,40,.22)'; ctx.beginPath(); ctx.roundRect(bx + 2 * S * .4, by + 3 * S * .4, w, h, u * .8); ctx.fill();
+    ctx.fillStyle = '#fffdf6'; ctx.strokeStyle = 'rgba(60,50,40,.35)'; ctx.lineWidth = Math.max(1, S * .35);
+    ctx.beginPath(); ctx.roundRect(bx, by, w, h, u * .8); ctx.fill(); ctx.stroke();
+    const tx = clamp(bx + u, px, bx + w - u), ty = below ? by : by + h;   // the tail points at Pip
+    ctx.beginPath(); ctx.moveTo(tx - u * .45, ty); ctx.lineTo(px + (below ? 0 : 2 * S), below ? py + 30 * S : py - 3 * S); ctx.lineTo(tx + u * .45, ty); ctx.fill();
+    ctx.strokeStyle = 'rgba(60,50,40,.35)'; ctx.beginPath(); ctx.moveTo(tx - u * .45, ty); ctx.lineTo(px + (below ? 0 : 2 * S), below ? py + 30 * S : py - 3 * S); ctx.lineTo(tx + u * .45, ty); ctx.stroke();
+    ctx.fillStyle = '#fffdf6'; ctx.fillRect(tx - u * .42, ty - (below ? -1 : 2) * S * .5, u * .84, S * .7);
+    let left = Math.ceil(age * 1.7);   // typed out, a couple of letters a tick
+    ctx.fillStyle = '#2d2a33';
+    lines.forEach((l, i) => { if (left <= 0) return; ctx.fillText(l.slice(0, left), bx + pad, by + pad * .7 + lh * (i + .5)); left -= l.length + 1; });
+    ctx.restore();
+  }
   /* ---------------- the journey book ----------------
      Each landmark reached is stamped into a book kept on this device: when it
      was first reached, how often, the best time to it from the chapter's start,
@@ -978,6 +1097,7 @@
       for (const ch of [chunks.get(ci), chunks.get(ci + 1)]) if (ch) for (const ft of ch.features) if (ft.x - pl.x < 170 && ft.x - pl.x > -40) discover(ft.id);
       if (wd && pl.x / span - region > .25) discover(wd);
       const sp = weatherAt(pl.x); if (sp.kind && sp.w > .6) discover(sp.kind);
+      listen();
       if (card && ++card.t > 300) card = null;
     }
     cam = Math.max(cam, pl.x - simW * .38);
@@ -1010,9 +1130,14 @@
   // Sound lives in assets/pip-audio.js; the simulation only names events.
   // Nothing sounds while a ghost is rebuilt or the planner imagines.
   const BUZZ = {stomp: 12, tumble: 30, spring: 10, grow: 16, arrive: [12, 60, 12], smash: 14};
+  const SAYS = {grow: ['grow', {}, 3], shrink: ['shrink', {}, 2], spring: ['spring', {}, 2, .5], splash: ['splash', {}, 3], smash: ['smash', {}, 1, .4], crumble: ['crumble', {}, 1, .35], place: ['placed', {}, 2, .7], refuse: ['refused', {}, 2, .6], gotcha: ['gotcha', {}, 2]};   // what Pip says to an event (see Pip talks)
   const sfx = (name, o) => {
     if (ghostSim) return;
     if (typeof PipAudio !== 'undefined') PipAudio.fx(name, o);
+    const c = o && o.chain;
+    if (name === 'stomp') c >= 3 ? say('chain3', {n: c}, 3) : c === 2 ? say('chain', {}, 2) : say('stomp', {}, 1, .45);
+    else if (name === 'tumble') say(journey.tumbles >= 2 ? 'tumble_again' : 'tumble', {n: journey.tumbles}, 3);
+    else if (SAYS[name]) say(...SAYS[name]);
     // A light tap on the hand for a person playing by touch, where supported.
     const ms = name === 'land' ? (o && o.impact > 4 ? 6 : 0) : BUZZ[name];
     if (ms && human && usingTouch && typeof navigator !== 'undefined' && navigator.vibrate) try { navigator.vibrate(ms); } catch (_) {}
@@ -2666,6 +2791,7 @@
     seen = seen || new Set(store.get('pip-run:seen') || []);
     if (seen.has(id) || card || chapter) return;
     seen.add(id); store.set('pip-run:seen', [...seen]); card = {id, t: 0}; sfx('find');
+    if (!Object.values(SPELL).includes(id)) { const n = FINDS[id][0]; say('find', {Name: n, name: n[0].toLowerCase() + n.slice(1)}, 2, .7); }   // (weather has its own lines)
   }
   function drawCard() {
     if (!card || replay) return;
@@ -3725,7 +3851,7 @@
       const d = dpr;
       ctx.fillStyle = b.id === 'share' ? 'rgba(255,236,170,.92)' : 'rgba(255,250,238,.82)'; ctx.beginPath(); ctx.roundRect(b.x * d, b.y * d, b.w * d, b.h * d, b.h * d / 2); ctx.fill();
       ctx.lineWidth = Math.max(1.5, d); ctx.strokeStyle = 'rgba(28,52,60,.3)'; ctx.stroke();
-      ctx.fillStyle = '#23404a'; ctx.font = `600 ${Math.round(b.h * .38) * d}px system-ui,-apple-system,sans-serif`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.fillStyle = '#23404a'; ctx.font = `600 ${Math.round(b.h * .38 * (b.f || 1)) * d}px system-ui,-apple-system,sans-serif`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';   // drawn at the size the row was fitted at
       txt(b.label, (b.x + b.w / 2) * d, (b.y + b.h / 2) * d + d);
     }
     ctx.restore();
@@ -3828,7 +3954,7 @@
     for (const e of enemies) drawEnemy(e);
     drawGhost(); drawPip(); drawParts(); drawWeather(m); drawSpell(); drawFore(m); drawGrade(m); drawDusk(m); drawDarkness(m); drawSpell(true);
     if (!human || replay) drawThoughts(arcs, at);
-    drawWary(); drawDirectorWorld();
+    drawWary(); drawDirectorWorld(); drawSpeech();
   }
   // The camera eases in on Pip during tense moments and replays. The scene is
   // drawn unscaled to a buffer and composited, so tiles never show seams.
@@ -3954,7 +4080,7 @@
   if (playing) raf = requestAnimationFrame(frame);
   // Test hook: lets the smoke test drive the simulation without a browser clock.
   window.__pipRun = {tick, reset, state: () => ({pl, enemies, seeds, maxX, dead, human, cam, viewW}), GAP, layout, tileAt: (x, y) => tileAt(x, y),
-    art: ci => { const ch = chunk(ci); return ch && {art: chunkArt(ch, Math.round(TS * S)), biome: ch.biome}; }, props: ci => { const ch = chunk(ci); return ch && ch.props ? ch.props.map(q => ({...q})) : []; }, dressing: ci => { const ch = chunk(ci); return ch && ch.dressing ? ch.dressing.list.map(q => ({...q})) : []; }, celebrated: () => [...celebrated.keys()], render: () => render(), lookAt, weatherAt, book: () => store.get('pip-run:book'), bookOpen: () => !!book, openBook, tension: () => tension, pace: ms => paced(ms), quality: () => ({level: pace.level, settled: pace.settled, windows: pace.windows, dpr, width: cv.width}), fx: () => ({parts: parts.length, rings: parts.filter(q => q.ring).length, sparks: parts.filter(q => q.spark).length, prints: prints.length, printList: prints.map(q => ({...q})), rustled: rustle.size}), dayAt,
+    art: ci => { const ch = chunk(ci); return ch && {art: chunkArt(ch, Math.round(TS * S)), biome: ch.biome}; }, props: ci => { const ch = chunk(ci); return ch && ch.props ? ch.props.map(q => ({...q})) : []; }, dressing: ci => { const ch = chunk(ci); return ch && ch.dressing ? ch.dressing.list.map(q => ({...q})) : []; }, celebrated: () => [...celebrated.keys()], render: () => render(), lookAt, weatherAt, speech: () => speech && {...speech}, say, book: () => store.get('pip-run:book'), bookOpen: () => !!book, openBook, tension: () => tension, pace: ms => paced(ms), quality: () => ({level: pace.level, settled: pace.settled, windows: pace.windows, dpr, width: cv.width}), fx: () => ({parts: parts.length, rings: parts.filter(q => q.ring).length, sparks: parts.filter(q => q.spark).length, prints: prints.length, printList: prints.map(q => ({...q})), rustled: rustle.size}), dayAt,
     scores: () => { const th = enemies.filter(e => e.state !== 'dead' && e.state !== 'squash' && Math.abs(e.x - pl.x) < 260); return OPTIONS.map(o => [o.dir, o.wait, o.hold, Math.round(simulate(o, th).score)]); },
     actions: () => actions(),
     tile: (x, y, v) => setTile(x, y, v),

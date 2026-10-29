@@ -241,6 +241,24 @@ for (const seed of [3, 11]) {
   strict = true; G.openBook(); drawn = 0; G.render(); strict = false;
   assert.ok(G.bookOpen() && drawn > 200, `the book draws (${drawn} calls)`);
 }
+// Pip talks: lines come from what is happening, worded from the moment, not
+// too often and not the same line twice running; a ghost rebuild says
+// nothing; and the bubble draws with sane geometry.
+{
+  G.reset(1); const said = [];
+  strict = true;
+  for (let f = 0; f < 60 * 240; f++) {
+    G.tick(); const s = G.speech();
+    if (s && (!said.length || said[said.length - 1].at !== s.at)) { said.push(s); assert.ok(!/[{}]/.test(s.text) && s.text.length > 1, `a worded line (${s.text})`); drawn = 0; G.render(); assert.ok(drawn > 300, 'a frame with a bubble draws'); }
+  }
+  strict = false;
+  const mins = 60 * 240 / 40 / 60;
+  assert.ok(said.length >= 3 * mins && said.length <= 12 * mins, `Pip talks now and then (${said.length} lines in ${mins} min)`);
+  for (let i = 1; i < said.length; i++) assert.notEqual(said[i].text, said[i - 1].text, 'never the same line twice running');
+  assert.ok(said.some(q => /Lighthouse/.test(q.text)), `a line names the landmark ahead (${said.map(q => q.text).join(' | ')})`);
+  const n = said.length; G.ghost.race(G.ghost.encode());
+  assert.ok(!G.speech(), 'a ghost rebuild says nothing');
+}
 // Resolution follows the device: frames slower than about 50 a second drop a
 // step (a smaller canvas the browser scales up), a step that does not help is
 // taken back, and then it settles.
@@ -254,4 +272,4 @@ for (const seed of [3, 11]) {
   assert.ok(G.quality().settled); feed(40); assert.equal(G.quality().level, 1, 'and then it settles');
   strict = true; drawn = 0; G.render(); strict = false; assert.ok(drawn > 300, `and still draws whole frames (${drawn} calls)`);
 }
-console.log('Pip Run PASS: jump-sized gaps, finite physics, demo player progresses through 4 seeded worlds, reaches each chapter’s destination and plays its landmark scene, clears block rows that run up to a gap, and gets past ferries, lifts, crumble bridges, floating steps and podspitters, referee refuses traps and accepted walls stay passable, shared runs replay exactly as ghosts, the painted ground of all four biomes draws with sane geometry, once per chunk, route dressing stands on level ground, whole frames render in every biome with footprints in snow, cloud and moss, the weather comes and goes with sane geometry, stomps ring and spark, the journey book stamps landmarks (not in ghost rebuilds), and the resolution steps down on a slow device.');
+console.log('Pip Run PASS: jump-sized gaps, finite physics, demo player progresses through 4 seeded worlds, reaches each chapter’s destination and plays its landmark scene, clears block rows that run up to a gap, and gets past ferries, lifts, crumble bridges, floating steps and podspitters, referee refuses traps and accepted walls stay passable, shared runs replay exactly as ghosts, the painted ground of all four biomes draws with sane geometry, once per chunk, route dressing stands on level ground, whole frames render in every biome with footprints in snow, cloud and moss, the weather comes and goes with sane geometry, Pip talks about what is happening, stomps ring and spark, the journey book stamps landmarks (not in ghost rebuilds), and the resolution steps down on a slow device.');
