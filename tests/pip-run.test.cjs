@@ -36,6 +36,21 @@ assert.ok(G, 'test hook exposed');
 
 // Gaps are sized from the jump itself, and always leave something to clear.
 assert.ok(G.GAP[0] >= 2 && G.GAP[-2] >= G.GAP[0] && G.GAP[1] >= 1, 'gap table follows the jump arc');
+// Holes in the ground are at least two tiles wide (Pip is wider than one tile,
+// so a one-tile crack looked like ground he walks across). The floating steps,
+// single stones rising over a pit, keep their one-tile hops.
+for (const seed of [1, 2, 3]) {
+  G.reset(seed);
+  const count = tx => { let n = 0; for (let y = 0; y < 15; y++) if (G.tileAt(tx, y)) n++; return n; };
+  let run = 0, narrow = 0, holes = 0, from = 0;
+  for (let tx = 24; tx < 24 * 120; tx++) {
+    const n = count(tx);
+    if (!n) { if (!run) from = count(tx - 1); run++; continue; }
+    if (run && from > 1 && n > 1) { holes++; if (run < 2) narrow++; }
+    run = 0;
+  }
+  assert.ok(holes > 40 && narrow === 0, `seed ${seed}: ${narrow} of ${holes} holes are one tile wide`);
+}
 
 // The demo player crosses generated worlds steadily, set pieces included.
 const passed = new Set();
@@ -110,7 +125,7 @@ for (const seed of [3, 11]) {
   const g = G.ghost.race(code);
   assert.equal(g.frames.length, xs.length, 'ghost covers the run');
   xs.forEach(([x, y], i) => { const p = G.ghost.at(i + 1); assert.ok(p.x === x && p.y === y, `ghost diverged at frame ${i + 1}`); });
-  for (const bad of ['', 'x', '2.zz', '3.1.a0.1.AA', '1.1.a0.1.AA', '2.1.a0.1.A*']) assert.equal(G.ghost.decode(bad), null, `rejects ${bad}`);
+  for (const bad of ['', 'x', '3.zz', '4.1.a0.1.AA', '2.1.a0.1.AA', '1.1.a0.1.AA', '3.1.a0.1.A*']) assert.equal(G.ghost.decode(bad), null, `rejects ${bad}`);
 }
 // The painted world: every biome's ground, stone and stumps paint with sane
 // geometry, once per chunk, and again only after a tile of theirs changes.
@@ -229,6 +244,32 @@ for (const seed of [3, 11]) {
   for (let f = 0; f < 60 * 120; f++) { G.tick(); const x = G.fx(); rings = Math.max(rings, x.rings); sparks = Math.max(sparks, x.sparks); }
   assert.ok(rings >= 1 && sparks >= 5, `a stomp throws a ring and sparks (${rings} rings, ${sparks} sparks)`);
 }
+// A stomped seed pod bursts the new way: the husk splits and its halves fall
+// away with seed fluff, instead of a flat pod hanging in the air.
+{
+  G.reset(1); for (let f = 0; f < 30; f++) G.tick(() => ({}));
+  const s = G.state(), pl = s.pl; pl.y -= 30; pl.vy = 2; pl.ground = false;
+  s.enemies.push({kind: 'pod', x: pl.x - 1, y: pl.y + pl.h + 1, baseY: 0, w: 12, h: 10, vx: 0, vy: 0, ground: false, state: 'walk', t: 0, period: 99});
+  G.tick(() => ({}));
+  const pod = G.state().enemies.find(e => e.kind === 'pod');
+  assert.ok(pod && pod.state === 'squash' && !G.state().dead && G.state().pl.vy < 0, 'Pip stomps the pod and bounces');
+  assert.ok(G.fx().fluff >= 5 && G.fx().rings >= 1, `the pod bursts into fluff (${G.fx().fluff})`);
+  strict = true; for (let f = 0; f < 34; f += 3) { G.tick(() => ({})); G.render(); } strict = false;
+}
+// Small lives keep to their places: fish leap only from open sea on the
+// coast, butterflies flutter over the meadow, and all of it draws sanely.
+{
+  G.reset(1); let fish = 0, astray = 0, flutter = 0;
+  for (let f = 0; f < 60 * 160; f++) {
+    G.tick(); if (f % 5) continue;
+    const L = G.life(), here = G.biomeAt(G.state().pl.x);
+    for (const q of L.fish) { fish++; const tx = Math.floor(q.xc / 16); let ground = false; for (let y = 4; y < 15; y++) if (G.tileAt(tx, y)) ground = true; if (ground || G.biomeAt(q.xc) !== 'coast') astray++; }
+    if (L.flutter && here === 'meadow') flutter++;
+    if (f % 400 === 0 || (L.fish.length && f % 50 === 0) || (L.bats && here === 'caves' && f % 50 === 0)) { strict = true; G.render(); strict = false; }
+  }
+  assert.ok(fish > 20 && astray === 0, `fish leap from the sea (${fish} seen, ${astray} astray)`);
+  assert.ok(flutter > 20, `butterflies over the meadow (${flutter})`);
+}
 // The journey book stamps each landmark reached, on this device; a ghost
 // rebuild (which replays a run) does not stamp anything. The book draws.
 {
@@ -272,4 +313,4 @@ for (const seed of [3, 11]) {
   assert.ok(G.quality().settled); feed(40); assert.equal(G.quality().level, 1, 'and then it settles');
   strict = true; drawn = 0; G.render(); strict = false; assert.ok(drawn > 300, `and still draws whole frames (${drawn} calls)`);
 }
-console.log('Pip Run PASS: jump-sized gaps, finite physics, demo player progresses through 4 seeded worlds, reaches each chapter’s destination and plays its landmark scene, clears block rows that run up to a gap, and gets past ferries, lifts, crumble bridges, floating steps and podspitters, referee refuses traps and accepted walls stay passable, shared runs replay exactly as ghosts, the painted ground of all four biomes draws with sane geometry, once per chunk, route dressing stands on level ground, whole frames render in every biome with footprints in snow, cloud and moss, the weather comes and goes with sane geometry, Pip talks about what is happening, stomps ring and spark, the journey book stamps landmarks (not in ghost rebuilds), and the resolution steps down on a slow device.');
+console.log('Pip Run PASS: jump-sized gaps at least two tiles wide, finite physics, demo player progresses through 4 seeded worlds, reaches each chapter’s destination and plays its landmark scene, clears block rows that run up to a gap, and gets past ferries, lifts, crumble bridges, floating steps and podspitters, referee refuses traps and accepted walls stay passable, shared runs replay exactly as ghosts, the painted ground of all four biomes draws with sane geometry, once per chunk, route dressing stands on level ground, whole frames render in every biome with footprints in snow, cloud and moss, the weather comes and goes with sane geometry, Pip talks about what is happening, stomps ring and spark, seed pods burst, fish leap only from the sea and butterflies keep to the meadow, the journey book stamps landmarks (not in ghost rebuilds), and the resolution steps down on a slow device.');

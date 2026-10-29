@@ -159,22 +159,26 @@
   }
   // How far a full-speed, full-hold jump carries Pip before landing dh tiles
   // higher, under a biome's rules and its worst headwind.
-  function reach(dh, R = P) {
+  function reach(dh, R = P, gust = -1) {
     // Take-off speed is what a short (2.5 tile) run-up can build under this
     // biome's acceleration: on ice that is well short of full speed.
     const b = {x: 0, y: 0, vx: Math.min(R.max, Math.sqrt(2 * R.acc * 40)), vy: 0, w: P.w, h: P.h, ground: true, jprev: false, buf: 0, coyote: P.coyote, jumping: false};
     const saved = tileAt; tileAt = () => EMPTY;
     let best = 0;
     for (let f = 0; f < 160; f++) {
-      stepBody(b, {r: true, j: true}, R, -1); b.ground = false; b.coyote = 0;
+      stepBody(b, {r: true, j: true}, R, gust); b.ground = false; b.coyote = 0;
       if (b.vy > 0 && b.y >= -dh * TS) { best = b.x; break; }
     }
     tileAt = saved; return best;
   }
   const GAPS = {};
   // (A full-speed reach would overstate icy gaps; see the run-up note above.)
-  for (const k of Object.keys(BIOMES)) { GAPS[k] = {}; for (let dh = -4; dh <= 2; dh++) GAPS[k][dh] = Math.max(0, Math.floor((reach(dh, RULES[k]) * .8 - 14) / TS)); }
+  const gapsFor = (R, gust) => { const o = {}; for (let dh = -4; dh <= 2; dh++) o[dh] = Math.max(0, Math.floor((reach(dh, R, gust) * .8 - 14) / TS)); return o; };
+  for (const k of Object.keys(BIOMES)) GAPS[k] = gapsFor(RULES[k], -1);
   const GAP = GAPS.meadow;
+  // In the sky the wind decides: where the gusts are calm or behind Pip a gap
+  // can be wider than under the worst headwind the table above assumes.
+  const WINDGAPS = [-.5, 0, .5].map(gust => ({gust, gaps: gapsFor(RULES.sky, gust)}));
 
   /* ---------------- world ---------------- */
   let seed = 1, chunks = new Map(), gen = {ci: -1, h: 3, recent: []}, regrow = [];
@@ -235,6 +239,13 @@
     // Gap tables assume a run-up of about three clear tiles; after a pipe or
     // other obstacle the run-up is shorter, so the gap is one tile narrower.
     const shortRun = () => { let n = 0; for (let k = c - 1; k >= 0 && n < 3; k--, n++) if (!t[(ROWS - h) * CW + k] || t[(ROWS - h - 1) * CW + k]) break; return c >= 3 && n < 3 ? 1 : 0; };
+    // The widest safe gap from here, for a step of dh: in the sky, under the
+    // weakest wind from the run-up to the landing.
+    const safeGap = dh => {
+      let tab = GAP;
+      if (sky) { let lo = 1; for (let x = wx(c) - 3 * TS; x <= wx(c) + 7 * TS; x += 8) lo = Math.min(lo, windAt(x)); for (const q of WINDGAPS) if (q.gust <= lo) tab = q.gaps; }
+      return (tab[dh] || 0) - shortRun();
+    };
     // One piece of route. Returns false when it did not fit (a short run
     // is laid instead), so the bag only remembers pieces that were placed.
     function piece(id, room) {
@@ -252,9 +263,13 @@
           return true;
         }
         case 'gap': {                                  // sized from the jump physics
-          const dh = [-2, -1, 0, 0, 1][r() * 5 | 0], h2 = H(h + dh), max = (GAP[h2 - h] || 0) - shortRun();
-          if (max < 1 || room < 4 + max) break;
-          const w = 1 + (r() * Math.min(max, 1 + Math.round(d * 2)) | 0);
+          // Never narrower than two tiles: Pip is wider than a one-tile crack,
+          // so he would seem to walk across it. Where only a one-tile jump is
+          // safe (a step up, a headwind) the far side comes level instead.
+          let h2 = H(h + [-2, -1, 0, 0, 1][r() * 5 | 0]), max = safeGap(h2 - h);
+          if (max < 2 && h2 > h) { h2 = h; max = safeGap(0); }
+          if (max < 2 || room < 4 + max) break;
+          const w = 2 + (r() * (Math.max(2, Math.min(max, 1 + Math.round(d * 2))) - 1) | 0);
           if (w > room - 3) break;
           const mid = c + w / 2;
           for (let i = 0; i < 3; i++) ch.seeds.push({x: wx(0) + (mid + i - 1) * TS, y: surface(Math.max(h, h2)) - 30 - (i === 1 ? 14 : 4), got: false});
@@ -276,10 +291,11 @@
           ch.seeds.push({x: wx(c - 2) + 8, y: surface(h) - 120, got: false});
           return true;
         }
-        case 'isles': {                                // extra gaps between sky islands
-          const h2 = H(h + [-1, 0, 1][r() * 3 | 0]), max = (GAP[h2 - h] || 0) - shortRun();
-          if (max < 1 || room < 4 + max) break;
-          c += 1 + (r() * Math.min(max, 2) | 0); h = h2; flat(2 + (r() * 2 | 0));
+        case 'isles': {                                // extra gaps between sky islands (rock pools on the coast)
+          let h2 = H(h + [-1, 0, 1][r() * 3 | 0]), max = safeGap(h2 - h);
+          if (max < 2 && h2 > h) { h2 = h; max = safeGap(0); }
+          if (max < 2 || room < 4 + max) break;
+          c += 2; h = h2; flat(2 + (r() * 2 | 0));
           return true;
         }
         case 'pyramid': {
@@ -465,8 +481,18 @@
     puff(x, e.y + e.h, '#fff4dc', 6);
     if (e.kind === 'walker') parts.push({x: x + 1, y: y - 8, vx: .7, vy: -2.6, life: 70, l0: 70, col: '#7cc24e', r: 2.2, leaf: true, spin: .5, g: .05, drag: .97});
     if (e.kind === 'flier') for (let i = 0; i < 8; i++) parts.push({x: x + (i - 4) * 1.5, y, vx: (i - 3.5) * .45, vy: -1.2 - i % 3 * .4, life: 60 + i * 4, l0: 90, col: i % 2 ? '#ffe3ee' : '#ffffff', r: 1.5, leaf: true, spin: (i % 2 ? 1 : -1) * .3, g: .025, drag: .96});
+    if (e.kind === 'pod') for (let i = 0; i < 9; i++) parts.push(i < 5   // a burst pod: seed fluff drifting off, chips of husk falling
+      ? {x: x + (i - 2) * 1.4, y: y - 2, vx: (i - 2) * .4, vy: -1.1 - i % 3 * .35, life: 70 + i * 8, l0: 110, col: '#fffaf0', r: 1.2, leaf: true, spin: (i % 2 ? 1 : -1) * .35, g: .018, drag: .95}
+      : {x, y, vx: (i - 7) * .9, vy: -1.6 - i % 2 * .6, life: 26, l0: 26, col: i % 2 ? '#8a5e34' : '#6b4424', r: 1.1, g: .16, drag: .97});
     if (chain >= 2) parts.push({x, y: y - 16, vx: 0, vy: -.55, life: 46, l0: 46, text: '×' + chain, r: 8 + Math.min(4, chain), col: ['#fffbea', '#ffe08a', '#ffb86a', '#ff8a8a'][Math.min(3, chain - 2)], g: 0, drag: 1});
     if (!ghostSim) { hitStop = Math.min(4, 2 + chain); jolt = frameNo; }
+  }
+  // Kicking a shell: a smaller clack of the same kind, where it was struck.
+  function kickFx(e, top) {
+    const x = top ? e.x + 7 : pl.x + 6 < e.x + 7 ? e.x + 1 : e.x + 13, y = top ? e.y + 2 : e.y + 7;
+    parts.push({x, y, vx: 0, vy: 0, life: 12, l0: 12, ring: true, r: 8, col: '#fffbea', g: 0, drag: 1});
+    for (let i = 0; i < 4; i++) { const a = -Math.PI / 2 + (i - 1.5) * .6; parts.push({x, y, vx: Math.cos(a) * 1.8, vy: Math.sin(a) * 1.8 - .4, life: 16, l0: 18, spark: true, r: 1.8, col: i % 2 ? '#ffe9a0' : '#ffffff', g: .1, drag: .9}); }
+    if (!ghostSim && top) { hitStop = 2; jolt = frameNo; }
   }
   function puff(x, y, col, n, up = 1) { for (let i = 0; i < n; i++) { const a = Math.PI * (1 + i / (n - 1 || 1)) * up; parts.push({x, y, vx: Math.cos(a) * (1 + i % 3 * .5), vy: Math.sin(a) * 1.2 - .4, life: 26 + i % 4 * 4, col, r: 1.6 + i % 3 * .6}); } }
   // What a footfall throws up depends on the ground: dust and grass clippings,
@@ -942,6 +968,9 @@
     refused: ['Nice try!', 'Not today!', 'Too sneaky.'],
     gotcha: ['You got me!', 'Sneaky!', 'Well played…'],
     find: ['Ooh, look: {name}!', 'Something new: {name}!', '{Name}! Neat.', 'Never seen {name} before!'],
+    fish: ['A fish!', 'Did you see that fish jump?', 'Jump, fishy, jump!', 'Show-off fish!', 'Look at that fish go!'],
+    butterfly: ['Sorry, butterfly!', 'Flutter, flutter!', 'Didn’t mean to scare you!', 'Hello, little butterfly!'],
+    bats: ['Bats! Eek!', 'Just bats. Only bats.', 'Whoosh! Bats!', 'Excuse me, bats!'],
     idle: ['Running is my favourite.', 'Where does this path go?', 'La la la…', 'I wonder what’s next.', 'Keep going, keep going.', 'Is it lunch yet?'],
     idle_meadow: ['Smells like rain and mushrooms.', 'Look at all the flowers!', 'The kingdom looks busy today.', 'Hi, butterflies!'],
     idle_frost: ['My toes are frozen.', 'Snowmen everywhere!', 'Ice skating, sort of.', 'I should’ve brought a scarf.'],
@@ -967,6 +996,7 @@
   function listen() {
     const span = REGION * CW * TS, region = Math.floor(pl.x / span), id = regionBiome(region), mark = BIOMES[regionBiome(region + 1)].mark;
     if (talk.region !== region) { talk.region = region; talk.enter = frameNo + RATE * 2.5; }
+    if (title) { if (talk.enter) talk.enter = Math.max(talk.enter, frameNo + 1); return; }   // nothing over the region's name: remarks wait until it fades
     if (talk.enter && frameNo >= talk.enter) { talk.enter = 0; say('enter_' + id, {}, 2); }
     const sp = weatherAt(pl.x);
     if (sp.kind && sp.w > .35 && talk.spell !== region) { talk.spell = region; say('w_' + sp.kind, {}, 2); }
@@ -984,31 +1014,39 @@
       const g = ghostAt(frameNo), lead = g ? Math.sign(Math.floor(maxX / TS) - g.m) : 0, who = ghost.label === 'best' ? 'your best' : 'the ghost';
       if (lead && lead !== talk.lead) { if (talk.lead !== undefined) say(lead > 0 ? 'ghost_ahead' : 'ghost_behind', {who}, 2, .7); talk.lead = lead; }
     }
+    // The small lives along the way (drawn only, but where they are is known).
+    const since = k => frameNo - (talk[k] ?? -1e9) > RATE * 20;
+    if (id === 'coast' && since('fish') && fishLeaps(seaRuns(pl.x - 32, pl.x + 112), frameNo).some(f => f.u === 8 && f.xc - pl.x > -24 && f.xc - pl.x < 100)) { talk.fish = frameNo; say('fish', {}, 2, .5); }
+    if (id === 'meadow' && since('bfly') && butterflyLight(pl.x) > .5 && butterflies(pl.x - 80, pl.x + 80, frameNo).some(b => b.fl > .6)) { talk.bfly = frameNo; say('butterfly', {}, 1, .5); }
+    if (id === 'caves' && since('bats')) { const f = batFlight(frameNo); if (f && f.u === 50) { talk.bats = frameNo; say('bats', {}, 2, .6); } }
     if (!dead && !arrival && frameNo > RATE * 12 && frameNo - lastSaid > (talk.idle || RATE * 25)) { talk.idle = RATE * (22 + Math.random() * 18); say(Math.random() < .65 ? 'idle_' + id : 'idle', {mark}, 1); }
   }
   // Pip's words in a bubble over his head, typed out as he says them.
   function drawSpeech() {
     if (!speech || replay) return;
     const age = (drawT ?? frameNo) - speech.at; if (age > speech.life || age < 0) { if (age > speech.life) speech = null; return; }
-    const u = Math.max(12, 6.4 * S), pad = u * .55, lh = u * 1.22, maxW = Math.min(cv.width * .44, u * 17);
-    ctx.save(); ctx.font = `700 ${u}px system-ui,-apple-system,sans-serif`; ctx.textBaseline = 'middle'; ctx.textAlign = 'left';
+    // Kept light: a small, see-through bubble in a regular weight, so it reads
+    // as a passing remark and never hides the run behind it.
+    const u = Math.max(11 * dpr, 4.5 * S), pad = u * .6, lh = u * 1.25, maxW = Math.min(cv.width * .4, u * 16);
+    ctx.save(); ctx.font = `500 ${u}px system-ui,-apple-system,sans-serif`; ctx.textBaseline = 'middle'; ctx.textAlign = 'left';
     const lines = []; let line = '';
     for (const word of speech.text.split(' ')) { const t = line ? line + ' ' + word : word; if (line && ctx.measureText(t).width > maxW) { lines.push(line); line = word; } else line = t; }
     lines.push(line);
     const w = Math.max(...lines.map(l => ctx.measureText(l).width)) + pad * 2, h = lines.length * lh + pad * 1.4;
     const [px, py] = W2D(pl.x + 6, pl.y - 4), k = age < 6 ? .6 + .4 * (age / 6) ** .6 : 1, a = Math.min(1, age / 4, (speech.life - age) / 10);
-    let bx = clamp(8 * dpr, px - w * .3, cv.width - w - 8 * dpr), by = py - h - 9 * S;
-    const below = by < oy + 6 * dpr; if (below) by = py + (big ? 46 : 36) * S;
-    ctx.globalAlpha = a; ctx.translate(px, below ? by : by + h); ctx.scale(k, k); ctx.translate(-px, -(below ? by : by + h));
-    ctx.fillStyle = 'rgba(20,30,40,.22)'; ctx.beginPath(); ctx.roundRect(bx + 2 * S * .4, by + 3 * S * .4, w, h, u * .8); ctx.fill();
-    ctx.fillStyle = '#fffdf6'; ctx.strokeStyle = 'rgba(60,50,40,.35)'; ctx.lineWidth = Math.max(1, S * .35);
-    ctx.beginPath(); ctx.roundRect(bx, by, w, h, u * .8); ctx.fill(); ctx.stroke();
-    const tx = clamp(bx + u, px, bx + w - u), ty = below ? by : by + h;   // the tail points at Pip
-    ctx.beginPath(); ctx.moveTo(tx - u * .45, ty); ctx.lineTo(px + (below ? 0 : 2 * S), below ? py + 30 * S : py - 3 * S); ctx.lineTo(tx + u * .45, ty); ctx.fill();
-    ctx.strokeStyle = 'rgba(60,50,40,.35)'; ctx.beginPath(); ctx.moveTo(tx - u * .45, ty); ctx.lineTo(px + (below ? 0 : 2 * S), below ? py + 30 * S : py - 3 * S); ctx.lineTo(tx + u * .45, ty); ctx.stroke();
-    ctx.fillStyle = '#fffdf6'; ctx.fillRect(tx - u * .42, ty - (below ? -1 : 2) * S * .5, u * .84, S * .7);
+    let bx = clamp(8 * dpr, px - w * .3, cv.width - w - 8 * dpr), by = py - h - 7 * S;
+    // Clear of the cards over the stage (where they stood last frame): below
+    // Pip instead, or faint if there is no room there either.
+    const hits = (x, y) => overlays.some(([rx, ry, rw, rh]) => x < rx + rw && x + w > rx && y < ry + rh && y + h > ry);
+    let below = by < oy + 6 * dpr || hits(bx, by), faint = 1; if (below) by = py + (big ? 44 : 34) * S;
+    if (hits(bx, by)) faint = .3;
+    const tip = [px + (below ? 0 : 1.5 * S), below ? py + 28 * S : py - 2 * S], tx = clamp(bx + u, px, bx + w - u), ty = below ? by : by + h;   // the tail points at Pip
+    const shape = () => { ctx.beginPath(); ctx.roundRect(bx, by, w, h, u * .9); ctx.moveTo(tx - u * .32, ty); ctx.lineTo(...tip); ctx.lineTo(tx + u * .32, ty); };
+    ctx.globalAlpha = a * .9 * faint; ctx.translate(px, ty); ctx.scale(k, k); ctx.translate(-px, -ty);
+    ctx.fillStyle = 'rgba(255,253,246,.74)'; shape(); ctx.fill();
+    ctx.strokeStyle = 'rgba(60,50,40,.16)'; ctx.lineWidth = Math.max(1, S * .25); ctx.beginPath(); ctx.roundRect(bx, by, w, h, u * .9); ctx.stroke();
     let left = Math.ceil(age * 1.7);   // typed out, a couple of letters a tick
-    ctx.fillStyle = '#2d2a33';
+    ctx.fillStyle = 'rgba(45,42,51,.9)';
     lines.forEach((l, i) => { if (left <= 0) return; ctx.fillText(l.slice(0, left), bx + pad, by + pad * .7 + lh * (i + .5)); left -= l.length + 1; });
     ctx.restore();
   }
@@ -1108,7 +1146,7 @@
       if (e.state === 'dead' || e.state === 'squash' || !overlap(pl, e)) continue;
       const stomp = pl.vy > 0 && pl.y + pl.h - e.y < 9;
       if (e.state === 'shell') {
-        e.state = 'slide'; e.vx = pl.x + 6 < e.x + 7 ? 3.6 : -3.6; inv = Math.max(inv, 12); sfx('bump');
+        e.state = 'slide'; e.vx = pl.x + 6 < e.x + 7 ? 3.6 : -3.6; inv = Math.max(inv, 12); sfx('bump'); kickFx(e, stomp);
         if (stomp) pl.vy = -4.4;
       } else if (stomp) {
         if (e.kind === 'snail') { e.state = 'shell'; e.vx = 0; e.h = 12; e.y += 2; e.shellAt = frameNo; }
@@ -1235,11 +1273,11 @@
     for (const b of bytes) bits += b.toString(2).padStart(8, '0');
     for (let i = 0; i < bits.length; i += 6) out += B64[parseInt(bits.slice(i, i + 6).padEnd(6, '0'), 2)];
     const ev = r.events.map(e => e.k === 'w' ? `w${e.f.toString(36)}-${e.w.toString(36)}` : `${e.k}${e.f.toString(36)}-${e.x.toString(36)}-${e.y.toString(36)}`).join('_');
-    return ['2', (r.seed >>> 0).toString(36), r.w.toString(36), bytes.length.toString(36), out].join('.') + (ev ? '.' + ev : '');
+    return ['3', (r.seed >>> 0).toString(36), r.w.toString(36), bytes.length.toString(36), out].join('.') + (ev ? '.' + ev : '');
   }
   function decodeRun(code) {
     const [v, sd, w, nb, data = '', ev = ''] = String(code).split('.');
-    if (v !== '2' || !w || !nb || !/^[0-9a-z]+$/.test(sd + w + nb) || /[^A-Za-z0-9_-]/.test(data)) return null;
+    if (v !== '3' || !w || !nb || !/^[0-9a-z]+$/.test(sd + w + nb) || /[^A-Za-z0-9_-]/.test(data)) return null;
     let bits = ''; for (const ch of data) bits += B64.indexOf(ch).toString(2).padStart(6, '0');
     const inputs = [];
     for (let i = 0, n = parseInt(nb, 36); i < n; i++) { const b = parseInt(bits.slice(i * 8, i * 8 + 8), 2); if (!(b >= 0)) return null; for (let k = 0; k <= b >> 3; k++) inputs.push(b & 7); }
@@ -2385,6 +2423,19 @@
           ctx.beginPath(); ctx.moveTo(x, y); ctx.quadraticCurveTo(x + len / 2, y - (1 + f * 2) * S, x + len, y); ctx.stroke();
         }
       }
+      for (let i = Math.floor(cam * .16 / 150) - 1, u; (u = i * 150) < cam * .16 + W / S + 150; i++) {   // fish leaping far out, now and then a school of three
+        const hf = hash(seed ^ 0xfa5, i), P = 280 + hf % 240, k = (frameNo + (hf >>> 9) % P) % P, school = hf % 4 ? 1 : 3;
+        for (let j = 0; j < school; j++) {
+          const v = k - j * 7; if (v < 0 || v > 34) continue;
+          const x = (u + (hf >>> 3) % 120 + j * 7 - cam * .16) * S, y = hz + bandH * (.1 + (hf >>> 14) % 12 / 100);
+          if (v < 22) {
+            const q = v / 22; ctx.save(); ctx.translate(x + (q - .5) * 12 * S, y - Math.sin(q * Math.PI) * 7 * S); ctx.rotate(Math.atan2(-7 * Math.PI * Math.cos(q * Math.PI), 12));
+            ctx.fillStyle = 'rgba(40,62,96,.75)'; ctx.beginPath(); ctx.ellipse(0, 0, 2.2 * S, .8 * S, 0, 0, 7); ctx.moveTo(-1.6 * S, 0); ctx.lineTo(-3.2 * S, -S); ctx.lineTo(-3.2 * S, S); ctx.fill(); ctx.restore();
+          }
+          const sq = v < 6 ? v / 6 : v >= 22 ? (v - 22) / 12 : -1;
+          if (sq >= 0) { ctx.strokeStyle = `rgba(255,255,255,${(.6 * (1 - sq)).toFixed(3)})`; ctx.lineWidth = Math.max(1, S * .3); ctx.beginPath(); ctx.ellipse(x + (v < 6 ? -6 : 6) * S, y, (1 + 3 * sq) * S, (.4 + sq) * S, 0, 0, 7); ctx.stroke(); }
+        }
+      }
       // The surf where the sea meets the beach: seen only in the gaps.
       const swell = 1 + 1.6 * (weatherAt(cam + viewW / 2).kind === 'squall' ? weatherAt(cam + viewW / 2).w : 0);   // a squall heaves the surf
       const yw = oy + WATER_Y * S, foam = X => yw + (Math.sin((X / S + cam) * .09 + frameNo * .05) * 1.2 + Math.sin((X / S + cam) * .031 - frameNo * .03) * 1.6) * S * swell;
@@ -2539,6 +2590,144 @@
         if (sp.w > .2) { const q = ((t + tx * 13) % 36) / 36; ctx.strokeStyle = `rgba(240,248,255,${(.6 * (1 - q) * sp.w).toFixed(3)})`; ctx.lineWidth = Math.max(1, S * .25); ctx.beginPath(); ctx.ellipse(x + (hash(tx, 5) % 5 - 2) * S, y, rx * q, rx * q * .25, 0, 0, 7); ctx.stroke(); }
       }
     }
+  }
+  /* ---------------- small lives ----------------
+     Fish leap from the sea between the dunes and far out on the water,
+     butterflies dance over the meadow by day and bats flit past Pip's light in
+     the caves. Drawn only, as functions of time and place, so the run, the
+     planner and ghosts never see them; Pip notices them (see Pip talks). */
+  // Stretches of open sea on the coast about x0..x1: columns with no ground at
+  // all, each from where it really starts (so its fish keep their place).
+  function seaRuns(x0, x1) {
+    const open = tx => { if (biomeAt(tx * TS) !== 'coast') return false; for (let y = 4; y < ROWS; y++) if (tileAt(tx, y)) return false; return true; };
+    const out = [], first = Math.floor(x0 / TS), end = Math.floor(x1 / TS);
+    let tx = first, a = null;
+    while (tx > first - 12 && open(tx - 1)) tx--;
+    for (; tx <= end + 12; tx++) {
+      const o = open(tx);
+      if (o && a === null) a = tx;
+      if (!o && a !== null) { out.push([a, tx - a]); a = null; }
+      if (!o && tx > end) break;
+    }
+    if (a !== null) out.push([a, tx - a]);
+    return out;
+  }
+  // Each stretch has a fish or two that leap now and then, on their own clocks.
+  function fishLeaps(runs, t) {
+    const out = [];
+    for (const [a, n] of runs) {
+      if (n < 2) continue;
+      const slots = n >= 6 ? 2 : 1;
+      for (let j = 0; j < slots; j++) {
+        const h = hash(seed ^ 0xf15, a * 4 + j), P = 150 + h % 160, D = 24 + (h >>> 8) % 10, u = (t + (h >>> 12) % P) % P;
+        if (u >= D + 14) continue;
+        out.push({u, D, q: u / D, L: Math.min(n * TS - 12, 14 + (h >>> 16) % 16), H: 16 + (h >>> 20) % 18, dir: h >>> 31 ? 1 : -1,
+          xc: (a + n * (j + .5) / slots) * TS + ((h >>> 24) % 7 - 3), kind: (h >>> 26) % 3});
+      }
+    }
+    return out;
+  }
+  const FISH = [['#ff9a6a', '#ffe2c2', '#e0603c'], ['#58c6be', '#dcfff6', '#2f8f8a'], ['#a9c4e8', '#f4f9ff', '#5f7fae']];
+  const fishSprite = k => sprite('fish' + k, 13, 8, g => {
+    const [back, belly, fin] = FISH[k];
+    g.translate(6.5, 4);
+    g.fillStyle = fin; g.beginPath(); g.moveTo(-3.6, 0); g.lineTo(-6.3, -2.6); g.quadraticCurveTo(-5.3, 0, -6.3, 2.6); g.closePath(); g.fill();   // tail
+    g.beginPath(); g.moveTo(-1.2, -2.1); g.quadraticCurveTo(.4, -3.9, 1.9, -2.1); g.fill();   // the fin on its back
+    g.fillStyle = grad(g, 0, -2.6, 0, 2.6, [back, back, belly]); g.beginPath(); g.ellipse(.4, 0, 4.6, 2.5, 0, 0, 7); g.fill();
+    g.fillStyle = 'rgba(255,255,255,.55)'; g.beginPath(); g.ellipse(.6, -1.25, 2.4, .55, -.1, 0, 7); g.fill();
+    g.fillStyle = '#ffffff'; g.beginPath(); g.arc(3, -.5, .95, 0, 7); g.fill(); g.fillStyle = '#1f2630'; g.beginPath(); g.arc(3.25, -.5, .5, 0, 7); g.fill();
+  });
+  function drawSeaLife(m) {
+    const w = weightOf(m, 'coast'); if (w < .05) return;   // with the sea behind them: none where the next region's sky still shows
+    const t = drawT ?? frameNo, runs = seaRuns(cam - TS, cam + viewW + TS);
+    const ring = (x, q, k) => { const [sx, sy] = W2D(x, WATER_Y); ctx.strokeStyle = `rgba(255,255,255,${(.8 * (1 - q)).toFixed(3)})`; ctx.lineWidth = Math.max(1, S * .35); ctx.beginPath(); ctx.ellipse(sx, sy, (1.5 + 5 * q) * k * S, (.5 + 1.4 * q) * k * S, 0, 0, 7); ctx.stroke(); };
+    ctx.save();
+    for (const [a, n] of runs) {   // a shadow gliding under the surface
+      const h = hash(seed ^ 0xf16, a), sp = .006 + h % 5 * .002, ph = h % 628 / 100, x = (a + .5) * TS + (n - 1) * TS * (.5 + .45 * Math.sin(t * sp + ph));
+      const [sx, sy] = W2D(x, WATER_Y + 6 + h % 4), wag = Math.sin(t * .3) * .6 * S;
+      ctx.globalAlpha = .28 * w; ctx.fillStyle = '#123a58';
+      ctx.save(); ctx.translate(sx, sy); ctx.scale(Math.cos(t * sp + ph) >= 0 ? 1 : -1, 1);
+      ctx.beginPath(); ctx.ellipse(0, 0, 4.5 * S, 1.6 * S, 0, 0, 7); ctx.fill();
+      ctx.beginPath(); ctx.moveTo(-3.5 * S, 0); ctx.lineTo(-7 * S, -1.8 * S + wag); ctx.lineTo(-7 * S, 1.8 * S + wag); ctx.fill(); ctx.restore();
+    }
+    ctx.globalAlpha = w;
+    for (const f of fishLeaps(runs, t)) {
+      const from = f.xc - f.dir * f.L / 2, to = f.xc + f.dir * f.L / 2;
+      if (f.u < 10) ring(from, f.u / 10, .8);
+      if (f.u >= f.D) {   // back in with a splash and a few drops
+        const v = f.u - f.D; ring(to, v / 14, 1);
+        ctx.fillStyle = `rgba(255,255,255,${(.85 * (1 - v / 14)).toFixed(3)})`;
+        for (let i = 0; i < 4; i++) { const [dx, dy] = W2D(to + (i - 1.5) * (1 + v * .35), WATER_Y - (1.1 + i % 2 * .5) * v + .07 * v * v); ctx.beginPath(); ctx.arc(dx, dy, .7 * S, 0, 7); ctx.fill(); }
+        continue;
+      }
+      const q = f.q, [sx, sy] = W2D(f.xc + f.dir * (q - .5) * f.L, WATER_Y - f.H * 4 * q * (1 - q)), spr = fishSprite(f.kind);
+      ctx.save(); ctx.translate(sx, sy); ctx.rotate(Math.atan2(-f.H * 4 * (1 - 2 * q), f.dir * f.L)); if (f.dir < 0) ctx.scale(1, -1);
+      ctx.drawImage(spr, -6.5 * S, -4 * S, 13 * S, 8 * S); ctx.restore();
+    }
+    ctx.restore();
+  }
+  // Butterflies over the meadow by day, a few to a chunk, each about its own
+  // patch of turf; they lift away from Pip as he runs by and settle again.
+  const BFLY = [['#ffd36a', '#ff9f43'], ['#9fd8ff', '#5f9fe0'], ['#ffc2dc', '#ff7fae'], ['#fffbea', '#ffe08a']];
+  function flutterAnchors(ch) {
+    if (ch.flutter) return ch.flutter;
+    ch.flutter = [];
+    if (ch.biome === 'meadow') for (let x = 1; x < CW - 1; x++) {
+      const tx = ch.ci * CW + x, h = hash(seed ^ 0xb7f, tx); if (h % 7) continue;
+      for (let y = 2; y < ROWS; y++) { const v = ch.t[y * CW + x]; if (!v) continue; if (v === EARTH) ch.flutter.push({x: tx * TS + 8, y: y * TS - 9, h}); break; }
+    }
+    return ch.flutter;
+  }
+  function butterflies(x0, x1, t) {
+    const out = [];
+    for (let ci = Math.max(0, Math.floor(x0 / (CW * TS))); ci <= Math.floor(x1 / (CW * TS)); ci++) {
+      const ch = chunks.get(ci); if (!ch || ch.biome !== 'meadow') continue;
+      for (const b of flutterAnchors(ch)) {
+        const ph = b.h % 628 / 100;
+        let x = b.x + 12 * Math.sin(t * .011 + ph) + 5 * Math.sin(t * .037 + ph * 2), y = b.y - 5 * Math.abs(Math.sin(t * .019 + ph)) - 2 * Math.sin(t * .053 + ph);
+        const fl = smoothstep((60 - Math.hypot(x - pl.x - 6, y - pl.y - 10)) / 44);
+        x += (x > pl.x + 6 ? 1 : -1) * fl * 20; y -= fl * 28;
+        out.push({x, y, fl, ph, col: BFLY[(b.h >>> 8) % 4], dir: Math.cos(t * .011 + ph) >= 0 ? 1 : -1});
+      }
+    }
+    return out;
+  }
+  const butterflyLight = x => { const d = dayAt(x), sp = weatherAt(x); return clamp(0, 1 - d.night - .6 * d.dusk, 1) * (1 - (sp.kind === 'shower' ? sp.w : 0)); };
+  function drawButterflies(m) {
+    const a = weightOf(m, 'meadow') * butterflyLight(cam + viewW / 2); if (a < .05) return;
+    const t = drawT ?? frameNo, s = S;
+    ctx.save(); ctx.globalAlpha = a;
+    for (const b of butterflies(cam - 24, cam + viewW + 24, t)) {
+      const [x, y] = W2D(b.x, b.y), flap = .25 + .75 * Math.abs(Math.sin(t * (.5 + .5 * b.fl) + b.ph * 3));
+      ctx.save(); ctx.translate(x, y); ctx.scale(b.dir * 1.45, 1.45); ctx.rotate(-.15);
+      for (const [wy, rx, ry, c] of [[-1, 2.4, 1.7, b.col[0]], [.9, 1.6, 1.2, b.col[1]]]) {
+        ctx.fillStyle = c;
+        for (const sd of [-1, 1]) { ctx.beginPath(); ctx.ellipse(sd * rx * .55 * flap * s, wy * s, rx * flap * s, ry * s, sd * .5, 0, 7); ctx.fill(); }
+      }
+      ctx.fillStyle = '#4a3a2c'; ctx.fillRect(-.3 * s, -2 * s, .6 * s, 3.6 * s);
+      ctx.restore();
+    }
+    ctx.restore();
+  }
+  // Now and then a few bats flit across the caves, past Pip's light.
+  function batFlight(t) {
+    const P = 560, k = Math.floor(t / P), h = hash(seed ^ 0xba7, k), u = t - k * P - h % 300;
+    return u < 0 || u > 140 || h % 3 === 0 ? null : {u, q: u / 140, dir: h >>> 31 ? 1 : -1, n: 3 + (h >>> 4) % 3};
+  }
+  function drawBats(m) {
+    const w = weightOf(m, 'caves'), t = drawT ?? frameNo, f = w > .3 && batFlight(Math.floor(t)); if (!f) return;
+    ctx.save(); ctx.globalAlpha = w; ctx.fillStyle = '#3d3150'; ctx.strokeStyle = 'rgba(255,220,170,.4)';
+    for (let i = 0; i < f.n; i++) {
+      const q = f.q - i * .035; if (q < 0 || q > 1) continue;
+      const [x, y] = W2D(cam + viewW * (f.dir > 0 ? -.1 + 1.2 * q : 1.1 - 1.2 * q), pl.y - 22 - i % 3 * 9 + Math.sin(t * .21 + i * 2) * 5 + Math.sin(q * 9 + i) * 6);
+      const flap = Math.sin(t * .7 + i * 1.3), s = S * (.9 + i % 2 * .2);
+      ctx.save(); ctx.translate(x, y); ctx.lineWidth = Math.max(1, .4 * s); ctx.beginPath();
+      for (const sd of [-1, 1]) { ctx.moveTo(0, 0); ctx.quadraticCurveTo(sd * 3 * s, (-2.5 * flap - 1) * s, sd * 6 * s, -3 * flap * s); ctx.quadraticCurveTo(sd * 4.5 * s, (1 - flap) * s, sd * 3.6 * s, (.2 - 1.4 * flap) * s); ctx.quadraticCurveTo(sd * 2.2 * s, .8 * s, 0, s); }
+      ctx.fill(); ctx.stroke();
+      ctx.beginPath(); ctx.ellipse(0, .4 * s, 1.3 * s, 1.7 * s, 0, 0, 7); ctx.moveTo(-.9 * s, -.9 * s); ctx.lineTo(-.6 * s, -2.2 * s); ctx.lineTo(-.1 * s, -1.2 * s); ctx.moveTo(.9 * s, -.9 * s); ctx.lineTo(.6 * s, -2.2 * s); ctx.lineTo(.1 * s, -1.2 * s); ctx.fill();
+      ctx.restore();
+    }
+    ctx.restore();
   }
   /* ---------------- time of day ----------------
      The sun goes down as the journey goes on: day for the first chapters,
@@ -2791,7 +2980,10 @@
     seen = seen || new Set(store.get('pip-run:seen') || []);
     if (seen.has(id) || card || chapter) return;
     seen.add(id); store.set('pip-run:seen', [...seen]); card = {id, t: 0}; sfx('find');
-    if (!Object.values(SPELL).includes(id)) { const n = FINDS[id][0]; say('find', {Name: n, name: n[0].toLowerCase() + n.slice(1)}, 2, .7); }   // (weather has its own lines)
+    if (!Object.values(SPELL).includes(id)) {   // (weather has its own lines)
+      const n = FINDS[id][0], low = n[0].toLowerCase() + n.slice(1), name = /^a |s$/.test(low) ? low : (/^[aeiou]/.test(low) ? 'an ' : 'a ') + low;   // "a lift", "an aurora", "floating steps"
+      say('find', {Name: n, name}, 2, .7);
+    }
   }
   function drawCard() {
     if (!card || replay) return;
@@ -2803,6 +2995,7 @@
     const pill = u * 3.2, w = Math.max(nw + pill, sw) + u * 2, x = cv.width / 2 - w / 2, h = u * 3.1;
     const [px, py] = W2D(pl.x - 8, pl.y - 14);   // never hide Pip: fade back while he is under the card
     if (px < x + w && px + 28 * S > x && py < y + h && py + 40 * S > y) ctx.globalAlpha *= .25;
+    overlays.push([x, y, w, h]);
     ctx.fillStyle = 'rgba(24,46,56,.72)'; ctx.beginPath(); ctx.roundRect(x, y, w, h, u * .7); ctx.fill();
     ctx.fillStyle = '#ffd36a'; ctx.beginPath(); ctx.roundRect(x + u, y + u * .45, u * 2.6, u * 1.1, u * .55); ctx.fill();
     ctx.fillStyle = '#3b2a10'; ctx.font = `800 ${u * .62}px system-ui,-apple-system,sans-serif`; ctx.textAlign = 'center'; ctx.fillText('NEW', x + u * 2.3, y + u);
@@ -3061,15 +3254,19 @@
     ctx.save(); ctx.globalAlpha = a; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
     let w = 0; for (const [t, wt, k] of lines) { ctx.font = `${wt} ${u * k}px system-ui,-apple-system,sans-serif`; w = Math.max(w, ctx.measureText(t).width); }
     const h = lines.reduce((q, l) => q + u * l[2] * 1.55, 0) + u * 1.4, x = cv.width / 2, y = Math.max(oy + VIEW_H * S * .1, 76 * dpr);
+    const [px, py] = W2D(pl.x - 8, pl.y - 14), bw = w + u * 2.8;   // fade back while Pip is under it, as the find card does
+    chapterFade += ((px < x + bw / 2 && px + 28 * S > x - bw / 2 && py < y + h && py + 40 * S > y ? .5 : 1) - chapterFade) * .15; ctx.globalAlpha *= chapterFade;
+    overlays.push([x - bw / 2, y, bw, h]);
     ctx.fillStyle = 'rgba(22,42,52,.74)'; ctx.beginPath(); ctx.roundRect(x - w / 2 - u * 1.4, y, w + u * 2.8, h, u * .9); ctx.fill();
     let yy = y + u * .7;
     for (const [t, wt, k, col] of lines) { ctx.font = `${wt} ${u * k}px system-ui,-apple-system,sans-serif`; yy += u * k * .78; ctx.fillStyle = col; ctx.fillText(t, x, yy); yy += u * k * .77; }
     ctx.restore();
   }
-  let title = null, lastRegion = -1;
+  let title = null, lastRegion = -1, overlays = [], chapterFade = 1;   // overlays: where this frame's cards stand, for Pip's bubble to keep clear of
   function drawTitle() {
     if (!title || replay) return;
     const a = Math.min(1, title.t / 25, (210 - title.t) / 35), B = BIOMES[title.id], u = Math.max(14, 11 * S), y = oy + VIEW_H * S * .3;
+    overlays.push([cv.width * .1, y - u, cv.width * .8, u * 2.8]);
     ctx.save(); ctx.globalAlpha = Math.max(0, a); ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
     ctx.font = `800 ${u * 1.5}px system-ui,-apple-system,sans-serif`; ctx.fillStyle = 'rgba(20,28,40,.55)'; ctx.fillText(B.name, cv.width / 2 + 2, y + 2); ctx.fillStyle = '#fffbea'; ctx.fillText(B.name, cv.width / 2, y);
     ctx.font = `500 ${u * .8}px system-ui,-apple-system,sans-serif`; ctx.fillStyle = 'rgba(20,28,40,.55)'; ctx.fillText(B.sub, cv.width / 2 + 1, y + u * 1.3 + 1); ctx.fillStyle = '#fffbea'; ctx.fillText(B.sub, cv.width / 2, y + u * 1.3);
@@ -3341,16 +3538,27 @@
     };
     const blush = (bx, by) => { ctx.fillStyle = 'rgba(255,128,128,.32)'; ctx.beginPath(); ctx.ellipse(bx, by, 1.6 * s, .9 * s, 0, 0, 7); ctx.fill(); };
     const flat = e.state === 'squash' && e.kind !== 'pod', st = e.t;
-    if (e.state === 'squash' && !flat) { ball(0, -2 * s, 8 * s, 2.6 * s, ['#b98a58', '#8a5e38', '#5e3e24']); ctx.restore(); return; }
+    const pod = () => {   // a spiky seed pod
+      ctx.fillStyle = '#6b4424'; ctx.beginPath(); for (let k = 0; k < 12; k++) { const a = k * Math.PI / 6, rr = (k % 2 ? 3.6 : 6.4) * s; ctx.lineTo(Math.cos(a) * rr, Math.sin(a) * rr); } ctx.fill();
+      ball(0, 0, 3.6 * s, 3.6 * s, ['#f6dca6', '#c99a62', '#8a5e34']);
+    };
+    if (e.state === 'squash' && !flat) {   // a burst pod: the husk splits and its halves tumble away and fall
+      ctx.globalAlpha *= Math.max(0, 1 - Math.max(0, st - 16) / 18);
+      for (const sd of [-1, 1]) {
+        ctx.save(); ctx.translate(sd * (1.5 + st * .6) * s, (-5 - 2 * st + .12 * st * st) * s); ctx.rotate(sd * st * .2);
+        ctx.beginPath(); ctx.rect(sd > 0 ? 0 : -8 * s, -8 * s, 8 * s, 16 * s); ctx.clip(); pod();
+        ctx.fillStyle = '#fff1cf'; ctx.beginPath(); ctx.ellipse(0, 0, .9 * s, 3.2 * s, 0, 0, 7); ctx.fill();   // the pale inside of the husk
+        ctx.restore();
+      }
+      ctx.restore(); return;
+    }
     if (flat) {   // squashed flat with a wobble, fading into a poof at the end
       const k = Math.min(1, st / 4), wob = st > 4 ? Math.sin(st * .9) * .08 * Math.max(0, 1 - (st - 4) / 14) : 0;
       ctx.scale(1 + .45 * k + wob, 1 - .52 * k - wob); ctx.globalAlpha *= st > 22 ? Math.max(0, 1 - (st - 22) / 10) : 1;
     }
     if (e.state === 'shell' && e.shellAt !== undefined && frameNo - e.shellAt < 22) { const q = (frameNo - e.shellAt) / 22; ctx.rotate(Math.sin(q * Math.PI * 4) * .25 * (1 - q)); }   // the shell wobbles
-    if (e.kind === 'pod') {             // a spiky seed pod, spinning as it flies
-      ctx.translate(0, -5 * s); ctx.rotate(-e.t * .18);
-      ctx.fillStyle = '#6b4424'; ctx.beginPath(); for (let k = 0; k < 12; k++) { const a = k * Math.PI / 6, rr = (k % 2 ? 3.6 : 6.4) * s; ctx.lineTo(Math.cos(a) * rr, Math.sin(a) * rr); } ctx.fill();
-      ball(0, 0, 3.6 * s, 3.6 * s, ['#f6dca6', '#c99a62', '#8a5e34']);
+    if (e.kind === 'pod') {             // spinning as it flies
+      ctx.translate(0, -5 * s); ctx.rotate(-e.t * .18); pod();
       ctx.restore(); return;
     }
     if (e.kind === 'walker') {          // Mossbud: a round seed with a sprouting leaf
@@ -3656,8 +3864,12 @@
       gb.setTransform(1, 0, 0, 1, 0, 0); gb.globalCompositeOperation = 'source-atop';
       gb.globalAlpha = .45; gb.fillStyle = '#a2acb6'; gb.fillRect(0, 0, bw, bh); gb.globalAlpha = .22; gb.fillStyle = '#ffffff'; gb.fillRect(0, 0, bw, bh);
       ctx.drawImage(ghostBuf, bx, by);
-      ctx.globalAlpha = .7; ctx.fillStyle = '#e6f6ff'; ctx.font = `600 ${Math.max(10, 4.6 * S)}px system-ui,-apple-system,sans-serif`; ctx.textAlign = 'center';
-      ctx.fillText(ghost.label === 'best' ? 'your best' : 'ghost', x, y - (pipVisual() - 14) * S);
+      // Its name fades while it runs with Pip, so it never reads as his own label.
+      const apart = smoothstep((Math.hypot(g.x - live.pl.x, g.y - live.pl.y) - 14) / 26);
+      if (apart > .02) {
+        ctx.globalAlpha = .6 * apart; ctx.fillStyle = '#e6f6ff'; ctx.font = `500 ${Math.max(9, 3.8 * S)}px system-ui,-apple-system,sans-serif`; ctx.textAlign = 'center';
+        ctx.fillText(ghost.label === 'best' ? 'your best' : 'ghost', x, y - (pipVisual() - 14) * S);
+      }
     }
     ctx.restore();
     ({pl, facing, anim, landedAt, dead, inv, sq, skidding, big, growing} = live);
@@ -3949,10 +4161,10 @@
   }
   function scene(arcs, at) {
     const m = biomeMix();
-    drawBackground(); drawDestination(); drawTiles(); drawPrints(); drawPuddles(); drawGrass(); drawLeaves(); drawMovers(); drawCrystals(); drawSeeds(); drawMarks();
+    drawBackground(); drawDestination(); drawSeaLife(m); drawTiles(); drawPrints(); drawPuddles(); drawGrass(); drawLeaves(); drawButterflies(m); drawMovers(); drawCrystals(); drawSeeds(); drawMarks();
     drawItems();
     for (const e of enemies) drawEnemy(e);
-    drawGhost(); drawPip(); drawParts(); drawWeather(m); drawSpell(); drawFore(m); drawGrade(m); drawDusk(m); drawDarkness(m); drawSpell(true);
+    drawGhost(); drawPip(); drawParts(); drawBats(m); drawWeather(m); drawSpell(); drawFore(m); drawGrade(m); drawDusk(m); drawDarkness(m); drawSpell(true);
     if (!human || replay) drawThoughts(arcs, at);
     drawWary(); drawDirectorWorld(); drawSpeech();
   }
@@ -3990,7 +4202,7 @@
     for (const e of enemies) if (e.px !== undefined) { e.x = lerp(e.px, e.x); e.y = lerp(e.py, e.y); }
     composite(() => scene(plan && plan.arcs, plan ? plan.at : 0));
     ({pl, cam} = live); enemies.forEach((e, i) => { [e.x, e.y] = ex[i]; }); drawT = null;
-    ctx.setTransform(1, 0, 0, 1, 0, 0); drawConsole(); drawTitle(); drawCard(); drawChapter(); drawHud(); drawBook();
+    ctx.setTransform(1, 0, 0, 1, 0, 0); overlays = []; drawConsole(); drawTitle(); drawCard(); drawChapter(); drawHud(); drawBook();
   }
 
   // The book: a page of five postcards, one per landmark, stamped once reached.
@@ -4080,13 +4292,14 @@
   if (playing) raf = requestAnimationFrame(frame);
   // Test hook: lets the smoke test drive the simulation without a browser clock.
   window.__pipRun = {tick, reset, state: () => ({pl, enemies, seeds, maxX, dead, human, cam, viewW}), GAP, layout, tileAt: (x, y) => tileAt(x, y),
-    art: ci => { const ch = chunk(ci); return ch && {art: chunkArt(ch, Math.round(TS * S)), biome: ch.biome}; }, props: ci => { const ch = chunk(ci); return ch && ch.props ? ch.props.map(q => ({...q})) : []; }, dressing: ci => { const ch = chunk(ci); return ch && ch.dressing ? ch.dressing.list.map(q => ({...q})) : []; }, celebrated: () => [...celebrated.keys()], render: () => render(), lookAt, weatherAt, speech: () => speech && {...speech}, say, book: () => store.get('pip-run:book'), bookOpen: () => !!book, openBook, tension: () => tension, pace: ms => paced(ms), quality: () => ({level: pace.level, settled: pace.settled, windows: pace.windows, dpr, width: cv.width}), fx: () => ({parts: parts.length, rings: parts.filter(q => q.ring).length, sparks: parts.filter(q => q.spark).length, prints: prints.length, printList: prints.map(q => ({...q})), rustled: rustle.size}), dayAt,
+    art: ci => { const ch = chunk(ci); return ch && {art: chunkArt(ch, Math.round(TS * S)), biome: ch.biome}; }, props: ci => { const ch = chunk(ci); return ch && ch.props ? ch.props.map(q => ({...q})) : []; }, dressing: ci => { const ch = chunk(ci); return ch && ch.dressing ? ch.dressing.list.map(q => ({...q})) : []; }, celebrated: () => [...celebrated.keys()], render: () => render(), lookAt, weatherAt, speech: () => speech && {...speech}, say, book: () => store.get('pip-run:book'), bookOpen: () => !!book, openBook, tension: () => tension, pace: ms => paced(ms), quality: () => ({level: pace.level, settled: pace.settled, windows: pace.windows, dpr, width: cv.width}), fx: () => ({parts: parts.length, rings: parts.filter(q => q.ring).length, sparks: parts.filter(q => q.spark).length, fluff: parts.filter(q => q.leaf).length, prints: prints.length, printList: prints.map(q => ({...q})), rustled: rustle.size}), dayAt,
     scores: () => { const th = enemies.filter(e => e.state !== 'dead' && e.state !== 'squash' && Math.abs(e.x - pl.x) < 260); return OPTIONS.map(o => [o.dir, o.wait, o.hold, Math.round(simulate(o, th).score)]); },
     actions: () => actions(),
     tile: (x, y, v) => setTile(x, y, v),
     rollout: i => { const th = enemies.filter(e => e.state !== 'dead' && e.state !== 'squash' && Math.abs(e.x - pl.x) < 260); const r = simulate(OPTIONS[i], th); return {o: OPTIONS[i], score: r.score, death: r.death, pts: r.pts}; },
     journey: () => ({chapters, arrival: !!arrival, chapter: chapter && {...chapter}}), stats: () => stats, biomeAt: x => biomeAt(x), GAPS, features: () => [...chunks.values()].flatMap(ch => ch.features), wonder: r => regionWonder(r),
     debug: () => ({tension, risk, marks: marks.length, replay: !!replay, zoom, big, items: items.length}),
+    life: () => ({fish: fishLeaps(seaRuns(cam - TS, cam + viewW + TS), frameNo).filter(f => f.u < f.D).map(f => ({...f})), bats: batFlight(frameNo), flutter: butterflies(cam, cam + viewW, frameNo).length, runs: seaRuns(cam - TS, cam + viewW + TS)}),
     director: {arm: t => { tool = t; }, refill: () => { charges = 3; }, place: (tx, ty) => place(tx, ty), grow, info: () => ({tool, charges, dirScore, notes: notes.map(n => n.text)})},
     ghost: {encode: () => encodeRun(run), decode: decodeRun, race: code => { const r = decodeRun(code), live = seed; ghost = r && buildGhost(r, 'friend'); reset(live); return ghost; }, at: f => ghostAt(f), run: () => run}};
 })();
