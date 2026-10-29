@@ -50,7 +50,7 @@ A.cycle(); assert.equal(A.mode(), 1); assert.equal(store['pip-run:sound'], 'fx')
 A.cycle(); assert.equal(A.mode(), 2); assert.equal(store['pip-run:sound'], 'music');
 
 // Every effect builds a valid graph.
-for (const name of ['step', 'jump', 'land', 'seed', 'bump', 'smash', 'sprout', 'grow', 'shrink', 'stomp', 'spring', 'tumble', 'crumble', 'spit', 'arrive', 'find', 'place', 'refuse', 'gotcha', 'ui', 'rustle', 'splash'])
+for (const name of ['step', 'jump', 'land', 'seed', 'bump', 'smash', 'sprout', 'grow', 'shrink', 'stomp', 'spring', 'tumble', 'crumble', 'spit', 'arrive', 'find', 'place', 'refuse', 'gotcha', 'ui', 'rustle', 'splash', 'talk'])
   for (const o of [{}, {surface: 'grass'}, {surface: 'snow'}, {surface: 'moss'}, {surface: 'ice'}, {surface: 'cloud'}, {surface: 'crystal'}, {surface: 'wood'}, {surface: 'stone'}, {surface: 'sand'}, {snow: true}, {impact: 9, streak: 12, v: 1}]) A.fx(name, o);
 // Each landmark's arrival scene sounds different, and fuller than the bare fanfare.
 const voices = mark => { const n = count.started; trace.length = 0; A.fx('arrive', {mark}); return [count.started - n, trace.filter(v => v > 1).sort((a, b) => a - b).join()]; };
@@ -84,4 +84,4 @@ for (const name of ['step', 'jump', 'land', 'seed', 'bump', 'arrive']) assert.ok
 const total = Object.values(heard).reduce((a, b) => a + b, 0), code = G.ghost.encode();
 G.ghost.race(code);
 assert.equal(Object.values(heard).reduce((a, b) => a + b, 0), total, 'ghost rebuild is silent');
-console.log(`Pip Run sound PASS: 22 effects build valid graphs, five landmark scenes sound distinct, ambience, weather and score over 5 biomes, crickets after sunset (${count.started} voices), off by default and remembered, silent while paused, game voices ${Object.keys(heard).length} event kinds, ghost rebuilds are silent.`);
+console.log(`Pip Run sound PASS: 23 effects build valid graphs, five landmark scenes sound distinct, ambience, weather and score over 5 biomes, crickets after sunset (${count.started} voices), off by default and remembered, silent while paused, game voices ${Object.keys(heard).length} event kinds, ghost rebuilds are silent.`);
