@@ -134,13 +134,13 @@ for (const seed of [3, 11]) {
 // Painted trees, rocks and cottages stand on level, unbroken ground under
 // their whole base and a tile beyond: never over an edge or by a ledge.
 {
-  const FOOT = {cottage: 4, oak: 3, rock: 2, pine: 2}, kinds = {};
+  const FOOT = {cottage: 4, oak: 3, rock: 2, pine: 2, blossom: 3}, kinds = {}, byBiome = {};
   for (const seed of [1, 2, 3, 5]) {
     G.reset(seed);
     for (let ci = 0; ci < 48; ci++) {
       G.art(ci);
       for (const q of G.props(ci)) {
-        kinds[q.kind] = (kinds[q.kind] || 0) + 1;
+        kinds[q.kind] = (kinds[q.kind] || 0) + 1; (byBiome[G.biomeAt(ci * 384 + 8)] = byBiome[G.biomeAt(ci * 384 + 8)] || new Set()).add(q.kind);
         const tx = ci * 24 + q.x;
         for (let d = -FOOT[q.kind]; d <= FOOT[q.kind]; d++) {
           let y = 0; while (y < 15 && !G.tileAt(tx + d, y)) y++;
@@ -149,7 +149,9 @@ for (const seed of [3, 11]) {
       }
     }
   }
-  for (const k of ['oak', 'pine', 'rock']) assert.ok(kinds[k] > 3, `some ${k}s are placed (${JSON.stringify(kinds)})`);
+  for (const [b, ks] of Object.entries(byBiome)) assert.ok([...ks].every(k => ({meadow: ['oak', 'rock', 'cottage'], frost: ['pine', 'rock'], sky: ['blossom']})[b].includes(k)), `${b} keeps to its own trees (${[...ks]})`);
+  assert.ok(!byBiome.coast && !byBiome.caves, 'the coast and the caves have no shared trees or rocks');
+  for (const k of ['oak', 'pine', 'rock', 'blossom']) assert.ok(kinds[k] > 3, `some ${k}s are placed (${JSON.stringify(kinds)})`);
 }
 // Route dressing (fences, signposts, wells, ponds, snowmen...) sits on level
 // ground with three tiles of headroom under its whole width, inside its chunk, clear of the bigger props
