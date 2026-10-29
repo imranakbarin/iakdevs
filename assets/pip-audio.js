@@ -51,6 +51,41 @@ const PipAudio = (() => {
     tone(f, {t, d, peak, to}); tone(f * 2.76, {t, d: d * .4, peak: peak * .22, to}); tone(f * 5.4, {t, d: d * .15, peak: peak * .07, to});
   }
   const arp = (notes, base, gap, peak, t) => notes.forEach((n, i) => bell(base * 2 ** (n / 12), t + i * gap, peak, .6));
+  // A filtered oscillator: horns and hums.
+  function brass(f, {t, type = 'sawtooth', cut = 700, a = .06, d = .5, peak = .05, slide = 0, to = fxBus}) {
+    const o = ac.createOscillator(), flt = ac.createBiquadFilter(), g = gain(0, to);
+    o.type = type; o.frequency.setValueAtTime(f, t); if (slide) o.frequency.exponentialRampToValueAtTime(f * slide, t + a + d);
+    flt.type = 'lowpass'; flt.frequency.value = cut; flt.Q.value = .8;
+    o.connect(flt); flt.connect(g); env(g, t, a, peak, d); o.start(t); o.stop(t + a + d + .05);
+  }
+  // Each landmark's arrival scene has its own sound, timed to what is drawn
+  // (the scene runs about 3.75 s).
+  const SCENES = {
+    meadow(t) {   // the gate: caps bounce, warm light fills the doorway, petals fly
+      [0, .75, 1.5].forEach((dt, i) => tone(150 - i * 10, {t: t + .1 + dt, type: 'triangle', a: .01, d: .22, peak: .05 * (1 - i * .3), slide: 1.6}));
+      [0, 4, 7, 11].forEach(n => tone(hz(65 + n), {t: t + .2, type: 'triangle', a: .5, d: 2.2, peak: .012}));
+      for (let i = 0; i < 14; i++) hiss({t: t + .25 + i * .09 + rnd() * .05, f: 3800 + rnd() * 2400, q: 1.5, d: .09, peak: .01});
+      for (let i = 0; i < 6; i++) bell(hz(84 + [0, 2, 4, 7, 9, 12][rnd() * 6 | 0]), t + .4 + i * .22 + rnd() * .06, .014, .7);
+    },
+    frost(t) {    // the spire: light climbs it, it flares, glints burst out
+      tone(520, {t: t + .1, a: 1.9, d: .5, peak: .016, slide: 3.2}); tone(780, {t: t + .1, type: 'triangle', a: 1.9, d: .5, peak: .008, slide: 3.2});
+      hiss({t: t + .1, f: 1800, f2: 9000, q: 3, a: 1.9, d: .3, peak: .014});
+      bell(hz(91), t + 2.3, .05, 1.6); bell(hz(98), t + 2.32, .03, 1.4);
+      for (let i = 0; i < 10; i++) bell(hz(96 + [0, 3, 7, 10, 12, 15][rnd() * 6 | 0]), t + 2.45 + i * .07 + rnd() * .04, .012, .4);
+    },
+    sky(t) {      // the harbour: a horn, then the airship's propeller fading off
+      brass(147, {t: t + .15, d: .5, peak: .05}); brass(185, {t: t + .15, d: .5, peak: .03});
+      brass(147, {t: t + .85, d: .9, peak: .05}); brass(220, {t: t + .85, d: .9, peak: .025});
+      const s = ac.createBufferSource(), flt = ac.createBiquadFilter(), g = gain(0, fxBus), lfo = ac.createOscillator(), depth = gain(.012, g.gain);
+      s.buffer = noise; s.loop = true; flt.type = 'bandpass'; flt.frequency.setValueAtTime(240, t + .3); flt.frequency.exponentialRampToValueAtTime(420, t + 3.6); flt.Q.value = 1.5;
+      lfo.type = 'square'; lfo.frequency.setValueAtTime(14, t + .3); lfo.frequency.exponentialRampToValueAtTime(22, t + 3.6); lfo.connect(depth);
+      s.connect(flt); flt.connect(g); env(g, t + .3, .6, .03, 3); s.start(t + .3); s.stop(t + 4); lfo.start(t + .3); lfo.stop(t + 4);
+    },
+    caves(t) {    // the heart: a low hum that swells as its rings pulse out
+      tone(55, {t, a: 1.2, d: 2.4, peak: .05}); tone(82.4, {t, a: 1.2, d: 2.4, peak: .025}); tone(110, {t: t + .4, type: 'triangle', a: 1, d: 2, peak: .012});
+      [0, .7, 1.4].forEach((dt, i) => { tone(hz(69 - i * 5), {t: t + .05 + dt, a: .02, d: 1.1, peak: .03, slide: .7}); bell(hz(81 + [0, 3, 7][i]), t + .05 + dt, .02, 1.2); });
+    }
+  };
 
   /* ---------------- effects ---------------- */
   const SEED = [0, 2, 4, 7, 9, 12, 14, 16];
@@ -79,7 +114,10 @@ const PipAudio = (() => {
     tumble(o, t) { tone(660, {t, type: 'triangle', d: .6, peak: .05, slide: .35}); },
     crumble(o, t) { hiss({t, f: 500, f2: 180, q: 2, d: .2, peak: .07}); tone(140 + rnd() * 40, {t, type: 'triangle', d: .05, peak: .03}); },
     spit(o, t) { hiss({t, f: 2400, q: 1.5, d: .06, peak: .04}); tone(480, {t, d: .05, peak: .02, slide: .6}); },
-    arrive(o, t) { arp([0, 4, 7, 12, 16], 523, .13, .06, t); [0, 4, 7].forEach(n => tone(hz(60 + n), {t: t + .55, type: 'triangle', a: .3, d: 1.6, peak: .018})); },
+    arrive({mark}, t) {
+      if (SCENES[mark]) { SCENES[mark](t); arp([0, 4, 7, 12], 523, .12, .035, t + (mark === 'frost' ? 2.3 : .05)); }   // the scene leads, the fanfare answers
+      else { arp([0, 4, 7, 12, 16], 523, .13, .06, t); [0, 4, 7].forEach(n => tone(hz(60 + n), {t: t + .55, type: 'triangle', a: .3, d: 1.6, peak: .018})); }
+    },
     find(o, t) { bell(1046, t, .045, .6); bell(1568, t + .12, .045, .8); },
     place(o, t) { tone(600, {t, d: .06, peak: .05, slide: 1.4}); },
     refuse(o, t) { tone(190, {t, type: 'triangle', d: .14, peak: .05, slide: .8}); },
