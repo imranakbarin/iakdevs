@@ -70,7 +70,7 @@ assert.ok(T.PACE < 1, 'the town runs slower than real time');
 { const lead = {...T.VARIANTS.find(v => v.variant === 'cricket'), story: 'India win the second Test', name: 'India'};
   T.build(2024, 'sports'); T.decorate([lead]); T.setToday([lead]);
   const board = T.props().find(p => p.kind === 'times');
-  assert.ok(board && board.host && board.z >= board.host.h, 'the billboard stands on a building roof');
+  assert.ok(board && board.x > 16.5 && board.y < 1.5 && !T.buildings().some(b => b.x + 1 > board.x - .5 && b.y < board.y + 1), 'the billboard stands in the right-hand corner, clear of the houses');
   assert.ok(T.props().filter(p => p.kind === 'kiosk').length >= 1 && T.props().some(p => p.kind === 'bunting'), 'kiosks on the corners, bunting on a match day');
   const chat = T.startEvent('chat'), plane = T.startEvent('skybanner');
   assert.ok(chat && plane && /India|Test/.test(plane.towed), 'a plane tows the headline');
