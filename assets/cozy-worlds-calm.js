@@ -31,7 +31,7 @@ window.CozyWorlds=(()=>{
       .stage{overflow:hidden;background:#131814}.picture{opacity:0;transition:opacity .8s ease;pointer-events:none}.picture.visible{opacity:1}
       .art{display:block;object-fit:cover;user-select:none;-webkit-user-drag:none}canvas{pointer-events:none}
       .dock{position:absolute;left:50%;bottom:max(16px,env(safe-area-inset-bottom));transform:translateX(-50%);z-index:3;display:flex;align-items:center;gap:2px;padding:4px 6px;max-width:calc(100% - 24px);border:1px solid #e6e0ca24;border-radius:28px;background:#17201dd4;backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);transition:opacity .7s ease}
-      .dock.soft{opacity:.35}.dock:hover,.dock:focus-within,.dock.open{opacity:1}
+      .dock.soft{opacity:.35}@media(hover:none){.dock.soft{opacity:.62}}.dock:hover,.dock:focus-within,.dock.open{opacity:1}
       button{appearance:none;border:0;background:transparent;color:inherit;font:500 12px/1.3 system-ui,-apple-system,sans-serif;cursor:pointer;min-height:44px;padding:0 12px;border-radius:22px;display:flex;align-items:center;justify-content:center;gap:9px;white-space:nowrap}
       button:hover{background:#ffffff0c}button:focus-visible{outline:2px solid #e0e7ca;outline-offset:1px}
       svg{display:block;width:19px;height:19px}.icon{width:44px;padding:11px}.scene-button{min-width:136px;padding:0 9px}.scene-button svg{width:14px;height:14px;opacity:.7}

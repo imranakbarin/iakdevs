@@ -264,3 +264,10 @@ New `assets/art-wonders.js` (+ `tests/art-wonders.test.cjs`) wraps every `STYLES
 
 New `assets/home.js` (loaded after `art-wonders.js`, before the inline script, so it can read the first hash). It wraps `modeBtn.onchange` in `Home.install()` (called last, after `WorldSound.install()`): choosing the `home` option shows the overlay and puts the menu back on the current mode, so `modeBtn.value` is never left as `home`. Shared anchors touched: `<option value="home">⌂ Today</option>` first in `#mode` with `selected` moved to World art; the script tag; the install call; Cozy Worlds' own menu (`assets/cozy-worlds-calm.js`, now `?v=3`) lists `⌂ Today` first. The overlay pauses the scene through `playBtn.click()` and resumes it the same way.
 
+
+## Claude follow-up (Cozy Worlds pacing)
+
+Narrow edits to your files, found by profiling (frames were ~50 ms on desktop and phone):
+- `assets/cozy-scene-motion.js` (`?v=2`): `steam()` set `ctx.filter='blur(1.4px)'` on the full scene canvas every frame. It now draws the three strokes blurred into a small `steamBuf` (96×144 at the current scale) and composites that with `screen`; `dispose()` frees it. Same look, 16.7 ms frames in all three scenes.
+- `assets/cozy-worlds-calm.js` (`?v=4`): the resting `.dock.soft` stays at `.35` with a mouse, `.62` on touch screens (no hover to bring it back).
+- Shared `index.html` anchor touched: only the two `?v=` numbers in `openCozy()`.

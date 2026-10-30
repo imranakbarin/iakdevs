@@ -2131,7 +2131,7 @@ function pipMotion(on){if(pipFrame.getAttribute('src'))pipFrame.contentWindow?.p
 pipFrame.addEventListener('load',()=>{pipMotion(modeBtn.value==='pip'&&playing);if(modeBtn.value==='pip')pipFrame.contentWindow?.document.getElementById('game')?.focus();});
 let cozyPromise=null;
 function openCozy(){
- if(!cozyPromise)cozyPromise=Promise.all(['assets/cozy-scene-motion.js?v=1','assets/cozy-worlds-calm.js?v=3'].map(src=>new Promise((resolve,reject)=>{const js=document.createElement('script');js.src=src;js.onload=resolve;js.onerror=()=>{js.remove();reject(new Error('Scene script unavailable'));};document.head.append(js);})));
+ if(!cozyPromise)cozyPromise=Promise.all(['assets/cozy-scene-motion.js?v=2','assets/cozy-worlds-calm.js?v=4'].map(src=>new Promise((resolve,reject)=>{const js=document.createElement('script');js.src=src;js.onload=resolve;js.onerror=()=>{js.remove();reject(new Error('Scene script unavailable'));};document.head.append(js);})));
  cozyPromise.then(()=>{if(modeBtn.value==='cozy')CozyWorlds.mount(document.getElementById('cozy-host'),{onMotionChange(value){playing=value;syncPlay();},onExperienceChange(value){modeBtn.value=value;modeBtn.onchange();}});}).catch(()=>{if(modeBtn.value==='cozy')document.getElementById('cozy-host').innerHTML='<p class="cozy-error">The scene could not load. Please refresh.</p>';cozyPromise=null;});
 }
 modeBtn.onchange=()=>{
