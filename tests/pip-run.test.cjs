@@ -92,11 +92,13 @@ for (const [over, falls] of [[1, true], [3, true], [5, false], [10, false]]) {
 const passed = new Set();
 for (const seed of [1, 2, 5, 9]) {
   G.reset(seed);
-  let tumbles = 0, prev = 0, last = 0;
+  let tumbles = 0, prev = 0, last = 0, leaps = 0, late = 0;
   const secs = 90;
   for (let f = 1; f <= 60 * secs; f++) {
+    const b = G.state().pl, was = b.ground, vy0 = b.vy, on = b.on;
     G.tick();
     const s = G.state();
+    if (!s.dead && s.pl.vy < -6.5 && vy0 >= -.01 && !on) { leaps++; if (!was) late++; }   // a take-off, from the ground or after walking off it
     assert.ok(Number.isFinite(s.pl.x) && Number.isFinite(s.pl.y), 'finite position');
     if (s.dead && !prev) tumbles++;
     prev = s.dead;
@@ -108,6 +110,9 @@ for (const seed of [1, 2, 5, 9]) {
   assert.ok(G.celebrated().length >= G.journey().chapters, `seed ${seed}: every arrival plays its landmark scene`);
   assert.ok(m > secs * 5, `seed ${seed}: demo reached only ${m} m in ${secs} s`);
   assert.ok(tumbles <= 6, `seed ${seed}: ${tumbles} tumbles`);
+  // He leaps from the lip, not after slipping off it (a coyote-window leap
+  // starts from below the edge and looks like a slip).
+  assert.ok(leaps > 50 && late < leaps * .05, `seed ${seed}: ${late} of ${leaps} leaps after walking off the edge`);
 }
 for (const id of ['ferry', 'lift', 'crumble', 'stairs', 'spitter']) assert.ok(passed.has(id), `the demo never got past a ${id}`);
 // A block row that runs right up to a gap's edge (the generator no longer
@@ -349,4 +354,4 @@ for (const seed of [3, 11]) {
   assert.ok(G.quality().settled); feed(40); assert.equal(G.quality().level, 1, 'and then it settles');
   strict = true; drawn = 0; G.render(); strict = false; assert.ok(drawn > 300, `and still draws whole frames (${drawn} calls)`);
 }
-console.log('Pip Run PASS: jump-sized gaps at least two tiles wide, Pip stands on his feet (slips off a lip he only touches), the planner foresees creatures by their rules, finite physics, demo player progresses through 4 seeded worlds, reaches each chapter’s destination and plays its landmark scene, clears block rows that run up to a gap, and gets past ferries, lifts, crumble bridges, floating steps and podspitters, referee refuses traps and accepted walls stay passable, shared runs replay exactly as ghosts, the painted ground of all four biomes draws with sane geometry, once per chunk, route dressing stands on level ground, whole frames render in every biome with footprints in snow, cloud and moss, the weather comes and goes with sane geometry, Pip talks about what is happening, stomps ring and spark, seed pods burst, fish leap only from the sea and butterflies keep to the meadow, the journey book stamps landmarks (not in ghost rebuilds), and the resolution steps down on a slow device.');
+console.log('Pip Run PASS: jump-sized gaps at least two tiles wide, Pip stands on his feet (slips off a lip he only touches), the planner foresees creatures by their rules, the demo leaps from the lip, finite physics, demo player progresses through 4 seeded worlds, reaches each chapter’s destination and plays its landmark scene, clears block rows that run up to a gap, and gets past ferries, lifts, crumble bridges, floating steps and podspitters, referee refuses traps and accepted walls stay passable, shared runs replay exactly as ghosts, the painted ground of all four biomes draws with sane geometry, once per chunk, route dressing stands on level ground, whole frames render in every biome with footprints in snow, cloud and moss, the weather comes and goes with sane geometry, Pip talks about what is happening, stomps ring and spark, seed pods burst, fish leap only from the sea and butterflies keep to the meadow, the journey book stamps landmarks (not in ghost rebuilds), and the resolution steps down on a slow device.');
