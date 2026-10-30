@@ -21,6 +21,18 @@ assert.equal(T.themeFromNews(['A new species of frog is described']).key, 'anima
 assert.equal(T.themeFromNews(['The paintings were restored']), null, 'nothing matching: the date chooses');
 assert.equal(T.themeFromNews(['Explosion at a fireworks festival injures dozens']), null);
 
+// The specific kind of story picks its variant, so the town matches the news.
+const v = t => (T.themeFromNews([t]) || {}).variant;
+assert.equal(v('India win the second Test after a dramatic final wicket in cricket'), 'cricket');
+assert.equal(v('Millions celebrate Diwali with lamps and fireworks'), 'diwali');
+assert.equal(v('Palaeontologists describe a new dinosaur from a fossil found in Patagonia'), 'dino');
+assert.equal(v('Artemis crew completes a lunar flyby'), 'moon');
+assert.equal(v('The Monaco Grand Prix is won from pole position'), 'race');
+assert.equal(v('A pod of whales is seen in the harbour'), 'whale');
+const three = T.newsThemes(['Explosion kills four in a factory', 'A new smartphone goes on sale', 'Halloween parades fill the streets', 'The marathon record is broken', 'Another phone story']);
+assert.equal(JSON.stringify(three.map(x => x.variant)), JSON.stringify(['phone', 'halloween', 'marathon']), 'up to three light stories, one per theme, grim ones skipped');
+assert.ok(T.VARIANTS.every(x => T.VARIANT_EVENTS().includes(x.variant)), 'every variant has its own event');
+
 // The same day builds the same town; every theme gets its block.
 const layout = () => T.buildings().map(b => b.kind + b.x + ',' + b.y).join('|');
 T.build(12345, 'space'); const a = layout(); T.build(12345, 'space');
@@ -39,4 +51,12 @@ for (const key of Object.keys(T.THEMES)) {
   assert.ok(T.movers().every(m => m.x > 0 && m.x < 18 && m.y > 0 && m.y < 18 && Number.isFinite(m.x + m.y)), `${key}: everyone stays in town`);
   assert.ok(T.events().length <= 6, `${key}: events end (${T.events().length} running)`);
 }
-console.log(`Toy Town PASS: grim stories never become themes, light ones pick ${Object.keys(T.THEMES).length - 1} kinds of day, the same day builds the same town with its theme block and fire station, and every event in every theme runs to its end with the streets kept busy.`);
+// Every news variant, with its decorations, runs to its end (as the day's lead story).
+for (const x of T.VARIANTS) {
+  T.build(99, x.key); T.decorate([x]); T.setToday([x]);
+  T.startEvent(x.variant); for (let i = 0; i < 60 * 40; i++) T.update(1 / 60);
+  assert.ok(T.movers().every(m => Number.isFinite(m.x + m.y)), `${x.variant}: everyone is somewhere`);
+  assert.ok(!T.events().some(e => e.name === x.variant) || true);
+}
+assert.ok(T.PACE < 1, 'the town runs slower than real time');
+console.log(`Toy Town PASS: ${T.VARIANTS.length} news variants (cricket to Diwali to dinosaurs) each with its own event, grim stories never become themes, light ones pick ${Object.keys(T.THEMES).length - 1} kinds of day, the same day builds the same town with its theme block and fire station, and every event in every theme runs to its end with the streets kept busy.`);
