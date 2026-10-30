@@ -208,5 +208,21 @@ const WorldSound = (() => {
     for (const ev of ['pointerdown', 'keydown']) addEventListener(ev, unlock, {passive: true});
     if (!raf) raf = requestAnimationFrame(loop);
   }
-  return {install, toggle, on: () => on, state: () => ac ? ac.state : 'idle'};
+  // One-off sounds: the horn plays even with the soundscape off (a tap asked for it); the arrival chime only with it on.
+  function cue(kind) {
+    if (kind !== 'honk' && !on) return;
+    if (!boot()) return;
+    quiet(ac.resume());
+    const t = ac.currentTime + .02;
+    if (kind === 'honk') {
+      const out = gain(1); out.connect(ac.destination);
+      for (const [at, len] of [[0, .16], [.22, .32]]) for (const f of [392, 494]) {
+        const o = ac.createOscillator(), flt = ac.createBiquadFilter(), g = gain(0, out);
+        o.type = 'sawtooth'; o.frequency.value = f; flt.type = 'lowpass'; flt.frequency.value = 1500; o.connect(flt); flt.connect(g);
+        g.gain.setValueAtTime(.0001, t + at); g.gain.exponentialRampToValueAtTime(.06, t + at + .02); g.gain.setValueAtTime(.06, t + at + len - .04); g.gain.exponentialRampToValueAtTime(.0001, t + at + len);
+        o.start(t + at); o.stop(t + at + len + .05);
+      }
+    } else if (kind === 'chime') [72, 76, 79].forEach((m, i) => tone(hz(m), {t: t + i * .16, type: 'triangle', a: .01, d: 1.4, peak: .035}));
+  }
+  return {install, toggle, cue, on: () => on, state: () => ac ? ac.state : 'idle'};
 })();

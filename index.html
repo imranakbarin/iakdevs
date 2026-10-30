@@ -135,21 +135,23 @@ input[type=range]{width:80px;accent-color:#E63B2E}
 <dialog id="art-gallery" aria-labelledby="art-gallery-heading"><div class="art-gallery-head"><div><h2 id="art-gallery-heading">Choose artwork</h2></div><button id="art-close" aria-label="Close art gallery">Close</button></div><div id="art-presentation" role="group" aria-label="Artwork type"><button id="art-live" type="button" aria-pressed="true">Live art</button><button id="art-painted" type="button" aria-pressed="false">Paintings</button></div><div id="art-grid"></div></dialog>
 <script src="assets/living-art.js?v=3"></script>
 <script src="assets/scene-motion.js?v=2"></script>
-<script src="assets/road-traffic.js?v=4"></script>
+<script src="assets/road-traffic.js?v=5"></script>
 <script src="assets/world-atmosphere.js?v=2"></script>
 <script src="assets/zen-steel-gpu.js?v=2"></script>
-<script src="assets/zen-garden.js?v=12"></script>
+<script src="assets/zen-garden.js?v=13"></script>
+<script src="assets/zen-seasons.js?v=1"></script>
 <script src="assets/road-illustration.js?v=12"></script>
 <script src="assets/road-rural.js?v=4"></script>
 <script src="assets/road-vehicles.js?v=8"></script>
-<script src="assets/road-weather-light.js?v=2"></script>
+<script src="assets/road-weather-light.js?v=3"></script>
 <script src="assets/creature-mind.js?v=2"></script>
 <script src="assets/art-presence.js?v=1"></script>
 <script src="assets/art-ambience.js?v=1"></script>
-<script src="assets/art-wonders.js?v=1"></script>
-<script src="assets/home.js?v=1"></script>
-<script src="assets/road-journey.js?v=1"></script>
-<script src="assets/world-sound.js?v=2"></script>
+<script src="assets/art-wonders.js?v=2"></script>
+<script src="assets/home.js?v=2"></script>
+<script src="assets/road-journey.js?v=2"></script>
+<script src="assets/road-stops.js?v=1"></script>
+<script src="assets/world-sound.js?v=3"></script>
 <script src="assets/kangra-world.js?v=3"></script>
 <script src="assets/art-depth.js?v=11"></script>
 <script src="assets/art-finishing.js?v=2"></script>
@@ -626,6 +628,23 @@ const MB=['#D7261E','#F2B705','#3E8E41','#2A4D9B','#E9628E','#F07C1E','#1E9E9A']
 const EYEW='#fbf1dc';
 function dbl(c,lw=3.4){c.lineJoin='round';c.lineCap='round';c.strokeStyle=T.ink;c.lineWidth=lw;c.stroke();c.strokeStyle=T.bg;c.lineWidth=lw*.33;c.stroke();}
 function hatch(c,cx,cy,ext,ang,sp,lw=.9){c.save();c.translate(cx,cy);c.rotate(ang);c.beginPath();for(let k=-ext;k<=ext;k+=sp){c.moveTo(-ext,k);c.lineTo(ext,k);}c.strokeStyle=T.ink;c.lineWidth=lw;c.stroke();c.restore();}
+// hatch(c,hx,hy,len,ang,sp,lw) inside leafPath(c,len,w), clipped by arithmetic instead of c.clip():
+// a clip per animated feather each frame cost Madhubani half its frame rate. The outline drawn
+// after the hatching covers the line ends, so it looks the same.
+const LEAF_HATCH=new Map();
+function leafHatch(c,len,w,hx,hy,ang,sp,lw=.9){
+  const key=len+','+w+','+hx+','+hy+','+ang+','+sp;let segs=LEAF_HATCH.get(key);
+  if(!segs){
+    const co=Math.cos(ang),si=Math.sin(ang),bz=(a,b,d,e,u)=>(1-u)**3*a+3*(1-u)**2*u*b+3*(1-u)*u*u*d+u**3*e,q=[];
+    for(const sd of[1,-1])for(let j=0;j<=24;j++){const u=j/24,x=sd*bz(0,w,w*.75,0,u)-hx,y=bz(0,-len*.25,-len*.78,-len,u)-hy;q.push([x*co+y*si,y*co-x*si]);}
+    segs=[];
+    for(let k=-len;k<=len;k+=sp){let lo=len,hi=-len;
+      for(let i=0;i<q.length;i++){const [x1,y1]=q[i],[x2,y2]=q[(i+1)%q.length];if((y1-k)*(y2-k)>0||y1===y2)continue;const x=x1+(k-y1)/(y2-y1)*(x2-x1);lo=Math.min(lo,x);hi=Math.max(hi,x);}
+      if(hi>lo)segs.push([lo,hi,k]);}
+    if(LEAF_HATCH.size>300)LEAF_HATCH.clear();LEAF_HATCH.set(key,segs);
+  }
+  c.save();c.translate(hx,hy);c.rotate(ang);c.beginPath();for(const [lo,hi,k] of segs){c.moveTo(lo,k);c.lineTo(hi,k);}c.strokeStyle=T.ink;c.lineWidth=lw;c.stroke();c.restore();
+}
 function mbAlt(q,A){let B=pick(q,MB);return B===A?MB[(MB.indexOf(A)+3)%MB.length]:B;}
 function mbEye(c,x,y,r){c.beginPath();c.moveTo(x-r*1.6,y);c.quadraticCurveTo(x,y-r*1.4,x+r*1.6,y);c.quadraticCurveTo(x,y+r*1.4,x-r*1.6,y);c.fillStyle=EYEW;c.fill();c.strokeStyle=T.ink;c.lineWidth=1.3;c.stroke();
   c.beginPath();c.arc(x+r*.2,y,r*.55,0,TAU);c.fillStyle='#140c08';c.fill();}
@@ -675,7 +694,7 @@ function mbSun(c,x,y,rot=0){
 }
 function mbBird(c,x,y,dir,s,q,fl){
   const A=pick(q,MB),B=mbAlt(q,A);c.save();c.translate(x,y);c.scale(dir*s,s);
-  for(const [a,l] of[[PI*.82,36],[PI*.9,32]]){c.save();c.translate(-14,2);c.rotate(a+PI/2);leafPath(c,l,7);c.fillStyle=B;c.fill();c.save();c.clip();hatch(c,0,-l/2,l,0,3);c.restore();leafPath(c,l,7);dbl(c,2.2);c.restore();}
+  for(const [a,l] of[[PI*.82,36],[PI*.9,32]]){c.save();c.translate(-14,2);c.rotate(a+PI/2);leafPath(c,l,7);c.fillStyle=B;c.fill();leafHatch(c,l,7,0,-l/2,0,3);leafPath(c,l,7);dbl(c,2.2);c.restore();}
   const fly=fl!==undefined;if(fly)mbWing(c,-3,-5,-PI*.6+fl*.55,44,15,B,A);
   else{c.beginPath();c.moveTo(-3,9);c.lineTo(-5,17);c.moveTo(4,9);c.lineTo(4,17);c.strokeStyle=T.ink;c.lineWidth=2;c.stroke();}
   c.beginPath();c.ellipse(0,0,19,12,0,0,TAU);c.fillStyle=A;c.fill();c.save();c.clip();c.beginPath();c.ellipse(-2,5,14,7,0,0,TAU);c.fillStyle=T.bg;c.fill();c.clip();hatch(c,0,4,20,PI/2,2.6);c.restore();
@@ -706,7 +725,7 @@ function mbPeacock(c,x,q,A){
   const d0=q()<.5?1:-1,dir=A?A.dir:d0,s=1.05+q()*.2;c.save();c.translate(x,gy(x)+2);c.scale(dir*s,s);
   const tailCols=['#3E8E41','#1E9E9A','#2A4D9B'];
   for(let i=0;i<6;i++){const a=PI*(.86+i*.035)+(A?Math.sin(A.t*1.1+i*.5+A.k)*.03:0),len=86-i*7;c.save();c.translate(-12,-42);c.rotate(a+PI/2);
-    leafPath(c,len,12);c.fillStyle=tailCols[i%3];c.fill();c.save();c.clip();c.fillStyle=T.bg;c.fillRect(0,-len,12,len);hatch(c,6,-len/2,len,-.6,2.6);c.restore();leafPath(c,len,12);dbl(c,2.4);
+    leafPath(c,len,12);c.fillStyle=tailCols[i%3];c.fill();c.beginPath();c.moveTo(0,0);c.bezierCurveTo(12,-len*.25,9,-len*.78,0,-len);c.closePath();c.fillStyle=T.bg;c.fill();leafHatch(c,len,12,6,-len/2,-.6,2.6);leafPath(c,len,12);dbl(c,2.4);
     c.beginPath();c.ellipse(0,-len*.78,6,8,0,0,TAU);c.fillStyle='#F2B705';c.fill();dbl(c,2);c.beginPath();c.ellipse(0,-len*.78,2.6,3.6,0,0,TAU);c.fillStyle='#2A4D9B';c.fill();c.restore();}
   const l1=A?Math.sin(A.ph)*6*A.m:0,l2=-l1;c.beginPath();c.moveTo(-3,-24);c.lineTo(-6+l1,0);c.moveTo(5,-24);c.lineTo(6+l2,0);c.moveTo(-6+l1,0);c.lineTo(-12+l1,1);c.moveTo(6+l2,0);c.lineTo(13+l2,1);c.strokeStyle=T.ink;c.lineWidth=2.4;c.stroke();
   const body=()=>{c.beginPath();c.moveTo(-16,-40);c.bezierCurveTo(-18,-14,20,-14,18,-40);c.bezierCurveTo(16,-60,10,-74,12,-96);c.lineTo(22,-96);c.bezierCurveTo(22,-76,24,-60,18,-40);c.moveTo(-16,-40);c.bezierCurveTo(-14,-56,6,-62,14,-56);};
@@ -714,7 +733,7 @@ function mbPeacock(c,x,q,A){
   c.fillStyle='#2A4D9B';c.fill();c.save();c.clip();c.beginPath();c.ellipse(-2,-36,12,14,0,0,TAU);c.fillStyle=T.bg;c.fill();c.clip();hatch(c,-2,-36,20,.7,2.6);c.restore();
   c.beginPath();c.moveTo(-16,-40);c.bezierCurveTo(-18,-14,20,-14,20,-38);c.bezierCurveTo(22,-58,24,-76,22,-98);c.lineTo(12,-98);c.bezierCurveTo(12,-76,6,-62,-2,-58);c.bezierCurveTo(-12,-54,-15,-48,-16,-40);c.closePath();dbl(c,3.2);
   c.beginPath();for(let t=0;t<1;t+=.16)dot(c,lerp(15,18,t),lerp(-60,-90,t),1.4);c.fillStyle=T.bg;c.fill();
-  c.save();c.translate(-4,-42);c.rotate(PI*.75+PI/2);leafPath(c,30,11);c.fillStyle='#1E9E9A';c.fill();c.save();c.clip();hatch(c,0,-15,30,0,3);c.restore();leafPath(c,30,11);dbl(c,2.4);c.restore();
+  c.save();c.translate(-4,-42);c.rotate(PI*.75+PI/2);leafPath(c,30,11);c.fillStyle='#1E9E9A';c.fill();leafHatch(c,30,11,0,-15,0,3);leafPath(c,30,11);dbl(c,2.4);c.restore();
   c.save();if(A)c.translate(Math.sin(A.t*2.4+A.k)*2.2,0);
   c.beginPath();c.arc(18,-102,8,0,TAU);c.fillStyle='#2A4D9B';c.fill();dbl(c,2.6);
   for(let i=-1;i<=1;i++){const a=-PI/2+i*.32;c.beginPath();c.moveTo(18,-110);c.lineTo(18+Math.cos(a)*13,-110+Math.sin(a)*13);c.strokeStyle=T.ink;c.lineWidth=1.4;c.stroke();c.beginPath();c.arc(18+Math.cos(a)*14,-110+Math.sin(a)*14,2.6,0,TAU);c.fillStyle='#F2B705';c.fill();c.stroke();}
@@ -767,7 +786,7 @@ function mbFan(c,x,q,t){
   for(let i=0;i<15;i++){
     const a=-PI+(i+.5)*PI/15+Math.sin(t*.65+i*.38)*.012,len=120+Math.sin(i*PI/14)*42;
     c.save();c.rotate(a+PI/2);leafPath(c,len,19);c.fillStyle=i%2?'#1E9E9A':'#3E8E41';c.fill();
-    c.save();c.clip();hatch(c,0,-len/2,len,.45,6,.65);c.restore();leafPath(c,len,19);dbl(c,2.6);
+    leafHatch(c,len,19,0,-len/2,.45,6,.65);leafPath(c,len,19);dbl(c,2.6);
     for(const [rx,ry,col] of[[12,18,'#F2B705'],[8,12,'#D7261E'],[4,7,'#2A4D9B']]){c.beginPath();c.ellipse(0,-len*.76,rx,ry,0,0,TAU);c.fillStyle=col;c.fill();c.strokeStyle=T.ink;c.lineWidth=1;c.stroke();}
     c.restore();
   }
@@ -941,7 +960,7 @@ function kFigure(c,x,y,s,col,t,dir=1){
   c.beginPath();c.moveTo(5,-41);c.lineTo(7,-39);c.lineTo(5,-38);c.strokeStyle='#76482e';c.lineWidth=.65;c.stroke();
   c.beginPath();c.arc(3,-41,.65,0,TAU);c.fillStyle='#2b2924';c.fill();c.restore();
 }
-STYLES.kangra={name:'Kangra miniature',
+STYLES.kangra={name:'Kangra',
   theme:()=>({bg:'#4f79ad',ink:'#3b2a1c',mark:'#3b2a1c',light:'#fffaf0',night:false,sky:['#4f79ad','#a9c7d9','#efe6cc']}),
   init(r){P[0]=.45+r()*.4;},sky:kSky,ground:kGround,
   zones:['woods','pasture','palace','riverside','lake'],
@@ -1238,7 +1257,7 @@ function folkAnimal(c,x,y,q,t,kind){
  c.fillStyle='#f5e6c8';c.beginPath();c.arc(kind==='bird'?42:65,kind==='bird'?-64:-108,4,0,TAU);c.fill();c.fillStyle='#493633';c.beginPath();c.arc(kind==='bird'?43:66,kind==='bird'?-64:-108,1.5,0,TAU);c.fill();c.restore();
 }
 // One composed grove per stretch: branches, perches and feet share fixed anchors.
-STYLES.mexico={name:'Mexican folk inspired',focus:370,
+STYLES.mexico={name:'Mexican amate',focus:370,
  theme:()=>({bg:'#edcf9d',ink:'#654737',mark:'#654737',light:'#fff2d5'}),init(){},
  sky(c,xa,xb){artPaper(c,xa,xb,'#edcf9d');},
  ground(c,xa,xb){
@@ -1463,7 +1482,7 @@ function jpBoat(c,x,y,s,t){
  c.beginPath();c.moveTo(-9,-13);c.lineTo(7,-10);c.lineTo(28,9+Math.sin(t*.7)*2);artStroke(c,'#6f6850',1.2);
  for(let j=0;j<4;j++){c.beginPath();c.moveTo(-46-j*5,12+j*5);c.quadraticCurveTo(-5,14+j*5,33+j*4,10+j*5);artStroke(c,'rgba(242,231,203,.5)',.8);}c.restore();
 }
-STYLES.japan={name:'Evolving Japanese woodblock landscape',theme:()=>({bg:'#efe3c9',ink:'#2a494c',mark:'#2a494c',light:'#f7edd5'}),init(){},
+STYLES.japan={name:'Japanese woodblock',theme:()=>({bg:'#efe3c9',ink:'#2a494c',mark:'#2a494c',light:'#f7edd5'}),init(){},
  zones:['blossom','village','terraces','headland','grove'],
  sky(c,xa,xb){const g=c.createLinearGradient(0,0,0,475);g.addColorStop(0,'#efdabd');g.addColorStop(.4,'#f0e4ce');g.addColorStop(1,'#d7d7bb');c.fillStyle=g;c.fillRect(xa,-1200,xb-xa,1675);},
  ground(c,xa,xb){
@@ -1612,7 +1631,7 @@ function inkWaterfall(c,x,y,length,q,t=0){
  for(let j=0;j<7;j++){const yy=((t*18+j*length/7)%length+length)%length;c.beginPath();c.moveTo(-4,yy);c.quadraticCurveTo(0,yy+5,5,yy+2);artStroke(c,'rgba(255,252,238,.68)',.7);}
  c.restore();
 }
-STYLES.china={name:'Chinese evolving ink landscape',theme:()=>({bg:'#eee8d8',ink:'#34443d',mark:'#34443d',light:'#f8f2e5'}),init(){},
+STYLES.china={name:'Chinese ink',theme:()=>({bg:'#eee8d8',ink:'#34443d',mark:'#34443d',light:'#f8f2e5'}),init(){},
  zones:['gorge','river','village','bamboo'],
  sky(c,xa,xb){artPaper(c,xa,xb,'#eee8d8');},
  ground(c,xa,xb){
@@ -1813,10 +1832,13 @@ const tripDrive={x:1,v:0};
 function roadFrame(t,dt,c=ctx,placeOverride=null){
  const w=cv.width,h=cv.height;
  if(placeOverride===null){
+  RoadWeather.snap();
   const delta=playing&&!drag?dt:0;
-  journey=RoadTraffic.drive(delta,journey*42,42*speed/40,trafficEnabled,tripDrive)/42;
+  const stops=typeof RoadStops!=='undefined';
+  journey=RoadTraffic.drive(delta,journey*42,42*speed/40*(stops?RoadStops.cruise(journey*42):1),trafficEnabled,tripDrive,stops&&RoadStops.state()?42*speed/40:0)/42;
   roadWeather(journey,delta,document.getElementById('weather').value);
-  const weights=roadPlaceWeights(delta,document.getElementById('place').value);
+  const pace=stops?RoadStops.pace():1;   // parked at a stop: the place cycle and the trip clock wait
+  const weights=roadPlaceWeights(delta*pace,document.getElementById('place').value);
   const bands=roadPlaceTransition.bands,active=weights.map((weight,ix)=>({weight,ix})).filter(p=>bands.some(b=>b[p.ix]>0));
   const totals=roadBandDepths.map(()=>0);let total=0;
   for(const scene of active){
@@ -1838,9 +1860,10 @@ function roadFrame(t,dt,c=ctx,placeOverride=null){
   const stopNames=[['Alpine café','Scenic campsite','Valley overlook'],['Desert rest stop','Windmill','Canyon overlook'],['Woodland lodge','Forest campsite','Forest overlook'],['Lighthouse','Coastal café','Ocean overlook'],['Corner café','Farm market','City overlook']];
   const feature=RoadIllustration.routeFeatures(journey,dominant).find(f=>f.z>.08&&f.z<1);
   const stop=feature?' · '+(feature.type==='gateway'?'Stone gateway':'River bridge')+' ahead':upcoming?' · '+stopNames[dominant][upcoming.variant]+' ahead':'';
-  const tripLabel=typeof RoadJourney!=='undefined'?RoadJourney.update({dt:delta,km:journey*42/1000,speed:42*speed/40,dominant,auto:document.getElementById('place').value==='auto',phase:roadPlaceTransition.autoTime/44,weights:a,weather:we,names:names||p.name,cue:tripCue,stop,places})
+  const tripLabel=typeof RoadJourney!=='undefined'?RoadJourney.update({dt:delta*pace,km:journey*42/1000,speed:42*speed/40,dominant,auto:document.getElementById('place').value==='auto',phase:roadPlaceTransition.autoTime/44,weights:a,weather:we,names:names||p.name,cue:tripCue,stop,places})
    :(names||p.name)+' · '+({sun:'Sunny',sunset:'Sunset',rain:'Rain',fog:'Fog',snow:'Snow',night:'Night'})[we]+' · '+tripCue+stop;
   const status=document.getElementById('trip-status');if(status.textContent!==tripLabel)status.textContent=tripLabel;
+  if(stops)RoadStops.frame(c,w,h,dominant);
   return;
  }
  c.save();c.setTransform(1,0,0,1,0,0);c.clearRect(0,0,w,h);c.globalAlpha=1;c.globalCompositeOperation='source-over';c.lineCap='butt';c.lineJoin='miter';c.lineWidth=1;
@@ -2131,7 +2154,7 @@ function pipMotion(on){if(pipFrame.getAttribute('src'))pipFrame.contentWindow?.p
 pipFrame.addEventListener('load',()=>{pipMotion(modeBtn.value==='pip'&&playing);if(modeBtn.value==='pip')pipFrame.contentWindow?.document.getElementById('game')?.focus();});
 let cozyPromise=null;
 function openCozy(){
- if(!cozyPromise)cozyPromise=Promise.all(['assets/cozy-scene-motion.js?v=1','assets/cozy-worlds-calm.js?v=3'].map(src=>new Promise((resolve,reject)=>{const js=document.createElement('script');js.src=src;js.onload=resolve;js.onerror=()=>{js.remove();reject(new Error('Scene script unavailable'));};document.head.append(js);})));
+ if(!cozyPromise)cozyPromise=Promise.all(['assets/cozy-scene-motion.js?v=2','assets/cozy-worlds-calm.js?v=4'].map(src=>new Promise((resolve,reject)=>{const js=document.createElement('script');js.src=src;js.onload=resolve;js.onerror=()=>{js.remove();reject(new Error('Scene script unavailable'));};document.head.append(js);})));
  cozyPromise.then(()=>{if(modeBtn.value==='cozy')CozyWorlds.mount(document.getElementById('cozy-host'),{onMotionChange(value){playing=value;syncPlay();},onExperienceChange(value){modeBtn.value=value;modeBtn.onchange();}});}).catch(()=>{if(modeBtn.value==='cozy')document.getElementById('cozy-host').innerHTML='<p class="cozy-error">The scene could not load. Please refresh.</p>';cozyPromise=null;});
 }
 modeBtn.onchange=()=>{
@@ -2184,7 +2207,8 @@ function drawScene(dt){
   ArtDepth.prepare(document.getElementById('sty').value);
   document.getElementById('art-status').hidden=true;
   if(document.getElementById('art-title').textContent!==ST.name)document.getElementById('art-title').textContent=ST.name;
-  if(document.getElementById('art-medium').textContent!=='Live art · Endless landscape · Drag to explore')document.getElementById('art-medium').textContent='Live art · Endless landscape · Drag to explore';
+  const medium=(LivingArt.collection[document.getElementById('sty').value]?.country||'World')+' · Live art · Drag to explore';
+  if(document.getElementById('art-medium').textContent!==medium)document.getElementById('art-medium').textContent=medium;
   const k=S*DPR,vw=cv.clientWidth/S,camPx=Math.round(camX*k),cam=camPx/k;
   const a=Math.floor(cam/CW),b=Math.floor((cam+vw)/CW);
   ctx.setTransform(1,0,0,1,0,0);ctx.fillStyle=T.bg;ctx.fillRect(0,0,cv.width,cv.height);
@@ -2225,13 +2249,15 @@ function drawScene(dt){
   for(const i of OC.keys())if((i<a-5||i>b+5)&&(!ArtDepth.layered(ST)||i<farA-2||i>farB+2))OC.delete(i);
 
 }
-let frameHandle=0,lastPaint=0,lastMetrics=0;
+let frameHandle=0,lastPaint=0,lastMetrics=0,smoothSmall=true;
 function wakeScene(){SceneMotion.invalidate();if(!frameHandle&&!document.hidden)frameHandle=requestAnimationFrame(frame);}
 function frame(t){
  frameHandle=0;if(document.hidden){last=t;return;}
  if(modeBtn.value==='cozy'||modeBtn.value==='mushroom'||modeBtn.value==='pip'){last=t;return;}
  if(modeBtn.value==='art'&&(cv.width!==Math.round(cv.clientWidth*DPR)||cv.height!==Math.round(cv.clientHeight*DPR)))layout();
-  const dirty=SceneMotion.consumeDirty(),moving=playing||Boolean(drag),interval=cv.clientWidth<700||SceneMotion.renderMs>18?1000/30:1000/60;
+  // Small screens draw at 60 fps while a frame is cheap, and drop to 30 (with some hysteresis) when it is not.
+  const small=cv.clientWidth<700;if(small)smoothSmall=SceneMotion.renderMs<(smoothSmall?10:7);
+  const dirty=SceneMotion.consumeDirty(),moving=playing||Boolean(drag),interval=(small?!smoothSmall:SceneMotion.renderMs>18)?1000/30:1000/60;
  if(!dirty&&!moving)return;
  if(!dirty&&t-lastPaint<interval-.7){frameHandle=requestAnimationFrame(frame);return;}
  const dt=SceneMotion.advance((t-last)/1000,playing);last=t;lastPaint=t;
@@ -2253,7 +2279,7 @@ if(requestedZen||requestedRoad||requestedCozy||requestedMushroom||requestedPip){
 // Editing the hash (or following a deep link in the same tab) opens that world;
 // the app's own replaceState calls never fire hashchange.
 addEventListener('hashchange',()=>location.reload());
-ArtAmbience.install();ArtWonders.install();ArtPresence.install();WorldSound.install();Home.install();
+ArtAmbience.install();ArtWonders.install();ArtPresence.install();WorldSound.install();if(typeof RoadStops!=='undefined')RoadStops.install();Home.install();
 motionPreference.addEventListener('change',e=>{if(e.matches){playing=false;syncPlay();if(modeBtn.value==='cozy')window.CozyWorlds?.pause();wakeScene();}});
 wakeScene();
 </script>

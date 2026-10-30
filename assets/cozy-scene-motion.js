@@ -76,14 +76,22 @@ window.CozySceneMotion = (() => {
       ctx.save();ctx.translate(843,630);ctx.scale(1+breath*.007,1+breath*.032);ctx.drawImage(body.c,body.x-843,body.y-630);ctx.restore();
       const cycle=t%11;if(cycle>7.8&&cycle<8.5){const s=(cycle-7.8)/.7,a=Math.sin(s*Math.PI*2)*Math.sin(s*Math.PI)*.055;ctx.save();ctx.translate(972,548);ctx.rotate(a);ctx.drawImage(ear.c,ear.x-972,ear.y-548);ctx.restore();}
     }
+    // The steam is blurred on a small canvas of its own and laid on the scene:
+    // a filter on the full-screen canvas blurred all of it for every wisp,
+    // every frame (it held Cozy Worlds to 20-30 frames a second).
+    let steamBuf=null;
     function steam(ctx,t){
       const [x,y]=kind==='tea'?[1067,660]:kind==='cabin'?[523,770]:[460,522];
-      ctx.save();ctx.globalCompositeOperation='screen';ctx.filter='blur(1.4px)';
+      const m=ctx.getTransform?ctx.getTransform():{a:1},k=Math.max(.5,Math.abs(m.a)||1),bx=x-48,by=y-136,bw=96,bh=144;
+      const cw=Math.ceil(bw*k),chh=Math.ceil(bh*k);
+      if(!steamBuf||steamBuf.width!==cw||steamBuf.height!==chh)steamBuf=make(cw,chh);
+      const g0=steamBuf.getContext('2d');g0.setTransform(1,0,0,1,0,0);g0.clearRect(0,0,cw,chh);g0.setTransform(k,0,0,k,-bx*k,-by*k);g0.filter='blur(1.4px)';
       for(let i=0;i<3;i++){
         const px=x+(i-1)*10,top=y-109-i*7,sway=Math.sin(t*.65+i*1.6)*10;
-        const g=ctx.createLinearGradient(px,y,px,top);g.addColorStop(0,'rgba(250,247,239,0)');g.addColorStop(.18,'rgba(250,247,239,.25)');g.addColorStop(.55,'rgba(250,247,239,.14)');g.addColorStop(1,'rgba(250,247,239,0)');
-        ctx.strokeStyle=g;ctx.lineWidth=2.2+i*.45;ctx.beginPath();ctx.moveTo(px,y);ctx.bezierCurveTo(px-9+sway,y-28,px+14-sway,y-73,px+sway,top);ctx.stroke();
-      }ctx.restore();
+        const g=g0.createLinearGradient(px,y,px,top);g.addColorStop(0,'rgba(250,247,239,0)');g.addColorStop(.18,'rgba(250,247,239,.25)');g.addColorStop(.55,'rgba(250,247,239,.14)');g.addColorStop(1,'rgba(250,247,239,0)');
+        g0.strokeStyle=g;g0.lineWidth=2.2+i*.45;g0.beginPath();g0.moveTo(px,y);g0.bezierCurveTo(px-9+sway,y-28,px+14-sway,y-73,px+sway,top);g0.stroke();
+      }
+      ctx.save();ctx.globalCompositeOperation='screen';ctx.drawImage(steamBuf,bx,by,bw,bh);ctx.restore();
     }
     return {draw(ctx,t){
       waters.forEach(p=>wave(ctx,p,t,kind==='cabin'?3.4:1.8));
@@ -91,7 +99,7 @@ window.CozySceneMotion = (() => {
       if(kind==='nook'){rain(ctx,t);cat(ctx,t);}
       if(kind!=='tea')fire(ctx,t);
       steam(ctx,t);
-    },dispose(){for(const p of [...waters,...leaves,...flames,body,ear])if(p){p.c.width=1;p.c.height=1;}}};
+    },dispose(){for(const p of [...waters,...leaves,...flames,body,ear])if(p){p.c.width=1;p.c.height=1;}if(steamBuf){steamBuf.width=steamBuf.height=1;}}};
   }
   return {create,width:W,height:H};
 })();

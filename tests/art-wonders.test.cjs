@@ -11,7 +11,8 @@ let log = [];
 const ctx = new Proxy({}, {get: (o, k) => k in o ? o[k] : (...a) => { log.push(k + a.map(v => typeof v === 'number' ? v.toFixed(2) : '').join(',')); }, set: (o, k, v) => { o[k] = v; log.push(k + '=' + v); return true; }});
 const caption = {append(e) { this.child = e; }};
 const sandbox = {
-  Math, Object, Array, String, Number, setInterval: () => 0,
+  Math, Object, Array, String, Number, JSON, setInterval: () => 0,
+  localStorage: {data: {}, getItem(k) { return k in this.data ? this.data[k] : null; }, setItem(k, v) { this.data[k] = String(v); }},
   document: {getElementById: id => id === 'art-caption' ? caption : null, createElement: () => ({style: {}, textContent: ''})}
 };
 const ctxVm = vm.createContext(sandbox);
@@ -52,4 +53,21 @@ for (const style of Object.keys(STYLES)) for (let i = 1; i < 60; i++) {
   }
 }
 assert.ok(caption.child && caption.child.textContent, 'a caption names what is passing');
-console.log(`Art wonders PASS: 7 styles, seeded stretches never repeat back to back, ${Object.values(kinds).reduce((a, s) => a + s.size, 0)} style/kind pairs seen, every kind draws deterministically at 4 times, captions shown.`);
+
+// What has been seen is collected per tradition, and only the first sighting is called new.
+vm.runInContext("localStorage.data = {}", ctxVm);
+const total = W.count().total;
+assert.equal(total, 4 * 4 + 3 * 5, 'four kinds everywhere (fireflies included), five where a tradition adds its own');
+let i0 = 1; while (!W.wonderAt('japan', i0)) i0++;
+const at = W.where('japan', i0, 5) - 600;
+STYLES.japan.anim(ctx, at, at + 1200, 5);
+assert.match(caption.child.textContent, /· new in your wonders$/, 'the first sighting is marked new');
+assert.deepEqual(Array.from(W.seen().japan), [W.wonderAt('japan', i0)], 'and kept');
+assert.equal(W.count().n, 1);
+STYLES.japan.anim(ctx, at + 3 * W.SPAN * 400, at + 3 * W.SPAN * 400 + 1200, 9);   // move on, then come back
+STYLES.japan.anim(ctx, at, at + 1200, 30);
+assert.doesNotMatch(caption.child.textContent, /new in your wonders/, 'a second sighting is not new');
+assert.equal(W.count().n, 1, 'counted once');
+vm.runInContext("localStorage.data['art-wonders:seen'] = '{bad'", ctxVm);
+assert.equal(W.count().n, 0, 'a damaged record reads as nothing seen');
+console.log(`Art wonders PASS: 7 styles, seeded stretches never repeat back to back, ${Object.values(kinds).reduce((a, s) => a + s.size, 0)} style/kind pairs seen, every kind draws deterministically at 4 times, captions shown, ${total} wonders to collect, first sightings kept once.`);

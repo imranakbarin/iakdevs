@@ -264,3 +264,27 @@ New `assets/art-wonders.js` (+ `tests/art-wonders.test.cjs`) wraps every `STYLES
 
 New `assets/home.js` (loaded after `art-wonders.js`, before the inline script, so it can read the first hash). It wraps `modeBtn.onchange` in `Home.install()` (called last, after `WorldSound.install()`): choosing the `home` option shows the overlay and puts the menu back on the current mode, so `modeBtn.value` is never left as `home`. Shared anchors touched: `<option value="home">⌂ Today</option>` first in `#mode` with `selected` moved to World art; the script tag; the install call; Cozy Worlds' own menu (`assets/cozy-worlds-calm.js`, now `?v=3`) lists `⌂ Today` first. The overlay pauses the scene through `playBtn.click()` and resumes it the same way.
 
+
+## Claude follow-up (Cozy Worlds pacing)
+
+Narrow edits to your files, found by profiling (frames were ~50 ms on desktop and phone):
+- `assets/cozy-scene-motion.js` (`?v=2`): `steam()` set `ctx.filter='blur(1.4px)'` on the full scene canvas every frame. It now draws the three strokes blurred into a small `steamBuf` (96×144 at the current scale) and composites that with `screen`; `dispose()` frees it. Same look, 16.7 ms frames in all three scenes.
+- `assets/cozy-worlds-calm.js` (`?v=4`): the resting `.dock.soft` stays at `.35` with a mouse, `.62` on touch screens (no hover to bring it back).
+- Shared `index.html` anchor touched: only the two `?v=` numbers in `openCozy()`.
+
+## Claude follow-up (World art captions and Madhubani pacing)
+
+Shared `index.html`, narrow edits in the live-art section:
+- Live style names now read like the gallery cards: `Kangra`, `Japanese woodblock`, `Chinese ink`, `Mexican amate` (were `Kangra miniature`, `Evolving Japanese woodblock landscape`, `Chinese evolving ink landscape`, `Mexican folk inspired`). The live medium line in `drawScene` is `<country> · Live art · Drag to explore`, the country read from `LivingArt.collection`.
+- New `leafHatch(c,len,w,hx,hy,ang,sp,lw)` after `hatch()`: hatching inside `leafPath(len,w)` clipped by arithmetic (segments cached per shape) instead of `c.save();c.clip();hatch();c.restore()`. Used by the animated Madhubani figures only: `mbFan` feathers, the `mbPeacock` tail (its clipped `fillRect` half is now a half-leaf path fill) and wing, and the `mbBird` tail. The outline drawn after covers the line ends; same-frame renders differ on at most ~130 faint pixels. Headless desktop: missed frames 62–91% → ~30%, median 33 → 16.7 ms. The fish (`mbFish`, ~48 clips a frame) still clip.
+- World art wonders collection: `assets/art-wonders.js` is `?v=2` (shared anchor: only that number). It keeps first sightings in `localStorage['art-wonders:seen']` (`{style: [kind…]}`), adds "· new in your wonders" to the `#art-moment` line once, and appends `<section id="art-wonders-book">` to the end of `#art-gallery` (rendered on each `#art-browse` click via `addEventListener`, so `living-art.js`'s own `onclick` is untouched).
+
+## Claude follow-up (Zen garden seasons)
+
+New `assets/zen-seasons.js` (+ `tests/zen-seasons.test.cjs`), loaded right after `zen-garden.js` (now `?v=13`). Shared `index.html` anchor: only that script tag and the version. Hooks in `zen-garden.js`: `zenFrame` calls `ZenSeasons.under(...)` before `zenBall` and `ZenSeasons.over(...)` before `zenHint` (both only with the atmosphere on); the garden's own petal loop in `zenAtmosphereLayer` is skipped when the module is present (the seasons replace it); `zenRakeMove` calls `ZenSeasons.sweep(p.x,p.y,36)`; `zenScare` also asks `ZenSeasons.scare(x,y)`.
+
+## Claude follow-up (Road trip stops, horn, arrival; pacing)
+
+- New `assets/road-stops.js` (+ `tests/road-stops.test.cjs`), loaded after `road-journey.js` (now `?v=2`); `world-sound.js` is `?v=3` (adds `WorldSound.cue('honk'|'chime')`). Shared `index.html` anchors in `roadFrame` (outer call): `RoadWeather.snap()` first; the `RoadTraffic.drive(...)` cruise is multiplied by `RoadStops.cruise(journey*42)` and gets a sixth `flow` argument while pulled over; `roadPlaceWeights` and `RoadJourney.update` get `delta*pace` (the place cycle and leg clock wait while parked); `RoadStops.frame(c,w,h,dominant)` before the `return`. `RoadStops.install()` sits next to `WorldSound.install()`. Stops visited: `localStorage['road-trip:stops']`.
+- Narrow edits to your files: `road-traffic.js` (`?v=5`) `drive(...,flow=0)` keeps other traffic at `flow` while the player slows below it, and passes `hold` to `tick` so no overtake starts while pulled over (traffic speeds are relative to the player's, so a parked car froze everything and then overtook a parked lead car). `road-weather-light.js` (`?v=3`): `capture()` only records the atmosphere and the source; the new `snap()` copies the previous frame into the 256×128 reflection buffer before the next frame draws. Copying the frame being drawn forced a mid-frame flush: headless render time 24 → 5 ms, desktop draws 30 → ~45/s.
+- Frame loop (`frame()`): small screens (<700 px) now draw at 60 fps while `SceneMotion.renderMs` stays under 10 ms (back to 30 above it, returning under 7), instead of always 30. Larger screens unchanged (30 above 18 ms).

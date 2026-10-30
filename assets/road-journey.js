@@ -1,8 +1,8 @@
 /* Road trip journey: the drive becomes a trip between named places. Each
  * stretch heads for a town in the next landscape; the status line counts down
  * to it, and arriving shows a postcard (where, how far, the weather on the
- * way) and stamps it into a trip log kept on this device. Town names are
- * original. Pure presentation: it reads the road's own state and changes
+ * way) and stamps it into a trip log kept on this device; the car eases off
+ * as the town's name rises over the road. Town names are original. Pure presentation: it reads the road's own state and changes
  * nothing about the drive. */
 const RoadJourney = (() => {
   const TOWNS = [
@@ -42,8 +42,24 @@ const RoadJourney = (() => {
     card = {until: performance.now() + 7000};
     requestAnimationFrame(() => { el.style.opacity = '1'; el.style.transform = 'translate(-50%,0)'; });
   }
+  // Arriving: the car eases off, a quiet chime, and the town's name over the road.
+  let slowUntil = 0, title = null;
+  function welcome(name) {
+    slowUntil = performance.now() + 6000;
+    if (typeof WorldSound !== 'undefined' && WorldSound.cue) WorldSound.cue('chime');
+    if (!title) {
+      title = document.createElement('div'); title.id = 'trip-welcome';
+      title.style.cssText = 'position:fixed;left:0;right:0;top:36%;z-index:5;pointer-events:none;text-align:center;color:#fffaf0;text-shadow:0 2px 18px rgba(0,0,0,.55);opacity:0;transition:opacity 1.2s';
+      document.body.append(title);
+    }
+    title.innerHTML = `<div style="font:700 11px/1 system-ui,-apple-system,sans-serif;letter-spacing:.32em">WELCOME TO</div><div style="font:400 clamp(34px,7vw,64px)/1.1 Georgia,serif;margin-top:8px">${name}</div>`;
+    title.style.opacity = '1';
+  }
+  // The share of cruise while arriving: down to 70% and back over six seconds.
+  function slow() { const left = (slowUntil - performance.now()) / 1000; return left <= 0 ? 1 : 1 - .3 * Math.max(0, Math.min(1, left / 1.5, (6 - left) / 1.5)); }
   function arrive(ix, km, places) {
     const name = town(ix, ++n);
+    welcome(name);
     stamps = stamps || store.get(); stamps.add(name); store.set(stamps);
     const came = [...weathers].filter(w => w !== 'sun').map(w => SEEN[w]);
     postcard(name, places[ix].name, ix, Math.max(0.1, km - fromKm).toFixed(1), came.length ? came.slice(0, 2).join(' and ') : '');
@@ -54,6 +70,7 @@ const RoadJourney = (() => {
     const {dt, km, speed, dominant, auto, phase, weights, weather, names, cue, stop, places} = s;
     for (const [k, v] of Object.entries(weights)) if (v > .5) weathers.add(k);
     if (card && performance.now() > card.until && el) { el.style.opacity = '0'; el.style.transform = 'translate(-50%,-8px)'; card = null; }
+    if (title && title.style.opacity === '1' && performance.now() > slowUntil - 2200) title.style.opacity = '0';
     // Where the drive is heading, and how far that is at the current speed.
     let dest, secs;
     if (auto) {
@@ -71,5 +88,5 @@ const RoadJourney = (() => {
     const w = ({sun: 'Sunny', sunset: 'Sunset', rain: 'Rain', fog: 'Fog', snow: 'Snow', night: 'Night'})[weather];
     return innerWidth < 600 ? `${places[dominant].name} · ${w} · ${dest} ${dist}` : `${names} · ${w} · ${cue}${stop} · ${dest} ${dist}`;
   }
-  return {update, stamps: () => (stamps = stamps || store.get()).size, total};
+  return {update, slow, stamps: () => (stamps = stamps || store.get()).size, total};
 })();

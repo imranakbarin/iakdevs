@@ -15,7 +15,7 @@ const RoadTraffic=(()=>{
    const start=380+k*1150;if(hero<start+180&&end>start-30)return true;
   }return false;
  }
- function tick(dt,camera,cruise,enabled){
+ function tick(dt,camera,cruise,enabled,hold=false){
   clock+=dt;transition+=dt;
   if(enabled!==enabledBefore){
    cars=[];nextLead=clock;nextOncoming=clock+18;enabledBefore=enabled;
@@ -39,7 +39,7 @@ const RoadTraffic=(()=>{
   // Do not reserve a phantom scheduled car: new oncoming traffic waits until
   // the player has returned. Existing traffic must clear the complete pass.
   const clear=arriving.every(t=>t>passTime+4)&&!crossingAhead(hero,hero+cruise*passTime+30);
-  if(state==='follow'&&enabled&&lead&&gap<=95+cruise*.35&&gap>18&&clear)enter('outbound',laneDuration);
+  if(state==='follow'&&enabled&&!hold&&lead&&gap<=95+cruise*.35&&gap>18&&clear)enter('outbound',laneDuration);
   if(state==='outbound'){
    lane=.52+(-.52-.52)*ease(transition/maneuverDuration);
    if(transition>=maneuverDuration){lane=-.52;enter('passing');}
@@ -54,24 +54,25 @@ const RoadTraffic=(()=>{
   const target=cruise===0?1:state==='outbound'&&lead?clamp((lead.v+Math.max(0,(gap-18)/Math.max(.1,maneuverDuration-transition)))/cruise,.4,1):waiting?clamp((lead.v+Math.max(-10,(gap-(45+cruise*.35))*.8))/cruise,.4,1):1;
   factor+=(target-factor)*(1-Math.exp(-dt*3));
  }
- function advance(dt,camera,cruise,enabled){
+ function advance(dt,camera,cruise,enabled,hold=false){
   cruise=Math.max(0,cruise);
   if(camera<lastCamera-1)reset(camera);
   if(dt<=0||cruise===0){if(enabledBefore===null||enabled!==enabledBefore)tick(0,camera,cruise,enabled);lastCamera=camera;return snapshot(camera);}
   const count=Math.max(1,Math.round(dt/step)),delta=dt/count,start=lastCamera;
-  for(let k=0;k<count;k++)tick(delta,start+(camera-start)*(k+1)/count,cruise,enabled);
+  for(let k=0;k<count;k++)tick(delta,start+(camera-start)*(k+1)/count,cruise,enabled,hold);
   lastCamera=camera;return snapshot(camera);
  }
  // Integrate camera and traffic together, so render frequency and speed changes
  // cannot give the player and other vehicles different acceleration histories.
- function drive(dt,camera,cruise,enabled,motion){
+ // flow: a speed the other traffic keeps even while the player slows below it (pulled over at a stop).
+ function drive(dt,camera,cruise,enabled,motion,flow=0){
   if(dt<=0){advance(0,camera,cruise,enabled);return camera;}
   if(cruise<=0){motion.x=0;motion.v=0;advance(0,camera,0,enabled);return camera;}
   const count=Math.max(1,Math.ceil(dt*120-1e-8)),delta=dt/count;
   for(let i=0;i<count;i++){
    SceneMotion.spring(motion,cruise/42*factor,delta,2.4);
    camera+=42*motion.x*delta;
-   advance(delta,camera,42*motion.x/Math.max(.4,factor),enabled);
+   advance(delta,camera,Math.max(flow,42*motion.x/Math.max(.4,factor)),enabled,flow>0);   // no overtaking while pulled over
   }
   return camera;
  }

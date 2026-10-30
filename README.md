@@ -4,7 +4,7 @@ A standalone canvas experience at https://imranakbarin.github.io/iakdevs/.
 
 ## Today (home screen)
 
-A visit without a link opens **Today** (`assets/home.js`): a card per experience with a small moving preview (Pip running through his kingdom, World art cycling through traditions, the touring car on the road, the garden, the reading nook) and what you have done there, read from what each experience already keeps on the device: Pip's best on today's world and the sights found, Road trip postcards collected, whether you have raked the garden. Tap a card to step in; **⌂ Today** in the experience menu (and in Cozy Worlds' own menu) brings you back, and Esc or ✕ returns to where you were. The scene behind pauses while it is open. Links to an experience still go straight there; `#today` opens it.
+A visit without a link opens **Today** (`assets/home.js`): a card per experience with a small moving preview (Pip running through his kingdom, World art cycling through traditions, the touring car on the road, the garden, the reading nook) and what you have done there, read from what each experience already keeps on the device: Pip's best on today's world, the sights found (of 15) and landmarks in his journey book, the World art wonders seen (of 31), Road trip postcards and roadside stops, the Zen garden's season and whether you have raked it, and the last Cozy room. Tap a card to step in; **⌂ Today** in the experience menu (and in Cozy Worlds' own menu) brings you back, and Esc or ✕ returns to where you were. The scene behind pauses while it is open. Links to an experience still go straight there; `#today` opens it.
 
 ## Modes
 
@@ -49,13 +49,19 @@ Inputs are recorded on the scene clock, so paused redraws remain pixel-identical
 
 `assets/art-wonders.js` cuts each endless live landscape into long stretches (about a minute and a half of drifting). Most hold one rare sight, seeded and never the same twice in a row: a migrating flock, kites on the wind (strings down to the land), or a passing shower that leaves a rainbow once the cloud has gone by; fireflies when the theme is dark; petals on the wind in Japan, rising lanterns in China and papel picado garlands in Mexico. Each is drawn in the style's own ink and palette (Warli in white line), as a pure function of seed, stretch and scene time, so a paused redraw is unchanged. A quiet italic line under the style's name says what is passing. `tests/art-wonders.test.cjs` checks the no-repeat rule, every kind per style and deterministic drawing.
 
+**Wonders seen.** The first sighting of each kind in each tradition is kept on this device (`localStorage['art-wonders:seen']`) and marked "· new in your wonders" under the style's name; the Artworks dialog ends with a *Wonders seen* section, one row per tradition (31 in all; fireflies need dark mode). Live captions now read like the gallery: Gond, Warli, Madhubani, Kangra, Japanese woodblock, Chinese ink, Mexican amate, with the country in the line below.
+
 ## Zen garden: raking and visitors
 
 Drag across the sand to rake it: a five-tine rake follows your finger or pointer, carved with the same ridges and troughs as the steel ball's trail (a quiet hint says so on the first visit), and the garden renews with the next pattern as usual. A tap on the water still ripples it. About once a minute a small bird lands on the rim of the sand bed, hops in leaving tiny footprints, pecks and flies off (tap near it and it leaves sooner); by day a dragonfly hovers and darts over the lily pads. Raking by hand has its own sand hiss when sound is on.
 
+**Seasons** (`assets/zen-seasons.js`). The garden opens in the calendar's season and turns every two and a half minutes of garden time (a paused garden holds still), a short line naming each: blossom drifting in spring; warm motes and butterflies in summer; maple leaves in autumn that settle on the sand until the ball rolls through them or the rake sweeps them off; snow, a dusting on the sand and frost at the edges in winter. Butterflies settle on the sand and lift off when the ball, the rake or a tap comes near (not in the moonlit garden); in autumn and winter a crane glides over, its shadow crossing the sand.
+
 ## Road trip journey
 
 `assets/road-journey.js` turns the drive into a trip between named places (original names). Each stretch heads for a town in the next landscape and the status line counts down to it ("Saltwind Bay in 1.2 km"). Arriving, as the new landscape takes over, shows a postcard: the town, how far you came from the last one and the weather on the way, stamped into a trip log kept on this device ("Stamp 6 of 20"). With a fixed place, towns come every stretch within it. It only reads the road's state.
+
+**Stops and the horn** (`assets/road-stops.js`). When a roadside stop is coming up (a café, a campsite, a windmill, an overlook…), a tap on the road pulls over: the car brakes smoothly and parks with the stop beside the road ahead (only stops that will be drawn there are offered, never mid-overtake), hazards blinking while other traffic flows past. The place cycle and the trip's countdown wait; a card names the stop and keeps it in the trip log (15 to find); a tap, or fourteen seconds, drives on. A tap on the car (or H) sounds a two-tone horn. Arriving in a town, the car eases off with a soft chime (sound on) and "Welcome to …" rises over the road with its postcard.
 
 ## Soundscapes
 
@@ -115,3 +121,5 @@ Drag across the sand to rake it: a five-tine rake follows your finger or pointer
 ## Rendering notes
 
 World tiles are 600 world units wide and cached per chunk. Tiles are blitted only up to the next tile's origin so translucent paint (hills, paper grain) never doubles along a seam. Bump the `?v=` query on a script tag when its file changes.
+
+**Pacing.** Small screens draw at 60 fps while a frame costs under 10 ms (30 fps above, returning under 7) instead of always 30. The road's car reflections copy the previous frame before the next one draws; copying the frame still being drawn forced a mid-frame GPU flush (render time 24 → 5 ms). Madhubani's animated peacock feathers clip their hatching by arithmetic (cached per shape) instead of a canvas clip per feather each frame, the same picture at about half the missed frames. Cozy Worlds' steam blurs a small buffer rather than filtering the whole scene each frame (50 → 16.7 ms frames).

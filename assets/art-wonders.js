@@ -6,7 +6,8 @@
  * Mexico. Each is drawn in the style's own ink and palette (Warli in white
  * line). Everything is a pure function of seed, stretch and scene time, so a
  * paused redraw is unchanged. A quiet line under the style's name says what
- * is passing. */
+ * is passing; the first sighting of each kind in a tradition is kept on this
+ * device and collected in the Artworks dialog under "Wonders seen". */
 const ArtWonders = (() => {
   const SPAN = 3600, COMMON = ['flock', 'kites', 'shower'];
   const EXTRA = {japan: ['petals'], china: ['lanterns'], mexico: ['banners']};
@@ -142,11 +143,54 @@ const ArtWonders = (() => {
   function caption(style, xa, xb, t) {
     const i = Math.floor((xa + xb) / 2 / SPAN), w = wonderAt(style, i), name = w ? NAMES[w] : '';
     if (!line) { const cap = document.getElementById('art-caption'); if (!cap) return; line = document.createElement('span'); line.id = 'art-moment'; line.style.cssText = 'display:block;font:italic 12px/1.5 Georgia,serif;opacity:0;transition:opacity 1.2s;margin-top:3px'; cap.append(line); }
-    if (name && name !== shown) { shown = name; line.textContent = name; line.style.opacity = '.85'; until = t + 9; }
+    if (name && name !== shown) { shown = name; line.textContent = name + (note(style, w) ? ' · new in your wonders' : ''); line.style.opacity = '.85'; until = t + 9; }
     else if (!name) shown = '';
     if (t > until && line.style.opacity !== '0') line.style.opacity = '0';
   }
+  /* The wonders seen in each tradition are kept on this device, and the
+     Artworks dialog shows them as a collection (the Today page counts them). */
+  const KEY = 'art-wonders:seen';
+  const BOOK = {flock: ['🕊', 'A flock'], kites: ['🪁', 'Kites'], shower: ['🌈', 'Rainbow'], fireflies: ['✨', 'Fireflies'], petals: ['🌸', 'Petals'], lanterns: ['🏮', 'Lanterns'], banners: ['🎊', 'Papel picado']};
+  const kinds = style => COMMON.concat(EXTRA[style] || [], ['fireflies']);
+  function seen() { try { const v = JSON.parse(localStorage.getItem(KEY)); return v && typeof v === 'object' ? v : {}; } catch (_) { return {}; } }
+  function note(style, w) {
+    const all = seen(), list = Array.isArray(all[style]) ? all[style] : [];
+    if (list.includes(w)) return false;
+    all[style] = list.concat(w);
+    try { localStorage.setItem(KEY, JSON.stringify(all)); } catch (_) { return false; }
+    return true;
+  }
+  function count() {
+    const all = seen(); let n = 0, total = 0;
+    for (const style of Object.keys(STYLES)) { const k = kinds(style); total += k.length; n += k.filter(w => (all[style] || []).includes(w)).length; }
+    return {n, total};
+  }
+  const BOOK_CSS = `#art-wonders-book{margin-top:26px;border-top:1px solid #b2a28b44;padding-top:18px}
+#art-wonders-book h3{font:400 23px/1.2 Georgia,serif;margin:0 0 3px}#art-wonders-book>p{font-size:12px;color:#756e5f;margin:0 0 10px}
+.aw-row{display:grid;grid-template-columns:170px 1fr;gap:10px;align-items:center;padding:8px 0;border-bottom:1px dashed #b2a28b33}
+.aw-row strong{font:400 16px/1.2 Georgia,serif}.aw-row small{display:block;font-size:10.5px;color:#8a8170;margin-top:2px}
+.aw-chips{display:flex;flex-wrap:wrap;gap:6px}
+.aw-chip{display:inline-flex;align-items:center;gap:5px;padding:4px 10px 4px 8px;border-radius:999px;font-size:12px;background:#fffaf0;border:1px solid #b2a28b66;color:#3e3a30}
+.aw-chip.no{background:transparent;border-style:dashed;color:#9a917f}.aw-chip.no span{filter:grayscale(1);opacity:.45}
+@media(max-width:600px){.aw-row{grid-template-columns:1fr;gap:6px}#art-wonders-book h3{font-size:20px}}`;
+  let book = null;
+  function renderBook() {
+    const modal = document.getElementById('art-gallery'); if (!modal) return;
+    if (!book) {
+      const st = document.createElement('style'); st.textContent = BOOK_CSS; document.head.append(st);
+      book = document.createElement('section'); book.id = 'art-wonders-book'; book.setAttribute('aria-label', 'Wonders seen'); modal.append(book);
+    }
+    const all = seen(), {n, total} = count();
+    book.innerHTML = `<h3>Wonders seen</h3><p>${n ? `${n} of ${total} so far` : 'None yet'}. Live art brings one every minute or two; each tradition has its own.</p>`
+      + Object.keys(STYLES).map(style => {
+        const got = all[style] || [], k = kinds(style), name = (STYLES[style].name || style);
+        return `<div class="aw-row"><div><strong>${name}</strong><small>${k.filter(w => got.includes(w)).length} of ${k.length}</small></div><div class="aw-chips">`
+          + k.map(w => { const [g, label] = BOOK[w], has = got.includes(w); return `<span class="aw-chip${has ? '' : ' no'}" title="${has ? NAMES[w] : 'Not seen yet'}"><span aria-hidden="true">${g}</span>${label}${!has && w === 'fireflies' ? ' · in dark mode' : ''}</span>`; }).join('')
+          + '</div></div>';
+      }).join('');
+  }
   function install() {
+    const browse = document.getElementById('art-browse'); if (browse) browse.addEventListener('click', renderBook);
     // Painted artworks and other modes do not run the live layer: hide the line there.
     setInterval(() => { if (line && (typeof artPresentation !== 'undefined' && artPresentation !== 'live' || typeof modeBtn !== 'undefined' && modeBtn.value !== 'art')) { line.style.opacity = '0'; shown = ''; } }, 1000);
     for (const [key, st] of Object.entries(STYLES)) {
@@ -161,5 +205,5 @@ const ArtWonders = (() => {
     if (w === 'shower') return a0 + 500 + (t * 26 % (SPAN - 1000));
     return a0 + (w === 'kites' ? 480 + 620 : w === 'banners' ? 400 + 360 : SPAN / 2);
   }
-  return {install, wonderAt, where, SPAN};
+  return {install, wonderAt, where, SPAN, seen, count, renderBook};
 })();
