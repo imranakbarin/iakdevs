@@ -667,7 +667,11 @@
     const bumped = new Set(), gotItem = new Set();
     for (let f = 0; f < 96; f++) {
       simNow = frameNo + f;
-      const inp = policy(o, f, b, st, threats, f), ev = stepBody(b, inp);
+      const grounded = b.ground || !!b.on, inp = policy(o, f, b, st, threats, f), ev = stepBody(b, inp);
+      // A leap after walking off the edge (in the coyote window) starts from
+      // below the lip and looks like a slip: worth it only when nothing from
+      // the lip itself does as well (under a block row, say).
+      if (ev.jumped && !grounded) bonus -= 40;
       if (b.ground && !b.on) {
         const ty = Math.floor((b.y + b.h + 1) / TS);
         for (let tx = Math.floor((b.x + b.foot) / TS); tx <= Math.floor((b.x + b.w - b.foot - EPS) / TS); tx++)
