@@ -547,6 +547,8 @@
   // Where a creature will be f frames from now, from its own rules: fliers bob,
   // hoppers leap on a timer toward Pip, everything else keeps its heading.
   function predict(e, f) {
+    if (!f) return [e.x, e.y];
+    if (e.path && e.pathAt === frameNo) { const k = Math.min(f, HORIZON) * 2; return [e.path[k], e.path[k + 1]]; }
     if (e.kind === 'flier') return [e.x + e.vx * f, e.baseY + dsin((e.t + f) * .045) * 20];
     if (e.kind === 'hopper') {
       const gY = e.gY ?? e.y, dir = pl.x < e.x ? -.8 : .8;
@@ -557,6 +559,40 @@
       return y >= gY && u > 2 ? [x0 + dir * 31 * .8, gY] : [x0 + (e.ground ? dir : e.dir || dir) * .8 * u, Math.min(gY, y)];
     }
     return [e.x + e.vx * f, e.y];
+  }
+  // Foresight: each creature near Pip is played forward once per decision by
+  // its own rules (turning at walls and ledges, falling, hopping on its timer
+  // toward where Pip will be), with no effect on the world. Rollouts read
+  // where it is from this path.
+  const HORIZON = 96;
+  function stepFoe(e, px) {
+    e.t++;
+    if ((e.state === 'walk' || e.kind === 'flier') && e.kind !== 'pod' && quiet(e.x + 7 + e.vx * 8) && !quiet(e.x + 7)) { e.vx = -e.vx; if (e.dir) e.dir = -e.dir; }
+    if (e.state === 'dead' || e.state === 'squash') return;
+    if (e.kind === 'flier') { e.x += e.vx; e.y = e.baseY + dsin(e.t * .045) * 20; return; }
+    if (e.kind === 'pod') { e.x += e.vx; if (solid(Math.floor(e.x / TS), Math.floor((e.y + 5) / TS))) { e.state = 'squash'; e.y = 1e4; } return; }
+    if (e.kind === 'hopper') {
+      e.vx = e.ground ? 0 : e.dir || -.8;
+      if (e.ground && e.t % e.period === 0) { e.vy = -5.4; e.dir = px < e.x ? -.8 : .8; e.ground = false; }
+    }
+    if (e.kind === 'snail' && e.state === 'walk' && e.ground) {
+      const ahead = e.vx > 0 ? e.x + e.w + 1 : e.x - 1;
+      if (!solid(Math.floor(ahead / TS), Math.floor((e.y + e.h + 2) / TS))) e.vx = -e.vx;
+    }
+    if (e.state === 'shell') e.vx = 0;
+    const v = e.vx;
+    if (moveX(e) && v) e.vx = -v;
+    e.vy = Math.min(6, e.vy + .35); moveY(e);
+  }
+  function foresee(threats) {
+    const keep = simNow;
+    for (const e of threats) {
+      const c = {...e}, path = new Float32Array((HORIZON + 1) * 2);
+      path[0] = c.x; path[1] = c.y;
+      for (let f = 1; f <= HORIZON; f++) { simNow = frameNo + f; stepFoe(c, pl.x + pl.vx * f); path[f * 2] = c.x; path[f * 2 + 1] = c.y; }
+      e.path = path; e.pathAt = frameNo;
+    }
+    simNow = keep;
   }
   function danger(b, threats, f) {
     const ahead = b.x + b.w + Math.max(6, b.vx * 9), feet = Math.floor((b.y + b.h + 2) / TS);
@@ -611,10 +647,16 @@
   }
   // One imagined future: its score, the frame it would end in a tumble (if
   // any) and a sparse path for the thought overlay.
+  // Planks Pip would stand on in a rollout start to go there too (in the
+  // world's own map, undone when the rollout ends).
   function simulate(o, threats) {
+    const added = [];
+    try { return rollout(o, threats, added); } finally { for (const k of added) crumbleFall.delete(k); }
+  }
+  function rollout(o, threats, added) {
     const b = {...pl}, stomped = new Set(), got = new Set(), st = {auto: 0}, pts = [[b.x + 6, b.y + 10]];
     const near = marks.filter(k => k.x > pl.x - 32 && k.x < pl.x + 260);
-    let bonus = 0, sumX = 0, wary = 0, hit = false;
+    let bonus = 0, sumX = 0, wary = 0, hit = false, safeUntil = inv;   // contacts are harmless while Pip blinks after a shrink or a respawn
     const lazy = impatience * (o.dir !== 1 ? 500 : o.wait * 10);
     const end = (score, death) => { pts.push([b.x + 6, b.y + 10]); return {score: score - lazy, death, pts}; };
     // A tumble near the end of a rollout, while the simple default policy is
@@ -625,7 +667,12 @@
     const bumped = new Set(), gotItem = new Set();
     for (let f = 0; f < 96; f++) {
       simNow = frameNo + f;
-      const ev = stepBody(b, policy(o, f, b, st, threats, f));
+      const inp = policy(o, f, b, st, threats, f), ev = stepBody(b, inp);
+      if (b.ground && !b.on) {
+        const ty = Math.floor((b.y + b.h + 1) / TS);
+        for (let tx = Math.floor((b.x + b.foot) / TS); tx <= Math.floor((b.x + b.w - b.foot - EPS) / TS); tx++)
+          if (tileAt(tx, ty) === CRUMBLE && !crumbleFall.has(tx * 64 + ty)) { crumbleFall.set(tx * 64 + ty, frameNo + f + 30); added.push(tx * 64 + ty); }
+      }
       // Star blocks are worth a detour: a seed, and sometimes a Golden Sprout.
       if (ev.bump && tileAt(ev.bump[0], ev.bump[1]) === BLOCK && !bumped.has(ev.bump[0])) { bumped.add(ev.bump[0]); bonus += big ? 14 : 30; }
       if (b.x < cam) { b.x = cam; b.vx = Math.max(0, b.vx); }
@@ -641,9 +688,10 @@
         const [ex, ey] = predict(e, f);
         if (b.x < ex + e.w + m && b.x + b.w > ex - m && b.y < ey + e.h + m && b.y + b.h > ey - m) {
           if (e.state === 'shell') continue;
-          if (b.vy > 0 && b.y + b.h - ey < 9) { stomped.add(e); b.vy = -4.4; bonus += 35 * (1 - .5 * risk); }
-          else if (big && !hit) { hit = true; bonus -= 260; }
-          else if (!big || hit) return fall(f);
+          if (b.vy > 0 && b.y + b.h - ey < 9) { stomped.add(e); b.vy = inp.j ? -6.4 : -4.4; b.jumping = inp.j; bonus += 35 * (1 - .5 * risk); }
+          else if (f < safeUntil) continue;
+          else if (big && !hit) { hit = true; bonus -= 260; safeUntil = f + 110; }
+          else return fall(f);
         }
       }
       for (const it of items) {
@@ -664,6 +712,7 @@
     const threats = enemies.filter(e => e.state !== 'dead' && e.state !== 'squash' && Math.abs(e.x - pl.x) < 260);
     seedsNear = [];
     for (const ch of chunks.values()) for (const s of ch.seeds) if (!s.got && s.x > pl.x - 16 && s.x < pl.x + 200) seedsNear.push(s);
+    foresee(threats);
     const keep = simNow, arcs = OPTIONS.map(o => simulate(o, threats));
     simNow = keep;
     let best = 0;
@@ -1123,7 +1172,7 @@
     // Last resort: the world never holds Pip for long. After 15 s without
     // progress a breeze carries him on to the next safe ground. It depends
     // only on the world's state, so ghosts replay it exactly.
-    if (maxX > progressX + 8) { progressX = maxX; progressAt = frameNo; }
+    if (maxX > progressX + 24) { progressX = maxX; progressAt = frameNo; }   // a tile and a half: edging forward is not progress
     else if (!dead && frameNo - progressAt > RATE * 15) carry();
     if (!ghostSim && run.inputs.length < RUN_MAX) { run.m = Math.floor(maxX / TS); if (frameNo % 300 === 0) saveBest(); }
     const region = Math.floor(pl.x / (REGION * CW * TS));
@@ -1281,11 +1330,11 @@
     for (const b of bytes) bits += b.toString(2).padStart(8, '0');
     for (let i = 0; i < bits.length; i += 6) out += B64[parseInt(bits.slice(i, i + 6).padEnd(6, '0'), 2)];
     const ev = r.events.map(e => e.k === 'w' ? `w${e.f.toString(36)}-${e.w.toString(36)}` : `${e.k}${e.f.toString(36)}-${e.x.toString(36)}-${e.y.toString(36)}`).join('_');
-    return ['5', (r.seed >>> 0).toString(36), r.w.toString(36), bytes.length.toString(36), out].join('.') + (ev ? '.' + ev : '');
+    return ['6', (r.seed >>> 0).toString(36), r.w.toString(36), bytes.length.toString(36), out].join('.') + (ev ? '.' + ev : '');
   }
   function decodeRun(code) {
     const [v, sd, w, nb, data = '', ev = ''] = String(code).split('.');
-    if (v !== '5' || !w || !nb || !/^[0-9a-z]+$/.test(sd + w + nb) || /[^A-Za-z0-9_-]/.test(data)) return null;
+    if (v !== '6' || !w || !nb || !/^[0-9a-z]+$/.test(sd + w + nb) || /[^A-Za-z0-9_-]/.test(data)) return null;
     let bits = ''; for (const ch of data) bits += B64.indexOf(ch).toString(2).padStart(6, '0');
     const inputs = [];
     for (let i = 0, n = parseInt(nb, 36); i < n; i++) { const b = parseInt(bits.slice(i * 8, i * 8 + 8), 2); if (!(b >= 0)) return null; for (let k = 0; k <= b >> 3; k++) inputs.push(b & 7); }
@@ -1873,7 +1922,7 @@
     const props = propsImg.complete && propsImg.naturalWidth ? (ch.props = ch.props || chunkProps(ch, at)) : [];
     let y0 = ROWS; for (let y = 0; y < ROWS && y0 === ROWS; y++) for (let x = 0; x < CW; x++) if (STATIC.has(at(x, y))) { y0 = y; break; }
     const dress = ch.dressing && ch.dressing.n === props.length ? ch.dressing.list : (ch.dressing = {n: props.length, list: chunkDressing(ch, at, props)}).list;
-    y0 = Math.max(0, y0 - 1); for (const p of props) y0 = Math.max(0, Math.min(y0, Math.floor((p.s * TS + 3 - PROP[p.kind][4]) / TS)));
+    y0 = Math.max(0, y0 - 1); for (const p of props) y0 = Math.max(0, Math.min(y0, Math.floor((p.s * TS + 3 - PROP[p.kind][4] - PROP_BACK) / TS)));
     for (const d of dress) y0 = Math.max(0, Math.min(y0, Math.floor((d.s * TS - (DHIGH[d.kind] || 36)) / TS)));
     const c2 = document.createElement('canvas'); c2.width = (CW + 2 * M) * n; c2.height = Math.max(1, ROWS - y0) * n;
     const g = c2.getContext('2d'), border = borderOf(ch.ci);
@@ -2156,7 +2205,7 @@
     if (props.length) {
       g.globalCompositeOperation = 'destination-over';
       for (const p of props) {
-        const spr = propSprite(p.kind, bio, k), w = spr.width / k, hh = spr.height / k, X = p.x * TS + 8 - w / 2 + ((p.hv >>> 5) % 5 - 2), Y = p.s * TS + 3 - hh;
+        const spr = propSprite(p.kind, bio, k), w = spr.width / k, hh = spr.height / k, X = p.x * TS + 8 - w / 2 + ((p.hv >>> 5) % 5 - 2), Y = p.s * TS + 3 - hh - PROP_BACK;
         if (p.hv & 1) { g.save(); g.translate(X + w, Y); g.scale(-1, 1); g.drawImage(spr, 0, 0, w, hh); g.restore(); } else g.drawImage(spr, X, Y, w, hh);
       }
       g.globalCompositeOperation = 'source-over';
@@ -3241,7 +3290,8 @@
       if (r < 0 || x < -200 * S || x > cv.width + 200 * S) continue;
       const tx = Math.floor((gx + 8) / TS); let gy = 4; while (gy < ROWS && !solid(tx, gy)) gy++;
       const id = regionBiome(r + 1);
-      ctx.save(); ctx.translate(x, W2D(0, gy * TS)[1]);
+      const back = .55;   // set back onto the plaza's receding top, in perspective like the faces
+      ctx.save(); ctx.translate(x + DEPTH.k * (cam + viewW / 2 - gx - 8) * back * S, W2D(0, gy * TS - DEPTH.up * back)[1]);
       if (id !== 'sky') { ctx.fillStyle = 'rgba(30,22,16,.22)'; ctx.beginPath(); ctx.ellipse(0, 0, 50 * S, 4 * S, 0, 0, 7); ctx.fill(); }   // it stands on the plaza
       const at = celebrated.get(r), cel = at === undefined || frameNo < at ? -1 : frameNo - at;
       landmarkArt(id, S * .95, frameNo, cel); ctx.restore();
@@ -3371,6 +3421,7 @@
      the view, so the faces turn as the view scrolls. Drawn behind the painted
      tiles, so only the receding faces show; drawing only (the run, the
      planner and ghosts never see it). */
+  const PROP_BACK = 5;                // trees, rocks and cottages stand this far back on the ground's receding top
   const DEPTH = {up: 9, k: .055};   // how far a top recedes, and how far a back edge leans toward the middle per pixel from it
   const faceCache = new Map();
   function faceColors(id, bio) {
@@ -3389,6 +3440,15 @@
       f = {top: [mix(top, .12), mix(top, -.1)], side: [mix(side, -.25), mix(side, -.4)]};
     }
     faceCache.set(key, f); return f;
+  }
+  // A soft shadow on the ground's receding top under a body, smaller and
+  // fainter the higher the body is (on: the surface it stands on, if known).
+  function groundShadow(cx, bottom, rx, on) {
+    let gy = on ?? -1;
+    for (let row = Math.max(0, Math.floor(bottom / TS)); row < ROWS && gy < 0; row++) if (solid(Math.floor(cx / TS), row)) gy = row * TS;
+    const k = gy < 0 ? 0 : Math.max(0, 1 - (gy - bottom) / 96); if (k < .02) return;
+    const [sx, sy] = W2D(cx, gy - DEPTH.up * .45), q = .55 + .45 * k;
+    ctx.fillStyle = `rgba(40,30,20,${(.24 * k).toFixed(3)})`; ctx.beginPath(); ctx.ellipse(sx, sy, rx * S * q, rx * .26 * S * q, 0, 0, 7); ctx.fill();
   }
   function drawDepth() {
     const t0 = Math.floor(cam / TS) - 1, t1 = t0 + Math.ceil(viewW / TS) + 2, cols = t1 - t0 + 3, mid = cam + viewW / 2, up = DEPTH.up;
@@ -3487,6 +3547,7 @@
       g.strokeStyle = 'rgba(240,226,255,.8)'; g.lineWidth = .35; for (let x = 6; x < w - 2; x += 7) { g.beginPath(); g.moveTo(x, .6); g.lineTo(x - 1.2, 3); g.lineTo(x, 6.4); g.stroke(); }
     }
   });
+  const MOVER_FACES = {meadow: ['#c99a66', '#a07042', '#6e4a2c'], coast: ['#d8bf96', '#b09468', '#7c6444'], frost: ['#f2f8ff', '#c9dcf2', '#8fb0d6'], sky: ['#ffffff', '#e2dcf6', '#c2b8e4'], caves: ['#c9a8ff', '#9a78e0', '#5a3f9a']};   // top, its far edge, side
   function drawMovers() {
     const t = drawT ?? frameNo;
     for (const ch of chunks.values()) for (const m of ch.movers) {
@@ -3509,6 +3570,13 @@
         }
       }
       if (b === 'caves') blob(x + w / 2, y + 3 * s, 28 * s, '#be96ff', .35);
+      {   // its thickness: a receding top and the side toward the middle of the view, as the tiles have
+        const [top, back, side] = MOVER_FACES[b] || MOVER_FACES.meadow, mid = cam + viewW / 2, up = DEPTH.up * .8, l0 = DEPTH.k * (mid - mx) * S, l1 = DEPTH.k * (mid - mx - m.w) * S, th = 6 * s;
+        const g = ctx.createLinearGradient(0, y, 0, y - up * s); g.addColorStop(0, top); g.addColorStop(1, back);
+        ctx.fillStyle = g; ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x + w, y); ctx.lineTo(x + w + l1, y - up * s); ctx.lineTo(x + l0, y - up * s); ctx.fill();
+        const ex = l1 > 0 ? x + w : x, le = l1 > 0 ? l1 : l0;
+        if (Math.abs(le) > .5) { ctx.fillStyle = side; ctx.beginPath(); ctx.moveTo(ex, y); ctx.lineTo(ex + le, y - up * s); ctx.lineTo(ex + le, y - up * s + th); ctx.lineTo(ex, y + th); ctx.fill(); }
+      }
       ctx.drawImage(moverSprite(b, m.kind, m.w), x - 4 * s, y - 5 * s, (m.w + 8) * s, 20 * s);
       if (m.kind === 'ferry' && b === 'coast') {    // a striped cloth sail on a driftwood mast, filling in the sea breeze
         const mx2 = x + w / 2, fill = .8 + .2 * Math.sin(t * .04 + m.ph);
@@ -3571,8 +3639,8 @@
   });
   function drawEnemy(e) {
     const [x, y] = W2D(e.x, e.y), s = S, w = e.w * s, h = e.h * s, step = Math.sin(e.t * .25), flip = e.vx > 0 && e.kind !== 'flier', L = flip ? -1 : 1;
+    if (e.state !== 'dead' && !(e.state === 'squash' && e.t > 26)) groundShadow(e.x + e.w / 2, e.y + e.h, e.kind === 'pod' ? 5 : 7.5);
     ctx.save(); ctx.translate(x + w / 2, y + h);
-    if (e.ground && e.state !== 'dead' && e.kind !== 'pod') { ctx.fillStyle = 'rgba(30,20,10,.22)'; ctx.beginPath(); ctx.ellipse(0, -.2 * s, 7.5 * s, 1.5 * s, 0, 0, 7); ctx.fill(); }
     if (e.state === 'dead') { ctx.rotate(Math.PI); ctx.translate(0, h); }
     if (flip) ctx.scale(-1, 1);
     // Creatures notice Pip. This is drawn only (the simulation and the planner
@@ -3893,12 +3961,7 @@
     const lean = dead ? 0 : teeter ? teeter * facing * (.1 + .08 * Math.sin(t * .45)) : pl.ground ? (skidding ? -.12 : .11 * Math.min(1, Math.abs(pl.vx) / P.max)) : .04;
     // His shadow lies on the ground's receding top, under him in the air too,
     // smaller and fainter the higher he is.
-    if (!dead) {
-      const c = pl.x + pl.w / 2, from = Math.floor((pl.y + pl.h) / TS);
-      let gy = -1; for (let row = Math.max(0, from); row < ROWS && gy < 0; row++) if (solid(Math.floor(c / TS), row)) gy = row * TS;
-      const hgt = gy < 0 ? 999 : gy - (pl.y + pl.h), k = pl.ground || pl.on ? 1 : Math.max(0, 1 - hgt / 96);
-      if (k > .02) { const [sx0, sy0] = W2D(c, (pl.on ? pl.y + pl.h : gy) - DEPTH.up * .45); ctx.fillStyle = `rgba(40,30,20,${(.24 * k).toFixed(3)})`; ctx.beginPath(); ctx.ellipse(sx0, sy0, 8 * S * (shownBig() ? 1.25 : 1) * (.55 + .45 * k), 2.1 * S * (.55 + .45 * k), 0, 0, 7); ctx.fill(); }
-    }
+    if (!dead) groundShadow(pl.x + pl.w / 2, pl.y + pl.h, 8 * (shownBig() ? 1.25 : 1), pl.on ? pl.y + pl.h : undefined);
     ctx.save(); ctx.translate(x, y);
     if (dead) ctx.rotate(Math.min(Math.PI, dead * .08));
     ctx.scale(facing, 1); ctx.rotate(lean); ctx.scale(sx * sc, sy * sc);
@@ -4374,7 +4437,8 @@
     tile: (x, y, v) => setTile(x, y, v),
     rollout: i => { const th = enemies.filter(e => e.state !== 'dead' && e.state !== 'squash' && Math.abs(e.x - pl.x) < 260); const r = simulate(OPTIONS[i], th); return {o: OPTIONS[i], score: r.score, death: r.death, pts: r.pts}; },
     journey: () => ({chapters, arrival: !!arrival, chapter: chapter && {...chapter}}), stats: () => stats, biomeAt: x => biomeAt(x), GAPS, features: () => [...chunks.values()].flatMap(ch => ch.features), wonder: r => regionWonder(r),
-    debug: () => ({tension, risk, marks: marks.length, replay: !!replay, zoom, big, items: items.length}),
+    debug: () => ({tension, risk, marks: marks.length, replay: !!replay, zoom, big, items: items.length, plan: plan && {dir: plan.dir, wait: plan.wait, hold: plan.hold, f: plan.f}, impatience}),
+    foresee: () => { const th = enemies.filter(e => e.state !== 'dead' && e.state !== 'squash'); foresee(th); return th.map(e => ({kind: e.kind, x: e.x, at: f => predict(e, f)})); },
     life: () => ({fish: fishLeaps(seaRuns(cam - TS, cam + viewW + TS), frameNo).filter(f => f.u < f.D).map(f => ({...f})), bats: batFlight(frameNo), flutter: butterflies(cam, cam + viewW, frameNo).length, runs: seaRuns(cam - TS, cam + viewW + TS)}),
     director: {arm: t => { tool = t; }, refill: () => { charges = 3; }, place: (tx, ty) => place(tx, ty), grow, info: () => ({tool, charges, dirScore, notes: notes.map(n => n.text)})},
     ghost: {encode: () => encodeRun(run), decode: decodeRun, race: code => { const r = decodeRun(code), live = seed; ghost = r && buildGhost(r, 'friend'); reset(live); return ghost; }, at: f => ghostAt(f), run: () => run}};
