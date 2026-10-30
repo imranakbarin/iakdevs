@@ -149,6 +149,7 @@ input[type=range]{width:80px;accent-color:#E63B2E}
 <script src="assets/art-ambience.js?v=1"></script>
 <script src="assets/art-wonders.js?v=2"></script>
 <script src="assets/art-gallery.js?v=1"></script>
+<script src="assets/art-richer.js?v=3"></script>
 <script src="assets/home.js?v=2"></script>
 <script src="assets/road-journey.js?v=2"></script>
 <script src="assets/road-stops.js?v=1"></script>
@@ -2281,7 +2282,7 @@ if(requestedZen||requestedRoad||requestedCozy||requestedMushroom||requestedPip){
 // Editing the hash (or following a deep link in the same tab) opens that world;
 // the app's own replaceState calls never fire hashchange.
 addEventListener('hashchange',()=>location.reload());
-ArtAmbience.install();ArtWonders.install();if(typeof ArtGallery!=='undefined')ArtGallery.install();ArtPresence.install();WorldSound.install();if(typeof RoadStops!=='undefined')RoadStops.install();Home.install();
+if(typeof ArtRicher!=='undefined')ArtRicher.install();ArtAmbience.install();ArtWonders.install();if(typeof ArtGallery!=='undefined')ArtGallery.install();ArtPresence.install();WorldSound.install();if(typeof RoadStops!=='undefined')RoadStops.install();Home.install();
 motionPreference.addEventListener('change',e=>{if(e.matches){playing=false;syncPlay();if(modeBtn.value==='cozy')window.CozyWorlds?.pause();wakeScene();}});
 wakeScene();
 </script>
