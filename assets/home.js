@@ -18,6 +18,7 @@ const Home = (() => {
   const COZY = {nook: 'the reading nook', tea: 'the tea garden', cabin: 'the lakeside cabin'};
 
   const list = v => Array.isArray(v) ? v : [];
+  const townToday = () => list(get('toy-town:news:' + today(), [])).length ? 'Today\u2019s theme comes from the news' : 'A new town and a new theme every day';
   function cards() {
     const best = get('pip-run:best', null), seen = list(get('pip-run:seen', [])), book = get('pip-run:book', {}), stamps = list(get('road-trip:stamps', [])), stops = list(get('road-trip:stops', []));
     const landmarks = book && typeof book === 'object' ? Object.keys(book).length : 0, cozy = (get('cozy-simple-v2', {}) || {}).scene;
@@ -35,6 +36,7 @@ const Home = (() => {
       {mode: 'zen', title: 'Zen garden', text: 'A steel ball draws in the sand as the seasons turn. Rake it yourself.',
         progress: [season ? `${season} in the garden today` : 'Visitors come and go', ...(raked ? ['You have raked the sand'] : [])], preview: 'zen'},
       {mode: 'cozy', title: 'Cozy Worlds', text: 'A reading nook, a tea garden and a lakeside cabin.', progress: [COZY[cozy] ? `Last time: ${COZY[cozy]}` : 'Calm rooms to rest in'], preview: 'cozy'},
+      {mode: 'town', title: 'Toy Town', text: 'A busy little town where something silly is always happening. Tap to poke it.', progress: [townToday()], preview: 'town'},
       {mode: 'mushroom', title: 'Mushroom Island', text: 'Pip’s cinematic run through a painted kingdom.', progress: [], preview: 'mushroom'}
     ];
   }
@@ -44,7 +46,8 @@ const Home = (() => {
     road: '<div class="img" style="background-image:url(assets/road-painted-mountains.webp);background-position:50% 0;height:58%"></div><div class="ground"></div><div class="road"></div><div class="lane"></div><img class="car" alt="" src="assets/road-painted-car.webp">',
     zen: '<div class="img zoom" style="background-image:url(assets/garden-koi-wide.webp)"></div>',
     cozy: '<div class="img zoom" style="background-image:url(assets/cozy-nook-thumb.webp)"></div>',
-    mushroom: '<div class="img pan" style="background-image:url(assets/mushroom-cinematic-kingdom.webp);animation-direction:alternate-reverse"></div>'
+    mushroom: '<div class="img pan" style="background-image:url(assets/mushroom-cinematic-kingdom.webp);animation-direction:alternate-reverse"></div>',
+    town: '<svg class="img" viewBox="0 0 160 100" preserveAspectRatio="xMidYMid slice" aria-hidden="true" style="background:#bfe6f7"><path d="M80 18 150 53 80 88 10 53Z" fill="#a6d877"/><path d="M10 53 80 88v8L10 61Z" fill="#8c6a48"/><path d="M150 53 80 88v8l70-35Z" fill="#6f5238"/><path d="M45 35.5 115 70.5M115 35.5 45 70.5" stroke="#6a7280" stroke-width="9"/><g><path d="M58 40l10 5v-14l-10-5Z" fill="#f6a6a0"/><path d="M68 45l10-5v-14l-10 5Z" fill="#d98b86"/><path d="M58 26l10-5 10 5-10 5Z" fill="#d9533e"/></g><g><path d="M92 48l8 4v-22l-8-4Z" fill="#9cc7ef"/><path d="M100 52l8-4v-22l-8 4Z" fill="#7aa6cf"/><path d="M92 26l8-4 8 4-8 4Z" fill="#b9d2e6"/></g><circle cx="120" cy="42" r="6" fill="#5cb85c"/><circle cx="40" cy="58" r="5" fill="#5cb85c"/><rect x="76" y="60" width="8" height="5" fill="#f6c541"><animate attributeName="x" values="60;96;60" dur="6s" repeatCount="indefinite"/><animate attributeName="y" values="52;70;52" dur="6s" repeatCount="indefinite"/></rect><ellipse cx="128" cy="16" rx="10" ry="3" fill="#9aa6b5"><animate attributeName="cx" values="20;140;20" dur="14s" repeatCount="indefinite"/></ellipse></svg>'
   };
   const CSS = `
 #home{position:fixed;inset:0;z-index:30;overflow:auto;-webkit-overflow-scrolling:touch;box-sizing:border-box;padding:max(20px,env(safe-area-inset-top)) 18px 30px;
