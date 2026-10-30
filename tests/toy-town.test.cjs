@@ -66,6 +66,16 @@ for (const x of T.VARIANTS) {
   assert.ok(!T.events().some(e => e.name === x.variant) || true);
 }
 assert.ok(T.PACE < 1, 'the town runs slower than real time');
+// The Toy Town Times stands on a roof, never on a road; neighbours chat about the story by name; a plane tows the headline.
+{ const lead = {...T.VARIANTS.find(v => v.variant === 'cricket'), story: 'India win the second Test', name: 'India'};
+  T.build(2024, 'sports'); T.decorate([lead]); T.setToday([lead]);
+  const board = T.props().find(p => p.kind === 'times');
+  assert.ok(board && board.host && board.z >= board.host.h, 'the billboard stands on a building roof');
+  assert.ok(T.props().filter(p => p.kind === 'kiosk').length >= 1 && T.props().some(p => p.kind === 'bunting'), 'kiosks on the corners, bunting on a match day');
+  const chat = T.startEvent('chat'), plane = T.startEvent('skybanner');
+  assert.ok(chat && plane && /India|Test/.test(plane.towed), 'a plane tows the headline');
+  for (let i = 0; i < 60 * 40; i++) T.update(1 / 60);
+  assert.ok(T.TALK.sports.some(l => l.includes('{N}')), 'some lines name the story'); }
 // A calm town: gentle moments run to their end, and traffic waits at red lights instead of piling into the crossings.
 T.build(31337, 'weather'); T.setToday([]);
 for (const name of T.CALM) T.startEvent(name);
