@@ -33,6 +33,13 @@ const three = T.newsThemes(['Explosion kills four in a factory', 'A new smartpho
 assert.equal(JSON.stringify(three.map(x => x.variant)), JSON.stringify(['phone', 'halloween', 'marathon']), 'up to three light stories, one per theme, grim ones skipped');
 assert.ok(T.VARIANTS.every(x => T.VARIANT_EVENTS().includes(x.variant)), 'every variant has its own event');
 
+// The story's own name goes on the banners; a long story becomes a headline.
+assert.equal(T.nameOf('India win the second Test against England by an innings'), 'India');
+assert.equal(T.nameOf('Thousands celebrate the New Year in Sydney Harbour'), 'New Year', 'the first of equally long names: HAPPY NEW YEAR!');
+assert.equal(T.nameOf('The Artemis III crew completes a lunar flyby'), 'Artemis III');
+assert.equal(T.nameOf('A new smartphone goes on sale'), '');
+assert.ok(T.headline('In tennis, the Toy Open final is won in five sets, while the crowd sings and the rain holds off for once in a long while').length <= 72, 'long stories are shortened');
+
 // The same day builds the same town; every theme gets its block.
 const layout = () => T.buildings().map(b => b.kind + b.x + ',' + b.y).join('|');
 T.build(12345, 'space'); const a = layout(); T.build(12345, 'space');
