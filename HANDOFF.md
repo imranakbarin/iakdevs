@@ -296,3 +296,7 @@ New `assets/zen-seasons.js` (+ `tests/zen-seasons.test.cjs`), loaded right after
 ## Claude follow-up (World art living gallery)
 
 New `assets/art-gallery.js` (+ `tests/art-gallery.test.cjs`), loaded after `art-wonders.js`, installed next to `ArtWonders.install()`. It wraps `LivingArt.draw` (draws your painting into an offscreen at the framed size, then wall/frame, light and a near particle layer) and appends `#art-gallery-opts` after `#art-presentation` in the Artworks dialog. Shared `index.html` anchor: `artPresentation` now defaults to `'painted'` unless the hash is a live style link (`#gond-…` etc.). Body class `gallery-framed` restyles `#art-caption` as a plaque while framed.
+
+## Claude follow-up (richer live paintings)
+
+New `assets/art-richer.js` (+ `tests/art-richer.test.cjs`), loaded after `art-gallery.js`; `ArtRicher.install()` runs first on the init line (before `ArtAmbience.install()`), after `GondBenchmark.install()`. It wraps `STYLES[key].chunk` for gond, warli, kangra, japan, china and mexico: your grammar runs first unchanged, then extra `add(layer, fn)` calls (layers -1/0/1 sky and far, 3 for Warli huts, 6/7 foreground) seeded from `hash(seed^0x51c3, x0)`. It clears `OC`, `tiles`, `jobs` and `farTiles` once at install. Madhubani is untouched.
