@@ -17,7 +17,7 @@ const ToyTown = (() => {
   const mulberry32 = a => () => { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; };
   const clamp = (a, x, b) => Math.max(a, Math.min(b, x)), lerp = (a, b, t) => a + (b - a) * t, TAU = Math.PI * 2;
   const today = () => new Date().toISOString().slice(0, 10), narrow = () => typeof innerWidth === 'number' && innerWidth < 700;
-  let rnd = Math.random, seed = 0, day = '', theme = null, newsLine = '', today_ = [];
+  let rnd = Math.random, seed = 0, day = '', theme = null, newsLine = '', today_ = [], nextHeadline = 12, headIx = 0;
   let W = 0, H = 0, dpr = 1, S = 1, cam = {x: N / 2, y: N / 2, z: 1, tx: N / 2, ty: N / 2, tz: 1}, base = 1;
   let grid = [], buildings = [], props = [], movers = [], events = [], parts = [], bubbles = [], ground = null, sprites = new Map();
   const PACE = .6, CARS = 7, BIKES = 4, PEOPLE = 14, LIGHT = 10;   // a calm town: few cars, a handful of cyclists, people taking their time   // the whole town runs at 60% speed: easier to follow, calmer to watch
@@ -89,10 +89,21 @@ const ToyTown = (() => {
     for (const story of stories) {
       if (out.length >= max || GRIM.some(w => has(story, w))) continue;
       const v = VARIANTS.find(v => v.words.some(w => has(story, w.length <= 3 ? w : w + '*')));   // "whale" finds "whales"; short ones (ai, eid) only whole
-      if (v && !out.some(o => o.key === v.key)) out.push({...v, story});
+      if (v && !out.some(o => o.key === v.key)) out.push({...v, story, name: nameOf(story)});
     }
     return out;
   }
+  // The name a story is about (a team, a festival, a mission…): its longest run of capitalised words.
+  const STOP = new Set(['The', 'A', 'An', 'In', 'On', 'At', 'After', 'Its', 'His', 'Her', 'Their', 'This', 'That', 'With', 'For', 'From', 'By', 'Of', 'And', 'As', 'To', 'Over', 'Under', 'More', 'Most', 'Several', 'Thousands', 'Millions', 'Hundreds']);
+  function nameOf(story) {
+    let best = [], cur = [];
+    for (const raw of String(story).split(/\s+/)) { const w = raw.replace(/[^A-Za-z0-9'’-]/g, ''); if (/^[A-Z][A-Za-z0-9'’-]+$/.test(w) && !STOP.has(w)) cur.push(w); else { if (cur.length > best.length) best = cur; cur = []; } if (/[.,;:]$/.test(raw)) { if (cur.length > best.length) best = cur; cur = []; } }
+    if (cur.length > best.length) best = cur;
+    if (best.length === 1 && ['New', 'First', 'Second', 'Third', 'Last', 'Two', 'Three'].includes(best[0])) return '';   // a lone "New" is not a name
+    return best.slice(0, 3).join(' ');
+  }
+  // A story shortened to a headline the town can shout.
+  const headline = story => { const t = String(story).split(/[;:]|, (?:and|while|after|as) /)[0]; return t.length > 70 ? t.slice(0, t.lastIndexOf(' ', 68)) + '…' : t; };
   function themeFromNews(stories) { return newsThemes(stories, 1)[0] || null; }
   const strip = html => String(html).replace(/<[^>]*>/g, '').replace(/&[a-z#0-9]+;/gi, ' ').replace(/\s+/g, ' ').trim();
   async function fetchNews(date) {
@@ -381,6 +392,13 @@ const ToyTown = (() => {
     const make = VARIANT_EVENTS[name] || THEME_EVENTS[name] || EVENTS[name]; if (!make) return null;
     if ((VARIANT_EVENTS[name] || THEME_EVENTS[name]) && events.some(e => e.name === name)) return null;   // one launch (or match, or parade) at a time
     const e = make(x, y); if (!e) return null;
+    const news = today_.find(v => v.variant === name);
+    if (news) {   // the story's own name on a banner over the scene, and on the fans' signs
+      const N_ = (news.name || '').toUpperCase(), BAN = {sports: N_ ? `GO ${N_}!` : 'GO TEAM!', space: N_ ? `${N_} 🚀` : 'TO THE STARS!', election: N_ ? `${N_}: VOTE!` : 'VOTE!', festival: N_ ? `HAPPY ${N_}!` : 'HAPPY DAY!', awards: N_ ? `★ ${N_} ★` : '★ BRAVO ★', tech: N_ ? `${N_} ✨` : 'THE FUTURE!', animals: N_ ? `WELCOME, ${N_}!` : 'HELLO, ANIMALS!', market: N_ ? `${N_} ↑↓` : 'BUY! SELL!', science: N_ ? `${N_} 🧪` : 'EUREKA!'};
+      e.banner = BAN[news.key] || news.title.toUpperCase();
+      if (news.name) for (const m of movers.filter(m => m.type === 'person' && !m.kind).slice(0, 4)) { m.sign = news.name.split(' ')[0].toUpperCase().slice(0, 10); setTimeout(() => { m.sign = null; }, 20000); }
+      if (Math.random() < .5) tick(`Today's news, toy-sized: ${headline(news.story)}`);
+    }
     e.name = name; e.t = 0; events.push(e); feature(e, name in VARIANT_EVENTS || name in THEME_EVENTS ? 11 : 7); return e;
   }
   function randomEvent(x, y) {
@@ -495,8 +513,14 @@ const ToyTown = (() => {
       return {x: m.x, y: m.y, dur: 30, follow: m, end() { remove(m); }};
     }
   });
+  EVENTS.newsie = () => {
+    if (!today_.some(v => v.story)) return EVENTS.balloon();
+    const kid = spawnPerson(Math.random, {kind: 'newsie', col: '#3f78c9', max: .45}), stories = today_.filter(v => v.story);
+    tick('The newspaper seller is out with today\'s Toy Town Times.');
+    return {x: kid.x, y: kid.y, dur: 30, follow: kid, quiet: true, update(e, dt) { if ((e.next = (e.next || 1) - dt) <= 0) { e.next = 7; const v = stories[(e.k = (e.k || 0) + 1) % stories.length]; say(kid, `Extra! ${headline(v.story).slice(0, 44)}${headline(v.story).length > 44 ? '…' : ''}`, 5); } }, end() { remove(kid); }};
+  };
   // What the town does on its own when the news is quiet: gentle things, mostly.
-  const CALM = ['kite', 'picnic', 'gardener', 'painter', 'reading', 'butterflies', 'catnap', 'balloon', 'sweeper', 'icecream', 'busker', 'hotair', 'pigeons', 'band', 'duck'];
+  const CALM = ['newsie', 'kite', 'picnic', 'gardener', 'painter', 'reading', 'butterflies', 'catnap', 'balloon', 'sweeper', 'icecream', 'busker', 'hotair', 'pigeons', 'band', 'duck'];
 
   /* ---------------- the news, toy-sized ---------------- */
   const sky = (kind, x, y, z, vx = 0, vy = 0) => ({kind, x, y, z, vx, vy});
@@ -641,8 +665,9 @@ const ToyTown = (() => {
     wind() { const e = EVENTS.hat(); tick('Windy day in Toy Town! Hats, leaves and one umbrella are flying.'); e.leaves = true; return e; }
   };
   // Decorations for the day's news (lamps for Diwali, pumpkins for Halloween, a podium for medals…).
+  let decorN = 0;
   function decorate(list) {
-    const has = v => list.some(x => x.variant === v), plaza = () => { const t = []; for (let y = 2; y < 16; y++) for (let x = 2; x < 16; x++) if (tile(x, y).kind === 'plaza' && !tile(x, y).used) t.push([x, y]); return t[(t.length * .5) | 0] || [9, 9]; };
+    const has = v => list.some(x => x.variant === v), plaza = () => { const t = []; for (let y = 2; y < 16; y++) for (let x = 2; x < 16; x++) if (tile(x, y).kind === 'plaza' && !tile(x, y).used && !tile(x, y).decor) t.push([x, y]); const pick = t[(t.length * (.5 + (decorN++ % 3) * .21)) % (t.length || 1) | 0] || [9, 9]; if (tile(...pick)) tile(...pick).decor = true; return pick; };   // each decoration its own tile
     if (has('diwali')) { for (const l of LINES) for (let t = 1.6; t < 16.5; t += 1.25) { props.push({kind: 'diya', x: l + .95, y: t, ph: t}); props.push({kind: 'diya', x: t, y: l + .95, ph: t + 1}); } const [x, y] = plaza(); props.push({kind: 'rangoli', x: x + .5, y: y + .5}); }
     if (has('christmas')) { const [x, y] = plaza(); props.push({kind: 'xtree', x: x + .5, y: y + .5}); }
     if (has('halloween')) for (const b of buildings) if (b.kind === 'house' && Math.random() < .7) props.push({kind: 'pumpkin', x: b.x + .5, y: b.y + .95});
@@ -653,6 +678,8 @@ const ToyTown = (() => {
     if (has('mars')) props.push({kind: 'skymars'});
     if (has('phone')) { const t = buildings.filter(b => b.kind === 'tower').sort((a, b) => b.h - a.h)[0]; if (t) props.push({kind: 'billboard', x: t.x + .5, y: t.y + .5, z: t.h}); }
     if (has('marathon')) props.push({kind: 'finish', x: 16, y: LINES[1] + .5});
+    // The Toy Town Times board stands on the grass at the front edge of town, clear of the events.
+    { const bx = 4.5, by = 17.4; for (let i = props.length - 1; i >= 0; i--) if (props[i].kind === 'tree' && Math.hypot(props[i].x - bx, props[i].y - by) < 2.2) props.splice(i, 1); props.push({kind: 'times', x: bx, y: by}); }
     if (has('cricket') || has('tennis')) { const st = props.find(p => p.kind === 'stadium'); if (st) st.sport = has('cricket') ? 'cricket' : 'tennis'; }
   }
 
@@ -662,16 +689,28 @@ const ToyTown = (() => {
   function diamond(c, x, y, w = 1, d = 1) { const a = P(x, y), b = P(x + w, y), e = P(x + w, y + d), f = P(x, y + d); c.beginPath(); c.moveTo(...a); c.lineTo(...b); c.lineTo(...e); c.lineTo(...f); c.closePath(); }
   const shade = (hex, k) => { const n = parseInt(hex.slice(1), 16), f = v => clamp(0, Math.round(v * k), 255); return `rgb(${f(n >> 16)},${f(n >> 8 & 255)},${f(n & 255)})`; };
   // A box centred on (cx, cy) with half sizes hx, hy, from z0 up h.
+  // Soft, clay-like boxes: each face is a gradient, every face is also stroked in its own
+  // colour with round joins (rounding the corners), and the top edges catch a soft highlight.
   function box(c, cx, cy, hx, hy, z0, h, col, top) {
-    const A = (x, y, z) => P(cx + x, cy + y, z0 + z);
-    c.beginPath(); c.moveTo(...A(-hx, hy, 0)); c.lineTo(...A(hx, hy, 0)); c.lineTo(...A(hx, hy, h)); c.lineTo(...A(-hx, hy, h)); c.closePath(); c.fillStyle = shade(col, .88); c.fill();
-    c.beginPath(); c.moveTo(...A(hx, -hy, 0)); c.lineTo(...A(hx, hy, 0)); c.lineTo(...A(hx, hy, h)); c.lineTo(...A(hx, -hy, h)); c.closePath(); c.fillStyle = shade(col, .72); c.fill();
-    c.beginPath(); c.moveTo(...A(-hx, -hy, h)); c.lineTo(...A(hx, -hy, h)); c.lineTo(...A(hx, hy, h)); c.lineTo(...A(-hx, hy, h)); c.closePath(); c.fillStyle = top || shade(col, 1.08); c.fill();
+    const A = (x, y, z) => P(cx + x, cy + y, z0 + z), r = Math.max(1, Math.min(3 * S, (hx + hy) * 10 * S, h * S * .35));
+    const face = (pts, g) => { c.beginPath(); c.moveTo(...pts[0]); for (const q of pts.slice(1)) c.lineTo(...q); c.closePath(); c.fillStyle = g; c.fill(); c.strokeStyle = g; c.stroke(); };
+    c.save(); c.lineJoin = 'round'; c.lineWidth = r;
+    const L = [A(-hx, hy, 0), A(hx, hy, 0), A(hx, hy, h), A(-hx, hy, h)], R = [A(hx, -hy, 0), A(hx, hy, 0), A(hx, hy, h), A(hx, -hy, h)], T = [A(-hx, -hy, h), A(hx, -hy, h), A(hx, hy, h), A(-hx, hy, h)];
+    let g = c.createLinearGradient(0, L[3][1], 0, L[0][1]); g.addColorStop(0, shade(col, .97)); g.addColorStop(1, shade(col, .8)); face(L, g);
+    g = c.createLinearGradient(0, R[3][1], 0, R[1][1]); g.addColorStop(0, shade(col, .8)); g.addColorStop(1, shade(col, .64)); face(R, g);
+    if (top) face(T, top); else { g = c.createLinearGradient(T[0][0], T[0][1], T[2][0], T[2][1]); g.addColorStop(0, shade(col, 1.18)); g.addColorStop(1, shade(col, 1.03)); face(T, g); }
+    c.strokeStyle = 'rgba(255,255,255,.35)'; c.lineWidth = r * .55; c.beginPath(); c.moveTo(...T[3]); c.lineTo(...T[2]); c.lineTo(...T[1]); c.stroke();
+    c.restore();
+  }
+  // A soft pool of shade on the ground, a little towards the bottom right (the light is up-left).
+  function softShadow(c, x, y, rx, a = .22) {
+    const [sx, sy] = P(x + .12, y + .12), g = c.createRadialGradient(sx, sy, 0, sx, sy, rx * TW * S);
+    g.addColorStop(0, `rgba(40,60,40,${a})`); g.addColorStop(1, 'rgba(40,60,40,0)'); c.save(); c.translate(sx, sy); c.scale(1, .5); c.translate(-sx, -sy); c.fillStyle = g; c.beginPath(); c.arc(sx, sy, rx * TW * S, 0, TAU); c.fill(); c.restore();
   }
   const GROUND = {lot: '#a6d877', edge: '#94cf6a', park: '#8fd16a', plaza: '#e9dcc0', dirt: '#d7b98a', road: '#6a7280', bridge: '#8a6f55', water: '#62c2ea'};
   function drawGround(c) {
     for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) {
-      const t = tile(x, y); diamond(c, x, y); c.fillStyle = (x + y) % 2 && t.kind !== 'road' ? shade(GROUND[t.kind], .97) : GROUND[t.kind]; c.fill();
+      const t = tile(x, y); diamond(c, x, y); c.fillStyle = c.strokeStyle = GROUND[t.kind]; c.lineWidth = 1; c.fill(); c.stroke();
       if (t.kind === 'road' || t.kind === 'bridge') {
         const hor = isRoad(y) && !isRoad(x), ver = isRoad(x) && !isRoad(y);
         c.strokeStyle = 'rgba(255,255,255,.75)'; c.lineWidth = Math.max(1, S * 1.2); c.setLineDash([4 * S, 5 * S]); c.beginPath();
@@ -683,8 +722,12 @@ const ToyTown = (() => {
     }
     // The town sits on a thick slab of earth, like a toy on a table.
     const a = P(0, N), b = P(N, N), e = P(N, 0), d = 26;
-    c.fillStyle = '#8c6a48'; c.beginPath(); c.moveTo(...a); c.lineTo(...b); c.lineTo(b[0], b[1] + d * S); c.lineTo(a[0], a[1] + d * S); c.closePath(); c.fill();
-    c.fillStyle = '#6f5238'; c.beginPath(); c.moveTo(...b); c.lineTo(...e); c.lineTo(e[0], e[1] + d * S); c.lineTo(b[0], b[1] + d * S); c.closePath(); c.fill();
+    let g = c.createLinearGradient(0, a[1], 0, a[1] + d * S); g.addColorStop(0, '#9c7a55'); g.addColorStop(1, '#7a5c3e');
+    c.fillStyle = g; c.lineJoin = 'round'; c.lineWidth = 4 * S; c.strokeStyle = g; c.beginPath(); c.moveTo(...a); c.lineTo(...b); c.lineTo(b[0], b[1] + d * S); c.lineTo(a[0], a[1] + d * S); c.closePath(); c.fill(); c.stroke();
+    g = c.createLinearGradient(0, e[1], 0, b[1] + d * S); g.addColorStop(0, '#7f6045'); g.addColorStop(1, '#5e4630');
+    c.fillStyle = g; c.strokeStyle = g; c.beginPath(); c.moveTo(...b); c.lineTo(...e); c.lineTo(e[0], e[1] + d * S); c.lineTo(b[0], b[1] + d * S); c.closePath(); c.fill(); c.stroke();
+    for (const bd of buildings) softShadow(c, bd.x + .5, bd.y + .5, .55 + Math.min(.5, bd.h / 160), .2);
+    for (const p of props) if (p.kind === 'tree') softShadow(c, p.x, p.y, .3 * p.s, .18);
   }
   function drawBuilding(c, b, night) {
     const cx = b.x + .5, cy = b.y + .5;
@@ -719,7 +762,12 @@ const ToyTown = (() => {
     c.beginPath(); c.moveTo(...a); c.lineTo(...b); c.lineTo(b[0], b[1] - size * .9 * S); c.lineTo(a[0], a[1] - size * .9 * S); c.closePath(); c.fill();
   }
   function door(c, x, y) { const a = P(x - .07, y, 0), b = P(x + .07, y, 0); c.beginPath(); c.moveTo(...a); c.lineTo(...b); c.lineTo(b[0], b[1] - 9 * S); c.lineTo(a[0], a[1] - 9 * S); c.closePath(); c.fill(); }
-  function drawTree(c, p) { const [x, y] = P(p.x, p.y); c.fillStyle = '#7a5235'; c.fillRect(x - 1.5 * S, y - 10 * S * p.s, 3 * S, 10 * S * p.s); for (const [dy, r, k] of [[16, 8, .85], [22, 6.5, 1], [27, 4.5, 1.12]]) { c.fillStyle = shade(p.c, k); c.beginPath(); c.arc(x, y - dy * S * p.s, r * S * p.s, 0, TAU); c.fill(); } }
+  // A ball on a stick, lit from the upper left, swaying a touch in the breeze.
+  function drawTree(c, p) {
+    const [x, y] = P(p.x, p.y), k = S * p.s, sway = Math.sin(clock * .8 + p.x * 3) * .8 * k;
+    c.strokeStyle = '#7a5235'; c.lineWidth = 3 * k; c.lineCap = 'round'; c.beginPath(); c.moveTo(x, y - 1 * k); c.lineTo(x + sway * .5, y - 12 * k); c.stroke();
+    for (const [dy, r] of [[17, 8.5], [24, 6.5]]) { const cx = x + sway, cy = y - dy * k, g = c.createRadialGradient(cx - r * .4 * k, cy - r * .45 * k, r * .1 * k, cx, cy, r * k); g.addColorStop(0, shade(p.c, 1.3)); g.addColorStop(.55, p.c); g.addColorStop(1, shade(p.c, .72)); c.fillStyle = g; c.beginPath(); c.arc(cx, cy, r * k, 0, TAU); c.fill(); }
+  }
   function drawProp(c, p, night) {
     const [x, y] = P(p.x, p.y);
     if (p.kind === 'tree') drawTree(c, p);
@@ -751,6 +799,17 @@ const ToyTown = (() => {
       else for (let k = 0; k < 6; k++) { const sx = p.x - 1.4 + (k % 3) * 1.4, sy = p.y - .8 + (k >> 1 & 1) * 1.6; box(c, sx, sy, .35, .25, 0, 7, '#e9d4a8'); box(c, sx, sy, .4, .3, 12, 2, ['#e2463a', '#3f8fd6', '#2f9e7a'][k % 3]); }
     }
     else if (p.kind === 'animal') drawAnimal(c, p);
+    else if (p.kind === 'times') {
+      const [bx, by] = P(p.x, p.y, 0), u = Math.max(S, .9), w = 130 * u, h = 74 * u, top = by - 34 * u - h, stories = today_.filter(v => v.story), v = stories.length ? stories[Math.floor(clock / 14) % stories.length] : null;
+      c.strokeStyle = '#7a5235'; c.lineWidth = 2 * S; c.beginPath(); c.moveTo(bx - w * .35, by); c.lineTo(bx - w * .35, top + h); c.moveTo(bx + w * .35, by); c.lineTo(bx + w * .35, top + h); c.stroke();
+      c.fillStyle = 'rgba(0,0,0,.12)'; c.beginPath(); c.roundRect(bx - w / 2 + 2 * S, top + 3 * S, w, h, 5 * S); c.fill();
+      c.fillStyle = '#fffaf0'; c.beginPath(); c.roundRect(bx - w / 2, top, w, h, 5 * S); c.fill(); c.strokeStyle = '#2d3440'; c.lineWidth = Math.max(1, S); c.stroke();
+      c.fillStyle = '#2d3440'; c.textAlign = 'center'; c.textBaseline = 'alphabetic'; c.font = `900 ${10 * u}px Georgia,serif`; c.fillText('TOY TOWN TIMES', bx, top + 14 * u);
+      c.fillRect(bx - w / 2 + 6 * u, top + 18 * u, w - 12 * u, 1 * u);
+      const text = v ? `${v.emoji} ${headline(v.story)}` : 'Nothing much happened today. Lovely.', fs = 7.6 * u; c.font = `700 ${fs}px system-ui`; c.textAlign = 'left';
+      const words = text.split(' '), lines = []; let line = ''; for (const wd of words) { const t = line ? line + ' ' + wd : wd; if (c.measureText(t).width > w - 14 * u && line) { lines.push(line); line = wd; } else line = t; } lines.push(line);
+      lines.slice(0, 5).forEach((l, i) => c.fillText(l, bx - w / 2 + 7 * u, top + 29 * u + i * fs * 1.25));
+    }
     else if (p.kind === 'flowers') { for (let k = 0; k < 5; k++) { c.fillStyle = k % 2 ? p.c[0] : p.c[1]; c.beginPath(); c.arc(x + (k - 2) * 2.6 * S, y - 2 * S - (k % 2) * 1.2 * S + Math.sin(clock * 1.5 + k) * .4 * S, 1.5 * S, 0, TAU); c.fill(); } c.fillStyle = '#4f9e4a'; c.fillRect(x - 6.5 * S, y - 1 * S, 13 * S, 1.6 * S); }
     else if (p.kind === 'picnic') { diamond(c, p.x - .45, p.y - .3, .9, .6); c.fillStyle = '#e2463a'; c.fill(); c.fillStyle = 'rgba(255,255,255,.75)'; for (let k = 0; k < 3; k++) { diamond(c, p.x - .45 + k * .3, p.y - .3, .15, .6); c.fill(); } box(c, p.x + .25, p.y + .1, .1, .07, 0, 5, '#b8784a'); }
     else if (p.kind === 'easel') { const [ex, ey] = P(p.x, p.y, 0); c.strokeStyle = '#7a5235'; c.lineWidth = 1.2 * S; c.beginPath(); c.moveTo(ex - 3 * S, ey); c.lineTo(ex, ey - 16 * S); c.lineTo(ex + 3 * S, ey); c.stroke(); c.fillStyle = '#fffaf0'; c.fillRect(ex - 5 * S, ey - 17 * S, 10 * S, 8 * S); const k = Math.min(1, p.t / 25); c.fillStyle = '#7fd3ff'; c.fillRect(ex - 4 * S, ey - 12 * S, 8 * S * k, 2.5 * S); c.fillStyle = '#ffd23f'; c.beginPath(); c.arc(ex + 2 * S, ey - 15 * S, 1.3 * S * k, 0, TAU); c.fill(); c.fillStyle = '#5cb85c'; c.fillRect(ex - 4 * S, ey - 10.5 * S, 8 * S * Math.max(0, k * 1.4 - .4), 1.2 * S); }
@@ -783,7 +842,8 @@ const ToyTown = (() => {
     if (m.type === 'car') {
       const along = m.d < 2, len = m.kind === 'bus' ? .42 : m.kind === 'fire' ? .38 : m.kind === 'racer' ? .3 : .26, wid = .14;
       const hx = along ? len : wid, hy = along ? wid : len, hgt = m.kind === 'bus' ? 13 : m.kind === 'racer' ? 4 : 8;
-      box(c, mx, my, hx, hy, (m.lift || 0) + 2, hgt, m.col);
+      c.fillStyle = '#2d3440'; for (const k of [-.6, .6]) { const [wx, wy] = P(mx + (along ? hx * k : hx + .01), my + (along ? hy + .01 : hy * k), (m.lift || 0) + 2); c.beginPath(); c.ellipse(wx, wy, 2.2 * s, 2.2 * s, 0, 0, TAU); c.fill(); }
+      box(c, mx, my, hx, hy, (m.lift || 0) + 3, hgt, m.col);
       if (m.kind !== 'bus' && m.kind !== 'racer') box(c, mx - (along ? (m.d === 0 ? .05 : -.05) : 0), my - (along ? 0 : (m.d === 2 ? .05 : -.05)), hx * .55, hy * .9, (m.lift || 0) + 2 + hgt, 5, m.col, '#cfe9ff');
       if (m.kind === 'racer') { const t = P(mx, my, hgt + 3); c.fillStyle = '#fff'; c.font = `900 ${5 * s}px system-ui`; c.textAlign = 'center'; c.fillText(String(m.num || 1), t[0], t[1]); }
       if (m.kind === 'taxi') { const t = P(mx, my, (m.lift || 0) + hgt + 9); c.fillStyle = '#222'; c.fillRect(t[0] - 3 * s, t[1] - 2 * s, 6 * s, 2.5 * s); }
@@ -804,10 +864,11 @@ const ToyTown = (() => {
     const slip = m.slip && clock - m.slip < 2.5, body = m.kind === 'robot' ? '#c0c8d4' : m.kind === 'runner' ? '#ffffff' : m.kind === 'band' ? '#d9533e' : m.col;
     c.save(); c.translate(x, y - bob + (m.sit ? 3 * s : 0)); if (slip) c.rotate(Math.PI / 2 * Math.min(1, (clock - m.slip) * 4));
     c.fillStyle = 'rgba(0,0,0,.15)'; c.beginPath(); c.ellipse(0, bob, 3 * s, 1.2 * s, 0, 0, TAU); c.fill();
-    c.fillStyle = body; c.fillRect(-2.2 * s, -9 * s, 4.4 * s, 7 * s); c.fillStyle = '#3b3f4a'; c.fillRect(-2 * s, -2 * s, 1.6 * s, 2 * s); c.fillRect(.4 * s, -2 * s, 1.6 * s, 2 * s);
-    c.fillStyle = m.kind === 'robot' ? '#9aa6b5' : m.skin; c.beginPath(); c.arc(0, -11.5 * s, 2.6 * s, 0, TAU); c.fill();
+    { const g = c.createLinearGradient(-2.4 * s, 0, 2.4 * s, 0); g.addColorStop(0, shade(body.startsWith('#') ? body : '#cccccc', 1.12)); g.addColorStop(1, shade(body.startsWith('#') ? body : '#cccccc', .8)); c.fillStyle = g; c.beginPath(); c.roundRect(-2.4 * s, -9.5 * s, 4.8 * s, 7.6 * s, 2.2 * s); c.fill(); } c.fillStyle = '#3b3f4a'; c.fillRect(-2 * s, -2 * s, 1.6 * s, 2 * s); c.fillRect(.4 * s, -2 * s, 1.6 * s, 2 * s);
+    { const hc = m.kind === 'robot' ? '#9aa6b5' : m.skin, g = c.createRadialGradient(-1 * s, -12.5 * s, .3 * s, 0, -11.5 * s, 2.8 * s); g.addColorStop(0, shade(hc, 1.18)); g.addColorStop(1, shade(hc, .85)); c.fillStyle = g; c.beginPath(); c.arc(0, -11.8 * s, 2.8 * s, 0, TAU); c.fill(); }
     if (m.kind === 'chef') { c.fillStyle = '#fff'; c.fillRect(-2.4 * s, -16.5 * s, 4.8 * s, 3.5 * s); }
     if (m.kind === 'robot') { c.fillStyle = '#ff5d5d'; c.fillRect(-.6 * s, -16 * s, 1.2 * s, 2.4 * s); }
+    if (m.kind === 'newsie') { c.fillStyle = '#e9dcc0'; c.fillRect(1.5 * s, -7 * s, 4 * s, 5 * s); c.fillStyle = '#2d3440'; c.fillRect(2 * s, -6 * s, 3 * s, .6 * s); c.fillRect(2 * s, -4.8 * s, 3 * s, .6 * s); c.fillStyle = '#3f78c9'; c.beginPath(); c.arc(0, -13.5 * s, 2.8 * s, Math.PI, 0); c.fill(); }
     if (m.kind === 'sweeper') { c.strokeStyle = '#8a6f55'; c.lineWidth = 1.2 * s; c.beginPath(); c.moveTo(2 * s, -8 * s); c.lineTo(5 * s + Math.sin(clock * 4) * 2 * s, 0); c.stroke(); }
     if (m.can) { c.fillStyle = '#5b8fd6'; c.fillRect(2 * s, -6 * s, 3.4 * s, 3 * s); }
     if (m.brush) { c.strokeStyle = '#7a5235'; c.lineWidth = s; c.beginPath(); c.moveTo(2 * s, -7 * s); c.lineTo(5 * s, -9 * s + Math.sin(clock * 3) * s); c.stroke(); }
@@ -833,6 +894,7 @@ const ToyTown = (() => {
     if (e.cat && !e.cat.down) push(e.cat.b.x + e.cat.b.y + 1.1, () => { const [x, y] = P(e.cat.b.x + .5, e.cat.b.y + .5, e.cat.z + 8); c.fillStyle = '#ff9c3a'; c.beginPath(); c.ellipse(x, y, 4 * S, 2.6 * S, 0, 0, TAU); c.fill(); c.beginPath(); c.arc(x + 3.5 * S, y - 3 * S, 2.4 * S, 0, TAU); c.fill(); c.beginPath(); c.moveTo(x + 2 * S, y - 4.5 * S); c.lineTo(x + 2.6 * S, y - 7 * S); c.lineTo(x + 3.6 * S, y - 5 * S); c.moveTo(x + 4 * S, y - 5 * S); c.lineTo(x + 5 * S, y - 7 * S); c.lineTo(x + 5.6 * S, y - 4.5 * S); c.fill(); });
     if (e.flock) for (const f of e.flock) push(f.x + f.y + .5, () => { const [x, y] = P(f.x, f.y, f.z + 2); c.fillStyle = '#8b8f9a'; c.beginPath(); c.ellipse(x, y, 2.6 * S, 1.6 * S, 0, 0, TAU); c.fill(); c.strokeStyle = '#8b8f9a'; c.lineWidth = S; if (f.z > 4) { const w = Math.sin(clock * 20 + f.x) * 3 * S; c.beginPath(); c.moveTo(x - 4 * S, y - w); c.lineTo(x, y); c.lineTo(x + 4 * S, y - w); c.stroke(); } });
     if (e.ufo) push(e.x + e.y + 3, () => { const [x, y] = P(e.x, e.y, e.ufo.z); if (e.t > 2.5 && e.t < 9.5) { c.fillStyle = 'rgba(180,255,170,.28)'; c.beginPath(); const g = P(e.x, e.y); c.moveTo(x - 6 * S, y); c.lineTo(x + 6 * S, y); c.lineTo(g[0] + 14 * S, g[1]); c.lineTo(g[0] - 14 * S, g[1]); c.closePath(); c.fill(); } c.fillStyle = '#9aa6b5'; c.beginPath(); c.ellipse(x, y, 16 * S, 5 * S, 0, 0, TAU); c.fill(); c.fillStyle = '#aef0ff'; c.beginPath(); c.ellipse(x, y - 4 * S, 7 * S, 5 * S, 0, Math.PI, 0); c.fill(); for (let k = 0; k < 5; k++) { c.fillStyle = Math.sin(clock * 10 + k) > 0 ? '#ffd23f' : '#ff5d5d'; c.beginPath(); c.arc(x - 12 * S + k * 6 * S, y + 1 * S, 1.3 * S, 0, TAU); c.fill(); } });
+    if (e.banner) push(e.x + e.y + 4, () => { const [x, y] = P(e.x, e.y, 46), fs = Math.max(9, 8.5 * S), wave = Math.sin(clock * 2) * 2 * S; c.save(); c.font = `900 ${fs}px system-ui`; const w = c.measureText(e.banner).width + fs * 1.6, h = fs * 1.8; c.strokeStyle = '#7a5235'; c.lineWidth = Math.max(1, 1.4 * S); c.beginPath(); c.moveTo(x - w / 2, y - h); c.lineTo(x - w / 2, y + 26 * S); c.moveTo(x + w / 2, y - h); c.lineTo(x + w / 2, y + 26 * S); c.stroke(); c.fillStyle = '#fff6dc'; c.beginPath(); c.moveTo(x - w / 2, y - h); c.quadraticCurveTo(x, y - h + wave, x + w / 2, y - h); c.lineTo(x + w / 2, y); c.quadraticCurveTo(x, y + wave + 4 * S, x - w / 2, y); c.closePath(); c.fill(); c.strokeStyle = '#d0543a'; c.lineWidth = Math.max(1, 1.2 * S); c.stroke(); c.fillStyle = '#d0543a'; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText(e.banner, x, y - h / 2 + wave * .4); c.restore(); });
     if (e.sky) push(e.sky.x + e.sky.y + 40, () => { const q = e.sky, [x, y] = P(q.x, q.y, q.z), s = S;
       if (q.kind === 'hotair') { const cols = ['#e2463a', '#ffd23f', '#3f8fd6']; for (let k = 0; k < 3; k++) { c.fillStyle = cols[k]; c.beginPath(); c.ellipse(x, y - 22 * s, (14 - k * 4.5) * s, 17 * s, 0, 0, TAU); c.fill(); } c.strokeStyle = '#6b4a2b'; c.lineWidth = s; c.beginPath(); c.moveTo(x - 8 * s, y - 10 * s); c.lineTo(x - 4 * s, y); c.moveTo(x + 8 * s, y - 10 * s); c.lineTo(x + 4 * s, y); c.stroke(); c.fillStyle = '#a8784a'; c.fillRect(x - 4 * s, y, 8 * s, 5 * s); }
       else if (q.kind === 'comet') { c.fillStyle = '#ffffff'; c.beginPath(); c.arc(x, y, 4 * s, 0, TAU); c.fill(); c.fillStyle = 'rgba(255,255,255,.35)'; c.beginPath(); c.arc(x, y, 9 * s, 0, TAU); c.fill(); }
@@ -878,6 +940,7 @@ const ToyTown = (() => {
     for (const m of movers) if (m.type === 'person') m.umbrella = raining && !m.kind;
     if (raining) for (let k = 0; k < 6; k++) parts.push({x: Math.random() * 18, y: Math.random() * 18, z: 160, vx: 0, vy: 0, vz: -260, g: 0, life: .6, t: 0, col: 'rgba(120,170,220,.7)', r: 1, rain: true});
     // Chaos: keep a few things going at once.
+    if ((nextHeadline -= dt) <= 0) { const st = today_.filter(v => v.story); if (st.length) tick(`TODAY'S NEWS ${st[(headIx++) % st.length].emoji} ${headline(st[(headIx - 1) % st.length].story)}`); nextHeadline = 30; }
     if ((nextEvent -= dt) <= 0) { if (events.length < 3) randomEvent(); nextEvent = 7 + Math.random() * 6; }   // an unhurried rhythm
     // Traffic: keep the streets busy as cars leave and events come and go.
     while (movers.filter(m => m.type === 'car' && (m.kind === 'car' || m.kind === 'bus' || m.kind === 'taxi')).length < CARS) spawnCar();
@@ -965,5 +1028,5 @@ const ToyTown = (() => {
     addEventListener('hashchange', () => location.reload());
     start();
   }
-  return {CALM, lightPhase, themeFromNews, newsThemes, VARIANTS, VARIANT_EVENTS: () => Object.keys(VARIANT_EVENTS), decorate, setToday: l => { today_ = l; }, PACE, THEMES, GRIM, build, update, events: () => events, movers: () => movers, buildings: () => buildings, props: () => props, startEvent, randomEvent, setPlaying: v => { playing = v; }, debug: () => ({clock, theme, seed, night: nightLevel(), cam: {...cam}})};
+  return {nameOf, headline, CALM, lightPhase, themeFromNews, newsThemes, VARIANTS, VARIANT_EVENTS: () => Object.keys(VARIANT_EVENTS), decorate, setToday: l => { today_ = l; }, PACE, THEMES, GRIM, build, update, events: () => events, movers: () => movers, buildings: () => buildings, props: () => props, startEvent, randomEvent, setPlaying: v => { playing = v; }, debug: () => ({clock, theme, seed, night: nightLevel(), cam: {...cam}})};
 })();
