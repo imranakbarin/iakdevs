@@ -883,10 +883,8 @@ const ToyTown = (() => {
     while (movers.filter(m => m.type === 'car' && (m.kind === 'car' || m.kind === 'bus' || m.kind === 'taxi')).length < CARS) spawnCar();
     while (movers.filter(m => m.kind === 'bike').length < BIKES) spawnBike();
     while (movers.filter(m => m.type === 'person' && !m.kind).length < PEOPLE) spawnPerson();
-    // The director: glide towards the featured event, then back out.
-    const close = director && clock < directorUntil && events.includes(director);
-    cam.tx = close ? director.x : N / 2; cam.ty = close ? director.y : N / 2; cam.tz = close ? (narrow() ? 1.25 : 1.45) : 1;
-    const k = Math.min(1, dt * .9); cam.x += (cam.tx - cam.x) * k; cam.y += (cam.ty - cam.y) * k; cam.z += (cam.tz - cam.z) * k;
+    // The camera stays put (no zooming after events); a drag pans it, and it eases to where it was dragged.
+    const k = Math.min(1, dt * 4); cam.x += (cam.tx - cam.x) * k; cam.y += (cam.ty - cam.y) * k; cam.z = 1;
   }
   function render() {
     S = base * cam.z * dpr / dpr; S = base * cam.z;
@@ -952,7 +950,17 @@ const ToyTown = (() => {
   }
   if (typeof window !== 'undefined' && cv) {
     addEventListener('resize', layout);
-    cv.addEventListener('pointerdown', poke);
+    // A drag looks around (useful on phones, where the town is wider than the screen); a tap pokes.
+    let down = null;
+    cv.addEventListener('pointerdown', e => { down = {x: e.clientX, y: e.clientY, cx: cam.tx, cy: cam.ty, moved: false}; cv.setPointerCapture(e.pointerId); });
+    cv.addEventListener('pointermove', e => {
+      if (!down) return;
+      const dx = (e.clientX - down.x) * dpr / (TW * S), dy = (e.clientY - down.y) * dpr / (TH * S);
+      if (Math.hypot(e.clientX - down.x, e.clientY - down.y) > 8) down.moved = true;
+      if (down.moved) { cam.tx = clamp(2, down.cx - (dx + dy) / 2, N - 2); cam.ty = clamp(2, down.cy - (dy - dx) / 2, N - 2); cam.x = cam.tx; cam.y = cam.ty; }
+    });
+    cv.addEventListener('pointerup', e => { if (down && !down.moved) poke(e); down = null; });
+    cv.addEventListener('pointercancel', () => { down = null; });
     addEventListener('message', e => { if (e.origin === location.origin && e.data && e.data.type === 'town:motion') playing = !!e.data.playing; });
     addEventListener('hashchange', () => location.reload());
     start();
