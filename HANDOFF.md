@@ -292,3 +292,7 @@ New `assets/zen-seasons.js` (+ `tests/zen-seasons.test.cjs`), loaded right after
 ## Claude follow-up (softer sound)
 
 `world-sound.js` (`?v=4`) and `pip-audio.js` (`?v=7`, in `pip-run.html`) were reported as irritating. Both now route the master through a high shelf, lowpass and a generated convolution room; bells use whole-number partials and lower pitches; plucks are filtered triangles; birds, crickets, rain and the sand bed moved down and got quieter; default attacks are 10–12 ms. Narrow edit to your Cozy file: `cozy-worlds-calm.js` (`?v=5`) rain filter is highpass 240 / lowpass 2300 (was 380 / 4200). Shared `index.html` anchors: only those version numbers.
+
+## Claude follow-up (World art living gallery)
+
+New `assets/art-gallery.js` (+ `tests/art-gallery.test.cjs`), loaded after `art-wonders.js`, installed next to `ArtWonders.install()`. It wraps `LivingArt.draw` (draws your painting into an offscreen at the framed size, then wall/frame, light and a near particle layer) and appends `#art-gallery-opts` after `#art-presentation` in the Artworks dialog. Shared `index.html` anchor: `artPresentation` now defaults to `'painted'` unless the hash is a live style link (`#gond-…` etc.). Body class `gallery-framed` restyles `#art-caption` as a plaque while framed.
