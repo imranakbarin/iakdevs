@@ -3397,7 +3397,7 @@
     }
   }
   function drawDarkness(m) {
-    const w0 = weightOf(m, 'caves'), w = w0 * w0 * (3 - 2 * w0); if (w < .02) return;   // the dark deepens once inside the cave mouth
+    const w0 = weightOf(m, 'caves'), w = w0 * w0 * (3 - 2 * w0) * (replay ? .6 : 1); if (w < .02) return;   // the dark deepens once inside the cave mouth (a replay lifts it, so the close call shows)
     const dw = Math.ceil(cv.width / 2), dh = Math.ceil(cv.height / 2);   // half resolution: the dark is soft, and it is a quarter of the pixels
     if (!darkBuf || darkBuf.width !== dw || darkBuf.height !== dh) { darkBuf = document.createElement('canvas'); darkBuf.width = dw; darkBuf.height = dh; }
     const g = darkBuf.getContext('2d'); g.setTransform(.5, 0, 0, .5, 0, 0); g.globalCompositeOperation = 'source-over'; g.clearRect(0, 0, cv.width, cv.height);
@@ -3939,7 +3939,7 @@
     drawLeg(-18, LEG.hip + bob, front, false);
   }
   function drawPip() {
-    if (inv && !dead && Math.floor(inv / 4) % 2) return;
+    if (inv && !dead && !replay && Math.floor(inv / 4) % 2) return;   // a replay shows him solid: the blink read as a dim, ghostly Pip
     const [x, y] = W2D(pl.x + P.w / 2, pl.y + pl.h + 1);
     // One drawn body in every pose (the painted frames' cut-out legs no longer
     // show): running, in the air by vertical speed, landing, skidding, tumbling.
@@ -3971,7 +3971,7 @@
   }
   // The ghost is the same painted Pip, see-through, drawn from its recorded pose.
   function drawGhost() {
-    if (!ghost || !ghost.frames.length) return;
+    if (!ghost || !ghost.frames.length || replay) return;   // a replay is Pip's moment alone
     const fin = ghost.frames[ghost.frames.length - 1], done = frameNo > ghost.frames.length;
     if (done) {   // where the ghost's run ended: a little flag
       const [x, y] = W2D(fin.x + 6, fin.y + fin.h);
@@ -4181,7 +4181,7 @@
     ctx.textAlign = 'center';
     const coarse = usingTouch || matchMedia('(pointer:coarse)').matches;
     drawDirectorHud(); ctx.textAlign = 'center'; ctx.font = `600 ${u}px system-ui,-apple-system,sans-serif`;
-    const msg = toast && performance.now() < toast.until ? toast.text : replay ? `Replay · ${replay.kind}` : !human ? (tool ? (coarse ? 'Tap just ahead of Pip to place · tap the tool again to cancel' : 'Click just ahead of Pip to place · Esc to cancel')
+    const msg = toast && performance.now() < toast.until ? toast.text : replay ? `Instant replay · ${replay.kind}` : !human ? (tool ? (coarse ? 'Tap just ahead of Pip to place · tap the tool again to cancel' : 'Click just ahead of Pip to place · Esc to cancel')
       : coarse ? 'Challenge Pip with a tool below · or tap the stage to play' : 'Challenge Pip: pick a tool (1 2 3) · or ← → Space to play')
       : performance.now() < hintUntil ? (usingTouch ? 'Hold right to run · tap jump, hold to jump higher' : '← → run · Space to jump, hold for higher') : '';
     if (msg) {
