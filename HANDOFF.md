@@ -271,3 +271,9 @@ Narrow edits to your files, found by profiling (frames were ~50 ms on desktop an
 - `assets/cozy-scene-motion.js` (`?v=2`): `steam()` set `ctx.filter='blur(1.4px)'` on the full scene canvas every frame. It now draws the three strokes blurred into a small `steamBuf` (96×144 at the current scale) and composites that with `screen`; `dispose()` frees it. Same look, 16.7 ms frames in all three scenes.
 - `assets/cozy-worlds-calm.js` (`?v=4`): the resting `.dock.soft` stays at `.35` with a mouse, `.62` on touch screens (no hover to bring it back).
 - Shared `index.html` anchor touched: only the two `?v=` numbers in `openCozy()`.
+
+## Claude follow-up (World art captions and Madhubani pacing)
+
+Shared `index.html`, narrow edits in the live-art section:
+- Live style names now read like the gallery cards: `Kangra`, `Japanese woodblock`, `Chinese ink`, `Mexican amate` (were `Kangra miniature`, `Evolving Japanese woodblock landscape`, `Chinese evolving ink landscape`, `Mexican folk inspired`). The live medium line in `drawScene` is `<country> · Live art · Drag to explore`, the country read from `LivingArt.collection`.
+- New `leafHatch(c,len,w,hx,hy,ang,sp,lw)` after `hatch()`: hatching inside `leafPath(len,w)` clipped by arithmetic (segments cached per shape) instead of `c.save();c.clip();hatch();c.restore()`. Used by the animated Madhubani figures only: `mbFan` feathers, the `mbPeacock` tail (its clipped `fillRect` half is now a half-leaf path fill) and wing, and the `mbBird` tail. The outline drawn after covers the line ends; same-frame renders differ on at most ~130 faint pixels. Headless desktop: missed frames 62–91% → ~30%, median 33 → 16.7 ms. The fish (`mbFish`, ~48 clips a frame) still clip.
