@@ -1,6 +1,7 @@
 /* "Today": the home screen. One card per experience, each with a small moving
- * preview and what you have done there (Pip's best on today's world and his
- * finds, Road trip postcards, whether you have raked the garden). Tapping a
+ * preview and what you have done there (Pip's best on today's world, his finds
+ * and journey book, the wonders seen in World art, Road trip postcards and
+ * stops, the garden's season, the last cozy room). Tapping a
  * card opens it; "⌂ Today" in the experience menu (and in Cozy Worlds' own
  * menu) brings you back. It opens on a visit without a link, or with #today;
  * a link to an experience still goes straight there. While it is open the
@@ -12,17 +13,28 @@ const Home = (() => {
   const get = (k, fallback) => { try { const v = JSON.parse(localStorage.getItem(k)); return v ?? fallback; } catch (_) { return fallback; } };
   const today = () => new Date().toISOString().slice(0, 10);
   const ART = ['assets/og-gond.jpg', 'assets/art-japan-living.webp', 'assets/mexican-amate-panorama.webp'];
+  // Pip Run lives in its own frame, so its totals are mirrored here (tests/home.test.cjs keeps them in step).
+  const PIP_FINDS = 15, PIP_BOOK = 5;
+  const COZY = {nook: 'the reading nook', tea: 'the tea garden', cabin: 'the lakeside cabin'};
 
+  const list = v => Array.isArray(v) ? v : [];
   function cards() {
-    const best = get('pip-run:best', null), seen = get('pip-run:seen', []), stamps = get('road-trip:stamps', []);
+    const best = get('pip-run:best', null), seen = list(get('pip-run:seen', [])), book = get('pip-run:book', {}), stamps = list(get('road-trip:stamps', [])), stops = list(get('road-trip:stops', []));
+    const landmarks = book && typeof book === 'object' ? Object.keys(book).length : 0, cozy = (get('cozy-simple-v2', {}) || {}).scene;
     let raked = false; try { raked = !!localStorage.getItem('zen-rake-hint'); } catch (_) {}
+    const wonders = typeof ArtWonders !== 'undefined' && ArtWonders.count ? ArtWonders.count() : null, season = typeof ZenSeasons !== 'undefined' ? ZenSeasons.NAMES[ZenSeasons.calendar()] : '';
+    const stopTotal = typeof RoadStops !== 'undefined' ? RoadStops.total : 15;
     return [
       {mode: 'pip', hero: true, tag: 'Today’s world', title: 'Pip Run', text: 'An original platformer. Watch the AI plan its runs, set it challenges, or play.',
-        progress: [best && best.day === today() ? `Your best today: ${best.m} m` : 'Today’s world is waiting for your run', Array.isArray(seen) && seen.length ? `${seen.length} of 10 sights found` : 'Ten sights to find along the way'], preview: 'pip'},
-      {mode: 'art', title: 'World art', text: 'Seven folk traditions as endless living paintings.', progress: ['Kites, flocks and rainbows drift by'], preview: 'art'},
-      {mode: 'road', title: 'Road trip', text: 'A drive through five landscapes and every weather.', progress: [stamps.length ? `${stamps.length} of 20 postcards collected` : 'Collect postcards from 20 towns'], preview: 'road'},
-      {mode: 'zen', title: 'Zen garden', text: 'A steel ball draws in the sand. Rake it yourself.', progress: [raked ? 'You have raked the sand' : 'A bird and a dragonfly visit'], preview: 'zen'},
-      {mode: 'cozy', title: 'Cozy Worlds', text: 'A reading nook, a tea garden and a lakeside cabin.', progress: ['Calm rooms to rest in'], preview: 'cozy'},
+        progress: [best && best.day === today() ? `Your best today: ${best.m} m` : 'Today’s world is waiting for your run',
+          (seen.length ? `${Math.min(seen.length, PIP_FINDS)} of ${PIP_FINDS} sights found` : `${PIP_FINDS} sights to find along the way`) + (landmarks ? ` · ${landmarks} of ${PIP_BOOK} landmarks in the journey book` : '')], preview: 'pip'},
+      {mode: 'art', title: 'World art', text: 'Seven folk traditions as endless living paintings.',
+        progress: [wonders && wonders.n ? `${wonders.n} of ${wonders.total} wonders seen` : 'Kites, flocks and rainbows drift by: collect the wonders'], preview: 'art'},
+      {mode: 'road', title: 'Road trip', text: 'A drive through five landscapes and every weather. Tap to pull over.',
+        progress: [stamps.length ? `${stamps.length} of 20 postcards collected` : 'Collect postcards from 20 towns', ...(stops.length ? [`${stops.length} of ${stopTotal} roadside stops visited`] : [])], preview: 'road'},
+      {mode: 'zen', title: 'Zen garden', text: 'A steel ball draws in the sand as the seasons turn. Rake it yourself.',
+        progress: [season ? `${season} in the garden today` : 'Visitors come and go', ...(raked ? ['You have raked the sand'] : [])], preview: 'zen'},
+      {mode: 'cozy', title: 'Cozy Worlds', text: 'A reading nook, a tea garden and a lakeside cabin.', progress: [COZY[cozy] ? `Last time: ${COZY[cozy]}` : 'Calm rooms to rest in'], preview: 'cozy'},
       {mode: 'mushroom', title: 'Mushroom Island', text: 'Pip’s cinematic run through a painted kingdom.', progress: [], preview: 'mushroom'}
     ];
   }
@@ -143,5 +155,5 @@ const Home = (() => {
     };
     if (!firstHash || firstHash === '#' || firstHash === '#today') show();
   }
-  return {install, show, open, isOpen: () => !!el && !el.hidden};
+  return {install, show, open, cards, PIP_FINDS, PIP_BOOK, isOpen: () => !!el && !el.hidden};
 })();
