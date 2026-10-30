@@ -45,6 +45,10 @@ Inputs are recorded on the scene clock, so paused redraws remain pixel-identical
 
 `assets/art-ambience.js` adds slow mist veils, cloud shadows and water glints to the painterly live-art styles (Kangra, Japan, China, Mexico). Mushroom Island's `assets/mushroom-life.js` animates the painted kingdom (mist, lamps, townsfolk, flocks, light shafts) and gives Pip's run star seeds to collect, a fairy companion and butterflies that lift off as he passes.
 
+## World art: the living gallery
+
+`assets/art-gallery.js` shows the painted panoramas as an exhibition, and World art now opens on them (a link to a live style such as `#gond-12` still opens live art; Artworks → Live art switches). On larger screens each painting hangs in a gilt frame on a lit wall with a museum plaque; phones show it full bleed. The painting eases with the pointer or the phone's tilt and a near layer of motes, petals or fireflies drifts faster than it as it pans. The light follows the local clock: rosy dawn, soft shafts by day, golden hour, violet dusk, moonlight with stars and fireflies at night. Every couple of minutes the tour glides on to the next tradition. *Frame on the wall* and *Tour the traditions* toggle in Artworks (kept in `localStorage['art-gallery']`). It wraps `LivingArt.draw`; the paintings and their own motion are unchanged.
+
 ## World art wonders
 
 `assets/art-wonders.js` cuts each endless live landscape into long stretches (about a minute and a half of drifting). Most hold one rare sight, seeded and never the same twice in a row: a migrating flock, kites on the wind (strings down to the land), or a passing shower that leaves a rainbow once the cloud has gone by; fireflies when the theme is dark; petals on the wind in Japan, rising lanterns in China and papel picado garlands in Mexico. Each is drawn in the style's own ink and palette (Warli in white line), as a pure function of seed, stretch and scene time, so a paused redraw is unchanged. A quiet italic line under the style's name says what is passing. `tests/art-wonders.test.cjs` checks the no-repeat rule, every kind per style and deterministic drawing.
