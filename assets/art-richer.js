@@ -4,8 +4,8 @@
  *   flocks of dotted birds in the sky.
  * - Warli: the ray-circled sun and moon, V-stroke birds, a range of dotted
  *   triangle hills and little huts along the fields.
- * - Kangra: distant blue ranges with hilltop palaces, rows of round trees on
- *   the ridges, curling gold-edged clouds and flowering shrubs in front.
+ * - Kangra: hazy distant blue ranges, soft clouds and birds (the painted
+ *   trees and shrubs of its own grammar are left to stand on their own).
  * - Japan: gold kasumi mist bands drifting across sky and hills, cranes.
  * - China: pale distant peaks in ink wash, mist bands and skeins of geese.
  * - Mexico: amate-style patterned birds across the sky.
@@ -110,7 +110,6 @@ const ArtRicher = (() => {
   /* ---- Kangra ---- */
   const kRange = (x, off, amp) => topY + 250 + off - amp * (.55 + .45 * Math.sin(x * .007 + off) * Math.sin(x * .0031 + 1.3));
   function kangra(x0, add, r) {
-    // Distant blue ranges (the far plane), with a hilltop palace now and then.
     add(-1, c => {   // a continuous function of x over exactly this chunk, so neighbours meet without overlap
       for (const [off, amp, col] of [[0, 70, '147,167,196'], [28, 46, '160,184,190']]) {
         const g = c.createLinearGradient(0, topY + 250 + off - amp, 0, topY + 250 + off + 70);
@@ -120,49 +119,20 @@ const ArtRicher = (() => {
         c.lineTo(x0 + 600.5, kRange(x0 + 600.5, off, amp)); c.lineTo(x0 + 600.5, topY + 250 + off + 70); c.closePath(); c.fill();
       }
     });
-    if (r() < .4) {
-      const x = x0 + 120 + r() * 360;
+    if (r() < .75) {   // a soft cloud: drawn once, blurred into one shape, so no puff or ring shows
+      const x = x0 + 80 + r() * 440, y = topY + 50 + r() * 70, w = 170 + r() * 90, q = mulberry32(Math.round(x));
+      const lobes = Array.from({length: 7}, (_, k) => [(k / 6 - .5) * w * .8, -Math.sin(k / 6 * Math.PI) * w * .1 + (q() - .5) * 6, w * (.1 + q() * .06)]);
       add(-1, c => {
-        const y = kRange(x, 0, 70) + 3;
-        c.fillStyle = '#f3ead6'; c.strokeStyle = 'rgba(59,42,28,.5)'; c.lineWidth = .7;
-        c.fillRect(x - 16, y - 12, 32, 12); c.strokeRect(x - 16, y - 12, 32, 12);
-        for (const dx of [-11, 0, 11]) { c.beginPath(); c.arc(x + dx, y - 12, dx ? 3.5 : 5, Math.PI, 0); c.fill(); c.stroke(); }
-        c.fillRect(x - 21, y - 18, 4, 18); c.fillRect(x + 17, y - 18, 4, 18);
-      });
-    }
-    // Rows of round trees along the ridges, as the miniatures dot them.
-    add(1, c => {
-      const q = mulberry32(Math.round(x0) ^ 77);
-      for (let k = 0; k < 14; k++) {
-        const x = x0 + q() * 600, y = gy(x) - 30 - q() * 50, rr = 4 + q() * 4;
-        c.fillStyle = q() < .5 ? '#4f6b43' : '#5d7a4a'; c.beginPath(); c.arc(x, y - rr, rr, 0, TAU); c.fill();
-        c.fillStyle = 'rgba(214,226,170,.5)'; c.beginPath(); for (let d = 0; d < 4; d++) dot(c, x - rr * .4 + d * rr * .3, y - rr * 1.3 + (d % 2) * 2, .9); c.fill();
-        c.strokeStyle = '#4a3a28'; c.lineWidth = .8; c.beginPath(); c.moveTo(x, y); c.lineTo(x, y + 3); c.stroke();
-      }
-    });
-    if (r() < .8) {   // a curling, gold-edged cloud
-      const x = x0 + 80 + r() * 440, y = topY + 50 + r() * 70, w = 150 + r() * 90;
-      add(-1, c => {
-        // Soft puffs with a faint warm edge, no outline: a cut-out cloud looked wrong over the miniature.
-        const night = !!T.night, core = night ? '176,188,206' : '252,248,238';
-        for (const [dx, dy, rr] of [[-.33, 2, .15], [-.12, -8, .19], [.1, -3, .17], [.3, 3, .13]]) {
-          const px = x + dx * w, py = y + dy, pr = rr * w, g = c.createRadialGradient(px, py - pr * .2, pr * .1, px, py, pr * 1.3);
-          g.addColorStop(0, `rgba(${core},.8)`); g.addColorStop(.65, `rgba(${core},.5)`); g.addColorStop(.85, night ? 'rgba(150,160,180,.18)' : 'rgba(232,206,150,.25)'); g.addColorStop(1, 'rgba(232,206,150,0)');
-          c.fillStyle = g; c.beginPath(); c.arc(px, py, pr * 1.3, 0, TAU); c.fill();
-        }
+        const m = c.getTransform(), k = Math.hypot(m.a, m.b) || 1, cw = Math.ceil(w * 1.3 * k), ch = Math.ceil(w * .55 * k);
+        const off = document.createElement('canvas'); off.width = cw; off.height = ch;
+        const g = off.getContext('2d'), night = !!T.night;
+        g.filter = `blur(${Math.max(2, w * .035 * k)}px)`; g.translate(cw / 2, ch * .62); g.scale(k, k);
+        g.fillStyle = night ? 'rgba(176,188,206,.75)' : 'rgba(252,249,240,.85)';
+        g.beginPath(); for (const [dx, dy, rr] of lobes) { g.moveTo(dx + rr, dy); g.arc(dx, dy, rr, 0, TAU); } g.ellipse(0, w * .04, w * .42, w * .07, 0, 0, TAU); g.fill();
+        c.drawImage(off, x - cw / 2 / k, y - ch * .62 / k, cw / k, ch / k);
       });
     }
     if (r() < .6) { const x = x0 + r() * 600, y = topY + 80 + r() * 60, n = 3 + (r() * 4 | 0); add(1, c => vbirds(c, x, y, n, .8, 'rgba(59,42,28,.7)', mulberry32(Math.round(x)))); }
-    // Flowering shrubs along the front.
-    for (let k = 0, n = 2 + (r() * 2 | 0); k < n; k++) {
-      const x = x0 + 40 + r() * 520, s = .8 + r() * .5, col = ['#e9a3b5', '#f6f0e4', '#e07f6a'][r() * 3 | 0];
-      add(7, c => {
-        const y = gy(x) + 70, q = mulberry32(Math.round(x));
-        c.fillStyle = '#3f5a36'; c.beginPath(); c.ellipse(x, y, 26 * s, 15 * s, 0, Math.PI, 0); c.fill();
-        c.fillStyle = '#56733f'; c.beginPath(); for (let d = 0; d < 9; d++) dot(c, x + (q() - .5) * 44 * s, y - q() * 12 * s, 3.5 * s); c.fill();
-        c.fillStyle = col; c.beginPath(); for (let d = 0; d < 12; d++) dot(c, x + (q() - .5) * 44 * s, y - 2 - q() * 13 * s, 1.8 * s); c.fill();
-      });
-    }
   }
 
   /* ---- Japan ---- */
