@@ -8,7 +8,7 @@ assert.match(html, /assets\/art-wonders\.js\?v=\d+/, 'the module loads');
 assert.match(html, /ArtWonders\.install\(\)/, 'and is installed');
 
 let log = [];
-const ctx = new Proxy({}, {get: (o, k) => k in o ? o[k] : (...a) => { log.push(k + a.map(v => typeof v === 'number' ? v.toFixed(2) : '').join(',')); }, set: (o, k, v) => { o[k] = v; log.push(k + '=' + v); return true; }});
+const ctx = new Proxy({}, {get: (o, k) => k in o ? o[k] : (...a) => { log.push(k + a.map(v => typeof v === 'number' ? v.toFixed(2) : '').join(',')); if (/^create.*Gradient$/.test(k)) return {addColorStop: (...s) => log.push('stop' + s.join())}; }, set: (o, k, v) => { o[k] = v; log.push(k + '=' + v); return true; }});
 const caption = {append(e) { this.child = e; }};
 const sandbox = {
   Math, Object, Array, String, Number, JSON, setInterval: () => 0,
