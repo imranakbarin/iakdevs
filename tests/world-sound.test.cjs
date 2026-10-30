@@ -60,7 +60,7 @@ S.toggle(); assert.equal(S.on(), true); assert.equal(store['world-sound'], 'on')
 const run = (secs, step) => { for (let i = 0; i < secs * 60; i++) { clock.t += 1 / 60; if (step) step(i); frameCb(clock.t * 1000); } };
 for (const [mode, step] of [['road', () => g('journey += .02')], ['zen', i => { g('zenDistance += 34 / 60'); if (i % 400 === 0) g('zenRipples.push({})'); }], ['art', null]]) {
   g(`modeBtn.value = '${mode}'`);
-  const before = count.voices; run(30, step);
+  const before = count.voices; run(mode === 'art' ? 60 : 30, step);   // the art scene's voices are sparse and random: 30 s sometimes held only ten
   assert.ok(count.voices - before > 10, `${mode}: the soundscape played (${count.voices - before} voices)`);
 }
 for (const style of ['gond', 'warli', 'madhubani', 'kangra', 'china', 'mexico']) { element('sty').value = style; run(30); }
