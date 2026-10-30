@@ -14,7 +14,10 @@ const ArtDepth=(()=>{
  }
  // Sites share both the surface coordinates and the camera plane of their terrain.
  function treeSite(c,x,q,s,surface){
-  const y=surface(x);c.save();c.translate(x,y);c.scale(s,s);c.translate(-x,-(gy(x)+3));kTree(c,x,q);c.restore();
+  // Stand on a gentle stretch: a tree planted on a steep valley side reads as floating.
+  const slope=X=>Math.abs(surface(X+10)-surface(X-10))/20;
+  if(slope(x)>.25){let best=x,low=slope(x);for(let d=-120;d<=120;d+=6){const v=slope(x+d);if(v<low){low=v;best=x+d;}}x=best;}
+  const y=surface(x)+1;c.save();c.translate(x,y);c.scale(s,s);c.translate(-x,-(gy(x)+3));kTree(c,x,q);c.restore();
  }
  function flatSite(x,s,surface){
   let best=x,score=Infinity;const w=83*s;

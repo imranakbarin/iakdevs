@@ -25,8 +25,8 @@ const KangraWorld=(()=>{
   surface(c,xa,xb,x=>kRidge(x,1),'#a1ae7b','#6c8558',0x493);
   // Painted distant foliage belongs to the same hillside surface and camera.
   for(let i=Math.floor(xa/42)-1;i<xb/42+1;i++){
-   const q=mulberry32(hash(seed^0x494,i)),x=i*42+q()*22,y=kRidge(x,1)+1;
-   if(q()<.32)continue;ArtDepth.foliage(c,x,y,16+q()*12,17+q()*11,q,.65);
+   const q=mulberry32(hash(seed^0x494,i)),x=i*42+q()*22,y=kRidge(x,1)+2;
+   if(q()<.32||Math.abs(kRidge(x+12,1)-kRidge(x-12,1))/24>.3)continue;   // none on steep valley sides, where they floatArtDepth.foliage(c,x,y,16+q()*12,17+q()*11,q,.65);
   }
  }
  function ground(c,xa,xb){
