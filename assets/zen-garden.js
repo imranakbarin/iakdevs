@@ -305,7 +305,7 @@ function zenAtmosphereLayer(c,L,t,dt){
   c.fillStyle=ray;c.beginPath();c.moveTo(x,0);c.lineTo(x+L.w*.055,0);c.lineTo(x+L.w*.5,L.h);c.lineTo(x+L.w*.29,L.h);c.closePath();c.fill();
  }
  c.restore();
- for(const p of zenPetals.items){
+ if(typeof ZenSeasons==='undefined')for(const p of zenPetals.items){
   if(p.delay>0||p.alpha<=0)continue;
   const size=(L.portrait?4:6)*p.size,x=p.x*L.w,y=p.y*L.h;
   const altitude=Math.max(0,p.ground-p.y),shadowOffset=altitude*L.h*.13;
@@ -431,8 +431,11 @@ function zenFrame(dt){
  c.clearRect(0,0,cv.width,cv.height);c.setTransform(DPR,0,0,DPR,0,0);
  if(zenCycle>8)zenTrace.style.opacity=String(1-Math.min(1,(zenCycle-8)/6));
  if(zenAtmosphere)zenCanopy(c,L,zenClock);
+ const seasons=zenAtmosphere&&typeof ZenSeasons!=='undefined';
+ if(seasons)ZenSeasons.under(c,L,zenClock,playing?dt:0);
  zenBall(c,L);
  if(zenAtmosphere){zenPond(c,L,zenClock);zenFountain(c,L,zenClock);zenSpringWater(c,L,zenClock);zenAtmosphereLayer(c,L,zenClock,dt);zenVisitors(c,L,zenClock,playing?dt:0);}
+ if(seasons)ZenSeasons.over(c,L,zenClock,playing?dt:0);
  zenHint(c,L);
 }
 // Raking: a drag that starts on the sand pulls a five-tine rake after the
@@ -458,6 +461,7 @@ function zenRakeMove(x,y){
   zc.stroke();
  }
  zenRake.n=n;zenRake.last=p;zenRakeLen+=len;zenTrace.style.opacity='1';
+ if(typeof ZenSeasons!=='undefined')ZenSeasons.sweep(p.x,p.y,36);
 }
 function zenRakeEnd(){zenRake=null;}
 // The first visit shows how: a quiet line under the garden, once per device.
@@ -475,7 +479,7 @@ function zenHint(c,L){
    hops in leaving tiny footprints, pecks and flies off (a tap nearby sends it
    off sooner). By day a dragonfly hovers and darts over the pond. */
 let zenBird=null,zenNextBird=12,zenFly=null;
-function zenScare(x,y){if(!zenBird||zenBird.phase==='out'||Math.hypot(x-zenBird.sx,y-zenBird.sy)>60)return false;zenBird.phase='out';zenBird.t=0;zenBird.from={x:zenBird.x,y:zenBird.y};return true;}
+function zenScare(x,y){const fly=typeof ZenSeasons!=='undefined'&&ZenSeasons.scare(x,y);if(!zenBird||zenBird.phase==='out'||Math.hypot(x-zenBird.sx,y-zenBird.sy)>60)return fly;zenBird.phase='out';zenBird.t=0;zenBird.from={x:zenBird.x,y:zenBird.y};return true;}
 function zenVisitors(c,L,t,dt){
  const s=Math.max(1,L.r/140),inner=L.r*.885;
  if(!zenBird&&dt&&(zenNextBird-=dt)<=0){
