@@ -1,11 +1,15 @@
-/* Bounded precipitation layers and live environment reflections. No pixel readback. */
+/* Bounded precipitation layers and live environment reflections (from the previous frame). No pixel readback. */
 const RoadWeather=(()=>{
  const env=document.createElement('canvas'),finish=document.createElement('canvas');env.width=256;env.height=128;
  let atmosphere={sun:1,rain:0,snow:0,night:0,sunset:0,fog:0},time=0;
  let n=713;const random=()=>{n=(Math.imul(n,1664525)+1013904223)>>>0;return n/4294967296;};
  const cloud=document.createElement('canvas');cloud.width=512;cloud.height=192;const cg=cloud.getContext('2d');for(let i=0;i<45;i++){const x=random()*512,y=random()*130,r=35+random()*90,g=cg.createRadialGradient(x,y,0,x,y,r);g.addColorStop(0,'rgba(158,171,178,.55)');g.addColorStop(1,'rgba(158,171,178,0)');cg.fillStyle=g;cg.fillRect(x-r,y-r,r*2,r*2);}
  const particles=Array.from({length:110},()=>({x:random(),y:random(),depth:random(),speed:.7+random()*.6,phase:random()*6.28}));
- function capture(c,w,h,a,t){atmosphere=a;time=t;const g=env.getContext('2d');g.clearRect(0,0,256,128);g.drawImage(c.canvas,0,0,w,h*.75,0,0,256,128);}
+ // The reflections come from the previous frame, copied by snap() before the next one starts
+ // drawing: copying the frame still being drawn made the GPU finish it mid-frame (~20 ms).
+ let source=null;
+ function capture(c,w,h,a,t){atmosphere=a;time=t;source={canvas:c.canvas,w,h};}
+ function snap(){if(!source)return;const g=env.getContext('2d');g.clearRect(0,0,256,128);g.drawImage(source.canvas,0,0,source.w,source.h*.75,0,0,256,128);}
  function lit(hex){if(!hex.startsWith('#')||hex.length!==7)return hex;const v=parseInt(hex.slice(1),16),dark=1-atmosphere.night*.58-atmosphere.rain*.13-atmosphere.fog*.07;return '#'+[16,8,0].map((s,i)=>Math.max(0,Math.min(255,Math.round(((v>>s)&255)*dark+[18,3,-9][i]*atmosphere.sunset+[0,3,9][i]*atmosphere.rain))).toString(16).padStart(2,'0')).join('');}
  function reflect(c,points,glass=false){
   const p=points[0],q=points[1],r=points[3];if(!glass&&Math.abs(q.y-p.y)>Math.abs(q.x-p.x)*.3)return;c.save();c.clip();c.globalAlpha=(glass?.32:.09+atmosphere.rain*.08)*(1-atmosphere.night*.65);c.globalCompositeOperation=glass?'source-over':'soft-light';c.transform((q.x-p.x)/256,(q.y-p.y)/256,(r.x-p.x)/128,(r.y-p.y)/128,p.x,p.y);c.translate(256,0);c.scale(-1,1);c.drawImage(env,0,0);c.restore();
@@ -55,5 +59,5 @@ const RoadWeather=(()=>{
   }c.restore();
  }
  function clouds(c,w,h,a,t){const strength=Math.min(1,a.rain*.82+a.snow*.65+a.fog*.25);if(strength<.001)return;c.save();c.globalAlpha=strength*(1-a.night*.4);const width=w*1.25,x=-(t*3%width);for(let k=-1;k<2;k++)c.drawImage(cloud,x+k*width,-h*.025,width,h*.32);c.restore();}
- return {capture,lit,reflect,paintedCar,precipitation,lamps,beams,clouds};
+ return {capture,snap,lit,reflect,paintedCar,precipitation,lamps,beams,clouds};
 })();

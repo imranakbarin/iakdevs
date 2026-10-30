@@ -135,7 +135,7 @@ input[type=range]{width:80px;accent-color:#E63B2E}
 <dialog id="art-gallery" aria-labelledby="art-gallery-heading"><div class="art-gallery-head"><div><h2 id="art-gallery-heading">Choose artwork</h2></div><button id="art-close" aria-label="Close art gallery">Close</button></div><div id="art-presentation" role="group" aria-label="Artwork type"><button id="art-live" type="button" aria-pressed="true">Live art</button><button id="art-painted" type="button" aria-pressed="false">Paintings</button></div><div id="art-grid"></div></dialog>
 <script src="assets/living-art.js?v=3"></script>
 <script src="assets/scene-motion.js?v=2"></script>
-<script src="assets/road-traffic.js?v=4"></script>
+<script src="assets/road-traffic.js?v=5"></script>
 <script src="assets/world-atmosphere.js?v=2"></script>
 <script src="assets/zen-steel-gpu.js?v=2"></script>
 <script src="assets/zen-garden.js?v=13"></script>
@@ -143,14 +143,15 @@ input[type=range]{width:80px;accent-color:#E63B2E}
 <script src="assets/road-illustration.js?v=12"></script>
 <script src="assets/road-rural.js?v=4"></script>
 <script src="assets/road-vehicles.js?v=8"></script>
-<script src="assets/road-weather-light.js?v=2"></script>
+<script src="assets/road-weather-light.js?v=3"></script>
 <script src="assets/creature-mind.js?v=2"></script>
 <script src="assets/art-presence.js?v=1"></script>
 <script src="assets/art-ambience.js?v=1"></script>
 <script src="assets/art-wonders.js?v=2"></script>
 <script src="assets/home.js?v=1"></script>
-<script src="assets/road-journey.js?v=1"></script>
-<script src="assets/world-sound.js?v=2"></script>
+<script src="assets/road-journey.js?v=2"></script>
+<script src="assets/road-stops.js?v=1"></script>
+<script src="assets/world-sound.js?v=3"></script>
 <script src="assets/kangra-world.js?v=3"></script>
 <script src="assets/art-depth.js?v=11"></script>
 <script src="assets/art-finishing.js?v=2"></script>
@@ -1831,10 +1832,13 @@ const tripDrive={x:1,v:0};
 function roadFrame(t,dt,c=ctx,placeOverride=null){
  const w=cv.width,h=cv.height;
  if(placeOverride===null){
+  RoadWeather.snap();
   const delta=playing&&!drag?dt:0;
-  journey=RoadTraffic.drive(delta,journey*42,42*speed/40,trafficEnabled,tripDrive)/42;
+  const stops=typeof RoadStops!=='undefined';
+  journey=RoadTraffic.drive(delta,journey*42,42*speed/40*(stops?RoadStops.cruise(journey*42):1),trafficEnabled,tripDrive,stops&&RoadStops.state()?42*speed/40:0)/42;
   roadWeather(journey,delta,document.getElementById('weather').value);
-  const weights=roadPlaceWeights(delta,document.getElementById('place').value);
+  const pace=stops?RoadStops.pace():1;   // parked at a stop: the place cycle and the trip clock wait
+  const weights=roadPlaceWeights(delta*pace,document.getElementById('place').value);
   const bands=roadPlaceTransition.bands,active=weights.map((weight,ix)=>({weight,ix})).filter(p=>bands.some(b=>b[p.ix]>0));
   const totals=roadBandDepths.map(()=>0);let total=0;
   for(const scene of active){
@@ -1856,9 +1860,10 @@ function roadFrame(t,dt,c=ctx,placeOverride=null){
   const stopNames=[['Alpine café','Scenic campsite','Valley overlook'],['Desert rest stop','Windmill','Canyon overlook'],['Woodland lodge','Forest campsite','Forest overlook'],['Lighthouse','Coastal café','Ocean overlook'],['Corner café','Farm market','City overlook']];
   const feature=RoadIllustration.routeFeatures(journey,dominant).find(f=>f.z>.08&&f.z<1);
   const stop=feature?' · '+(feature.type==='gateway'?'Stone gateway':'River bridge')+' ahead':upcoming?' · '+stopNames[dominant][upcoming.variant]+' ahead':'';
-  const tripLabel=typeof RoadJourney!=='undefined'?RoadJourney.update({dt:delta,km:journey*42/1000,speed:42*speed/40,dominant,auto:document.getElementById('place').value==='auto',phase:roadPlaceTransition.autoTime/44,weights:a,weather:we,names:names||p.name,cue:tripCue,stop,places})
+  const tripLabel=typeof RoadJourney!=='undefined'?RoadJourney.update({dt:delta*pace,km:journey*42/1000,speed:42*speed/40,dominant,auto:document.getElementById('place').value==='auto',phase:roadPlaceTransition.autoTime/44,weights:a,weather:we,names:names||p.name,cue:tripCue,stop,places})
    :(names||p.name)+' · '+({sun:'Sunny',sunset:'Sunset',rain:'Rain',fog:'Fog',snow:'Snow',night:'Night'})[we]+' · '+tripCue+stop;
   const status=document.getElementById('trip-status');if(status.textContent!==tripLabel)status.textContent=tripLabel;
+  if(stops)RoadStops.frame(c,w,h,dominant);
   return;
  }
  c.save();c.setTransform(1,0,0,1,0,0);c.clearRect(0,0,w,h);c.globalAlpha=1;c.globalCompositeOperation='source-over';c.lineCap='butt';c.lineJoin='miter';c.lineWidth=1;
@@ -2244,13 +2249,15 @@ function drawScene(dt){
   for(const i of OC.keys())if((i<a-5||i>b+5)&&(!ArtDepth.layered(ST)||i<farA-2||i>farB+2))OC.delete(i);
 
 }
-let frameHandle=0,lastPaint=0,lastMetrics=0;
+let frameHandle=0,lastPaint=0,lastMetrics=0,smoothSmall=true;
 function wakeScene(){SceneMotion.invalidate();if(!frameHandle&&!document.hidden)frameHandle=requestAnimationFrame(frame);}
 function frame(t){
  frameHandle=0;if(document.hidden){last=t;return;}
  if(modeBtn.value==='cozy'||modeBtn.value==='mushroom'||modeBtn.value==='pip'){last=t;return;}
  if(modeBtn.value==='art'&&(cv.width!==Math.round(cv.clientWidth*DPR)||cv.height!==Math.round(cv.clientHeight*DPR)))layout();
-  const dirty=SceneMotion.consumeDirty(),moving=playing||Boolean(drag),interval=cv.clientWidth<700||SceneMotion.renderMs>18?1000/30:1000/60;
+  // Small screens draw at 60 fps while a frame is cheap, and drop to 30 (with some hysteresis) when it is not.
+  const small=cv.clientWidth<700;if(small)smoothSmall=SceneMotion.renderMs<(smoothSmall?10:7);
+  const dirty=SceneMotion.consumeDirty(),moving=playing||Boolean(drag),interval=(small?!smoothSmall:SceneMotion.renderMs>18)?1000/30:1000/60;
  if(!dirty&&!moving)return;
  if(!dirty&&t-lastPaint<interval-.7){frameHandle=requestAnimationFrame(frame);return;}
  const dt=SceneMotion.advance((t-last)/1000,playing);last=t;lastPaint=t;
@@ -2272,7 +2279,7 @@ if(requestedZen||requestedRoad||requestedCozy||requestedMushroom||requestedPip){
 // Editing the hash (or following a deep link in the same tab) opens that world;
 // the app's own replaceState calls never fire hashchange.
 addEventListener('hashchange',()=>location.reload());
-ArtAmbience.install();ArtWonders.install();ArtPresence.install();WorldSound.install();Home.install();
+ArtAmbience.install();ArtWonders.install();ArtPresence.install();WorldSound.install();if(typeof RoadStops!=='undefined')RoadStops.install();Home.install();
 motionPreference.addEventListener('change',e=>{if(e.matches){playing=false;syncPlay();if(modeBtn.value==='cozy')window.CozyWorlds?.pause();wakeScene();}});
 wakeScene();
 </script>
