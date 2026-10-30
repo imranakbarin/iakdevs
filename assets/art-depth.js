@@ -24,7 +24,13 @@ const ArtDepth=(()=>{
   for(let d=-180;d<=180;d+=6){const ys=[];for(let j=-4;j<=4;j++)ys.push(surface(x+d+j*w/4));const cost=Math.max(...ys)-Math.min(...ys)+Math.abs(d)*.012;if(cost<score){score=cost;best=x+d;}}
   return best;
  }
+ // A soft elliptical pool of shade at (x,y), drawn before what stands there.
+ function groundShadow(c,x,y,rx,ry,a=.32){
+  c.save();c.translate(x,y);c.scale(1,ry/rx);const g=c.createRadialGradient(0,0,0,0,0,rx);g.addColorStop(0,`rgba(28,48,24,${a})`);g.addColorStop(.6,`rgba(28,48,24,${a*.45})`);g.addColorStop(1,'rgba(28,48,24,0)');
+  c.fillStyle=g;c.beginPath();c.arc(0,0,rx,0,TAU);c.fill();c.restore();
+ }
  function pavilionSite(c,x,q,s,surface){
+  groundShadow(c,x+8*s,surface(x)+4*s,120*s,16*s,.34);
   const w=83*s,points=[];for(let j=0;j<=12;j++){const xx=x-w+j*w/6;points.push([xx,surface(xx)+5*s]);}
   const y=Math.min(...points.map(p=>p[1]))-2*s;
   c.save();c.beginPath();c.moveTo(x-w,y);c.lineTo(x+w,y);for(let j=points.length-1;j>=0;j--)c.lineTo(...points[j]);c.closePath();
@@ -223,7 +229,7 @@ const ArtDepth=(()=>{
    if(q()<.28)return KangraWorld.cypress(c,x,q);
    const h=150+q()*55,y=gy(x)+4,flip=q()<.5?-1:1;
    c.save();c.translate(x,y-1);c.scale(flip,1);
-   c.beginPath();c.ellipse(0,0,h*.13,3,0,0,TAU);c.fillStyle='rgba(26,50,26,.22)';c.fill();
+   groundShadow(c,0,1,h*.34,h*.045);   // a soft pool of shade, so the roots sit in the grass
    c.drawImage(painted.kangraTree,6,9,1246,1238,-h*.5,-h,h,h);
    c.beginPath();for(let j=-3;j<=3;j++){c.moveTo(j*4,1);c.lineTo(j*4-2,-2);c.lineTo(j*4+1,0);}stroke(c,'#688b46',.7);c.restore();
   };
@@ -238,5 +244,5 @@ const ArtDepth=(()=>{
   const madhubani=STYLES.madhubani.chunk;STYLES.madhubani.chunk=function(r,x0,add,z,act){madhubani.call(this,r,x0,add,z,act);const type=this.zones.indexOf(z);if(type===3)add(2,function*(c,q){const x=x0+300;c.translate(x,gy(x));c.scale(1.08,1.08);c.translate(-x,-gy(x));yield* mbTree(c,x,q);});};
   const kangra=STYLES.kangra.chunk;STYLES.kangra.chunk=function(r,x0,add,z,act){kangra.call(this,r,x0,add,z,act);if(z==='woods'&&r()<.4)add(2,(c,q)=>treeSite(c,x0+90,q,.8,gy));};
  }
- return {install,prepare,layered,near,light,atmosphere,treeSite,pavilionSite,flatSite,foliage,asset:key=>painted[key],reset(){nearTiles.clear();orchardTiles.clear();}};
+ return {install,prepare,layered,near,light,atmosphere,treeSite,pavilionSite,flatSite,foliage,groundShadow,asset:key=>painted[key],reset(){nearTiles.clear();orchardTiles.clear();}};
 })();
