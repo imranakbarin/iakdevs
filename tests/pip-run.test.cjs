@@ -77,6 +77,17 @@ for (const [over, falls] of [[1, true], [3, true], [5, false], [10, false]]) {
   assert.equal(G.state().pl.y > 15 * 16 || G.state().dead > 0, falls, `${over} px of body on the lip: ${falls ? 'falls' : 'stands'}`);
 }
 
+// The planner foresees creatures by their own rules: a walker heading into a
+// wall turns back there (the old guess carried it straight through).
+{
+  G.reset(1); for (let f = 0; f < 5; f++) G.tick(() => ({}));
+  for (let y = 9; y < 12; y++) G.tile(20, y, 1);
+  const s = G.state(); s.enemies.length = 0;
+  s.enemies.push({kind: 'walker', x: 20 * 16 - 30, y: 12 * 16 - 14, baseY: 0, w: 14, h: 14, vx: .5, vy: 0, ground: true, state: 'walk', t: 0, period: 99});
+  const [w] = G.foresee(), [x48] = w.at(48), [x96] = w.at(96);
+  assert.ok(x48 <= 20 * 16 - 14 && x96 < x48, `a walker turns at the wall (${w.x} → ${x48.toFixed(1)} → ${x96.toFixed(1)})`);
+}
+
 // The demo player crosses generated worlds steadily, set pieces included.
 const passed = new Set();
 for (const seed of [1, 2, 5, 9]) {
@@ -150,7 +161,7 @@ for (const seed of [3, 11]) {
   const g = G.ghost.race(code);
   assert.equal(g.frames.length, xs.length, 'ghost covers the run');
   xs.forEach(([x, y], i) => { const p = G.ghost.at(i + 1); assert.ok(p.x === x && p.y === y, `ghost diverged at frame ${i + 1}`); });
-  for (const bad of ['', 'x', '5.zz', '6.1.a0.1.AA', '4.1.a0.1.AA', '3.1.a0.1.AA', '2.1.a0.1.AA', '1.1.a0.1.AA', '5.1.a0.1.A*']) assert.equal(G.ghost.decode(bad), null, `rejects ${bad}`);
+  for (const bad of ['', 'x', '6.zz', '7.1.a0.1.AA', '5.1.a0.1.AA', '4.1.a0.1.AA', '3.1.a0.1.AA', '2.1.a0.1.AA', '1.1.a0.1.AA', '6.1.a0.1.A*']) assert.equal(G.ghost.decode(bad), null, `rejects ${bad}`);
 }
 // The painted world: every biome's ground, stone and stumps paint with sane
 // geometry, once per chunk, and again only after a tile of theirs changes.
@@ -338,4 +349,4 @@ for (const seed of [3, 11]) {
   assert.ok(G.quality().settled); feed(40); assert.equal(G.quality().level, 1, 'and then it settles');
   strict = true; drawn = 0; G.render(); strict = false; assert.ok(drawn > 300, `and still draws whole frames (${drawn} calls)`);
 }
-console.log('Pip Run PASS: jump-sized gaps at least two tiles wide, Pip stands on his feet (slips off a lip he only touches), finite physics, demo player progresses through 4 seeded worlds, reaches each chapter’s destination and plays its landmark scene, clears block rows that run up to a gap, and gets past ferries, lifts, crumble bridges, floating steps and podspitters, referee refuses traps and accepted walls stay passable, shared runs replay exactly as ghosts, the painted ground of all four biomes draws with sane geometry, once per chunk, route dressing stands on level ground, whole frames render in every biome with footprints in snow, cloud and moss, the weather comes and goes with sane geometry, Pip talks about what is happening, stomps ring and spark, seed pods burst, fish leap only from the sea and butterflies keep to the meadow, the journey book stamps landmarks (not in ghost rebuilds), and the resolution steps down on a slow device.');
+console.log('Pip Run PASS: jump-sized gaps at least two tiles wide, Pip stands on his feet (slips off a lip he only touches), the planner foresees creatures by their rules, finite physics, demo player progresses through 4 seeded worlds, reaches each chapter’s destination and plays its landmark scene, clears block rows that run up to a gap, and gets past ferries, lifts, crumble bridges, floating steps and podspitters, referee refuses traps and accepted walls stay passable, shared runs replay exactly as ghosts, the painted ground of all four biomes draws with sane geometry, once per chunk, route dressing stands on level ground, whole frames render in every biome with footprints in snow, cloud and moss, the weather comes and goes with sane geometry, Pip talks about what is happening, stomps ring and spark, seed pods burst, fish leap only from the sea and butterflies keep to the meadow, the journey book stamps landmarks (not in ghost rebuilds), and the resolution steps down on a slow device.');
