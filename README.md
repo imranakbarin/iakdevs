@@ -13,6 +13,13 @@ A visit without a link opens **Today** (`assets/home.js`): a card per experience
 - **Zen garden** — raked-sand patterns over painted gardens.
 - **Cozy Worlds** — calming illustrated scenes.
 - **Pip Run** — a small original platformer you can play (`#pip-run`).
+- **Toy Town** — a chaotic isometric toy town, themed every day by the news (`#toy-town`).
+
+## Toy Town
+
+`toy-town.html` + `assets/toy-town.js` (`#toy-town`, or Toy Town in the menu): a busy little isometric town on a slab of earth, where something silly is always happening. A new town is laid out every day (seeded by the date; *New town* makes a random one) with roads, a river and bridges, houses, shops, towers, a fire station, a park, a building site with a turning crane and the day's theme block. Cars queue and honk on their own, people walk the pavements, ducks paddle, and chaos overlaps: burst hydrants, runaway shopping carts, a dog with the butcher's sausages, escaping balloons, a cat on a roof (the fire truck comes; the cat jumps down by itself), pigeons, banana peels, an ice cream van, a traffic jam, escaped chickens, a giant rubber duck, and now and then a UFO borrowing a car. A director camera glides to the action, a ticker reports it, and a tap anywhere pokes the town. A five-minute day ends in a night of lit windows and street lamps.
+
+**The day's theme comes from the news.** The page reads Wikipedia's "In the news" for the day (`api.wikimedia.org` featured feed, cached per day) and turns the first light story into a theme: sport → Big Match Day at the stadium, space → a rocket launch from the park, an election → a rally with signs, a festival → fireworks, awards/film/music → a red carpet with a famous llama, tech → robots and delivery drones, animals → a zoo escape, markets → Market Mania, science → the lab goes "boing". Any story mentioning deaths, war, attacks, disasters, crime and the like is never used; with no usable story, or offline, the date picks the theme. The card names the theme and the story it came from.
 
 ## Deep links
 
