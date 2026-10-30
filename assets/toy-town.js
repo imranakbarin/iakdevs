@@ -20,7 +20,7 @@ const ToyTown = (() => {
   let rnd = Math.random, seed = 0, day = '', theme = null, newsLine = '', today_ = [];
   let W = 0, H = 0, dpr = 1, S = 1, cam = {x: N / 2, y: N / 2, z: 1, tx: N / 2, ty: N / 2, tz: 1}, base = 1;
   let grid = [], buildings = [], props = [], movers = [], events = [], parts = [], bubbles = [], ground = null, sprites = new Map();
-  const PACE = .6;   // the whole town runs at 60% speed: easier to follow, calmer to watch
+  const PACE = .6, CARS = 7, BIKES = 4, PEOPLE = 14, LIGHT = 10;   // a calm town: few cars, a handful of cyclists, people taking their time   // the whole town runs at 60% speed: easier to follow, calmer to watch
   let clock = 0, playing = true, last = 0, nextEvent = 2, director = null, directorUntil = 0;
   const STREETS = ['Maple St', 'Elm Ave', 'Pickle Lane', 'Gumdrop Rd', 'Button Way', 'Teapot St', 'Biscuit Ave', 'Puddle Lane'];
   const streetOf = (x, y) => STREETS[(isRoad(Math.floor(x)) ? LINES.indexOf(Math.floor(x)) : 4 + Math.max(0, LINES.indexOf(Math.floor(y)))) % STREETS.length];
@@ -130,8 +130,10 @@ const ToyTown = (() => {
     for (const b of blocks.filter(b => b.river)) b.type = 'riverside';
     for (const b of blocks) fill(b, r);
     for (let x = 0; x < N; x++) for (let y = 0; y < N; y++) if (tile(x, y).kind === 'edge' && r() < .55) props.push({kind: 'tree', x: x + .5, y: y + .5, s: .8 + r() * .4, c: r() < .5 ? '#5cb85c' : '#7cc65a'});
-    for (let k = 0; k < 14; k++) spawnCar(r);
-    for (let k = 0; k < 26; k++) spawnPerson(r);
+    for (let k = 0; k < CARS; k++) spawnCar(r);
+    for (let k = 0; k < BIKES; k++) spawnBike(r);
+    for (let k = 0; k < PEOPLE; k++) spawnPerson(r);
+    for (const b of buildings) if (b.kind === 'house' && r() < .75) props.push({kind: 'flowers', x: b.x + .5, y: b.y + .88, c: [PASTEL[r() * 8 | 0], PASTEL[r() * 8 | 0]]});
     for (let k = 0; k < 5; k++) props.push({kind: 'duck', x: 1 + r() * 16, y: 13.2 + r() * 1.6, vx: (r() - .5) * .3, ph: r() * 6});
     sprites.clear(); ground = null;
     theme = themeKey; town.blocks = blocks;
@@ -167,8 +169,21 @@ const ToyTown = (() => {
   }
   function spawnPerson(r = Math.random, opts = {}) {
     const p = randomRoadPoint(r);
-    const m = Object.assign({type: 'person', x: p.x, y: p.y, d: p.d, v: 0, max: .35 + r() * .25, col: PASTEL[r() * PASTEL.length | 0], skin: ['#f1c9a5', '#d8a77c', '#a8754f', '#7a4e33'][r() * 4 | 0], lane: r() < .5 ? .42 : -.42, ph: r() * 6, wait: 0}, opts);
+    const m = Object.assign({type: 'person', x: p.x, y: p.y, d: p.d, v: 0, max: .35 + r() * .25, col: PASTEL[r() * PASTEL.length | 0], skin: ['#f1c9a5', '#d8a77c', '#a8754f', '#7a4e33'][r() * 4 | 0], lane: (r() < .5 ? 1 : -1) * (.4 + r() * .07), ph: r() * 6, wait: 0}, opts);
     movers.push(m); return m;
+  }
+  function spawnBike(r = Math.random) {
+    const p = randomRoadPoint(r), m = {type: 'car', kind: 'bike', x: p.x, y: p.y, d: p.d, v: 0, max: .55 + r() * .15, col: PASTEL[r() * PASTEL.length | 0], skin: ['#f1c9a5', '#d8a77c', '#a8754f', '#7a4e33'][r() * 4 | 0], wait: 0, lane: .36, ph: r() * 6};
+    movers.push(m); return m;
+  }
+  // Traffic lights: the two directions take turns, with a short amber in between.
+  const lightPhase = () => { const u = clock % (LIGHT * 2); return {green: u < LIGHT ? 'x' : 'y', amber: u % LIGHT > LIGHT - 2}; };
+  // Is m held at the next crossing? Movers along x wait while y has green, and the other way round.
+  function heldAtLight(m, stopAt) {
+    const L = lightPhase(), axis = m.d < 2 ? 'x' : 'y', pos = m.d < 2 ? m.x : m.y, sign = m.d === 0 || m.d === 2 ? 1 : -1;
+    if (L.green === axis && !L.amber) return false;
+    for (const l of LINES) { const dist = (l + .5 - pos) * sign; if (dist > stopAt - .3 && dist < stopAt + .35) return true; }
+    return false;
   }
   function laneOffset(m) { const s = m.type === 'car' ? (m.d === 0 || m.d === 3 ? 1 : -1) * m.lane : m.lane; return m.d < 2 ? [0, s] : [-s, 0]; }
   function atNode(m) { return LINES.some(l => Math.abs((m.d < 2 ? m.x : m.y) - (l + .5)) < .02); }
@@ -177,13 +192,16 @@ const ToyTown = (() => {
     if (m.path) return stepPath(m, dt);
     const [dx, dy] = DIRS[m.d];
     let want = m.max;
-    if (m.type === 'car') {   // keep a gap to the car ahead in the same lane, so queues and honking happen on their own
+    if (m.type === 'car') {   // keep a gap to whatever is ahead in the lane, and stop for red lights
       for (const o of movers) if (o !== m && o.type === 'car' && o.d === m.d) {
         const ahead = (o.x - m.x) * dx + (o.y - m.y) * dy, side = Math.abs((o.x - m.x) * dy) + Math.abs((o.y - m.y) * dx);
-        if (ahead > 0 && ahead < .9 && side < .2) want = Math.min(want, o.v * .9, ahead < .55 ? 0 : want);
+        if (ahead > 0 && ahead < 1 && side < .3) want = Math.min(want, o.v * .9, ahead < .6 ? 0 : want);
       }
+      if (heldAtLight(m, .75)) want = 0;
       for (const e of events) if (e.blocks && Math.hypot(e.x - m.x, e.y - m.y) < 1.1) want = 0;
-      if (want === 0 && m.v < .05) { m.wait += dt; if (m.wait > 2.5 && Math.random() < dt * .8) { say(m, ['BEEP!', 'HONK!', 'MOVE IT!', 'beep beep', 'HONK HONK'][Math.random() * 5 | 0], 1.2); m.wait = 0; } } else m.wait = 0;
+    } else if (!m.kind || m.kind === 'chef' || m.kind === 'farmer' || m.kind === 'keeper') {   // walkers wait at the crossing and keep a little room
+      if (heldAtLight(m, .62)) want = 0;
+      for (const o of movers) if (o !== m && o.type === 'person' && o.d === m.d) { const ahead = (o.x - m.x) * dx + (o.y - m.y) * dy, side = Math.abs((o.x - m.x) * dy) + Math.abs((o.y - m.y) * dx); if (ahead > 0 && ahead < .3 && side < .1) want = Math.min(want, o.v * .8); }
     }
     m.v += (want - m.v) * Math.min(1, dt * 3);
     const before = m.d < 2 ? m.x : m.y;
@@ -216,7 +234,7 @@ const ToyTown = (() => {
   /* ---------------- chaos ---------------- */
   function say(who, text, secs = 2) { bubbles.push({who, text, until: clock + secs}); }
   function tick(text) { const el = document.getElementById('tick'); if (el) el.textContent = text; }
-  function feature(e, secs = 7) { if (!director || clock > directorUntil) { director = e; directorUntil = clock + secs; } }
+  function feature(e, secs = 7) { if (e.quiet) return; if (!director || clock > directorUntil) { director = e; directorUntil = clock + secs; } }
   function burst(x, y, z, n, col, opt = {}) { for (let i = 0; i < n; i++) parts.push({x, y, z, vx: (Math.random() - .5) * (opt.spread || 1.4), vy: (Math.random() - .5) * (opt.spread || 1.4), vz: (opt.up || 40) + Math.random() * (opt.up || 40), g: opt.g ?? 90, life: opt.life || 1.4, t: 0, col: Array.isArray(col) ? col[Math.random() * col.length | 0] : col, r: opt.r || 1.6, star: opt.star}); }
   const buildingOn = pred => { const list = buildings.filter(pred); return list[Math.random() * list.length | 0]; };
   const peopleNear = (x, y, d) => movers.filter(m => m.type === 'person' && Math.hypot(m.x - x, m.y - y) < d);
@@ -278,7 +296,7 @@ const ToyTown = (() => {
     icecream() {
       const truck = spawnCar(Math.random, 'icecream'); truck.col = '#ffd6e8'; truck.max = .8;
       tick('♪ The ice cream van is here! ♪ Everyone drops everything.');
-      return {x: truck.x, y: truck.y, dur: 12, follow: truck, update(e, dt) { if (e.t > 2 && !e.stopped) { e.stopped = 1; truck.stopUntil = clock + 8; say(truck, '♪ ding ding ♪', 3); for (const m of movers.filter(m => m.type === 'person' && !m.kind).slice(0, 5)) { m.path = [{x: truck.x + (Math.random() - .5) * .8, y: truck.y + (Math.random() - .5) * .8, speed: 1.1, then: q => say(q, ['Vanilla!', 'Two scoops!', 'Sprinkles!'][Math.random() * 3 | 0], 1.5)}]; } } }};
+      return {x: truck.x, y: truck.y, dur: 12, follow: truck, update(e, dt) { if (e.t > 2 && !e.stopped) { e.stopped = 1; truck.stopUntil = clock + 8; say(truck, '♪ ding ding ♪', 3); for (const m of movers.filter(m => m.type === 'person' && !m.kind).slice(0, 3)) { m.path = [{x: truck.x + (Math.random() - .5) * .8, y: truck.y + (Math.random() - .5) * .8, speed: .5, then: q => say(q, ['Vanilla!', 'Two scoops!', 'Sprinkles!'][Math.random() * 3 | 0], 1.5)}]; } } }};
     },
     duck() {
       tick('A GIANT rubber duck has appeared in the river. Nobody knows why.');
@@ -366,11 +384,12 @@ const ToyTown = (() => {
     e.name = name; e.t = 0; events.push(e); feature(e, name in VARIANT_EVENTS || name in THEME_EVENTS ? 11 : 7); return e;
   }
   function randomEvent(x, y) {
-    const names = Object.keys(EVENTS).filter(n => n !== 'ufo' || Math.random() < .25);
+    const names = CALM;
     // The day's theme comes round often; the town's everyday chaos fills the rest.
     // The day's news comes round often (the lead story most); everyday chaos fills the rest.
     const news = today_.length ? (Math.random() < .55 ? today_[0] : today_[Math.random() * today_.length | 0]).variant : theme;
-    const pick = Math.random() < .4 && !events.some(e => e.name === news) ? news : names[Math.random() * names.length | 0];
+    const free = names.filter(n => !events.some(e => e.name === n));
+    const pick = Math.random() < .35 && !events.some(e => e.name === news) ? news : free[Math.random() * free.length | 0];
     return startEvent(pick, x, y);
   }
 
@@ -418,6 +437,66 @@ const ToyTown = (() => {
       return {x: car.x, y: car.y, dur: 3, follow: car, update(e) { car.lift = Math.max(0, Math.sin(e.t * 6) * 10 * (1 - e.t / 3)); }, end() { car.lift = 0; }};
     }
   });
+
+  /* ---------------- gentle moments ---------------- */
+  const parkSpot = () => { const t = []; for (let y = 2; y < 16; y++) for (let x = 2; x < 16; x++) if (tile(x, y).kind === 'park' || tile(x, y).kind === 'plaza') t.push([x + .5, y + .5]); return t[Math.random() * t.length | 0] || [9, 9]; };
+  const walker = () => movers.find(o => o.type === 'person' && !o.kind && !o.path && !o.busy) || spawnPerson();
+  function sendTo(m, x, y, then) { m.busy = true; m.path = route(m.x, m.y, x, y, .45).concat([{x, y, speed: .4, then}]); }
+  Object.assign(EVENTS, {
+    kite() {
+      const [x, y] = parkSpot(), kid = walker(); sendTo(kid, x, y, q => { q.stopUntil = clock + 30; });
+      tick('Kite weather in the park. Someone is very proud of theirs.');
+      return {x, y, dur: 34, kite: {kid, ph: Math.random() * 6}, end() { kid.busy = false; }};
+    },
+    picnic() {
+      const [x, y] = parkSpot(), mat = {kind: 'picnic', x, y}; props.push(mat);
+      const pals = [walker(), walker()]; pals.forEach((m, i) => sendTo(m, x + (i ? .3 : -.3), y + .1, q => { q.stopUntil = clock + 30; q.sit = true; }));
+      tick('A picnic in the park: sandwiches, lemonade and a very interested pigeon.');
+      return {x, y, dur: 36, end() { props.splice(props.indexOf(mat), 1); for (const m of pals) { m.sit = false; m.busy = false; } }};
+    },
+    gardener() {
+      const b = buildingOn(b => b.kind === 'house') || buildings[0], m = walker(), x = b.x + .5, y = b.y + 1.05;
+      sendTo(m, x, y, q => { q.stopUntil = clock + 16; q.can = true; });
+      tick(`Someone on ${streetOf(x, y + .5)} is watering the window boxes.`);
+      return {x, y, dur: 26, update(e, dt) { if (m.can && Math.random() < dt * 12) burst(x + .15, y, 6, 1, '#9fd8ff', {up: 4, spread: .2, g: 60, life: .5, r: 1.1}); }, end() { m.can = false; m.busy = false; props.push({kind: 'flowers', x, y: y - .17, c: [PASTEL[Math.random() * 8 | 0], '#ffd23f']}); }};
+    },
+    painter() {
+      const [x, y] = parkSpot(), m = walker(), easel = {kind: 'easel', x: x + .25, y, t: 0}; props.push(easel);
+      sendTo(m, x, y, q => { q.stopUntil = clock + 30; q.brush = true; });
+      tick('A painter has set up an easel. Today\'s subject: the duck pond.');
+      return {x, y, dur: 34, update(e, dt) { if (m.brush) easel.t += dt; }, end() { props.splice(props.indexOf(easel), 1); m.brush = false; m.busy = false; }};
+    },
+    reading() {
+      const benches = props.filter(p => p.kind === 'bench'); const bench = benches[Math.random() * benches.length | 0];
+      const [x, y] = bench ? [bench.x, bench.y] : parkSpot(), m = walker();
+      sendTo(m, x, y, q => { q.stopUntil = clock + 26; q.sit = true; q.book = true; });
+      tick('A quiet read by the river.');
+      return {x, y, dur: 30, end() { m.sit = false; m.book = false; m.busy = false; }};
+    },
+    butterflies() {
+      const [x, y] = parkSpot();
+      tick('Butterflies over the flower beds.');
+      return {x, y, dur: 24, flies: Array.from({length: 5}, (_, i) => ({ph: i * 1.3, c: ['#ffd23f', '#ff8fd0', '#9cc7ef', '#ffffff', '#f7c873'][i]}))};
+    },
+    catnap() {
+      const b = buildingOn(b => b.kind === 'house' || b.kind === 'shop');
+      if (!b) return null;
+      tick('A cat is napping in the sun on a warm roof. Do not disturb.');
+      return {x: b.x + .5, y: b.y + .5, dur: 26, nap: {b, z: b.h + 6}};
+    },
+    balloon() {
+      const kid = walker(); say(kid, 'Bye bye, balloon!', 2.5); tick('One red balloon drifts away over the rooftops.');
+      const q = [{x: kid.x, y: kid.y, z: 18, col: '#ff5d5d', ph: 0}];
+      return {x: kid.x, y: kid.y, dur: 16, balloons: q, update(e, dt) { for (const b of e.balloons) { b.z += dt * 9; b.x += dt * (.1 + Math.sin(clock + b.ph) * .06); } }};
+    },
+    sweeper() {
+      const m = spawnPerson(Math.random, {kind: 'sweeper', col: '#e98a3a', max: .2});
+      tick('The street sweeper is doing the morning round.');
+      return {x: m.x, y: m.y, dur: 30, follow: m, end() { remove(m); }};
+    }
+  });
+  // What the town does on its own when the news is quiet: gentle things, mostly.
+  const CALM = ['kite', 'picnic', 'gardener', 'painter', 'reading', 'butterflies', 'catnap', 'balloon', 'sweeper', 'icecream', 'busker', 'hotair', 'pigeons', 'band', 'duck'];
 
   /* ---------------- the news, toy-sized ---------------- */
   const sky = (kind, x, y, z, vx = 0, vy = 0) => ({kind, x, y, z, vx, vy});
@@ -672,6 +751,9 @@ const ToyTown = (() => {
       else for (let k = 0; k < 6; k++) { const sx = p.x - 1.4 + (k % 3) * 1.4, sy = p.y - .8 + (k >> 1 & 1) * 1.6; box(c, sx, sy, .35, .25, 0, 7, '#e9d4a8'); box(c, sx, sy, .4, .3, 12, 2, ['#e2463a', '#3f8fd6', '#2f9e7a'][k % 3]); }
     }
     else if (p.kind === 'animal') drawAnimal(c, p);
+    else if (p.kind === 'flowers') { for (let k = 0; k < 5; k++) { c.fillStyle = k % 2 ? p.c[0] : p.c[1]; c.beginPath(); c.arc(x + (k - 2) * 2.6 * S, y - 2 * S - (k % 2) * 1.2 * S + Math.sin(clock * 1.5 + k) * .4 * S, 1.5 * S, 0, TAU); c.fill(); } c.fillStyle = '#4f9e4a'; c.fillRect(x - 6.5 * S, y - 1 * S, 13 * S, 1.6 * S); }
+    else if (p.kind === 'picnic') { diamond(c, p.x - .45, p.y - .3, .9, .6); c.fillStyle = '#e2463a'; c.fill(); c.fillStyle = 'rgba(255,255,255,.75)'; for (let k = 0; k < 3; k++) { diamond(c, p.x - .45 + k * .3, p.y - .3, .15, .6); c.fill(); } box(c, p.x + .25, p.y + .1, .1, .07, 0, 5, '#b8784a'); }
+    else if (p.kind === 'easel') { const [ex, ey] = P(p.x, p.y, 0); c.strokeStyle = '#7a5235'; c.lineWidth = 1.2 * S; c.beginPath(); c.moveTo(ex - 3 * S, ey); c.lineTo(ex, ey - 16 * S); c.lineTo(ex + 3 * S, ey); c.stroke(); c.fillStyle = '#fffaf0'; c.fillRect(ex - 5 * S, ey - 17 * S, 10 * S, 8 * S); const k = Math.min(1, p.t / 25); c.fillStyle = '#7fd3ff'; c.fillRect(ex - 4 * S, ey - 12 * S, 8 * S * k, 2.5 * S); c.fillStyle = '#ffd23f'; c.beginPath(); c.arc(ex + 2 * S, ey - 15 * S, 1.3 * S * k, 0, TAU); c.fill(); c.fillStyle = '#5cb85c'; c.fillRect(ex - 4 * S, ey - 10.5 * S, 8 * S * Math.max(0, k * 1.4 - .4), 1.2 * S); }
     else if (p.kind === 'diya') { const f = .7 + .3 * Math.sin(clock * 9 + p.ph * 5); c.fillStyle = '#b5652d'; c.beginPath(); c.ellipse(x, y - 1 * S, 2.6 * S, 1.2 * S, 0, 0, TAU); c.fill(); c.fillStyle = `rgba(255,${180 + 40 * f | 0},60,${.9})`; c.beginPath(); c.ellipse(x, y - 3.5 * S * f, 1.1 * S, 2.2 * S * f, 0, 0, TAU); c.fill(); }
     else if (p.kind === 'rangoli') { for (let k = 4; k > 0; k--) { c.fillStyle = ['#ff5d9e', '#ffd23f', '#5dd36b', '#5d9eff'][k % 4]; diamond(c, p.x - k * .18, p.y - k * .18, k * .36, k * .36); c.fill(); } }
     else if (p.kind === 'xtree') { for (let k = 0; k < 3; k++) { c.fillStyle = '#2f8f4a'; c.beginPath(); c.moveTo(x - (14 - k * 4) * S, y - (8 + k * 12) * S); c.lineTo(x + (14 - k * 4) * S, y - (8 + k * 12) * S); c.lineTo(x, y - (26 + k * 12) * S); c.fill(); } for (let k = 0; k < 9; k++) { c.fillStyle = Math.sin(clock * 4 + k) > 0 ? ['#ff5d5d', '#ffd23f', '#5dd3ff'][k % 3] : '#ffffff'; c.beginPath(); c.arc(x + Math.sin(k * 2.3) * 9 * S, y - (12 + k * 3.4) * S, 1.4 * S, 0, TAU); c.fill(); } c.fillStyle = '#ffd23f'; c.font = `${12 * S}px system-ui`; c.textAlign = 'center'; c.fillText('★', x, y - 50 * S); }
@@ -691,6 +773,13 @@ const ToyTown = (() => {
   }
   function drawMover(c, m, night) {
     const [ox, oy] = laneOffset(m), mx = m.x + (m.path ? 0 : ox), my = m.y + (m.path ? 0 : oy), [x, y] = P(mx, my, m.lift || 0), s = S;
+    if (m.kind === 'bike') {
+      const f = DIRS[m.d], [ax, ay] = P(mx - f[0] * .1, my - f[1] * .1, 3), [bx, by] = P(mx + f[0] * .1, my + f[1] * .1, 3), spin = clock * 10 * m.v;
+      c.strokeStyle = '#2d3440'; c.lineWidth = Math.max(1, s); for (const [wx, wy] of [[ax, ay], [bx, by]]) { c.beginPath(); c.arc(wx, wy, 2.6 * s, 0, TAU); c.stroke(); c.beginPath(); c.moveTo(wx, wy); c.lineTo(wx + Math.cos(spin) * 2.6 * s, wy + Math.sin(spin) * 2.6 * s); c.stroke(); }
+      c.strokeStyle = m.col; c.lineWidth = 1.6 * s; c.beginPath(); c.moveTo(ax, ay); c.lineTo((ax + bx) / 2, (ay + by) / 2 - 4 * s); c.lineTo(bx, by); c.stroke();
+      const [rx, ry] = P(mx, my, 10); c.fillStyle = m.col; c.fillRect(rx - 2 * s, ry - 6 * s, 4 * s, 6 * s); c.fillStyle = m.skin; c.beginPath(); c.arc(rx, ry - 8.5 * s, 2.4 * s, 0, TAU); c.fill(); c.fillStyle = shade(m.col, .8); c.beginPath(); c.arc(rx, ry - 9.5 * s, 2.6 * s, Math.PI, 0); c.fill();
+      return;
+    }
     if (m.type === 'car') {
       const along = m.d < 2, len = m.kind === 'bus' ? .42 : m.kind === 'fire' ? .38 : m.kind === 'racer' ? .3 : .26, wid = .14;
       const hx = along ? len : wid, hy = along ? wid : len, hgt = m.kind === 'bus' ? 13 : m.kind === 'racer' ? 4 : 8;
@@ -713,12 +802,16 @@ const ToyTown = (() => {
     if (m.kind === 'ghost') { c.fillStyle = '#ffffff'; c.beginPath(); c.arc(x, y - 10 * s - bob, 4 * s, Math.PI, 0); c.lineTo(x + 4 * s, y - 2 * s - bob); for (let k = 0; k < 4; k++) c.lineTo(x + (4 - k * 2.6) * s, y - (k % 2 ? 3.5 : 1.5) * s - bob); c.closePath(); c.fill(); c.fillStyle = '#222'; c.fillRect(x - 2 * s, y - 11 * s - bob, 1.2 * s, 1.6 * s); c.fillRect(x + .8 * s, y - 11 * s - bob, 1.2 * s, 1.6 * s); return; }
     if (m.kind === 'dino') { const g = '#7cc65a'; c.fillStyle = g; c.beginPath(); c.ellipse(x, y - 14 * s - bob, 12 * s, 7 * s, 0, 0, TAU); c.fill(); c.beginPath(); c.moveTo(x - 10 * s, y - 14 * s); c.quadraticCurveTo(x - 22 * s, y - 12 * s, x - 26 * s, y - 6 * s); c.lineTo(x - 9 * s, y - 10 * s); c.fill(); c.beginPath(); c.moveTo(x + 6 * s, y - 18 * s); c.quadraticCurveTo(x + 10 * s, y - 34 * s, x + 14 * s, y - 36 * s); c.lineTo(x + 18 * s, y - 34 * s); c.quadraticCurveTo(x + 12 * s, y - 26 * s, x + 11 * s, y - 15 * s); c.fill(); c.beginPath(); c.ellipse(x + 17 * s, y - 37 * s, 5 * s, 3.4 * s, 0, 0, TAU); c.fill(); c.fillRect(x - 6 * s, y - 9 * s, 3.5 * s, 9 * s); c.fillRect(x + 3 * s, y - 9 * s, 3.5 * s, 9 * s); c.fillStyle = '#222'; c.beginPath(); c.arc(x + 18.5 * s, y - 38 * s, .9 * s, 0, TAU); c.fill(); c.fillStyle = '#4f9e4a'; for (let k = 0; k < 4; k++) { c.beginPath(); c.arc(x - 6 * s + k * 4 * s, y - 20 * s, 1.6 * s, 0, TAU); c.fill(); } return; }
     const slip = m.slip && clock - m.slip < 2.5, body = m.kind === 'robot' ? '#c0c8d4' : m.kind === 'runner' ? '#ffffff' : m.kind === 'band' ? '#d9533e' : m.col;
-    c.save(); c.translate(x, y - bob); if (slip) c.rotate(Math.PI / 2 * Math.min(1, (clock - m.slip) * 4));
+    c.save(); c.translate(x, y - bob + (m.sit ? 3 * s : 0)); if (slip) c.rotate(Math.PI / 2 * Math.min(1, (clock - m.slip) * 4));
     c.fillStyle = 'rgba(0,0,0,.15)'; c.beginPath(); c.ellipse(0, bob, 3 * s, 1.2 * s, 0, 0, TAU); c.fill();
     c.fillStyle = body; c.fillRect(-2.2 * s, -9 * s, 4.4 * s, 7 * s); c.fillStyle = '#3b3f4a'; c.fillRect(-2 * s, -2 * s, 1.6 * s, 2 * s); c.fillRect(.4 * s, -2 * s, 1.6 * s, 2 * s);
     c.fillStyle = m.kind === 'robot' ? '#9aa6b5' : m.skin; c.beginPath(); c.arc(0, -11.5 * s, 2.6 * s, 0, TAU); c.fill();
     if (m.kind === 'chef') { c.fillStyle = '#fff'; c.fillRect(-2.4 * s, -16.5 * s, 4.8 * s, 3.5 * s); }
     if (m.kind === 'robot') { c.fillStyle = '#ff5d5d'; c.fillRect(-.6 * s, -16 * s, 1.2 * s, 2.4 * s); }
+    if (m.kind === 'sweeper') { c.strokeStyle = '#8a6f55'; c.lineWidth = 1.2 * s; c.beginPath(); c.moveTo(2 * s, -8 * s); c.lineTo(5 * s + Math.sin(clock * 4) * 2 * s, 0); c.stroke(); }
+    if (m.can) { c.fillStyle = '#5b8fd6'; c.fillRect(2 * s, -6 * s, 3.4 * s, 3 * s); }
+    if (m.brush) { c.strokeStyle = '#7a5235'; c.lineWidth = s; c.beginPath(); c.moveTo(2 * s, -7 * s); c.lineTo(5 * s, -9 * s + Math.sin(clock * 3) * s); c.stroke(); }
+    if (m.book) { c.fillStyle = '#d0543a'; c.fillRect(-2.5 * s, -9 * s, 5 * s, 3 * s); }
     if (m.kind === 'runner') { c.fillStyle = '#d0543a'; c.font = `800 ${3.6 * s}px system-ui`; c.textAlign = 'center'; c.fillText(String(7 + (m.ph * 10 | 0) % 90), 0, -5 * s); }
     if (m.kind === 'band') { c.fillStyle = '#ffd23f'; c.beginPath(); c.moveTo(2 * s, -8 * s); c.lineTo(7 * s, -11 * s); c.lineTo(7 * s, -5 * s); c.closePath(); c.fill(); c.fillStyle = '#2d3440'; c.fillRect(-2.6 * s, -16.5 * s, 5.2 * s, 3 * s); }
     if (m.guitar) { c.fillStyle = '#b5652d'; c.beginPath(); c.ellipse(2.5 * s, -5 * s, 2.6 * s, 2 * s, -.6, 0, TAU); c.fill(); c.fillRect(3 * s, -10 * s, 1 * s, 5 * s); }
@@ -750,6 +843,9 @@ const ToyTown = (() => {
     if (e.hat) push(e.hat.x + e.hat.y + 1, () => { const [x, y] = P(e.hat.x, e.hat.y, e.hat.z); c.fillStyle = '#3b3f4a'; c.beginPath(); c.ellipse(x, y, 5 * S, 1.6 * S, Math.sin(clock * 5) * .4, 0, TAU); c.fill(); c.fillRect(x - 2.6 * S, y - 5 * S, 5.2 * S, 5 * S); });
     if (e.ball) push(e.ball.x + e.ball.y + 2, () => { const [x, y] = P(e.ball.x, e.ball.y, e.ball.z); c.fillStyle = '#c23b2b'; c.beginPath(); c.arc(x, y, 2.4 * S, 0, TAU); c.fill(); });
     if (e.glow) push(e.x + e.y + .5, () => { const [x, y] = P(e.x, e.y, 10), g = c.createRadialGradient(x, y, 0, x, y, 40 * S); g.addColorStop(0, 'rgba(255,200,90,.35)'); g.addColorStop(1, 'rgba(255,200,90,0)'); c.fillStyle = g; c.fillRect(x - 40 * S, y - 40 * S, 80 * S, 80 * S); });
+    if (e.kite && e.kite.kid) push(e.kite.kid.x + e.kite.kid.y + 30, () => { const k = e.kite.kid, [hx, hy] = P(k.x, k.y, 12), t = clock * .8 + e.kite.ph, [kx, ky] = P(k.x + 1.2 + Math.sin(t) * .3, k.y - 1.6 + Math.cos(t * 1.3) * .2, 90 + Math.sin(t * 1.7) * 8); c.strokeStyle = 'rgba(60,60,60,.6)'; c.lineWidth = 1; c.beginPath(); c.moveTo(hx, hy); c.quadraticCurveTo((hx + kx) / 2, (hy + ky) / 2 + 20 * S, kx, ky); c.stroke(); c.fillStyle = '#e2463a'; c.beginPath(); c.moveTo(kx, ky - 7 * S); c.lineTo(kx + 5 * S, ky); c.lineTo(kx, ky + 8 * S); c.lineTo(kx - 5 * S, ky); c.closePath(); c.fill(); c.fillStyle = '#ffd23f'; c.beginPath(); c.moveTo(kx, ky - 7 * S); c.lineTo(kx + 5 * S, ky); c.lineTo(kx, ky); c.closePath(); c.fill(); c.strokeStyle = '#3f8fd6'; c.beginPath(); c.moveTo(kx, ky + 8 * S); for (let j = 1; j < 5; j++) c.lineTo(kx + Math.sin(t * 3 + j) * 3 * S, ky + 8 * S + j * 4 * S); c.stroke(); });
+    if (e.flies) for (const f of e.flies) push(e.x + e.y + 1.5, () => { const a = clock * .6 + f.ph, [x, y] = P(e.x + Math.cos(a) * 1.2, e.y + Math.sin(a * 1.3) * 1.2, 14 + Math.sin(a * 2) * 6), w = Math.abs(Math.sin(clock * 9 + f.ph)) * 3 * S + .6 * S; c.fillStyle = f.c; c.beginPath(); c.ellipse(x - w * .6, y, w, 2.4 * S, -.4, 0, TAU); c.ellipse(x + w * .6, y, w, 2.4 * S, .4, 0, TAU); c.fill(); });
+    if (e.nap) push(e.nap.b.x + e.nap.b.y + 1.1, () => { const [x, y] = P(e.nap.b.x + .5, e.nap.b.y + .5, e.nap.z + 4), br = 1 + Math.sin(clock * 1.2) * .06; c.fillStyle = '#ff9c3a'; c.beginPath(); c.ellipse(x, y, 5 * S * br, 2.8 * S * br, 0, 0, TAU); c.fill(); c.beginPath(); c.arc(x + 4.5 * S, y - 1 * S, 2.4 * S, 0, TAU); c.fill(); c.strokeStyle = '#ff9c3a'; c.lineWidth = 1.6 * S; c.beginPath(); c.moveTo(x - 5 * S, y); c.quadraticCurveTo(x - 9 * S, y + 2 * S, x - 6 * S, y + 4 * S); c.stroke(); c.fillStyle = 'rgba(45,52,64,.7)'; c.font = `700 ${7 * S}px system-ui`; c.fillText('z', x + 8 * S, y - 8 * S - (clock % 2) * 4 * S); c.fillText('z', x + 12 * S, y - 14 * S - ((clock + 1) % 2) * 4 * S); });
     if (e.bigduck) push(e.x + 13.9 + .5, () => { const [x, y] = P(e.x, 13.9, 0), s = S * 3.2; c.fillStyle = '#ffd23f'; c.beginPath(); c.ellipse(x, y - 4 * s, 7 * s, 4 * s, 0, 0, TAU); c.fill(); c.beginPath(); c.arc(x + 5 * s, y - 9 * s, 3.6 * s, 0, TAU); c.fill(); c.fillStyle = '#ff8a3d'; c.beginPath(); c.ellipse(x + 9 * s, y - 8.5 * s, 2 * s, 1 * s, 0, 0, TAU); c.fill(); c.fillStyle = '#222'; c.beginPath(); c.arc(x + 6 * s, y - 10 * s, .7 * s, 0, TAU); c.fill(); });
     if (e.drones) for (const d of e.drones) push(d.x + d.y + 2, () => { const [x, y] = P(d.x, d.y, d.z); c.fillStyle = '#3b3f4a'; c.fillRect(x - 6 * S, y - 1 * S, 12 * S, 2 * S); c.fillStyle = 'rgba(200,210,220,.7)'; for (const k of [-6, 6]) { c.beginPath(); c.ellipse(x + k * S, y - 2 * S, 3 * S, .8 * S, 0, 0, TAU); c.fill(); } if (d.box) { c.fillStyle = '#c79a5a'; c.fillRect(x - 2.5 * S, y + 1 * S, 5 * S, 4 * S); } });
   }
@@ -782,10 +878,11 @@ const ToyTown = (() => {
     for (const m of movers) if (m.type === 'person') m.umbrella = raining && !m.kind;
     if (raining) for (let k = 0; k < 6; k++) parts.push({x: Math.random() * 18, y: Math.random() * 18, z: 160, vx: 0, vy: 0, vz: -260, g: 0, life: .6, t: 0, col: 'rgba(120,170,220,.7)', r: 1, rain: true});
     // Chaos: keep a few things going at once.
-    if ((nextEvent -= dt) <= 0) { if (events.length < 4) randomEvent(); nextEvent = 2.5 + Math.random() * 3.5; }
+    if ((nextEvent -= dt) <= 0) { if (events.length < 3) randomEvent(); nextEvent = 7 + Math.random() * 6; }   // an unhurried rhythm
     // Traffic: keep the streets busy as cars leave and events come and go.
-    while (movers.filter(m => m.type === 'car' && !m.kind.startsWith('fire')).length < 12) spawnCar();
-    while (movers.filter(m => m.type === 'person' && !m.kind).length < 22) spawnPerson();
+    while (movers.filter(m => m.type === 'car' && (m.kind === 'car' || m.kind === 'bus' || m.kind === 'taxi')).length < CARS) spawnCar();
+    while (movers.filter(m => m.kind === 'bike').length < BIKES) spawnBike();
+    while (movers.filter(m => m.type === 'person' && !m.kind).length < PEOPLE) spawnPerson();
     // The director: glide towards the featured event, then back out.
     const close = director && clock < directorUntil && events.includes(director);
     cam.tx = close ? director.x : N / 2; cam.ty = close ? director.y : N / 2; cam.tz = close ? (narrow() ? 1.25 : 1.45) : 1;
@@ -805,6 +902,9 @@ const ToyTown = (() => {
     else if (p.kind === 'rangoli') push(p.x + p.y - 3, () => drawProp(ctx, p, night));
     else if (p.kind !== 'fountain' && p.kind !== 'stadium' && p.kind !== 'launchpad' && p.kind !== 'duck') push(p.x + p.y, () => drawProp(ctx, p, night)); else push(p.kind === 'duck' ? p.x + p.y : -1 + p.x + p.y - 2, () => drawProp(ctx, p, night));
     for (const m of movers) push(m.x + m.y + .05, () => drawMover(ctx, m, night > .5));
+    const Lp = lightPhase();
+    for (const l of LINES) for (const k of LINES) push(l + k + 1.9, () => { const x = l + .96, y = k + .96, [bx, by] = P(x, y, 0), [tx, ty] = P(x, y, 20); ctx.strokeStyle = '#3b3f4a'; ctx.lineWidth = Math.max(1, 1.4 * S); ctx.beginPath(); ctx.moveTo(bx, by); ctx.lineTo(tx, ty); ctx.stroke(); ctx.fillStyle = '#2d3440'; ctx.fillRect(tx - 2.6 * S, ty - 9 * S, 5.2 * S, 10 * S);
+      const col = a => a === Lp.green ? (Lp.amber ? '#ffb020' : '#3ddc5a') : '#ff4d4d'; ctx.fillStyle = col('x'); ctx.beginPath(); ctx.arc(tx - 1.2 * S, ty - 6 * S, 1.3 * S, 0, TAU); ctx.fill(); ctx.fillStyle = col('y'); ctx.beginPath(); ctx.arc(tx + 1.2 * S, ty - 2.5 * S, 1.3 * S, 0, TAU); ctx.fill(); });
     for (const e of events) drawEventExtras(ctx, e, push);
     for (const q of parts) push(q.x + q.y + (q.rain ? 50 : .2), () => { const [x, y] = P(q.x, q.y, q.z); ctx.globalAlpha = Math.max(0, 1 - q.t / q.life); ctx.fillStyle = q.col; if (q.rain) ctx.fillRect(x, y, 1 * S, 6 * S); else if (q.star || q.note) { ctx.font = `${(q.note ? 12 : 10) * S}px system-ui`; ctx.fillText(q.note ? '♪' : '★', x, y); } else { ctx.beginPath(); ctx.arc(x, y, q.r * S, 0, TAU); ctx.fill(); } ctx.globalAlpha = 1; });
     list.sort((a, b) => a[0] - b[0]); for (const [, f] of list) f();
@@ -825,7 +925,7 @@ const ToyTown = (() => {
     const lead = list[0], short = t => t.length > 100 ? t.slice(0, 97) + '…' : t;
     document.getElementById('date').textContent = new Date().toLocaleDateString(undefined, {weekday: 'short', day: 'numeric', month: 'short'});
     document.getElementById('theme').textContent = `${lead.emoji} Today: ${lead.title}`;
-    document.getElementById('news').textContent = lead.story ? `Inspired by today's news: ${short(lead.story)}` + (list.length > 1 ? `  Also in town: ${list.slice(1).map(v => v.emoji + ' ' + v.title).join(', ')}.` : '') : 'A new town every day. Something silly is always happening.';
+    document.getElementById('news').textContent = lead.story ? `Inspired by today's news: ${short(lead.story)}` + (list.length > 1 ? `  Also in town: ${list.slice(1).map(v => v.emoji + ' ' + v.title).join(', ')}.` : '') : 'A gentle little town, new every day.';
   }
   async function start() {
     layout();
@@ -847,7 +947,7 @@ const ToyTown = (() => {
   function poke(e) {
     const r = cv.getBoundingClientRect(), sx = (e.clientX - r.left) * dpr, sy = (e.clientY - r.top) * dpr;
     const u = (sx - W / 2) / (TW * S), v = (sy - H / 2) / (TH * S), gx = (u + v) / 2 + cam.x, gy = (v - u) / 2 + cam.y;
-    const names = ['hydrant', 'balloons', 'banana', 'pigeons', 'chickens', 'cart', 'dog'];
+    const names = ['balloon', 'butterflies', 'kite', 'pigeons', 'busker'];
     startEvent(names[Math.random() * names.length | 0], clamp(1.5, gx, 16.5), clamp(1.5, gy, 16.5));
   }
   if (typeof window !== 'undefined' && cv) {
@@ -857,5 +957,5 @@ const ToyTown = (() => {
     addEventListener('hashchange', () => location.reload());
     start();
   }
-  return {themeFromNews, newsThemes, VARIANTS, VARIANT_EVENTS: () => Object.keys(VARIANT_EVENTS), decorate, setToday: l => { today_ = l; }, PACE, THEMES, GRIM, build, update, events: () => events, movers: () => movers, buildings: () => buildings, props: () => props, startEvent, randomEvent, setPlaying: v => { playing = v; }, debug: () => ({clock, theme, seed, night: nightLevel(), cam: {...cam}})};
+  return {CALM, lightPhase, themeFromNews, newsThemes, VARIANTS, VARIANT_EVENTS: () => Object.keys(VARIANT_EVENTS), decorate, setToday: l => { today_ = l; }, PACE, THEMES, GRIM, build, update, events: () => events, movers: () => movers, buildings: () => buildings, props: () => props, startEvent, randomEvent, setPlaying: v => { playing = v; }, debug: () => ({clock, theme, seed, night: nightLevel(), cam: {...cam}})};
 })();
