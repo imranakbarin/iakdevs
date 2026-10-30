@@ -24,7 +24,7 @@ class AC {
   get currentTime() { return clock.t; }
   constructor() { this.sampleRate = 8000; this.state = 'running'; this.destination = new Node(); }
   createGain() { return new Node(); } createOscillator() { return new Node(); } createBufferSource() { return new Node(); }
-  createBiquadFilter() { return new Node(); } createDynamicsCompressor() { return new Node(); }
+  createBiquadFilter() { return new Node(); } createDynamicsCompressor() { return new Node(); } createConvolver() { return new Node(); }
   createBuffer(c, n) { return {getChannelData: () => new Float32Array(n)}; }
   resume() { this.state = 'running'; return Promise.resolve(); } suspend() { this.state = 'suspended'; return Promise.resolve(); }
 }

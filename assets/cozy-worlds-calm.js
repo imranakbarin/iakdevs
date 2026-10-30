@@ -108,7 +108,7 @@ window.CozyWorlds=(()=>{
       const src=ctx.createBufferSource();src.buffer=buffer;src.loop=true;const hp=ctx.createBiquadFilter();hp.type='highpass';const lp=ctx.createBiquadFilter();lp.type='lowpass';const gain=ctx.createGain();gain.gain.value=0;
       src.connect(hp);hp.connect(lp);lp.connect(gain);gain.connect(ctx.destination);src.start();audio={ctx,src,hp,lp,gain};
     }
-    function applyAudio(){if(!audio)return;const now=audio.ctx.currentTime,rain=scene.sound==='rain';audio.hp.frequency.setTargetAtTime(rain?380:35,now,.6);audio.lp.frequency.setTargetAtTime(rain?4200:350,now,.6);const gain=audio.gain.gain;if(gain.cancelAndHoldAtTime)gain.cancelAndHoldAtTime(now);else{gain.cancelScheduledValues(now);gain.setValueAtTime(gain.value,now);}gain.linearRampToValueAtTime(audioOn?(rain?.045:.14):0,now+1.1);}
+    function applyAudio(){if(!audio)return;const now=audio.ctx.currentTime,rain=scene.sound==='rain';audio.hp.frequency.setTargetAtTime(rain?240:35,now,.6);audio.lp.frequency.setTargetAtTime(rain?2300:350,now,.6);const gain=audio.gain.gain;if(gain.cancelAndHoldAtTime)gain.cancelAndHoldAtTime(now);else{gain.cancelScheduledValues(now);gain.setValueAtTime(gain.value,now);}gain.linearRampToValueAtTime(audioOn?(rain?.045:.14):0,now+1.1);}
     on($('#audio'),'click',async()=>{
       if(audioPending)return;audioPending=true;
       try{if(!audio)initAudio();if(audio.ctx.state==='suspended')await audio.ctx.resume();if(!running)return;audioOn=!audioOn;applyAudio();update();}
