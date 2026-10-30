@@ -51,7 +51,7 @@ Inputs are recorded on the scene clock, so paused redraws remain pixel-identical
 
 ## World art: richer live paintings
 
-`assets/art-richer.js` fills each live tradition the way its real paintings fill the frame, in its own idiom: Gond gets a patterned leaf-rayed sun (a moon in dark mode), dash-filled clouds and flocks of dotted birds; Warli the ray-circled sun and moon, V-stroke birds, ranges of dotted triangle hills and little huts; Kangra hazy blue ranges behind its hills, soft clouds (blurred once into a single shape) and birds; Japan gold kasumi mist bands and cranes; China pale ink-wash peaks, mist bands and skeins of geese; Mexico patterned amate birds. Madhubani, already dense, is unchanged. All of it is added to each chunk as static layers (seeded per chunk, painted once into the cached tiles, so no per-frame cost), after the tradition's own grammar.
+`assets/art-richer.js` fills each live tradition the way its real paintings fill the frame, in its own idiom: Gond gets a patterned leaf-rayed sun (a moon in dark mode), dash-filled clouds and flocks of dotted birds; Warli the ray-circled sun and moon, V-stroke birds, ranges of dotted triangle hills and little huts; Kangra soft clouds (blurred once into a single shape) and birds; Japan gold kasumi mist bands and cranes; China pale ink-wash peaks, mist bands and skeins of geese; Mexico patterned amate birds. Madhubani, already dense, is unchanged. All of it is added to each chunk as static layers (seeded per chunk, painted once into the cached tiles, so no per-frame cost), after the tradition's own grammar.
 
 ## World art wonders
 

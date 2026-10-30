@@ -4,8 +4,8 @@
  *   flocks of dotted birds in the sky.
  * - Warli: the ray-circled sun and moon, V-stroke birds, a range of dotted
  *   triangle hills and little huts along the fields.
- * - Kangra: hazy distant blue ranges, soft clouds and birds (the painted
- *   trees and shrubs of its own grammar are left to stand on their own).
+ * - Kangra: soft clouds and birds in its sky (its own painted hills, trees
+ *   and shrubs are left as they are).
  * - Japan: gold kasumi mist bands drifting across sky and hills, cranes.
  * - China: pale distant peaks in ink wash, mist bands and skeins of geese.
  * - Mexico: amate-style patterned birds across the sky.
@@ -110,15 +110,7 @@ const ArtRicher = (() => {
   /* ---- Kangra ---- */
   const kRange = (x, off, amp) => topY + 250 + off - amp * (.55 + .45 * Math.sin(x * .007 + off) * Math.sin(x * .0031 + 1.3));
   function kangra(x0, add, r) {
-    add(-1, c => {   // a continuous function of x over exactly this chunk, so neighbours meet without overlap
-      for (const [off, amp, col] of [[0, 70, '147,167,196'], [28, 46, '160,184,190']]) {
-        const g = c.createLinearGradient(0, topY + 250 + off - amp, 0, topY + 250 + off + 70);
-        g.addColorStop(0, `rgba(${col},.62)`); g.addColorStop(.55, `rgba(${col},.4)`); g.addColorStop(1, `rgba(${col},0)`);
-        c.fillStyle = g; c.beginPath(); c.moveTo(x0 - .5, topY + 250 + off + 70);
-        for (let x = x0 - .5; x <= x0 + 600.5; x += 10) c.lineTo(x, kRange(x, off, amp));
-        c.lineTo(x0 + 600.5, kRange(x0 + 600.5, off, amp)); c.lineTo(x0 + 600.5, topY + 250 + off + 70); c.closePath(); c.fill();
-      }
-    });
+    // (No distant range here: drawn over the far hills, it cut their trees off at the roots.)
     if (r() < .75) {   // a soft cloud: drawn once, blurred into one shape, so no puff or ring shows
       const x = x0 + 80 + r() * 440, y = topY + 50 + r() * 70, w = 170 + r() * 90, q = mulberry32(Math.round(x));
       const lobes = Array.from({length: 7}, (_, k) => [(k / 6 - .5) * w * .8, -Math.sin(k / 6 * Math.PI) * w * .1 + (q() - .5) * 6, w * (.1 + q() * .06)]);
