@@ -31,6 +31,12 @@ const KangraWorld=(()=>{
  }
  function ground(c,xa,xb){
   surface(c,xa,xb,gy,'#99a777','#6d8454',0x495);
+  // A darker lip of grass along the meadow's edge: without it the meadow and the hills behind
+  // are one green, and what stands on the edge looks pasted on.
+  c.save();c.beginPath();c.moveTo(xa,gy(xa));for(let x=Math.floor(xa/4)*4;x<=xb+4;x+=4)c.lineTo(x,gy(x));c.lineTo(xb+4,gy(xb)+30);c.lineTo(xa,gy(xa)+30);c.closePath();c.clip();
+  for(let x=Math.floor(xa/4)*4;x<=xb+4;x+=4){const y=gy(x),g=c.createLinearGradient(0,y,0,y+22);g.addColorStop(0,'rgba(58,84,44,.32)');g.addColorStop(1,'rgba(58,84,44,0)');c.fillStyle=g;c.fillRect(x,y,4.5,22);}
+  c.restore();
+  for(let i=Math.floor(xa/5)-1;i<xb/5+1;i++){const q=mulberry32(hash(seed^0x498,i)),x=i*5+q()*4,y=gy(x)+1.5;c.beginPath();c.moveTo(x,y);c.quadraticCurveTo(x+(q()-.5)*3,y-3,x+(q()-.5)*4,y-4-q()*4);line(c,q()<.6?'rgba(64,92,46,.7)':'rgba(140,156,96,.7)',.7);}
   c.save();c.beginPath();c.moveTo(xa,gy(xa));for(let x=Math.floor(xa/4)*4;x<=xb+4;x+=4)c.lineTo(x,gy(x));c.lineTo(xb+4,RIVER);c.lineTo(xa,RIVER);c.closePath();c.clip();
   for(let i=Math.floor(xa/8)-1;i<xb/8+1;i++){
    const q=mulberry32(hash(seed^0x496,i)),x=i*8+q()*6,y=gy(x)+6+q()*(RIVER-gy(x)-12);
@@ -46,6 +52,7 @@ const KangraWorld=(()=>{
  }
  function cypress(c,x,q){
   const y=gy(x)+3,h=110+q()*50,w=14+q()*6;c.save();
+  ArtDepth.groundShadow(c,x+3,y,w*1.8,w*.35,.3);
   const im=ArtDepth.asset('kangraCypress');if(im.width){c.drawImage(im,296,18,435,1503,x-w,y-h,w*2,h);c.restore();return;}
   c.beginPath();c.moveTo(x,y);c.quadraticCurveTo(x-2,y-h*.4,x,y-h);line(c,'#75694b',3);
   for(let j=0;j<180;j++){
