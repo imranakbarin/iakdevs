@@ -705,8 +705,8 @@ const ToyTown = (() => {
     if (has('mars')) props.push({kind: 'skymars'});
     if (has('phone')) { const t = buildings.filter(b => b.kind === 'tower').sort((a, b) => b.h - a.h)[0]; if (t) props.push({kind: 'billboard', x: t.x + .5, y: t.y + .5, z: t.h}); }
     if (has('marathon')) props.push({kind: 'finish', x: 16, y: LINES[1] + .5});
-    // The Toy Town Times is a billboard on the roof of a building near the front of town, as real ones are.
-    { const host = buildings.filter(b => b.kind === 'shop' || b.kind === 'tower' || b.kind === 'house').sort((a, b) => (b.x + b.y) - (a.x + a.y) || a.h - b.h)[0]; if (host) props.push({kind: 'times', x: host.x + .5, y: host.y + .5, z: host.h + (host.kind === 'house' ? 14 : 0), host}); }
+    // The Toy Town Times stands on the grass at the town's right-hand corner: only sky behind it, so it hides no houses.
+    { const bx = 17.25, by = .75; for (let k = props.length - 1; k >= 0; k--) if (props[k].kind === 'tree' && Math.hypot(props[k].x - bx, props[k].y - by) < 2) props.splice(k, 1); props.push({kind: 'times', x: bx, y: by, z: 0}); }
     // Newspaper kiosks on two corners, bunting over the streets on big days.
     { const spots = []; for (let y = 2; y < 16; y++) for (let x = 2; x < 16; x++) { const t = tile(x, y); if (!t.used && !t.decor && (t.kind === 'plaza' || t.kind === 'park') && DIRS.some(([dx, dy]) => (tile(x + dx, y + dy) || {}).kind === 'road')) spots.push([x, y]); }
       for (const [x, y] of [spots[0], spots[(spots.length / 2) | 0]].filter(Boolean)) { tile(x, y).decor = true; const [dx, dy] = DIRS.find(([dx, dy]) => (tile(x + dx, y + dy) || {}).kind === 'road'); props.push({kind: 'kiosk', x: x + .5 + dx * .28, y: y + .5 + dy * .28}); } }   // on a free corner by the pavement
