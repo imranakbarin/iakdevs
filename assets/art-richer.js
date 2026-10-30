@@ -143,13 +143,13 @@ const ArtRicher = (() => {
     if (r() < .8) {   // a curling, gold-edged cloud
       const x = x0 + 80 + r() * 440, y = topY + 50 + r() * 70, w = 150 + r() * 90;
       add(-1, c => {
-        // Puffs on a soft base, one fill, then a gold rim only along the tops, as the miniatures edge them.
-        const puffs = [0, 1, 2, 3].map(k => [x - w * .33 + k * w * .22, y - (k % 2 ? 9 : 2), w * (.13 + (k % 2) * .04)]);
-        c.save(); c.fillStyle = 'rgba(250,245,232,.88)'; c.beginPath(); c.ellipse(x, y + w * .05, w * .48, w * .09, 0, 0, TAU);
-        for (const [px, py, pr] of puffs) { c.moveTo(px + pr, py); c.arc(px, py, pr, 0, TAU); }
-        c.fill(); c.strokeStyle = 'rgba(190,150,70,.85)'; c.lineWidth = 1.3;
-        for (const [px, py, pr] of puffs) { c.beginPath(); c.arc(px, py, pr, Math.PI * 1.08, Math.PI * 1.92); c.stroke(); c.beginPath(); c.arc(px, py + pr * .25, pr * .5, Math.PI * 1.15, Math.PI * 1.85); c.lineWidth = .8; c.stroke(); c.lineWidth = 1.3; }
-        c.restore();
+        // Soft puffs with a faint warm edge, no outline: a cut-out cloud looked wrong over the miniature.
+        const night = !!T.night, core = night ? '176,188,206' : '252,248,238';
+        for (const [dx, dy, rr] of [[-.33, 2, .15], [-.12, -8, .19], [.1, -3, .17], [.3, 3, .13]]) {
+          const px = x + dx * w, py = y + dy, pr = rr * w, g = c.createRadialGradient(px, py - pr * .2, pr * .1, px, py, pr * 1.3);
+          g.addColorStop(0, `rgba(${core},.8)`); g.addColorStop(.65, `rgba(${core},.5)`); g.addColorStop(.85, night ? 'rgba(150,160,180,.18)' : 'rgba(232,206,150,.25)'); g.addColorStop(1, 'rgba(232,206,150,0)');
+          c.fillStyle = g; c.beginPath(); c.arc(px, py, pr * 1.3, 0, TAU); c.fill();
+        }
       });
     }
     if (r() < .6) { const x = x0 + r() * 600, y = topY + 80 + r() * 60, n = 3 + (r() * 4 | 0); add(1, c => vbirds(c, x, y, n, .8, 'rgba(59,42,28,.7)', mulberry32(Math.round(x)))); }

@@ -56,11 +56,42 @@ const ArtWonders = (() => {
     for (let j = 1; j <= 4; j++) { const bx = Math.sin(t * 2.4 + j + k) * 7 * s, by = 30 * s + j * 13 * s; c.beginPath(); c.moveTo(bx - 4 * s, by - 3 * s); c.lineTo(bx + 4 * s, by + 3 * s); c.moveTo(bx + 4 * s, by - 3 * s); c.lineTo(bx - 4 * s, by + 3 * s); c.stroke(); }
     c.restore();
   }
+  // Painterly traditions get a soft, unlined cloud; folk ones a single clean
+  // silhouette (every lobe filled over a wider stroke, so only the outer edge shows).
+  const PAINTERLY = {kangra: 1, japan: 1, china: 1, mexico: 1};
+  const LOBES = [[-120, 6, 34], [-70, -10, 44], [-15, -22, 52], [42, -8, 46], [95, 4, 36], [135, 12, 26]];
   function cloud(c, style, x, y, s) {
-    c.beginPath(); c.moveTo(x - 170 * s, y + 20 * s);
-    for (let j = 0; j <= 6; j++) { const cx = x - 150 * s + j * 50 * s; c.arc(cx, y + 4 * s, (26 + (j % 3) * 9) * s, Math.PI, 0); }
-    c.lineTo(x + 170 * s, y + 20 * s); c.closePath();
-    c.fillStyle = white(style) ? 'rgba(248,239,226,.18)' : T.light; c.fill(); c.strokeStyle = ink(); c.lineWidth = 1.8 * s; c.stroke();
+    c.save();
+    if (PAINTERLY[style]) {
+      const night = isDark(), core = night ? '178,190,206' : '250,247,240', rim = night ? '120,134,156' : '214,218,222';
+      for (const [dx, dy, r] of LOBES) {
+        const g = c.createRadialGradient(x + dx * s, y + dy * s - r * .25 * s, r * .1 * s, x + dx * s, y + dy * s, r * 1.25 * s);
+        g.addColorStop(0, `rgba(${core},.82)`); g.addColorStop(.6, `rgba(${core},.55)`); g.addColorStop(1, `rgba(${rim},0)`);
+        c.fillStyle = g; c.beginPath(); c.arc(x + dx * s, y + dy * s, r * 1.25 * s, 0, TAU); c.fill();
+      }
+      const base = c.createLinearGradient(0, y, 0, y + 40 * s); base.addColorStop(0, `rgba(${rim},.12)`); base.addColorStop(1, `rgba(${rim},0)`);   // a grey underside, where the rain falls from
+      c.fillStyle = base; c.beginPath(); c.ellipse(x, y + 14 * s, 150 * s, 22 * s, 0, 0, TAU); c.fill();
+    } else {
+      const shape = () => { c.beginPath(); for (const [dx, dy, r] of LOBES) { c.moveTo(x + (dx + r) * s, y + dy * s); c.arc(x + dx * s, y + dy * s, r * s, 0, TAU); } c.rect(x - 150 * s, y, 300 * s, 22 * s); };
+      shape(); c.strokeStyle = ink(); c.lineWidth = 3.6 * s; c.lineJoin = 'round'; c.stroke();
+      shape(); c.fillStyle = white(style) ? T.bg : T.light; c.fill();
+      if (style === 'gond') { c.save(); shape(); c.clip(); c.strokeStyle = ink(); c.globalAlpha *= .35; c.lineWidth = 1; c.beginPath(); for (let yy = y - 60 * s; yy < y + 20 * s; yy += 8 * s) for (let xx = x - 150 * s + ((yy / 8) % 2) * 6; xx < x + 150 * s; xx += 13 * s) { c.moveTo(xx, yy); c.lineTo(xx + 6 * s, yy); } c.stroke(); c.restore(); }
+      if (white(style)) { shape(); c.fillStyle = 'rgba(248,239,226,.18)'; c.fill(); }
+    }
+    c.restore();
+  }
+  function rain(c, style, cx, cy, t, fade) {
+    const soft = PAINTERLY[style];
+    c.save(); c.lineCap = 'round';
+    c.strokeStyle = soft ? (isDark() ? 'rgba(200,212,228,1)' : 'rgba(150,164,176,1)') : white(style) ? T.ink : style === 'gond' || style === 'madhubani' ? WATER[0] : ink();
+    c.lineWidth = soft ? .8 : 1.1;
+    for (let k = 0; k < (soft ? 60 : 34); k++) {
+      const x = cx - 140 + (k * 37) % 280, y = cy + 26 + ((t * (soft ? 260 : 210) + k * 61) % 300), len = soft ? 16 : 10;
+      c.globalAlpha = fade * (soft ? .28 : .5) * Math.min(1, (330 - (y - cy)) / 90, (y - cy - 26) / 30);
+      if (c.globalAlpha <= 0) continue;
+      c.beginPath(); c.moveTo(x, y); c.lineTo(x - len * .3, y + len); c.stroke();
+    }
+    c.restore();
   }
 
   function draw(style, c, xa, xb, t) {
@@ -96,8 +127,7 @@ const ArtWonders = (() => {
         }
         c.globalAlpha = edgeFade(cx, a0);
         if (c.globalAlpha > 0) {
-          c.strokeStyle = white(style) ? T.ink : style === 'gond' || style === 'madhubani' || style === 'mexico' ? WATER[0] : ink(); c.lineWidth = 1.3;
-          for (let k = 0; k < 44; k++) { const x = cx - 150 + (k * 37) % 300, y = cy + 30 + ((t * 230 + k * 61) % 300); c.globalAlpha = edgeFade(cx, a0) * .6 * Math.min(1, (330 - (y - cy)) / 80); c.beginPath(); c.moveTo(x, y); c.lineTo(x - 5, y + 13); c.stroke(); }
+          rain(c, style, cx, cy, t, edgeFade(cx, a0));
           c.globalAlpha = edgeFade(cx, a0); cloud(c, style, cx, cy, 1);
         }
       } else if (w === 'fireflies') {
