@@ -433,7 +433,7 @@
     title = null; lastRegion = -1; arrival = null; chapter = null; chapters = 0; celebrated.clear(); journey = {start: 0, seeds0: 0, tumbles: 0, finds0: 0, arrived: -1};
     plan = null; stuckX = 0; stuckSince = 0; impatience = 0; progressX = 0; progressAt = 0; marks = []; hitStop = 0; jolt = -99; speech = null; lastSaid = -1e9; talk = {human: false}; risk = .25; tension = 0; wary = 0; stompTimes = []; history = []; moment = null; replay = null; lastReplay = -1e9; usedAt = new Map();
     simW = Math.round(viewW); run = {seed, w: simW, inputs: [], events: [], human: 0, m: 0};
-    prev = {cam, x: pl.x, y: pl.y};
+    prev = {cam, x: pl.x, y: pl.y, anim, sq};
   }
   function spawnUpTo(xRight) {
     for (let ci = Math.max(0, Math.floor(cam / (CW * TS)) - 1); ci <= Math.floor(xRight / (CW * TS)); ci++) {
@@ -1119,10 +1119,10 @@
     b[id] = e; store.set('pip-run:book', b);
     return first ? 'new' : mineBetter ? 'mine' : better ? 'best' : null;
   }
-  let prev = {cam: 0, x: 0, y: 0};
+  let prev = {cam: 0, x: 0, y: 0, anim: 0, sq: 0};
   function tick(src = liveInput) {
     if (replay) replay = null;   // only headless callers tick during a replay; the live loop pauses
-    if (!ghostSim) { prev = {cam, x: pl.x, y: pl.y}; for (const e of enemies) { e.px = e.x; e.py = e.y; } }
+    if (!ghostSim) { prev = {cam, x: pl.x, y: pl.y, anim, sq}; for (const e of enemies) { e.px = e.x; e.py = e.y; } }
     frameNo++;
     if (ghostSim) replayEvents();
     else { const w = Math.round(viewW); if (w !== simW) { simW = w; logEvent({f: frameNo, k: 'w', w}); } }
@@ -2415,7 +2415,7 @@
       if (mt) tiled(mt, .03, oy + bandH * .86 - mt.height);
       const sea = (par, base, a, shade) => {
         ctx.fillStyle = vgrad(oy + bandH * (base - .08), oy + bandH, `rgba(255,255,255,${a})`, `rgba(${shade},${a})`); ctx.beginPath(); ctx.moveTo(0, H);
-        for (let x = 0; x <= W + 12; x += 12) { const wx = x / S + cam * par + frameNo * .08; ctx.lineTo(x, oy + bandH * base - (Math.abs(Math.sin(wx * .045)) * 12 + Math.sin(wx * .011) * 6) * S); }
+        for (let x = 0; x <= W + 12; x += 12) { const wx = x / S + cam * par + clockNow() * .08; ctx.lineTo(x, oy + bandH * base - (Math.abs(Math.sin(wx * .045)) * 12 + Math.sin(wx * .011) * 6) * S); }
         ctx.lineTo(W, H); ctx.fill();
       };
       sea(.25, .8, .75, '214,208,240');
@@ -2434,7 +2434,7 @@
         const step = 150, cw = 100 * sc;
         for (let i = Math.floor((cam * par - cw) / step), u; (u = i * step) < cam * par + W / S + cw; i++) {
           const hc = hash(seed ^ salt, i); if (hc % 3 === 0) continue;
-          const spr = cloudSprite(hc % 4), x = (u + hc % 60 - cam * par - frameNo * .03 * par) * S, y = oy + bandH * (base + ((hc >>> 6) % 14) / 100);
+          const spr = cloudSprite(hc % 4), x = (u + hc % 60 - cam * par - clockNow() * .03 * par) * S, y = oy + bandH * (base + ((hc >>> 6) % 14) / 100);
           ctx.globalAlpha = fade * a; ctx.drawImage(spr, x, y - spr.height * sc, spr.width * sc, spr.height * sc); ctx.globalAlpha = fade;
         }
       }
@@ -2443,7 +2443,7 @@
         ctx.fillStyle = vgrad(y0 - 4 * S, H, '#f6f3fd', '#d9d2f0'); ctx.fillRect(0, y0 - 4 * S, W, H - y0 + 4 * S);
         for (let i = Math.floor((cam * par - 140) / step), u; (u = i * step) < cam * par + W / S + 40; i++) {
           const hc = hash(seed ^ salt, i), k = sc * (.85 + (hc >>> 5) % 6 * .1), spr = cloudSprite(hc % 4);
-          ctx.drawImage(spr, (u + hc % 30 - cam * par - frameNo * .05 * par) * S, y0 + (hc >>> 9) % 8 * S - spr.height * k * .8, spr.width * k, spr.height * k);
+          ctx.drawImage(spr, (u + hc % 30 - cam * par - clockNow() * .05 * par) * S, y0 + (hc >>> 9) % 8 * S - spr.height * k * .8, spr.width * k, spr.height * k);
         }
       }
     } else if (id === 'coast') {
@@ -2467,8 +2467,8 @@
       const sea = ctx.createLinearGradient(0, hz, 0, oy + bandH); sea.addColorStop(0, '#f4c49c'); sea.addColorStop(.18, '#c99aa6'); sea.addColorStop(.5, '#5f8fb4'); sea.addColorStop(1, '#2c6690');
       ctx.fillStyle = sea; ctx.fillRect(0, hz, W, H - hz);
       for (let i = 0; i < 44; i++) {   // the sun's path of glitter
-        const f = (i / 44) ** 1.7, y = hz + f * bandH * .36, spread = (8 + f * 70) * S, jx = Math.sin(i * 12.9898 + Math.floor(frameNo / 6 + i) * 4.1) * spread;
-        const a = lit * (.25 + .5 * (.5 + .5 * Math.sin(frameNo * .18 + i * 1.7))) * (1 - f * .6);
+        const f = (i / 44) ** 1.7, y = hz + f * bandH * .36, spread = (8 + f * 70) * S, jx = Math.sin(i * 12.9898 + Math.floor(clockNow() / 6 + i) * 4.1) * spread;
+        const a = lit * (.25 + .5 * (.5 + .5 * Math.sin(clockNow() * .18 + i * 1.7))) * (1 - f * .6);
         ctx.fillStyle = `rgba(255,236,190,${a.toFixed(3)})`; ctx.fillRect(sx + jx - (2 + f * 9) * S, y, (4 + f * 18) * S, Math.max(1, (.4 + f * 1.2) * S));
       }
       ctx.strokeStyle = 'rgba(255,255,255,.28)'; ctx.lineWidth = Math.max(1, S * .35);
@@ -2476,12 +2476,12 @@
         const f = (k / 9) ** 1.6, y = hz + f * bandH * .36, par = .04 + f * .4, step = 30 + f * 60;
         for (let u = Math.floor((cam * par - step) / step) * step; u < cam * par + W / S + step; u += step) {
           const hw = hash(seed ^ 0x5ea, Math.round(u / step) * 16 + k); if (hw % 3 === 0) continue;
-          const x = (u - cam * par + Math.sin(frameNo * .02 + k + u) * 6) * S, len = (8 + f * 26) * S * (.6 + (hw >>> 4) % 5 * .1);
+          const x = (u - cam * par + Math.sin(clockNow() * .02 + k + u) * 6) * S, len = (8 + f * 26) * S * (.6 + (hw >>> 4) % 5 * .1);
           ctx.beginPath(); ctx.moveTo(x, y); ctx.quadraticCurveTo(x + len / 2, y - (1 + f * 2) * S, x + len, y); ctx.stroke();
         }
       }
       for (let i = Math.floor(cam * .16 / 150) - 1, u; (u = i * 150) < cam * .16 + W / S + 150; i++) {   // fish leaping far out, now and then a school of three
-        const hf = hash(seed ^ 0xfa5, i), P = 280 + hf % 240, k = (frameNo + (hf >>> 9) % P) % P, school = hf % 4 ? 1 : 3;
+        const hf = hash(seed ^ 0xfa5, i), P = 280 + hf % 240, k = (clockNow() + (hf >>> 9) % P) % P, school = hf % 4 ? 1 : 3;
         for (let j = 0; j < school; j++) {
           const v = k - j * 7; if (v < 0 || v > 34) continue;
           const x = (u + (hf >>> 3) % 120 + j * 7 - cam * .16) * S, y = hz + bandH * (.1 + (hf >>> 14) % 12 / 100);
@@ -2495,19 +2495,19 @@
       }
       // The surf where the sea meets the beach: seen only in the gaps.
       const swell = 1 + 1.6 * (weatherAt(cam + viewW / 2).kind === 'squall' ? weatherAt(cam + viewW / 2).w : 0);   // a squall heaves the surf
-      const yw = oy + WATER_Y * S, foam = X => yw + (Math.sin((X / S + cam) * .09 + frameNo * .05) * 1.2 + Math.sin((X / S + cam) * .031 - frameNo * .03) * 1.6) * S * swell;
+      const yw = oy + WATER_Y * S, foam = X => yw + (Math.sin((X / S + cam) * .09 + clockNow() * .05) * 1.2 + Math.sin((X / S + cam) * .031 - clockNow() * .03) * 1.6) * S * swell;
       ctx.fillStyle = vgrad(yw - 2 * S, oy + bandH, '#4f8fb6', '#1f557c'); ctx.beginPath(); ctx.moveTo(0, H);
       for (let X = 0; X <= W + 8; X += 8) ctx.lineTo(X, foam(X)); ctx.lineTo(W, H); ctx.fill();
       ctx.strokeStyle = 'rgba(255,255,255,.8)'; ctx.lineWidth = Math.max(1, S * .7); ctx.beginPath();
       for (let X = 0; X <= W + 8; X += 8) X ? ctx.lineTo(X, foam(X)) : ctx.moveTo(X, foam(X)); ctx.stroke();
       ctx.fillStyle = 'rgba(255,255,255,.5)';
-      for (let i = 0; i < 30; i++) { const X = ((i * 97 - cam * S * .9 + frameNo * .6 * S) % (W + 60) + W + 60) % (W + 60) - 30; ctx.beginPath(); ctx.ellipse(X, foam(X) + (2 + i % 4 * 1.5) * S, (2 + i % 3) * S, .6 * S, 0, 0, 7); ctx.fill(); }
+      for (let i = 0; i < 30; i++) { const X = ((i * 97 - cam * S * .9 + clockNow() * .6 * S) % (W + 60) + W + 60) % (W + 60) - 30; ctx.beginPath(); ctx.ellipse(X, foam(X) + (2 + i % 4 * 1.5) * S, (2 + i % 3) * S, .6 * S, 0, 0, 7); ctx.fill(); }
       ctx.fillStyle = '#1f557c'; ctx.fillRect(0, oy + bandH, W, H - oy - bandH);
     } else {
       fill([[0, '#0c0a18'], [.5, '#171329'], [1, '#221c35']]);
       // Light leaks through cracks in the roof.
       for (let i = 0; i < 4; i++) {
-        const x = (((i * 233 + 90 - cam * .1) % (W / S + 200)) + W / S + 200) % (W / S + 200) * S - 100 * S, a = .05 + .03 * Math.sin(frameNo * .01 + i);
+        const x = (((i * 233 + 90 - cam * .1) % (W / S + 200)) + W / S + 200) % (W / S + 200) * S - 100 * S, a = .05 + .03 * Math.sin(clockNow() * .01 + i);
         ctx.fillStyle = `rgba(150,190,255,${a.toFixed(3)})`; ctx.beginPath(); ctx.moveTo(x, oy); ctx.lineTo(x + 14 * S, oy); ctx.lineTo(x + 70 * S, oy + bandH); ctx.lineTo(x + 30 * S, oy + bandH); ctx.fill();
       }
       const rock = caveWall();   // the far walls: dark rock hanging from the roof and rising from the floor
@@ -2518,14 +2518,14 @@
       ridge(.26, .9, 18, vgrad(oy + bandH * .7, oy + bandH, '#2a2342', '#17131f'), 7.4, true);
       for (let i = Math.floor((cam * .26 - 80) / 90), u; (u = i * 90) < cam * .26 + W / S + 80; i++) {   // crystal clusters glowing in the dark
         const hc = hash(seed ^ 0xc9, i); if (hc % 2) continue;
-        const uu = u + hc % 40, x = (uu - cam * .26) * S, y = ridgeY(uu, .9, 18, 7.4, true), col = [[95, 242, 216], [180, 139, 255], [255, 143, 208]][hc % 3], pulse = .5 + .2 * Math.sin(frameNo * .03 + i);
+        const uu = u + hc % 40, x = (uu - cam * .26) * S, y = ridgeY(uu, .9, 18, 7.4, true), col = [[95, 242, 216], [180, 139, 255], [255, 143, 208]][hc % 3], pulse = .5 + .2 * Math.sin(clockNow() * .03 + i);
         glow(x, y - 6 * S, 30 * S, `rgba(${col},${(.35 * pulse).toFixed(2)})`);
         for (const [dx, hh, w] of [[-4, 9, 2.4], [0, 15, 3], [5, 8, 2.2]]) {
           ctx.fillStyle = vgrad(y - hh * S, y, `rgba(${col},.95)`, `rgba(${col},.35)`); ctx.beginPath(); ctx.moveTo(x + (dx - w) * S, y); ctx.lineTo(x + dx * S, y - hh * S); ctx.lineTo(x + (dx + w) * S, y); ctx.fill();
         }
       }
       for (let i = 0; i < 26; i++) {   // far crystals twinkle
-        const x = ((i * 131.7 - cam * .15) % (W + 40) + W + 40) % (W + 40) - 20, y = oy + bandH * (.25 + (i * 37 % 50) / 100), a = .25 + .25 * Math.sin(frameNo * .04 + i);
+        const x = ((i * 131.7 - cam * .15) % (W + 40) + W + 40) % (W + 40) - 20, y = oy + bandH * (.25 + (i * 37 % 50) / 100), a = .25 + .25 * Math.sin(clockNow() * .04 + i);
         ctx.fillStyle = ['rgba(95,242,216,', 'rgba(180,139,255,', 'rgba(255,143,208,'][i % 3] + a.toFixed(2) + ')'; ctx.beginPath(); ctx.arc(x, y, (1 + i % 3 * .5) * S * .5, 0, 7); ctx.fill();
       }
       ctx.fillStyle = '#1b172a'; ctx.fillRect(0, oy + bandH, W, H - oy - bandH);
@@ -2594,7 +2594,7 @@
   // Rain, snow, light and drips over the world.
   function drawSpell(late = false) {   // late: after the cave dark, where drips catch what light there is
     const sp = weatherAt(cam + viewW / 2), w = sp.w; if (w < .01 || late !== (sp.kind === 'drip')) return;
-    const W = cv.width, bandH = VIEW_H * S, t = drawT ?? frameNo;
+    const W = cv.width, bandH = VIEW_H * S, t = clockNow();
     const ground = sx => { const tx = Math.floor((cam + sx / S) / TS); for (let ty = 1; ty < ROWS; ty++) if (solid(tx, ty) && !solid(tx, ty - 1)) return oy + ty * TS * S; return -1; };
     ctx.save();
     if (sp.kind === 'shower' || sp.kind === 'squall') {
@@ -2635,7 +2635,7 @@
   }
   // Puddles on the turf during a shower and for a while after, rippling while it rains.
   function drawPuddles() {
-    const x0 = cam - TS, x1 = cam + viewW + TS, t = drawT ?? frameNo;
+    const x0 = cam - TS, x1 = cam + viewW + TS, t = clockNow();
     for (const ch of chunks.values()) {
       if (!ch.tops || ch.biome !== 'meadow' && ch.biome !== 'coast') continue;
       for (const [tx, ty] of ch.tops) {
@@ -2813,7 +2813,7 @@
   }
   function drawSkyTime(m) {
     const o = 1 - weightOf(m, 'caves'), d = dayAt(m.centre); if (o < .02 || d.day > .99) return;
-    const W = cv.width, H = cv.height, bandH = VIEW_H * S, t = drawT ?? frameNo, phases = ['gold', 'dawn', 'dusk', 'night'];
+    const W = cv.width, H = cv.height, bandH = VIEW_H * S, t = clockNow(), phases = ['gold', 'dawn', 'dusk', 'night'];
     const q = ctx.createLinearGradient(0, oy, 0, oy + bandH);
     [0, .6, 1].forEach((at, k) => q.addColorStop(at, mixWash(phases.map(ph => [d[ph] * o, ...SKYWASH[ph][k]]))));
     ctx.fillStyle = q; ctx.fillRect(0, 0, W, portrait ? oy + bandH : H);   // the phone console covers the rest
@@ -2838,7 +2838,7 @@
   // sunset, and fireflies over the meadow at night.
   function drawDusk(m) {
     const o = 1 - weightOf(m, 'caves'), d = dayAt(m.centre); if (o < .02 || d.day > .99) return;
-    const W = cv.width, bandH = VIEW_H * S, t = drawT ?? frameNo;
+    const W = cv.width, bandH = VIEW_H * S, t = clockNow();
     const dark = (d.night + d.dusk * .5) * o; if (dark < .02) return;   // (the wash itself is part of drawGrade)
     if (!dead) {
       const [px, py] = W2D(pl.x + 6, pl.y + pl.h * .45);
@@ -2980,7 +2980,7 @@
     if (!id) return;
     const prog = centre / span - region, a = clamp(0, Math.min(prog / .12, (1 - prog) / .12), 1);
     if (a <= 0) return;
-    const W = cv.width, bandH = VIEW_H * S, t = frameNo, s = S;
+    const W = cv.width, bandH = VIEW_H * S, t = clockNow(), s = S;
     ctx.save(); ctx.globalAlpha = a;
     if (id === 'whale') {
       const L = 120 * s, x = W + L - ((t * .45 * s) % (W + L * 2.4)), y = oy + bandH * .2 + Math.sin(t * .008) * 5 * s;
@@ -3279,7 +3279,7 @@
     if (dist > span * .92 || dist < 420 || open < .05) return;   // underground there is no horizon
     const near = 1 - Math.max(0, dist) / span, x = (viewW * .66 + dist * .1) * S, y = oy + VIEW_H * S * .7, s = (.3 + .35 * near) * S, id = regionBiome(m.region + 1);
     ctx.save(); ctx.translate(x, y); ctx.globalAlpha = open * .85 * Math.min(1, (span * .92 - dist) / 300) * Math.min(1, (dist - 420) / 260);
-    ctx.drawImage(landmarkSprite(id, true), -LM.w / 2 * s, -(LM.h - LM.foot) * s - (id === 'sky' ? Math.sin(frameNo * .03) * 3 * s : 0), LM.w * s, LM.h * s);
+    ctx.drawImage(landmarkSprite(id, true), -LM.w / 2 * s, -(LM.h - LM.foot) * s - (id === 'sky' ? Math.sin(clockNow() * .03) * 3 * s : 0), LM.w * s, LM.h * s);
     ctx.restore();
   }
   // The destination itself, full size and standing on the plaza.
@@ -3293,8 +3293,8 @@
       const back = .55;   // set back onto the plaza's receding top, in perspective like the faces
       ctx.save(); ctx.translate(x + DEPTH.k * (cam + viewW / 2 - gx - 8) * back * S, W2D(0, gy * TS - DEPTH.up * back)[1]);
       if (id !== 'sky') { ctx.fillStyle = 'rgba(30,22,16,.22)'; ctx.beginPath(); ctx.ellipse(0, 0, 50 * S, 4 * S, 0, 0, 7); ctx.fill(); }   // it stands on the plaza
-      const at = celebrated.get(r), cel = at === undefined || frameNo < at ? -1 : frameNo - at;
-      landmarkArt(id, S * .95, frameNo, cel); ctx.restore();
+      const at = celebrated.get(r), cel = at === undefined || clockNow() < at ? -1 : clockNow() - at;
+      landmarkArt(id, S * .95, clockNow(), cel); ctx.restore();
     }
   }
   function drawChapter() {
@@ -3336,19 +3336,19 @@
     for (const id of [m.a, m.b]) {
       const w = weightOf(m, id); if (w < .02) continue;
       ctx.save(); ctx.globalAlpha = w;
-      if (id === 'frost') { ctx.fillStyle = 'rgba(255,255,255,.85)'; for (let i = 0; i < 46; i++) { const x = ((i * 97.3 + frameNo * (.35 + i % 3 * .15) + Math.sin(frameNo * .02 + i) * 12 - cam * S * .4) % W + W) % W, y = ((i * 53.1 + frameNo * (.9 + i % 4 * .3)) % H); ctx.beginPath(); ctx.arc(x, y, (1 + i % 3 * .5) * S * .45, 0, 7); ctx.fill(); } }
-      else if (id === 'sky') { const dirw = Math.sign(windAt(m.centre)) || 1; ctx.strokeStyle = 'rgba(255,255,255,.55)'; ctx.lineWidth = Math.max(1, S * .3); for (let i = 0; i < 14; i++) { const x = ((i * 211 + dirw * frameNo * (6 + i % 3 * 2)) % (W + 300) + W + 300) % (W + 300) - 150, y = oy + VIEW_H * S * ((i * 37 % 80) / 100 + .05); ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x - dirw * 40 * S * .4, y); ctx.stroke(); } }
+      if (id === 'frost') { ctx.fillStyle = 'rgba(255,255,255,.85)'; for (let i = 0; i < 46; i++) { const x = ((i * 97.3 + clockNow() * (.35 + i % 3 * .15) + Math.sin(clockNow() * .02 + i) * 12 - cam * S * .4) % W + W) % W, y = ((i * 53.1 + clockNow() * (.9 + i % 4 * .3)) % H); ctx.beginPath(); ctx.arc(x, y, (1 + i % 3 * .5) * S * .45, 0, 7); ctx.fill(); } }
+      else if (id === 'sky') { const dirw = Math.sign(windAt(m.centre)) || 1; ctx.strokeStyle = 'rgba(255,255,255,.55)'; ctx.lineWidth = Math.max(1, S * .3); for (let i = 0; i < 14; i++) { const x = ((i * 211 + dirw * clockNow() * (6 + i % 3 * 2)) % (W + 300) + W + 300) % (W + 300) - 150, y = oy + VIEW_H * S * ((i * 37 % 80) / 100 + .05); ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x - dirw * 40 * S * .4, y); ctx.stroke(); } }
       else if (id === 'coast') {
         // Gulls glide over the sea, wings beating now and then; spray glints in the low sun.
         ctx.strokeStyle = 'rgba(70,56,72,.75)'; ctx.lineWidth = Math.max(1, S * .45); ctx.lineCap = 'round';
         for (let i = 0; i < 5; i++) {
-          const sp = .25 + i % 3 * .12, x = ((i * 389 + frameNo * sp * S - cam * S * .15) % (W + 200) + W + 200) % (W + 200) - 100, y = oy + VIEW_H * S * (.14 + (i * 23 % 30) / 100) + Math.sin(frameNo * .02 + i) * 8 * S;
-          const beat = Math.sin(frameNo * .09 + i * 2), flap = Math.max(0, beat) ** 3 * 3.5 * S, k = (3 + i % 2) * S;
+          const sp = .25 + i % 3 * .12, x = ((i * 389 + clockNow() * sp * S - cam * S * .15) % (W + 200) + W + 200) % (W + 200) - 100, y = oy + VIEW_H * S * (.14 + (i * 23 % 30) / 100) + Math.sin(clockNow() * .02 + i) * 8 * S;
+          const beat = Math.sin(clockNow() * .09 + i * 2), flap = Math.max(0, beat) ** 3 * 3.5 * S, k = (3 + i % 2) * S;
           ctx.beginPath(); ctx.moveTo(x - k * 2, y - k * .4 - flap); ctx.quadraticCurveTo(x - k, y - k * 1.1 - flap * .5, x, y); ctx.quadraticCurveTo(x + k, y - k * 1.1 - flap * .5, x + k * 2, y - k * .4 - flap); ctx.stroke();
         }
-        for (let i = 0; i < 16; i++) { const x = ((i * 157 + Math.sin(frameNo * .013 + i) * 30 - cam * S * .6) % W + W) % W, y = oy + VIEW_H * S * (.66 + (i * 29 % 30) / 100), a = Math.max(0, Math.sin(frameNo * .06 + i * 1.3)) * .5; ctx.fillStyle = `rgba(255,244,214,${a.toFixed(2)})`; ctx.beginPath(); ctx.arc(x, y, S * .55, 0, 7); ctx.fill(); }
+        for (let i = 0; i < 16; i++) { const x = ((i * 157 + Math.sin(clockNow() * .013 + i) * 30 - cam * S * .6) % W + W) % W, y = oy + VIEW_H * S * (.66 + (i * 29 % 30) / 100), a = Math.max(0, Math.sin(clockNow() * .06 + i * 1.3)) * .5; ctx.fillStyle = `rgba(255,244,214,${a.toFixed(2)})`; ctx.beginPath(); ctx.arc(x, y, S * .55, 0, 7); ctx.fill(); }
       }
-      else if (id === 'caves') { for (let i = 0; i < 22; i++) { const x = ((i * 157 + Math.sin(frameNo * .01 + i) * 40 - cam * S * .5) % W + W) % W, y = oy + VIEW_H * S * ((i * 41 % 90) / 100) + Math.sin(frameNo * .015 + i * 2) * 10, a = .3 + .3 * Math.sin(frameNo * .05 + i); ctx.fillStyle = `rgba(160,255,230,${a.toFixed(2)})`; ctx.beginPath(); ctx.arc(x, y, S * .5, 0, 7); ctx.fill(); } }
+      else if (id === 'caves') { for (let i = 0; i < 22; i++) { const x = ((i * 157 + Math.sin(clockNow() * .01 + i) * 40 - cam * S * .5) % W + W) % W, y = oy + VIEW_H * S * ((i * 41 % 90) / 100) + Math.sin(clockNow() * .015 + i * 2) * 10, a = .3 + .3 * Math.sin(clockNow() * .05 + i); ctx.fillStyle = `rgba(160,255,230,${a.toFixed(2)})`; ctx.beginPath(); ctx.arc(x, y, S * .5, 0, 7); ctx.fill(); } }
       ctx.restore();
     }
   }
@@ -3404,12 +3404,12 @@
     g.fillStyle = `rgba(4,5,14,${(.88 * w).toFixed(3)})`; g.fillRect(0, 0, cv.width, cv.height);
     g.globalCompositeOperation = 'destination-out';
     const hole = (x, y, r, a = 1) => { const q = g.createRadialGradient(x, y, 0, x, y, r); q.addColorStop(0, `rgba(0,0,0,${a})`); q.addColorStop(.55, `rgba(0,0,0,${a * .7})`); q.addColorStop(1, 'rgba(0,0,0,0)'); g.fillStyle = q; g.fillRect(x - r, y - r, r * 2, r * 2); };
-    const [px, py] = W2D(pl.x + 6, pl.y + pl.h * .4); hole(px, py, (big ? 92 : 78) * S * (1 + .03 * Math.sin(frameNo * .12)));
+    const [px, py] = W2D(pl.x + 6, pl.y + pl.h * .4); hole(px, py, (big ? 92 : 78) * S * (1 + .03 * Math.sin(clockNow() * .12)));
     for (const ch of chunks.values()) { for (const k of ch.crystals) { const [x, y] = W2D(k.x, k.y + (k.up ? -8 : 8)); if (x > -60 && x < cv.width + 60) hole(x, y, 34 * S, .85); }
       for (const sd of ch.seeds) if (!sd.got) { const [x, y] = W2D(sd.x, sd.y); if (x > -20 && x < cv.width + 20) hole(x, y, 13 * S, .9); } }
     for (const it of items) { const [x, y] = W2D(it.x + 6, it.y + 6); hole(x, y, 26 * S); }
     for (const p of parts) if (p.glow) { const [x, y] = W2D(p.x, p.y); hole(x, y, 9 * S, .7 * Math.min(1, p.life / 14)); }
-    for (const k of prints) { const age = frameNo - k.at; if (k.m === 'moss' && age >= 0 && age < PRINT_LIFE.moss) { const [x, y] = W2D(k.x, k.y); hole(x, y, 12 * S, .7 * (1 - age / PRINT_LIFE.moss)); } }
+    for (const k of prints) { const age = clockNow() - k.at; if (k.m === 'moss' && age >= 0 && age < PRINT_LIFE.moss) { const [x, y] = W2D(k.x, k.y); hole(x, y, 12 * S, .7 * (1 - age / PRINT_LIFE.moss)); } }
     ctx.drawImage(darkBuf, 0, 0, cv.width, cv.height);
     // Creature eyes glint in the dark.
     for (const e of enemies) { if (e.state === 'dead' || e.state === 'squash') continue; const [x, y] = W2D(e.x + 7, e.y + 5); if (x < -20 || x > cv.width + 20) continue; ctx.fillStyle = `rgba(255,240,170,${(.8 * w).toFixed(2)})`; for (const d of [-2.4, 2.4]) { ctx.beginPath(); ctx.arc(x + d * S, y, .9 * S, 0, 7); ctx.fill(); } }
@@ -3495,15 +3495,19 @@
     }
     for (let tx = t0; tx <= t1; tx++) for (let ty = 0; ty < ROWS; ty++) {
       let id = tileAt(tx, ty); if (!id || (tx >= 0 && STATIC.has(id))) continue;
-      if (replay && id === USED && (usedAt.get(tx + ',' + ty) ?? -1) > frameNo) id = BLOCK;
+      if (replay && id === USED && (usedAt.get(tx + ',' + ty) ?? -1) > clockNow()) id = BLOCK;
       const b = bumps.find(q => q.tx === tx && q.ty === ty), lift = b ? Math.sin(b.t / 10 * Math.PI) * 4 * S : 0;
       const ch = chunks.get(Math.floor(tx / CW));
-      const shake = id === CRUMBLE && crumbleFall.has(tx * 64 + ty) ? Math.sin(frameNo * 1.9 + tx) * .9 * S : 0;
+      const shake = id === CRUMBLE && crumbleFall.has(tx * 64 + ty) ? Math.sin(clockNow() * 1.9 + tx) * .9 * S : 0;
       ctx.drawImage(tileCanvas(id, tileAt(tx, ty - 1) === EMPTY, ch ? ch.biome : 'meadow', hash(seed ^ 0xb21, tx * 16 + ty) % 3), ox + tx * n - cd + shake, oy + ty * n - lift);
-      if (id === BLOCK) { const a = .25 + .25 * Math.sin(frameNo * .08 + tx); ctx.fillStyle = `rgba(255,255,230,${a.toFixed(3)})`; ctx.fillRect(ox + tx * n - cd + n * .12, oy + ty * n + n * .1 - lift, n * .76, n * .08); }
+      if (id === BLOCK) { const a = .25 + .25 * Math.sin(clockNow() * .08 + tx); ctx.fillStyle = `rgba(255,255,230,${a.toFixed(3)})`; ctx.fillRect(ox + tx * n - cd + n * .12, oy + ty * n + n * .1 - lift, n * .76, n * .08); }
     }
   }
   const W2D = (x, y) => [ox + x * S - camDev(), oy + y * S];
+  // The clock drawing animates by: between the last two ticks while a frame
+  // is drawn (the simulation runs at 40 a second, screens at 60 or 120), so
+  // nothing steps on the tick.
+  const clockNow = () => drawT ?? frameNo;
   // Ferries and lifts, dressed for their biome. Lifts show their rails.
   let drawT = null;   // fractional tick time while drawing between ticks
   // Ferries and lifts, painted once per biome and width: a lashed log raft
@@ -3601,10 +3605,10 @@
   }
   function drawSeeds() {
     for (const ch of chunks.values()) for (const s of ch.seeds) {
-      if (s.got && !(replay && s.gotAt > frameNo)) continue;
-      const [x, y] = W2D(s.x, s.y + Math.sin(frameNo * .06 + s.x * .1) * 1.5);
+      if (s.got && !(replay && s.gotAt > clockNow())) continue;
+      const [x, y] = W2D(s.x, s.y + Math.sin(clockNow() * .06 + s.x * .1) * 1.5);
       if (x < -20 || x > cv.width + 20) continue;
-      star(x, y, 5.2 * S, frameNo * .03 + s.x);
+      star(x, y, 5.2 * S, clockNow() * .03 + s.x);
     }
   }
   // A star seed: a faceted golden star around an amber heart, painted once large.
@@ -3647,7 +3651,7 @@
     // never see it): eyes follow him when he is close, and a landing beside them,
     // a friend stomped or a shell sliding by makes them flinch.
     const dx = pl.x + 6 - (e.x + 7), dy = pl.y + pl.h * .4 - (e.y + 4), near = dead || e.state === 'dead' ? 0 : smoothstep((92 - Math.hypot(dx, dy)) / 60);
-    const since = frameNo - landedAt, flinch = !dead && since >= 0 && since < 22 && Math.abs(dx) < 60 && Math.abs(dy) < 44 ? 1 - since / 22 : 0;
+    const since = clockNow() - landedAt, flinch = !dead && since >= 0 && since < 22 && Math.abs(dx) < 60 && Math.abs(dy) < 44 ? 1 - since / 22 : 0;
     let startle = 0;
     for (const o of enemies) if (o !== e && Math.abs(o.x - e.x) < 110) startle = Math.max(startle, o.state === 'squash' ? 1 - o.t / 34 : o.state === 'slide' && Math.abs(o.x - e.x) < 64 ? .8 : 0);
     const shock = Math.max(flinch, startle), lookX = clamp(-1, dx / 36, 1) * L, lookY = clamp(-1, dy / 36, 1);
@@ -3686,7 +3690,7 @@
       const k = Math.min(1, st / 4), wob = st > 4 ? Math.sin(st * .9) * .08 * Math.max(0, 1 - (st - 4) / 14) : 0;
       ctx.scale(1 + .45 * k + wob, 1 - .52 * k - wob); ctx.globalAlpha *= st > 22 ? Math.max(0, 1 - (st - 22) / 10) : 1;
     }
-    if (e.state === 'shell' && e.shellAt !== undefined && frameNo - e.shellAt < 22) { const q = (frameNo - e.shellAt) / 22; ctx.rotate(Math.sin(q * Math.PI * 4) * .25 * (1 - q)); }   // the shell wobbles
+    if (e.state === 'shell' && e.shellAt !== undefined && clockNow() - e.shellAt < 22) { const q = (clockNow() - e.shellAt) / 22; ctx.rotate(Math.sin(q * Math.PI * 4) * .25 * (1 - q)); }   // the shell wobbles
     if (e.kind === 'pod') {             // spinning as it flies
       ctx.translate(0, -5 * s); ctx.rotate(-e.t * .18); pod();
       ctx.restore(); return;
@@ -3758,9 +3762,9 @@
     // They glow when the planner is tense (and in replays, which show its
     // thinking), fade out a few tiles ahead of Pip so they do not run across
     // the scenery, and give way to a landmark's scene.
-    let since = 1e9; for (const t of celebrated.values()) if (frameNo >= t) since = Math.min(since, frameNo - t);
+    let since = 1e9; for (const t of celebrated.values()) if (clockNow() >= t) since = Math.min(since, clockNow() - t);
     const show = replay ? 1 : (.3 + .7 * smoothstep(tension / .45)) * (arrival ? 0 : smoothstep((since - CEL) / 40));
-    const fade = Math.max(.3, 1 - (frameNo - at) / 40) * show, lw = Math.max(1, S * .34);
+    const fade = Math.max(.3, 1 - (clockNow() - at) / 40) * show, lw = Math.max(1, S * .34);
     if (fade < .01) return;
     const x0 = W2D(pl.x + 6, 0)[0], x1 = W2D(pl.x + 6 + 8 * TS, 0)[0], reach = x => 1 - smoothstep((x - x0) / (x1 - x0));
     const ink = (rgb, a) => { const q = ctx.createLinearGradient(x0, 0, x1, 0); q.addColorStop(0, `rgba(${rgb},${a})`); q.addColorStop(1, `rgba(${rgb},0)`); return q; };
@@ -3787,7 +3791,7 @@
     for (const k of marks) {
       const [x, y] = W2D(k.x + P.w / 2, k.y + P.h + 1);
       if (x < -60 || x > cv.width + 60) continue;
-      ctx.save(); ctx.globalAlpha = .2 + .06 * Math.sin(frameNo * .05 + k.at); ctx.translate(x, y); ctx.scale(sc, sc);
+      ctx.save(); ctx.globalAlpha = .2 + .06 * Math.sin(clockNow() * .05 + k.at); ctx.translate(x, y); ctx.scale(sc, sc);
       ctx.drawImage(sheet, 19 * FRAME_W, 0, FRAME_W, FRAME_H, -122, -300, FRAME_W, FRAME_H); ctx.restore();
     }
   }
@@ -3947,7 +3951,7 @@
     if (dead) pose = POSE.tumble;
     else if (!pl.ground) { const t = clamp(0, (pl.vy + 3) / 5, 1); pose = t < .5 ? mixPose(POSE.rise, POSE.apex, t * 2) : mixPose(POSE.apex, POSE.fall, (t - .5) * 2); }
     else if (skidding) pose = POSE.skid;
-    else if (frameNo - landedAt < 6) pose = mixPose(POSE.land, runPose(anim / stride(), clamp(0, Math.abs(pl.vx) / 1.2, 1)), (frameNo - landedAt) / 6);
+    else if (clockNow() - landedAt < 6) pose = mixPose(POSE.land, runPose(anim / stride(), clamp(0, Math.abs(pl.vx) / 1.2, 1)), (clockNow() - landedAt) / 6);
     else pose = runPose(anim / stride(), clamp(0, Math.abs(pl.vx) / 1.2, 1));
     // Standing at an edge with nothing under his toes, he teeters, arms up.
     let teeter = 0;
@@ -3956,7 +3960,7 @@
       teeter = !solid(Math.floor((c + 4) / TS), row) ? 1 : !solid(Math.floor((c - 4) / TS), row) ? -1 : 0;
       if (teeter) pose = mixPose(pose, POSE.apex, .6);
     }
-    const sc = pipVisual() / 295 * S, sx = 1 - .13 * sq, sy = 1 + .15 * sq, t = drawT ?? frameNo;
+    const sc = pipVisual() / 295 * S, sx = 1 - .13 * sq, sy = 1 + .15 * sq, t = clockNow();
     // Lean into speed on the ground, brace against a skid, sway over an edge.
     const lean = dead ? 0 : teeter ? teeter * facing * (.1 + .08 * Math.sin(t * .45)) : pl.ground ? (skidding ? -.12 : .11 * Math.min(1, Math.abs(pl.vx) / P.max)) : .04;
     // His shadow lies on the ground's receding top, under him in the air too,
@@ -4033,9 +4037,10 @@
     ctx.globalAlpha = a; ctx.drawImage(b, x - r, y - r, r * 2, r * 2); ctx.globalAlpha = 1;
   }
   function drawParts() {
+    const back = drawT === null ? 0 : frameNo - drawT;   // how far behind the last tick this frame is drawn
     for (const p of parts) {
-      const [x, y] = W2D(p.x, p.y), a = Math.min(1, p.life / 14);
-      if (p.seed) { star(x, y, 5 * S * a, frameNo * .2); continue; }
+      const [x, y] = W2D(p.x - p.vx * back, p.y - p.vy * back), a = Math.min(1, p.life / 14);
+      if (p.seed) { star(x, y, 5 * S * a, clockNow() * .2); continue; }
       if (p.ring) { const q = 1 - p.life / p.l0; ctx.strokeStyle = p.col; ctx.globalAlpha = (1 - q) * .9; ctx.lineWidth = Math.max(1, (2.6 - 2 * q) * S); ctx.beginPath(); ctx.ellipse(x, y, p.r * (.4 + q) * S, p.r * (.4 + q) * .45 * S, 0, 0, 7); ctx.stroke(); ctx.globalAlpha = 1; continue; }
       if (p.spark) { ctx.globalAlpha = a; ctx.fillStyle = p.col; ctx.save(); ctx.translate(x, y); ctx.rotate(p.life * .3); const k = p.r * S * (.5 + .5 * a); ctx.beginPath(); for (let i = 0; i < 8; i++) { const rr = i % 2 ? k * .3 : k; ctx.lineTo(Math.cos(i * Math.PI / 4) * rr, Math.sin(i * Math.PI / 4) * rr); } ctx.fill(); ctx.restore(); ctx.globalAlpha = 1; continue; }
       if (p.text) { const q = 1 - p.life / p.l0, k = q < .15 ? q / .15 * 1.25 : 1.25 - Math.min(.25, (q - .15) * 2);
@@ -4052,7 +4057,7 @@
   // Footprints pressed into snow and cloud; in the caves, moss that glows where Pip stepped.
   const PRINT_LIFE = {snow: 900, cloud: 260, moss: 300, sand: 700};
   function drawPrints() {
-    const t = drawT ?? frameNo;
+    const t = clockNow();
     for (const k of prints) {
       const age = t - k.at, f = 1 - age / PRINT_LIFE[k.m]; if (age < 0 || f <= 0) continue;
       const [x, y] = W2D(k.x, k.y); if (x < -20 || x > cv.width + 20) continue;
@@ -4066,7 +4071,7 @@
   // around Pip and the creatures; where Pip lands it flattens for a moment.
   const GRASS = {meadow: ['#4f9a3a', '#6fbf4f', '#94d35e', '#b7e77e'], caves: ['#1f8a74', '#38c2a4', '#7ef0d4', '#2fb79c'], coast: ['#a8a85a', '#c9c47e', '#8a944c', '#ddd59a']};
   function drawGrass() {
-    const t = drawT ?? frameNo, x0 = cam - TS, x1 = cam + viewW + TS, push = [];
+    const t = clockNow(), x0 = cam - TS, x1 = cam + viewW + TS, push = [];
     if (!dead) push.push([pl.x + 6, pl.y + pl.h, 1, t - landedAt]);
     for (const e of enemies) if (e.ground && e.state !== 'dead' && e.kind !== 'flier') push.push([e.x + 7, e.y + e.h, .6, 99]);
     for (const ch of chunks.values()) {
@@ -4095,7 +4100,7 @@
   // a shower of them comes down when Pip runs past a trunk.
   const rustle = new Map();
   function drawLeaves() {
-    const t = drawT ?? frameNo;
+    const t = clockNow();
     for (const ch of chunks.values()) {
       if (!ch.art || !ch.props) continue;
       ch.props.forEach((p, i) => {
@@ -4325,10 +4330,17 @@
   function render() {
     zoom += ((replay ? 1.16 : arrival && arrival.phase === 'cheer' ? 1.1 : 1 + .09 * Math.max(0, tension - .2) / .8) - zoom) * .08;
     if (replay) {
-      const snap = replay.frames[Math.min(replay.frames.length - 1, Math.floor(replay.i))];
+      // Played at half speed, so blended between recorded frames (on copies:
+      // the recording itself stays as it was).
+      const n = replay.frames.length, i0 = Math.min(n - 1, Math.floor(replay.i)), snap = replay.frames[i0], next = replay.frames[Math.min(n - 1, i0 + 1)], f = Math.min(1, replay.i - i0);
+      const mix = (a, b) => Math.abs(b - a) > 48 ? a : a + (b - a) * f;
       const live = {pl, facing, anim, landedAt, dead, inv, cam, enemies, parts, bumps, frameNo, sq, skidding, big, growing, items};
       ({pl, facing, anim, landedAt, dead, inv, cam, enemies, parts, bumps, frameNo, sq, skidding, big, growing, items} = snap);
+      pl = {...pl, x: mix(snap.pl.x, next.pl.x), y: mix(snap.pl.y, next.pl.y)}; cam = mix(snap.cam, next.cam); anim = mix(snap.anim, next.anim); sq = mix(snap.sq, next.sq);
+      enemies = snap.enemies.map((e, k) => { const o = next.enemies[k]; return o && o.kind === e.kind ? {...e, x: mix(e.x, o.x), y: mix(e.y, o.y), t: e.t + f} : e; });
+      drawT = snap.frameNo + f;
       composite(() => scene(snap.arcs, snap.at));
+      drawT = null;
       ctx.setTransform(1, 0, 0, 1, 0, 0); drawConsole(); drawHud();
       ({pl, facing, anim, landedAt, dead, inv, cam, enemies, parts, bumps, frameNo, sq, skidding, big, growing, items} = live);
       return;
@@ -4336,11 +4348,12 @@
     // Draw between the last two ticks; a jump of more than a few tiles is a
     // respawn or a restart, shown as is.
     const k = clamp(0, acc, 1), lerp = (a, b) => Math.abs(b - a) > 48 ? b : a + (b - a) * k;
-    const live = {pl, cam}, ex = enemies.map(e => [e.x, e.y]);
+    const live = {pl, cam, anim, sq}, ex = enemies.map(e => [e.x, e.y, e.t]);
     pl = {...pl, x: lerp(prev.x, pl.x), y: lerp(prev.y, pl.y)}; cam = lerp(prev.cam, cam); drawT = frameNo - 1 + k;
-    for (const e of enemies) if (e.px !== undefined) { e.x = lerp(e.px, e.x); e.y = lerp(e.py, e.y); }
+    anim = lerp(prev.anim ?? anim, anim); sq = lerp(prev.sq ?? sq, sq);   // his stride and squash, not just his position
+    for (const e of enemies) { if (e.px !== undefined) { e.x = lerp(e.px, e.x); e.y = lerp(e.py, e.y); } e.t += k - 1; }
     composite(() => scene(plan && plan.arcs, plan ? plan.at : 0));
-    ({pl, cam} = live); enemies.forEach((e, i) => { [e.x, e.y] = ex[i]; }); drawT = null;
+    ({pl, cam, anim, sq} = live); enemies.forEach((e, i) => { [e.x, e.y, e.t] = ex[i]; }); drawT = null;
     ctx.setTransform(1, 0, 0, 1, 0, 0); overlays = []; drawConsole(); drawTitle(); drawCard(); drawChapter(); drawHud(); drawBook();
   }
 
