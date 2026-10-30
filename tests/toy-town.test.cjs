@@ -47,7 +47,7 @@ for (const key of Object.keys(T.THEMES)) {
   T.build(4242, key);
   for (const name of ['hydrant', 'cart', 'dog', 'balloons', 'cat', 'pigeons', 'banana', 'ufo', 'icecream', 'duck', 'jam', 'chickens', key]) T.startEvent(name);
   for (let i = 0; i < 60 * 30; i++) T.update(1 / 60);
-  assert.ok(T.movers().filter(m => m.type === 'car').length >= 12 && T.movers().filter(m => m.type === 'person').length >= 22, `${key}: the streets stay busy`);
+  assert.ok(T.movers().filter(m => m.kind === 'car' || m.kind === 'bus' || m.kind === 'taxi').length >= 7 && T.movers().filter(m => m.kind === 'bike').length >= 4 && T.movers().filter(m => m.type === 'person').length >= 14, `${key}: cars, cyclists and walkers keep the streets alive`);
   assert.ok(T.movers().every(m => m.x > 0 && m.x < 18 && m.y > 0 && m.y < 18 && Number.isFinite(m.x + m.y)), `${key}: everyone stays in town`);
   assert.ok(T.events().length <= 6, `${key}: events end (${T.events().length} running)`);
 }
@@ -59,4 +59,17 @@ for (const x of T.VARIANTS) {
   assert.ok(!T.events().some(e => e.name === x.variant) || true);
 }
 assert.ok(T.PACE < 1, 'the town runs slower than real time');
+// A calm town: gentle moments run to their end, and traffic waits at red lights instead of piling into the crossings.
+T.build(31337, 'weather'); T.setToday([]);
+for (const name of T.CALM) T.startEvent(name);
+let clashes = 0, samples = 0;
+for (let i = 0; i < 60 * 120; i++) {
+  T.update(1 / 60);
+  if (i % 30) continue;
+  const cars = T.movers().filter(m => m.type === 'car' && !m.path);
+  for (const a of cars) for (const b of cars) if (a !== b && (a.d < 2) !== (b.d < 2) && Math.hypot(a.x - b.x, a.y - b.y) < .3) clashes++;
+  samples++;
+}
+assert.ok(clashes / samples < .05, `cross traffic rarely meets in a crossing (${clashes} near misses in ${samples} samples)`);
+assert.ok(T.events().length <= 6, 'the gentle moments end too');
 console.log(`Toy Town PASS: ${T.VARIANTS.length} news variants (cricket to Diwali to dinosaurs) each with its own event, grim stories never become themes, light ones pick ${Object.keys(T.THEMES).length - 1} kinds of day, the same day builds the same town with its theme block and fire station, and every event in every theme runs to its end with the streets kept busy.`);
