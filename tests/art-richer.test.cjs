@@ -7,8 +7,8 @@ const root = path.join(__dirname, '..'), html = fs.readFileSync(path.join(root, 
 assert.match(html, /assets\/art-richer\.js\?v=\d+/, 'the module loads');
 assert.match(html, /ArtRicher\.install\(\)[\s\S]*?ArtWonders\.install\(\)/, 'installed with the other art layers');
 const grab = name => html.match(new RegExp('function ' + name + '\\([^]*?\\n'))[0];
-const ctx = new Proxy({}, {get: (o, k) => k in o ? o[k] : k === 'createLinearGradient' || k === 'createRadialGradient' ? () => ({addColorStop() {}}) : () => {}, set: (o, k, v) => { o[k] = v; return true; }});
-const box = vm.createContext({Math, Object, Array, Map, String, Number});
+const ctx = new Proxy({}, {get: (o, k) => k in o ? o[k] : k === 'getTransform' ? () => ({a: 1.5, b: 0}) : k === 'createLinearGradient' || k === 'createRadialGradient' ? () => ({addColorStop() {}}) : () => {}, set: (o, k, v) => { o[k] = v; return true; }});
+const box = vm.createContext({Math, Object, Array, Map, String, Number, document: {createElement: () => ({getContext: () => ctx})}});
 vm.runInContext(grab('mulberry32') + grab('hash') + `
   var seed = 11, TAU = Math.PI * 2, topY = 60, T = {ink: '#111', mark: '#111', light: '#fff', bg: '#eee'};
   var GOND_PAIRS = [['#416e5b', '#e6b34b'], ['#af563c', '#e4ac53']], BRIGHT = ['#F7B32B', '#E63B2E', '#12A4B6'];

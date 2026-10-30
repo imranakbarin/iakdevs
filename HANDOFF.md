@@ -300,3 +300,4 @@ New `assets/art-gallery.js` (+ `tests/art-gallery.test.cjs`), loaded after `art-
 ## Claude follow-up (richer live paintings)
 
 New `assets/art-richer.js` (+ `tests/art-richer.test.cjs`), loaded after `art-gallery.js`; `ArtRicher.install()` runs first on the init line (before `ArtAmbience.install()`), after `GondBenchmark.install()`. It wraps `STYLES[key].chunk` for gond, warli, kangra, japan, china and mexico: your grammar runs first unchanged, then extra `add(layer, fn)` calls (layers -1/0/1 sky and far, 3 for Warli huts, 6/7 foreground) seeded from `hash(seed^0x51c3, x0)`. It clears `OC`, `tiles`, `jobs` and `farTiles` once at install. Madhubani is untouched.
+- Kangra additions trimmed after review: the ridge trees (floated off the hills), hilltop palaces and front shrubs are gone; clouds are blurred once into an offscreen at tile build. `art-richer.js` is `?v=5`.
