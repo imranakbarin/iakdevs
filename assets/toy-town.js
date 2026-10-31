@@ -24,6 +24,8 @@ const ToyTown = (() => {
   let rnd = Math.random, seed = 0, day = '', theme = null, newsLine = '', today_ = [], nextHeadline = 12, headIx = 0;
   let W = 0, H = 0, dpr = 1, S = 1, cam = {x: N / 2, y: N / 2, z: 1, tx: N / 2, ty: N / 2, tz: 1}, base = 1;
   let grid = [], buildings = [], props = [], movers = [], events = [], parts = [], bubbles = [], ground = null, sprites = new Map();
+  const MIN_ZOOM = .52, MAX_ZOOM = 3.25;
+  let zoomAnchor = null, nextStreetMoment = 16, streetMoments = 0;
   const PACE = .6, CARS = 7, BIKES = 4, PEOPLE = 14, LIGHT = 10;   // a calm town: few cars, a handful of cyclists, people taking their time   // the whole town runs at 60% speed: easier to follow, calmer to watch
   let clock = 0, playing = true, last = 0, nextEvent = 2, director = null, directorUntil = 0;
   const STREETS = ['Maple St', 'Elm Ave', 'Pickle Lane', 'Gumdrop Rd', 'Button Way', 'Teapot St', 'Biscuit Ave', 'Puddle Lane'];
@@ -136,6 +138,7 @@ const ToyTown = (() => {
       return {kind: road ? (water ? 'bridge' : 'road') : water ? 'water' : (x === 0 || y === 0 || x === N - 1 || y === N - 1) ? 'edge' : 'lot', block: null};
     }));
     buildings = []; props = []; movers = []; events = []; parts = []; bubbles = [];
+    nextStreetMoment = 16; streetMoments = 0;
     const blocks = [];
     for (const [ya, yb] of [[2, 5], [7, 10], [12, 15]]) for (const [xa, xb] of [[2, 5], [7, 10], [12, 15]]) blocks.push({xa, xb, ya, yb, river: ya === 12});
     const land = blocks.filter(b => !b.river), order = land.map(b => b).sort(() => r() - .5);
@@ -177,18 +180,22 @@ const ToyTown = (() => {
   // Movers travel along the road lines; ax is the axis they move on ('x' or 'y').
   const DIRS = [[1, 0], [-1, 0], [0, 1], [0, -1]];
   function randomRoadPoint(r) { const along = r() < .5, line = LINES[r() * 4 | 0] + .5, t = 1.5 + r() * 14.5; return along ? {x: t, y: line, d: r() < .5 ? 0 : 1} : {x: line, y: t, d: r() < .5 ? 2 : 3}; }
+  const directionAngle = d => [0, Math.PI, Math.PI / 2, -Math.PI / 2][d] || 0;
   function spawnCar(r = Math.random, kind) {
     const p = randomRoadPoint(r), k = kind || (r() < .12 ? 'bus' : r() < .15 ? 'taxi' : 'car');
-    const m = {type: 'car', kind: k, x: p.x, y: p.y, d: p.d, v: 0, travel: 0, max: k === 'bus' ? .9 : 1.2 + r() * .5, col: k === 'taxi' ? '#f6c541' : k === 'bus' ? '#3f8fd6' : PASTEL[r() * PASTEL.length | 0], wait: 0, lane: .2};
+    const m = {type: 'car', kind: k, x: p.x, y: p.y, d: p.d, heading: directionAngle(p.d), v: 0, travel: 0, max: k === 'bus' ? .9 : 1.2 + r() * .5, col: k === 'taxi' ? '#f6c541' : k === 'bus' ? '#3f8fd6' : PASTEL[r() * PASTEL.length | 0], wait: 0, lane: .2};
     movers.push(m); return m;
   }
   function spawnPerson(r = Math.random, opts = {}) {
     const p = randomRoadPoint(r);
-    const m = Object.assign({type: 'person', x: p.x, y: p.y, d: p.d, v: 0, travel: 0, max: .35 + r() * .25, col: PASTEL[r() * PASTEL.length | 0], skin: ['#f1c9a5', '#d8a77c', '#a8754f', '#7a4e33'][r() * 4 | 0], lane: (r() < .5 ? 1 : -1) * (.4 + r() * .07), ph: r() * 6, wait: 0}, opts);
+    const m = Object.assign({type: 'person', x: p.x, y: p.y, d: p.d, v: 0, travel: 0, max: .35 + r() * .25, col: PASTEL[r() * PASTEL.length | 0], skin: ['#f1c9a5', '#d8a77c', '#a8754f', '#7a4e33'][r() * 4 | 0],
+      hat: r() < .23 ? (r() < .5 ? 'cap' : 'beanie') : null,
+      bag: r() < .25, scarf: r() < .24, hair: r() < .5 ? '#49362d' : '#333947',
+      lane: (r() < .5 ? 1 : -1) * (.4 + r() * .07), ph: r() * 6, wait: 0}, opts);
     movers.push(m); return m;
   }
   function spawnBike(r = Math.random) {
-    const p = randomRoadPoint(r), m = {type: 'car', kind: 'bike', x: p.x, y: p.y, d: p.d, v: 0, travel: 0, max: .55 + r() * .15, col: PASTEL[r() * PASTEL.length | 0], skin: ['#f1c9a5', '#d8a77c', '#a8754f', '#7a4e33'][r() * 4 | 0], wait: 0, lane: .36, ph: r() * 6};
+    const p = randomRoadPoint(r), m = {type: 'car', kind: 'bike', x: p.x, y: p.y, d: p.d, heading: directionAngle(p.d), v: 0, travel: 0, max: .55 + r() * .15, col: PASTEL[r() * PASTEL.length | 0], skin: ['#f1c9a5', '#d8a77c', '#a8754f', '#7a4e33'][r() * 4 | 0], wait: 0, lane: .36, ph: r() * 6};
     movers.push(m); return m;
   }
   // Traffic lights: the two directions take turns, with a short amber in between.
@@ -233,6 +240,14 @@ const ToyTown = (() => {
     if (m.x < 1.4 || m.x > 16.6 || m.y < 1.4 || m.y > 16.6) { m.d ^= 1; m.x = clamp(1.45, m.x, 16.55); m.y = clamp(1.45, m.y, 16.55); }
   }
   // Scripted movement (an event's chase, a fire truck's run): straight to each point in turn.
+  // Ease the rendered vehicle toward its actual lane direction during turns.
+  function easeHeading(m, dt) {
+    if (m.type !== 'car') return;
+    const target = directionAngle(m.d);
+    const from = Number.isFinite(m.heading) ? m.heading : target;
+    const delta = Math.atan2(Math.sin(target - from), Math.cos(target - from));
+    m.heading = from + clamp(-dt * 5, delta, dt * 5);
+  }
   function stepPath(m, dt) {
     const p = m.path[0]; if (!p) { m.path = null; return; }
     const dx = p.x - m.x, dy = p.y - m.y, dist = Math.hypot(dx, dy), sp = (p.speed || m.max) * dt;
@@ -722,6 +737,29 @@ const ToyTown = (() => {
     if (has('cricket') || has('tennis')) { const st = props.find(p => p.kind === 'stadium'); if (st) st.sport = has('cricket') ? 'cricket' : 'tennis'; }
   }
 
+  // Occasional unhurried encounters in front of the shops.
+  function streetMoment() {
+    const shops = buildings.filter(b => b.kind === 'shop');
+    const people = movers.filter(m => m.type === 'person' && !m.kind && !m.busy &&
+      (!m.stopUntil || clock >= m.stopUntil));
+    const near = [];
+    for (const m of people) for (const shop of shops) {
+      const distance = Math.hypot(m.x - shop.x - .5, m.y - shop.y - .5);
+      if (distance < 2.3) near.push({m, shop, distance});
+    }
+    if (!near.length) return false;
+    near.sort((a, b) => a.distance - b.distance);
+    const {m, shop} = near[Math.floor(Math.random() * Math.min(5, near.length))];
+    m.stopUntil = clock + 2.2; m.v = 0; m.waveUntil = clock + 1.6;
+    say(m, {BAKERY: 'Smells lovely!', BOOKS: 'New books!', CAFE: 'Morning coffee?',
+      PIZZA: 'Pizza tonight?', TOYS: 'Look at that!', SWEETS: 'A little treat?',
+      PETS: 'Hello, pups!'}[shop.name] || 'Lovely day!', 2.1);
+    const friend = people.find(o => o !== m && Math.hypot(o.x - m.x, o.y - m.y) < 1.15);
+    if (friend) { friend.stopUntil = clock + 1.5; friend.v = 0; friend.waveUntil = clock + 1.5; say(friend, 'Hello!', 1.5); }
+    streetMoments++;
+    return true;
+  }
+
   /* ---------------- drawing ---------------- */
   // Iso projection: grid (x, y) and height z (px at scale 1) to screen pixels.
   const P = (x, y, z = 0) => [W / 2 + ((x - cam.x) - (y - cam.y)) * TW * S, H / 2 + ((x - cam.x) + (y - cam.y)) * TH * S - z * S];
@@ -897,6 +935,31 @@ const ToyTown = (() => {
     else if (p.a === 'giraffe') { c.fillStyle = '#f2c14e'; c.beginPath(); c.ellipse(x, y - 9 * s, 6 * s, 4 * s, 0, 0, TAU); c.fill(); c.fillRect(x + 3 * s, y - 26 * s, 2.5 * s, 16 * s); c.beginPath(); c.ellipse(x + 5 * s, y - 27 * s, 3 * s, 2 * s, 0, 0, TAU); c.fill(); c.fillRect(x - 4 * s, y - 6 * s, 1.6 * s, 6 * s); c.fillRect(x + 3 * s, y - 6 * s, 1.6 * s, 6 * s); }
     else { c.fillStyle = '#222'; c.beginPath(); c.ellipse(x, y - 5 * s, 2.6 * s, 4.2 * s, 0, 0, TAU); c.fill(); c.fillStyle = '#fff'; c.beginPath(); c.ellipse(x + .6 * s, y - 4.5 * s, 1.5 * s, 3 * s, 0, 0, TAU); c.fill(); c.fillStyle = '#f2a33a'; c.fillRect(x + 1.2 * s, y - 8 * s, 2 * s, 1 * s); }
   }
+  // A small rotated prism preserves the isometric perspective as vehicles turn.
+  function vehicleBox(c, cx, cy, halfLength, halfWidth, z, height, color, roof, angle) {
+    const co = Math.cos(angle), si = Math.sin(angle);
+    const corners = [[-halfLength, -halfWidth], [halfLength, -halfWidth],
+      [halfLength, halfWidth], [-halfLength, halfWidth]]
+      .map(([u, v]) => [cx + co * u - si * v, cy + si * u + co * v]);
+    const bottom = corners.map(([x, y]) => P(x, y, z));
+    const top = corners.map(([x, y]) => P(x, y, z + height));
+    const sides = corners.map((p, i) => {
+      const j = (i + 1) % 4;
+      return {i, j, depth: (corners[i][0] + corners[i][1] + corners[j][0] + corners[j][1]) / 2};
+    }).sort((a, b) => a.depth - b.depth);
+    c.save(); c.lineJoin = 'round'; c.lineWidth = Math.max(.6, S * .6);
+    for (const {i, j, depth} of sides) {
+      c.fillStyle = shade(color, depth < cx + cy ? .72 : .83);
+      c.beginPath(); c.moveTo(...bottom[i]); c.lineTo(...bottom[j]);
+      c.lineTo(...top[j]); c.lineTo(...top[i]); c.closePath(); c.fill();
+    }
+    c.fillStyle = roof || shade(color, 1.14); c.beginPath();
+    c.moveTo(...top[0]); for (const pt of top.slice(1)) c.lineTo(...pt);
+    c.closePath(); c.fill();
+    c.strokeStyle = 'rgba(255,255,255,.42)'; c.lineWidth = Math.max(.5, .75 * S);
+    c.beginPath(); c.moveTo(...top[3]); c.lineTo(...top[2]); c.lineTo(...top[1]); c.stroke();
+    c.restore();
+  }
   function drawMover(c, m, night) {
     const [ox, oy] = laneOffset(m), mx = m.x + (m.path ? 0 : ox), my = m.y + (m.path ? 0 : oy), [x, y] = P(mx, my, m.lift || 0), s = S;
     // A contact shadow stays on the road while the person, bicycle or car moves above it.
@@ -930,14 +993,18 @@ const ToyTown = (() => {
     if (m.type === 'car') {
       const along = m.d < 2, len = m.kind === 'bus' ? .42 : m.kind === 'fire' ? .38 : m.kind === 'racer' ? .3 : .26, wid = .14;
       const hx = along ? len : wid, hy = along ? wid : len, hgt = m.kind === 'bus' ? 13 : m.kind === 'racer' ? 4 : 8;
+      const angle = Number.isFinite(m.heading) ? m.heading : directionAngle(m.d);
+      const co = Math.cos(angle), si = Math.sin(angle);
       c.fillStyle = '#2d3440'; const wheelSpin = (m.travel || 0) * 21;
       for (const k of [-.6, .6]) {
-        const [wx, wy] = P(mx + (along ? hx * k : hx + .01), my + (along ? hy + .01 : hy * k), (m.lift || 0) + 2);
+        const [wx, wy] = P(mx + co * len * k - si * (wid + .01), my + si * len * k + co * (wid + .01), (m.lift || 0) + 2);
         c.beginPath(); c.ellipse(wx, wy, 2.5 * s, 2.5 * s, 0, 0, TAU); c.fill();
         c.strokeStyle = '#b7c4ce'; c.lineWidth = .7 * s; c.beginPath(); c.moveTo(wx - Math.cos(wheelSpin) * 1.3 * s, wy - Math.sin(wheelSpin) * 1.3 * s); c.lineTo(wx + Math.cos(wheelSpin) * 1.3 * s, wy + Math.sin(wheelSpin) * 1.3 * s); c.stroke();
       }
-      box(c, mx, my, hx, hy, (m.lift || 0) + 3, hgt, m.col);
-      if (m.kind !== 'bus' && m.kind !== 'racer') box(c, mx - (along ? (m.d === 0 ? .05 : -.05) : 0), my - (along ? 0 : (m.d === 2 ? .05 : -.05)), hx * .55, hy * .9, (m.lift || 0) + 2 + hgt, 5, m.col, '#cfe9ff');
+      vehicleBox(c, mx, my, len, wid, (m.lift || 0) + 3, hgt, m.col, null, angle);
+      if (m.kind !== 'bus' && m.kind !== 'racer')
+        vehicleBox(c, mx - co * .05, my - si * .05, len * .55, wid * .88,
+          (m.lift || 0) + 3 + hgt, 5, m.col, '#cfe9ff', angle);
       if (m.kind === 'racer') { const t = P(mx, my, hgt + 3); c.fillStyle = '#fff'; c.font = `900 ${5 * s}px system-ui`; c.textAlign = 'center'; c.fillText(String(m.num || 1), t[0], t[1]); }
       if (m.kind === 'bus') { const dest = {sports: 'STADIUM', space: 'LAUNCH SITE', election: 'POLLS', festival: 'FESTIVAL', awards: 'PREMIERE', animals: 'ZOO', market: 'BANK', science: 'LAB', tech: 'EXPO'}[theme] || 'TOWN CENTRE', [tx, ty] = P(mx, my + (along ? hy : 0), hgt * .7); c.fillStyle = '#1d2230'; c.fillRect(tx - 11 * s, ty - 3 * s, 22 * s, 5 * s); c.fillStyle = '#ffb020'; c.font = `800 ${3.6 * s}px system-ui`; c.textAlign = 'center'; c.fillText(dest, tx, ty + .6 * s); }
       if (m.kind === 'taxi') { const t = P(mx, my, (m.lift || 0) + hgt + 9); c.fillStyle = '#222'; c.fillRect(t[0] - 3 * s, t[1] - 2 * s, 6 * s, 2.5 * s); }
@@ -979,6 +1046,11 @@ const ToyTown = (() => {
       c.fillStyle = m.kind === 'robot' ? '#bdc7d3' : m.skin;
       c.beginPath(); c.arc((side * 3.3 - stride * 1.5) * s, -5.8 * s, .8 * s, 0, TAU); c.fill();
     }
+    if (m.bag && m.kind !== 'robot') {
+      c.fillStyle = '#7e634b'; c.beginPath(); c.roundRect(-3.7 * s, -8.7 * s, 3.5 * s, 5.2 * s, 1.3 * s); c.fill();
+      c.strokeStyle = '#c6a57a'; c.lineWidth = .75 * s; c.beginPath();
+      c.moveTo(-2.2 * s, -8.2 * s); c.lineTo(-2.2 * s, -4.3 * s); c.stroke();
+    }
     { const g = c.createLinearGradient(-2.4 * s, 0, 2.4 * s, 0);
       g.addColorStop(0, shade(body.startsWith('#') ? body : '#cccccc', 1.12));
       g.addColorStop(1, shade(body.startsWith('#') ? body : '#cccccc', .8));
@@ -990,10 +1062,23 @@ const ToyTown = (() => {
       g.addColorStop(0, shade(hc, 1.18)); g.addColorStop(1, shade(hc, .85));
       c.fillStyle = g; c.beginPath(); c.arc(0, -11.8 * s, 2.8 * s, 0, TAU); c.fill();
       if (m.kind !== 'robot') { // A small hairline, face and nose make each pedestrian legible.
-        c.fillStyle = '#514034'; c.beginPath(); c.arc(-.25 * s, -12.7 * s, 2.8 * s, Math.PI * 1.08, Math.PI * 1.93); c.fill();
+        c.fillStyle = m.hair || '#514034'; c.beginPath(); c.arc(-.25 * s, -12.7 * s, 2.8 * s, Math.PI * 1.08, Math.PI * 1.93); c.fill();
         c.fillStyle = '#2d3440'; c.beginPath(); c.arc(1.45 * s, -11.9 * s, .43 * s, 0, TAU); c.fill();
         c.fillStyle = shade(hc, .85); c.beginPath(); c.arc(2.3 * s, -10.85 * s, .65 * s, 0, TAU); c.fill();
       }
+    }
+    if (m.scarf && m.kind !== 'robot') {
+      c.fillStyle = '#f4c661'; c.beginPath(); c.roundRect(-2.5 * s, -9.4 * s, 5 * s, 1.6 * s, .6 * s); c.fill();
+      c.fillRect(-1.1 * s, -8.5 * s, 1.2 * s, 3.1 * s);
+    }
+    if (m.hat && m.kind !== 'chef' && m.kind !== 'newsie') {
+      c.fillStyle = m.hat === 'beanie' ? '#9b6ed3' : '#387ea6';
+      c.beginPath(); c.ellipse(-.3 * s, -14.3 * s, 3.3 * s, m.hat === 'beanie' ? 2.6 * s : 1.8 * s, 0, Math.PI, TAU); c.fill();
+      if (m.hat === 'cap') c.fillRect(1.2 * s, -14.1 * s, 3.1 * s, .9 * s);
+    }
+    if (m.waveUntil && clock < m.waveUntil) {
+      c.strokeStyle = m.skin || '#d8a77c'; c.lineWidth = 1.5 * s; c.beginPath();
+      c.moveTo(2.1 * s, -8 * s); c.lineTo(5.5 * s, -12.5 * s - Math.sin(clock * 10) * s); c.stroke();
     }
     if (m.kind === 'chef') { c.fillStyle = '#fff'; c.fillRect(-2.4 * s, -16.5 * s, 4.8 * s, 3.5 * s); }
     if (m.kind === 'robot') { c.fillStyle = '#ff5d5d'; c.fillRect(-.6 * s, -16 * s, 1.2 * s, 2.4 * s); }
@@ -1047,6 +1132,7 @@ const ToyTown = (() => {
 
   /* ---------------- frame ---------------- */
   function layout() {
+    zoomAnchor = null;
     dpr = Math.min(2, devicePixelRatio || 1); W = cv.width = Math.round(innerWidth * dpr); H = cv.height = Math.round(innerHeight * dpr);
     cv.style.width = innerWidth + 'px'; cv.style.height = innerHeight + 'px';
     const fit = Math.min(W / (N * TW * 2 + 60), H / (N * TH * 2 + 200));
@@ -1057,7 +1143,7 @@ const ToyTown = (() => {
   function nightLevel() { return clamp(0, -Math.cos(clock / (300 * PACE) * TAU) * 2 - 1, 1); }
   function update(dt) {
     clock += dt;
-    for (const m of movers.slice()) step(m, dt);
+    for (const m of movers.slice()) { step(m, dt); easeHeading(m, dt); }
     for (const e of events.slice()) { e.t += dt; if (e.follow) { e.x = e.follow.x; e.y = e.follow.y; } if (e.update) e.update(e, dt); if (e.t > e.dur) { if (e.end) e.end.call(e); events.splice(events.indexOf(e), 1); } }
     for (const m of movers.slice()) if (m.home && !m.path) remove(m);
     for (const p of props) if (p.kind === 'duck') { p.x += p.vx * dt; if (p.x < .3 || p.x > 17.5) p.vx *= -1; }
@@ -1074,13 +1160,25 @@ const ToyTown = (() => {
     if (raining) for (let k = 0; k < 6; k++) parts.push({x: Math.random() * 18, y: Math.random() * 18, z: 160, vx: 0, vy: 0, vz: -260, g: 0, life: .6, t: 0, col: 'rgba(120,170,220,.7)', r: 1, rain: true});
     // Chaos: keep a few things going at once.
     if ((nextHeadline -= dt) <= 0) { const st = today_.filter(v => v.story); if (st.length) tick(`TODAY'S NEWS ${st[(headIx++) % st.length].emoji} ${headline(st[(headIx - 1) % st.length].story)}`); nextHeadline = 30; }
-    if ((nextEvent -= dt) <= 0) { if (events.length < 3) randomEvent(); nextEvent = 7 + Math.random() * 6; }   // an unhurried rhythm
+    if ((nextEvent -= dt) <= 0) { if (events.length < 3) randomEvent(); nextEvent = 7 + Math.random() * 6; }
+    if (clock >= nextStreetMoment) { streetMoment(); nextStreetMoment = clock + 20 + Math.random() * 8; }   // an unhurried rhythm
     // Traffic: keep the streets busy as cars leave and events come and go.
     while (movers.filter(m => m.type === 'car' && (m.kind === 'car' || m.kind === 'bus' || m.kind === 'taxi')).length < CARS) spawnCar();
     while (movers.filter(m => m.kind === 'bike').length < BIKES) spawnBike();
     while (movers.filter(m => m.type === 'person' && !m.kind).length < PEOPLE) spawnPerson();
-    // The camera stays put (no zooming after events); a drag pans it, and it eases to where it was dragged.
-    const k = Math.min(1, dt * 4); cam.x += (cam.tx - cam.x) * k; cam.y += (cam.ty - cam.y) * k; cam.z = 1;
+    // Preserve the pointed-at block while easing wheel/button zoom.
+    if (Math.abs(cam.tz - cam.z) > .0002) {
+      cam.z = lerp(cam.z, cam.tz, Math.min(1, dt * 12));
+      if (zoomAnchor) focusCamera(zoomAnchor.world, zoomAnchor.sx, zoomAnchor.sy);
+    } else if (zoomAnchor) {
+      cam.z = cam.tz;
+      focusCamera(zoomAnchor.world, zoomAnchor.sx, zoomAnchor.sy);
+      zoomAnchor = null;
+    }
+    if (!zoomAnchor) {
+      const k = Math.min(1, dt * 4);
+      cam.x += (cam.tx - cam.x) * k; cam.y += (cam.ty - cam.y) * k;
+    }
   }
   function render() {
     S = base * cam.z;
@@ -1151,28 +1249,107 @@ const ToyTown = (() => {
     setTimeout(() => { const el = document.getElementById('hint'); if (el) el.style.opacity = '0'; }, 6000);
   }
   // A tap pokes the town: something happens right there.
+  // Inverse isometric projection used by both pokes and gestures.
+  function screenWorld(sx, sy) {
+    const scale = base * cam.z || S || 1;
+    const u = (sx - W / 2) / (TW * scale), v = (sy - H / 2) / (TH * scale);
+    return {x: cam.x + (u + v) / 2, y: cam.y + (v - u) / 2};
+  }
+  function focusCamera(world, sx, sy) {
+    const scale = base * cam.z || 1;
+    const u = (sx - W / 2) / (TW * scale), v = (sy - H / 2) / (TH * scale);
+    cam.x = cam.tx = clamp(1.1, world.x - (u + v) / 2, N - 1.1);
+    cam.y = cam.ty = clamp(1.1, world.y - (v - u) / 2, N - 1.1);
+  }
+  function zoomAt(factor, cx = innerWidth / 2, cy = innerHeight / 2) {
+    const sx = cx * dpr, sy = cy * dpr;
+    zoomAnchor = {world: screenWorld(sx, sy), sx, sy};
+    cam.tz = clamp(MIN_ZOOM, cam.tz * factor, MAX_ZOOM);
+    if (!playing) { cam.z = cam.tz; focusCamera(zoomAnchor.world, sx, sy); zoomAnchor = null; render(); }
+    return cam.tz;
+  }
+  function resetView() {
+    zoomAnchor = {world: {x: N / 2, y: N / 2}, sx: W / 2, sy: H / 2};
+    cam.tz = 1;
+    if (!playing) { cam.z = 1; focusCamera(zoomAnchor.world, W / 2, H / 2); zoomAnchor = null; render(); }
+  }
+  function pinchTo(scale, centerX, centerY, anchorWorld) {
+    cam.z = cam.tz = clamp(MIN_ZOOM, scale, MAX_ZOOM);
+    zoomAnchor = null;
+    focusCamera(anchorWorld, centerX * dpr, centerY * dpr);
+    if (!playing) render();
+  }
   function poke(e) {
     const r = cv.getBoundingClientRect(), sx = (e.clientX - r.left) * dpr, sy = (e.clientY - r.top) * dpr;
-    const u = (sx - W / 2) / (TW * S), v = (sy - H / 2) / (TH * S), gx = (u + v) / 2 + cam.x, gy = (v - u) / 2 + cam.y;
+    const {x: gx, y: gy} = screenWorld(sx, sy);
     const names = ['balloon', 'butterflies', 'kite', 'pigeons', 'busker'];
     startEvent(names[Math.random() * names.length | 0], clamp(1.5, gx, 16.5), clamp(1.5, gy, 16.5));
   }
   if (typeof window !== 'undefined' && cv) {
     addEventListener('resize', layout);
-    // A drag looks around (useful on phones, where the town is wider than the screen); a tap pokes.
-    let down = null;
-    cv.addEventListener('pointerdown', e => { down = {x: e.clientX, y: e.clientY, cx: cam.tx, cy: cam.ty, moved: false}; cv.setPointerCapture(e.pointerId); });
-    cv.addEventListener('pointermove', e => {
-      if (!down) return;
-      const dx = (e.clientX - down.x) * dpr / (TW * S), dy = (e.clientY - down.y) * dpr / (TH * S);
-      if (Math.hypot(e.clientX - down.x, e.clientY - down.y) > 8) down.moved = true;
-      if (down.moved) { cam.tx = clamp(2, down.cx - (dx + dy) / 2, N - 2); cam.ty = clamp(2, down.cy - (dy - dx) / 2, N - 2); cam.x = cam.tx; cam.y = cam.ty; }
+    // Single pointer: drag or poke. Two pointers: pinch and pan with a stable anchor.
+    const fingers = new Map();
+    let down = null, pinch = null;
+    const pair = () => [...fingers.values()].slice(0, 2);
+    const beginPinch = () => {
+      const [a, b] = pair(); if (!a || !b) return;
+      const cx = (a.x + b.x) / 2, cy = (a.y + b.y) / 2;
+      pinch = {distance: Math.max(1, Math.hypot(a.x - b.x, a.y - b.y)),
+        scale: cam.z, world: screenWorld(cx * dpr, cy * dpr)};
+      cam.tz = cam.z; zoomAnchor = null; down = null;
+    };
+    cv.addEventListener('pointerdown', e => {
+      fingers.set(e.pointerId, {x: e.clientX, y: e.clientY});
+      cv.setPointerCapture(e.pointerId);
+      if (fingers.size === 1) { pinch = null; zoomAnchor = null; cam.tz = cam.z;
+        down = {x: e.clientX, y: e.clientY, cx: cam.x, cy: cam.y, moved: false}; }
+      else beginPinch();
     });
-    cv.addEventListener('pointerup', e => { if (down && !down.moved) poke(e); down = null; });
-    cv.addEventListener('pointercancel', () => { down = null; });
+    cv.addEventListener('pointermove', e => {
+      if (!fingers.has(e.pointerId)) return;
+      fingers.set(e.pointerId, {x: e.clientX, y: e.clientY});
+      if (fingers.size >= 2) {
+        if (!pinch) beginPinch();
+        const [a, b] = pair();
+        pinchTo(pinch.scale * Math.hypot(a.x - b.x, a.y - b.y) / pinch.distance,
+          (a.x + b.x) / 2, (a.y + b.y) / 2, pinch.world);
+      } else if (down) {
+        const dx = (e.clientX - down.x) * dpr / (TW * base * cam.z);
+        const dy = (e.clientY - down.y) * dpr / (TH * base * cam.z);
+        if (Math.hypot(e.clientX - down.x, e.clientY - down.y) > 8) down.moved = true;
+        if (down.moved) { cam.tx = cam.x = clamp(1.1, down.cx - (dx + dy) / 2, N - 1.1);
+          cam.ty = cam.y = clamp(1.1, down.cy - (dy - dx) / 2, N - 1.1);
+          if (!playing) render(); }
+      }
+    });
+    function releasePointer(e, cancelled = false) {
+      if (!fingers.has(e.pointerId)) return;
+      const wasPinch = !!pinch || fingers.size > 1;
+      fingers.delete(e.pointerId);
+      if (!cancelled && !wasPinch && down && !down.moved) poke(e);
+      down = null;
+      if (fingers.size === 1) {
+        const remaining = [...fingers.values()][0];
+        down = {x: remaining.x, y: remaining.y, cx: cam.x, cy: cam.y, moved: true};
+      } else pinch = null;
+    }
+    cv.addEventListener('pointerup', e => releasePointer(e));
+    cv.addEventListener('pointercancel', e => releasePointer(e, true));
+    cv.addEventListener('wheel', e => {
+      e.preventDefault();
+      const rect = cv.getBoundingClientRect();
+      zoomAt(Math.exp(-clamp(-120, e.deltaY, 120) * .0025),
+        e.clientX - rect.left, e.clientY - rect.top);
+    }, {passive: false});
+    for (const [id, factor] of [['zoom-in', 1.35], ['zoom-out', 1 / 1.35]]) {
+      const button = document.getElementById(id);
+      if (button) button.addEventListener('click', () => zoomAt(factor));
+    }
+    const resetButton = document.getElementById('zoom-reset');
+    if (resetButton) resetButton.addEventListener('click', resetView);
     addEventListener('message', e => { if (e.origin === location.origin && e.data && e.data.type === 'town:motion') playing = !!e.data.playing; });
     addEventListener('hashchange', () => location.reload());
     start();
   }
-  return {layout, render, TALK, nameOf, headline, dateKey, CALM, lightPhase, themeFromNews, newsThemes, VARIANTS, VARIANT_EVENTS: () => Object.keys(VARIANT_EVENTS), decorate, setToday: l => { today_ = l; }, PACE, THEMES, GRIM, build, update, events: () => events, movers: () => movers, buildings: () => buildings, props: () => props, startEvent, randomEvent, setPlaying: v => { playing = v; }, debug: () => ({clock, theme, seed, night: nightLevel(), cam: {...cam}})};
+  return {layout, render, zoomAt, resetView, pinchTo, screenWorld, streetMoment, TALK, nameOf, headline, dateKey, CALM, lightPhase, themeFromNews, newsThemes, VARIANTS, VARIANT_EVENTS: () => Object.keys(VARIANT_EVENTS), decorate, setToday: l => { today_ = l; }, PACE, THEMES, GRIM, build, update, events: () => events, movers: () => movers, buildings: () => buildings, props: () => props, startEvent, randomEvent, setPlaying: v => { playing = v; }, debug: () => ({clock, theme, seed, night: nightLevel(), cam: {...cam}, streetMoments})};
 })();

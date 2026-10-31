@@ -129,6 +129,50 @@ scene.render();
 assert.equal(strokes.groundDraws, 2, 'new town invalidates static ground');
 for (const key of Object.keys(scene.THEMES)) { scene.build(4242, key); scene.render(); }
 assert.ok(strokes.screenBlits >= 12, 'all themed scenes complete a render pass');
+// Camera zoom is bounded, preserves a focal world point, and can reset to fit.
+scene.resetView();
+for (let i = 0; i < 90; i++) scene.update(1 / 60);
+const beforeZoom = scene.screenWorld(800, 300), oldZoom = scene.debug().cam.z;
+scene.zoomAt(1.7, 800, 300);
+for (let i = 0; i < 90; i++) scene.update(1 / 60);
+assert.ok(scene.debug().cam.z > oldZoom * 1.65, 'zoom in gets closer');
+const afterZoom = scene.screenWorld(800, 300);
+assert.ok(Math.hypot(beforeZoom.x - afterZoom.x, beforeZoom.y - afterZoom.y) < .02,
+  'wheel zoom keeps the same world point beneath the cursor');
+scene.zoomAt(.2, 800, 300);
+for (let i = 0; i < 90; i++) scene.update(1 / 60);
+assert.ok(scene.debug().cam.z < .7, 'zoom out sees more of the town');
+scene.pinchTo(100, 640, 360, {x: 9, y: 9});
+assert.ok(scene.debug().cam.z <= 3.25, 'pinch maximum is clamped');
+scene.pinchTo(.01, 640, 360, {x: 9, y: 9});
+assert.ok(scene.debug().cam.z >= .52, 'pinch minimum is clamped');
+scene.resetView();
+for (let i = 0; i < 90; i++) scene.update(1 / 60);
+assert.ok(Math.abs(scene.debug().cam.z - 1) < .02, 'Fit restores starting zoom');
+assert.ok(Math.abs(scene.debug().cam.x - 9) < .02 && Math.abs(scene.debug().cam.y - 9) < .02,
+  'Fit recentres the whole town');
+scene.setPlaying(false); scene.zoomAt(1.25); // controls still work while paused
+assert.ok(scene.debug().cam.z > 1.2, 'zoom controls work while paused');
+scene.setPlaying(true);
+
+// Neighborhood encounters use nearby shops, rather than placing floating scenes.
+scene.build(12457, 'weather');
+const walkersWithAccessories = scene.movers().filter(m => m.type === 'person' && !m.kind)
+  .filter(m => m.hat || m.bag || m.scarf);
+assert.ok(walkersWithAccessories.length >= 1, 'neighbors have varied outfits');
+const shop = scene.buildings().find(b => b.kind === 'shop');
+const neighbor = scene.movers().find(m => m.type === 'person' && !m.kind);
+assert.ok(shop && neighbor, 'shop and neighbor exist');
+neighbor.x = shop.x + .5; neighbor.y = shop.y + .5;
+assert.ok(scene.streetMoment(), 'a nearby person can stop to greet a shop');
+assert.equal(scene.debug().streetMoments, 1, 'shop encounter increments the town moment counter');
+scene.render();
+const townPage = fs.readFileSync(path.join(root, 'toy-town.html'), 'utf8');
+for (const id of ['zoom-in', 'zoom-out', 'zoom-reset']) {
+  assert.match(townPage, new RegExp('id="' + id + '"[^>]*aria-label="[^"]+"'), id + ' is accessible');
+}
+assert.match(townPage, /toy-town\.js\?v=10/, 'zoom-enhanced engine is loaded');
+
 
 // A calm town: gentle moments run to their end, and traffic waits at red lights instead of piling into the crossings.
 T.build(31337, 'weather'); T.setToday([]);

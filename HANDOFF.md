@@ -321,3 +321,10 @@ New, self-contained mode like Pip Run: `toy-town.html` + `assets/toy-town.js` (+
 - Cyclists pedal and wheels turn according to accumulated distance, so stopping for traffic lights freezes their motion; vehicles also use travel-based wheel highlights and soft contact shadows.
 - Houses have chimneys, second-side windows, porch lights and threshold stones. Shop and tower parapets plus mullioned window frames increase depth. Small seeded grass tufts sit in the cached ground layer, not floating as separate sprites.
 - The isolated `assets/toy-town.js` public API exposes `layout` and `render` for deterministic canvas smoke tests. `toy-town.html` now loads `toy-town.js?v=9`.
+ 
+## Toy Town camera and neighborhood life (31 October 2026)
+
+- Wheel zoom anchors the point beneath the cursor; touch uses two tracked pointers for pinch-to-zoom and two-finger panning. One finger still drags the town or taps for a gentle event. Zoom is clamped to 0.52–3.25×, and the subtle − / Fit / + buttons provide an accessible fallback. Controls work when animation is paused.
+- Camera zoom eases toward button/wheel targets; pinch is direct. The static-ground cache naturally invalidates on camera scale/position changes. The page uses toy-town.js?v=10.
+- Vehicle visuals rotate smoothly toward their movement direction via a rotated isometric prism. Pedestrians have seeded hats, scarves, backpacks and hair colors. Periodic quiet shop interactions pause a passerby for a brief greeting, sometimes acknowledged by another walker.
+- Regression coverage should include zoom bounds, cursor anchoring, Fit reset, accessible controls, scene render tests and shop interactions.
