@@ -1435,6 +1435,9 @@ const ToyTown = (() => {
     }
   }
   function render() {
+    // Keep the original 2D simulation alive for all gestures, news and traffic,
+    // but avoid drawing a duplicate city when WebGL is successfully visible.
+    if (typeof window !== 'undefined' && window.ToyTown3D?.active) return;
     S = base * cam.z;
     const night = nightLevel();
     const sky = ctx.createLinearGradient(0, 0, 0, H); sky.addColorStop(0, night > .5 ? '#1d2747' : '#bfe6f7'); sky.addColorStop(1, night > .5 ? '#2e3a63' : '#e8f6fb');

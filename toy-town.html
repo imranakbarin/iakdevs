@@ -7,6 +7,8 @@
 <style>
 html,body{margin:0;height:100%;overflow:hidden;background:#bfe6f7;font-family:system-ui,-apple-system,sans-serif;touch-action:none}
 #town{display:block;width:100%;height:100%;cursor:grab;touch-action:none;-webkit-user-select:none;user-select:none;overscroll-behavior:none}
+#town-3d{display:none;position:fixed;inset:0;pointer-events:none;z-index:1;overflow:hidden}
+#card,#ticker,#hint,#zoom-controls{z-index:3}
 html.embedded #zoom-controls{display:none}
 #card{position:fixed;left:14px;top:calc(72px + env(safe-area-inset-top,0px));max-width:min(360px,calc(100vw - 28px));padding:10px 14px 9px;border-radius:14px;background:rgba(255,253,245,.92);box-shadow:0 6px 20px rgba(30,50,70,.18);color:#2d3440;pointer-events:none}
 #card .k{font:700 10.5px/1 system-ui;letter-spacing:.14em;text-transform:uppercase;color:#d0543a}
@@ -22,9 +24,16 @@ html.embedded #zoom-controls{display:none}
 #zoom-controls #zoom-reset{font-size:12px;letter-spacing:.01em;min-width:43px}
 @media (max-width:600px){#card{top:calc(64px + env(safe-area-inset-top,0px));padding:8px 12px}#card .t{font-size:16px}}
 </style>
+<script type="importmap">
+{"imports":{
+  "three":"https://cdn.jsdelivr.net/npm/three@0.187.0/build/three.module.js",
+  "three/addons/":"https://cdn.jsdelivr.net/npm/three@0.187.0/examples/jsm/"
+}}
+</script>
 </head>
 <body>
 <canvas id="town" aria-label="Toy Town: a busy little isometric town"></canvas>
+<div id="town-3d" aria-hidden="true"></div>
 <div id="card" role="status"><div class="k">Toy Town · <span id="date"></span></div><div class="t" id="theme">Opening the town…</div><div class="n" id="news"></div></div>
 <div id="ticker" role="log" aria-live="polite"><b>TOY TOWN NEWS</b><span id="tick">Good morning, Toy Town!</span></div>
 <div id="hint">Drag to explore · pinch or scroll to zoom · tap for a surprise</div>
@@ -35,6 +44,21 @@ html.embedded #zoom-controls{display:none}
 </div>
 <script>if(new URLSearchParams(location.search).has('embed'))document.documentElement.classList.add('embedded');</script>
 <script src="assets/toy-town-diorama.js?v=1"></script>
-<script src="assets/toy-town.js?v=13"></script>
+<script src="assets/toy-town.js?v=14"></script>
+<script type="module">
+  // Opt out with ?classic=1 for the original Canvas experience.
+  // Loading errors are deliberately isolated from the existing town engine.
+  if (!new URLSearchParams(location.search).has('classic') && window.WebGL2RenderingContext) {
+    Promise.all([
+      import('three'),
+      import('three/addons/geometries/RoundedBoxGeometry.js'),
+      import('./assets/toy-town-3d.js?v=1')
+    ]).then(([THREE, geometry, view]) => {
+      try { view.mountToyTown3D(THREE, geometry.RoundedBoxGeometry, ToyTown,
+        document.getElementById('town-3d')); }
+      catch (error) { console.warn('3D is unavailable; classic Toy Town remains active',error); }
+    }).catch(error => console.warn('3D resources unavailable; using the 2D town',error));
+  }
+</script>
 </body>
 </html>

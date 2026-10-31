@@ -10,7 +10,7 @@ assert.match(dioramaSource, /function tree\(/, 'new organic tree renderer exists
 assert.match(dioramaSource, /function gable\(/, 'real pitched roof renderer exists');
 assert.match(dioramaSource, /function glazing\(/, 'framed glazing renderer exists');
 assert.match(html, /<option value="town">Toy Town<\/option>/, 'Toy Town is in the menu');
-assert.match(html, /townFrame\.src='toy-town\.html\?v=13&embed=1'/, 'and opens its current embedded page');
+assert.match(html, /townFrame\.src='toy-town\.html\?v=14&embed=1'/, 'and opens its current embedded page');
 assert.match(fs.readFileSync(path.join(root, 'toy-town.html'), 'utf8'), /assets\/toy-town\.js\?v=\d+/);
 const box = vm.createContext({Math, Object, Array, JSON, Date, String, Number, RegExp, setTimeout: () => 0, document: {getElementById: () => ({textContent: ''})}});
 vm.runInContext((dioramaSource + '\n' + fs.readFileSync(path.join(root, 'assets/toy-town.js'), 'utf8')) + ';this.T = ToyTown;', box);
@@ -283,8 +283,17 @@ const townPage = fs.readFileSync(path.join(root, 'toy-town.html'), 'utf8');
 for (const id of ['zoom-in', 'zoom-out', 'zoom-reset']) {
   assert.match(townPage, new RegExp('id="' + id + '"[^>]*aria-label="[^"]+"'), id + ' is accessible');
 }
-assert.match(townPage, /toy-town\.js\?v=13/, 'diorama engine is loaded');
+assert.match(townPage, /toy-town\.js\?v=14/, 'diorama engine is loaded');
 assert.match(townPage, /toy-town-diorama\.js\?v=1/, 'diorama is loaded before the engine');
+assert.match(townPage, /id="town-3d"/, 'WebGL mounts into its own overlay');
+assert.match(townPage, /pointer-events:none/, 'WebGL overlay allows iPhone touch gestures through to original canvas');
+assert.match(townPage, /WebGL2RenderingContext/, '3D is only attempted on supported browsers');
+assert.match(townPage, /classic/, 'original 2D scene remains selectable with classic URL option');
+assert.match(townPage, /three@0\.187\.0/, '3D package is pinned to a reproducible version');
+assert.match(townPage, /\.catch\(error => console\.warn/, '3D dependency failure falls back to the original renderer');
+assert.match(fs.readFileSync(path.join(root,'assets/toy-town.js'),'utf8'),
+  /window\.ToyTown3D\?\.active/, 'classic simulation skips redundant Canvas rendering only when WebGL is active');
+
 assert.ok(townPage.indexOf('toy-town-diorama.js') < townPage.indexOf('toy-town.js'),
   'material renderer loads before the world engine');
 assert.match(fs.readFileSync(path.join(root,'assets/toy-town.js'),'utf8'),
