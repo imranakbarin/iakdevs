@@ -308,3 +308,9 @@ New `assets/art-richer.js` (+ `tests/art-richer.test.cjs`), loaded after `art-ga
 ## Claude follow-up (Toy Town)
 
 New, self-contained mode like Pip Run: `toy-town.html` + `assets/toy-town.js` (+ `tests/toy-town.test.cjs`). It fetches `https://api.wikimedia.org/feed/v1/wikipedia/en/featured/YYYY/MM/DD` from the browser (cached in `localStorage['toy-town:news:<date>']`). Shared `index.html` anchors touched, mirroring Pip: `.town-mode`/`#town-host` CSS after `.pip-mode`; `<div id="town-host">` with `#town-frame` before `#pip-host`; `<option value="town">Toy Town</option>`; `requestedTown` (`#toy-town`); `townFrame`/`townMotion` (posts `{type:'town:motion',playing}`) next to `pipFrame`; play and "New town" handling; `town` flag in `modeBtn.onchange` (body class, iframe src, LivingArt.mode, seed/sound hidden, h1, labels, hash); `'town'` added beside `'pip'` in the `drawScene`/`frame` early returns and the init lines. `home.js` is `?v=3` with a Toy Town card.
+
+## Toy Town follow-up (31 October 2026)
+
+- Daily seeds now use the visitor's local calendar date rather than UTC. The visual day/night cycle takes five real minutes; town movement still runs at 60% speed.
+- A reusable Canvas 2D buffer caches ground, roads, and tree/building contact shadows. It is invalidated by new town layouts, news decorations, resizes and camera movements. `toy-town.html` loads `toy-town.js?v=8`.
+- Tests assert that all news variants finish, and cover local midnight and the real-time day/night period.

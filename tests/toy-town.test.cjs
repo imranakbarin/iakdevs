@@ -32,6 +32,14 @@ assert.equal(v('A pod of whales is seen in the harbour'), 'whale');
 const three = T.newsThemes(['Explosion kills four in a factory', 'A new smartphone goes on sale', 'Halloween parades fill the streets', 'The marathon record is broken', 'Another phone story']);
 assert.equal(JSON.stringify(three.map(x => x.variant)), JSON.stringify(['phone', 'halloween', 'marathon']), 'up to three light stories, one per theme, grim ones skipped');
 assert.ok(T.VARIANTS.every(x => T.VARIANT_EVENTS().includes(x.variant)), 'every variant has its own event');
+// Local midnight can differ from UTC midnight; the date key must use local calendar fields.
+class LateEveningDate extends Date {
+  constructor(...args) { super(...(args.length ? args : ['2026-11-01T00:30:00Z'])); }
+  getFullYear() { return 2026; } getMonth() { return 9; } getDate() { return 31; }
+}
+const lateBox = vm.createContext({...box, Date: LateEveningDate});
+vm.runInContext(fs.readFileSync(path.join(root, 'assets/toy-town.js'), 'utf8') + ';this.T = ToyTown;', lateBox);
+assert.equal(lateBox.T.dateKey(), '2026-10-31', 'late local evening remains on the local date');
 
 // The story's own name goes on the banners; a long story becomes a headline.
 assert.equal(T.nameOf('India win the second Test against England by an innings'), 'India');
@@ -61,12 +69,14 @@ for (const key of Object.keys(T.THEMES)) {
 // Every news variant, with its decorations, runs to its end (as the day's lead story).
 for (const x of T.VARIANTS) {
   T.build(99, x.key); T.decorate([x]); T.setToday([x]);
-  T.startEvent(x.variant); for (let i = 0; i < 60 * 40; i++) T.update(1 / 60);
+  const started = T.startEvent(x.variant);
+  assert.ok(started, `${x.variant}: the event starts`);
+  for (let i = 0; i < 60 * 40; i++) T.update(1 / 60);
   assert.ok(T.movers().every(m => Number.isFinite(m.x + m.y)), `${x.variant}: everyone is somewhere`);
-  assert.ok(!T.events().some(e => e.name === x.variant) || true);
+  assert.ok(!T.events().includes(started), `${x.variant}: the original event finishes`);
 }
 assert.ok(T.PACE < 1, 'the town runs slower than real time');
-// The Toy Town Times stands on a roof, never on a road; neighbours chat about the story by name; a plane tows the headline.
+// The Toy Town Times stands at the town corner, clear of houses; neighbours chat and a plane tows the headline.
 { const lead = {...T.VARIANTS.find(v => v.variant === 'cricket'), story: 'India win the second Test', name: 'India'};
   T.build(2024, 'sports'); T.decorate([lead]); T.setToday([lead]);
   const board = T.props().find(p => p.kind === 'times');
@@ -89,4 +99,10 @@ for (let i = 0; i < 60 * 120; i++) {
 }
 assert.ok(clashes / samples < .05, `cross traffic rarely meets in a crossing (${clashes} near misses in ${samples} samples)`);
 assert.ok(T.events().length <= 6, 'the gentle moments end too');
+// The simulation is slow, but daylight/night cycle still lasts five real minutes.
+const dayCycle = 300 * T.PACE, phase = T.debug().clock % dayCycle;
+T.update((dayCycle / 2 - phase + dayCycle) % dayCycle);
+assert.ok(T.debug().night > .99, 'night halfway through the real-time cycle');
+T.update(dayCycle / 2);
+assert.ok(T.debug().night < .01, 'daylight returns after a five-minute cycle');
 console.log(`Toy Town PASS: ${T.VARIANTS.length} news variants (cricket to Diwali to dinosaurs) each with its own event, grim stories never become themes, light ones pick ${Object.keys(T.THEMES).length - 1} kinds of day, the same day builds the same town with its theme block and fire station, and every event in every theme runs to its end with the streets kept busy.`);

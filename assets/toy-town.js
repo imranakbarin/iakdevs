@@ -7,8 +7,8 @@
  * usable story (or offline) the date picks the theme. Cars and people move on
  * the streets and chaos events overlap: runaway carts, burst hydrants, cats
  * on roofs and the fire truck that comes for them, escaping balloons,
- * pigeons, banana peels, a UFO now and then. A director camera glides to the
- * action, a ticker reports it, and a tap anywhere pokes the town. */
+ * pigeons, banana peels, a UFO now and then. The camera stays still until dragged, a ticker reports the action,
+ * and a tap anywhere pokes the town. */
 const ToyTown = (() => {
   const cv = document.getElementById('town'), ctx = cv && cv.getContext ? cv.getContext('2d') : null;
   const N = 18, TW = 32, TH = 16, LINES = [1, 6, 11, 16];
@@ -16,7 +16,11 @@ const ToyTown = (() => {
   const hash = (a, b) => { let h = Math.imul(a ^ 0x9e3779b9, 0x85ebca6b) ^ Math.imul((b + 0x632be5ab) | 0, 0xc2b2ae35); h ^= h >>> 16; h = Math.imul(h, 0x7feb352d); h ^= h >>> 15; return h >>> 0; };
   const mulberry32 = a => () => { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; };
   const clamp = (a, x, b) => Math.max(a, Math.min(b, x)), lerp = (a, b, t) => a + (b - a) * t, TAU = Math.PI * 2;
-  const today = () => new Date().toISOString().slice(0, 10), narrow = () => typeof innerWidth === 'number' && innerWidth < 700;
+  const dateKey = (d = new Date()) => {
+    const pad = n => String(n).padStart(2, '0');
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+  };
+  const today = () => dateKey(), narrow = () => typeof innerWidth === 'number' && innerWidth < 700;
   let rnd = Math.random, seed = 0, day = '', theme = null, newsLine = '', today_ = [], nextHeadline = 12, headIx = 0;
   let W = 0, H = 0, dpr = 1, S = 1, cam = {x: N / 2, y: N / 2, z: 1, tx: N / 2, ty: N / 2, tz: 1}, base = 1;
   let grid = [], buildings = [], props = [], movers = [], events = [], parts = [], bubbles = [], ground = null, sprites = new Map();
@@ -694,6 +698,7 @@ const ToyTown = (() => {
   let decorN = 0;
   const TV_DAYS = ['sports', 'space', 'election', 'awards', 'festival'];
   function decorate(list) {
+    ground = null; // Decorations can change the tree shadows on the ground layer.
     const has = v => list.some(x => x.variant === v), plaza = () => { const t = []; for (let y = 2; y < 16; y++) for (let x = 2; x < 16; x++) if (tile(x, y).kind === 'plaza' && !tile(x, y).used && !tile(x, y).decor) t.push([x, y]); const pick = t[(t.length * (.5 + (decorN++ % 3) * .21)) % (t.length || 1) | 0] || [9, 9]; if (tile(...pick)) tile(...pick).decor = true; return pick; };   // each decoration its own tile
     if (has('diwali')) { for (const l of LINES) for (let t = 1.6; t < 16.5; t += 1.25) { props.push({kind: 'diya', x: l + .95, y: t, ph: t}); props.push({kind: 'diya', x: t, y: l + .95, ph: t + 1}); } const [x, y] = plaza(); props.push({kind: 'rangoli', x: x + .5, y: y + .5}); }
     if (has('christmas')) { const [x, y] = plaza(); props.push({kind: 'xtree', x: x + .5, y: y + .5}); }
@@ -962,10 +967,10 @@ const ToyTown = (() => {
     cv.style.width = innerWidth + 'px'; cv.style.height = innerHeight + 'px';
     const fit = Math.min(W / (N * TW * 2 + 60), H / (N * TH * 2 + 200));
     base = innerWidth < 700 ? Math.max(fit, (W / (9 * TW * 2))) : fit;   // phones see part of the town and follow the action
-    sprites.clear();
+    sprites.clear(); ground = null;
   }
-  // A five-minute day: about three minutes of daylight, a dusk, a night and a dawn.
-  function nightLevel() { return clamp(0, -Math.cos(clock / 300 * TAU) * 2 - 1, 1); }
+  // A five-minute day in real time, though moving things run at 60% speed.
+  function nightLevel() { return clamp(0, -Math.cos(clock / (300 * PACE) * TAU) * 2 - 1, 1); }
   function update(dt) {
     clock += dt;
     for (const m of movers.slice()) step(m, dt);
@@ -994,11 +999,22 @@ const ToyTown = (() => {
     const k = Math.min(1, dt * 4); cam.x += (cam.tx - cam.x) * k; cam.y += (cam.ty - cam.y) * k; cam.z = 1;
   }
   function render() {
-    S = base * cam.z * dpr / dpr; S = base * cam.z;
+    S = base * cam.z;
     const night = nightLevel();
     const sky = ctx.createLinearGradient(0, 0, 0, H); sky.addColorStop(0, night > .5 ? '#1d2747' : '#bfe6f7'); sky.addColorStop(1, night > .5 ? '#2e3a63' : '#e8f6fb');
     ctx.fillStyle = sky; ctx.fillRect(0, 0, W, H);
-    drawGround(ctx);
+    // Static streets, earth and contact shadows are cached between camera movements.
+    // Reuse the same buffer during panning instead of allocating a canvas every frame.
+    if (!ground || ground.w !== W || ground.h !== H || ground.x !== cam.x || ground.y !== cam.y || ground.s !== S) {
+      const buffer = ground ? ground.canvas : document.createElement('canvas');
+      if (buffer.width !== W) buffer.width = W;
+      if (buffer.height !== H) buffer.height = H;
+      const gc = buffer.getContext('2d');
+      gc.clearRect(0, 0, W, H);
+      drawGround(gc);
+      ground = {canvas: buffer, w: W, h: H, x: cam.x, y: cam.y, s: S};
+    }
+    ctx.drawImage(ground.canvas, 0, 0);
     // Water glints.
     ctx.fillStyle = 'rgba(255,255,255,.55)'; for (let k = 0; k < 40; k++) { const x = (k * 7.3 + clock * .2) % 18, y = 13 + (k * .37) % 2, s = P(x, y); if (Math.sin(clock * 2 + k) > .6) ctx.fillRect(s[0], s[1], 4 * S, 1.2 * S); }
     const list = [], push = (k, f) => list.push([k, f]);
@@ -1074,5 +1090,5 @@ const ToyTown = (() => {
     addEventListener('hashchange', () => location.reload());
     start();
   }
-  return {TALK, nameOf, headline, CALM, lightPhase, themeFromNews, newsThemes, VARIANTS, VARIANT_EVENTS: () => Object.keys(VARIANT_EVENTS), decorate, setToday: l => { today_ = l; }, PACE, THEMES, GRIM, build, update, events: () => events, movers: () => movers, buildings: () => buildings, props: () => props, startEvent, randomEvent, setPlaying: v => { playing = v; }, debug: () => ({clock, theme, seed, night: nightLevel(), cam: {...cam}})};
+  return {TALK, nameOf, headline, dateKey, CALM, lightPhase, themeFromNews, newsThemes, VARIANTS, VARIANT_EVENTS: () => Object.keys(VARIANT_EVENTS), decorate, setToday: l => { today_ = l; }, PACE, THEMES, GRIM, build, update, events: () => events, movers: () => movers, buildings: () => buildings, props: () => props, startEvent, randomEvent, setPlaying: v => { playing = v; }, debug: () => ({clock, theme, seed, night: nightLevel(), cam: {...cam}})};
 })();
