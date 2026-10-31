@@ -141,16 +141,21 @@ const ToyTown = (() => {
     nextStreetMoment = 16; streetMoments = 0;
     const blocks = [];
     for (const [ya, yb] of [[2, 5], [7, 10], [12, 15]]) for (const [xa, xb] of [[2, 5], [7, 10], [12, 15]]) blocks.push({xa, xb, ya, yb, river: ya === 12});
-    const land = blocks.filter(b => !b.river), order = land.map(b => b).sort(() => r() - .5);
+    // The centre remains a handcrafted neighborhood on every date; everything
+    // around it is still shuffled by theme and seed.
+    const hero = blocks.find(b => b.xa === 7 && b.ya === 7);
+    const land = blocks.filter(b => !b.river && b !== hero), order = land.map(b => b).sort(() => r() - .5);
     const special = {sports: 'stadium', space: 'launchpad', election: 'stage', festival: 'stage', awards: 'stage', tech: 'lab', animals: 'zoo', market: 'market', science: 'lab', weather: 'park'}[themeKey] || 'park';
-    const kinds = [special, 'fire', special === 'park' ? 'towers' : 'park', 'shops', 'houses', r() < .5 ? 'construction' : 'houses'];
+    const kinds = [special, 'fire', special === 'park' ? 'towers' : 'park', 'houses', r() < .5 ? 'construction' : 'houses'];
     order.forEach((b, i) => { b.type = kinds[i] || 'houses'; });
+    hero.type = 'hero';
     for (const b of blocks.filter(b => b.river)) b.type = 'riverside';
     for (const b of blocks) fill(b, r);
     for (let x = 0; x < N; x++) for (let y = 0; y < N; y++) if (tile(x, y).kind === 'edge' && r() < .55) props.push({kind: 'tree', x: x + .5, y: y + .5, s: .8 + r() * .4, c: r() < .5 ? '#5cb85c' : '#7cc65a'});
     for (let k = 0; k < CARS; k++) spawnCar(r);
     for (let k = 0; k < BIKES; k++) spawnBike(r);
     for (let k = 0; k < PEOPLE; k++) spawnPerson(r);
+    spawnHeroResidents(hero, r);
     for (const b of buildings) if (b.kind === 'house' && r() < .75) props.push({kind: 'flowers', x: b.x + .5, y: b.y + .88, c: [PASTEL[r() * 8 | 0], PASTEL[r() * 8 | 0]]});
     for (let k = 0; k < 5; k++) props.push({kind: 'duck', x: 1 + r() * 16, y: 13.2 + r() * 1.6, vx: (r() - .5) * .3, ph: r() * 6});
     sprites.clear(); ground = null;
@@ -158,7 +163,42 @@ const ToyTown = (() => {
   }
   const town = {blocks: []};
   function addBuilding(b) { buildings.push(b); tile(b.x, b.y).used = true; }
+  function fillHero(b, r) {
+    const {xa: x, ya: y} = b;
+    const site = (ix, iy, kind, details) => {
+      const bx = x + ix, by = y + iy;
+      addBuilding({x: bx, y: by, kind, hero: true, ...details});
+    };
+    // Only five carefully placed buildings: two corner shops and three homes.
+    // Their frontages face the path; the central two-by-two block is open.
+    site(1, 0, 'shop', {h: 28, wall: '#f0d8bd', awning: '#bf6657', name: 'BAKERY'});
+    site(2, 0, 'shop', {h: 27, wall: '#c6dfd3', awning: '#427c78', name: 'BOOKS'});
+    site(0, 0, 'house', {h: 24, wall: '#dfbba4', roof: '#a55a49'});
+    site(3, 1, 'house', {h: 22, wall: '#c4d7e7', roof: '#638db2'});
+    site(3, 3, 'house', {h: 26, wall: '#eedbb9', roof: '#b47742'});
+    for (let yy = y; yy <= b.yb; yy++) for (let xx = x; xx <= b.xb; xx++) {
+      const cell = tile(xx, yy);
+      cell.kind = (xx >= x + 1 && xx <= x + 2 && yy >= y + 1 && yy <= y + 2)
+        ? 'plaza' : cell.used ? 'lot' : 'park';
+    }
+    b.hero = true;
+    // Furniture occupies free tiles and is placed directly on the lawn/terrace.
+    props.push(
+      {kind:'hero-bench', x:x + 1.43, y:y + 2.52},
+      {kind:'hero-table', x:x + 2.49, y:y + 2.55, flower:true},
+      {kind:'hero-lamp', x:x + .65, y:y + 1.65},
+      {kind:'hero-lamp', x:x + 3.31, y:y + 2.65},
+      {kind:'hero-mail', x:x + .77, y:y + 3.35},
+      {kind:'hero-rack', x:x + 2.54, y:y + 1.4},
+      {kind:'hero-shrub', x:x + .44, y:y + 2.24, col:'#497e50'},
+      {kind:'hero-shrub', x:x + 3.35, y:y + .45, col:'#568e66'},
+      {kind:'hero-shrub', x:x + 2.62, y:y + 3.4, col:'#6d9a63'},
+      {kind:'tree', x:x + .55, y:y + 2.55, s:.78, c:'#508f69'}
+    );
+    return b;
+  }
   function fill(b, r) {
+    if (b.type === 'hero') { fillHero(b, r); return; }
     const tiles = []; for (let y = b.ya; y <= b.yb; y++) for (let x = b.xa; x <= b.xb; x++) { tile(x, y).block = b; tiles.push([x, y]); }
     const edge = ([x, y]) => x === b.xa || x === b.xb || y === b.ya || y === b.yb;
     const pastel = () => PASTEL[r() * PASTEL.length | 0], roof = () => ROOFS[r() * ROOFS.length | 0];
@@ -194,6 +234,50 @@ const ToyTown = (() => {
       lane: (r() < .5 ? 1 : -1) * (.4 + r() * .07), ph: r() * 6, wait: 0}, opts);
     movers.push(m); return m;
   }
+  // These neighbors stay within open paths; the bakery, bookshop, bench and
+  // terrace are actual destinations. No teleporting, clipping through roofs,
+  // or randomly jittering between points.
+  function spawnHeroResidents(b, r) {
+    const {xa:x, ya:y} = b;
+    const routes = [
+      [{x:x+1.49,y:y+1.18,dwell:3,wave:true},{x:x+1.49,y:y+1.96,dwell:1.2},
+       {x:x+1.42,y:y+2.53,dwell:4.4,sit:true},{x:x+1.48,y:y+1.87,dwell:1}],
+      [{x:x+2.48,y:y+1.2,dwell:3,wave:true},{x:x+2.46,y:y+1.85,dwell:1},
+       {x:x+2.49,y:y+2.62,dwell:3.8},{x:x+2.39,y:y+1.7,dwell:1}],
+      [{x:x+1.43,y:y+2.52,dwell:4,sit:true},{x:x+1.64,y:y+1.88,dwell:1.4},
+       {x:x+1.5,y:y+3.72,dwell:.8},
+       {x:x+1.5,y:y+5.2,dwell:1.4,cross:true},  // reach the riverside across the marked road
+       {x:x+1.5,y:y+3.72,dwell:1.2,cross:true},
+       {x:x+2.42,y:y+1.82,dwell:2,wave:true},{x:x+2.48,y:y+2.58,dwell:3.5}]
+    ];
+    const origins = [[x+1.48,y+1.88],[x+2.45,y+1.83],[x+2.41,y+2.63]];
+    for (let i = 0; i < routes.length; i++) {
+      const m = spawnPerson(r, {x:origins[i][0], y:origins[i][1], d:i===1?2:3,
+        lane:0, max:.26 + r() * .07, heroResident:true, heroStops:routes[i],
+        heroIndex:i, stopUntil:clock + .2 + i * 1.3});
+      m.v = 0;
+    }
+  }
+  function updateHeroResident(m) {
+    if (!m.heroResident || m.path && m.path.length || clock < (m.stopUntil || 0)) return;
+    const dest = m.heroStops[m.heroIndex % m.heroStops.length];
+    // Wait until the crossing is clear before the pedestrian leaves the curb.
+    // Cars arriving afterwards yield while the crossing remains occupied.
+    const b = town.blocks.find(q => q.hero);
+    const crossX = b.xa + 1.5, crossY = b.yb + 1.5;
+    if (dest.cross && movers.some(o => o.type === 'car' && o.d < 2 &&
+      Math.abs(o.y - crossY) < .25 && Math.abs(o.x - crossX) < 1.1)) {
+      m.v = 0; m.stopUntil = clock + .35; return;
+    }
+    m.heroIndex++;
+    m.sit = false; m.crossing = !!dest.cross;
+    m.path = [{x:dest.x,y:dest.y,speed:m.max,then:walker=>{
+      walker.v = 0; walker.crossing = false;
+      walker.stopUntil = clock + dest.dwell;
+      walker.sit = !!dest.sit;
+      if (dest.wave) walker.waveUntil = clock + Math.min(dest.dwell, 1.4);
+    }}];
+  }
   function spawnBike(r = Math.random) {
     const p = randomRoadPoint(r), m = {type: 'car', kind: 'bike', x: p.x, y: p.y, d: p.d, heading: directionAngle(p.d), v: 0, travel: 0, max: .55 + r() * .15, col: PASTEL[r() * PASTEL.length | 0], skin: ['#f1c9a5', '#d8a77c', '#a8754f', '#7a4e33'][r() * 4 | 0], wait: 0, lane: .36, ph: r() * 6};
     movers.push(m); return m;
@@ -220,6 +304,14 @@ const ToyTown = (() => {
         if (ahead > 0 && ahead < 1 && side < .3) want = Math.min(want, o.v * .9, ahead < .6 ? 0 : want);
       }
       if (heldAtLight(m, .75)) want = 0;
+      const hb = town.blocks.find(b => b.hero);
+      if (hb && m.d < 2 && Math.abs(m.y - (hb.yb + 1.5)) < .27 &&
+        movers.some(w => w.heroResident && w.crossing &&
+          Math.abs(w.x - (hb.xa + 1.5)) < .7 &&
+          w.y > hb.yb + .3 && w.y < hb.yb + 2)) {
+        const remaining = (hb.xa + 1.5 - m.x) * dx;
+        if (remaining > .15 && remaining < 2) want = 0;
+      }
       for (const e of events) if (e.blocks && Math.hypot(e.x - m.x, e.y - m.y) < 1.1) want = 0;
     } else if (!m.kind || m.kind === 'chef' || m.kind === 'farmer' || m.kind === 'keeper') {   // walkers wait at the crossing and keep a little room
       if (heldAtLight(m, .62)) want = 0;
@@ -741,7 +833,7 @@ const ToyTown = (() => {
   function streetMoment() {
     const shops = buildings.filter(b => b.kind === 'shop');
     const people = movers.filter(m => m.type === 'person' && !m.kind && !m.busy &&
-      (!m.stopUntil || clock >= m.stopUntil));
+      !m.heroResident && !m.path && (!m.stopUntil || clock >= m.stopUntil));
     const near = [];
     for (const m of people) for (const shop of shops) {
       const distance = Math.hypot(m.x - shop.x - .5, m.y - shop.y - .5);
@@ -797,6 +889,28 @@ const ToyTown = (() => {
         c.moveTo(gx, gy); c.lineTo(gx + .5 * S, gy - 2.1 * S);
         c.moveTo(gx + 1.5 * S, gy); c.lineTo(gx + 2.4 * S, gy - 1.6 * S); c.stroke();
       }
+      // A small-scale tactile surface: inset paving, short curb seams and a
+      // clear pedestrian crossing. These sit in the static layer under actors.
+      const hb = town.blocks.find(b => b.hero);
+      if (hb && x >= hb.xa && x <= hb.xb && y >= hb.ya && y <= hb.yb && t.kind !== 'water') {
+        const central = x >= hb.xa+1 && x <= hb.xa+2 && y >= hb.ya+1 && y <= hb.ya+2;
+        if (central) {
+          diamond(c,x+.07,y+.07,.86,.86); c.fillStyle='#dfd5bc'; c.fill();
+          c.strokeStyle='rgba(255,255,255,.4)'; c.lineWidth=Math.max(.6,S*.65);
+          c.stroke();
+          for(let k=1;k<=2;k++) { c.beginPath();
+            c.moveTo(...P(x+.07+k*.86/3,y+.07));
+            c.lineTo(...P(x+.07+k*.86/3,y+.93)); c.stroke(); }
+        } else if (t.kind==='park' || t.kind==='lot') {
+          const edgePath = x===hb.xa+1 || x===hb.xa+2 || y===hb.ya+1 || y===hb.ya+2;
+          if(edgePath){diamond(c,x+.18,y+.18,.64,.64);c.fillStyle='rgba(229,216,183,.32)';c.fill();}
+        }
+      }
+      if (hb && y===hb.yb+1 && x===hb.xa+1) {
+        // Crossing stripes are painted on the street, not hovering above it.
+        for(let k=0;k<4;k++){diamond(c,x+.28+k*.12,y+.12,.07,.75);
+          c.fillStyle='rgba(255,250,231,.72)';c.fill();}
+      }
       if (t.kind === 'road' || t.kind === 'bridge') {
         const hor = isRoad(y) && !isRoad(x), ver = isRoad(x) && !isRoad(y);
         c.strokeStyle = 'rgba(255,255,255,.75)'; c.lineWidth = Math.max(1, S * 1.2); c.setLineDash([4 * S, 5 * S]); c.beginPath();
@@ -814,6 +928,38 @@ const ToyTown = (() => {
     c.fillStyle = g; c.strokeStyle = g; c.beginPath(); c.moveTo(...b); c.lineTo(...e); c.lineTo(e[0], e[1] + d * S); c.lineTo(b[0], b[1] + d * S); c.closePath(); c.fill(); c.stroke();
     for (const bd of buildings) softShadow(c, bd.x + .5, bd.y + .5, .55 + Math.min(.5, bd.h / 160), .2);
     for (const p of props) if (p.kind === 'tree') softShadow(c, p.x, p.y, .3 * p.s, .18);
+  }
+  function drawHeroFacade(c,b,night) {
+    if (!b.hero) return;
+    const x=b.x+.5, y=b.y+.5, h=b.h;
+    c.save(); c.lineCap='round'; c.lineJoin='round';
+    if (b.kind==='house') {
+      // A low stone plinth, eaves and two narrow shutters tie the window into the wall.
+      box(c,x,y,.375,.375,0,2,'#b5a18b','#ded1bb');
+      const a=P(x-.4,y+.38,h-1), d=P(x+.4,y+.38,h-1);
+      c.strokeStyle='rgba(255,245,215,.8)';c.lineWidth=Math.max(1.2,S*1.6);
+      c.beginPath();c.moveTo(...a);c.lineTo(...d);c.stroke();
+      for(const side of [-1,1]){
+        const xx=x-.17+side*.075, p=P(xx,y+.373,h*.55);
+        c.fillStyle=side<0?'#8c987c':'#708e7e';
+        c.fillRect(p[0]-1.1*S,p[1]-4*S,2.2*S,8*S);
+      }
+      const flower=P(x-.18,y+.41,h*.54-7);
+      c.fillStyle='#ae7650';c.fillRect(flower[0]-5*S,flower[1],10*S,1.7*S);
+      for(let k=0;k<3;k++){c.fillStyle=k===1?'#e7ad96':'#fff0cf';
+        c.beginPath();c.arc(flower[0]+(k-1)*3*S,flower[1]-1.6*S,1.3*S,0,TAU);c.fill();}
+    }else if(b.kind==='shop'){
+      // A low shop sill and hanging sign use the same wall-space perspective.
+      box(c,x,y+.43,.37,.035,2,3,'#b6a997','#ecdfd0');
+      const sign=P(x+.25,y+.44,h*.8);
+      c.strokeStyle='#574c42';c.lineWidth=Math.max(1,S);
+      c.beginPath();c.moveTo(sign[0],sign[1]-10*S);c.lineTo(sign[0],sign[1]-3*S);c.stroke();
+      c.fillStyle='#fff2db';c.beginPath();c.roundRect(sign[0]-7*S,sign[1]-3*S,14*S,8*S,1.5*S);c.fill();
+      c.strokeStyle=b.awning;c.lineWidth=Math.max(.8,S);c.stroke();
+      c.fillStyle=b.awning;c.font=`800 ${Math.max(5,4.5*S)}px system-ui`;
+      c.textAlign='center';c.fillText(b.name==='BAKERY'?'BREAD':'READ',sign[0],sign[1]+2*S);
+    }
+    c.restore();
   }
   function drawBuilding(c, b, night) {
     const cx = b.x + .5, cy = b.y + .5;
@@ -833,6 +979,23 @@ const ToyTown = (() => {
       const top = P(cx, cy, b.h + 16), corners = [[-.42, -.42], [.42, -.42], [.42, .42], [-.42, .42]].map(([x, y]) => P(cx + x, cy + y, b.h));
       c.fillStyle = shade(b.roof, .82); c.beginPath(); c.moveTo(...corners[3]); c.lineTo(...corners[2]); c.lineTo(...top); c.closePath(); c.fill();
       c.fillStyle = shade(b.roof, .66); c.beginPath(); c.moveTo(...corners[2]); c.lineTo(...corners[1]); c.lineTo(...top); c.closePath(); c.fill();
+      if (b.hero) {
+        // Roof courses follow the two actual sloped faces, giving zoomed-in
+        // houses dimensional clay tiles instead of stripes on flat canvas.
+        c.save(); c.strokeStyle = 'rgba(255,235,209,.46)';
+        c.lineWidth = Math.max(.8, 1 * S); c.lineCap = 'round';
+        for (let course = 1; course <= 4; course++) {
+          const t = course / 5;
+          const along = (a, d) => [top[0] + (a[0] - top[0])*t, top[1] + (a[1]-top[1])*t];
+          for (const pair of [[3,2],[2,1]]) {
+            const a = along(corners[pair[0]]), d = along(corners[pair[1]]);
+            c.beginPath(); c.moveTo(...a); c.lineTo(...d); c.stroke();
+          }
+        }
+        c.strokeStyle = 'rgba(91,61,43,.34)'; c.lineWidth = Math.max(.7, S);
+        c.beginPath(); c.moveTo(...top); c.lineTo(...corners[2]); c.stroke();
+        c.restore();
+      }
       win(c, cx - .17, cy + .36, 5, b.h * .55, night, 'y');
       win(c, cx + .36, cy - .13, 4.5, b.h * .58, night, 'x');
       box(c, cx - .17, cy - .16, .08, .08, b.h + 11, 12, '#b97657', '#d99b72');
@@ -842,6 +1005,7 @@ const ToyTown = (() => {
       const lamp = P(cx + .29, cy + .37, b.h * .36);
       c.fillStyle = night ? '#ffe4a0' : '#fff7dc'; c.beginPath(); c.arc(lamp[0], lamp[1], 1.5 * S, 0, TAU); c.fill();
       wallGlow(cx + .29, cy + .37, .28);
+      drawHeroFacade(c,b,night);
     } else if (b.kind === 'shop') {
       box(c, cx, cy, .4, .4, 0, b.h, b.wall);
       box(c, cx, cy, .43, .43, b.h, 2, shade(b.wall, .75), shade(b.wall, 1.08));
@@ -858,6 +1022,7 @@ const ToyTown = (() => {
         c.ellipse(leaf[0] + 1.8 * S, leaf[1] - 1 * S, 2.1 * S, 3.7 * S, .4, 0, TAU); c.fill();
       }
       wallGlow(cx, cy + .4, .26);
+      drawHeroFacade(c,b,night);
       const s = P(cx, cy + .2, b.h + 7); c.fillStyle = '#ffffff'; const fs = Math.max(6, 6.5 * S); c.font = `800 ${fs}px system-ui`; c.textAlign = 'center'; const tw = c.measureText(b.name).width + 6; c.fillRect(s[0] - tw / 2, s[1] - fs * .8, tw, fs * 1.25); c.fillStyle = b.awning; c.fillText(b.name, s[0], s[1] + fs * .3);
     } else if (b.kind === 'tower') {
       box(c, cx, cy, .4, .4, 0, b.h, b.wall);
@@ -893,6 +1058,44 @@ const ToyTown = (() => {
     const [x, y] = P(p.x, p.y);
     if (p.kind === 'tree') drawTree(c, p);
     else if (p.kind === 'bench') { box(c, p.x, p.y, .25, .08, 3, 2, '#b8784a'); }
+    else if (p.kind === 'hero-bench') {
+      for(const d of [-.19,.19]) {box(c,p.x+d,p.y,.04,.075,0,5,'#41494b');}
+      box(c,p.x,p.y,.29,.12,5,2.3,'#a56b47','#c99366');
+      box(c,p.x,p.y-.09,.29,.035,8,10,'#a56b47','#d2a77c');
+      c.strokeStyle='#f6d0a0';c.lineWidth=Math.max(.5,S*.8);
+      for(const d of [-.12,.04]){const a=P(p.x-.26,p.y-.12,11+d*7),b=P(p.x+.26,p.y-.12,11+d*7);c.beginPath();c.moveTo(...a);c.lineTo(...b);c.stroke();}
+    }
+    else if (p.kind === 'hero-table') {
+      box(c,p.x,p.y,.17,.17,7,1.4,'#c9a37a','#e7c49a');
+      for(const d of [-.13,.13])for(const e of [-.13,.13])box(c,p.x+d,p.y+e,.025,.025,0,8,'#8b684c');
+      const [tx,ty]=P(p.x,p.y,10);
+      c.fillStyle='#fff6d8';c.beginPath();c.ellipse(tx,ty,3*S,1.6*S,0,0,TAU);c.fill();
+      c.fillStyle='#c77b55';c.beginPath();c.arc(tx,ty-1*S,1.2*S,0,TAU);c.fill();
+    }
+    else if (p.kind === 'hero-lamp') {
+      const a=P(p.x,p.y),b=P(p.x,p.y,25);
+      c.strokeStyle='#4b5557';c.lineWidth=Math.max(1.3,2.2*S);c.beginPath();c.moveTo(...a);c.lineTo(...b);c.stroke();
+      c.fillStyle='#fff0bd';c.beginPath();c.arc(b[0],b[1]-2*S,3*S,0,TAU);c.fill();
+      c.fillStyle='#475257';c.fillRect(b[0]-4*S,b[1]-6*S,8*S,2*S);
+      if(night){const g=c.createRadialGradient(b[0],b[1],0,b[0],b[1],23*S);
+        g.addColorStop(0,'rgba(255,210,129,.36)');g.addColorStop(1,'rgba(255,210,129,0)');
+        c.fillStyle=g;c.fillRect(b[0]-23*S,b[1]-23*S,46*S,46*S);}
+    }
+    else if (p.kind === 'hero-mail') {
+      box(c,p.x,p.y,.09,.1,7,9,'#4788a8','#79b7d1');box(c,p.x,p.y,.05,.05,0,7,'#4b5557');
+      const s=P(p.x,p.y+.1,12);c.fillStyle='#ecf7ff';c.fillRect(s[0]-2*S,s[1]-S,4*S,.8*S);
+    }
+    else if (p.kind === 'hero-rack') {
+      c.strokeStyle='#6a777a';c.lineWidth=Math.max(1,1.7*S);
+      for(const k of [-1,0,1]){const q=P(p.x+k*.16,p.y,0);c.beginPath();c.arc(q[0],q[1]-3*S,3*S,Math.PI,0);c.lineTo(q[0]+3*S,q[1]);c.stroke();}
+    }
+    else if (p.kind === 'hero-shrub') {
+      box(c,p.x,p.y,.16,.16,0,3,'#b58c67','#d5ac85');
+      for(const [dx,dy,rad] of [[-2.7,-8,3.8],[2.6,-8,4.1],[0,-12,4.5]]){
+        const grad=c.createRadialGradient(x+dx*S-1.3*S,y+dy*S-1.3*S,.3*S,x+dx*S,y+dy*S,rad*S);
+        grad.addColorStop(0,'#a1d69b');grad.addColorStop(1,p.col);c.fillStyle=grad;
+        c.beginPath();c.arc(x+dx*S,y+dy*S,rad*S,0,TAU);c.fill();}
+    }
     else if (p.kind === 'fountain') { diamond(c, p.x - .6, p.y - .6, 1.2, 1.2); c.fillStyle = '#c9d2dc'; c.fill(); diamond(c, p.x - .5, p.y - .5, 1, 1); c.fillStyle = '#7fd3ff'; c.fill(); if (Math.random() < .5) burst(p.x, p.y, 6, 1, '#bfe9ff', {up: 40, spread: .3, life: .9, r: 1.2}); }
     else if (p.kind === 'crane') {
       c.strokeStyle = '#e0a020'; c.lineWidth = Math.max(1.5, 2.4 * S); const b0 = P(p.x, p.y, 0), b1 = P(p.x, p.y, 120); c.beginPath(); c.moveTo(...b0); c.lineTo(...b1); c.stroke();
@@ -1166,7 +1369,7 @@ const ToyTown = (() => {
   function nightLevel() { return clamp(0, -Math.cos(clock / (300 * PACE) * TAU) * 2 - 1, 1); }
   function update(dt) {
     clock += dt;
-    for (const m of movers.slice()) { step(m, dt); easeHeading(m, dt); }
+    for (const m of movers.slice()) { step(m, dt); easeHeading(m, dt); updateHeroResident(m); }
     for (const e of events.slice()) { e.t += dt; if (e.follow) { e.x = e.follow.x; e.y = e.follow.y; } if (e.update) e.update(e, dt); if (e.t > e.dur) { if (e.end) e.end.call(e); events.splice(events.indexOf(e), 1); } }
     for (const m of movers.slice()) if (m.home && !m.path) remove(m);
     for (const p of props) if (p.kind === 'duck') { p.x += p.vx * dt; if (p.x < .3 || p.x > 17.5) p.vx *= -1; }
@@ -1438,5 +1641,5 @@ const ToyTown = (() => {
     addEventListener('hashchange', () => location.reload());
     start();
   }
-  return {layout, render, zoomAt, resetView, fitView, pinchTo, screenWorld, streetMoment, TALK, nameOf, headline, dateKey, CALM, lightPhase, themeFromNews, newsThemes, VARIANTS, VARIANT_EVENTS: () => Object.keys(VARIANT_EVENTS), decorate, setToday: l => { today_ = l; }, PACE, THEMES, GRIM, build, update, events: () => events, movers: () => movers, buildings: () => buildings, props: () => props, startEvent, randomEvent, setPlaying: v => { playing = v; }, debug: () => ({clock, theme, seed, night: nightLevel(), cam: {...cam}, fitZoom, streetMoments})};
+  return {layout, render, zoomAt, resetView, fitView, pinchTo, screenWorld, streetMoment, hero: () => town.blocks.find(b => b.hero), TALK, nameOf, headline, dateKey, CALM, lightPhase, themeFromNews, newsThemes, VARIANTS, VARIANT_EVENTS: () => Object.keys(VARIANT_EVENTS), decorate, setToday: l => { today_ = l; }, PACE, THEMES, GRIM, build, update, events: () => events, movers: () => movers, buildings: () => buildings, props: () => props, startEvent, randomEvent, setPlaying: v => { playing = v; }, debug: () => ({clock, theme, seed, night: nightLevel(), cam: {...cam}, fitZoom, streetMoments})};
 })();

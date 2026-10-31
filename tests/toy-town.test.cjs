@@ -5,7 +5,7 @@
 const fs = require('node:fs'), path = require('node:path'), vm = require('node:vm'), assert = require('node:assert/strict');
 const root = path.join(__dirname, '..'), html = fs.readFileSync(path.join(root, 'index.html'), 'utf8');
 assert.match(html, /<option value="town">Toy Town<\/option>/, 'Toy Town is in the menu');
-assert.match(html, /townFrame\.src='toy-town\.html\?v=11&embed=1'/, 'and opens its current embedded page');
+assert.match(html, /townFrame\.src='toy-town\.html\?v=12&embed=1'/, 'and opens its current embedded page');
 assert.match(fs.readFileSync(path.join(root, 'toy-town.html'), 'utf8'), /assets\/toy-town\.js\?v=\d+/);
 const box = vm.createContext({Math, Object, Array, JSON, Date, String, Number, RegExp, setTimeout: () => 0, document: {getElementById: () => ({textContent: ''})}});
 vm.runInContext(fs.readFileSync(path.join(root, 'assets/toy-town.js'), 'utf8') + ';this.T = ToyTown;', box);
@@ -183,6 +183,49 @@ scene.render();
 assert.equal(strokes.groundDraws, 2, 'new town invalidates static ground');
 for (const key of Object.keys(scene.THEMES)) { scene.build(4242, key); scene.render(); }
 assert.ok(strokes.screenBlits >= 12, 'all themed scenes complete a render pass');
+// Hero neighborhood remains central and landscaped on every seed, while the
+// surrounding plots still respond to the day's theme.
+const hero = scene.hero();
+assert.ok(hero && hero.xa === 7 && hero.ya === 7 && hero.type === 'hero', 'hero neighborhood stays central');
+const heroBuildings = scene.buildings().filter(b => b.hero);
+assert.equal(heroBuildings.length, 5, 'hero block has five individually placed buildings');
+assert.equal(heroBuildings.filter(b => b.kind === 'shop').length, 2, 'hero block includes two small shops');
+assert.equal(heroBuildings.filter(b => b.kind === 'house').length, 3, 'hero block includes three homes');
+const heroProps = scene.props().filter(p => p.kind.startsWith('hero-'));
+for (const k of ['hero-bench','hero-table','hero-lamp','hero-mail','hero-rack','hero-shrub'])
+  assert.ok(heroProps.some(p => p.kind === k), k + ' furniture is present');
+assert.ok(heroProps.every(p => p.x >= hero.xa && p.x < hero.xb + 1 &&
+  p.y >= hero.ya && p.y < hero.yb + 1), 'each decorative object sits within the central block');
+const locals = scene.movers().filter(m => m.heroResident);
+assert.equal(locals.length, 3, 'three neighbors follow local neighborhood routes');
+for (let k = 0; k < 60 * 75; k++) scene.update(1 / 60);
+assert.ok(locals.every(m => m.x > hero.xa && m.x < hero.xb + 1 &&
+  m.y > hero.ya && m.y < hero.yb + 2.3 && Number.isFinite(m.x + m.y)),
+  'residents stay on the neighborhood paths and marked crossing');
+assert.ok(locals.every(m => m.heroIndex >= 2), 'residents reach multiple real destinations');
+assert.ok(locals.some(m => m.heroStops.some(p => p.cross)), 'a resident has a marked riverside crossing');
+// A car approaches the crosswalk while a resident is already crossing:
+const crossingWalker = locals[0];
+const crossingCar = scene.movers().find(m => m.type === 'car' && m.kind === 'car');
+assert.ok(crossingCar, 'ordinary traffic is present for crossing test');
+crossingWalker.x = hero.xa + 1.5; crossingWalker.y = hero.yb + 1.1;
+crossingWalker.crossing = true; crossingWalker.stopUntil = 0;
+crossingWalker.path = [{x:hero.xa + 1.5, y:hero.yb + 1.85, speed:.18}];
+crossingCar.x = hero.xa + .5; crossingCar.y = hero.yb + 1.5;
+crossingCar.d = 0; crossingCar.v = .8; crossingCar.max = 1.3;
+scene.update(.10);
+assert.ok(crossingCar.v < .8, 'driver slows for a pedestrian on the zebra crossing');
+crossingWalker.crossing = false; crossingWalker.path = null; crossingWalker.stopUntil = scene.debug().clock + 1;
+
+assert.ok(locals.some(m => m.heroStops.some(p => p.sit)), 'benches are activity destinations');
+scene.render();
+const oldHero = scene.hero();
+scene.build(654321, 'market');
+assert.equal(scene.hero().type, 'hero', 'a different news theme retains the hero neighborhood');
+assert.equal(scene.buildings().filter(b => b.hero).length, heroBuildings.length,
+  'theme changes retain the same neighborhood architecture');
+assert.ok(oldHero !== scene.hero(), 'a new town creates fresh block references');
+
 // Camera zoom is bounded, preserves a focal world point, and can reset to fit.
 scene.resetView();
 for (let i = 0; i < 90; i++) scene.update(1 / 60);
@@ -225,7 +268,7 @@ const townPage = fs.readFileSync(path.join(root, 'toy-town.html'), 'utf8');
 for (const id of ['zoom-in', 'zoom-out', 'zoom-reset']) {
   assert.match(townPage, new RegExp('id="' + id + '"[^>]*aria-label="[^"]+"'), id + ' is accessible');
 }
-assert.match(townPage, /toy-town\.js\?v=11/, 'Safari-compatible engine is loaded');
+assert.match(townPage, /toy-town\.js\?v=12/, 'Safari-compatible engine is loaded');
 assert.match(html, /id="town-zoom"/, 'zoom controls live outside the iframe');
 assert.match(html, /id="town-fit"/, 'mobile has a fit-the-city button');
 assert.match(html, /town:zoom/, 'outer buttons message the city');
