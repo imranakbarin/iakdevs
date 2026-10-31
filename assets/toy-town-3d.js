@@ -131,13 +131,23 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
     let x = Math.imul((i|0) ^ 0x9e3779b9, 0x85ebca6b) ^ Math.imul((j|0)+0x632be5ab, 0xc2b2ae35);
     x = Math.imul(x ^ (x>>>15),0x27d4eb2d); return (x>>>0)/4294967296;
   };
+  // Draped fabric canopy with a soft scalloped front valance. It stays
+  // physically attached to the storefront and needs no new animation loop.
   const fabric = (parent, x,y,z,color,w=.46,d=.22) => {
-    const canopy=box(parent,w,.055,d,color,x,y,z);
-    canopy.rotation.x=-.16;
-    for(let n=0;n<6;n++){
-      const stripe=box(parent,w/13,.053,d,'#fff4da',x-w*.37+n*w*.145,y+.016,z);
-      stripe.rotation.x=-.16;
+    const canopy=box(parent,w,.043,d,color,x,y,z);
+    canopy.rotation.x=-.13;
+    for(let n=0;n<8;n++){
+      const col=n%2?'#faeed7':color;
+      const xx=x-w/2+(n+.5)*w/8;
+      const stripe=box(parent,w/8-.004,.043,d,col,xx,y+.018,z);
+      stripe.rotation.x=-.13;
+      // Rounded suspended scallops are beneath the free edge rather than
+      // painted squares hanging in mid-air.
+      const scallop=ball(parent,w/16,col,xx,y-.047,z+d*.48);
+      scallop.scale.set(1.07,.46,.55);
     }
+    // Trim along the canopy edge reads as one continuous stitched seam.
+    box(parent,w,.014,.035,'#f5e2c4',x,y-.050,z+d*.51);
   };
   function sign(parent, label, x,y,z,w, ink='#575049',paper='#fff0d0'){
     const cvs=document.createElement('canvas');cvs.width=256;cvs.height=96;
@@ -199,27 +209,70 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
     return material;
   }
 
+  // Storybook roof surfaces are modeled as curved, bevelled volumes rather
+  // than rotated rectangular slabs. Two shared geometries cover every house,
+  // so richer silhouettes do not multiply the mobile mesh budget.
+  function roofCurve(t){
+    return .37-.35*Math.pow(t,.86)+.037*Math.sin(Math.PI*t);
+  }
   function roof(g,color,top,edge=.44){
-    const dark=roofMaterial(color);
-    const tan=Math.atan2(.35,.49);
-    // Two actual sloping roof meshes with a visible ridge. Not painted polygons.
+    const clay=roofMaterial(color);
     for(const side of [-1,1]){
-      const slab=box(g,.66,.078,1.04,dark,side*.255,top+.20,0);
-      slab.rotation.z=-side*tan;
-      // One slim clay eave lip, rather than four conspicuous stripes.
-      const eave=box(g,.024,.025,1.05,mat(tint(color,'#fff0d9',.24)),
-        side*.485,top+.034,0);
-      eave.rotation.z=-side*tan;
+      const key='storybook-roof:'+side;
+      let geometry=geometryCache.get(key);
+      if(!geometry){
+        const shape=new THREE.Shape();
+        shape.moveTo(0,roofCurve(0));
+        for(let i=1;i<=12;i++){
+          const t=i/12;
+          shape.lineTo(side*.52*t,roofCurve(t));
+        }
+        for(let i=12;i>=0;i--){
+          const t=i/12;
+          shape.lineTo(side*.52*t,roofCurve(t)-.067);
+        }
+        shape.closePath();
+        geometry=new THREE.ExtrudeGeometry(shape,{
+          depth:1.04,bevelEnabled:true,bevelSize:.014,
+          bevelThickness:.014,bevelSegments:2,curveSegments:12,steps:1
+        });
+        geometry.translate(0,0,-.52);
+        geometryCache.set(key,geometry);
+      }
+      object(g,geometry,clay,0,top,0);
+      // Continuous cream-painted eave beneath each slightly upturned edge.
+      box(g,.060,.050,1.085,mat(tint(color,'#fff2da',.34)),
+        side*.51,top+.003,0);
     }
-    box(g,.095,.09,1.06,mat('#f7e5cf'),0,top+.375,0);
-    // Gable triangle occupies the opening under the two roof planes.
-    const shape=new THREE.Shape();shape.moveTo(-.46,0);shape.lineTo(.46,0);shape.lineTo(0,.37);shape.closePath();
-    const key='gable';let geometry=geometryCache.get(key);
-    if(!geometry){
-      geometry=new THREE.ExtrudeGeometry(shape,{depth:.77,bevelEnabled:true,bevelSize:.014,bevelThickness:.014,bevelSegments:1,steps:1});
-      geometry.translate(0,0,-.385);geometryCache.set(key,geometry);
+    box(g,.077,.075,1.095,mat(tint(color,'#f2ddbe',.40)),0,top+.375,0);
+    // Hand-shaped curved gable fills the whole roof end: no daylight gaps
+    // between the canopy and facade when the camera lowers at close zoom.
+    const key='storybook-gable';
+    let gable=geometryCache.get(key);
+    if(!gable){
+      const face=new THREE.Shape();
+      face.moveTo(-.455,-.04);face.lineTo(.455,-.04);
+      face.lineTo(.455,roofCurve(1)-.037);
+      for(let i=11;i>=0;i--){
+        const t=i/12;face.lineTo(.455*t,roofCurve(t)-.037);
+      }
+      for(let i=1;i<=12;i++){
+        const t=i/12;face.lineTo(-.455*t,roofCurve(t)-.037);
+      }
+      face.closePath();
+      gable=new THREE.ExtrudeGeometry(face,{
+        depth:.77,bevelEnabled:true,bevelSize:.015,bevelThickness:.012,
+        bevelSegments:2,steps:1
+      });
+      gable.translate(0,0,-.385);geometryCache.set(key,gable);
     }
-    object(g,geometry,mat('#ebcfb2'),0,top-.035,0);
+    object(g,gable,mat('#ebcfb2'),0,top-.022,0);
+    // Timbers close the front roof edge, adding depth without tiny shadows.
+    for(const side of [-1,1]){
+      const beam=box(g,.024,.043,.05,'#f7ecd8',side*.34,
+        top+roofCurve(.65)-.036,.423);
+      beam.rotation.z=-side*.45;
+    }
   }
   function planter(g,x,z,variant=0){
     box(g,.15,.15,.15,'#c98f75',x,.13,z);
@@ -518,8 +571,14 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
   function tree(p,i){
     const x=p.x,z=p.y,sc=p.s||1;
     const g=new THREE.Group();g.position.set(x,0,z);world.add(g);g.scale.setScalar(sc);
-    const trunk=cylinder(g,.055,.075,.51,'#83694f',0,.30,0);
+    const trunk=cylinder(g,.058,.087,.56,'#866e53',0,.30,0);
     trunk.rotation.z=(rng(i,27)-.5)*.10;
+    // Roots taper out into the lawn rather than meeting it as a cut cylinder.
+    for(let n=0;n<3;n++){
+      const a=n*TAU/3+.5;
+      const root=ball(g,.09,'#856a50',Math.cos(a)*.08,.065,Math.sin(a)*.08);
+      root.scale.set(1.20,.29,.80);
+    }
     const branchTint=mat('#83694f');
     for(let k=0;k<3;k++){
       const a=k*TAU/3+.5;
@@ -539,8 +598,9 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
     const blossom=i%11===0;
     // One continuous asymmetric crown and smaller leaf clusters. Eight equal
     // spheres previously resembled stacked broccoli balls in the screenshot.
-    const crown=ball(g,.34,blossom?'#adc29b':'#81ae91',0,.88,0);
-    crown.scale.set(1.10,.78,1.03);
+    const crown=ball(g,.35,blossom?'#adc29b':'#81ae91',0,.86,0);
+    crown.scale.set(1.10,.84,1.06);
+    crown.rotation.y=rng(i,312)*TAU;
     for(let k=0;k<11;k++){
       const a=k*TAU/11+.34,rad=.20+(rng(i,k+51)-.5)*.10;
       const height=.84+(rng(i,k+29)-.5)*.22;
@@ -548,7 +608,9 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
         ['#78a98a','#93bb99','#a0c5a1','#6e9f85','#afd0aa'][k%5];
       const puff=ball(g,.12+rng(i,k+9)*.075,col,
         Math.cos(a)*rad,height,Math.sin(a)*rad);
-      puff.scale.set(1.15,.72,1.12);
+      puff.scale.set(1.20,.62+(k%3)*.08,1.10);
+      puff.rotation.set((rng(i,k+69)-.5)*.55,rng(i,k+73)*TAU,
+        (rng(i,k+86)-.5)*.45);
       if(k%2===0){
         const posX=Math.cos(a)*(rad+.06),posZ=Math.sin(a)*(rad+.04);
         for(let q=0;q<3;q++)

@@ -9,10 +9,10 @@ const moduleCode=fs.readFileSync(path.join(root,'assets/toy-town-3d.js'),'utf8')
 assert.match(html,/type="importmap"/);
 assert.match(html,/three@0\.187\.0\/build\/three\.module\.js/);
 assert.match(html,/three@0\.187\.0\/examples\/jsm\//);
-assert.match(html,/toy-town-3d\.js\?v=7/);
+assert.match(html,/toy-town-3d\.js\?v=8/);
 assert.match(html,/toy-town\.js\?v=14/);
 assert.ok(html.indexOf('toy-town.js?v=14')<html.indexOf("import('three')"), 'classic fallback starts first');
-assert.match(page,/toy-town\.html\?v=20&embed=1/);
+assert.match(page,/toy-town\.html\?v=21&embed=1/);
 assert.match(moduleCode,/export function mountToyTown3D/);
 assert.match(moduleCode,/new THREE\.WebGLRenderer/);
 assert.match(moduleCode,/window\.ToyTown3D=api/);
@@ -22,7 +22,7 @@ assert.match(moduleCode,/function syncActors/);
 assert.match(moduleCode,/function syncCamera/);
 assert.match(moduleCode,/function roof/);
 assert.match(moduleCode,/function light/);
-const callbacks=[],stats={created:0,renders:0,geometry:0,dispose:0,frames:0,roofTextures:0,paintOperations:0},events={};
+const callbacks=[],stats={created:0,renders:0,geometry:0,dispose:0,frames:0,roofTextures:0,paintOperations:0,profileVertices:0},events={};
 class V {
   constructor(x=0,y=0,z=0){this.x=x;this.y=y;this.z=z;}
   set(x,y,z){this.x=x;this.y=y;this.z=z;return this;}
@@ -57,7 +57,7 @@ class Renderer {
   render(){stats.renders++;if(this.throwOnRender)throw Error('GPU render failed');}
   dispose(){stats.dispose++;}
 }
-class Shape {moveTo(){}lineTo(){}closePath(){}}
+class Shape {moveTo(){}lineTo(){stats.profileVertices++;}closePath(){}}
 class Texture {constructor(){this.colorSpace='';stats.roofTextures++;}}
 const THREE={
  WebGLRenderer:Renderer, Scene:O, Group:O,
@@ -123,6 +123,8 @@ assert.equal(townCanvas.style.opacity,'0');
 assert.ok(stats.renders>=1);
 assert.ok(stats.roofTextures>=2,'roof textures created for different colored gables');
 assert.ok(stats.paintOperations>=400,'small overlapping tiles produce detailed but subtle roof texture');
+assert.ok(stats.profileVertices>=75,
+  'the scene builds 3D curved roof shell and gable vertices, not just flat slabs');
 assert.match(moduleCode,/const variation=\(row\*13\+col\*17\)%7/,
   'clay roof does not use an obvious large-color checkerboard');
 assert.match(moduleCode,/Miniature gabled porch roof/,
@@ -131,6 +133,10 @@ assert.match(moduleCode,/Separate warm, irregular limestone pavers/,
   'courtyard pavers replace the rigid grid');
 assert.match(moduleCode,/function plaster\(color\)/,'walls use grainy plaster instead of plain plastic');
 assert.match(moduleCode,/function grassMaterial\(/,'garden uses a reusable painted grass texture');
+assert.match(moduleCode,/function roofCurve\(/,'story book roofs use a real curved profile');
+assert.match(moduleCode,/storybook-roof:/,'the sculpted roof is cached for repeated houses');
+assert.match(moduleCode,/rounded suspended scallops/i,'shop awnings use dimensional fabric rather than bars');
+assert.match(moduleCode,/roots taper out into the lawn/i,'tree trunks have naturally grounded roots');
 assert.match(moduleCode,/grassMaterial\('#b9cba7',10\)/,'land slab has layered grass instead of a flat green box');
 assert.match(moduleCode,/paver.rotation.y=/,'stone paths have irregular handmade placement');
 assert.match(moduleCode,/23-closeness\*10/,'close zoom lowers the eye to show character faces');
