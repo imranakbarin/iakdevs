@@ -69,17 +69,20 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
     const cv=document.createElement('canvas'); cv.width=256;cv.height=256;
     const c=cv.getContext('2d');
     c.fillStyle=pigment;c.fillRect(0,0,256,256);
-    const dark=tint(pigment,'#663e3f',.19),light=tint(pigment,'#fff1d6',.36);
-    // Overlapping, staggered shingles with soft seams and edge highlights.
-    for(let row=0;row<9;row++)for(let col=-1;col<9;col++){
-      const x=col*36+(row%2)*18,y=row*30;
-      c.fillStyle=(col+row)%3===0?light:pigment;
-      c.beginPath();c.roundRect(x+1,y+1,34,29,[4,4,9,9]);c.fill();
-      c.strokeStyle=dark;c.lineWidth=1.6;c.stroke();
-      c.fillStyle='rgba(255,247,222,.27)';
-      c.fillRect(x+4,y+3,25,2);
-      c.strokeStyle='rgba(76,51,43,.15)';c.lineWidth=1;
-      c.beginPath();c.moveTo(x+4,y+25);c.lineTo(x+29,y+25);c.stroke();
+    const dark=tint(pigment,'#77584e',.13),light=tint(pigment,'#f1d4b2',.10);
+    // Fine, warm clay tiles. Previously 34×29 highly contrasting squares
+    // read as a checkerboard at close zoom, not as miniature roof shingles.
+    // Vary the tile tone only subtly; the staggered overlap supplies depth.
+    for(let row=0;row<15;row++)for(let col=-1;col<13;col++){
+      const x=col*23+(row%2)*11.5,y=row*18;
+      const variation=(row*13+col*17)%7;
+      c.fillStyle=variation<2?light:variation===6?dark:pigment;
+      c.beginPath();c.roundRect(x+.5,y+.5,22.5,18.5,[2.5,2.5,6,6]);c.fill();
+      c.strokeStyle='rgba(91,58,48,.20)';c.lineWidth=1.1;c.stroke();
+      c.fillStyle='rgba(255,246,222,.13)';
+      c.fillRect(x+3,y+2.5,16,1.2);
+      c.strokeStyle='rgba(86,59,48,.10)';c.lineWidth=.8;
+      c.beginPath();c.moveTo(x+3,y+16);c.lineTo(x+19,y+16);c.stroke();
     }
     const tx=new THREE.CanvasTexture(cv);tx.colorSpace=THREE.SRGBColorSpace;
     const m=new THREE.MeshStandardMaterial({map:tx,color:'#ffffff',roughness:.94,metalness:0});
@@ -164,12 +167,10 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
     for(const side of [-1,1]){
       const slab=box(g,.66,.078,1.04,dark,side*.255,top+.20,0);
       slab.rotation.z=-side*tan;
-      for(let row=0;row<4;row++){
-        const t=(row+.5)/4;
-        const x=side*(.07+t*.38), y=top+.35*(1-t)+.045;
-        const ridge=box(g,.025,.022,.96,mat(side<0?'#fff2d4':'#ddae99'),x,y,0);
-        ridge.rotation.z=-side*tan;
-      }
+      // One slim clay eave lip, rather than four conspicuous stripes.
+      const eave=box(g,.024,.025,1.05,mat(tint(color,'#fff0d9',.24)),
+        side*.485,top+.034,0);
+      eave.rotation.z=-side*tan;
     }
     box(g,.095,.09,1.06,mat('#f7e5cf'),0,top+.375,0);
     // Gable triangle occupies the opening under the two roof planes.
@@ -219,10 +220,17 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
       const shutter=box(g,.056,.27,.048,'#6c9a91',dx,.65,.445);
       shutter.castShadow=false;
     }
-    box(g,.43,.07,.34,'#dfc5a4',.20,.69,.54);
-    for(const px of [.015,.385]){
-      cylinder(g,.028,.032,.54,'#f8e9cd',px,.41,.668);
-      box(g,.06,.09,.08,'#f9edda',px,.71,.668);
+    // Miniature gabled porch roof with a central ridge and two sloping leaves.
+    // The old single flat block read as an oversized floating canopy.
+    for(const side of [-1,1]){
+      const leaf=box(g,.31,.045,.39,roofMaterial(b.roof||'#ba7355'),
+        .20+side*.14,.745,.56);
+      leaf.rotation.z=-side*.26;
+    }
+    box(g,.045,.037,.42,'#f4e5d2',.20,.824,.56);
+    for(const px of [.018,.382]){
+      cylinder(g,.025,.030,.47,'#f8e9d2',px,.412,.695);
+      box(g,.052,.065,.065,'#e6ceb3',px,.667,.695);
     }
     box(g,.12,.34,.12,'#b27966',-.21,cap+.15,-.12);
     box(g,.15,.06,.15,'#eac4a0',-.21,cap+.36,-.12);
@@ -287,15 +295,21 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
       const stem=cylinder(g,.019,.036,.40,branchTint,Math.cos(a)*.10,.54,Math.sin(a)*.10);
       stem.rotation.z=Math.cos(a)*.53;stem.rotation.x=Math.sin(a)*.53;
     }
-    for(let k=0;k<8;k++){
-      const a=k*TAU/7+.3,rad=k>=7?0:.22+((i+k)%3)*.018;
-      const col=['#7eb593','#a0c99d','#6ba28b','#c5d9a3','#8dbfa1','#92bd90','#75ad99','#bfdb9b'][k];
-      const puff=ball(g,k===7?.28:.205+((k+i)%3)*.018,col,
-        Math.cos(a)*rad,.82+(k%3)*.075,Math.sin(a)*rad);
-      puff.scale.set(1.10,.78,1.07);
-      if(k%2===0)for(let q=0;q<3;q++){
-        ball(g,.027,'#c7dfad',Math.cos(a)*rad-.055+q*.047,
-          1.015+(k%3)*.068,Math.sin(a)*rad+.036);
+    // One continuous asymmetric crown and smaller leaf clusters. Eight equal
+    // spheres previously resembled stacked broccoli balls in the screenshot.
+    const crown=ball(g,.34,'#81ae91',0,.88,0);
+    crown.scale.set(1.10,.78,1.03);
+    for(let k=0;k<11;k++){
+      const a=k*TAU/11+.34,rad=.20+(rng(i,k+51)-.5)*.10;
+      const height=.84+(rng(i,k+29)-.5)*.22;
+      const col=['#78a98a','#93bb99','#a0c5a1','#6e9f85','#afd0aa'][k%5];
+      const puff=ball(g,.12+rng(i,k+9)*.075,col,
+        Math.cos(a)*rad,height,Math.sin(a)*rad);
+      puff.scale.set(1.15,.72,1.12);
+      if(k%2===0){
+        const posX=Math.cos(a)*(rad+.06),posZ=Math.sin(a)*(rad+.04);
+        for(let q=0;q<3;q++)
+          ball(g,.033,'#bfd5a4',posX+(q-1)*.05,height+.10+(q%2)*.025,posZ);
       }
     }
   }
@@ -424,9 +438,16 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
     for(let yy=7;yy<=10;yy++)for(let xx=7;xx<=10;xx++){
       const middle=xx>7&&xx<10&&yy>7&&yy<10;
       groundPiece(.97,.97,middle?'#e9d9ba':'#96b99c',xx+.5,yy+.5,.179);
-      if(middle)for(let p=0;p<3;p++){
-        groundPiece(.01,.9,'#d5c7b1',xx+.18+p*.29,yy+.5,.221);
-        groundPiece(.9,.012,'#d5c7b1',xx+.5,yy+.19+p*.3,.222);
+      if(middle) {
+        // Separate warm, irregular limestone pavers with recessed joints.
+        // Their subtle size and hue variations replace the rigid dark grid.
+        const stone=['#ede1c9','#e6d7ba','#e9ddc7','#e2d4bb'];
+        for(let row=0;row<3;row++)for(let col=0;col<3;col++){
+          const jitter=(rng(xx*17+col,yy*29+row)-.5)*.025;
+          groundPiece(.268+jitter,.268-jitter,stone[(xx+yy+col+row)%4],
+            xx+.205+col*.291+jitter*.3,yy+.205+row*.291-jitter*.3,
+            .221+((row+col)%2)*.006);
+        }
       }
     }
     // A low, warm stone border defines the central neighborhood as one

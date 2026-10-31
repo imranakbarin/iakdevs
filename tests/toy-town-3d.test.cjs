@@ -9,10 +9,10 @@ const moduleCode=fs.readFileSync(path.join(root,'assets/toy-town-3d.js'),'utf8')
 assert.match(html,/type="importmap"/);
 assert.match(html,/three@0\.187\.0\/build\/three\.module\.js/);
 assert.match(html,/three@0\.187\.0\/examples\/jsm\//);
-assert.match(html,/toy-town-3d\.js\?v=3/);
+assert.match(html,/toy-town-3d\.js\?v=4/);
 assert.match(html,/toy-town\.js\?v=14/);
 assert.ok(html.indexOf('toy-town.js?v=14')<html.indexOf("import('three')"), 'classic fallback starts first');
-assert.match(page,/toy-town\.html\?v=16&embed=1/);
+assert.match(page,/toy-town\.html\?v=17&embed=1/);
 assert.match(moduleCode,/export function mountToyTown3D/);
 assert.match(moduleCode,/new THREE\.WebGLRenderer/);
 assert.match(moduleCode,/window\.ToyTown3D=api/);
@@ -119,7 +119,14 @@ assert.equal(host.style.display,'block');
 assert.equal(townCanvas.style.opacity,'0');
 assert.ok(stats.renders>=1);
 assert.ok(stats.roofTextures>=2,'roof textures created for different colored gables');
-assert.ok(stats.paintOperations>=150,'painted shingles render repeated courses and edges');
+assert.ok(stats.paintOperations>=400,'small overlapping tiles produce detailed but subtle roof texture');
+assert.match(moduleCode,/const variation=\(row\*13\+col\*17\)%7/,
+  'clay roof does not use an obvious large-color checkerboard');
+assert.match(moduleCode,/Miniature gabled porch roof/,
+  'porch has a pitched profile rather than a flat canopy');
+assert.match(moduleCode,/Separate warm, irregular limestone pavers/,
+  'courtyard pavers replace the rigid grid');
+
 assert.equal(api.getStats().plazaLights,1,'modeled plaza lamps have physical warm light');
 const lantern=api.scene.children.find(o=>o.children?.some(x=>x.isPointLight))?.children.find(x=>x.isPointLight);
 assert.ok(lantern && lantern.intensity>0, 'dusk physically illuminates the courtyard');
