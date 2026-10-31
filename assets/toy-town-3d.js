@@ -537,16 +537,29 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
     const width=.52,depth=.23;
     const plinth=box(g,width+.05,.14,depth+.06,'#dcc8ac',x,y-.25,z+depth*.34);
     plinth.castShadow=false;
-    const glass=mat('#aed9cf',.23,'#4d7a7b');
+    // Transparent pale glazing; the old opaque teal material read as an
+    // unexplained painted wall in real Safari-sized screenshots.
+    const glass=new THREE.MeshStandardMaterial({
+      color:style==='bakery'?'#d6e5d9':'#bcd9d5',
+      roughness:.17,metalness:.09,transparent:true,opacity:.48,
+      depthWrite:false,side:THREE.DoubleSide
+    });
     for(let i=0;i<5;i++){
       const angle=(-.82+i*.41),px=x+Math.sin(angle)*width*.42;
       const pz=z+Math.cos(angle)*depth;
-      const panel=box(g,.145,.35,.031,glass,px,y,pz);
+      const panel=box(g,.142,.35,.015,glass,px,y,pz);
+      panel.castShadow=false;
+      panel.receiveShadow=false;
       panel.rotation.y=angle;
-      const post=box(g,.018,.38,.037,'#f6e9d1',
-        px-.07,y,pz+.008);
+      const post=box(g,.017,.385,.032,'#f6e9d1',
+        px-.071,y,pz+.013);
       post.rotation.y=angle;
-      box(g,.145,.020,.047,'#faefda',px,y+.19,pz+.016).rotation.y=angle;
+      const lintel=box(g,.145,.021,.039,'#faefda',px,y+.19,pz+.018);
+      lintel.rotation.y=angle;
+      // One restrained strip of glass reflection follows each pane's angle.
+      const shine=box(g,.014,.21,.009,mat('#eaf5e8'),px+.023,y+.035,pz+.017);
+      shine.rotation.y=angle;
+      shine.castShadow=false;
     }
     // Curved glazed bay hood, cast as one small rounded volume.
     const hood=box(g,.59,.079,.36,style==='bakery'?'#bf765e':'#6b9789',

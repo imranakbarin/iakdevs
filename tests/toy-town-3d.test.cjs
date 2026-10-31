@@ -9,10 +9,10 @@ const moduleCode=fs.readFileSync(path.join(root,'assets/toy-town-3d.js'),'utf8')
 assert.match(html,/type="importmap"/);
 assert.match(html,/three@0\.187\.0\/build\/three\.module\.js/);
 assert.match(html,/three@0\.187\.0\/examples\/jsm\//);
-assert.match(html,/toy-town-3d\.js\?v=9/);
+assert.match(html,/toy-town-3d\.js\?v=10/);
 assert.match(html,/toy-town\.js\?v=14/);
 assert.ok(html.indexOf('toy-town.js?v=14')<html.indexOf("import('three')"), 'classic fallback starts first');
-assert.match(page,/toy-town\.html\?v=22&embed=1/);
+assert.match(page,/toy-town\.html\?v=23&embed=1/);
 assert.match(moduleCode,/export function mountToyTown3D/);
 assert.match(moduleCode,/new THREE\.WebGLRenderer/);
 assert.match(moduleCode,/window\.ToyTown3D=api/);
@@ -140,6 +140,10 @@ assert.match(moduleCode,/function plaster\(color\)/,'walls use grainy plaster in
 assert.match(moduleCode,/function grassMaterial\(/,'garden uses a reusable painted grass texture');
 assert.match(moduleCode,/function roofCurve\(/,'story book roofs use a real curved profile');
 assert.match(moduleCode,/function glazedBowWindow\(/,'hero shops have five real curved display panels');
+assert.match(moduleCode,/transparent:true,opacity:\.48/,
+  'the shaped storefront bay uses actual translucent glazing');
+assert.match(moduleCode,/depthWrite:false,side:THREE.DoubleSide/,
+  'glass remains transparent rather than obscuring the merchandise');
 assert.match(moduleCode,/function lathePot\(/,'hero garden pots use revolved clay geometry');
 assert.match(moduleCode,/function stoneMaterial\(/,'foundation uses a shared painted masonry material');
 assert.match(moduleCode,/function stoneFoundation\(/,'the five hero buildings have solid textured foundation plinths');
