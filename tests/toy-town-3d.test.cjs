@@ -9,10 +9,10 @@ const moduleCode=fs.readFileSync(path.join(root,'assets/toy-town-3d.js'),'utf8')
 assert.match(html,/type="importmap"/);
 assert.match(html,/three@0\.187\.0\/build\/three\.module\.js/);
 assert.match(html,/three@0\.187\.0\/examples\/jsm\//);
-assert.match(html,/toy-town-3d\.js\?v=8/);
+assert.match(html,/toy-town-3d\.js\?v=9/);
 assert.match(html,/toy-town\.js\?v=14/);
 assert.ok(html.indexOf('toy-town.js?v=14')<html.indexOf("import('three')"), 'classic fallback starts first');
-assert.match(page,/toy-town\.html\?v=21&embed=1/);
+assert.match(page,/toy-town\.html\?v=22&embed=1/);
 assert.match(moduleCode,/export function mountToyTown3D/);
 assert.match(moduleCode,/new THREE\.WebGLRenderer/);
 assert.match(moduleCode,/window\.ToyTown3D=api/);
@@ -57,7 +57,11 @@ class Renderer {
   render(){stats.renders++;if(this.throwOnRender)throw Error('GPU render failed');}
   dispose(){stats.dispose++;}
 }
-class Shape {moveTo(){}lineTo(){stats.profileVertices++;}closePath(){}}
+class Shape {constructor(){this.holes=[];}moveTo(){}lineTo(){stats.profileVertices++;}closePath(){}}
+class Path extends Shape {}
+class Vector2 extends V {}
+class Vector3 extends V {}
+class Curve {constructor(points){this.points=points;}}
 class Texture {constructor(){this.colorSpace='';stats.roofTextures++;}}
 const THREE={
  WebGLRenderer:Renderer, Scene:O, Group:O,
@@ -67,7 +71,8 @@ const THREE={
  MeshStandardMaterial:Material,MeshBasicMaterial:Material,
  Mesh,BoxGeometry:Geometry,SphereGeometry:Geometry,IcosahedronGeometry:Geometry,
  CylinderGeometry:Geometry,TorusGeometry:Geometry,PlaneGeometry:Geometry,ExtrudeGeometry:Geometry,
- Shape,CanvasTexture:Texture,DoubleSide:2,
+ LatheGeometry:Geometry,TubeGeometry:Geometry,
+ Shape,Path,Vector2,Vector3,CatmullRomCurve3:Curve,CanvasTexture:Texture,DoubleSide:2,
  SRGBColorSpace:'srgb',ACESFilmicToneMapping:2,PCFSoftShadowMap:3,
  MathUtils:{clamp:(v,min,max)=>Math.max(min,Math.min(max,v)),lerp:(a,b,t)=>a+(b-a)*t}
 };
@@ -134,6 +139,16 @@ assert.match(moduleCode,/Separate warm, irregular limestone pavers/,
 assert.match(moduleCode,/function plaster\(color\)/,'walls use grainy plaster instead of plain plastic');
 assert.match(moduleCode,/function grassMaterial\(/,'garden uses a reusable painted grass texture');
 assert.match(moduleCode,/function roofCurve\(/,'story book roofs use a real curved profile');
+assert.match(moduleCode,/function glazedBowWindow\(/,'hero shops have five real curved display panels');
+assert.match(moduleCode,/function lathePot\(/,'hero garden pots use revolved clay geometry');
+assert.match(moduleCode,/function stoneMaterial\(/,'foundation uses a shared painted masonry material');
+assert.match(moduleCode,/function stoneFoundation\(/,'the five hero buildings have solid textured foundation plinths');
+
+assert.match(moduleCode,/function timberArch\(/,'hero facades contain carved masonry arches with real openings');
+assert.match(moduleCode,/function handCarvedTimbers\(/,'hero cottages use modeled structural timber details');
+assert.match(moduleCode,/function leafyClimber\(/,'climbing greenery follows curved 3D paths');
+assert.match(moduleCode,/atelierHome\(g,b,style,height,paint\)/,'only hero houses receive authored landmark model');
+assert.match(moduleCode,/atelierShop\(g,b,h\)/,'only hero shops receive authored frontage model');
 assert.match(moduleCode,/storybook-roof:/,'the sculpted roof is cached for repeated houses');
 assert.match(moduleCode,/rounded suspended scallops/i,'shop awnings use dimensional fabric rather than bars');
 assert.match(moduleCode,/roots taper out into the lawn/i,'tree trunks have naturally grounded roots');

@@ -436,6 +436,208 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
     ball(g,.042,accent,-.42,h*.64,.513).scale.set(.82,.82,.35);
   }
 
+  /* -------- Authored miniature landmark kit (central five buildings only) --------
+   * Shared curved geometry makes these actual miniature architectural pieces,
+   * not dozens of screen-aligned rectangles. Hero-only keeps GPU cost bounded.
+   */
+  const stoneMaterials=new Map();
+  function stoneMaterial(color='#cfb69d') {
+    if(stoneMaterials.has(color))return stoneMaterials.get(color);
+    const c=document.createElement('canvas');c.width=256;c.height=128;
+    const p=c.getContext('2d'),mortar=tint(color,'#fff0dc',.31);
+    p.fillStyle=mortar;p.fillRect(0,0,256,128);
+    for(let row=0;row<5;row++){
+      for(let n=-1;n<9;n++){
+        const offset=row%2?17:0, x=n*34+offset;
+        const noise=rng(n+15,row+19),y=row*27;
+        p.fillStyle=tint(color,noise<.34?'#eed8bc':'#a99a84',.08+noise*.2);
+        p.beginPath();
+        p.roundRect(x+2,y+2,31,23,3+noise*4);
+        p.fill();
+        p.strokeStyle='rgba(118,94,74,.17)';p.lineWidth=.7;p.stroke();
+        p.fillStyle='rgba(255,250,236,.17)';
+        p.fillRect(x+5,y+4,18,1);
+      }
+    }
+    const texture=new THREE.CanvasTexture(c);
+    texture.colorSpace=THREE.SRGBColorSpace;
+    const material=new THREE.MeshStandardMaterial({map:texture,roughness:.98,metalness:0});
+    stoneMaterials.set(color,material);
+    return material;
+  }
+  function stoneFoundation(g,theme='#c5ad93'){
+    // Stone masonry is a textured lower wall surface, not a scatter of
+    // individual cubes. The five hero buildings share the geometry budget.
+    box(g,.792,.245,.793,stoneMaterial(theme),0,.225,0);
+    box(g,.827,.039,.824,'#f4e1c9',0,.36,0);
+    box(g,.837,.051,.836,'#d7bda0',0,.095,0);
+  }
+  function lathePot(g,x,z,foliage='#6e9c77',accent='#e5a5aa',s=1){
+    const key='atelier-terracotta-pot';
+    let geometry=geometryCache.get(key);
+    if(!geometry){
+      const profile=[
+        [0,0],[.074,0],[.085,.013],[.079,.043],
+        [.103,.128],[.109,.137],[.101,.151],[.084,.155]
+      ].map(([r,y])=>new THREE.Vector2(r,y));
+      geometry=new THREE.LatheGeometry(profile,10);
+      geometryCache.set(key,geometry);
+    }
+    const pot=object(g,geometry,mat('#cb9274'),x,.065,z);
+    pot.scale.setScalar(s);
+    for(let k=0;k<3;k++){
+      const f=ball(g,.09*s,foliage,x+(k-1)*.064*s,.23*s,z+(k%2)*.042*s);
+      f.scale.set(.77,1.1,.83);
+      ball(g,.027*s,accent,x+(k-1)*.067*s,.28*s,z+.047*s);
+    }
+  }
+  function timberArch(g,x,y,z,w=.31,h=.58) {
+    // Deep sculpted limestone surround, wooden curved inset and stone step.
+    const key='atelier-arched-frame:'+w+':'+h;
+    let frame=geometryCache.get(key);
+    if(!frame){
+      const outer=new THREE.Shape();
+      outer.moveTo(-w*.62,-h*.52);outer.lineTo(w*.62,-h*.52);
+      outer.lineTo(w*.62,h*.12);
+      for(let i=0;i<=16;i++){
+        const t=i*Math.PI/16;
+        outer.lineTo(Math.cos(t)*w*.62,h*.12+Math.sin(t)*w*.56);
+      }
+      outer.closePath();
+      const cut=new THREE.Path();
+      cut.moveTo(-w*.46,-h*.50);cut.lineTo(w*.46,-h*.50);
+      cut.lineTo(w*.46,h*.12);
+      for(let i=0;i<=16;i++){
+        const t=i*Math.PI/16;
+        cut.lineTo(Math.cos(t)*w*.46,h*.12+Math.sin(t)*w*.44);
+      }
+      cut.closePath();
+      outer.holes.push(cut);
+      frame=new THREE.ExtrudeGeometry(outer,{
+        depth:.059,bevelEnabled:true,bevelSize:.013,bevelThickness:.009,
+        bevelSegments:2,curveSegments:12,steps:1
+      });
+      geometryCache.set(key,frame);
+    }
+    object(g,frame,mat('#f8ead5'),x,y,z);
+    const inner=box(g,w*.88,h*.76,.04,'#966a53',x,y-h*.07,z+.034);
+    inner.castShadow=false;
+    // Curved lintel and threshold make the physical entry readable at close zoom.
+    box(g,w*1.14,.036,.22,'#d8c2a4',x,y-h*.52,z+.095);
+    for(let p=0;p<3;p++){
+      const edge=box(g,.018,h*.50,.017,'#bb8d6b',
+        x+(p-1)*w*.27,y-h*.14,z+.063);
+      edge.castShadow=false;
+    }
+    ball(g,.018,'#f3d392',x+w*.33,y-h*.16,z+.073);
+  }
+  function glazedBowWindow(g,x,y,z,style='bakery'){
+    // Three window panels follow the face of a projecting rounded bay.
+    // A modelled canopy caps the bay, with stone base under the glazing.
+    const width=.52,depth=.23;
+    const plinth=box(g,width+.05,.14,depth+.06,'#dcc8ac',x,y-.25,z+depth*.34);
+    plinth.castShadow=false;
+    const glass=mat('#aed9cf',.23,'#4d7a7b');
+    for(let i=0;i<5;i++){
+      const angle=(-.82+i*.41),px=x+Math.sin(angle)*width*.42;
+      const pz=z+Math.cos(angle)*depth;
+      const panel=box(g,.145,.35,.031,glass,px,y,pz);
+      panel.rotation.y=angle;
+      const post=box(g,.018,.38,.037,'#f6e9d1',
+        px-.07,y,pz+.008);
+      post.rotation.y=angle;
+      box(g,.145,.020,.047,'#faefda',px,y+.19,pz+.016).rotation.y=angle;
+    }
+    // Curved glazed bay hood, cast as one small rounded volume.
+    const hood=box(g,.59,.079,.36,style==='bakery'?'#bf765e':'#6b9789',
+      x,y+.25,z+.08);
+    hood.castShadow=true;
+    hood.rotation.x=-.06;
+    for(let i=-2;i<=2;i++){
+      const x0=x+i*.093;
+      if(style==='bakery'){
+        const roll=ball(g,.040,'#d7a46d',x0,y-.17,z+.23);
+        roll.scale.set(1.2,.48,.9);
+      }else{
+        box(g,.042,.15,.055,
+          ['#a66f7d','#6e9d91','#d8af6d','#8c83a8','#b68465'][i+2],
+          x0,y-.12,z+.246);
+      }
+    }
+  }
+  function handCarvedTimbers(g,upper=.89,accent='#927c65'){
+    // Half-timbered cottages: structural diagonals across the cream plaster,
+    // held slightly proud of the facade rather than floating beside it.
+    for(const side of [-1,1]){
+      const x=side*.31;
+      box(g,.035,upper*.77,.045,accent,x,upper*.46,.427);
+      const diagonal=box(g,.032,.47,.046,accent,x-side*.092,upper*.42,.427);
+      diagonal.rotation.z=side*.51;
+    }
+    box(g,.69,.031,.054,'#e6cfae',0,upper*.76,.431);
+    box(g,.69,.023,.052,accent,0,upper*.29,.433);
+  }
+  function leafyClimber(g,x,seed){
+    // A gently curved winding stem plus sculpted ivy leaflets. Three meshes
+    // for the main stem; leaves share material and geometry cache.
+    const pts=[];
+    for(let i=0;i<=9;i++){
+      const y=.16+i*.104;
+      pts.push(new THREE.Vector3(x+.045*Math.sin(i*.85+seed),y,.427));
+    }
+    const curve=new THREE.CatmullRomCurve3(pts);
+    const stem=object(g,new THREE.TubeGeometry(curve,20,.009,4,false),
+      mat('#5e8668'));
+    stem.castShadow=false;
+    for(let i=1;i<=8;i++){
+      const p=pts[i],leaf=ball(g,.045,i%3?'#729f77':'#a0b98b',
+        p.x+(i%2?.03:-.03),p.y,.444);
+      leaf.scale.set(1.28,.53,.38);
+      leaf.rotation.z=(i%2?-.48:.48);
+      if(i%3===0)ball(g,.018,'#e8b6ad',p.x+.02,p.y+.028,.472);
+    }
+  }
+  function atelierHome(g,b,style,height,paint) {
+    if(!b.hero)return;
+    const accent=style===0?'#92775b':style===1?'#788c86':'#b38a71';
+    handCarvedTimbers(g,height,accent);
+    // Sculpted arch replaces the stack of flat rectangular doors.
+    timberArch(g,.21,.36,.454,.24,.50);
+    // Window alcove, small roof trim and hand-built hanging flower trough.
+    box(g,.305,.03,.074,'#f9ebd6',-.20,.814,.444);
+    windowBox(g,-.20,.52,.505);
+    if(style===0)leafyClimber(g,-.37,b.x+b.y);
+    else if(style===1){
+      for(let k=-1;k<=1;k++){
+        box(g,.013,.12,.026,'#f8e7d1',k*.068,height*.76,.448);
+      }
+      box(g,.28,.020,.045,accent,0,height*.83,.448);
+    }else{
+      // A warm curved porch lantern and a little built-in seat.
+      ball(g,.042,mat('#f8e8bd',.35,'#f5c578'),-.31,.83,.458);
+      box(g,.24,.052,.16,'#d8bd9d',-.26,.17,.61);
+    }
+    lathePot(g,-.37,.55,'#6f9c7b','#eeb4b1',.83);
+  }
+  function atelierShop(g,b,h) {
+    if(!b.hero)return;
+    const bakery=b.name==='BAKERY',theme=bakery?'#c28d72':'#739b8b';
+    // Proper projecting bay display makes shops distinct from the cottages.
+    glazedBowWindow(g,bakery?-.18:.16,.55,.424,bakery?'bakery':'books');
+    // Arch around a real inset shop door; books or pastries stay behind glass.
+    timberArch(g,bakery?.20:-.18,.37,.476,.18,.52);
+    // Shaped cornice plus a shallow signboard cap above the curved awning.
+    box(g,.78,.055,.15,'#f5e4c8',0,h-.11,.51);
+    for(const x of [-.36,.36]){
+      const corbel=box(g,.09,.16,.12,'#ead4bc',x,h-.19,.51);
+      corbel.rotation.z=x>0?-.11:.11;
+    }
+    // Hand-thrown terracotta pots rather than boxy entrance planters.
+    lathePot(g,-.37,.65,bakery?'#78a07a':'#719c86','#e8b4b6',.82);
+    lathePot(g,.38,.63,'#80a48b','#e5d2aa',.91);
+    if(!bakery)leafyClimber(g,.35,b.x+b.y);
+  }
+
   function home(b){
     const g=new THREE.Group();g.position.set(b.x+.5,0,b.y+.5);world.add(g);
     const style=b.hero?(b.x<=7?0:b.y<10?1:2):(Math.abs(b.x*17+b.y*11)%3);
@@ -443,6 +645,7 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
     const paint=tint(b.wall||shades[(b.x+b.y)%shades.length]);
     box(g,.79,.09,.8,'#cbb59a',0,.045,0);
     box(g,.76,height,.76,b.hero?plaster(paint):mat(paint),0,.10+height/2,0);
+    if(b.hero)stoneFoundation(g,tint(paint,'#b89b80',.23));
     if(b.hero)wallTrim(g,.10+height,style===1?'#ebd6c0':'#e3c6ad');
     const cap=.1+height;
     roof(g,b.roof||'#ba7355',cap);
@@ -508,6 +711,7 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
       box(g,.70,.030,.048,'#f1e0cc',0,.98,.426);
     }
     if(b.hero){
+      atelierHome(g,b,style,height,paint);
       planter(g,-.29,.46);planter(g,.38,.31);
       // picket hedge on one side of the entry with no roof penetration
       for(let k=0;k<4;k++)ball(g,.10,'#7ba780',-.37,.20,-.24+k*.16);
@@ -518,6 +722,7 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
     const h=Math.max(1.08,b.h/33), color=tint(b.wall||'#e6d7bd');
     box(g,.84,.11,.87,'#c2b09c',0,.055,0);
     box(g,.79,h,.79,b.hero?plaster(color):mat(color),0,.11+h/2,0);
+    if(b.hero)stoneFoundation(g,tint(color,'#bba98d',.19));
     if(b.hero){
       wallTrim(g,h+.11,'#f2dfc5');
       for(const wx of [-.355,.355]) ivy(g,b.x*7+b.y,wx);
@@ -541,6 +746,7 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
     }
     planter(g,-.39,.50);planter(g,.37,.53);
     shopExtra(g,b,h);
+    atelierShop(g,b,h);
     // Storefront merch stays behind glass; no floating signs.
     if(b.name==='BAKERY'){
       for(let i=0;i<3;i++)ball(g,.058,'#c69459',-.31+i*.11,.30,.46);

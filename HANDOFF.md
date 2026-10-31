@@ -407,3 +407,9 @@ New, self-contained mode like Pip Run: `toy-town.html` + `assets/toy-town.js` (+
 - Shop awnings now have rounded fabric valances and a continuous stitched edge rather than six flat boards; organic trees receive raised tapering roots and crown variation. No added controls or city actors. Existing 2D fallback, all layouts/events, and iPhone zoom preserved.
 - The Three mock suite asserts geometry profile vertices and feature dispatch in addition to all prior WebGL lifecycle/camera/fallback checks. The real Chromium screenshot workflow is configured to capture the v21 release on mobile and desktop. Visual parity with reference images is still an open human review criterion.
 - Outer page version `toy-town.html?v=21&embed=1`; 3D module `toy-town-3d.js?v=8`; original `toy-town.js?v=14` unchanged.
+
+## Toy Town v22 — artisan landmark kit (31 October 2026)
+
+- Source `assets/toy-town-3d.js?v=9`, outer iframe `toy-town.html?v=22&embed=1`. Replaces center-five hero facade details with original, hand-authored geometry built at runtime: extruded stone arch frames with Path holes, true five-panel bow glass shop windows, modeled timber facades, LatheGeometry flower vessels, CatmullRomCurve3/TubeGeometry climbing ivy, softly painted masonry foundation courses. Material and geometry caches avoid repeated GPU allocations. The rest of the town uses the established efficient basic models.
+- `atelierHome` and `atelierShop` are hero-only; old roads, traffic, news variants, actors, touch/zoom and fallback remain untouched. Tests include additional Three mocks for Path, LatheGeometry, TubeGeometry, and vector/curve types; 2D regression still required. Visual QA uses the real GitHub Actions Chromium screenshot workflow, whose output should be inspected for geometry overlap or loading errors before claiming parity.
+- Pixel-perfect Pixar-like photo parity is **not** confirmed. Improve authored asset quality from screenshot evidence rather than adding random props.
