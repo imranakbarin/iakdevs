@@ -9,10 +9,10 @@ const moduleCode=fs.readFileSync(path.join(root,'assets/toy-town-3d.js'),'utf8')
 assert.match(html,/type="importmap"/);
 assert.match(html,/three@0\.187\.0\/build\/three\.module\.js/);
 assert.match(html,/three@0\.187\.0\/examples\/jsm\//);
-assert.match(html,/toy-town-3d\.js\?v=1/);
+assert.match(html,/toy-town-3d\.js\?v=2/);
 assert.match(html,/toy-town\.js\?v=14/);
 assert.ok(html.indexOf('toy-town.js?v=14')<html.indexOf("import('three')"), 'classic fallback starts first');
-assert.match(page,/toy-town\.html\?v=14&embed=1/);
+assert.match(page,/toy-town\.html\?v=15&embed=1/);
 assert.match(moduleCode,/export function mountToyTown3D/);
 assert.match(moduleCode,/new THREE\.WebGLRenderer/);
 assert.match(moduleCode,/window\.ToyTown3D=api/);
@@ -128,6 +128,15 @@ seed++;buildings=buildings.slice();callbacks.shift()();
 assert.equal(api.getStats().redrawCount,2,'new daily town triggers a full rebuild');
 const cameraZoom=api.camera.zoom;
 assert.ok(cameraZoom>0 && Number.isFinite(cameraZoom),'camera syncs to the existing zoom');
+host.clientWidth=844; host.clientHeight=390; win.innerWidth=844; win.innerHeight=390;
+callbacks.shift()();
+assert.equal(api.renderer.domElement.width,844,'landscape resize updates renderer');
+assert.equal(api.renderer.domElement.height,390,'landscape resize updates renderer height');
+assert.ok(api.camera.right>api.camera.top,'landscape retains the full 3D field of view');
+host.clientWidth=390; host.clientHeight=844; win.innerWidth=390; win.innerHeight=844;
+callbacks.shift()();
+assert.equal(api.renderer.domElement.width,390,'portrait resize restores mobile projection');
+
 const rendersBeforeFail=stats.renders;
 api.renderer.throwOnRender=true;callbacks.shift()();
 assert.equal(api.active,false,'render failure disables WebGL');

@@ -35,9 +35,12 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
   sun.target.position.set(9,0,9);
   scene.add(sun,sun.target);
   const materialCache = new Map(), geometryCache = new Map();
+  const contactMaterial = new THREE.MeshBasicMaterial({
+    color:'#304746',transparent:true,opacity:.17,depthWrite:false
+  });
   const world = new THREE.Group(); scene.add(world);
-  const actors = new Map();
-  let worldSeed = null, worldBuildings = null, worldPropCount = 0;
+  const actors = new Map(), ambient = [];
+  let worldSeed = null, worldBuildings = null, worldPropCount = 0, sceneTime = 0;
   let stopped = false, raf = 0, frames = 0, redrawCount = 0, lastSize = '', lastFrameAt = 0;
   const TAU = Math.PI * 2, LINES = [1,6,11,16];
   const rgb = (c) => new THREE.Color(c);
@@ -69,7 +72,14 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
   };
   const object = (parent, geometry, material, x=0,y=0,z=0, cast=true) => {
     const o = new THREE.Mesh(geometry,material);
-    o.position.set(x,y,z); o.castShadow=cast; o.receiveShadow=true; parent.add(o); return o;
+    o.position.set(x,y,z);
+    const p=geometry.parameters||{};
+    // Hundreds of tiny flower/window meshes casting real-time shadows
+    // overload mobile GPUs. Preserve architectural and tree shadows.
+    const substantial=(p.width>=.27&&p.height>=.12&&p.depth>=.18)||(p.radius>=.18);
+    o.castShadow=!!cast&&(desktop()||substantial);
+    o.receiveShadow=desktop()||substantial;
+    parent.add(o); return o;
   };
   const box = (p,w,h,d,col,x=0,y=0,z=0,rounded=true) =>
     object(p,geo(rounded?'round':'box',w,h,d),typeof col === 'string'?mat(col):col,x,y,z);
@@ -167,6 +177,16 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
     pane(g,.415,.65,-.11,.23,.24,'#ffd99a',true);
     const sill=box(g,.25,.025,.07,'#bb9776',-.20,.493,.46);
     for(let j=0;j<3;j++)ball(g,.028,j===1?'#e99d9e':'#f6dfbc',-.27+j*.07,.52,.46);
+    // Window shutters, visible depth and a proper little porch roof.
+    for(const dx of [-.325,-.065]){
+      const shutter=box(g,.056,.27,.048,'#6c9a91',dx,.65,.445);
+      shutter.castShadow=false;
+    }
+    box(g,.43,.07,.34,'#dfc5a4',.20,.69,.54);
+    for(const px of [.015,.385]){
+      cylinder(g,.028,.032,.54,'#f8e9cd',px,.41,.668);
+      box(g,.06,.09,.08,'#f9edda',px,.71,.668);
+    }
     box(g,.12,.34,.12,'#b27966',-.21,cap+.15,-.12);
     box(g,.15,.06,.15,'#eac4a0',-.21,cap+.36,-.12);
     if(b.hero){
@@ -187,6 +207,9 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
     box(g,.16,.43,.038,'#f6ead7',.03,.38,.448);
     ball(g,.016,'#eecb7c',.084,.37,.470);
     fabric(g,0,.89,.56,b.awning||'#bc6e63',.90,.31);
+    // Timber threshold and sash frames give the storefront visual weight.
+    box(g,.80,.085,.19,'#d5bda1',0,.13,.505);
+    for(const wx of [-.36,-.09,.18,.36])box(g,.016,.45,.045,'#fff3d8',wx,.50,.45);
     sign(g,b.name||'CAFE',0,h+.03,.448,.66,b.awning||'#7b5442');
     planter(g,-.39,.50);planter(g,.37,.53);
     // Storefront merch stays behind glass; no floating signs.
@@ -221,11 +244,22 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
     const g=new THREE.Group();g.position.set(x,0,z);world.add(g);g.scale.setScalar(sc);
     const trunk=cylinder(g,.055,.075,.51,'#83694f',0,.30,0);
     trunk.rotation.z=(rng(i,27)-.5)*.10;
-    for(let k=0;k<5;k++){
-      const a=k*TAU/5+.3,rad=k===4?0:.22;
-      const col=['#7eb593','#a0c99d','#6ba28b','#c5d9a3','#8dbfa1'][k];
-      const puff=ball(g,k===4?.27:.25,col,Math.cos(a)*rad,.79+(k%2)*.11,Math.sin(a)*rad);
-      puff.scale.set(1.05,.94,1.05);
+    const branchTint=mat('#83694f');
+    for(let k=0;k<3;k++){
+      const a=k*TAU/3+.5;
+      const stem=cylinder(g,.019,.036,.40,branchTint,Math.cos(a)*.10,.54,Math.sin(a)*.10);
+      stem.rotation.z=Math.cos(a)*.53;stem.rotation.x=Math.sin(a)*.53;
+    }
+    for(let k=0;k<8;k++){
+      const a=k*TAU/7+.3,rad=k>=7?0:.22+((i+k)%3)*.018;
+      const col=['#7eb593','#a0c99d','#6ba28b','#c5d9a3','#8dbfa1','#92bd90','#75ad99','#bfdb9b'][k];
+      const puff=ball(g,k===7?.28:.205+((k+i)%3)*.018,col,
+        Math.cos(a)*rad,.82+(k%3)*.075,Math.sin(a)*rad);
+      puff.scale.set(1.10,.78,1.07);
+      if(k%2===0)for(let q=0;q<3;q++){
+        ball(g,.027,'#c7dfad',Math.cos(a)*rad-.055+q*.047,
+          1.015+(k%3)*.068,Math.sin(a)*rad+.036);
+      }
     }
   }
   function littleFlowers(x,z,i){
@@ -303,6 +337,14 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
       box(world,1.75,.08,1.5,'#f1e2c7',p.x,1.05,p.y);
     }
     else if(k==='flowers')littleFlowers(p.x,p.y,i);
+    else if(k==='duck') {
+      // The 2D simulation already supplies accurate water coordinates.
+      const duck=new THREE.Group();duck.position.set(p.x,.21,p.y);world.add(duck);
+      const body=ball(duck,.11,'#f9d767',0,0,0);body.scale.set(1.25,.70,.93);
+      ball(duck,.065,'#fff0ad',.095,.07,0);
+      box(duck,.065,.025,.055,'#ed9d61',.16,.055,.02);
+      ambient.push({kind:'duck',mesh:duck,ref:p,phase:i*.65});
+    }
     else if(k==='times'){
       // Newsstand stays legible and anchored to the outskirts.
       box(world,.7,.08,.18,'#eddcc1',p.x,.82,p.y);
@@ -341,8 +383,39 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
         groundPiece(.9,.012,'#d5c7b1',xx+.5,yy+.19+p*.3,.222);
       }
     }
+    // A low, warm stone border defines the central neighborhood as one
+    // landscaped courtyard; it leaves walkways open for arriving residents.
+    const edging=mat('#e4d4b7');
+    for(let n=0;n<4;n++) {
+      for(const z of [7.05,10.94]) {
+        if(n!==1&&n!==2)box(world,.78,.095,.072,edging,7.5+n,.23,z);
+      }
+      for(const x of [7.05,10.94]) {
+        if(n!==1&&n!==2)box(world,.072,.095,.78,edging,x,.23,7.5+n);
+      }
+    }
+    // Dappled garden beds stay below doors and away from the moving pavement.
+    for(const [x,z] of [[7.23,8.52],[10.73,8.82],[7.31,10.45],[10.65,10.42]]) {
+      box(world,.36,.09,.28,'#bba27d',x,.22,z);
+      for(let j=0;j<5;j++) {
+        const xx=x-.12+j*.06;
+        ball(world,.073,j%2?'#649d7b':'#8aba91',xx,.31,z);
+        if(j%2===0)ball(world,.027,j===0?'#edb4b3':'#fff0c8',xx,.39,z);
+      }
+    }
     // Four grounded zebra stripes on the actual southern road.
     for(let i=0;i<4;i++)groundPiece(.088,.71,'#f8eedb',8.20+i*.17,11.5,.240);
+    // Translucent moving ripples: actual water-height meshes tied to the river.
+    for(let i=0;i<15;i++) {
+      const x=1.5+i*1.01, z=13.45+(i%3)*.35;
+      if(LINES.some(line=>Math.abs(line+.5-x)<.65))continue;
+      const ring=object(world,geo('torus',.18+(i%3)*.05,.012),
+        mat('#e4f4df',.32),x,.160,z,false);
+      ring.rotation.x=-Math.PI/2;
+      ring.material.transparent=true;
+      ring.material.opacity=.53;
+      ambient.push({kind:'water',mesh:ring,phase:i*.85,x,z});
+    }
     // Riverside edge, small paths; never grow trees out of water.
     for(let i=1;i<17;i++){
       if(!isRoad(i)) {
@@ -362,6 +435,7 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
     }
   }
   function rebuild(){
+    ambient.length = 0;
     while(world.children.length)world.remove(world.children[0]);
     for(const [ref,obj] of actors){obj.group.parent?.remove(obj.group);}
     actors.clear();
@@ -445,11 +519,69 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
     ball(g,.063,ref.skin||'#d6ae87',-.04,.63,0);
     return g;
   }
+  function creature(ref) {
+    const g=new THREE.Group(), kind=ref.kind;
+    if(kind==='ghost'){
+      const body=ball(g,.16,'#f5efe3',0,.22,0);
+      body.scale.set(.8,1.42,.8);
+      for(const x of [-.055,.055])ball(g,.016,'#465263',x,.29,.124);
+      return g;
+    }
+    if(kind==='penguin'){
+      const torso=ball(g,.125,'#45515a',0,.22,0);
+      torso.scale.set(.82,1.55,.83);
+      const bib=ball(g,.092,'#f7eee1',0,.19,.075);bib.scale.set(.8,1.4,.42);
+      for(const x of [-.04,.04])ball(g,.012,'#252e38',x,.35,.097);
+      box(g,.09,.025,.065,'#e3a461',0,.30,.135);
+      return g;
+    }
+    if(kind==='hen'){
+      const body=ball(g,.12,'#fff7eb',0,.17,0);body.scale.set(1.25,.90,1);
+      ball(g,.075,'#fff3dd',.11,.23,0);
+      const comb=ball(g,.035,'#d76a64',.11,.31,0);
+      box(g,.075,.025,.045,'#dfa05d',.17,.22,0);
+      return g;
+    }
+    if(kind==='dino'){
+      const body=ball(g,.32,'#8fba8c',0,.38,0);body.scale.set(1.3,.8,.82);
+      cylinder(g,.14,.12,.50,'#8fba8c',.28,.70,0);
+      ball(g,.16,'#93c69f',.30,.92,.0);
+      for(let j=0;j<4;j++)ball(g,.065,'#6e9f79',-.2+j*.13,.63,0);
+      for(const x of [-.21,.20])cylinder(g,.065,.06,.32,'#729e80',x,.17,0);
+      ball(g,.018,'#3d4e4a',.40,.96,.12);
+      return g;
+    }
+    // Dogs and llamas are quadrupeds, not human avatars.
+    const llama=kind==='llama',fur=llama?'#efe2cb':'#b88d68';
+    const body=ball(g,llama?.19:.17,fur,0,llama?.31:.22,0);
+    body.scale.set(1.4,.75,.82);
+    for(const x of [-.17,.17])for(const z of [-.09,.09])
+      cylinder(g,.030,.038,llama?.30:.18,fur,x,llama?.17:.10,z);
+    if(llama)cylinder(g,.075,.085,.52,fur,.21,.62,0);
+    const head=ball(g,llama?.10:.12,fur,.25,llama?.86:.33,0);
+    head.scale.set(1.12,.87,.95);
+    for(const z of [-.07,.07]){
+      const ear=ball(g,.046,fur,.23,llama?1.01:.45,z);
+      ear.scale.set(.58,1.5,.65);
+    }
+    const nose=ball(g,.045,'#765a4c',llama?.36:.37,llama?.84:.30,0);
+    for(const z of [-.075,.075])ball(g,.013,'#322d29',llama?.31:.32,llama?.92:.38,z);
+    return g;
+  }
   function actor(ref){
-    const g=ref.kind==='bike'?bicycle(ref):ref.type==='car'?car(ref):person(ref);
-    g.position.set(ref.x,0.16,ref.y);
+    const animal=['dog','hen','penguin','llama','dino','ghost'].includes(ref.kind);
+    const g=ref.kind==='bike'?bicycle(ref):ref.type==='car'?car(ref):animal?creature(ref):person(ref);
+    g.position.set(ref.x,0,ref.y);
+    const kind=ref.kind==='bike'?'bike':ref.type==='car'?'car':animal?'animal':'person';
+    // Feathered miniature contact pads hold feet and tyres to the terrain
+    // even under overcast lighting and at close zoom.
+    const pad=object(g,geo('sphere',.11),contactMaterial,0,
+      kind==='car'?.101:kind==='bike'?.057:kind==='animal'?.042:.012,0,false);
+    const spread=kind==='car'?[3.05,.065,1.75]:
+      kind==='bike'?[1.9,.06,1.1]:kind==='animal'?[1.35,.05,1.05]:[.85,.045,.60];
+    pad.scale.set(...spread);
     world.add(g);
-    actors.set(ref,{group:g,kind:ref.kind==='bike'?'bike':ref.type==='car'?'car':'person'});
+    actors.set(ref,{group:g,kind});
   }
   function syncActors(){
     const live=new Set(town.movers());
@@ -464,18 +596,39 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
       const off=(d===0||d===1)?{x:0,z:lane}:{x:lane,z:0};
       const path=!!ref.path;
       const desiredX=ref.x+(path?0:off.x),desiredZ=ref.y+(path?0:off.z);
-      g.position.set(desiredX,ref.sit&&item.kind==='person'?.11:.16,desiredZ);
+      // Ground-contact calibration: wheels touch the road instead of floating.
+      const baseY=item.kind==='car'?.078:item.kind==='bike'?.11:
+        item.kind==='animal'?.13:ref.sit?.10:.16;
+      g.position.set(desiredX,baseY,desiredZ);
       const a=Number.isFinite(ref.heading)?-ref.heading:[0,Math.PI,-Math.PI/2,Math.PI/2][d];
       g.rotation.y=a;
       const limbs=g.userData.limbs;
       if(limbs){
         const moving=!!ref.v&&ref.v>.035&&!ref.sit&&(!ref.stopUntil||town.debug().clock>=ref.stopUntil);
         const step=moving?Math.sin((ref.travel||0)*17+(ref.ph||0))*.44:0;
-        limbs.legs[0].rotation.x=step;limbs.legs[1].rotation.x=-step;
-        limbs.arms[0].rotation.x=-step*.85;limbs.arms[1].rotation.x=step*.85;
+        limbs.legs[0].rotation.x=ref.sit?-1.18:step;
+        limbs.legs[1].rotation.x=ref.sit?-1.18:-step;
+        limbs.arms[0].rotation.x=ref.sit?.22:-step*.85;
+        limbs.arms[1].rotation.x=ref.sit?.22:step*.85;
         if(ref.waveUntil&&town.debug().clock<ref.waveUntil)limbs.arms[1].rotation.z=-1.6;
         else limbs.arms[1].rotation.z=0;
         g.position.y+=moving?Math.abs(Math.sin((ref.travel||0)*17))*.012:0;
+      }
+      if(item.kind==='animal' && !reducedMotion) {
+        g.position.y+=Math.abs(Math.sin((ref.travel||0)*13))*Math.min(.016,(ref.v||0)*.035);
+      }
+    }
+  }
+  function animateAmbient(time){
+    if(reducedMotion)return;
+    for(const a of ambient){
+      if(a.kind==='duck'){
+        a.mesh.position.set(a.ref.x,.21+Math.sin(time*1.75+a.phase)*.025,a.ref.y);
+        a.mesh.rotation.y=Math.sin(time*.58+a.phase)*.22;
+      } else if(a.kind==='water'){
+        const pulse=.88+.16*Math.sin(time*1.1+a.phase);
+        a.mesh.scale.set(pulse,pulse,pulse);
+        a.mesh.position.y=.159+.004*Math.sin(time*.85+a.phase);
       }
     }
   }
@@ -528,6 +681,7 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
       const state=town.debug();
       if(worldBuildings!==town.buildings()||worldSeed!==state.seed)rebuild();
       syncActors();syncCamera();light(state.night||0);
+      animateAmbient(state.clock||0);
       renderer.render(scene,camera); frames++;
       if(!api.active) {
         api.active=true;window.ToyTown3D.active=true;
@@ -548,7 +702,7 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
   renderer.domElement.addEventListener('webglcontextrestored',restored,false);
   const api={
     active:false,renderer,scene,camera,
-    getStats:()=>({frames,redrawCount,actors:actors.size,buildings:town.buildings().length,webgl:true}),
+    getStats:()=>({frames,redrawCount,actors:actors.size,ambient:ambient.length,buildings:town.buildings().length,webgl:true}),
     stop(){stopped=true;cancelAnimationFrame(raf);this.active=false;window.ToyTown3D.active=false;
       host.style.display='none';document.getElementById('town').style.opacity='1';},
     dispose(){this.stop();renderer.dispose();}
