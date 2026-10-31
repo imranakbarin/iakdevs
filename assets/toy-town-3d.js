@@ -34,7 +34,7 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
   sun.shadow.radius = 3;
   sun.target.position.set(9,0,9);
   scene.add(sun,sun.target);
-  const materialCache = new Map(), geometryCache = new Map(), paintedRoofCache = new Map();
+  const materialCache = new Map(), geometryCache = new Map(), paintedRoofCache = new Map(), stuccoCache = new Map();
   // Studio-grade warm pastel cohesion across the different news-generated
   // building colors. Keep the recognizable roof hue but avoid plastic neon.
   const tint = (hex, toward='#fff0d9', ratio=.24) => {
@@ -191,27 +191,192 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
       const bloom=ball(g,.024,k%2?'#e8a5a4':'#ffebc9',xx,.32,z+.04);
     }
   }
+
+  // Small-scale plaster: not a blank pastel cube. A light speckled finish
+  // and soft edges let the houses read as hand-crafted resin miniatures.
+  function plaster(color) {
+    const pigment=tint(color,'#fff1de',.10);
+    if(stuccoCache.has(pigment))return stuccoCache.get(pigment);
+    const cv=document.createElement('canvas');cv.width=128;cv.height=128;
+    const c=cv.getContext('2d');
+    c.fillStyle=pigment;c.fillRect(0,0,128,128);
+    for(let k=0;k<260;k++){
+      const x=rng(k+1,197)*128,y=rng(k+7,381)*128;
+      c.fillStyle=k%3?'rgba(116,88,73,.055)':'rgba(255,252,238,.20)';
+      c.fillRect(x,y,.6+rng(k,19)*1.3,.6+rng(k,21)*1.3);
+    }
+    const tx=new THREE.CanvasTexture(cv);tx.colorSpace=THREE.SRGBColorSpace;
+    const material=new THREE.MeshStandardMaterial({map:tx,roughness:.96,metalness:0});
+    stuccoCache.set(pigment,material);return material;
+  }
+  function wallTrim(g,h,wood){
+    // Architectural cornice, plinth and corner quoins all follow the walls.
+    box(g,.85,.05,.85,'#f8e7d0',0,h+.075,0);
+    box(g,.81,.067,.82,'#e1c9ae',0,.125,0);
+    for(const x of [-.367,.367]) {
+      for(let level=0;level<4;level++) {
+        const y=.28+level*(h-.30)/4;
+        box(g,.078,.075,.067,wood,x,y,.407);
+        box(g,.067,.075,.078,wood,x,y,-.407);
+      }
+    }
+  }
+  function archedInset(g,x,y,z,w,h,wood,glass=false) {
+    // Beveled stone arch in actual wall space: timber/glass behind masonry.
+    const shape=new THREE.Shape();
+    shape.moveTo(-w/2,-h/2);
+    shape.lineTo(w/2,-h/2);
+    shape.lineTo(w/2,h*.14);
+    for(let i=0;i<=12;i++){
+      const angle=Math.PI*i/12;
+      shape.lineTo(Math.cos(angle)*w/2,h*.14+Math.sin(angle)*w*.46);
+    }
+    shape.lineTo(-w/2,-h/2);shape.closePath();
+    const gkey='arch:'+w+':'+h;
+    let arch=geometryCache.get(gkey);
+    if(!arch) {
+      arch=new THREE.ExtrudeGeometry(shape,{depth:.028,bevelEnabled:true,bevelSize:.012,bevelThickness:.009,bevelSegments:2,steps:1});
+      geometryCache.set(gkey,arch);
+    }
+    const surround=object(g,arch,mat('#f7e6ce'),x,y,z-.013);
+    // The carved stone surrounds an inset glass or timber panel.
+    const panel=box(g,w*.77,h*.84,.034,glass?mat('#9ecac6',.24,'#665b3b'):wood,
+      x,y-h*.075,z+.030);
+    if(glass){
+      box(g,w*.035,h*.66,.038,'#f7edd8',x,y-h*.08,z+.06);
+      box(g,w*.75,.018,.040,'#f7edd8',x,y-h*.09,z+.06);
+    }else ball(g,.014,'#e9cb87',x+w*.22,y-h*.19,z+.068);
+    return surround;
+  }
+  function windowBox(g,x,y,z) {
+    box(g,.33,.105,.145,'#b47b60',x,y,z);
+    for(let i=-3;i<=3;i++){
+      const xx=x+i*.040;
+      const leaf=ball(g,.047,i%2?'#6b9b78':'#94be8c',xx,y+.093,z-.025+(i%3)*.022);
+      leaf.scale.set(.85,1.04,.76);
+      if(i%2===0)ball(g,.024,i%3?'#efb2b0':'#f6ebc9',xx,y+.145,z);
+    }
+  }
+  function ivy(g,seed,sideX) {
+    // Climbing stems trained onto walls rather than floating bushes.
+    const green=['#71987a','#85a97c','#a7bc82'];
+    for(let i=0;i<7;i++){
+      const y=.29+i*.15,xx=sideX+Math.sin(i*.9+seed)*.028;
+      const leaf=ball(g,.046,green[(seed+i)%3],xx,y,.421);
+      leaf.scale.set(1.55,.74,.55);
+      if(i%3===0){
+        const flower=ball(g,.020,i%2?'#e9a8a8':'#f9e2ad',xx+.031,y+.037,.447);
+      }
+    }
+  }
+  function lowTerrace(g,style) {
+    // Open the corner as a welcoming porch, not four isolated boxes.
+    for(let i=0;i<3;i++){
+      const x=-.35+i*.12;
+      box(g,.105,.048,.14,'#d2c1a4',x,.11,.54+i*.026);
+    }
+    if(style===1) {
+      // Tiny timber balcony integrated into the second-level facade.
+      box(g,.42,.065,.24,'#d5bda0',-.14,1.02,.53);
+      for(let j=0;j<5;j++){
+        box(g,.022,.17,.029,'#f7ecd9',-.34+j*.10,1.125,.63);
+      }
+      box(g,.48,.037,.042,'#ead9bc',-.14,1.22,.64);
+    }
+    if(style===2) {
+      // Greenhouse bay with genuinely glazed panels and a garden trellis.
+      box(g,.31,.39,.28,plaster('#c9d9cd'),-.19,.38,.52);
+      pane(g,-.19,.44,.685,.22,.26);
+      box(g,.37,.065,.34,mat('#6b9985'),-.19,.61,.53);
+      for(let k=0;k<3;k++) {
+        cylinder(g,.011,.013,.28,'#658c79',-.34+k*.13,.33,.705);
+      }
+    }
+  }
+
+
+  function turret(g,wall,roofPigment,height=1.35) {
+    // A genuine curved miniature tower, not a flat overlay on a cube.
+    const tower=cylinder(g,.21,.24,height,plaster(wall),.31,.17+height/2,-.14);
+    tower.castShadow=true;
+    cylinder(g,.251,.25,.055,'#efdec8',.31,.19+height,-.14);
+    const cone=object(g,geo('cylinder',0,.295,.42),roofMaterial(roofPigment),
+      .31,.41+height,-.14);
+    cone.castShadow=true;
+    box(g,.19,.23,.042,'#f7e9d3',.31,height*.65,.074);
+    box(g,.15,.19,.046,mat('#9bbfc4',.30,'#8a5d3a'),.31,height*.65,.102);
+    box(g,.015,.18,.053,'#fff5e0',.31,height*.65,.133);
+    ball(g,.045,'#bd9e76',.31,.69+height,-.14);
+  }
+  function sideCottageWing(g,wall,roofPigment){
+    const wing=new THREE.Group();
+    wing.position.set(.28,0,-.17);
+    wing.scale.set(.60,.79,.72);
+    g.add(wing);
+    box(wing,.74,.81,.72,plaster(wall),0,.52,0);
+    roof(wing,roofPigment,.97);
+    pane(wing,.17,.55,.38,.22,.32);
+    box(wing,.11,.13,.12,'#bd8e75',-.18,1.22,-.16);
+  }
+  function shopExtra(g,b,h) {
+    if(!b.hero)return;
+    const bakery=b.name==='BAKERY';
+    const accent=bakery?'#bd7b64':'#598c85';
+    if(bakery){
+      // Bakery chimney, terracotta flower trough and hanging pastry sign.
+      box(g,.14,.47,.15,'#aa806a',-.23,h+.33,-.10);
+      box(g,.18,.055,.19,'#e6b89b',-.23,h+.56,-.10);
+      windowBox(g,-.20,.14,.57);
+    }else{
+      // The bookshop has its own two-sided wooden display and overhang.
+      box(g,.28,.36,.27,'#ebd7b8',.15,.38,.51);
+      pane(g,.15,.44,.664,.20,.25);
+      box(g,.37,.045,.33,accent,.15,.61,.52);
+      box(g,.35,.034,.08,'#c3a687',.15,.17,.68);
+    }
+    // Hanging oval sign has depth and a real metal mount.
+    const mount=box(g,.14,.022,.025,'#6b716a',-.32,h*.79,.475);
+    box(g,.025,.12,.025,'#6b716a',-.42,h*.72,.475);
+    const tag=ball(g,.10,'#f8ead1',-.42,h*.64,.48);
+    tag.scale.set(.75,.86,.20);
+    ball(g,.042,accent,-.42,h*.64,.513).scale.set(.82,.82,.35);
+  }
+
   function home(b){
     const g=new THREE.Group();g.position.set(b.x+.5,0,b.y+.5);world.add(g);
-    const height=Math.min(1.4,Math.max(.88,b.h/30));
+    const style=b.hero?(b.x<=7?0:b.y<10?1:2):(Math.abs(b.x*17+b.y*11)%3);
+    const height=Math.min(1.56,Math.max(.98,b.h/30))*(style===1?1.08:1);
     const paint=tint(b.wall||shades[(b.x+b.y)%shades.length]);
     box(g,.79,.09,.8,'#cbb59a',0,.045,0);
-    box(g,.76,height,.76,paint,0,.10+height/2,0);
+    box(g,.76,height,.76,plaster(paint),0,.10+height/2,0);
+    wallTrim(g,.10+height,style===1?'#ebd6c0':'#e3c6ad');
     const cap=.1+height;
     roof(g,b.roof||'#ba7355',cap);
+    // Each hero house gets a distinct architectural silhouette rather than
+    // three copies of the same rectangular cottage.
+    if(b.hero&&style===0)sideCottageWing(g,paint,b.roof||'#ba7355');
+    if(b.hero&&style===2)turret(g,paint,b.roof||'#ba7355',height+0.12);
     // A pitched dormer and deep eave give the cottage a recognizable roof
     // silhouette when viewed from the street.
     box(g,.20,.20,.17,'#f1dfc8',-.14,cap+.24,.295);
     box(g,.28,.045,.24,roofMaterial(b.roof||'#ba7355'),-.14,cap+.36,.30).rotation.z=-.12;
     box(g,.13,.12,.024,'#91bbc0',-.14,cap+.245,.393);
     box(g,.15,.015,.035,'#f8eddb',-.14,cap+.17,.411);
+    // Layered architecture shared across all cottage variants.
+    lowTerrace(g,style);
+    if(b.hero) ivy(g,b.x+b.y,style===1?.33:-.34);
     // Front porch and steps physically touch the entry.
     box(g,.32,.085,.25,'#dbc6a9',.21,.09,.51);
+    archedInset(g,.21,.31,.417,.19,.40,'#987055');
     box(g,.21,.39,.055,'#94684f',.21,.295,.41);
     box(g,.25,.42,.028,'#f4e3cc',.21,.315,.444);
     box(g,.175,.34,.035,'#99714e',.21,.28,.467);
     ball(g,.016,'#e9ca7d',.27,.32,.489);
     pane(g,-.20,.65,.405,.21,.25);
+    windowBox(g,-.20,.50,.488);
+    if(style===1) {
+      archedInset(g,-.19,height-.25,.414,.22,.32,'#b78a6b',true);
+    }
     pane(g,.415,.65,-.11,.23,.24,'#ffd99a',true);
     const sill=box(g,.25,.025,.07,'#bb9776',-.20,.493,.46);
     for(let j=0;j<3;j++)ball(g,.028,j===1?'#e99d9e':'#f6dfbc',-.27+j*.07,.52,.46);
@@ -234,6 +399,18 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
     }
     box(g,.12,.34,.12,'#b27966',-.21,cap+.15,-.12);
     box(g,.15,.06,.15,'#eac4a0',-.21,cap+.36,-.12);
+    // Handmade plaster corner and roofline details keep buildings from
+    // reading as exact clones of one little cube.
+    if(style===0){
+      const loft=ball(g,.10,'#f1dec3',.12,cap+.20,.39);
+      loft.scale.set(.95,.88,.43);
+      pane(g,.12,cap+.20,.44,.11,.14);
+    } else if(style===2) {
+      for(const x of [-.29,.04,.34]) {
+        box(g,.020,.14,.023,'#f6ecd9',x,.90,.429);
+      }
+      box(g,.70,.030,.048,'#f1e0cc',0,.98,.426);
+    }
     if(b.hero){
       planter(g,-.29,.46);planter(g,.38,.31);
       // picket hedge on one side of the entry with no roof penetration
@@ -244,7 +421,9 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
     const g=new THREE.Group();g.position.set(b.x+.5,0,b.y+.5);world.add(g);
     const h=Math.max(1.08,b.h/33), color=tint(b.wall||'#e6d7bd');
     box(g,.84,.11,.87,'#c2b09c',0,.055,0);
-    box(g,.79,h,.79,color,0,.11+h/2,0);
+    box(g,.79,h,.79,plaster(color),0,.11+h/2,0);
+    wallTrim(g,h+.11,'#f2dfc5');
+    for(const wx of [-.355,.355]) ivy(g,b.x*7+b.y,wx);
     roof(g,b.awning||'#9c6d60',h+.11);
     for(const x of [-.225,.225])pane(g,x,.50,.411,.29,.48);
     pane(g,.42,.70,-.14,.24,.32,'#ffd0a2',true);
@@ -256,7 +435,14 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
     box(g,.80,.085,.19,'#d5bda1',0,.13,.505);
     for(const wx of [-.36,-.09,.18,.36])box(g,.016,.45,.045,'#fff3d8',wx,.50,.45);
     sign(g,b.name||'CAFE',0,h+.03,.448,.66,b.awning||'#7b5442');
+    // Historic shopcornice with projecting wooden signage on a short bracket.
+    box(g,.88,.053,.065,'#f6e4cb',0,h+.17,.41);
+    box(g,.85,.038,.07,'#9f846b',0,.86,.46);
+    for(const sx of [-.35,.35]){
+      box(g,.026,.36,.07,'#ead4b3',sx,.50,.458);
+    }
     planter(g,-.39,.50);planter(g,.37,.53);
+    shopExtra(g,b,h);
     // Storefront merch stays behind glass; no floating signs.
     if(b.name==='BAKERY'){
       for(let i=0;i<3;i++)ball(g,.058,'#c69459',-.31+i*.11,.30,.46);
@@ -295,21 +481,34 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
       const stem=cylinder(g,.019,.036,.40,branchTint,Math.cos(a)*.10,.54,Math.sin(a)*.10);
       stem.rotation.z=Math.cos(a)*.53;stem.rotation.x=Math.sin(a)*.53;
     }
+    if(i%7===0) {
+      // Slender cypress interspersed with the broader miniature shade trees:
+      // layered tapering foliage and exposed slender trunk.
+      for(let tier=0;tier<4;tier++) {
+        const layer=ball(g,.25-tier*.042,['#5b8c72','#649879','#6fa486','#88b296'][tier],
+          0,.57+tier*.17,0);
+        layer.scale.set(.74,.78,.75);
+      }
+      return;
+    }
+    const blossom=i%11===0;
     // One continuous asymmetric crown and smaller leaf clusters. Eight equal
     // spheres previously resembled stacked broccoli balls in the screenshot.
-    const crown=ball(g,.34,'#81ae91',0,.88,0);
+    const crown=ball(g,.34,blossom?'#adc29b':'#81ae91',0,.88,0);
     crown.scale.set(1.10,.78,1.03);
     for(let k=0;k<11;k++){
       const a=k*TAU/11+.34,rad=.20+(rng(i,k+51)-.5)*.10;
       const height=.84+(rng(i,k+29)-.5)*.22;
-      const col=['#78a98a','#93bb99','#a0c5a1','#6e9f85','#afd0aa'][k%5];
+      const col=blossom?['#deb6bb','#edcbd0','#cda8b9','#e6c1c8','#d8b5b5'][k%5]:
+        ['#78a98a','#93bb99','#a0c5a1','#6e9f85','#afd0aa'][k%5];
       const puff=ball(g,.12+rng(i,k+9)*.075,col,
         Math.cos(a)*rad,height,Math.sin(a)*rad);
       puff.scale.set(1.15,.72,1.12);
       if(k%2===0){
         const posX=Math.cos(a)*(rad+.06),posZ=Math.sin(a)*(rad+.04);
         for(let q=0;q<3;q++)
-          ball(g,.033,'#bfd5a4',posX+(q-1)*.05,height+.10+(q%2)*.025,posZ);
+          ball(g,.033,blossom?'#f7dfde':'#bfd5a4',
+            posX+(q-1)*.05,height+.10+(q%2)*.025,posZ);
       }
     }
   }
@@ -427,6 +626,12 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
         groundPiece(.035,.36,'#f3e8d6',n+.5,t+.5,.183);
         groundPiece(.36,.035,'#f3e8d6',t+.5,n+.5,.190);
       }
+      // Cream stone curb bands pull the miniature streets into the
+      // landscaping. Keep the canal uncovered, including bridge openings.
+      for(const edge of [-.074,1.074]) {
+        groundPiece(.095,11.9,'#d9cdb8',n+edge,7.05,.205);
+        groundPiece(11.9,.095,'#d9cdb8',7.05,n+edge,.208);
+      }
       // River bridges have pale stone shoulders, anchored to the same lanes.
       groundPiece(1.12,2.05,'#a99f8c',n+.5,14,.17);
       groundPiece(.92,2.06,'#78868a',n+.5,14,.22);
@@ -447,6 +652,21 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
           groundPiece(.268+jitter,.268-jitter,stone[(xx+yy+col+row)%4],
             xx+.205+col*.291+jitter*.3,yy+.205+row*.291-jitter*.3,
             .221+((row+col)%2)*.006);
+        }
+      }
+    }
+    // Hand-set garden ribbons transition the little courtyard into the grass,
+    // instead of floating as a paved square cut out of a flat sheet.
+    for(let row=0;row<4;row++) {
+      for(let col=0;col<4;col++){
+        const x=7.27+col*1.0,z=7.22+row*.98;
+        if((row===1||row===2)&&(col===1||col===2))continue;
+        for(let n=0;n<3;n++){
+          const seed=row*29+col*17+n*7;
+          const px=x+.15+rng(seed,32)*.52,pz=z+.13+rng(seed,41)*.50;
+          const bloom=ball(world,.07,seed%2?'#87aa87':'#a3bf91',px,.24,pz);
+          bloom.scale.set(1.35,.58,1.24);
+          if(n===1)ball(world,.025,'#f3c6bf',px,.29,pz+.018);
         }
       }
     }
@@ -488,6 +708,16 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
       if(!isRoad(i)) {
         groundPiece(.85,.15,'#e1d3b7',i+.5,12.90,.17);
         littleFlowers(i+.35,12.63,i*17);
+      }
+    }
+    // City benches and planted corners are integrated with the paved streets:
+    // small seasonal flower beds, low stone troughs and soft ground cover.
+    for(const [x,z] of [[7.2,7.4],[10.76,9.65],[8.08,10.74],[10.8,10.84]]) {
+      box(world,.40,.082,.28,'#c8b59b',x,.18,z);
+      for(let n=0;n<6;n++){
+        const xx=x-.15+n*.059,yy=.25+(n%3)*.014;
+        ball(world,.060,n%2?'#76a88a':'#92bd91',xx,yy,z);
+        if(n%2===0)ball(world,.024,n%4?'#e5a6ad':'#f6e9c6',xx,yy+.07,z);
       }
     }
     // Decorative tiny lawns in free lots use deterministic coordinates.

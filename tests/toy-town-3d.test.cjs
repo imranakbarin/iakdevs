@@ -9,10 +9,10 @@ const moduleCode=fs.readFileSync(path.join(root,'assets/toy-town-3d.js'),'utf8')
 assert.match(html,/type="importmap"/);
 assert.match(html,/three@0\.187\.0\/build\/three\.module\.js/);
 assert.match(html,/three@0\.187\.0\/examples\/jsm\//);
-assert.match(html,/toy-town-3d\.js\?v=4/);
+assert.match(html,/toy-town-3d\.js\?v=5/);
 assert.match(html,/toy-town\.js\?v=14/);
 assert.ok(html.indexOf('toy-town.js?v=14')<html.indexOf("import('three')"), 'classic fallback starts first');
-assert.match(page,/toy-town\.html\?v=17&embed=1/);
+assert.match(page,/toy-town\.html\?v=18&embed=1/);
 assert.match(moduleCode,/export function mountToyTown3D/);
 assert.match(moduleCode,/new THREE\.WebGLRenderer/);
 assert.match(moduleCode,/window\.ToyTown3D=api/);
@@ -79,9 +79,12 @@ const host={style:{display:'none'},clientWidth:390,clientHeight:844,
   appendChild(o){this.child=o;}};
 const document={createElement:()=>({width:0,height:0,getContext:()=>canvas2d}),
   getElementById:id=>id==='town'?townCanvas:null};
-let buildings=[{kind:'house',x:7,y:7,h:34,wall:'#eddfc3',roof:'#a46d50'},
-  {kind:'shop',x:8,y:7,h:40,wall:'#decdbd',awning:'#b56e5e',name:'BAKERY'},
-  {kind:'shop',x:9,y:7,h:38,wall:'#bcd7d1',awning:'#547c79',name:'BOOKS'},
+let buildings=[
+  {kind:'house',x:7,y:7,h:34,hero:true,wall:'#eddfc3',roof:'#a46d50'},
+  {kind:'house',x:10,y:8,h:34,hero:true,wall:'#cbdcdb',roof:'#678d9c'},
+  {kind:'house',x:10,y:10,h:36,hero:true,wall:'#eadfc5',roof:'#be8165'},
+  {kind:'shop',x:8,y:7,h:40,hero:true,wall:'#decdbd',awning:'#b56e5e',name:'BAKERY'},
+  {kind:'shop',x:9,y:7,h:38,hero:true,wall:'#bcd7d1',awning:'#547c79',name:'BOOKS'},
   {kind:'tower',x:3,y:3,h:85,wall:'#a3b6ca'},
   {kind:'fire',x:12,y:12,h:26,wall:'#d56a59'}];
 const props=[
@@ -126,6 +129,14 @@ assert.match(moduleCode,/Miniature gabled porch roof/,
   'porch has a pitched profile rather than a flat canopy');
 assert.match(moduleCode,/Separate warm, irregular limestone pavers/,
   'courtyard pavers replace the rigid grid');
+assert.match(moduleCode,/function plaster\(color\)/,'walls use grainy plaster instead of plain plastic');
+assert.match(moduleCode,/function archedInset\(/,'doors/windows have dimensional arches');
+assert.match(moduleCode,/function turret\(/,'one hero cottage has its own curved tower');
+assert.match(moduleCode,/function sideCottageWing\(/,'another hero cottage has a secondary roof and wing');
+assert.match(moduleCode,/function shopExtra\(/,'bookshop and bakery have distinctive facades');
+assert.match(moduleCode,/function ivy\(/,'climbing green vines integrate facades with the landscape');
+assert.match(moduleCode,/One continuous asymmetric crown/,'sculpted tree shapes remain active');
+
 
 assert.equal(api.getStats().plazaLights,1,'modeled plaza lamps have physical warm light');
 const lantern=api.scene.children.find(o=>o.children?.some(x=>x.isPointLight))?.children.find(x=>x.isPointLight);
@@ -145,7 +156,9 @@ assert.ok(api.camera.position.y < normalCameraHeight,'close zoom lowers viewing 
 currentCamZoom=1.52;callbacks.shift()();
 assert.ok(Math.abs(api.camera.position.y-normalCameraHeight)<.0001,'camera returns to regular viewing angle');
 assert.equal(api.getStats().actors,3,'pedestrians and vehicles follow the existing simulation');
-assert.equal(api.getStats().buildings,5);
+assert.equal(api.getStats().buildings,7);
+const modeledArchitecture=api.scene.children.find(o=>o.children?.some(x=>x.position.x===7.5&&x.position.z===7.5));
+assert.ok(modeledArchitecture,'hero architectural assembly is part of the world');
 const oldCount=stats.renders;
 pedestrians.pop();frameClock+=1;
 callbacks.shift()();
