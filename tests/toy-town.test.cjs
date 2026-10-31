@@ -4,11 +4,16 @@
 // without error; and traffic and people keep the streets busy.
 const fs = require('node:fs'), path = require('node:path'), vm = require('node:vm'), assert = require('node:assert/strict');
 const root = path.join(__dirname, '..'), html = fs.readFileSync(path.join(root, 'index.html'), 'utf8');
+const dioramaSource = fs.readFileSync(path.join(root, 'assets/toy-town-diorama.js'), 'utf8');
+assert.match(dioramaSource, /function building\(/, 'new architectural renderer exists');
+assert.match(dioramaSource, /function tree\(/, 'new organic tree renderer exists');
+assert.match(dioramaSource, /function gable\(/, 'real pitched roof renderer exists');
+assert.match(dioramaSource, /function glazing\(/, 'framed glazing renderer exists');
 assert.match(html, /<option value="town">Toy Town<\/option>/, 'Toy Town is in the menu');
-assert.match(html, /townFrame\.src='toy-town\.html\?v=12&embed=1'/, 'and opens its current embedded page');
+assert.match(html, /townFrame\.src='toy-town\.html\?v=13&embed=1'/, 'and opens its current embedded page');
 assert.match(fs.readFileSync(path.join(root, 'toy-town.html'), 'utf8'), /assets\/toy-town\.js\?v=\d+/);
 const box = vm.createContext({Math, Object, Array, JSON, Date, String, Number, RegExp, setTimeout: () => 0, document: {getElementById: () => ({textContent: ''})}});
-vm.runInContext(fs.readFileSync(path.join(root, 'assets/toy-town.js'), 'utf8') + ';this.T = ToyTown;', box);
+vm.runInContext((dioramaSource + '\n' + fs.readFileSync(path.join(root, 'assets/toy-town.js'), 'utf8')) + ';this.T = ToyTown;', box);
 const T = box.T;
 
 // The news filter.
@@ -38,7 +43,7 @@ class LateEveningDate extends Date {
   getFullYear() { return 2026; } getMonth() { return 9; } getDate() { return 31; }
 }
 const lateBox = vm.createContext({...box, Date: LateEveningDate});
-vm.runInContext(fs.readFileSync(path.join(root, 'assets/toy-town.js'), 'utf8') + ';this.T = ToyTown;', lateBox);
+vm.runInContext((dioramaSource + '\n' + fs.readFileSync(path.join(root, 'assets/toy-town.js'), 'utf8')) + ';this.T = ToyTown;', lateBox);
 assert.equal(lateBox.T.dateKey(), '2026-10-31', 'late local evening remains on the local date');
 
 // The story's own name goes on the banners; a long story becomes a headline.
@@ -102,9 +107,10 @@ assert.ok(cyclist.travel > parkedDistance[1], 'cycling advances the pedal clock'
 
 // Canvas smoke: rich buildings, human poses and all event types must draw without errors.
 // The same camera frame reuses its static ground buffer until the world changes.
-const strokes = {groundDraws: 0, buffers: 0, screenBlits: 0};
+const strokes = {groundDraws: 0, buffers: 0, screenBlits: 0, detailPaths: 0, gradients: 0};
 const fakeContext = isGround => new Proxy({}, {get(_, key) {
-  if (key === 'createLinearGradient' || key === 'createRadialGradient') return () => ({addColorStop() {}});
+  if (key === 'createLinearGradient' || key === 'createRadialGradient') return () => {strokes.gradients++; return {addColorStop() {}};};
+  if (key === 'beginPath') return () => {strokes.detailPaths++;};
   if (key === 'measureText') return txt => ({width: String(txt).length * 5});
   if (key === 'clearRect') return () => { if (isGround) strokes.groundDraws++; };
   if (key === 'drawImage') return () => { if (!isGround) strokes.screenBlits++; };
@@ -132,7 +138,7 @@ const touchCtx = vm.createContext({
   requestAnimationFrame:()=>0,setTimeout:()=>0,
   addEventListener:(name,handler)=>{(hostHandlers[name] ||= []).push(handler);}
 });
-vm.runInContext(fs.readFileSync(path.join(root,'assets/toy-town.js'),'utf8')+';this.T=ToyTown;', touchCtx);
+vm.runInContext((dioramaSource + '\n' + fs.readFileSync(path.join(root,'assets/toy-town.js'),'utf8'))+';this.T=ToyTown;', touchCtx);
 const phone = touchCtx.T;
 phone.layout(); phone.build(2026,'weather');
 touchHandlers.pointerdown({pointerType:'touch',pointerId:7,clientX:100,clientY:200});
@@ -171,10 +177,12 @@ const sceneDoc = {
   createElement: tag => { assert.equal(tag, 'canvas'); strokes.buffers++; return fakeCanvas(true); }
 };
 const drawBox = vm.createContext({Math, Object, Array, JSON, Date, String, Number, RegExp, document: sceneDoc, innerWidth: 1280, innerHeight: 720, devicePixelRatio: 1, setTimeout: () => 0});
-vm.runInContext(fs.readFileSync(path.join(root, 'assets/toy-town.js'), 'utf8') + ';this.T = ToyTown;', drawBox);
+vm.runInContext((dioramaSource + '\n' + fs.readFileSync(path.join(root, 'assets/toy-town.js'), 'utf8')) + ';this.T = ToyTown;', drawBox);
 const scene = drawBox.T;
 scene.layout(); scene.build(2026, 'sports'); scene.decorate([scene.VARIANTS.find(v => v.variant === 'cricket')]);
 scene.render(); scene.render();
+assert.ok(strokes.detailPaths > 100, 'miniature buildings use layered projected outlines');
+assert.ok(strokes.gradients > 40, 'glazing, soft shadows and foliage use tonal shading');
 assert.equal(strokes.buffers, 1, 'only one backing canvas is allocated');
 assert.equal(strokes.groundDraws, 1, 'static ground is not redrawn each idle frame');
 assert.equal(strokes.screenBlits, 2, 'cached ground is blitted each frame');
@@ -183,6 +191,13 @@ scene.render();
 assert.equal(strokes.groundDraws, 2, 'new town invalidates static ground');
 for (const key of Object.keys(scene.THEMES)) { scene.build(4242, key); scene.render(); }
 assert.ok(strokes.screenBlits >= 12, 'all themed scenes complete a render pass');
+scene.pinchTo(3.2, 640, 360, {x: 9, y: 9});
+const previousPaths = strokes.detailPaths;
+scene.render();
+assert.ok(strokes.detailPaths > previousPaths, 'diorama geometry draws at close zoom');
+scene.pinchTo(.55, 640, 360, {x: 9, y: 9});
+scene.render();
+
 // Hero neighborhood remains central and landscaped on every seed, while the
 // surrounding plots still respond to the day's theme.
 const hero = scene.hero();
@@ -268,7 +283,14 @@ const townPage = fs.readFileSync(path.join(root, 'toy-town.html'), 'utf8');
 for (const id of ['zoom-in', 'zoom-out', 'zoom-reset']) {
   assert.match(townPage, new RegExp('id="' + id + '"[^>]*aria-label="[^"]+"'), id + ' is accessible');
 }
-assert.match(townPage, /toy-town\.js\?v=12/, 'Safari-compatible engine is loaded');
+assert.match(townPage, /toy-town\.js\?v=13/, 'diorama engine is loaded');
+assert.match(townPage, /toy-town-diorama\.js\?v=1/, 'diorama is loaded before the engine');
+assert.ok(townPage.indexOf('toy-town-diorama.js') < townPage.indexOf('toy-town.js'),
+  'material renderer loads before the world engine');
+assert.match(fs.readFileSync(path.join(root,'assets/toy-town.js'),'utf8'),
+  /cam.z = cam.tz = innerWidth < 700 \? 1\.52 : 1\.72/,
+  'opening view frames the village more closely');
+
 assert.match(html, /id="town-zoom"/, 'zoom controls live outside the iframe');
 assert.match(html, /id="town-fit"/, 'mobile has a fit-the-city button');
 assert.match(html, /town:zoom/, 'outer buttons message the city');

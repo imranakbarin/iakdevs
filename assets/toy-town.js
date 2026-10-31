@@ -171,11 +171,11 @@ const ToyTown = (() => {
     };
     // Only five carefully placed buildings: two corner shops and three homes.
     // Their frontages face the path; the central two-by-two block is open.
-    site(1, 0, 'shop', {h: 28, wall: '#f0d8bd', awning: '#bf6657', name: 'BAKERY'});
-    site(2, 0, 'shop', {h: 27, wall: '#c6dfd3', awning: '#427c78', name: 'BOOKS'});
-    site(0, 0, 'house', {h: 24, wall: '#dfbba4', roof: '#a55a49'});
-    site(3, 1, 'house', {h: 22, wall: '#c4d7e7', roof: '#638db2'});
-    site(3, 3, 'house', {h: 26, wall: '#eedbb9', roof: '#b47742'});
+    site(1, 0, 'shop', {h: 40, wall: '#f0d8bd', awning: '#bf6657', name: 'BAKERY'});
+    site(2, 0, 'shop', {h: 38, wall: '#c6dfd3', awning: '#427c78', name: 'BOOKS'});
+    site(0, 0, 'house', {h: 34, wall: '#dfbba4', roof: '#a55a49'});
+    site(3, 1, 'house', {h: 34, wall: '#c4d7e7', roof: '#638db2'});
+    site(3, 3, 'house', {h: 36, wall: '#eedbb9', roof: '#b47742'});
     for (let yy = y; yy <= b.yb; yy++) for (let xx = x; xx <= b.xb; xx++) {
       const cell = tile(xx, yy);
       cell.kind = (xx >= x + 1 && xx <= x + 2 && yy >= y + 1 && yy <= y + 2)
@@ -202,10 +202,10 @@ const ToyTown = (() => {
     const tiles = []; for (let y = b.ya; y <= b.yb; y++) for (let x = b.xa; x <= b.xb; x++) { tile(x, y).block = b; tiles.push([x, y]); }
     const edge = ([x, y]) => x === b.xa || x === b.xb || y === b.ya || y === b.yb;
     const pastel = () => PASTEL[r() * PASTEL.length | 0], roof = () => ROOFS[r() * ROOFS.length | 0];
-    if (b.type === 'houses') for (const [x, y] of tiles) { if (edge([x, y]) && r() < .8) addBuilding({x, y, kind: 'house', h: 16 + r() * 8, wall: pastel(), roof: roof()}); else props.push({kind: 'tree', x: x + .5, y: y + .5, s: .7 + r() * .4, c: '#6cc35a'}); }
-    else if (b.type === 'shops') for (const [x, y] of tiles) { if (edge([x, y])) addBuilding({x, y, kind: 'shop', h: 22 + r() * 14, wall: pastel(), awning: roof(), name: ['BAKERY', 'PIZZA', 'TOYS', 'BOOKS', 'CAFE', 'SWEETS', 'PETS'][r() * 7 | 0]}); else tile(x, y).kind = 'plaza'; }
+    if (b.type === 'houses') for (const [x, y] of tiles) { if (edge([x, y]) && r() < .8) addBuilding({x, y, kind: 'house', h: 29 + r() * 8, wall: pastel(), roof: roof()}); else props.push({kind: 'tree', x: x + .5, y: y + .5, s: .7 + r() * .4, c: '#6cc35a'}); }
+    else if (b.type === 'shops') for (const [x, y] of tiles) { if (edge([x, y])) addBuilding({x, y, kind: 'shop', h: 32 + r() * 11, wall: pastel(), awning: roof(), name: ['BAKERY', 'PIZZA', 'TOYS', 'BOOKS', 'CAFE', 'SWEETS', 'PETS'][r() * 7 | 0]}); else tile(x, y).kind = 'plaza'; }
     else if (b.type === 'towers') for (const [x, y] of tiles) { if (r() < .7) addBuilding({x, y, kind: 'tower', h: 50 + r() * 70, wall: ['#9fc4e8', '#b9d2e6', '#a8b8d8', '#c8d6e0'][r() * 4 | 0], roof: '#6b7c93'}); else tile(x, y).kind = 'plaza'; }
-    else if (b.type === 'fire') { for (const [x, y] of tiles) { if (x === b.xa && y === b.yb) addBuilding({x, y, kind: 'fire', h: 26, wall: '#e2463a', roof: '#a8281f'}); else if (edge([x, y]) && r() < .6) addBuilding({x, y, kind: 'house', h: 16 + r() * 8, wall: pastel(), roof: roof()}); else tile(x, y).kind = 'plaza'; } b.station = {x: b.xa + .5, y: b.yb + .5}; }
+    else if (b.type === 'fire') { for (const [x, y] of tiles) { if (x === b.xa && y === b.yb) addBuilding({x, y, kind: 'fire', h: 26, wall: '#e2463a', roof: '#a8281f'}); else if (edge([x, y]) && r() < .6) addBuilding({x, y, kind: 'house', h: 29 + r() * 8, wall: pastel(), roof: roof()}); else tile(x, y).kind = 'plaza'; } b.station = {x: b.xa + .5, y: b.yb + .5}; }
     else if (b.type === 'construction') { for (const [x, y] of tiles) tile(x, y).kind = 'dirt'; addBuilding({x: b.xa + 1, y: b.ya + 1, kind: 'site', h: 20, wall: '#d8c79a', roof: '#c9a85a'}); props.push({kind: 'crane', x: b.xa + 2.5, y: b.ya + 2.5}); }
     else if (b.type === 'riverside') for (const [x, y] of tiles) { if (tile(x, y).kind === 'water') continue; if (r() < .35) props.push({kind: 'tree', x: x + .5, y: y + .5, s: .7 + r() * .3, c: '#5cb85c'}); else if (r() < .2) props.push({kind: 'bench', x: x + .5, y: y + .5}); }
     else {   // park and the theme blocks keep open ground
@@ -876,7 +876,7 @@ const ToyTown = (() => {
     const [sx, sy] = P(x + .12, y + .12), g = c.createRadialGradient(sx, sy, 0, sx, sy, rx * TW * S);
     g.addColorStop(0, `rgba(40,60,40,${a})`); g.addColorStop(1, 'rgba(40,60,40,0)'); c.save(); c.translate(sx, sy); c.scale(1, .5); c.translate(-sx, -sy); c.fillStyle = g; c.beginPath(); c.arc(sx, sy, rx * TW * S, 0, TAU); c.fill(); c.restore();
   }
-  const GROUND = {lot: '#a6d877', edge: '#94cf6a', park: '#8fd16a', plaza: '#e9dcc0', dirt: '#d7b98a', road: '#6a7280', bridge: '#8a6f55', water: '#62c2ea'};
+  const GROUND = {lot: '#a7c892', edge: '#9ac490', park: '#8fc3a0', plaza: '#e2d6be', dirt: '#d1b697', road: '#69747a', bridge: '#927960', water: '#74b9cf'};
   function drawGround(c) {
     for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) {
       const t = tile(x, y); diamond(c, x, y); c.fillStyle = c.strokeStyle = GROUND[t.kind]; c.lineWidth = 1; c.fill(); c.stroke();
@@ -895,7 +895,7 @@ const ToyTown = (() => {
       if (hb && x >= hb.xa && x <= hb.xb && y >= hb.ya && y <= hb.yb && t.kind !== 'water') {
         const central = x >= hb.xa+1 && x <= hb.xa+2 && y >= hb.ya+1 && y <= hb.ya+2;
         if (central) {
-          diamond(c,x+.07,y+.07,.86,.86); c.fillStyle='#dfd5bc'; c.fill();
+          diamond(c,x+.07,y+.07,.86,.86); c.fillStyle='#efe3ca'; c.fill();
           c.strokeStyle='rgba(255,255,255,.4)'; c.lineWidth=Math.max(.6,S*.65);
           c.stroke();
           for(let k=1;k<=2;k++) { c.beginPath();
@@ -910,6 +910,18 @@ const ToyTown = (() => {
         // Crossing stripes are painted on the street, not hovering above it.
         for(let k=0;k<4;k++){diamond(c,x+.28+k*.12,y+.12,.07,.75);
           c.fillStyle='rgba(255,250,231,.72)';c.fill();}
+      }
+      if (t.kind === 'lot' || t.kind === 'park') {
+        // Tiny moss, ground daisies and path stones become visible as the
+        // camera approaches: seeded per tile to avoid flicker.
+        const h1 = hash(x * 41 + y * 17, 0x791);
+        for (let i=0;i<3;i++) {
+          const u = .13 + ((h1 >>> (i*5)) & 31) / 42;
+          const v = .15 + ((h1 >>> (i*7+1)) & 31) / 42;
+          const p=P(x+u,y+v), r=(i===1?1.2:.8)*S;
+          c.fillStyle = i===1?'rgba(252,238,199,.76)':'rgba(74,132,95,.33)';
+          c.beginPath();c.arc(p[0],p[1],r,0,TAU);c.fill();
+        }
       }
       if (t.kind === 'road' || t.kind === 'bridge') {
         const hor = isRoad(y) && !isRoad(x), ver = isRoad(x) && !isRoad(y);
@@ -962,6 +974,16 @@ const ToyTown = (() => {
     c.restore();
   }
   function drawBuilding(c, b, night) {
+    // Offscreen culling is important now that each shop has material layers:
+    // keep its full roof height in the vertical margin.
+    const foot = P(b.x+.5,b.y+.5);
+    if (foot[0] < -100*S || foot[0] > W+100*S ||
+        foot[1] < -95*S || foot[1] > H+(b.h+60)*S) return;
+    // All everyday houses and shops share one richer architectural language:
+    // pitched roofs, real glazing, deep awnings, inset doors and tactile trim.
+    if ((b.kind === 'house' || b.kind === 'shop') && typeof ToyTownDiorama !== 'undefined') {
+      ToyTownDiorama.building(c, b, night, {P, box, shade, S, TAU}); return;
+    }
     const cx = b.x + .5, cy = b.y + .5;
     // House and shop lights are attached to the facade, not floating sprites.
     const wallGlow = (x, y, power = .34) => {
@@ -1050,6 +1072,12 @@ const ToyTown = (() => {
   function door(c, x, y) { const a = P(x - .07, y, 0), b = P(x + .07, y, 0); c.beginPath(); c.moveTo(...a); c.lineTo(...b); c.lineTo(b[0], b[1] - 9 * S); c.lineTo(a[0], a[1] - 9 * S); c.closePath(); c.fill(); }
   // A ball on a stick, lit from the upper left, swaying a touch in the breeze.
   function drawTree(c, p) {
+    const foot = P(p.x,p.y);
+    if (foot[0] < -65*S || foot[0] > W+65*S ||
+        foot[1] < -65*S || foot[1] > H+65*S) return;
+    if (typeof ToyTownDiorama !== 'undefined') {
+      ToyTownDiorama.tree(c, p, {P, S, shade, TAU, clock}); return;
+    }
     const [x, y] = P(p.x, p.y), k = S * p.s, sway = Math.sin(clock * .8 + p.x * 3) * .8 * k;
     c.strokeStyle = '#7a5235'; c.lineWidth = 3 * k; c.lineCap = 'round'; c.beginPath(); c.moveTo(x, y - 1 * k); c.lineTo(x + sway * .5, y - 12 * k); c.stroke();
     for (const [dy, r] of [[17, 8.5], [24, 6.5]]) { const cx = x + sway, cy = y - dy * k, g = c.createRadialGradient(cx - r * .4 * k, cy - r * .45 * k, r * .1 * k, cx, cy, r * k); g.addColorStop(0, shade(p.c, 1.3)); g.addColorStop(.55, p.c); g.addColorStop(1, shade(p.c, .72)); c.fillStyle = g; c.beginPath(); c.arc(cx, cy, r * k, 0, TAU); c.fill(); }
@@ -1460,6 +1488,9 @@ const ToyTown = (() => {
   }
   async function start() {
     layout();
+    // Start on the living village instead of a distant map of tiny boxes.
+    // "Fit" is always available when someone wants the whole city.
+    cam.z = cam.tz = innerWidth < 700 ? 1.52 : 1.72;
     const h = location.hash.slice(1), random = h.startsWith('new');
     day = today();
     const daySeed = hash(+day.replace(/-/g, ''), 0x70e);
