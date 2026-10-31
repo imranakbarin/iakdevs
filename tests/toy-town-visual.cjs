@@ -59,16 +59,30 @@ async function main(){
           throw Error('Real 3D never activated '+JSON.stringify(diagnostics)+'; '+errors.join(' | '));
         }
       }
-      await page.evaluate(f=>ToyTown.zoomAt(f),job.zoom);
-      await page.waitForTimeout(1200);
+      // A snapshot must show exactly the *target* close-up, not whichever
+      // fraction of the easing animation a slow software GPU happened to reach.
+      // Pause the world before requesting zoom: ToyTown.zoomAt then snaps its
+      // camera to the target, while the real WebGL render loop stays alive.
+      const beforeFrame=await page.evaluate(()=>window.ToyTown3D?.getStats?.().frames||0);
+      await page.evaluate(f=>{
+        ToyTown.setPlaying(false);
+        ToyTown.zoomAt(f);
+      },job.zoom);
+      const actualZoom=await page.evaluate(()=>{
+        const {z,tz}=ToyTown.debug().cam;
+        return {z,tz};
+      });
+      if(Math.abs(actualZoom.z-actualZoom.tz)>.001)
+        throw Error('Closeup camera did not reach its target: '+JSON.stringify(actualZoom));
+      if(!job.classic){
+        await page.waitForFunction(n=>window.ToyTown3D?.getStats?.().frames>n,
+          beforeFrame,{timeout:45000,polling:100});
+      }
       await page.addStyleTag({content:'#card,#ticker,#hint,#zoom-controls{display:none!important}'});
       await page.waitForTimeout(150);
       // A moving WebGL canvas may never satisfy Playwright's stability check.
       // Freeze an actual rendered GPU frame; don't switch to the old 2D fallback.
-      await page.evaluate(()=>{
-        ToyTown.setPlaying(false);
-        window.ToyTown3D?.freeze?.();
-      });
+      await page.evaluate(()=>window.ToyTown3D?.freeze?.());
       await page.waitForTimeout(100);
       const image=await page.screenshot({type:'jpeg',quality:58,timeout:90000,
         animations:'disabled'});
