@@ -9,10 +9,10 @@ const moduleCode=fs.readFileSync(path.join(root,'assets/toy-town-3d.js'),'utf8')
 assert.match(html,/type="importmap"/);
 assert.match(html,/three@0\.187\.0\/build\/three\.module\.js/);
 assert.match(html,/three@0\.187\.0\/examples\/jsm\//);
-assert.match(html,/toy-town-3d\.js\?v=2/);
+assert.match(html,/toy-town-3d\.js\?v=3/);
 assert.match(html,/toy-town\.js\?v=14/);
 assert.ok(html.indexOf('toy-town.js?v=14')<html.indexOf("import('three')"), 'classic fallback starts first');
-assert.match(page,/toy-town\.html\?v=15&embed=1/);
+assert.match(page,/toy-town\.html\?v=16&embed=1/);
 assert.match(moduleCode,/export function mountToyTown3D/);
 assert.match(moduleCode,/new THREE\.WebGLRenderer/);
 assert.match(moduleCode,/window\.ToyTown3D=api/);
@@ -22,7 +22,7 @@ assert.match(moduleCode,/function syncActors/);
 assert.match(moduleCode,/function syncCamera/);
 assert.match(moduleCode,/function roof/);
 assert.match(moduleCode,/function light/);
-const callbacks=[],stats={created:0,renders:0,geometry:0,dispose:0,frames:0},events={};
+const callbacks=[],stats={created:0,renders:0,geometry:0,dispose:0,frames:0,roofTextures:0,paintOperations:0},events={};
 class V {
   constructor(x=0,y=0,z=0){this.x=x;this.y=y;this.z=z;}
   set(x,y,z){this.x=x;this.y=y;this.z=z;return this;}
@@ -58,11 +58,12 @@ class Renderer {
   dispose(){stats.dispose++;}
 }
 class Shape {moveTo(){}lineTo(){}closePath(){}}
-class Texture {constructor(){this.colorSpace='';}}
+class Texture {constructor(){this.colorSpace='';stats.roofTextures++;}}
 const THREE={
  WebGLRenderer:Renderer, Scene:O, Group:O,
  Color:C,Fog:class{constructor(col){this.color=new C(col);}},
  OrthographicCamera:O,HemisphereLight:O,DirectionalLight:Directional,
+ PointLight:class extends O {constructor(){super();this.isPointLight=true;this.intensity=0;}},
  MeshStandardMaterial:Material,MeshBasicMaterial:Material,
  Mesh,BoxGeometry:Geometry,SphereGeometry:Geometry,IcosahedronGeometry:Geometry,
  CylinderGeometry:Geometry,TorusGeometry:Geometry,PlaneGeometry:Geometry,ExtrudeGeometry:Geometry,
@@ -72,7 +73,7 @@ const THREE={
 };
 const win={WebGL2RenderingContext:function(){},innerWidth:390,innerHeight:844,
   devicePixelRatio:3,matchMedia:()=>({matches:false})};
-const canvas2d={fillText(){},beginPath(){},roundRect(){},fill(){},stroke(){},createLinearGradient:()=>({addColorStop(){}})};
+const canvas2d={fillText(){},beginPath(){},roundRect(){},fill(){stats.paintOperations++;},stroke(){},fillRect(){stats.paintOperations++;},moveTo(){},lineTo(){},createLinearGradient:()=>({addColorStop(){}})};
 const townCanvas={style:{opacity:'1'}};
 const host={style:{display:'none'},clientWidth:390,clientHeight:844,
   appendChild(o){this.child=o;}};
@@ -95,11 +96,11 @@ const props=[
 const pedestrians=[{type:'person',x:8.1,y:8.7,d:0,v:.26,travel:4,col:'#d5a6a0',skin:'#d8a984',heroResident:true},
   {type:'car',kind:'car',x:6.2,y:6.5,d:0,heading:0,v:.5,col:'#a7c9dc',travel:6},
   {type:'car',kind:'bike',x:8.4,y:11.4,d:2,v:.4,col:'#97b2a0',skin:'#dfa586'}];
-let seed=20261031,frameClock=6;
+let seed=20261031,frameClock=6,currentCamZoom=1.52,nightValue=.25;
 const town={
  buildings:()=>buildings,props:()=>props,movers:()=>pedestrians,
- fitView:()=>.475,debug:()=>({seed,night:.25,clock:frameClock,
-  cam:{x:9,y:9,z:1.52,tx:9,ty:9,tz:1.52}})
+ fitView:()=>.475,debug:()=>({seed,night:nightValue,clock:frameClock,
+  cam:{x:9,y:9,z:currentCamZoom,tx:9,ty:9,tz:currentCamZoom}})
 };
 const context={THREE,window:win,document,console,
   requestAnimationFrame:cb=>{callbacks.push(cb);return callbacks.length;},
@@ -117,6 +118,25 @@ assert.equal(api.active,true,'3D begins only after successful render');
 assert.equal(host.style.display,'block');
 assert.equal(townCanvas.style.opacity,'0');
 assert.ok(stats.renders>=1);
+assert.ok(stats.roofTextures>=2,'roof textures created for different colored gables');
+assert.ok(stats.paintOperations>=150,'painted shingles render repeated courses and edges');
+assert.equal(api.getStats().plazaLights,1,'modeled plaza lamps have physical warm light');
+const lantern=api.scene.children.find(o=>o.children?.some(x=>x.isPointLight))?.children.find(x=>x.isPointLight);
+assert.ok(lantern && lantern.intensity>0, 'dusk physically illuminates the courtyard');
+const lampAtDusk=lantern.intensity;nightValue=.85;callbacks.shift()();
+assert.ok(lantern.intensity>lampAtDusk*2.5,'neighborhood lights strengthen after sunset');
+nightValue=.25;callbacks.shift()();
+assert.ok(api.renderer.toneMappingExposure <= 1.1,'balanced lighting avoids blowing out pastel facades');
+const initialPedestrian=api.scene.children.find(g=>g.children&&g.children.some(x=>x.userData&&x.userData.limbs));
+assert.ok(initialPedestrian,'3D inhabitants have articulated limbs');
+const peopleGroup=api.scene.children.find(g=>g.children&&g.children.some(x=>x.position.x===8.1 && x.position.z===8.7));
+const firstPerson=peopleGroup.children.find(x=>x.position.x===8.1 && x.position.z===8.7);
+assert.ok(Math.abs(firstPerson.rotation.y-Math.PI/2)<.0001,'face points into walking direction, not sideways');
+const normalCameraHeight=api.camera.position.y;
+currentCamZoom=3.2; callbacks.shift()();
+assert.ok(api.camera.position.y < normalCameraHeight,'close zoom lowers viewing angle to show facades');
+currentCamZoom=1.52;callbacks.shift()();
+assert.ok(Math.abs(api.camera.position.y-normalCameraHeight)<.0001,'camera returns to regular viewing angle');
 assert.equal(api.getStats().actors,3,'pedestrians and vehicles follow the existing simulation');
 assert.equal(api.getStats().buildings,5);
 const oldCount=stats.renders;

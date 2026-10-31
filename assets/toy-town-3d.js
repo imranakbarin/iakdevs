@@ -10,7 +10,7 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
   renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, desktop() ? 1.8 : 1.4));
   renderer.outputColorSpace = THREE.SRGBColorSpace;
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
-  renderer.toneMappingExposure = 1.22;
+  renderer.toneMappingExposure = 1.08;
   renderer.shadowMap.enabled = true;
   renderer.shadowMap.type = THREE.PCFSoftShadowMap;
   renderer.domElement.setAttribute('aria-hidden', 'true');
@@ -18,11 +18,11 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
   host.appendChild(renderer.domElement);
   const scene = new THREE.Scene();
   scene.background = new THREE.Color('#d6edf4');
-  scene.fog = new THREE.Fog('#d6edf4', 25, 65);
+  scene.fog = new THREE.Fog('#d6edf4', 32, 77);
   const camera = new THREE.OrthographicCamera(-15, 15, 15, -15, .1, 120);
-  const hemisphere = new THREE.HemisphereLight('#fff8e4', '#8298ac', 2.15);
+  const hemisphere = new THREE.HemisphereLight('#fff8e4', '#849baa', 1.28);
   scene.add(hemisphere);
-  const sun = new THREE.DirectionalLight('#fff1d3', 3.25);
+  const sun = new THREE.DirectionalLight('#fff1d3', 2.20);
   sun.position.set(-11, 27, 16);
   sun.castShadow = true;
   sun.shadow.mapSize.set(desktop() ? 1024 : 512, desktop() ? 1024 : 512);
@@ -34,12 +34,20 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
   sun.shadow.radius = 3;
   sun.target.position.set(9,0,9);
   scene.add(sun,sun.target);
-  const materialCache = new Map(), geometryCache = new Map();
+  const materialCache = new Map(), geometryCache = new Map(), paintedRoofCache = new Map();
+  // Studio-grade warm pastel cohesion across the different news-generated
+  // building colors. Keep the recognizable roof hue but avoid plastic neon.
+  const tint = (hex, toward='#fff0d9', ratio=.24) => {
+    const norm=v=>/^#[0-9a-f]{6}$/i.test(v)?v:'#cba58b';
+    const a=norm(hex),b=norm(toward);
+    const channel=i=>Math.round(parseInt(a.slice(i,i+2),16)*(1-ratio)+parseInt(b.slice(i,i+2),16)*ratio);
+    return '#'+[1,3,5].map(i=>channel(i).toString(16).padStart(2,'0')).join('');
+  };
   const contactMaterial = new THREE.MeshBasicMaterial({
     color:'#304746',transparent:true,opacity:.17,depthWrite:false
   });
   const world = new THREE.Group(); scene.add(world);
-  const actors = new Map(), ambient = [];
+  const actors = new Map(), ambient = [], plazaLights = [];
   let worldSeed = null, worldBuildings = null, worldPropCount = 0, sceneTime = 0;
   let stopped = false, raf = 0, frames = 0, redrawCount = 0, lastSize = '', lastFrameAt = 0;
   const TAU = Math.PI * 2, LINES = [1,6,11,16];
@@ -55,6 +63,29 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
     return materialCache.get(key);
   };
   const shades = ['#f7e0c3','#d1e7dc','#efd3be','#c7dce7','#eddcbb'];
+  const roofMaterial = color => {
+    const pigment=tint(color,'#dcaf90',.12);
+    if(paintedRoofCache.has(pigment))return paintedRoofCache.get(pigment);
+    const cv=document.createElement('canvas'); cv.width=256;cv.height=256;
+    const c=cv.getContext('2d');
+    c.fillStyle=pigment;c.fillRect(0,0,256,256);
+    const dark=tint(pigment,'#663e3f',.19),light=tint(pigment,'#fff1d6',.36);
+    // Overlapping, staggered shingles with soft seams and edge highlights.
+    for(let row=0;row<9;row++)for(let col=-1;col<9;col++){
+      const x=col*36+(row%2)*18,y=row*30;
+      c.fillStyle=(col+row)%3===0?light:pigment;
+      c.beginPath();c.roundRect(x+1,y+1,34,29,[4,4,9,9]);c.fill();
+      c.strokeStyle=dark;c.lineWidth=1.6;c.stroke();
+      c.fillStyle='rgba(255,247,222,.27)';
+      c.fillRect(x+4,y+3,25,2);
+      c.strokeStyle='rgba(76,51,43,.15)';c.lineWidth=1;
+      c.beginPath();c.moveTo(x+4,y+25);c.lineTo(x+29,y+25);c.stroke();
+    }
+    const tx=new THREE.CanvasTexture(cv);tx.colorSpace=THREE.SRGBColorSpace;
+    const m=new THREE.MeshStandardMaterial({map:tx,color:'#ffffff',roughness:.94,metalness:0});
+    paintedRoofCache.set(pigment,m);
+    return m;
+  };
   const geo = (kind, ...dims) => {
     const key = kind + ':' + dims.join(':');
     if (!geometryCache.has(key)) {
@@ -127,7 +158,7 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
     return pane;
   }
   function roof(g,color,top,edge=.44){
-    const dark=mat(color,.91);
+    const dark=roofMaterial(color);
     const tan=Math.atan2(.35,.49);
     // Two actual sloping roof meshes with a visible ridge. Not painted polygons.
     for(const side of [-1,1]){
@@ -162,11 +193,17 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
   function home(b){
     const g=new THREE.Group();g.position.set(b.x+.5,0,b.y+.5);world.add(g);
     const height=Math.min(1.4,Math.max(.88,b.h/30));
-    const tint=b.wall||shades[(b.x+b.y)%shades.length];
+    const paint=tint(b.wall||shades[(b.x+b.y)%shades.length]);
     box(g,.79,.09,.8,'#cbb59a',0,.045,0);
-    box(g,.76,height,.76,tint,0,.10+height/2,0);
+    box(g,.76,height,.76,paint,0,.10+height/2,0);
     const cap=.1+height;
     roof(g,b.roof||'#ba7355',cap);
+    // A pitched dormer and deep eave give the cottage a recognizable roof
+    // silhouette when viewed from the street.
+    box(g,.20,.20,.17,'#f1dfc8',-.14,cap+.24,.295);
+    box(g,.28,.045,.24,roofMaterial(b.roof||'#ba7355'),-.14,cap+.36,.30).rotation.z=-.12;
+    box(g,.13,.12,.024,'#91bbc0',-.14,cap+.245,.393);
+    box(g,.15,.015,.035,'#f8eddb',-.14,cap+.17,.411);
     // Front porch and steps physically touch the entry.
     box(g,.32,.085,.25,'#dbc6a9',.21,.09,.51);
     box(g,.21,.39,.055,'#94684f',.21,.295,.41);
@@ -197,7 +234,7 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
   }
   function shop(b){
     const g=new THREE.Group();g.position.set(b.x+.5,0,b.y+.5);world.add(g);
-    const h=Math.max(1.08,b.h/33), color=b.wall||'#e6d7bd';
+    const h=Math.max(1.08,b.h/33), color=tint(b.wall||'#e6d7bd');
     box(g,.84,.11,.87,'#c2b09c',0,.055,0);
     box(g,.79,h,.79,color,0,.11+h/2,0);
     roof(g,b.awning||'#9c6d60',h+.11);
@@ -286,6 +323,11 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
     const orb=ball(world,.096,mat('#fff1cf',.34,'#ffdb9a'),p.x,1.01,p.y);
     orb.userData.lamp=true;
     cylinder(world,.115,.11,.055,'#526d6d',p.x,1.12,p.y);
+    // Only the two permanent plaza lanterns emit real warm point light.
+    // No point-light shadow maps: soft, battery-friendly dusk lighting.
+    const glow=new THREE.PointLight('#ffd19a',0,3.4,2);
+    glow.position.set(p.x,1.03,p.y); glow.castShadow=false;
+    world.add(glow);plazaLights.push(glow);
   }
   function smallProps(p,i){
     const k=p.kind;
@@ -355,7 +397,11 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
     }
   }
   function createGround(){
-    box(world,18.6,1.12,18.6,'#907457',9,-.60,9);
+    // A generous matte studio table under the actual miniature slab.
+    // Soft ambient contrast makes the scene read like a photographed model.
+    const backdrop=box(world,110,.07,110,'#d1e5df',9,-1.25,9);
+    backdrop.castShadow=false;
+    box(world,18.6,1.12,18.6,'#95785e',9,-.60,9);
     box(world,18.35,.20,18.35,'#b6c9a1',9,.025,9);
     // Water sits below streets; bridges cross at the existing four lanes.
     groundPiece(18.02,1.97,'#70b9c7',9,14,.105);
@@ -435,7 +481,7 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
     }
   }
   function rebuild(){
-    ambient.length = 0;
+    ambient.length = 0; plazaLights.length = 0;
     while(world.children.length)world.remove(world.children[0]);
     for(const [ref,obj] of actors){obj.group.parent?.remove(obj.group);}
     actors.clear();
@@ -463,11 +509,26 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
     const torso=ball(g,.095,coat,0,.26,0);
     torso.scale.set(.92,1.2,.74);
     const neck=cylinder(g,.031,.032,.055,skin,0,.374,0);
-    ball(g,.071,skin,0,.442,0);
-    const hair=ball(g,.076,ref.hair||'#5b4639',0,.485,-.008);
-    hair.scale.set(1,.55,1);
+    const head=ball(g,.078,skin,0,.445,0);
+    head.scale.set(.97,1.06,.94);
+    const hair=ball(g,.083,ref.hair||'#5b4639',0,.492,-.014);
+    hair.scale.set(1,.53,1);
+    // Eyes and a soft nose sit on the forward (+Z) face of the head,
+    // not on a screen-aligned sprite; rotation follows actual walking.
     for(const sx of [-1,1]){
-      ball(g,.012,'#3d4341',sx*.027,.454,.066);
+      ball(g,.019,'#fff8ef',sx*.030,.448,.071);
+      ball(g,.009,'#354449',sx*.030,.449,.085);
+      ball(g,.014,'#df978b',sx*.061,.417,.059);
+      ball(g,.022,skin,sx*.083,.439,.003);
+    }
+    ball(g,.017,skin,0,.423,.082);
+    const smile=object(g,geo('torus',.024,.004),mat('#925f5c'),0,.405,.079);
+    smile.scale.set(1,.40,.26);
+    // Layers of clothing create a tiny character instead of a colored capsule.
+    box(g,.072,.075,.040,'#fff1da',0,.324,.071);
+    box(g,.023,.038,.031,'#d3a082',0,.304,.091);
+    for(const sx of [-1,1]){
+      box(g,.014,.029,.022,'#f7e0c4',sx*.034,.305,.087);
     }
     const legs=[],arms=[];
     for(const side of [-1,1]){
@@ -480,8 +541,9 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
       ball(arm,.027,skin,0,-.15,0);g.add(arm);arms.push(arm);
     }
     if(ref.hat){
-      const cap=ball(g,.076,ref.hat==='beanie'?'#b18cbd':'#588f9e',0,.505,0);
-      cap.scale.set(1,.56,1);
+      const cap=ball(g,.085,ref.hat==='beanie'?'#b18cbd':'#588f9e',0,.513,0);
+      cap.scale.set(1,.57,1);
+      if(ref.hat==='cap')box(g,.095,.017,.063,'#588f9e',0,.487,.089);
     }
     if(ref.bag)box(g,.06,.15,.12,'#ae8966',-.106,.24,-.038);
     g.userData.limbs={legs,arms};
@@ -601,7 +663,9 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
         item.kind==='animal'?.13:ref.sit?.10:.16;
       g.position.set(desiredX,baseY,desiredZ);
       const a=Number.isFinite(ref.heading)?-ref.heading:[0,Math.PI,-Math.PI/2,Math.PI/2][d];
-      g.rotation.y=a;
+      // Cars, bicycles and quadrupeds point along local +X; only sculpted
+      // residents have local +Z faces. Keep both aligned with actual travel.
+      g.rotation.y=a+(item.kind==='person'?Math.PI/2:0);
       const limbs=g.userData.limbs;
       if(limbs){
         const moving=!!ref.v&&ref.v>.035&&!ref.sit&&(!ref.stopUntil||town.debug().clock>=ref.stopUntil);
@@ -634,10 +698,11 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
   }
   function light(time){
     const dark=THREE.MathUtils.clamp(time,0,1);
-    hemisphere.intensity=2.05-dark*.85;
-    sun.intensity=3.05-dark*1.65;
+    hemisphere.intensity=1.30-dark*.58;
+    sun.intensity=2.20-dark*1.24;
     sun.color.set(dark>.5?'#f9c59f':'#fff0d7');
-    scene.background.set(dark>.52?'#a3b9ce':'#d6edf4');
+    for(const lantern of plazaLights)lantern.intensity=dark*7.2;
+    scene.background.set(dark>.52?'#a3b9ce':'#d1e8e4');
     scene.fog.color.copy(scene.background);
     for(const p of materialCache.values()){
       if(p.emissive && p.emissive.r>.03) p.emissiveIntensity=.14+dark*1.25;
@@ -661,8 +726,11 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
     const t=THREE.MathUtils.clamp((v.z-(town.fitView?.()||.475))/.52,0,1);
     const scaled=v.z*(desktop()?1.5:1.58);
     camera.zoom=THREE.MathUtils.lerp(fit,scaled,t);
-    camera.position.set(v.x+18,23,v.y+18);
-    camera.lookAt(v.x,.25,v.y);
+    // At close-up, lower the virtual eye to show windows, porch geometry and
+    // faces; a gentle interpolation preserves the calm overview perspective.
+    const closeness=THREE.MathUtils.clamp((v.z-1.0)/2.7,0,1);
+    camera.position.set(v.x+18,24-closeness*6,v.y+18);
+    camera.lookAt(v.x,.30,v.y);
     camera.updateProjectionMatrix();
   }
   function frame(timestamp){
@@ -702,7 +770,7 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
   renderer.domElement.addEventListener('webglcontextrestored',restored,false);
   const api={
     active:false,renderer,scene,camera,
-    getStats:()=>({frames,redrawCount,actors:actors.size,ambient:ambient.length,buildings:town.buildings().length,webgl:true}),
+    getStats:()=>({frames,redrawCount,actors:actors.size,ambient:ambient.length,plazaLights:plazaLights.length,buildings:town.buildings().length,webgl:true}),
     stop(){stopped=true;cancelAnimationFrame(raf);this.active=false;window.ToyTown3D.active=false;
       host.style.display='none';document.getElementById('town').style.opacity='1';},
     dispose(){this.stop();renderer.dispose();}
