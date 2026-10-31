@@ -179,16 +179,16 @@ const ToyTown = (() => {
   function randomRoadPoint(r) { const along = r() < .5, line = LINES[r() * 4 | 0] + .5, t = 1.5 + r() * 14.5; return along ? {x: t, y: line, d: r() < .5 ? 0 : 1} : {x: line, y: t, d: r() < .5 ? 2 : 3}; }
   function spawnCar(r = Math.random, kind) {
     const p = randomRoadPoint(r), k = kind || (r() < .12 ? 'bus' : r() < .15 ? 'taxi' : 'car');
-    const m = {type: 'car', kind: k, x: p.x, y: p.y, d: p.d, v: 0, max: k === 'bus' ? .9 : 1.2 + r() * .5, col: k === 'taxi' ? '#f6c541' : k === 'bus' ? '#3f8fd6' : PASTEL[r() * PASTEL.length | 0], wait: 0, lane: .2};
+    const m = {type: 'car', kind: k, x: p.x, y: p.y, d: p.d, v: 0, travel: 0, max: k === 'bus' ? .9 : 1.2 + r() * .5, col: k === 'taxi' ? '#f6c541' : k === 'bus' ? '#3f8fd6' : PASTEL[r() * PASTEL.length | 0], wait: 0, lane: .2};
     movers.push(m); return m;
   }
   function spawnPerson(r = Math.random, opts = {}) {
     const p = randomRoadPoint(r);
-    const m = Object.assign({type: 'person', x: p.x, y: p.y, d: p.d, v: 0, max: .35 + r() * .25, col: PASTEL[r() * PASTEL.length | 0], skin: ['#f1c9a5', '#d8a77c', '#a8754f', '#7a4e33'][r() * 4 | 0], lane: (r() < .5 ? 1 : -1) * (.4 + r() * .07), ph: r() * 6, wait: 0}, opts);
+    const m = Object.assign({type: 'person', x: p.x, y: p.y, d: p.d, v: 0, travel: 0, max: .35 + r() * .25, col: PASTEL[r() * PASTEL.length | 0], skin: ['#f1c9a5', '#d8a77c', '#a8754f', '#7a4e33'][r() * 4 | 0], lane: (r() < .5 ? 1 : -1) * (.4 + r() * .07), ph: r() * 6, wait: 0}, opts);
     movers.push(m); return m;
   }
   function spawnBike(r = Math.random) {
-    const p = randomRoadPoint(r), m = {type: 'car', kind: 'bike', x: p.x, y: p.y, d: p.d, v: 0, max: .55 + r() * .15, col: PASTEL[r() * PASTEL.length | 0], skin: ['#f1c9a5', '#d8a77c', '#a8754f', '#7a4e33'][r() * 4 | 0], wait: 0, lane: .36, ph: r() * 6};
+    const p = randomRoadPoint(r), m = {type: 'car', kind: 'bike', x: p.x, y: p.y, d: p.d, v: 0, travel: 0, max: .55 + r() * .15, col: PASTEL[r() * PASTEL.length | 0], skin: ['#f1c9a5', '#d8a77c', '#a8754f', '#7a4e33'][r() * 4 | 0], wait: 0, lane: .36, ph: r() * 6};
     movers.push(m); return m;
   }
   // Traffic lights: the two directions take turns, with a short amber in between.
@@ -221,6 +221,7 @@ const ToyTown = (() => {
     m.v += (want - m.v) * Math.min(1, dt * 3);
     const before = m.d < 2 ? m.x : m.y;
     m.x += dx * m.v * dt; m.y += dy * m.v * dt;
+    m.travel = (m.travel || 0) + Math.abs(m.v * dt); // footsteps/wheels follow distance, not wall-clock time
     const now = m.d < 2 ? m.x : m.y;
     for (const l of LINES) {   // crossing an intersection centre: maybe turn
       const c = l + .5;
@@ -236,6 +237,7 @@ const ToyTown = (() => {
     const p = m.path[0]; if (!p) { m.path = null; return; }
     const dx = p.x - m.x, dy = p.y - m.y, dist = Math.hypot(dx, dy), sp = (p.speed || m.max) * dt;
     m.v = p.speed || m.max;
+    m.travel = (m.travel || 0) + Math.min(dist, sp);
     if (Math.abs(dx) > Math.abs(dy)) m.d = dx > 0 ? 0 : 1; else m.d = dy > 0 ? 2 : 3;
     if (dist <= sp) { m.x = p.x; m.y = p.y; m.path.shift(); if (p.then) p.then(m); } else { m.x += dx / dist * sp; m.y += dy / dist * sp; }
   }
@@ -748,6 +750,15 @@ const ToyTown = (() => {
   function drawGround(c) {
     for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) {
       const t = tile(x, y); diamond(c, x, y); c.fillStyle = c.strokeStyle = GROUND[t.kind]; c.lineWidth = 1; c.fill(); c.stroke();
+      if (t.kind === 'park' || t.kind === 'edge' || t.kind === 'lot') {
+        // Deterministic tiny clumps remain physically attached to the ground (and stay cached).
+        const h = hash(x * 31 + y, 0x52b), u = .18 + ((h & 255) / 255) * .55, v = .17 + (((h >>> 8) & 255) / 255) * .58;
+        const [gx, gy] = P(x + u, y + v);
+        c.strokeStyle = 'rgba(54,120,54,.2)'; c.lineWidth = Math.max(.6, .8 * S);
+        c.beginPath(); c.moveTo(gx - 2 * S, gy); c.lineTo(gx - 1 * S, gy - 2.5 * S);
+        c.moveTo(gx, gy); c.lineTo(gx + .5 * S, gy - 2.1 * S);
+        c.moveTo(gx + 1.5 * S, gy); c.lineTo(gx + 2.4 * S, gy - 1.6 * S); c.stroke();
+      }
       if (t.kind === 'road' || t.kind === 'bridge') {
         const hor = isRoad(y) && !isRoad(x), ver = isRoad(x) && !isRoad(y);
         c.strokeStyle = 'rgba(255,255,255,.75)'; c.lineWidth = Math.max(1, S * 1.2); c.setLineDash([4 * S, 5 * S]); c.beginPath();
@@ -773,9 +784,17 @@ const ToyTown = (() => {
       const top = P(cx, cy, b.h + 16), corners = [[-.42, -.42], [.42, -.42], [.42, .42], [-.42, .42]].map(([x, y]) => P(cx + x, cy + y, b.h));
       c.fillStyle = shade(b.roof, .82); c.beginPath(); c.moveTo(...corners[3]); c.lineTo(...corners[2]); c.lineTo(...top); c.closePath(); c.fill();
       c.fillStyle = shade(b.roof, .66); c.beginPath(); c.moveTo(...corners[2]); c.lineTo(...corners[1]); c.lineTo(...top); c.closePath(); c.fill();
-      win(c, cx - .12, cy + .36, 5, b.h * .55, night, 'y'); c.fillStyle = '#7a4a2b'; door(c, cx + .1, cy + .36);
+      win(c, cx - .17, cy + .36, 5, b.h * .55, night, 'y');
+      win(c, cx + .36, cy - .13, 4.5, b.h * .58, night, 'x');
+      box(c, cx - .17, cy - .16, .08, .08, b.h + 11, 12, '#b97657', '#d99b72');
+      c.fillStyle = '#7a4a2b'; door(c, cx + .1, cy + .36);
+      const porch = P(cx + .1, cy + .39, 0);
+      c.fillStyle = '#d2bea2'; c.beginPath(); c.ellipse(porch[0], porch[1] + 1.5 * S, 4.5 * S, 1.6 * S, 0, 0, TAU); c.fill();
+      const lamp = P(cx + .29, cy + .37, b.h * .36);
+      c.fillStyle = night ? '#ffe4a0' : '#fff7dc'; c.beginPath(); c.arc(lamp[0], lamp[1], 1.5 * S, 0, TAU); c.fill();
     } else if (b.kind === 'shop') {
       box(c, cx, cy, .4, .4, 0, b.h, b.wall);
+      box(c, cx, cy, .43, .43, b.h, 2, shade(b.wall, .75), shade(b.wall, 1.08));
       c.fillStyle = b.awning; c.beginPath(); c.moveTo(...P(cx - .4, cy + .4, b.h * .62)); c.lineTo(...P(cx + .4, cy + .4, b.h * .62)); c.lineTo(...P(cx + .4, cy + .56, b.h * .45)); c.lineTo(...P(cx - .4, cy + .56, b.h * .45)); c.closePath(); c.fill();
       c.fillStyle = 'rgba(255,255,255,.7)'; for (let k = 0; k < 4; k++) { c.beginPath(); c.moveTo(...P(cx - .4 + k * .2, cy + .4, b.h * .62)); c.lineTo(...P(cx - .3 + k * .2, cy + .4, b.h * .62)); c.lineTo(...P(cx - .3 + k * .2, cy + .56, b.h * .45)); c.lineTo(...P(cx - .4 + k * .2, cy + .56, b.h * .45)); c.closePath(); c.fill(); }
       win(c, cx, cy + .4, 9, b.h * .3, night, 'y'); win(c, cx + .4, cy, 6, b.h * .7, night, 'x');
@@ -783,7 +802,8 @@ const ToyTown = (() => {
     } else if (b.kind === 'tower') {
       box(c, cx, cy, .4, .4, 0, b.h, b.wall);
       for (let z = 8; z < b.h - 6; z += 9) { win(c, cx - .2, cy + .4, 4, z, night, 'y'); win(c, cx + .15, cy + .4, 4, z, night, 'y'); win(c, cx + .4, cy - .15, 4, z, night, 'x'); win(c, cx + .4, cy + .2, 4, z, night, 'x'); }
-      box(c, cx + .15, cy - .12, .1, .1, b.h, 8, '#c9cfd8');
+      box(c, cx, cy, .44, .44, b.h, 2.5, '#8c9dac', '#d7e3ec');
+      box(c, cx + .15, cy - .12, .1, .1, b.h + 2.5, 8, '#c9cfd8');
     } else if (b.kind === 'fire') {
       box(c, cx, cy, .44, .42, 0, b.h, b.wall);
       c.fillStyle = '#5a1d18'; const d0 = P(cx - .25, cy + .42, 0), d1 = P(cx + .25, cy + .42, 0), d2 = P(cx + .25, cy + .42, 16), d3 = P(cx - .25, cy + .42, 16); c.beginPath(); c.moveTo(...d0); c.lineTo(...d1); c.lineTo(...d2); c.lineTo(...d3); c.closePath(); c.fill();
@@ -798,6 +818,9 @@ const ToyTown = (() => {
     const tv = night && TV_DAYS.includes(theme) && Math.sin(x * 53 + y * 71 + z * 3) > .55;   // the night of a big story: windows flicker blue with the telly
     c.fillStyle = tv ? (Math.sin(clock * 9 + x * 7) > 0 ? '#8fb8ff' : '#5f86d6') : night ? (Math.sin(x * 91 + y * 37 + z) > -.3 ? '#ffe59a' : '#3b4660') : '#cfe9ff';
     c.beginPath(); c.moveTo(...a); c.lineTo(...b); c.lineTo(b[0], b[1] - size * .9 * S); c.lineTo(a[0], a[1] - size * .9 * S); c.closePath(); c.fill();
+    c.strokeStyle = 'rgba(255,253,240,.8)'; c.lineWidth = Math.max(.55, .8 * S); c.stroke();
+    c.strokeStyle = 'rgba(88,111,137,.42)'; c.lineWidth = Math.max(.4, .6 * S);
+    c.beginPath(); c.moveTo((a[0] + b[0]) / 2, (a[1] + b[1]) / 2); c.lineTo((a[0] + b[0]) / 2, (a[1] + b[1]) / 2 - size * .9 * S); c.stroke();
   }
   function door(c, x, y) { const a = P(x - .07, y, 0), b = P(x + .07, y, 0); c.beginPath(); c.moveTo(...a); c.lineTo(...b); c.lineTo(b[0], b[1] - 9 * S); c.lineTo(a[0], a[1] - 9 * S); c.closePath(); c.fill(); }
   // A ball on a stick, lit from the upper left, swaying a touch in the breeze.
@@ -876,17 +899,43 @@ const ToyTown = (() => {
   }
   function drawMover(c, m, night) {
     const [ox, oy] = laneOffset(m), mx = m.x + (m.path ? 0 : ox), my = m.y + (m.path ? 0 : oy), [x, y] = P(mx, my, m.lift || 0), s = S;
+    // A contact shadow stays on the road while the person, bicycle or car moves above it.
+    const [gx, gy] = P(mx, my, 0);
+    c.fillStyle = 'rgba(38,52,54,.19)'; c.beginPath();
+    c.ellipse(gx + 1.2 * s, gy + 1.5 * s, (m.type === 'car' ? 10 : 3.5) * s, (m.type === 'car' ? 3.3 : 1.4) * s, 0, 0, TAU); c.fill();
     if (m.kind === 'bike') {
-      const f = DIRS[m.d], [ax, ay] = P(mx - f[0] * .1, my - f[1] * .1, 3), [bx, by] = P(mx + f[0] * .1, my + f[1] * .1, 3), spin = clock * 10 * m.v;
-      c.strokeStyle = '#2d3440'; c.lineWidth = Math.max(1, s); for (const [wx, wy] of [[ax, ay], [bx, by]]) { c.beginPath(); c.arc(wx, wy, 2.6 * s, 0, TAU); c.stroke(); c.beginPath(); c.moveTo(wx, wy); c.lineTo(wx + Math.cos(spin) * 2.6 * s, wy + Math.sin(spin) * 2.6 * s); c.stroke(); }
-      c.strokeStyle = m.col; c.lineWidth = 1.6 * s; c.beginPath(); c.moveTo(ax, ay); c.lineTo((ax + bx) / 2, (ay + by) / 2 - 4 * s); c.lineTo(bx, by); c.stroke();
-      const [rx, ry] = P(mx, my, 10); c.fillStyle = m.col; c.fillRect(rx - 2 * s, ry - 6 * s, 4 * s, 6 * s); c.fillStyle = m.skin; c.beginPath(); c.arc(rx, ry - 8.5 * s, 2.4 * s, 0, TAU); c.fill(); c.fillStyle = shade(m.col, .8); c.beginPath(); c.arc(rx, ry - 9.5 * s, 2.6 * s, Math.PI, 0); c.fill();
+      const f = DIRS[m.d], [ax, ay] = P(mx - f[0] * .18, my - f[1] * .18, 3), [bx, by] = P(mx + f[0] * .18, my + f[1] * .18, 3);
+      const spin = (m.travel || 0) * 27, pedal = (m.travel || 0) * 20 + (m.ph || 0);
+      c.lineCap = 'round'; c.strokeStyle = '#303d49'; c.lineWidth = Math.max(1, 1.05 * s);
+      for (const [wx, wy] of [[ax, ay], [bx, by]]) {
+        c.beginPath(); c.arc(wx, wy, 3.5 * s, 0, TAU); c.stroke();
+        for (let k = 0; k < 3; k++) { const a = spin + k * TAU / 3; c.beginPath(); c.moveTo(wx, wy); c.lineTo(wx + Math.cos(a) * 3.2 * s, wy + Math.sin(a) * 3.2 * s); c.stroke(); }
+      }
+      const midX = (ax + bx) / 2, midY = (ay + by) / 2 - 5.3 * s;
+      c.strokeStyle = shade(m.col, .85); c.lineWidth = 2 * s; c.beginPath();
+      c.moveTo(ax, ay); c.lineTo(midX, midY); c.lineTo(bx, by); c.lineTo(ax, ay);
+      c.moveTo(midX, midY); c.lineTo(midX + 2 * s, midY - 2 * s); c.stroke();
+      const [rx, ry] = P(mx, my, 12), lean = m.d < 2 ? 1 : -1, leg = Math.sin(pedal) * 2.7 * s;
+      c.strokeStyle = '#364451'; c.lineWidth = 2.1 * s; c.beginPath();
+      c.moveTo(rx, ry - 1.2 * s); c.lineTo(midX - 1.2 * s, midY + leg);
+      c.moveTo(rx, ry - 1.2 * s); c.lineTo(midX + 1.2 * s, midY - leg); c.stroke();
+      c.strokeStyle = m.col; c.lineWidth = 4.5 * s; c.beginPath(); c.moveTo(rx - lean * 2 * s, ry - 8 * s); c.lineTo(rx, ry - 1 * s); c.stroke();
+      c.strokeStyle = m.skin; c.lineWidth = 1.8 * s; c.beginPath();
+      c.moveTo(rx - lean * 1.5 * s, ry - 6 * s); c.lineTo(bx, by - 6 * s); c.stroke();
+      c.fillStyle = m.skin; c.beginPath(); c.arc(rx - lean * 2.2 * s, ry - 10 * s, 3 * s, 0, TAU); c.fill();
+      c.fillStyle = shade(m.col, .78); c.beginPath(); c.arc(rx - lean * 2.2 * s, ry - 11 * s, 3.2 * s, Math.PI, 0); c.fill();
+      c.fillStyle = '#f9f1d9'; c.beginPath(); c.arc(rx - lean * .7 * s, ry - 10 * s, .5 * s, 0, TAU); c.fill();
       return;
     }
     if (m.type === 'car') {
       const along = m.d < 2, len = m.kind === 'bus' ? .42 : m.kind === 'fire' ? .38 : m.kind === 'racer' ? .3 : .26, wid = .14;
       const hx = along ? len : wid, hy = along ? wid : len, hgt = m.kind === 'bus' ? 13 : m.kind === 'racer' ? 4 : 8;
-      c.fillStyle = '#2d3440'; for (const k of [-.6, .6]) { const [wx, wy] = P(mx + (along ? hx * k : hx + .01), my + (along ? hy + .01 : hy * k), (m.lift || 0) + 2); c.beginPath(); c.ellipse(wx, wy, 2.2 * s, 2.2 * s, 0, 0, TAU); c.fill(); }
+      c.fillStyle = '#2d3440'; const wheelSpin = (m.travel || 0) * 21;
+      for (const k of [-.6, .6]) {
+        const [wx, wy] = P(mx + (along ? hx * k : hx + .01), my + (along ? hy + .01 : hy * k), (m.lift || 0) + 2);
+        c.beginPath(); c.ellipse(wx, wy, 2.5 * s, 2.5 * s, 0, 0, TAU); c.fill();
+        c.strokeStyle = '#b7c4ce'; c.lineWidth = .7 * s; c.beginPath(); c.moveTo(wx - Math.cos(wheelSpin) * 1.3 * s, wy - Math.sin(wheelSpin) * 1.3 * s); c.lineTo(wx + Math.cos(wheelSpin) * 1.3 * s, wy + Math.sin(wheelSpin) * 1.3 * s); c.stroke();
+      }
       box(c, mx, my, hx, hy, (m.lift || 0) + 3, hgt, m.col);
       if (m.kind !== 'bus' && m.kind !== 'racer') box(c, mx - (along ? (m.d === 0 ? .05 : -.05) : 0), my - (along ? 0 : (m.d === 2 ? .05 : -.05)), hx * .55, hy * .9, (m.lift || 0) + 2 + hgt, 5, m.col, '#cfe9ff');
       if (m.kind === 'racer') { const t = P(mx, my, hgt + 3); c.fillStyle = '#fff'; c.font = `900 ${5 * s}px system-ui`; c.textAlign = 'center'; c.fillText(String(m.num || 1), t[0], t[1]); }
@@ -898,7 +947,10 @@ const ToyTown = (() => {
       if (night) { const f = DIRS[m.d], h = P(mx + f[0] * len, my + f[1] * len, 6); c.fillStyle = 'rgba(255,240,170,.9)'; c.beginPath(); c.arc(h[0], h[1], 1.6 * s, 0, TAU); c.fill(); }
       return;
     }
-    const bob = m.dance ? Math.abs(Math.sin(clock * 7 + m.ph)) * 4 * s : Math.abs(Math.sin(clock * 8 * m.v + m.ph)) * 1.5 * s;
+    const moving = (m.v || 0) > .035 && !m.sit && !m.stopUntil || ((m.v || 0) > .035 && !m.sit && clock >= m.stopUntil);
+    const phase = (m.travel || 0) * 28 + (m.ph || 0), step = moving ? Math.sin(phase) * Math.min(1, m.v * 2.5) : 0;
+    const bob = m.dance ? Math.abs(Math.sin(clock * 7 + (m.ph || 0))) * 3 * s :
+      moving ? Math.abs(Math.sin(phase)) * 1.15 * s : (!m.sit ? .15 * Math.sin(clock * .85 + (m.ph || 0)) * s : 0);
     if (m.kind === 'cart') { box(c, mx, my, .12, .12, 3, 6, '#b8c2cc', '#dfe6ee'); return; }
     if (m.kind === 'dog') { c.fillStyle = '#b07a45'; c.beginPath(); c.ellipse(x, y - 4 * s - bob, 4.5 * s, 2.6 * s, 0, 0, TAU); c.fill(); c.beginPath(); c.arc(x + 4 * s * (m.d === 1 || m.d === 3 ? -1 : 1), y - 6.5 * s - bob, 2.2 * s, 0, TAU); c.fill(); c.strokeStyle = '#d95b5b'; c.lineWidth = 1.4 * s; c.beginPath(); c.moveTo(x + 5 * s, y - 6 * s - bob); c.quadraticCurveTo(x + 9 * s, y - 2 * s, x + 12 * s, y - 6 * s); c.stroke(); return; }
     if (m.kind === 'hen') { c.fillStyle = '#fff'; c.beginPath(); c.ellipse(x, y - 3.5 * s - bob, 3 * s, 2.4 * s, 0, 0, TAU); c.fill(); c.fillStyle = '#e2463a'; c.fillRect(x + 1.5 * s, y - 7 * s - bob, 1.6 * s, 1.6 * s); return; }
@@ -907,10 +959,42 @@ const ToyTown = (() => {
     if (m.kind === 'ghost') { c.fillStyle = '#ffffff'; c.beginPath(); c.arc(x, y - 10 * s - bob, 4 * s, Math.PI, 0); c.lineTo(x + 4 * s, y - 2 * s - bob); for (let k = 0; k < 4; k++) c.lineTo(x + (4 - k * 2.6) * s, y - (k % 2 ? 3.5 : 1.5) * s - bob); c.closePath(); c.fill(); c.fillStyle = '#222'; c.fillRect(x - 2 * s, y - 11 * s - bob, 1.2 * s, 1.6 * s); c.fillRect(x + .8 * s, y - 11 * s - bob, 1.2 * s, 1.6 * s); return; }
     if (m.kind === 'dino') { const g = '#7cc65a'; c.fillStyle = g; c.beginPath(); c.ellipse(x, y - 14 * s - bob, 12 * s, 7 * s, 0, 0, TAU); c.fill(); c.beginPath(); c.moveTo(x - 10 * s, y - 14 * s); c.quadraticCurveTo(x - 22 * s, y - 12 * s, x - 26 * s, y - 6 * s); c.lineTo(x - 9 * s, y - 10 * s); c.fill(); c.beginPath(); c.moveTo(x + 6 * s, y - 18 * s); c.quadraticCurveTo(x + 10 * s, y - 34 * s, x + 14 * s, y - 36 * s); c.lineTo(x + 18 * s, y - 34 * s); c.quadraticCurveTo(x + 12 * s, y - 26 * s, x + 11 * s, y - 15 * s); c.fill(); c.beginPath(); c.ellipse(x + 17 * s, y - 37 * s, 5 * s, 3.4 * s, 0, 0, TAU); c.fill(); c.fillRect(x - 6 * s, y - 9 * s, 3.5 * s, 9 * s); c.fillRect(x + 3 * s, y - 9 * s, 3.5 * s, 9 * s); c.fillStyle = '#222'; c.beginPath(); c.arc(x + 18.5 * s, y - 38 * s, .9 * s, 0, TAU); c.fill(); c.fillStyle = '#4f9e4a'; for (let k = 0; k < 4; k++) { c.beginPath(); c.arc(x - 6 * s + k * 4 * s, y - 20 * s, 1.6 * s, 0, TAU); c.fill(); } return; }
     const slip = m.slip && clock - m.slip < 2.5, body = m.kind === 'robot' ? '#c0c8d4' : m.kind === 'runner' ? '#ffffff' : m.kind === 'band' ? '#d9533e' : m.col;
-    c.save(); c.translate(x, y - bob + (m.sit ? 3 * s : 0)); if (slip) c.rotate(Math.PI / 2 * Math.min(1, (clock - m.slip) * 4));
-    c.fillStyle = 'rgba(0,0,0,.15)'; c.beginPath(); c.ellipse(0, bob, 3 * s, 1.2 * s, 0, 0, TAU); c.fill();
-    { const g = c.createLinearGradient(-2.4 * s, 0, 2.4 * s, 0); g.addColorStop(0, shade(body.startsWith('#') ? body : '#cccccc', 1.12)); g.addColorStop(1, shade(body.startsWith('#') ? body : '#cccccc', .8)); c.fillStyle = g; c.beginPath(); c.roundRect(-2.4 * s, -9.5 * s, 4.8 * s, 7.6 * s, 2.2 * s); c.fill(); } c.fillStyle = '#3b3f4a'; c.fillRect(-2 * s, -2 * s, 1.6 * s, 2 * s); c.fillRect(.4 * s, -2 * s, 1.6 * s, 2 * s);
-    { const hc = m.kind === 'robot' ? '#9aa6b5' : m.skin, g = c.createRadialGradient(-1 * s, -12.5 * s, .3 * s, 0, -11.5 * s, 2.8 * s); g.addColorStop(0, shade(hc, 1.18)); g.addColorStop(1, shade(hc, .85)); c.fillStyle = g; c.beginPath(); c.arc(0, -11.8 * s, 2.8 * s, 0, TAU); c.fill(); }
+    c.save(); c.translate(x, y - bob + (m.sit ? 3 * s : 0));
+    const facing = m.d === 0 || m.d === 3 ? 1 : -1; c.scale(facing, 1);
+    if (slip) c.rotate(Math.PI / 2 * Math.min(1, (clock - m.slip) * 4));
+    // Opposite arm/leg swing; the planted shoe compensates for the body's vertical bob.
+    c.lineCap = 'round'; c.lineJoin = 'round';
+    for (const side of [-1, 1]) {
+      const stride = side * step, toeX = (side * 1.25 + stride * 2.5) * s;
+      const lift = Math.max(0, stride) * 1.9 * s;
+      c.strokeStyle = '#405068'; c.lineWidth = 1.75 * s; c.beginPath();
+      c.moveTo(side * 1.1 * s, -3.4 * s);
+      c.lineTo((side * 1.15 + stride * .6) * s, -1.35 * s);
+      c.lineTo(toeX, bob - .85 * s - lift); c.stroke();
+      c.strokeStyle = '#253647'; c.lineWidth = 2 * s; c.beginPath();
+      c.moveTo(toeX - .5 * s, bob - .6 * s - lift); c.lineTo(toeX + 1.15 * s, bob - .6 * s - lift); c.stroke();
+      c.strokeStyle = m.kind === 'robot' ? '#9aa6b5' : shade(body.startsWith('#') ? body : '#cccccc', .78);
+      c.lineWidth = 1.55 * s; c.beginPath(); c.moveTo(side * 2.15 * s, -8 * s);
+      c.lineTo((side * 3.3 - stride * 1.5) * s, -5.8 * s); c.stroke();
+      c.fillStyle = m.kind === 'robot' ? '#bdc7d3' : m.skin;
+      c.beginPath(); c.arc((side * 3.3 - stride * 1.5) * s, -5.8 * s, .8 * s, 0, TAU); c.fill();
+    }
+    { const g = c.createLinearGradient(-2.4 * s, 0, 2.4 * s, 0);
+      g.addColorStop(0, shade(body.startsWith('#') ? body : '#cccccc', 1.12));
+      g.addColorStop(1, shade(body.startsWith('#') ? body : '#cccccc', .8));
+      c.fillStyle = g; c.beginPath(); c.roundRect(-2.4 * s, -9.5 * s, 4.8 * s, 7.6 * s, 2.2 * s); c.fill();
+      c.fillStyle = 'rgba(255,255,255,.28)'; c.fillRect(-1.7 * s, -8.6 * s, .55 * s, 4.7 * s);
+    }
+    { const hc = m.kind === 'robot' ? '#9aa6b5' : m.skin,
+      g = c.createRadialGradient(-1 * s, -12.5 * s, .3 * s, 0, -11.5 * s, 2.8 * s);
+      g.addColorStop(0, shade(hc, 1.18)); g.addColorStop(1, shade(hc, .85));
+      c.fillStyle = g; c.beginPath(); c.arc(0, -11.8 * s, 2.8 * s, 0, TAU); c.fill();
+      if (m.kind !== 'robot') { // A small hairline, face and nose make each pedestrian legible.
+        c.fillStyle = '#514034'; c.beginPath(); c.arc(-.25 * s, -12.7 * s, 2.8 * s, Math.PI * 1.08, Math.PI * 1.93); c.fill();
+        c.fillStyle = '#2d3440'; c.beginPath(); c.arc(1.45 * s, -11.9 * s, .43 * s, 0, TAU); c.fill();
+        c.fillStyle = shade(hc, .85); c.beginPath(); c.arc(2.3 * s, -10.85 * s, .65 * s, 0, TAU); c.fill();
+      }
+    }
     if (m.kind === 'chef') { c.fillStyle = '#fff'; c.fillRect(-2.4 * s, -16.5 * s, 4.8 * s, 3.5 * s); }
     if (m.kind === 'robot') { c.fillStyle = '#ff5d5d'; c.fillRect(-.6 * s, -16 * s, 1.2 * s, 2.4 * s); }
     if (m.kind === 'newsie') { c.fillStyle = '#e9dcc0'; c.fillRect(1.5 * s, -7 * s, 4 * s, 5 * s); c.fillStyle = '#2d3440'; c.fillRect(2 * s, -6 * s, 3 * s, .6 * s); c.fillRect(2 * s, -4.8 * s, 3 * s, .6 * s); c.fillStyle = '#3f78c9'; c.beginPath(); c.arc(0, -13.5 * s, 2.8 * s, Math.PI, 0); c.fill(); }
@@ -1090,5 +1174,5 @@ const ToyTown = (() => {
     addEventListener('hashchange', () => location.reload());
     start();
   }
-  return {TALK, nameOf, headline, dateKey, CALM, lightPhase, themeFromNews, newsThemes, VARIANTS, VARIANT_EVENTS: () => Object.keys(VARIANT_EVENTS), decorate, setToday: l => { today_ = l; }, PACE, THEMES, GRIM, build, update, events: () => events, movers: () => movers, buildings: () => buildings, props: () => props, startEvent, randomEvent, setPlaying: v => { playing = v; }, debug: () => ({clock, theme, seed, night: nightLevel(), cam: {...cam}})};
+  return {layout, render, TALK, nameOf, headline, dateKey, CALM, lightPhase, themeFromNews, newsThemes, VARIANTS, VARIANT_EVENTS: () => Object.keys(VARIANT_EVENTS), decorate, setToday: l => { today_ = l; }, PACE, THEMES, GRIM, build, update, events: () => events, movers: () => movers, buildings: () => buildings, props: () => props, startEvent, randomEvent, setPlaying: v => { playing = v; }, debug: () => ({clock, theme, seed, night: nightLevel(), cam: {...cam}})};
 })();

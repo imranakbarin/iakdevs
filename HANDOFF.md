@@ -314,3 +314,10 @@ New, self-contained mode like Pip Run: `toy-town.html` + `assets/toy-town.js` (+
 - Daily seeds now use the visitor's local calendar date rather than UTC. The visual day/night cycle takes five real minutes; town movement still runs at 60% speed.
 - A reusable Canvas 2D buffer caches ground, roads, and tree/building contact shadows. It is invalidated by new town layouts, news decorations, resizes and camera movements. `toy-town.html` loads `toy-town.js?v=8`.
 - Tests assert that all news variants finish, and cover local midnight and the real-time day/night period.
+
+## Toy Town character and scene quality (31 October 2026)
+
+- People walk with distance-based alternating legs and arms, planted shoes, facing-dependent head/face detail and subtle idle breathing. Their shadows remain on the road rather than bobbing with their bodies.
+- Cyclists pedal and wheels turn according to accumulated distance, so stopping for traffic lights freezes their motion; vehicles also use travel-based wheel highlights and soft contact shadows.
+- Houses have chimneys, second-side windows, porch lights and threshold stones. Shop and tower parapets plus mullioned window frames increase depth. Small seeded grass tufts sit in the cached ground layer, not floating as separate sprites.
+- The isolated `assets/toy-town.js` public API exposes `layout` and `render` for deterministic canvas smoke tests. `toy-town.html` now loads `toy-town.js?v=9`.

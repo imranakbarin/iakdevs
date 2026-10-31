@@ -86,6 +86,50 @@ assert.ok(T.PACE < 1, 'the town runs slower than real time');
   assert.ok(chat && plane && /India|Test/.test(plane.towed), 'a plane tows the headline');
   for (let i = 0; i < 60 * 40; i++) T.update(1 / 60);
   assert.ok(T.TALK.sports.some(l => l.includes('{N}')), 'some lines name the story'); }
+// Travel distance rather than elapsed time drives footsteps and spinning wheels.
+T.build(777, 'weather');
+const walkers = T.movers().filter(m => m.type === 'person' && !m.kind);
+const cyclist = T.movers().find(m => m.kind === 'bike'), walker = walkers[0];
+walker.v = 0; walker.max = 0; cyclist.v = 0; cyclist.max = 0;
+const parkedDistance = [walker.travel, cyclist.travel];
+for (let i = 0; i < 120; i++) T.update(1 / 60);
+assert.equal(walker.travel, parkedDistance[0], 'a standing walker does not advance animation distance');
+assert.equal(cyclist.travel, parkedDistance[1], 'a stopped bicycle does not pedal');
+walker.max = .6; cyclist.max = .65;
+for (let i = 0; i < 60 * 25; i++) T.update(1 / 60);
+assert.ok(walker.travel > parkedDistance[0], 'walking advances the stride clock');
+assert.ok(cyclist.travel > parkedDistance[1], 'cycling advances the pedal clock');
+
+// Canvas smoke: rich buildings, human poses and all event types must draw without errors.
+// The same camera frame reuses its static ground buffer until the world changes.
+const strokes = {groundDraws: 0, buffers: 0, screenBlits: 0};
+const fakeContext = isGround => new Proxy({}, {get(_, key) {
+  if (key === 'createLinearGradient' || key === 'createRadialGradient') return () => ({addColorStop() {}});
+  if (key === 'measureText') return txt => ({width: String(txt).length * 5});
+  if (key === 'clearRect') return () => { if (isGround) strokes.groundDraws++; };
+  if (key === 'drawImage') return () => { if (!isGround) strokes.screenBlits++; };
+  return () => {};
+}});
+const fakeCanvas = isGround => ({width: 0, height: 0, style: {}, getContext: () => fakeContext(isGround)});
+const sceneCanvas = fakeCanvas(false);
+const sceneDoc = {
+  getElementById: id => id === 'town' ? sceneCanvas : {textContent: '', style: {}},
+  createElement: tag => { assert.equal(tag, 'canvas'); strokes.buffers++; return fakeCanvas(true); }
+};
+const drawBox = vm.createContext({Math, Object, Array, JSON, Date, String, Number, RegExp, document: sceneDoc, innerWidth: 1280, innerHeight: 720, devicePixelRatio: 1, setTimeout: () => 0});
+vm.runInContext(fs.readFileSync(path.join(root, 'assets/toy-town.js'), 'utf8') + ';this.T = ToyTown;', drawBox);
+const scene = drawBox.T;
+scene.layout(); scene.build(2026, 'sports'); scene.decorate([scene.VARIANTS.find(v => v.variant === 'cricket')]);
+scene.render(); scene.render();
+assert.equal(strokes.buffers, 1, 'only one backing canvas is allocated');
+assert.equal(strokes.groundDraws, 1, 'static ground is not redrawn each idle frame');
+assert.equal(strokes.screenBlits, 2, 'cached ground is blitted each frame');
+scene.build(2027, 'festival'); scene.decorate([scene.VARIANTS.find(v => v.variant === 'halloween')]);
+scene.render();
+assert.equal(strokes.groundDraws, 2, 'new town invalidates static ground');
+for (const key of Object.keys(scene.THEMES)) { scene.build(4242, key); scene.render(); }
+assert.ok(strokes.screenBlits >= 12, 'all themed scenes complete a render pass');
+
 // A calm town: gentle moments run to their end, and traffic waits at red lights instead of piling into the crossings.
 T.build(31337, 'weather'); T.setToday([]);
 for (const name of T.CALM) T.startEvent(name);
