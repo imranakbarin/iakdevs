@@ -63,7 +63,15 @@ async function main(){
       await page.waitForTimeout(1200);
       await page.addStyleTag({content:'#card,#ticker,#hint,#zoom-controls{display:none!important}'});
       await page.waitForTimeout(150);
-      const image=await page.screenshot({type:'jpeg',quality:58});
+      // A moving WebGL canvas may never satisfy Playwright's stability check.
+      // Freeze an actual rendered GPU frame; don't switch to the old 2D fallback.
+      await page.evaluate(()=>{
+        ToyTown.setPlaying(false);
+        window.ToyTown3D?.freeze?.();
+      });
+      await page.waitForTimeout(100);
+      const image=await page.screenshot({type:'jpeg',quality:58,timeout:90000,
+        animations:'disabled'});
       await fs.writeFile(path.join(out,job.name+'.jpg'),image);
       const data=await page.evaluate(()=>({
         active:Boolean(window.ToyTown3D?.active),
@@ -71,6 +79,7 @@ async function main(){
         cam:ToyTown.debug().cam
       }));
       if(!job.classic&&!data.active)throw Error('3D vanished before screenshot: '+job.name);
+      if(!job.classic&&!data.stats?.frozen)throw Error('3D did not freeze the captured frame');
       const record={name:job.name,bytes:image.length,...data,errors};
       records.push(record);
       console.log('VISUAL_AUDIT '+JSON.stringify(record));

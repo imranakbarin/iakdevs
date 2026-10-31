@@ -49,7 +49,7 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
   const world = new THREE.Group(); scene.add(world);
   const actors = new Map(), ambient = [], plazaLights = [];
   let worldSeed = null, worldBuildings = null, worldPropCount = 0, sceneTime = 0;
-  let stopped = false, raf = 0, frames = 0, redrawCount = 0, lastSize = '', lastFrameAt = 0;
+  let stopped = false, frozen = false, raf = 0, frames = 0, redrawCount = 0, lastSize = '', lastFrameAt = 0;
   const TAU = Math.PI * 2, LINES = [1,6,11,16];
   const rgb = (c) => new THREE.Color(c);
   const mat = (hex, rough = .82, emissive = null) => {
@@ -111,8 +111,11 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
     // Hundreds of tiny flower/window meshes casting real-time shadows
     // overload mobile GPUs. Preserve architectural and tree shadows.
     const substantial=(p.width>=.27&&p.height>=.12&&p.depth>=.18)||(p.radius>=.18);
-    o.castShadow=!!cast&&(desktop()||substantial);
-    o.receiveShadow=desktop()||substantial;
+    // Tiny windows, leaves, shingles and trim should NEVER create their own
+    // realtime shadow pass. Desktop software WebGL became unresponsive when
+    // thousands of these meshes cast shadows in addition to full buildings.
+    o.castShadow=!!cast&&substantial;
+    o.receiveShadow=substantial;
     parent.add(o); return o;
   };
   const box = (p,w,h,d,col,x=0,y=0,z=0,rounded=true) =>
@@ -213,12 +216,10 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
     // Architectural cornice, plinth and corner quoins all follow the walls.
     box(g,.85,.05,.85,'#f8e7d0',0,h+.075,0);
     box(g,.81,.067,.82,'#e1c9ae',0,.125,0);
-    for(const x of [-.367,.367]) {
-      for(let level=0;level<4;level++) {
-        const y=.28+level*(h-.30)/4;
-        box(g,.078,.075,.067,wood,x,y,.407);
-        box(g,.067,.075,.078,wood,x,y,-.407);
-      }
+    for(const x of [-.358,.358]) {
+      // Continuous plaster pilasters, not floating Lego-like corner blocks.
+      box(g,.033,h*.66,.031,wood,x,.27+h*.34,.400);
+      box(g,.033,.050,.055,'#f2e6d6',x,.23,.405);
     }
   }
   function archedInset(g,x,y,z,w,h,wood,glass=false) {
@@ -296,17 +297,21 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
 
 
   function turret(g,wall,roofPigment,height=1.35) {
-    // A genuine curved miniature tower, not a flat overlay on a cube.
-    const tower=cylinder(g,.21,.24,height,plaster(wall),.31,.17+height/2,-.14);
+    // The tower lives beside the front corner, not in the main roof:
+    // its complete cylindrical wall is visible and reaches the ground.
+    const x=.34,z=.28,cy=.18+height/2;
+    const tower=cylinder(g,.20,.245,height,plaster(wall),x,cy,z);
     tower.castShadow=true;
-    cylinder(g,.251,.25,.055,'#efdec8',.31,.19+height,-.14);
-    const cone=object(g,geo('cylinder',0,.295,.42),roofMaterial(roofPigment),
-      .31,.41+height,-.14);
+    cylinder(g,.25,.25,.047,'#f0dfc7',x,.19+height,z);
+    const cone=object(g,geo('cylinder',0,.285,.39),roofMaterial(roofPigment),
+      x,.42+height,z);
     cone.castShadow=true;
-    box(g,.19,.23,.042,'#f7e9d3',.31,height*.65,.074);
-    box(g,.15,.19,.046,mat('#9bbfc4',.30,'#8a5d3a'),.31,height*.65,.102);
-    box(g,.015,.18,.053,'#fff5e0',.31,height*.65,.133);
-    ball(g,.045,'#bd9e76',.31,.69+height,-.14);
+    // The turret window faces the plaza and has real architectural trim.
+    box(g,.178,.245,.044,'#f7e9d3',x,.66+height*.32,z+.197);
+    box(g,.132,.185,.048,mat('#9bbfc4',.30,'#8a5d3a'),
+      x,.66+height*.32,z+.230);
+    box(g,.014,.18,.052,'#fff5e0',x,.66+height*.32,z+.262);
+    ball(g,.034,'#bd9e76',x,.66+height,z);
   }
   function sideCottageWing(g,wall,roofPigment){
     const wing=new THREE.Group();
@@ -348,14 +353,14 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
     const height=Math.min(1.56,Math.max(.98,b.h/30))*(style===1?1.08:1);
     const paint=tint(b.wall||shades[(b.x+b.y)%shades.length]);
     box(g,.79,.09,.8,'#cbb59a',0,.045,0);
-    box(g,.76,height,.76,plaster(paint),0,.10+height/2,0);
-    wallTrim(g,.10+height,style===1?'#ebd6c0':'#e3c6ad');
+    box(g,.76,height,.76,b.hero?plaster(paint):mat(paint),0,.10+height/2,0);
+    if(b.hero)wallTrim(g,.10+height,style===1?'#ebd6c0':'#e3c6ad');
     const cap=.1+height;
     roof(g,b.roof||'#ba7355',cap);
     // Each hero house gets a distinct architectural silhouette rather than
     // three copies of the same rectangular cottage.
     if(b.hero&&style===0)sideCottageWing(g,paint,b.roof||'#ba7355');
-    if(b.hero&&style===2)turret(g,paint,b.roof||'#ba7355',height+0.12);
+    if(b.hero&&style===2)turret(g,paint,b.roof||'#ba7355',height+.39);
     // A pitched dormer and deep eave give the cottage a recognizable roof
     // silhouette when viewed from the street.
     box(g,.20,.20,.17,'#f1dfc8',-.14,cap+.24,.295);
@@ -363,8 +368,10 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
     box(g,.13,.12,.024,'#91bbc0',-.14,cap+.245,.393);
     box(g,.15,.015,.035,'#f8eddb',-.14,cap+.17,.411);
     // Layered architecture shared across all cottage variants.
-    lowTerrace(g,style);
-    if(b.hero) ivy(g,b.x+b.y,style===1?.33:-.34);
+    if(b.hero) {
+      lowTerrace(g,style);
+      ivy(g,b.x+b.y,style===1?.33:-.34);
+    }
     // Front porch and steps physically touch the entry.
     box(g,.32,.085,.25,'#dbc6a9',.21,.09,.51);
     archedInset(g,.21,.31,.417,.19,.40,'#987055');
@@ -373,7 +380,7 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
     box(g,.175,.34,.035,'#99714e',.21,.28,.467);
     ball(g,.016,'#e9ca7d',.27,.32,.489);
     pane(g,-.20,.65,.405,.21,.25);
-    windowBox(g,-.20,.50,.488);
+    if(b.hero)windowBox(g,-.20,.50,.488);
     if(style===1) {
       archedInset(g,-.19,height-.25,.414,.22,.32,'#b78a6b',true);
     }
@@ -421,9 +428,11 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
     const g=new THREE.Group();g.position.set(b.x+.5,0,b.y+.5);world.add(g);
     const h=Math.max(1.08,b.h/33), color=tint(b.wall||'#e6d7bd');
     box(g,.84,.11,.87,'#c2b09c',0,.055,0);
-    box(g,.79,h,.79,plaster(color),0,.11+h/2,0);
-    wallTrim(g,h+.11,'#f2dfc5');
-    for(const wx of [-.355,.355]) ivy(g,b.x*7+b.y,wx);
+    box(g,.79,h,.79,b.hero?plaster(color):mat(color),0,.11+h/2,0);
+    if(b.hero){
+      wallTrim(g,h+.11,'#f2dfc5');
+      for(const wx of [-.355,.355]) ivy(g,b.x*7+b.y,wx);
+    }
     roof(g,b.awning||'#9c6d60',h+.11);
     for(const x of [-.225,.225])pane(g,x,.50,.411,.29,.48);
     pane(g,.42,.70,-.14,.24,.32,'#ffd0a2',true);
@@ -626,11 +635,13 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
         groundPiece(.035,.36,'#f3e8d6',n+.5,t+.5,.183);
         groundPiece(.36,.035,'#f3e8d6',t+.5,n+.5,.190);
       }
-      // Cream stone curb bands pull the miniature streets into the
-      // landscaping. Keep the canal uncovered, including bridge openings.
-      for(const edge of [-.074,1.074]) {
-        groundPiece(.095,11.9,'#d9cdb8',n+edge,7.05,.205);
-        groundPiece(11.9,.095,'#d9cdb8',7.05,n+edge,.208);
+      // Curbs are individual block-front segments, not giant floating strips
+      // cutting across every junction and bridge.
+      const segments=[[2.22,5.78],[7.22,10.78],[12.22,12.75],[15.25,15.78]];
+      for(const edge of [-.068,1.068])for(const [a,b] of segments) {
+        const size=b-a;
+        groundPiece(.063,size,'#d9cdb8',n+edge,(a+b)/2,.194);
+        groundPiece(size,.063,'#d9cdb8',(a+b)/2,n+edge,.194);
       }
       // River bridges have pale stone shoulders, anchored to the same lanes.
       groundPiece(1.12,2.05,'#a99f8c',n+.5,14,.17);
@@ -985,7 +996,7 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
     camera.updateProjectionMatrix();
   }
   function frame(timestamp){
-    if(stopped)return;
+    if(stopped || frozen)return;
     raf=requestAnimationFrame(frame);
     if(!town.buildings().length)return; // keep the 2D town visible until 3D is actually ready
     // Keep the new, heavier 3D geometry at a sustainable rate on phones.
@@ -1021,7 +1032,11 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
   renderer.domElement.addEventListener('webglcontextrestored',restored,false);
   const api={
     active:false,renderer,scene,camera,
-    getStats:()=>({frames,redrawCount,actors:actors.size,ambient:ambient.length,plazaLights:plazaLights.length,buildings:town.buildings().length,webgl:true}),
+    getStats:()=>({frames,redrawCount,actors:actors.size,ambient:ambient.length,plazaLights:plazaLights.length,buildings:town.buildings().length,webgl:true,frozen}),
+    // A stable actual GPU-rendered frame for visual regression screenshots.
+    // Unlike stop(), freeze does not switch to the Canvas fallback.
+    freeze(){frozen=true;cancelAnimationFrame(raf);},
+    unfreeze(){if(!stopped&&frozen){frozen=false;raf=requestAnimationFrame(frame);}},
     stop(){stopped=true;cancelAnimationFrame(raf);this.active=false;window.ToyTown3D.active=false;
       host.style.display='none';document.getElementById('town').style.opacity='1';},
     dispose(){this.stop();renderer.dispose();}

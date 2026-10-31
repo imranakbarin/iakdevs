@@ -9,10 +9,10 @@ const moduleCode=fs.readFileSync(path.join(root,'assets/toy-town-3d.js'),'utf8')
 assert.match(html,/type="importmap"/);
 assert.match(html,/three@0\.187\.0\/build\/three\.module\.js/);
 assert.match(html,/three@0\.187\.0\/examples\/jsm\//);
-assert.match(html,/toy-town-3d\.js\?v=5/);
+assert.match(html,/toy-town-3d\.js\?v=6/);
 assert.match(html,/toy-town\.js\?v=14/);
 assert.ok(html.indexOf('toy-town.js?v=14')<html.indexOf("import('three')"), 'classic fallback starts first');
-assert.match(page,/toy-town\.html\?v=18&embed=1/);
+assert.match(page,/toy-town\.html\?v=19&embed=1/);
 assert.match(moduleCode,/export function mountToyTown3D/);
 assert.match(moduleCode,/new THREE\.WebGLRenderer/);
 assert.match(moduleCode,/window\.ToyTown3D=api/);
@@ -177,6 +177,20 @@ host.clientWidth=390; host.clientHeight=844; win.innerWidth=390; win.innerHeight
 callbacks.shift()();
 assert.equal(api.renderer.domElement.width,390,'portrait resize restores mobile projection');
 
+const rendersBeforeFreeze=stats.renders;
+api.freeze();
+assert.equal(api.getStats().frozen,true,'visual audit freezes only the WebGL animation');
+assert.equal(api.active,true,'freezing keeps the rendered 3D canvas visible');
+callbacks.shift()();
+assert.equal(stats.renders,rendersBeforeFreeze,'frozen 3D holds the actual last GPU frame');
+api.unfreeze();
+assert.equal(api.getStats().frozen,false,'visual audit can resume rendering');
+callbacks.shift()();
+assert.ok(stats.renders>rendersBeforeFreeze,'WebGL renders after resuming');
+assert.match(moduleCode,/const segments=\[\[2\.22,5\.78\]/,
+  'stone curbs stop at road junctions instead of floating through intersections');
+assert.match(moduleCode,/continuous plaster pilasters/i,
+  'wall accents follow facades without disconnected bricks');
 const rendersBeforeFail=stats.renders;
 api.renderer.throwOnRender=true;callbacks.shift()();
 assert.equal(api.active,false,'render failure disables WebGL');
