@@ -24,8 +24,8 @@ const ToyTown = (() => {
   let rnd = Math.random, seed = 0, day = '', theme = null, newsLine = '', today_ = [], nextHeadline = 12, headIx = 0;
   let W = 0, H = 0, dpr = 1, S = 1, cam = {x: N / 2, y: N / 2, z: 1, tx: N / 2, ty: N / 2, tz: 1}, base = 1;
   let grid = [], buildings = [], props = [], movers = [], events = [], parts = [], bubbles = [], ground = null, sprites = new Map();
-  const MIN_ZOOM = .52, MAX_ZOOM = 3.25;
-  let zoomAnchor = null, nextStreetMoment = 16, streetMoments = 0;
+  const MIN_ZOOM = .42, MAX_ZOOM = 3.25;
+  let zoomAnchor = null, nextStreetMoment = 16, streetMoments = 0, fitZoom = 1;
   const PACE = .6, CARS = 7, BIKES = 4, PEOPLE = 14, LIGHT = 10;   // a calm town: few cars, a handful of cyclists, people taking their time   // the whole town runs at 60% speed: easier to follow, calmer to watch
   let clock = 0, playing = true, last = 0, nextEvent = 2, director = null, directorUntil = 0;
   const STREETS = ['Maple St', 'Elm Ave', 'Pickle Lane', 'Gumdrop Rd', 'Button Way', 'Teapot St', 'Biscuit Ave', 'Puddle Lane'];
@@ -817,6 +817,17 @@ const ToyTown = (() => {
   }
   function drawBuilding(c, b, night) {
     const cx = b.x + .5, cy = b.y + .5;
+    // House and shop lights are attached to the facade, not floating sprites.
+    const wallGlow = (x, y, power = .34) => {
+      if (!night) return;
+      const [sx, sy] = P(x, y, 8), rad = 13 * S;
+      c.save(); c.globalCompositeOperation = 'lighter';
+      const g = c.createRadialGradient(sx, sy, 0, sx, sy, rad);
+      g.addColorStop(0, `rgba(255,205,120,${power})`);
+      g.addColorStop(1, 'rgba(255,205,120,0)');
+      c.fillStyle = g; c.fillRect(sx - rad, sy - rad, 2 * rad, 2 * rad);
+      c.restore();
+    };
     if (b.kind === 'house') {
       box(c, cx, cy, .36, .36, 0, b.h, b.wall);
       const top = P(cx, cy, b.h + 16), corners = [[-.42, -.42], [.42, -.42], [.42, .42], [-.42, .42]].map(([x, y]) => P(cx + x, cy + y, b.h));
@@ -830,12 +841,23 @@ const ToyTown = (() => {
       c.fillStyle = '#d2bea2'; c.beginPath(); c.ellipse(porch[0], porch[1] + 1.5 * S, 4.5 * S, 1.6 * S, 0, 0, TAU); c.fill();
       const lamp = P(cx + .29, cy + .37, b.h * .36);
       c.fillStyle = night ? '#ffe4a0' : '#fff7dc'; c.beginPath(); c.arc(lamp[0], lamp[1], 1.5 * S, 0, TAU); c.fill();
+      wallGlow(cx + .29, cy + .37, .28);
     } else if (b.kind === 'shop') {
       box(c, cx, cy, .4, .4, 0, b.h, b.wall);
       box(c, cx, cy, .43, .43, b.h, 2, shade(b.wall, .75), shade(b.wall, 1.08));
       c.fillStyle = b.awning; c.beginPath(); c.moveTo(...P(cx - .4, cy + .4, b.h * .62)); c.lineTo(...P(cx + .4, cy + .4, b.h * .62)); c.lineTo(...P(cx + .4, cy + .56, b.h * .45)); c.lineTo(...P(cx - .4, cy + .56, b.h * .45)); c.closePath(); c.fill();
       c.fillStyle = 'rgba(255,255,255,.7)'; for (let k = 0; k < 4; k++) { c.beginPath(); c.moveTo(...P(cx - .4 + k * .2, cy + .4, b.h * .62)); c.lineTo(...P(cx - .3 + k * .2, cy + .4, b.h * .62)); c.lineTo(...P(cx - .3 + k * .2, cy + .56, b.h * .45)); c.lineTo(...P(cx - .4 + k * .2, cy + .56, b.h * .45)); c.closePath(); c.fill(); }
       win(c, cx, cy + .4, 9, b.h * .3, night, 'y'); win(c, cx + .4, cy, 6, b.h * .7, night, 'x');
+      // A pair of planted flowerpots are anchored at the storefront threshold.
+      for (const side of [-1, 1]) {
+        const px = cx + side * .32, py = cy + .46;
+        box(c, px, py, .055, .06, 0, 4, '#ac7958', '#d5a079');
+        const leaf = P(px, py, 6);
+        c.fillStyle = '#509b5d'; c.beginPath();
+        c.ellipse(leaf[0] - 1.6 * S, leaf[1], 2.1 * S, 3.5 * S, -.5, 0, TAU);
+        c.ellipse(leaf[0] + 1.8 * S, leaf[1] - 1 * S, 2.1 * S, 3.7 * S, .4, 0, TAU); c.fill();
+      }
+      wallGlow(cx, cy + .4, .26);
       const s = P(cx, cy + .2, b.h + 7); c.fillStyle = '#ffffff'; const fs = Math.max(6, 6.5 * S); c.font = `800 ${fs}px system-ui`; c.textAlign = 'center'; const tw = c.measureText(b.name).width + 6; c.fillRect(s[0] - tw / 2, s[1] - fs * .8, tw, fs * 1.25); c.fillStyle = b.awning; c.fillText(b.name, s[0], s[1] + fs * .3);
     } else if (b.kind === 'tower') {
       box(c, cx, cy, .4, .4, 0, b.h, b.wall);
@@ -1136,7 +1158,8 @@ const ToyTown = (() => {
     dpr = Math.min(2, devicePixelRatio || 1); W = cv.width = Math.round(innerWidth * dpr); H = cv.height = Math.round(innerHeight * dpr);
     cv.style.width = innerWidth + 'px'; cv.style.height = innerHeight + 'px';
     const fit = Math.min(W / (N * TW * 2 + 60), H / (N * TH * 2 + 200));
-    base = innerWidth < 700 ? Math.max(fit, (W / (9 * TW * 2))) : fit;   // phones see part of the town and follow the action
+    base = innerWidth < 700 ? Math.max(fit, (W / (9 * TW * 2))) : fit;   // phones start closer for legibility
+    fitZoom = clamp(MIN_ZOOM, fit / base, 1);  // "Fit" shows the whole city, even on a narrow phone
     sprites.clear(); ground = null;
   }
   // A five-minute day in real time, though moving things run at 60% speed.
@@ -1270,9 +1293,10 @@ const ToyTown = (() => {
   }
   function resetView() {
     zoomAnchor = {world: {x: N / 2, y: N / 2}, sx: W / 2, sy: H / 2};
-    cam.tz = 1;
-    if (!playing) { cam.z = 1; focusCamera(zoomAnchor.world, W / 2, H / 2); zoomAnchor = null; render(); }
+    cam.tz = fitZoom;
+    if (!playing) { cam.z = fitZoom; focusCamera(zoomAnchor.world, W / 2, H / 2); zoomAnchor = null; render(); }
   }
+  function fitView() { return fitZoom; }
   function pinchTo(scale, centerX, centerY, anchorWorld) {
     cam.z = cam.tz = clamp(MIN_ZOOM, scale, MAX_ZOOM);
     zoomAnchor = null;
@@ -1299,6 +1323,7 @@ const ToyTown = (() => {
       cam.tz = cam.z; zoomAnchor = null; down = null;
     };
     cv.addEventListener('pointerdown', e => {
+      if (e.pointerType === 'touch') return; // iOS uses dedicated TouchEvents below
       fingers.set(e.pointerId, {x: e.clientX, y: e.clientY});
       cv.setPointerCapture(e.pointerId);
       if (fingers.size === 1) { pinch = null; zoomAnchor = null; cam.tz = cam.z;
@@ -1306,7 +1331,7 @@ const ToyTown = (() => {
       else beginPinch();
     });
     cv.addEventListener('pointermove', e => {
-      if (!fingers.has(e.pointerId)) return;
+      if (e.pointerType === 'touch' || !fingers.has(e.pointerId)) return;
       fingers.set(e.pointerId, {x: e.clientX, y: e.clientY});
       if (fingers.size >= 2) {
         if (!pinch) beginPinch();
@@ -1333,8 +1358,62 @@ const ToyTown = (() => {
         down = {x: remaining.x, y: remaining.y, cx: cam.x, cy: cam.y, moved: true};
       } else pinch = null;
     }
-    cv.addEventListener('pointerup', e => releasePointer(e));
-    cv.addEventListener('pointercancel', e => releasePointer(e, true));
+    cv.addEventListener('pointerup', e => { if (e.pointerType !== 'touch') releasePointer(e); });
+    cv.addEventListener('pointercancel', e => { if (e.pointerType !== 'touch') releasePointer(e, true); });
+    // Mobile Safari can cancel the second PointerEvent of a pinch inside an
+    // iframe. TouchEvents are therefore the primary mobile gesture path.
+    let touchStart = null, touchPinch = null, hadPinch = false;
+    const centerOf = (a, b) => ({x: (a.clientX + b.clientX) / 2, y: (a.clientY + b.clientY) / 2});
+    const startPinch = ts => {
+      const {x, y} = centerOf(ts[0], ts[1]);
+      const rect = cv.getBoundingClientRect();
+      touchPinch = {distance: Math.max(1, Math.hypot(ts[0].clientX - ts[1].clientX, ts[0].clientY - ts[1].clientY)),
+        scale: cam.z, world: screenWorld((x - rect.left) * dpr, (y - rect.top) * dpr)};
+      touchStart = null; hadPinch = true; cam.tz = cam.z; zoomAnchor = null;
+    };
+    cv.addEventListener('touchstart', e => {
+      e.preventDefault();
+      const ts = e.touches;
+      if (ts.length >= 2) startPinch(ts);
+      else if (ts.length === 1 && !hadPinch) {
+        const t = ts[0]; const rect = cv.getBoundingClientRect();
+        cam.tz = cam.z; zoomAnchor = null;
+        touchStart = {x: t.clientX, y: t.clientY, cx: cam.x, cy: cam.y,
+          left: rect.left, top: rect.top, moved: false};
+      }
+    }, {passive: false});
+    cv.addEventListener('touchmove', e => {
+      e.preventDefault();
+      const ts = e.touches;
+      if (ts.length >= 2) {
+        if (!touchPinch) startPinch(ts);
+        const c = centerOf(ts[0], ts[1]), rect = cv.getBoundingClientRect();
+        const dist = Math.hypot(ts[0].clientX - ts[1].clientX, ts[0].clientY - ts[1].clientY);
+        pinchTo(touchPinch.scale * dist / touchPinch.distance,
+          c.x - rect.left, c.y - rect.top, touchPinch.world);
+      } else if (ts.length === 1 && touchStart && !hadPinch) {
+        const dx = (ts[0].clientX - touchStart.x) * dpr / (TW * base * cam.z);
+        const dy = (ts[0].clientY - touchStart.y) * dpr / (TH * base * cam.z);
+        if (Math.hypot(ts[0].clientX - touchStart.x, ts[0].clientY - touchStart.y) > 7)
+          touchStart.moved = true;
+        if (touchStart.moved) {
+          cam.tx = cam.x = clamp(1.1, touchStart.cx - (dx + dy) / 2, N - 1.1);
+          cam.ty = cam.y = clamp(1.1, touchStart.cy - (dy - dx) / 2, N - 1.1);
+          if (!playing) render();
+        }
+      }
+    }, {passive: false});
+    cv.addEventListener('touchend', e => {
+      e.preventDefault();
+      if (!e.touches.length) {
+        if (!hadPinch && touchStart && !touchStart.moved && e.changedTouches[0])
+          poke(e.changedTouches[0]);
+        touchStart = null; touchPinch = null; hadPinch = false;
+      } else if (hadPinch) { touchStart = null; touchPinch = null; }
+    }, {passive: false});
+    cv.addEventListener('touchcancel', e => {
+      e.preventDefault(); touchStart = null; touchPinch = null; hadPinch = false;
+    }, {passive: false});
     cv.addEventListener('wheel', e => {
       e.preventDefault();
       const rect = cv.getBoundingClientRect();
@@ -1347,9 +1426,17 @@ const ToyTown = (() => {
     }
     const resetButton = document.getElementById('zoom-reset');
     if (resetButton) resetButton.addEventListener('click', resetView);
+    // The parent page has its own zoom buttons so iOS users can adjust the
+    // camera even if their browser doesn't deliver multi-pointer events in an iframe.
+    addEventListener('message', e => {
+      if (e.origin !== location.origin || !e.data) return;
+      if (e.data.type === 'town:zoom' && Number.isFinite(e.data.factor) && e.data.factor > 0)
+        zoomAt(clamp(.5, e.data.factor, 2));
+      else if (e.data.type === 'town:fit') resetView();
+    });
     addEventListener('message', e => { if (e.origin === location.origin && e.data && e.data.type === 'town:motion') playing = !!e.data.playing; });
     addEventListener('hashchange', () => location.reload());
     start();
   }
-  return {layout, render, zoomAt, resetView, pinchTo, screenWorld, streetMoment, TALK, nameOf, headline, dateKey, CALM, lightPhase, themeFromNews, newsThemes, VARIANTS, VARIANT_EVENTS: () => Object.keys(VARIANT_EVENTS), decorate, setToday: l => { today_ = l; }, PACE, THEMES, GRIM, build, update, events: () => events, movers: () => movers, buildings: () => buildings, props: () => props, startEvent, randomEvent, setPlaying: v => { playing = v; }, debug: () => ({clock, theme, seed, night: nightLevel(), cam: {...cam}, streetMoments})};
+  return {layout, render, zoomAt, resetView, fitView, pinchTo, screenWorld, streetMoment, TALK, nameOf, headline, dateKey, CALM, lightPhase, themeFromNews, newsThemes, VARIANTS, VARIANT_EVENTS: () => Object.keys(VARIANT_EVENTS), decorate, setToday: l => { today_ = l; }, PACE, THEMES, GRIM, build, update, events: () => events, movers: () => movers, buildings: () => buildings, props: () => props, startEvent, randomEvent, setPlaying: v => { playing = v; }, debug: () => ({clock, theme, seed, night: nightLevel(), cam: {...cam}, fitZoom, streetMoments})};
 })();

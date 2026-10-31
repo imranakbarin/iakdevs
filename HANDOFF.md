@@ -328,3 +328,11 @@ New, self-contained mode like Pip Run: `toy-town.html` + `assets/toy-town.js` (+
 - Camera zoom eases toward button/wheel targets; pinch is direct. The static-ground cache naturally invalidates on camera scale/position changes. The page uses toy-town.js?v=10.
 - Vehicle visuals rotate smoothly toward their movement direction via a rotated isometric prism. Pedestrians have seeded hats, scarves, backpacks and hair colors. Periodic quiet shop interactions pause a passerby for a brief greeting, sometimes acknowledged by another walker.
 - Regression coverage should include zoom bounds, cursor anchoring, Fit reset, accessible controls, scene render tests and shop interactions.
+
+## Toy Town iPhone zoom repair and close-up environment (31 October 2026)
+
+- iOS now uses native non-passive TouchEvents directly on the city canvas for pinch and one-finger pan; touch PointerEvents are ignored to avoid duplicate/cancelled gestures. Taps still trigger town interactions, but ending a pinch cannot trigger an accidental tap. The canvas explicitly disables browser gesture handling without disabling page-wide accessibility zoom.
+- The main `index.html` now owns a tiny always-visible − / Fit / + HUD outside the town iframe. Buttons send origin-checked messages to the child; this works even when Safari fails to deliver multi-touch to a nested canvas. The direct `toy-town.html` page retains its own HUD; the embedded page hides duplicates.
+- The parent loads `toy-town.html?v=11&embed=1` and the child loads `assets/toy-town.js?v=11`, busting stale mobile caches. Fit now calculates a true whole-city scale; for a typical 390px phone the target is roughly 0.475×, instead of always resetting to 1×.
+- Houses and shops gain facade-attached warm evening light, and shopfronts gain grounded entrance planters for richer closer views. Avoid floating decorations and keep the calm tone.
+- Test harness covers origin-checked cross-frame controls, iOS touchstart/touchmove/touchend, pointer suppression, pinch/tap separation, mobile Fit, and all previous traffic/news themes; simulated viewports 320–1440 px are also checked. Live Safari visual QA remains to be performed.

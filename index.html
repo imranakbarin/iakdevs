@@ -98,6 +98,11 @@ input[type=range]{width:80px;accent-color:#E63B2E}
 .town-mode #town-host{display:block}
 .town-mode #c,.town-mode #zen-backdrop,.town-mode #zen-sand,.town-mode #cozy-host,.town-mode #mushroom-host,.town-mode #pip-host{display:none!important}
 #town-host iframe{width:100%;height:100%;display:block;border:0}
+#town-zoom{display:none;position:fixed;z-index:7;right:calc(14px + env(safe-area-inset-right,0px));bottom:calc(58px + env(safe-area-inset-bottom,0px));gap:4px;padding:5px;background:rgba(37,47,57,.9);border:1px solid #ffffff33;border-radius:18px;box-shadow:0 6px 22px #1d263337}
+.town-mode #town-zoom{display:flex}
+#town-zoom button{border:0;color:#fff;background:#ffffff1c;min-width:44px;min-height:44px;border-radius:12px;font:700 23px/1 system-ui;touch-action:manipulation}
+#town-zoom button:active{background:#ffffff48}#town-zoom button:focus-visible{outline:2px solid #fff;outline-offset:2px}
+#town-zoom #town-fit{font-size:12px;min-width:50px}
 .town-mode .bar{background:rgba(45,52,64,.88);color:#fff7e5;border:1px solid #ffffff40}
 .town-mode .bar > :not(#mode):not(#play):not(#new){display:none!important}
 .town-mode .bar #mode,.town-mode .bar #play,.town-mode .bar #new{color:#fff7e5;display:block!important}
@@ -116,6 +121,11 @@ input[type=range]{width:80px;accent-color:#E63B2E}
 <div id="cozy-host" aria-label="Cozy Worlds calming environments"></div>
 <div id="mushroom-host" aria-label="Mushroom Island, an illustrated auto-running adventure"><iframe id="mushroom-frame" title="Mushroom Island animated adventure" loading="lazy"></iframe></div>
 <div id="town-host" aria-label="Toy Town, a busy little isometric town"><iframe id="town-frame" title="Toy Town"></iframe></div>
+<div id="town-zoom" role="group" aria-label="Toy Town zoom controls">
+  <button id="town-out" type="button" aria-label="Zoom out">−</button>
+  <button id="town-fit" type="button" aria-label="Fit entire city">Fit</button>
+  <button id="town-in" type="button" aria-label="Zoom in">+</button>
+</div>
 <div id="pip-host" aria-label="Pip Run, a small original platformer"><iframe id="pip-frame" title="Pip Run platformer" allow="fullscreen; clipboard-write; web-share"></iframe></div>
 <canvas id="c" aria-label="Endlessly scrolling art landscape inspired by traditional painting"></canvas>
 <div class="ui"><div class="bar" id="scene-controls">
@@ -2163,6 +2173,10 @@ mushroomFrame.addEventListener('load',()=>mushroomMotion(modeBtn.value==='mushro
 // Pip Run lives in its own same-origin frame; it takes keyboard focus while shown.
 const pipFrame=document.getElementById('pip-frame'),townFrame=document.getElementById('town-frame');
 function townMotion(on){if(townFrame.getAttribute('src'))townFrame.contentWindow?.postMessage({type:'town:motion',playing:Boolean(on)},location.origin);}
+function townZoom(type,factor){if(townFrame.getAttribute('src'))townFrame.contentWindow?.postMessage({type,factor},location.origin);}
+document.getElementById('town-in').addEventListener('click',()=>townZoom('town:zoom',1.4));
+document.getElementById('town-out').addEventListener('click',()=>townZoom('town:zoom',1/1.4));
+document.getElementById('town-fit').addEventListener('click',()=>townZoom('town:fit'));
 townFrame.addEventListener('load',()=>townMotion(modeBtn.value==='town'&&playing));
 function pipMotion(on){if(pipFrame.getAttribute('src'))pipFrame.contentWindow?.postMessage({type:'pip:motion',playing:Boolean(on)},location.origin);}
 pipFrame.addEventListener('load',()=>{pipMotion(modeBtn.value==='pip'&&playing);if(modeBtn.value==='pip')pipFrame.contentWindow?.document.getElementById('game')?.focus();});
@@ -2179,7 +2193,7 @@ modeBtn.onchange=()=>{
  mushroomMotion(mushroom&&playing);
  document.body.classList.toggle('pip-mode',pip);
  document.body.classList.toggle('town-mode',town);
- if(town&&!townFrame.getAttribute('src'))townFrame.src='toy-town.html';
+ if(town&&!townFrame.getAttribute('src'))townFrame.src='toy-town.html?v=11&embed=1';
  townMotion(town&&playing);
  if(pip&&!pipFrame.getAttribute('src'))pipFrame.src='pip-run.html'+(pipShared?'#r='+pipShared:'');
  pipMotion(pip&&playing);if(pip)setTimeout(()=>pipFrame.contentWindow?.document.getElementById('game')?.focus(),50);

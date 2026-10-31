@@ -5,7 +5,7 @@
 const fs = require('node:fs'), path = require('node:path'), vm = require('node:vm'), assert = require('node:assert/strict');
 const root = path.join(__dirname, '..'), html = fs.readFileSync(path.join(root, 'index.html'), 'utf8');
 assert.match(html, /<option value="town">Toy Town<\/option>/, 'Toy Town is in the menu');
-assert.match(html, /townFrame\.src='toy-town\.html'/, 'and opens its page');
+assert.match(html, /townFrame\.src='toy-town\.html\?v=11&embed=1'/, 'and opens its current embedded page');
 assert.match(fs.readFileSync(path.join(root, 'toy-town.html'), 'utf8'), /assets\/toy-town\.js\?v=\d+/);
 const box = vm.createContext({Math, Object, Array, JSON, Date, String, Number, RegExp, setTimeout: () => 0, document: {getElementById: () => ({textContent: ''})}});
 vm.runInContext(fs.readFileSync(path.join(root, 'assets/toy-town.js'), 'utf8') + ';this.T = ToyTown;', box);
@@ -112,6 +112,60 @@ const fakeContext = isGround => new Proxy({}, {get(_, key) {
 }});
 const fakeCanvas = isGround => ({width: 0, height: 0, style: {}, getContext: () => fakeContext(isGround)});
 const sceneCanvas = fakeCanvas(false);
+// Native mobile touch events are the primary Safari gesture path; desktop PointerEvents
+// must not swallow or duplicate them.
+const touchHandlers = {}, hostHandlers = {}, fallbackButtons = {};
+let captured = 0, defaultBlocked = 0, singlePokes = 0;
+const touchCanvas = {
+  style: {}, getContext: () => fakeContext(false),
+  getBoundingClientRect: () => ({left: 0, top: 0}),
+  addEventListener: (name, handler) => {touchHandlers[name] = handler;},
+  setPointerCapture: () => {captured++;}
+};
+const touchDoc = {getElementById: id => id === 'town' ? touchCanvas :
+  ({textContent: '', style: {}, addEventListener:(name, handler) => {fallbackButtons[id] = handler;}}),
+  createElement: () => fakeCanvas(true)};
+const touchCtx = vm.createContext({
+  document:touchDoc, window:{}, location:{origin:'https://example.test',hash:'#new'},
+  innerWidth:390,innerHeight:844,devicePixelRatio:2,
+  Math,Object,Array,JSON,Date,String,Number,RegExp,
+  requestAnimationFrame:()=>0,setTimeout:()=>0,
+  addEventListener:(name,handler)=>{(hostHandlers[name] ||= []).push(handler);}
+});
+vm.runInContext(fs.readFileSync(path.join(root,'assets/toy-town.js'),'utf8')+';this.T=ToyTown;', touchCtx);
+const phone = touchCtx.T;
+phone.layout(); phone.build(2026,'weather');
+touchHandlers.pointerdown({pointerType:'touch',pointerId:7,clientX:100,clientY:200});
+assert.equal(captured,0,'iPhone taps do not call pointer capture');
+const point=(x,y)=>({clientX:x,clientY:y});
+const ev=touches=>({touches,changedTouches:touches,preventDefault(){defaultBlocked++}});
+touchHandlers.touchstart(ev([point(90,200)]));
+touchHandlers.touchstart(ev([point(90,200),point(190,200)]));
+const initialZoom=phone.debug().cam.z;
+touchHandlers.touchmove(ev([point(90,200),point(260,200)]));
+assert.ok(phone.debug().cam.z>initialZoom*1.5,'native iOS pinch enlarges the city');
+const beforeRelease=phone.events().length;
+touchHandlers.touchend(ev([]));
+assert.equal(phone.events().length,beforeRelease,'pinch release is not a tap');
+touchHandlers.touchstart(ev([point(120,270)]));
+touchHandlers.touchend({touches:[],changedTouches:[point(120,270)],preventDefault(){defaultBlocked++}});
+assert.ok(phone.events().length>beforeRelease,'single-finger tap still works');
+assert.ok(defaultBlocked>=4,'touch gestures suppress browser scrolling');
+const zoomBeforeButton=phone.debug().cam.z;
+hostHandlers.message.forEach(fn=>fn({origin:'https://example.test',data:{type:'town:zoom',factor:1.4}}));
+for(let k=0;k<90;k++)phone.update(1/60);
+assert.ok(phone.debug().cam.z>zoomBeforeButton,'zoom button on main page reaches iframe');
+const beforeForeign=phone.debug().cam.tz;
+hostHandlers.message.forEach(fn=>fn({origin:'https://untrusted.test',data:{type:'town:zoom',factor:.5}}));
+assert.equal(phone.debug().cam.tz,beforeForeign,'foreign frame message ignored');
+hostHandlers.message.forEach(fn=>fn({origin:'https://example.test',data:{type:'town:fit'}}));
+for(let k=0;k<90;k++)phone.update(1/60);
+assert.ok(phone.fitView()<.8,'Fit fits the whole city on a narrow phone');
+assert.ok(Math.abs(phone.debug().cam.z-phone.fitView())<.02,'parent Fit uses mobile fit scale');
+assert.ok(fallbackButtons['zoom-in']&&fallbackButtons['zoom-out']&&fallbackButtons['zoom-reset'],
+ 'standalone fallback zoom controls remain wired');
+
+
 const sceneDoc = {
   getElementById: id => id === 'town' ? sceneCanvas : {textContent: '', style: {}},
   createElement: tag => { assert.equal(tag, 'canvas'); strokes.buffers++; return fakeCanvas(true); }
@@ -145,7 +199,7 @@ assert.ok(scene.debug().cam.z < .7, 'zoom out sees more of the town');
 scene.pinchTo(100, 640, 360, {x: 9, y: 9});
 assert.ok(scene.debug().cam.z <= 3.25, 'pinch maximum is clamped');
 scene.pinchTo(.01, 640, 360, {x: 9, y: 9});
-assert.ok(scene.debug().cam.z >= .52, 'pinch minimum is clamped');
+assert.ok(scene.debug().cam.z >= .42, 'pinch minimum is clamped');
 scene.resetView();
 for (let i = 0; i < 90; i++) scene.update(1 / 60);
 assert.ok(Math.abs(scene.debug().cam.z - 1) < .02, 'Fit restores starting zoom');
@@ -171,7 +225,11 @@ const townPage = fs.readFileSync(path.join(root, 'toy-town.html'), 'utf8');
 for (const id of ['zoom-in', 'zoom-out', 'zoom-reset']) {
   assert.match(townPage, new RegExp('id="' + id + '"[^>]*aria-label="[^"]+"'), id + ' is accessible');
 }
-assert.match(townPage, /toy-town\.js\?v=10/, 'zoom-enhanced engine is loaded');
+assert.match(townPage, /toy-town\.js\?v=11/, 'Safari-compatible engine is loaded');
+assert.match(html, /id="town-zoom"/, 'zoom controls live outside the iframe');
+assert.match(html, /id="town-fit"/, 'mobile has a fit-the-city button');
+assert.match(html, /town:zoom/, 'outer buttons message the city');
+assert.match(townPage, /embedded/, 'embedded page hides duplicate controls');
 
 
 // A calm town: gentle moments run to their end, and traffic waits at red lights instead of piling into the crossings.
