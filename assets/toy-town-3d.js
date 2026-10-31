@@ -163,6 +163,42 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
     box(group,w+.095,.032,.078,'#d9c0a2',0,-h/2-.029,.042);
     return pane;
   }
+  // Shared, inexpensive painted-grass surfaces add depth without spawning
+  // hundreds of tiny meshes or shadow draw calls on mobile.
+  const grassMaterialCache = new Map();
+  function grassMaterial(color='#b4c9a4',repeat=1){
+    const key=color+':'+repeat;
+    if(grassMaterialCache.has(key))return grassMaterialCache.get(key);
+    const cv=document.createElement('canvas'); cv.width=256;cv.height=256;
+    const ctx=cv.getContext('2d');
+    const pale=tint(color,'#f4e7bd',.18);
+    ctx.fillStyle=pale;ctx.fillRect(0,0,256,256);
+    for(let n=0;n<670;n++){
+      const x=rng(n,72)*256,y=rng(n,293)*256,sz=.45+rng(n,125)*1.7;
+      ctx.fillStyle=n%9===0?'rgba(249,239,201,.64)':
+        n%3===0?'rgba(91,131,95,.13)':'rgba(92,137,110,.075)';
+      ctx.beginPath();
+      ctx.ellipse(x,y,sz,sz*.42,(rng(n,46)-.5)*1.2,0,TAU);
+      ctx.fill();
+    }
+    // A handful of pin-sized ground blossoms is baked into the surface.
+    for(let n=0;n<27;n++){
+      const x=rng(n,661)*256,y=rng(n,789)*256;
+      ctx.fillStyle=n%4===0?'#e9c9b5':'#f7ebd0';
+      ctx.beginPath();ctx.arc(x,y,1.05,0,TAU);ctx.fill();
+    }
+    const tex=new THREE.CanvasTexture(cv);tex.colorSpace=THREE.SRGBColorSpace;
+    if(repeat>1 && tex.repeat?.set) {
+      tex.wrapS=tex.wrapT=THREE.RepeatWrapping;
+      tex.repeat.set(repeat,repeat);
+    }
+    const material=new THREE.MeshStandardMaterial({
+      map:tex,roughness:1,metalness:0,color:'#ffffff'
+    });
+    grassMaterialCache.set(key,material);
+    return material;
+  }
+
   function roof(g,color,top,edge=.44){
     const dark=roofMaterial(color);
     const tan=Math.atan2(.35,.49);
@@ -624,7 +660,8 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
     const backdrop=box(world,110,.07,110,'#d1e5df',9,-1.25,9);
     backdrop.castShadow=false;
     box(world,18.6,1.12,18.6,'#95785e',9,-.60,9);
-    box(world,18.35,.20,18.35,'#b6c9a1',9,.025,9);
+    // Shared baked texture rather than a featureless green table.
+    box(world,18.35,.20,18.35,grassMaterial('#b9cba7',10),9,.025,9);
     // Water sits below streets; bridges cross at the existing four lanes.
     groundPiece(18.02,1.97,'#70b9c7',9,14,.105);
     const isRoad = v=>LINES.includes(v);
@@ -653,16 +690,18 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
     // The central hero has physically raised pavements, stone squares and grass.
     for(let yy=7;yy<=10;yy++)for(let xx=7;xx<=10;xx++){
       const middle=xx>7&&xx<10&&yy>7&&yy<10;
-      groundPiece(.97,.97,middle?'#e9d9ba':'#96b99c',xx+.5,yy+.5,.179);
+      groundPiece(.97,.97,middle?'#e9d9ba':grassMaterial('#97bc9a'),xx+.5,yy+.5,.179);
       if(middle) {
         // Separate warm, irregular limestone pavers with recessed joints.
         // Their subtle size and hue variations replace the rigid dark grid.
         const stone=['#ede1c9','#e6d7ba','#e9ddc7','#e2d4bb'];
         for(let row=0;row<3;row++)for(let col=0;col<3;col++){
           const jitter=(rng(xx*17+col,yy*29+row)-.5)*.025;
-          groundPiece(.268+jitter,.268-jitter,stone[(xx+yy+col+row)%4],
+          const paver=groundPiece(.265+jitter,.264-jitter,stone[(xx+yy+col+row)%4],
             xx+.205+col*.291+jitter*.3,yy+.205+row*.291-jitter*.3,
             .221+((row+col)%2)*.006);
+          // Slight handmade irregularity removes the machine-perfect grid.
+          paver.rotation.y=(rng(xx*37+row,yy*17+col)-.5)*.075;
         }
       }
     }
@@ -768,23 +807,23 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
     const g=new THREE.Group();
     const skin=ref.skin||'#dbab86',coat=ref.col||'#d6a3a0';
     // Rounded head and tapered torso read as a small character at close zoom.
-    const torso=ball(g,.095,coat,0,.26,0);
+    const torso=ball(g,.088,coat,0,.26,0);
     torso.scale.set(.92,1.2,.74);
     const neck=cylinder(g,.031,.032,.055,skin,0,.374,0);
-    const head=ball(g,.078,skin,0,.445,0);
-    head.scale.set(.97,1.06,.94);
-    const hair=ball(g,.083,ref.hair||'#5b4639',0,.492,-.014);
-    hair.scale.set(1,.53,1);
+    const head=ball(g,.095,skin,0,.457,0);
+    head.scale.set(1,1.045,.95);
+    const hair=ball(g,.099,ref.hair||'#5b4639',0,.515,-.014);
+    hair.scale.set(1,.46,1);
     // Eyes and a soft nose sit on the forward (+Z) face of the head,
     // not on a screen-aligned sprite; rotation follows actual walking.
     for(const sx of [-1,1]){
-      ball(g,.019,'#fff8ef',sx*.030,.448,.071);
-      ball(g,.009,'#354449',sx*.030,.449,.085);
-      ball(g,.014,'#df978b',sx*.061,.417,.059);
-      ball(g,.022,skin,sx*.083,.439,.003);
+      ball(g,.019,'#fff8ef',sx*.032,.455,.086);
+      ball(g,.009,'#354449',sx*.032,.457,.102);
+      ball(g,.015,'#df978b',sx*.069,.417,.074);
+      ball(g,.024,skin,sx*.097,.439,.005);
     }
-    ball(g,.017,skin,0,.423,.082);
-    const smile=object(g,geo('torus',.024,.004),mat('#925f5c'),0,.405,.079);
+    ball(g,.017,skin,0,.425,.100);
+    const smile=object(g,geo('torus',.024,.004),mat('#925f5c'),0,.404,.094);
     smile.scale.set(1,.40,.26);
     // Layers of clothing create a tiny character instead of a colored capsule.
     box(g,.072,.075,.040,'#fff1da',0,.324,.071);
@@ -803,7 +842,7 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
       ball(arm,.027,skin,0,-.15,0);g.add(arm);arms.push(arm);
     }
     if(ref.hat){
-      const cap=ball(g,.085,ref.hat==='beanie'?'#b18cbd':'#588f9e',0,.513,0);
+      const cap=ball(g,.099,ref.hat==='beanie'?'#b18cbd':'#588f9e',0,.534,0);
       cap.scale.set(1,.57,1);
       if(ref.hat==='cap')box(g,.095,.017,.063,'#588f9e',0,.487,.089);
     }
@@ -991,7 +1030,9 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
     // At close-up, lower the virtual eye to show windows, porch geometry and
     // faces; a gentle interpolation preserves the calm overview perspective.
     const closeness=THREE.MathUtils.clamp((v.z-1.0)/2.7,0,1);
-    camera.position.set(v.x+18,24-closeness*6,v.y+18);
+    // Bring the eye down as we approach: rooftops remain visible, but
+    // shop glazing, porches and characters occupy more of the composition.
+    camera.position.set(v.x+18,23-closeness*10,v.y+18);
     camera.lookAt(v.x,.30,v.y);
     camera.updateProjectionMatrix();
   }

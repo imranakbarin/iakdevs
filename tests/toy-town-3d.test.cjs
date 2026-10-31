@@ -9,10 +9,10 @@ const moduleCode=fs.readFileSync(path.join(root,'assets/toy-town-3d.js'),'utf8')
 assert.match(html,/type="importmap"/);
 assert.match(html,/three@0\.187\.0\/build\/three\.module\.js/);
 assert.match(html,/three@0\.187\.0\/examples\/jsm\//);
-assert.match(html,/toy-town-3d\.js\?v=6/);
+assert.match(html,/toy-town-3d\.js\?v=7/);
 assert.match(html,/toy-town\.js\?v=14/);
 assert.ok(html.indexOf('toy-town.js?v=14')<html.indexOf("import('three')"), 'classic fallback starts first');
-assert.match(page,/toy-town\.html\?v=19&embed=1/);
+assert.match(page,/toy-town\.html\?v=20&embed=1/);
 assert.match(moduleCode,/export function mountToyTown3D/);
 assert.match(moduleCode,/new THREE\.WebGLRenderer/);
 assert.match(moduleCode,/window\.ToyTown3D=api/);
@@ -73,7 +73,7 @@ const THREE={
 };
 const win={WebGL2RenderingContext:function(){},innerWidth:390,innerHeight:844,
   devicePixelRatio:3,matchMedia:()=>({matches:false})};
-const canvas2d={fillText(){},beginPath(){},roundRect(){},fill(){stats.paintOperations++;},stroke(){},fillRect(){stats.paintOperations++;},moveTo(){},lineTo(){},createLinearGradient:()=>({addColorStop(){}})};
+const canvas2d={fillText(){},beginPath(){},roundRect(){},ellipse(){},arc(){},fill(){stats.paintOperations++;},stroke(){},fillRect(){stats.paintOperations++;},moveTo(){},lineTo(){},createLinearGradient:()=>({addColorStop(){}})};
 const townCanvas={style:{opacity:'1'}};
 const host={style:{display:'none'},clientWidth:390,clientHeight:844,
   appendChild(o){this.child=o;}};
@@ -130,6 +130,10 @@ assert.match(moduleCode,/Miniature gabled porch roof/,
 assert.match(moduleCode,/Separate warm, irregular limestone pavers/,
   'courtyard pavers replace the rigid grid');
 assert.match(moduleCode,/function plaster\(color\)/,'walls use grainy plaster instead of plain plastic');
+assert.match(moduleCode,/function grassMaterial\(/,'garden uses a reusable painted grass texture');
+assert.match(moduleCode,/grassMaterial\('#b9cba7',10\)/,'land slab has layered grass instead of a flat green box');
+assert.match(moduleCode,/paver.rotation.y=/,'stone paths have irregular handmade placement');
+assert.match(moduleCode,/23-closeness\*10/,'close zoom lowers the eye to show character faces');
 assert.match(moduleCode,/function archedInset\(/,'doors/windows have dimensional arches');
 assert.match(moduleCode,/function turret\(/,'one hero cottage has its own curved tower');
 assert.match(moduleCode,/function sideCottageWing\(/,'another hero cottage has a secondary roof and wing');
