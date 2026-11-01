@@ -77,13 +77,13 @@ assert.match(moduleCode,/eye.scale.y=blink/,'eyelids blink without a separate an
 assert.match(html,/type="importmap"/);
 assert.match(html,/three@0\.187\.0\/build\/three\.module\.js/);
 assert.match(html,/three@0\.187\.0\/examples\/jsm\//);
-assert.match(html,/toy-town-3d\.js\?v=19/);
+assert.match(html,/toy-town-3d\.js\?v=20/);
 assert.match(html,/toy-town-landmarks\.js\?v=4/,'the independent models are requested alongside Three');
 assert.match(html,/buildLandmark:landmarks\.buildLandmark/,
   'loader injects the authored model builder into the 3D simulation');
 assert.match(html,/toy-town\.js\?v=15/);
 assert.ok(html.indexOf('toy-town.js?v=15')<html.indexOf("import('three')"), 'classic fallback starts first');
-assert.match(page,/toy-town\.html\?v=34&embed=1/);
+assert.match(page,/toy-town\.html\?v=35&embed=1/);
 assert.match(fs.readFileSync(path.join(root,'assets/toy-town.js'),'utf8'),
   /targetX=clamp\(\.08,p\.x,17\.92\)/,
   'scripted paths are clamped at the endpoint rather than freezing outside town');
@@ -213,6 +213,9 @@ const sceneWorld=api.scene.children.find(o=>o.children?.some(x=>x.userData?.uniq
 assert.ok(sceneWorld,'scene has a populated world group');
 const contours=sceneWorld.children.filter(o=>o.userData?.landscapeContour);
 assert.ok(contours.length>=2,'real geometric lawn contours join several lots');
+const piazza=sceneWorld.children.find(o=>o.userData?.villagePiazza);
+assert.ok(piazza && piazza.position.x===9 && piazza.position.z===9,
+  'rounded central stone piazza is placed at the heart of the village');
 assert.ok(contours.every(o=>o.position.x>2 && o.position.x<16 &&
   o.position.z>2 && o.position.z<13),
   'new landscaping stays on the grassy town slab, not the river');
@@ -281,6 +284,12 @@ assert.match(moduleCode,/createLandscapeComposition\(\);/,
   'terrain composition is constructed alongside the roads on rebuild');
 assert.match(moduleCode,/function contour\(/,
   'free parcels have organically shaped 3D landscape contours');
+assert.match(moduleCode,/const piazzaShape=new THREE.Shape\(\)/,
+  'the center is an irregular rounded piazza, not a square concrete slab');
+assert.match(moduleCode,/Warm rubbed cobblestones replace/,
+  'all roads use hand-weathered warm stone, not highway-gray asphalt');
+assert.doesNotMatch(moduleCode,/for\(let t=2;t<16;t\+=1\.28\)/,
+  'modern repeating highway dashed lines have been removed');
 
 
 assert.equal(api.getStats().plazaLights,1,'modeled plaza lamps have physical warm light');
