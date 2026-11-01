@@ -5,6 +5,7 @@ on:
   push:
     paths:
       - 'assets/toy-town-3d.js'
+      - 'assets/toy-town-landmarks.js'
       - 'assets/toy-town.js'
       - 'toy-town.html'
       - 'tests/toy-town-visual.cjs'

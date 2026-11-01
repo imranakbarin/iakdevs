@@ -48,7 +48,7 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
   });
   const world = new THREE.Group(); scene.add(world);
   const actors = new Map(), ambient = [], plazaLights = [];
-  let worldSeed = null, worldBuildings = null, worldPropCount = 0, sceneTime = 0;
+  let worldSeed = null, worldBuildings = null, worldPropCount = 0, sceneTime = 0, landmarkCount = 0;
   let stopped = false, frozen = false, raf = 0, frames = 0, redrawCount = 0, lastSize = '', lastFrameAt = 0;
   const TAU = Math.PI * 2, LINES = [1,6,11,16];
   const rgb = (c) => new THREE.Color(c);
@@ -1063,12 +1063,28 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
     }
   }
   function rebuild(){
-    ambient.length = 0; plazaLights.length = 0;
+    ambient.length = 0; plazaLights.length = 0; landmarkCount = 0;
     while(world.children.length)world.remove(world.children[0]);
     for(const [ref,obj] of actors){obj.group.parent?.remove(obj.group);}
     actors.clear();
     createGround();
     for(const b of town.buildings()){
+      // The five central landmarks are *entire independent models*.
+      // Avoid drawing the generic body, roof, porch or old atelier overlays
+      // behind them; an authored asset replaces that complete building.
+      if(b.hero && typeof options.buildLandmark==='function') {
+        try {
+          const unique=options.buildLandmark(THREE,RoundedBoxGeometry,b);
+          if(unique) {
+            unique.userData.landmark=true;
+            world.add(unique);
+            landmarkCount++;
+            continue;
+          }
+        } catch(error) {
+          console.warn('Hero landmark model failed; using classic geometry',error);
+        }
+      }
       if(b.kind==='house')home(b);
       else if(b.kind==='shop')shop(b);
       else if(b.kind==='tower')tower(b);
@@ -1354,7 +1370,7 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
   renderer.domElement.addEventListener('webglcontextrestored',restored,false);
   const api={
     active:false,renderer,scene,camera,
-    getStats:()=>({frames,redrawCount,actors:actors.size,ambient:ambient.length,plazaLights:plazaLights.length,buildings:town.buildings().length,webgl:true,frozen}),
+    getStats:()=>({frames,redrawCount,actors:actors.size,ambient:ambient.length,plazaLights:plazaLights.length,landmarks:landmarkCount,buildings:town.buildings().length,webgl:true,frozen}),
     // A stable actual GPU-rendered frame for visual regression screenshots.
     // Unlike stop(), freeze does not switch to the Canvas fallback.
     freeze(){frozen=true;cancelAnimationFrame(raf);},

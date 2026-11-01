@@ -6,13 +6,26 @@ const root=path.join(__dirname,'..');
 const html=fs.readFileSync(path.join(root,'toy-town.html'),'utf8');
 const page=fs.readFileSync(path.join(root,'index.html'),'utf8');
 const moduleCode=fs.readFileSync(path.join(root,'assets/toy-town-3d.js'),'utf8');
+const landmarkCode=fs.readFileSync(path.join(root,'assets/toy-town-landmarks.js'),'utf8');
+assert.match(landmarkCode,/export function buildLandmark/);
+assert.match(landmarkCode,/function bakery\(/);
+assert.match(landmarkCode,/function bookshop\(/);
+assert.match(landmarkCode,/function roseCottage\(/);
+assert.match(landmarkCode,/function blueCottage\(/);
+assert.match(landmarkCode,/function honeyCottage\(/);
+assert.match(landmarkCode,/function roundedFootprint\(/,'unique facades use extruded footprint geometry');
+assert.match(landmarkCode,/function volumeRoof\(/,'bespoke roofs are actual modeled shells');
+assert.match(landmarkCode,/function arch\(/,'landmark doors have hollow shaped frames');
 assert.match(html,/type="importmap"/);
 assert.match(html,/three@0\.187\.0\/build\/three\.module\.js/);
 assert.match(html,/three@0\.187\.0\/examples\/jsm\//);
-assert.match(html,/toy-town-3d\.js\?v=10/);
+assert.match(html,/toy-town-3d\.js\?v=11/);
+assert.match(html,/toy-town-landmarks\.js\?v=1/,'the independent models are requested alongside Three');
+assert.match(html,/buildLandmark:landmarks\.buildLandmark/,
+  'loader injects the authored model builder into the 3D simulation');
 assert.match(html,/toy-town\.js\?v=14/);
 assert.ok(html.indexOf('toy-town.js?v=14')<html.indexOf("import('three')"), 'classic fallback starts first');
-assert.match(page,/toy-town\.html\?v=23&embed=1/);
+assert.match(page,/toy-town\.html\?v=24&embed=1/);
 assert.match(moduleCode,/export function mountToyTown3D/);
 assert.match(moduleCode,/new THREE\.WebGLRenderer/);
 assert.match(moduleCode,/window\.ToyTown3D=api/);
@@ -44,7 +57,7 @@ class O {
   setAttribute(){}
   addEventListener(name,cb){events[name]=cb;}
 }
-class Geometry {constructor(){stats.geometry++;}translate(){return this;}}
+class Geometry {constructor(){stats.geometry++;}translate(){return this;}rotateX(){return this;}}
 class Material {constructor(o){Object.assign(this,o);this.emissive=new C(o.emissive||'#000');}}
 class Mesh extends O {constructor(g,m){super();this.geometry=g;this.material=m;}}
 class Directional extends O {constructor(){super();this.color=new C('white');this.shadow={
@@ -57,7 +70,7 @@ class Renderer {
   render(){stats.renders++;if(this.throwOnRender)throw Error('GPU render failed');}
   dispose(){stats.dispose++;}
 }
-class Shape {constructor(){this.holes=[];}moveTo(){}lineTo(){stats.profileVertices++;}closePath(){}}
+class Shape {constructor(){this.holes=[];}moveTo(){}lineTo(){stats.profileVertices++;}quadraticCurveTo(){stats.profileVertices++;}closePath(){}}
 class Path extends Shape {}
 class Vector2 extends V {}
 class Vector3 extends V {}
@@ -70,7 +83,7 @@ const THREE={
  PointLight:class extends O {constructor(){super();this.isPointLight=true;this.intensity=0;}},
  MeshStandardMaterial:Material,MeshBasicMaterial:Material,
  Mesh,BoxGeometry:Geometry,SphereGeometry:Geometry,IcosahedronGeometry:Geometry,
- CylinderGeometry:Geometry,TorusGeometry:Geometry,PlaneGeometry:Geometry,ExtrudeGeometry:Geometry,
+ CylinderGeometry:Geometry,ConeGeometry:Geometry,TorusGeometry:Geometry,PlaneGeometry:Geometry,ExtrudeGeometry:Geometry,
  LatheGeometry:Geometry,TubeGeometry:Geometry,
  Shape,Path,Vector2,Vector3,CatmullRomCurve3:Curve,CanvasTexture:Texture,DoubleSide:2,
  SRGBColorSpace:'srgb',ACESFilmicToneMapping:2,PCFSoftShadowMap:3,
@@ -114,9 +127,11 @@ const context={THREE,window:win,document,console,
   requestAnimationFrame:cb=>{callbacks.push(cb);return callbacks.length;},
   cancelAnimationFrame:()=>{}};
 vm.createContext(context);
+const assetBoot=new vm.Script(landmarkCode.replace(/^export /m,'')+';this.landmark=buildLandmark;');
+assetBoot.runInContext(context);
 const boot=new vm.Script(moduleCode.replace(/^export /m,'')+';this.mount=mountToyTown3D;');
 boot.runInContext(context);
-const api=context.mount(THREE,Geometry,town,host);
+const api=context.mount(THREE,Geometry,town,host,{buildLandmark:context.landmark});
 assert.equal(api.active,false,'do not hide classic scene before 3D is drawn');
 assert.equal(host.style.display,'none');
 assert.equal(townCanvas.style.opacity,'1');
@@ -186,6 +201,11 @@ currentCamZoom=1.52;callbacks.shift()();
 assert.ok(Math.abs(api.camera.position.y-normalCameraHeight)<.0001,'camera returns to regular viewing angle');
 assert.equal(api.getStats().actors,3,'pedestrians and vehicles follow the existing simulation');
 assert.equal(api.getStats().buildings,7);
+assert.equal(api.getStats().landmarks,5,'five independently modeled buildings replace generic hero meshes');
+const heroAssets=api.scene.children.flatMap(x=>x.children||[]).filter(x=>x.userData?.uniqueAsset);
+assert.equal(heroAssets.length,5,'five custom asset groups are mounted in the 3D scene');
+assert.equal(new Set(heroAssets.map(x=>x.userData.kind)).size,3,
+  'hero assets have identifiable shop and home model types');
 const modeledArchitecture=api.scene.children.find(o=>o.children?.some(x=>x.position.x===7.5&&x.position.z===7.5));
 assert.ok(modeledArchitecture,'hero architectural assembly is part of the world');
 const oldCount=stats.renders;
