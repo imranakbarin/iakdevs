@@ -44,6 +44,20 @@ assert.match(landmarkCode,/const wing=new T.Group\(\);/,
   'rose cottage has a separately modeled and projecting asymmetric wing');
 assert.match(landmarkCode,/volumeRoof\(dormer/,
   'roof dormers use curved three-dimensional gable shells');
+assert.match(landmarkCode,/function raisedRoofTiles\(/,
+  'each landmark roof has physically overlapping ceramic tile geometry');
+assert.match(landmarkCode,/new T\.InstancedMesh\(tileGeometry,tileMat,count\)/,
+  'ceramic courses are GPU-instanced rather than hundreds of individual draw calls');
+assert.match(landmarkCode,/function carvedRoofRidge\(/,
+  'roof ridge tiles articulate the silhouette in three dimensions');
+assert.match(landmarkCode,/function masonryCorners\(/,
+  'shop and cottage walls include staggered structural quoins');
+assert.match(landmarkCode,/function woodenShutters\(/,
+  'windows include dimensional wooden shutters and louvres');
+assert.match(landmarkCode,/function copperGutters\(/,
+  'roof edges and downspouts are real connected structural elements');
+assert.match(landmarkCode,/function shallowEntrySteps\(/,
+  'door thresholds connect to the surrounding walkable ground');
 assert.doesNotMatch(landmarkCode,/const cap=block\(g,\.29,\.047,\.26/,
   'old flat dormer tops are removed');
 assert.match(landmarkCode,/const shadowTex=/,'landmarks have baked foundation occlusion');
@@ -104,7 +118,7 @@ assert.match(moduleCode,/function syncActors/);
 assert.match(moduleCode,/function syncCamera/);
 assert.match(moduleCode,/function roof/);
 assert.match(moduleCode,/function light/);
-const callbacks=[],stats={created:0,renders:0,geometry:0,dispose:0,frames:0,roofTextures:0,paintOperations:0,profileVertices:0},events={};
+const callbacks=[],stats={created:0,renders:0,geometry:0,dispose:0,frames:0,roofTextures:0,paintOperations:0,profileVertices:0,instances:0,instancedGroups:0},events={};
 class V {
   constructor(x=0,y=0,z=0){this.x=x;this.y=y;this.z=z;}
   set(x,y,z){this.x=x;this.y=y;this.z=z;return this;}
@@ -115,6 +129,8 @@ class C {
   constructor(v){this.hex=v;this.r=.5;this.g=.5;this.b=.5;}
   set(v){this.hex=v;return this;}
   copy(v){this.hex=v.hex;return this;}
+  clone(){return new C(this.hex);}
+  lerp(v,t){return this;}
 }
 class O {
   constructor(){this.position=new V();this.rotation=new V();this.scale=new V(1,1,1);
@@ -122,6 +138,7 @@ class O {
   add(...items){for(const o of items){o.parent=this;this.children.push(o);} }
   remove(o){const i=this.children.indexOf(o);if(i>=0)this.children.splice(i,1);o.parent=null;}
   lookAt(){}
+  updateMatrix(){this.matrix={position:{...this.position},rotation:{...this.rotation}};}
   updateProjectionMatrix(){}
   setAttribute(){}
   addEventListener(name,cb){events[name]=cb;}
@@ -129,6 +146,12 @@ class O {
 class Geometry {constructor(){stats.geometry++;}translate(){return this;}rotateX(){return this;}}
 class Material {constructor(o){Object.assign(this,o);this.emissive=new C(o.emissive||'#000');}}
 class Mesh extends O {constructor(g,m){super();this.geometry=g;this.material=m;}}
+class InstancedMesh extends Mesh {
+  constructor(g,m,count){super(g,m);this.count=count;this.matrices=[];this.colors=[];
+    stats.instances+=count;stats.instancedGroups++;}
+  setMatrixAt(i,m){this.matrices[i]=m;}
+  setColorAt(i,c){this.colors[i]=c;}
+}
 class Directional extends O {constructor(){super();this.color=new C('white');this.shadow={
   mapSize:{set(){}},camera:{},bias:0,radius:0};this.target=new O();}}
 class Renderer {
@@ -146,7 +169,7 @@ class Vector3 extends V {}
 class Curve {constructor(points){this.points=points;}}
 class Texture {constructor(){this.colorSpace='';stats.roofTextures++;}}
 const THREE={
- WebGLRenderer:Renderer, Scene:O, Group:O,
+ WebGLRenderer:Renderer, Scene:O, Group:O, Object3D:O, InstancedMesh,
  Color:C,Fog:class{constructor(col){this.color=new C(col);}},
  OrthographicCamera:O,HemisphereLight:O,DirectionalLight:Directional,
  PointLight:class extends O {constructor(){super();this.isPointLight=true;this.intensity=0;}},
@@ -343,6 +366,20 @@ assert.equal(api.getStats().buildings,7);
 assert.equal(api.getStats().landmarks,5,'five independently modeled buildings replace generic hero meshes');
 const heroAssets=api.scene.children.flatMap(x=>x.children||[]).filter(x=>x.userData?.uniqueAsset);
 assert.equal(heroAssets.length,5,'five custom asset groups are mounted in the 3D scene');
+const roofTiles=[];
+const collectTiles=node=>{
+  if(node.userData?.ceramicRoofTiles)roofTiles.push(node);
+  for(const child of node.children||[])collectTiles(child);
+};
+for(const asset of heroAssets)collectTiles(asset);
+assert.ok(roofTiles.length>=5,'every landmark receives real overlapping curved roof tiles');
+assert.ok(stats.instances>=640,'hundreds of tiles use very few instanced GPU batches');
+assert.ok(stats.instancedGroups<=30,
+  'roof detail uses a bounded number of GPU instancing draw calls');
+assert.ok(roofTiles.every(t=>t.count===128&&t.matrices.length===128),
+  'every roof has complete deterministic tile-course transforms');
+assert.ok(roofTiles.every(t=>t.colors.length===128),
+  'each tile has subtle color variation without new material textures');
 assert.equal(new Set(heroAssets.map(x=>x.userData.kind)).size,3,
   'hero assets have identifiable shop and home model types');
 const modeledArchitecture=api.scene.children.find(o=>o.children?.some(x=>x.position.x===7.5&&x.position.z===7.5));
