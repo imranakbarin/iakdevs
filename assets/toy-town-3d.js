@@ -237,10 +237,21 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
     if(roadSurfaces.has(axis))return roadSurfaces.get(axis);
     const canvas=document.createElement('canvas');canvas.width=256;canvas.height=256;
     const p=canvas.getContext('2d');
-    p.fillStyle='#818d88';p.fillRect(0,0,256,256);
+    // Warm rubbed cobblestones replace the previous uniform highway gray.
+    // Cars continue using the same road mesh and simulation coordinates.
+    p.fillStyle='#a9ab9a';p.fillRect(0,0,256,256);
+    for(let row=0;row<15;row++)for(let col=-1;col<10;col++){
+      const x=col*29+(row%2)*14.5,y=row*18.5;
+      const tintIndex=Math.floor(rng(row*27+col,811)*5);
+      p.fillStyle=['rgba(222,217,188,.10)','rgba(100,108,97,.09)',
+        'rgba(244,229,198,.085)','rgba(135,132,112,.07)',
+        'rgba(203,196,168,.08)'][tintIndex];
+      p.beginPath();p.roundRect(x+1,y+1,27.2,17.4,3);p.fill();
+      p.strokeStyle='rgba(84,101,88,.115)';p.lineWidth=.8;p.stroke();
+    }
     for(let i=0;i<850;i++){
       const x=rng(i,115)*256,y=rng(i,774)*256,r=.35+rng(i,231)*1.35;
-      p.fillStyle=i%5===0?'rgba(238,231,204,.13)':'rgba(55,76,75,.09)';
+      p.fillStyle=i%5===0?'rgba(238,231,204,.12)':'rgba(55,76,75,.065)';
       p.beginPath();p.ellipse(x,y,r,r*.68,rng(i,572)*TAU,0,TAU);p.fill();
     }
     for(let i=0;i<22;i++){
@@ -1456,9 +1467,12 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
     for(const n of LINES){
       groundPiece(1.01,16.03,roadSurface('north-south'),n+.5,9,.132);
       groundPiece(16.03,1.01,roadSurface('east-west'),9,n+.5,.143);
-      for(let t=2;t<16;t+=1.28){
-        groundPiece(.035,.36,'#f3e8d6',n+.5,t+.5,.183);
-        groundPiece(.36,.035,'#f3e8d6',t+.5,n+.5,.190);
+      // No repeated bright highway centre dashes. Cobble seams and garden
+      // verges now give the lanes scale; keep a few discreet travel cues far
+      // from the village square for vehicle readability on mobile.
+      for(let t of [3.1,4.9,13.0,15.1]){
+        groundPiece(.024,.20,'#c6c3af',n+.5,t+.5,.181);
+        groundPiece(.20,.024,'#c6c3af',t+.5,n+.5,.188);
       }
       // Curbs are individual block-front segments, not giant floating strips
       // cutting across every junction and bridge.
@@ -1474,8 +1488,8 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
             length,.40,'east-west');
         }
         for(const edge of [-.068,1.068]) {
-          groundPiece(.063,length,'#d6c9b5',n+edge,(a+b)/2,.194);
-          groundPiece(length,.063,'#d6c9b5',(a+b)/2,n+edge,.194);
+          groundPiece(.054,length,'#bfb5a1',n+edge,(a+b)/2,.185);
+          groundPiece(length,.054,'#bfb5a1',(a+b)/2,n+edge,.185);
         }
       }
       // River bridges have pale stone shoulders, anchored to the same lanes.
@@ -1488,19 +1502,36 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
     // The hero neighborhood is one continuous garden, not sixteen lawns
     // boxed into independent tiles with dark grid joints between them.
     groundPiece(3.96,3.96,grassMaterial('#a6c49f'),9,9,.179);
-    groundPiece(1.96,1.96,'#e5d7ba',9,9,.180);
-    // Separate warm, irregular limestone pavers with recessed joints:
-    // a staggered hand-set pattern keeps movement paths clear for residents.
+    // A continuous, softly scalloped village green replaces the boxy central
+    // paving slab. The heart is a rounded stone piazza with irregular lawn
+    // pockets; the same pedestrian routes remain visible and unobstructed.
+    const piazzaShape=new THREE.Shape();
+    for(let i=0;i<=32;i++){
+      const a=i*TAU/32,organic=1+.055*Math.sin(3*a+.3)+
+        .035*Math.sin(7*a-1.1);
+      const px=Math.cos(a)*1.14*organic,pz=Math.sin(a)*1.09*organic;
+      if(i===0)piazzaShape.moveTo(px,pz);else piazzaShape.lineTo(px,pz);
+    }
+    piazzaShape.closePath();
+    const piazza=object(world,new THREE.ExtrudeGeometry(piazzaShape,{
+      depth:.038,bevelEnabled:true,bevelSize:.028,bevelThickness:.009,
+      bevelSegments:2,steps:1
+    }),mat('#e5d9bd'),9,.185,9,false);
+    piazza.rotation.x=-Math.PI/2;
+    piazza.userData.villagePiazza=true;
+    // Hand-set pavers follow the curved perimeter, not a square grid.
     const stone=['#ede1c9','#e6d7ba','#e9ddc7','#e2d4bb'];
-    for(let row=0;row<6;row++)for(let col=0;col<6;col++){
-      const px=8.16+col*.335+(row%2)*.07;
-      const pz=8.16+row*.338;
-      if(px>9.91||pz>9.91)continue;
-      const jitter=(rng(col*19+row,434)-.5)*.054;
-      const paver=groundPiece(.27+rng(col,row)*.040,.276+rng(row,col)*.042,
-        stone[(row*3+col)%4],px+jitter,pz-jitter*.7,.221);
+    for(let row=0;row<7;row++)for(let col=0;col<7;col++){
+      const px=8.06+col*.305+(row%2)*.065;
+      const pz=8.07+row*.307;
+      const dx=px-9,dz=pz-9;
+      if((dx*dx)/(1.08*1.08)+(dz*dz)/(1.02*1.02)>.91)continue;
+      const jitter=(rng(col*19+row,434)-.5)*.065;
+      const paver=groundPiece(.251+rng(col,row)*.037,
+        .251+rng(row,col)*.038,stone[(row*3+col)%4],
+        px+jitter,pz-jitter*.7,.235);
       // Slight handmade irregularity removes the machine-perfect grid.
-      paver.rotation.y=(rng(col*37+row,row*17+col)-.5)*.10;
+      paver.rotation.y=(rng(col*37+row,row*17+col)-.5)*.13;
     }
     // Hand-set garden ribbons transition the little courtyard into the grass,
     // instead of floating as a paved square cut out of a flat sheet.
