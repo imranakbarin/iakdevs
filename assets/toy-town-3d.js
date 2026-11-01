@@ -2022,6 +2022,31 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
       if(ref.hat==='cap')box(g,.095,.017,.063,'#588f9e',0,.487,.089);
     }
     if(ref.bag)box(g,.06,.15,.12,'#ae8966',-.106,.24,-.038);
+    // Specific silhouettes communicate a role before the visitor even moves.
+    // No billboard labels: their tools and clothing are physical geometry.
+    if(ref.kind==='chef'){
+      cylinder(g,.075,.078,.088,'#fff5e9',0,.568,0);
+      const puff=ball(g,.096,'#fff9f1',0,.620,0);puff.scale.set(1,.56,1);
+      box(g,.13,.13,.026,'#fff2e4',0,.269,.078);
+    }else if(ref.kind==='sweeper'){
+      const shaft=cylinder(g,.012,.014,.49,'#947455',.134,.26,.094);
+      shaft.rotation.z=-.25;
+      box(g,.14,.064,.055,'#b5a182',.19,.042,.094);
+      box(g,.17,.021,.04,'#5e786d',0,.23,.078);
+    }else if(ref.kind==='farmer'||ref.kind==='keeper'){
+      const brim=cylinder(g,.115,.115,.025,'#c7b38b',0,.555,0);
+      cylinder(g,.080,.085,.095,'#ab906d',0,.600,0);
+      const basket=box(g,.13,.105,.11,'#b6956b',-.15,.190,.055);
+      basket.castShadow=false;
+    }else if(ref.kind==='robot'){
+      const visor=box(face,.166,.058,.024,'#7faeb5',0,.456,.109);
+      box(g,.135,.021,.034,'#627c87',0,.305,.090);
+      cylinder(face,.012,.012,.077,'#aebec1',0,.580,0);
+      const beacon=ball(face,.029,'#f1ca8c',0,.631,0);beacon.castShadow=false;
+    }else if(ref.kind==='newsie'){
+      const satchel=box(g,.092,.130,.078,'#a88367',-.129,.228,.057);
+      box(g,.103,.022,.031,'#f9e8d0',-.129,.285,.099);
+    }
     g.userData.limbs={legs,arms,shins,eyelids,headPivot};
     // Lightweight deterministic silhouette variation: coat, satchel or vest,
     // plus narrow waist and different hats already supplied by simulation.
@@ -2330,7 +2355,7 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
         for(const eye of limbs.eyelids||[])eye.scale.y=blink<.18?.16:1;
         g.position.y+=moving?Math.abs(Math.sin((ref.travel||0)*17))*.012:0;
       }
-      if(item.kind==='car'){
+      if(item.kind==='car'||item.kind==='bike'){
         const rig=g.userData.vehicleRig;
         if(rig){
           for(const wheel of rig.wheels)wheel.rotation.z=-(ref.travel||0)*12;
