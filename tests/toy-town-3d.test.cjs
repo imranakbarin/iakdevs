@@ -22,6 +22,11 @@ assert.match(landmarkCode,/toneMapped:false/,'sign lettering is legible without 
 assert.match(landmarkCode,/BOOK NOOK/,'bookshop sign is compact enough for mobile');
 assert.match(moduleCode,/const rim=new THREE.DirectionalLight/,'sculpted character surfaces have shadow-free fill');
 assert.match(moduleCode,/function roadSurface\(axis\)/,'roads share tactile matte wear instead of flat plastic');
+assert.match(moduleCode,/const landscapeAtlas=/,'town has a continuous non-repeating terrain paint layer');
+assert.match(moduleCode,/function vergeMaterial\(axis\)/,'street edges have shared soft painted vegetation');
+assert.match(moduleCode,/function paintedVerge\(/,'street verges have physically placed decals');
+assert.match(moduleCode,/groundPiece\(3\.96,3\.96,grassMaterial/,'central landscaping is one courtyard not sixteen tiles');
+assert.doesNotMatch(moduleCode,/groundPiece\(\.97,\.97,middle/,'the old rigid 4 by 4 lawn patchwork is removed');
 assert.match(moduleCode,/function groundingShadow\(/,'architecture and trees have soft contact occlusion');
 assert.match(moduleCode,/const studioMat=/,'model sits on a photographed gradient table');
 assert.match(moduleCode,/sun\.color\.set\(tint\(/,'sunset light transitions smoothly without snapping hues');
@@ -31,13 +36,13 @@ assert.match(moduleCode,/eye.scale.y=blink/,'eyelids blink without a separate an
 assert.match(html,/type="importmap"/);
 assert.match(html,/three@0\.187\.0\/build\/three\.module\.js/);
 assert.match(html,/three@0\.187\.0\/examples\/jsm\//);
-assert.match(html,/toy-town-3d\.js\?v=13/);
+assert.match(html,/toy-town-3d\.js\?v=14/);
 assert.match(html,/toy-town-landmarks\.js\?v=2/,'the independent models are requested alongside Three');
 assert.match(html,/buildLandmark:landmarks\.buildLandmark/,
   'loader injects the authored model builder into the 3D simulation');
 assert.match(html,/toy-town\.js\?v=14/);
 assert.ok(html.indexOf('toy-town.js?v=14')<html.indexOf("import('three')"), 'classic fallback starts first');
-assert.match(page,/toy-town\.html\?v=26&embed=1/);
+assert.match(page,/toy-town\.html\?v=27&embed=1/);
 assert.match(moduleCode,/export function mountToyTown3D/);
 assert.match(moduleCode,/new THREE\.WebGLRenderer/);
 assert.match(moduleCode,/window\.ToyTown3D=api/);
@@ -159,6 +164,13 @@ const groundedPads=sceneWorld.children.filter(o=>o.material?.transparent&&o.mate
 assert.ok(groundedPads.length>=7,'soft contact shading integrates the slab, buildings and trees');
 assert.ok(groundedPads.some(p=>p.position.x===7.5&&p.position.z===7.5),
   "the landmark ground shadow is physically centered beneath its foundation");
+const meadow=sceneWorld.children.find(o=>o.userData?.continuousLandscape);
+assert.ok(meadow?.material?.transparent && meadow.position.x===9 && meadow.position.z===9,
+  'whole town receives a single transparent soil-and-meadow overlay');
+const verges=sceneWorld.children.filter(o=>o.userData?.terrainVerge);
+assert.ok(verges.length>=32,'street corners gain soft, bounded verges instead of paving-grid seams');
+assert.ok(verges.every(o=>o.rotation.x===-Math.PI/2),'landscape decals lie on the ground');
+assert.ok(verges.every(o=>o.position.y<.18),'road verges cannot float above the curbs');
 const roadMesh=sceneWorld.children.find(o=>o.position.x===1.5&&o.position.z===9);
 assert.ok(roadMesh?.material?.map,'roads have painted surface materials');
 assert.ok(stats.roofTextures>=2,'roof textures created for different colored gables');
