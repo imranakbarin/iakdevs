@@ -1239,6 +1239,13 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
       const body=ball(duck,.11,'#f9d767',0,0,0);body.scale.set(1.25,.70,.93);
       ball(duck,.065,'#fff0ad',.095,.07,0);
       box(duck,.065,.025,.055,'#ed9d61',.16,.055,.02);
+      const wings=[];
+      for(const side of [-1,1]){
+        const wing=new THREE.Group();wing.position.set(-.028,.034,side*.076);
+        const plumage=ball(wing,.069,'#e9c76b',-.025,0,side*.013);
+        plumage.scale.set(1.05,.45,.65);duck.add(wing);wings.push(wing);
+      }
+      duck.userData.duckWings=wings;
       ambient.push({kind:'duck',mesh:duck,ref:p,phase:i*.65});
     }
     else if(k==='times'){
@@ -2157,54 +2164,97 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
     g.userData.bicycleRig={wheels,crank,legs};
     return g;
   }
-  function creature(ref) {
-    const g=new THREE.Group(), kind=ref.kind;
+  function creature(ref){
+    const g=new THREE.Group(),kind=ref.kind;
+    const rig={kind,legs:[],wings:[],tail:null,head:null};
     if(kind==='ghost'){
-      const body=ball(g,.16,'#f5efe3',0,.22,0);
-      body.scale.set(.8,1.42,.8);
-      for(const x of [-.055,.055])ball(g,.016,'#465263',x,.29,.124);
-      return g;
+      const core=ball(g,.18,'#faf1e4',0,.25,0);core.scale.set(.82,1.4,.88);
+      const cloak=ball(g,.17,'#f3e9df',0,.16,0);cloak.scale.set(.99,.47,1);
+      for(const z of [-.085,.085])ball(g,.016,'#465263',.137,.30,z);
+      g.userData.creatureRig=rig;return g;
     }
     if(kind==='penguin'){
-      const torso=ball(g,.125,'#45515a',0,.22,0);
-      torso.scale.set(.82,1.55,.83);
-      const bib=ball(g,.092,'#f7eee1',0,.19,.075);bib.scale.set(.8,1.4,.42);
-      for(const x of [-.04,.04])ball(g,.012,'#252e38',x,.35,.097);
-      box(g,.09,.025,.065,'#e3a461',0,.30,.135);
-      return g;
+      const torso=ball(g,.155,'#43545c',0,.255,0);
+      torso.scale.set(.72,1.23,.88);
+      const bib=ball(g,.126,'#f7eee1',.091,.245,0);bib.scale.set(.38,1.22,.88);
+      const head=ball(g,.116,'#45535d',0,.45,0);
+      for(const z of [-.057,.057])ball(g,.014,'#252e38',.094,.472,z);
+      const beak=box(g,.095,.038,.066,'#e3a461',.142,.419,0);
+      for(const z of [-.095,.095]){
+        const flipper=new THREE.Group();flipper.position.set(0,.333,z);g.add(flipper);
+        const wing=ball(flipper,.107,'#52656e',0,-.053,z>0?.025:-.025);
+        wing.scale.set(.35,1.1,.51);rig.wings.push(flipper);
+        box(g,.115,.031,.075,'#e4a662',.065,.115,z);
+      }
+      rig.head=head;g.userData.creatureRig=rig;return g;
     }
     if(kind==='hen'){
-      const body=ball(g,.12,'#fff7eb',0,.17,0);body.scale.set(1.25,.90,1);
-      ball(g,.075,'#fff3dd',.11,.23,0);
-      const comb=ball(g,.035,'#d76a64',.11,.31,0);
-      box(g,.075,.025,.045,'#dfa05d',.17,.22,0);
-      return g;
+      const breast=ball(g,.145,'#f7eee0',0,.205,0);
+      breast.scale.set(1.22,.81,.91);
+      const neck=ball(g,.074,'#fff4e0',.133,.266,0);
+      const head=ball(g,.072,'#fff7e9',.175,.312,0);
+      const crest=ball(g,.032,'#d76a64',.16,.384,0);crest.scale.set(1,.95,.52);
+      const beak=box(g,.067,.023,.045,'#dfa05d',.245,.307,0);
+      for(const z of [-.105,.105]){
+        const wingGroup=new THREE.Group();wingGroup.position.set(-.015,.238,z);g.add(wingGroup);
+        const wing=ball(wingGroup,.092,'#ead9bc',-.015,-.015,0);
+        wing.scale.set(1.22,.52,.56);rig.wings.push(wingGroup);
+        const leg=cylinder(g,.010,.013,.083,'#d4a16d',.065,.091,z*.52);
+        leg.castShadow=false;
+        ball(g,.012,'#2d3031',.223,.336,z*.27);
+      }
+      for(let k=0;k<3;k++)ball(g,.055,'#eddec8',-.16-k*.017,
+        .225+k*.035,(k-1)*.053);
+      rig.head=head;g.userData.creatureRig=rig;return g;
     }
     if(kind==='dino'){
-      const body=ball(g,.32,'#8fba8c',0,.38,0);body.scale.set(1.3,.8,.82);
-      cylinder(g,.14,.12,.50,'#8fba8c',.28,.70,0);
-      ball(g,.16,'#93c69f',.30,.92,.0);
-      for(let j=0;j<4;j++)ball(g,.065,'#6e9f79',-.2+j*.13,.63,0);
-      for(const x of [-.21,.20])cylinder(g,.065,.06,.32,'#729e80',x,.17,0);
-      ball(g,.018,'#3d4e4a',.40,.96,.12);
-      return g;
+      const body=ball(g,.32,'#83b494',0,.38,0);body.scale.set(1.3,.78,.81);
+      const neck=new THREE.Group();neck.position.set(.24,.56,0);g.add(neck);
+      cylinder(neck,.13,.13,.38,'#8ab99b',0,.10,0);
+      const head=ball(neck,.16,'#9cc7a0',.02,.35,0);
+      for(const z of [-.125,.125])ball(neck,.018,'#364a43',.118,.39,z);
+      rig.head=neck;
+      for(let k=0;k<5;k++){
+        const plate=ball(g,.075,'#64947c',-.22+k*.14,.607,0);
+        plate.scale.set(.7,1.17,.75);
+      }
+      const tail=new THREE.Group();tail.position.set(-.29,.36,0);g.add(tail);
+      const tip=ball(tail,.25,'#80ad8d',-.21,-.025,0);tip.scale.set(1.20,.36,.49);
+      rig.tail=tail;
+      for(const x of [-.21,.20]){
+        const leg=new THREE.Group();leg.position.set(x,.24,0);g.add(leg);
+        cylinder(leg,.055,.065,.24,'#729e80',0,-.12,0);rig.legs.push(leg);
+      }
+      g.userData.creatureRig=rig;return g;
     }
-    // Dogs and llamas are quadrupeds, not human avatars.
-    const llama=kind==='llama',fur=llama?'#efe2cb':'#b88d68';
-    const body=ball(g,llama?.19:.17,fur,0,llama?.31:.22,0);
-    body.scale.set(1.4,.75,.82);
-    for(const x of [-.17,.17])for(const z of [-.09,.09])
-      cylinder(g,.030,.038,llama?.30:.18,fur,x,llama?.17:.10,z);
-    if(llama)cylinder(g,.075,.085,.52,fur,.21,.62,0);
-    const head=ball(g,llama?.10:.12,fur,.25,llama?.86:.33,0);
-    head.scale.set(1.12,.87,.95);
-    for(const z of [-.07,.07]){
-      const ear=ball(g,.046,fur,.23,llama?1.01:.45,z);
-      ear.scale.set(.58,1.5,.65);
+    // Quadrupeds have a connected head, moving tail and a real four-leg gait.
+    const llama=kind==='llama',fur=llama?'#e8dec9':'#ad8866';
+    const body=ball(g,llama?.20:.175,fur,0,llama?.37:.265,0);
+    body.scale.set(1.40,.79,.87);
+    for(const x of [-.16,.16])for(const z of [-.095,.095]){
+      const leg=new THREE.Group();leg.position.set(x,llama?.28:.21,z);g.add(leg);
+      const size=llama?.27:.17;
+      cylinder(leg,.032,.040,size,fur,0,-size*.46,0);
+      const paw=ball(leg,.036,llama?'#b7a991':'#806c57',
+        .035,-size*.9,.01);paw.scale.set(1.27,.42,.78);
+      rig.legs.push(leg);
     }
-    const nose=ball(g,.045,'#765a4c',llama?.36:.37,llama?.84:.30,0);
-    for(const z of [-.075,.075])ball(g,.013,'#322d29',llama?.31:.32,llama?.92:.38,z);
-    return g;
+    const neck=new THREE.Group();neck.position.set(.22,llama?.49:.35,0);g.add(neck);
+    if(llama)cylinder(neck,.071,.086,.36,fur,0,.11,0);
+    const face=ball(neck,llama?.106:.115,fur,.04,llama?.31:.01,0);
+    face.scale.set(1.15,.90,.96);
+    const y=llama?.42:.115;
+    const muzzle=ball(neck,.062,llama?'#e3d5bf':'#c9aa8a',.138,y-.025,0);
+    muzzle.scale.set(1.15,.65,.85);
+    for(const side of [-1,1]){
+      const ear=ball(neck,.045,fur,.012,y+.105,side*.08);
+      ear.scale.set(.61,1.40,.60);
+      ball(neck,.013,'#332f2c',.125,y+.006,side*.083);
+    }
+    const tail=new THREE.Group();tail.position.set(-.225,llama?.40:.32,0);g.add(tail);
+    const tuft=ball(tail,llama?.077:.065,fur,-.065,.032,0);
+    tuft.scale.set(1.25,.66,.75);rig.tail=tail;rig.head=neck;
+    g.userData.creatureRig=rig;return g;
   }
   function actor(ref){
     const animal=['dog','hen','penguin','llama','dino','ghost'].includes(ref.kind);
