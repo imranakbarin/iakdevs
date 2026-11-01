@@ -108,7 +108,7 @@ assert.match(moduleCode,/function groundingShadow\(/,'architecture and trees hav
 assert.match(moduleCode,/const studioMat=/,'model sits on a photographed gradient table');
 assert.match(moduleCode,/sun\.color\.set\(tint\(/,'sunset light transitions smoothly without snapping hues');
 assert.match(html,/#town-3d::after/,'lens finish has a restrained noninteractive vignette');
-assert.match(moduleCode,/g.userData.limbs=\{legs,arms,eyelids\}/,'figures animate eyelids');
+assert.match(moduleCode,/g.userData.limbs=\{legs,arms,shins,eyelids,headPivot\}/,'figures now have articulated knees, eyelids and independently moving heads');
 assert.match(moduleCode,/eye.scale.y=blink/,'eyelids blink without a separate animation thread');
 assert.match(html,/type="importmap"/);
 assert.match(html,/three@0\.187\.0\/build\/three\.module\.js/);
