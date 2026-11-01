@@ -33,7 +33,6 @@ async function main(){
     const jobs=[
       {name:'mobile-3d-close',w:390,h:844,classic:false,zoom:1.7},
       {name:'desktop-3d-close',w:1280,h:820,classic:false,zoom:1.8},
-      {name:'mobile-legacy-camera',w:390,h:844,classic:false,zoom:1.7,legacy:true},
       {name:'mobile-classic-reference',w:390,h:844,classic:true,zoom:1.7}
     ];
     const records=[];
@@ -44,7 +43,7 @@ async function main(){
       const errors=[];
       page.on('pageerror',err=>errors.push('pageerror:'+err.message));
       page.on('console',m=>{if(m.type()==='error')errors.push('console:'+m.text().slice(0,250));});
-      await page.goto('http://127.0.0.1:'+port+'/toy-town.html?visual=1'+(job.classic?'&classic=1':job.legacy?'&legacycam=1':''),
+      await page.goto('http://127.0.0.1:'+port+'/toy-town.html?visual=1'+(job.classic?'&classic=1':''),
         {waitUntil:'domcontentloaded',timeout:45000});
       await page.waitForFunction(()=>typeof ToyTown!=='undefined'&&ToyTown.buildings().length>0,
         {timeout:50000});
@@ -101,8 +100,6 @@ async function main(){
       if(job.name==='mobile-3d-close'){
         // Image can be recovered without binary artifact download permissions.
         console.log('TOY_CITY_JPEG_BEGIN '+image.toString('base64')+' TOY_CITY_JPEG_END');
-      }else if(job.name==='mobile-legacy-camera'){
-        console.log('TOY_CITY_LEGACY_JPEG_BEGIN '+image.toString('base64')+' TOY_CITY_LEGACY_JPEG_END');
       }
       await context.close();
     }
