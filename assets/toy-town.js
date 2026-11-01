@@ -267,7 +267,9 @@ const ToyTown = (() => {
     const m = Object.assign({type: 'person', x: p.x, y: p.y, d: p.d, v: 0, travel: 0, max: .35 + r() * .25, col: PASTEL[r() * PASTEL.length | 0], skin: ['#f1c9a5', '#d8a77c', '#a8754f', '#7a4e33'][r() * 4 | 0],
       hat: r() < .23 ? (r() < .5 ? 'cap' : 'beanie') : null,
       bag: r() < .25, scarf: r() < .24, hair: r() < .5 ? '#49362d' : '#333947',
-      lane: (r() < .5 ? 1 : -1) * (.4 + r() * .07), ph: r() * 6, wait: 0}, opts);
+      lane: (r() < .5 ? 1 : -1) * (.4 + r() * .07), ph: r() * 6, wait: 0,
+      intent:'walking', nextNotice:clock+7+r()*10, observeUntil:0,
+      attention:null}, opts);
     movers.push(m); return m;
   }
   // These neighbors stay within open paths; the bakery, bookshop, bench and
@@ -307,9 +309,11 @@ const ToyTown = (() => {
     }
     m.heroIndex++;
     m.sit = false; m.crossing = !!dest.cross;
+    m.intent=dest.cross?'crossing':'destination';m.attention={x:dest.x,y:dest.y};
     m.path = [{x:dest.x,y:dest.y,speed:m.max,then:walker=>{
       walker.v = 0; walker.crossing = false;
       walker.stopUntil = clock + dest.dwell;
+      walker.intent=dest.sit?'rest':dest.wave?'greeting':'waiting';
       walker.sit = !!dest.sit;
       if (dest.wave) walker.waveUntil = clock + Math.min(dest.dwell, 1.4);
     }}];
@@ -332,6 +336,26 @@ const ToyTown = (() => {
   function step(m, dt) {
     if (m.stopUntil && clock < m.stopUntil) { m.v = 0; return; }
     if (m.path) return stepPath(m, dt);
+    // Free pedestrians have local awareness, not a global scripted parade.
+    // They notice nearby storefronts, pause briefly, then resume their route.
+    // They never teleport or step into the shop/road center to do so.
+    if(m.type==='person'&&!m.kind&&!m.heroResident){
+      if(clock<(m.observeUntil||0)){m.v=0;return;}
+      if(m.intent==='browse'){m.intent='walking';m.attention=null;}
+      if(clock>=(m.nextNotice||0)&&m.max>.05){
+        m.nextNotice=clock+13+Math.random()*9;
+        const nearby=buildings.filter(b=>b.kind==='shop')
+          .map(b=>({x:b.x+.5,y:b.y+.5,d:Math.hypot(b.x+.5-m.x,b.y+.5-m.y)}))
+          .filter(b=>b.d>.58&&b.d<1.70)
+          .sort((a,b)=>a.d-b.d)[0];
+        const atJunction=LINES.some(l=>Math.abs(m.x-(l+.5))<.36&&
+          Math.abs(m.y-(l+.5))<.36);
+        if(nearby&&!atJunction){
+          m.intent='browse';m.attention={x:nearby.x,y:nearby.y};
+          m.observeUntil=clock+1.7+Math.random()*1.5;m.v=0;return;
+        }
+      }
+    }
     const [dx, dy] = DIRS[m.d];
     let want = m.max;
     if (m.type === 'car') {   // keep a gap to whatever is ahead in the lane, and stop for red lights
@@ -353,7 +377,20 @@ const ToyTown = (() => {
       if (heldAtLight(m, .62)) want = 0;
       for (const o of movers) if (o !== m && o.type === 'person' && o.d === m.d) { const ahead = (o.x - m.x) * dx + (o.y - m.y) * dy, side = Math.abs((o.x - m.x) * dy) + Math.abs((o.y - m.y) * dx); if (ahead > 0 && ahead < .3 && side < .1) want = Math.min(want, o.v * .8); }
     }
-    m.v += (want - m.v) * Math.min(1, dt * 3);
+    if(m.type==='person'&&!m.path&&m.max>.05){
+      // Personal space: a pedestrian naturally eases behind another walker.
+      for(const o of movers)if(o!==m&&o.type==='person'&&!o.path){
+        const ahead=(o.x-m.x)*dx+(o.y-m.y)*dy;
+        const lateral=Math.abs((o.x-m.x)*dy-(o.y-m.y)*dx);
+        if(ahead>.03&&ahead<.40&&lateral<.16)
+          want=Math.min(want,ahead<.20?0:Math.max(0,o.v*.75));
+      }
+    }
+    if(m.type==='car'){
+      m.braking=want<m.max*.43&&m.v>.06;
+      if(clock>=(m.turnUntil||0))m.turnSignal=null;
+    }
+    m.v += (want - m.v) * Math.min(1, dt * (m.type==='car'?2.1:3));
     const before = m.d < 2 ? m.x : m.y;
     m.x += dx * m.v * dt; m.y += dy * m.v * dt;
     m.travel = (m.travel || 0) + Math.abs(m.v * dt); // footsteps/wheels follow distance, not wall-clock time
@@ -362,7 +399,11 @@ const ToyTown = (() => {
       const c = l + .5;
       if ((before - c) * (now - c) <= 0 && before !== now) {
         const opts = DIRS.map((_, i) => i).filter(i => i !== (m.d ^ 1)).filter(i => { const nx = Math.round((m.d < 2 ? c : m.x) - .5 + DIRS[i][0]), ny = Math.round((m.d < 2 ? m.y : c) - .5 + DIRS[i][1]); const t = tile(nx, ny); return t && (t.kind === 'road' || t.kind === 'bridge'); });
-        if (opts.length && (Math.random() < .45 || !opts.includes(m.d))) { const nd = opts[Math.random() * opts.length | 0]; if (nd !== m.d) { if (m.d < 2) m.x = c; else m.y = c; m.d = nd; } }
+        if (opts.length && (Math.random() < .45 || !opts.includes(m.d))) { const nd = opts[Math.random() * opts.length | 0]; if (nd !== m.d) {
+          const cross=DIRS[m.d][0]*DIRS[nd][1]-DIRS[m.d][1]*DIRS[nd][0];
+          if(m.type==='car'){m.turnSignal=cross>0?'left':'right';m.turnUntil=clock+1.1;}
+          if (m.d < 2) m.x = c; else m.y = c; m.d = nd;
+        } }
       }
     }
     if (m.x < 1.4 || m.x > 16.6 || m.y < 1.4 || m.y > 16.6) { m.d ^= 1; m.x = clamp(1.45, m.x, 16.55); m.y = clamp(1.45, m.y, 16.55); }
