@@ -198,7 +198,8 @@ let buildings=[
   {kind:'shop',x:8,y:7,h:40,hero:true,wall:'#decdbd',awning:'#b56e5e',name:'BAKERY'},
   {kind:'shop',x:9,y:7,h:38,hero:true,wall:'#bcd7d1',awning:'#547c79',name:'BOOKS'},
   {kind:'house',x:3,y:3,h:33,wall:'#d6d7c0',roof:'#b4785a'},
-  {kind:'fire',x:12,y:12,h:26,wall:'#d56a59'}];
+  {kind:'fire',x:12,y:12,h:26,wall:'#d56a59'},
+  {kind:'tower',x:3,y:4,h:88,wall:'#a8bfd1'}];
 const props=[
   {kind:'tree',x:7.5,y:9.5,s:1,c:'#7a9973'},
   {kind:'hero-shrub',x:8.5,y:9.5,col:'#58976b'},
@@ -368,9 +369,9 @@ assert.ok(api.camera.position.y < normalCameraHeight,'close zoom lowers viewing 
 currentCamZoom=1.52;callbacks.shift()();
 assert.ok(Math.abs(api.camera.position.y-normalCameraHeight)<.0001,'camera returns to regular viewing angle');
 assert.equal(api.getStats().actors,3,'pedestrians and vehicles follow the existing simulation');
-assert.equal(api.getStats().buildings,7);
+assert.equal(api.getStats().buildings,8);
 assert.equal(api.getStats().landmarks,5,'five independently modeled buildings replace generic hero meshes');
-assert.equal(api.getStats().composedBuildings,1,
+assert.equal(api.getStats().composedBuildings,2,
   'the secondary house has staggered visual-only architecture');
 const secondary=api.scene.children.flatMap(o=>o.children||[])
   .find(o=>o.userData?.composedSecondary);
@@ -380,6 +381,15 @@ assert.ok(Math.abs(secondary.userData.composition.offsetX)<.06 &&
   'street-facing house offsets never move into the traffic lane');
 assert.ok(Math.abs(secondary.rotation.y)<.10,
   'varied houses stay realistically oriented to the village');
+const newTowers=api.scene.children.flatMap(o=>o.children||[])
+  .filter(o=>o.userData?.storybookTower);
+assert.equal(newTowers.length,1,'background tower is a handcrafted storybook assembly');
+assert.ok(newTowers[0].userData?.composedSecondary,
+  'the taller masonry tower also participates in safe street staggering');
+assert.match(moduleCode,/function tower\(b\)[\s\S]*?const slate=/,
+  'old office-block tower is now a tile-roofed miniature building');
+assert.match(moduleCode,/archedInset\(g,x,y,\.413/,
+  'towers have recessed, arched windows instead of a repeated flat-glass grid');
 const heroAssets=api.scene.children.flatMap(x=>x.children||[]).filter(x=>x.userData?.uniqueAsset);
 assert.equal(heroAssets.length,5,'five custom asset groups are mounted in the 3D scene');
 const roofTiles=[];
