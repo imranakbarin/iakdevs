@@ -15,6 +15,20 @@ assert.match(landmarkCode,/function blueCottage\(/);
 assert.match(landmarkCode,/function honeyCottage\(/);
 assert.match(landmarkCode,/function roundedFootprint\(/,'unique facades use extruded footprint geometry');
 assert.match(landmarkCode,/function volumeRoof\(/,'bespoke roofs are actual modeled shells');
+assert.match(landmarkCode,/function photographicGlass\(warm=false\)/,
+  'windows have shared reflective-sky and lamplit-interior material');
+assert.match(landmarkCode,/type==='stucco'/,
+  'landmark mineral plaster uses a distinct atlas');
+assert.match(landmarkCode,/type==='tile'/,
+  'roof clay and slate have weathered staggered handmade tiling');
+assert.match(landmarkCode,/type==='stone'/,
+  'ground courses and window surrounds have real painted ashlar');
+assert.match(landmarkCode,/type==='wood'/,
+  'timber framing is rendered with directional grain');
+assert.match(landmarkCode,/const glassCache=new Map\(\)/,
+  'architectural window materials are reused rather than generated per pane');
+assert.match(landmarkCode,/Layered eaves:/,
+  'roof edges contain dimensional undersides, fascia and ridgework');
 assert.match(landmarkCode,/function arch\(/,'landmark doors have hollow shaped frames');
 assert.match(landmarkCode,/function crossGable\(/,
   'independently sculpted front cross gables change the five landmark rooflines');
@@ -64,12 +78,12 @@ assert.match(html,/type="importmap"/);
 assert.match(html,/three@0\.187\.0\/build\/three\.module\.js/);
 assert.match(html,/three@0\.187\.0\/examples\/jsm\//);
 assert.match(html,/toy-town-3d\.js\?v=18/);
-assert.match(html,/toy-town-landmarks\.js\?v=3/,'the independent models are requested alongside Three');
+assert.match(html,/toy-town-landmarks\.js\?v=4/,'the independent models are requested alongside Three');
 assert.match(html,/buildLandmark:landmarks\.buildLandmark/,
   'loader injects the authored model builder into the 3D simulation');
 assert.match(html,/toy-town\.js\?v=14/);
 assert.ok(html.indexOf('toy-town.js?v=14')<html.indexOf("import('three')"), 'classic fallback starts first');
-assert.match(page,/toy-town\.html\?v=31&embed=1/);
+assert.match(page,/toy-town\.html\?v=32&embed=1/);
 assert.match(moduleCode,/export function mountToyTown3D/);
 assert.match(moduleCode,/new THREE\.WebGLRenderer/);
 assert.match(moduleCode,/window\.ToyTown3D=api/);
