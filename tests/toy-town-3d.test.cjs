@@ -51,6 +51,18 @@ assert.match(landmarkCode,/createRadialGradient/,'grounding uses a soft, feather
 assert.match(landmarkCode,/toneMapped:false/,'sign lettering is legible without harsh tone mapping');
 assert.match(landmarkCode,/BOOK NOOK/,'bookshop sign is compact enough for mobile');
 assert.match(moduleCode,/const rim=new THREE.DirectionalLight/,'sculpted character surfaces have shadow-free fill');
+assert.match(moduleCode,/EquirectangularReflectionMapping/,
+  'window reflections and painted surfaces share a warm studio sky');
+assert.match(moduleCode,/THREE\.WebGLRenderTarget&&THREE\.ShaderMaterial/,
+  'filmic tilt-shift finish is optional when WebGL features are unsupported');
+assert.match(moduleCode,/film\.target\.setSize\(rw,rh\)/,
+  'the photographic render target follows mobile and desktop resize');
+assert.match(moduleCode,/renderer\.setRenderTarget\(null\)/,
+  'the cinematic pass returns to the real device framebuffer');
+assert.match(moduleCode,/film=null;[\s\S]*?renderer\.render\(scene,camera\)/,
+  'a cinematic-pass error falls back to direct 3D WebGL rendering');
+assert.match(landmarkCode,/miniatureWindow:true,warm/,
+  'landmark glass supports shared natural dusk illumination');
 assert.match(moduleCode,/function roadSurface\(axis\)/,'roads share tactile matte wear instead of flat plastic');
 assert.match(moduleCode,/const landscapeAtlas=/,'town has a continuous non-repeating terrain paint layer');
 assert.match(moduleCode,/function vergeMaterial\(axis\)/,'street edges have shared soft painted vegetation');
@@ -77,13 +89,13 @@ assert.match(moduleCode,/eye.scale.y=blink/,'eyelids blink without a separate an
 assert.match(html,/type="importmap"/);
 assert.match(html,/three@0\.187\.0\/build\/three\.module\.js/);
 assert.match(html,/three@0\.187\.0\/examples\/jsm\//);
-assert.match(html,/toy-town-3d\.js\?v=20/);
-assert.match(html,/toy-town-landmarks\.js\?v=4/,'the independent models are requested alongside Three');
+assert.match(html,/toy-town-3d\.js\?v=21/);
+assert.match(html,/toy-town-landmarks\.js\?v=5/,'the independent models are requested alongside Three');
 assert.match(html,/buildLandmark:landmarks\.buildLandmark/,
   'loader injects the authored model builder into the 3D simulation');
 assert.match(html,/toy-town\.js\?v=15/);
 assert.ok(html.indexOf('toy-town.js?v=15')<html.indexOf("import('three')"), 'classic fallback starts first');
-assert.match(page,/toy-town\.html\?v=35&embed=1/);
+assert.match(page,/toy-town\.html\?v=36&embed=1/);
 assert.match(fs.readFileSync(path.join(root,'assets/toy-town.js'),'utf8'),
   /targetX=clamp\(\.08,p\.x,17\.92\)/,
   'scripted paths are clamped at the endpoint rather than freezing outside town');
@@ -208,6 +220,17 @@ assert.ok(api.getStats().woodlandShapes>=1,
 assert.ok(api.getStats().terrainContours>=2,
   'the open lots now contain landscaped organic terrain');
 assert.equal(api.getStats().festoonBulbs,14,'two suspended spans contain 14 miniature lamps');
+assert.ok(api.getStats().windowMaterials>=2,
+  'daylight and interior window materials are registered for unified dusk lighting');
+const allWindowMaterials=[];
+const gatherWindows=(node)=>{
+  if(node.material?.userData?.miniatureWindow&&!allWindowMaterials.includes(node.material))
+    allWindowMaterials.push(node.material);
+  for(const ch of node.children||[])gatherWindows(ch);
+};
+gatherWindows(api.scene);
+assert.ok(allWindowMaterials.length>=2,'two shared window finishes exist at runtime');
+const initialGlow=allWindowMaterials[0].emissiveIntensity;
 const initialGardenCount=api.getStats().gardenElements;
 const sceneWorld=api.scene.children.find(o=>o.children?.some(x=>x.userData?.uniqueAsset));
 assert.ok(sceneWorld,'scene has a populated world group');
@@ -302,6 +325,8 @@ nightValue=.85;callbacks.shift()();
 assert.notEqual(api.scene.background.hex,goldenHourSky,'haze and lighting shift together into dusk');
 assert.ok(api.renderer.toneMappingExposure<goldenHourExposure,'exposure gently lowers as dusk settles');
 assert.ok(lantern.intensity>lampAtDusk*2.5,'neighborhood lights strengthen after sunset');
+assert.ok(allWindowMaterials[0].emissiveIntensity>initialGlow,
+  'photographed window interiors illuminate as evening approaches');
 const lightCableBulb=api.scene.children.find(g=>g.children?.some(
   o=>o.material?.emissiveIntensity>1.2))?.children.find(o=>o.material?.emissiveIntensity>1.2);
 assert.ok(lightCableBulb,'festoon bulbs switch to glowing dusk material');
