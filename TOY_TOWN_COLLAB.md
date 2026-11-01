@@ -38,6 +38,32 @@ A `START` does not prohibit parallel edits. Avoid stepping on each other's uncom
 
 ## Exchange log (newest first)
 
+### DONE — Claude (Claude Code) — 2026-11-01
+- Outcome: the 3D town now reads as a photographed hand-built miniature (owner's reference: tilt-shift street at dusk). Code commits `c146e91` + `134c0b7` (squash-merged to `master` with this entry).
+- New `assets/toy-town-lens.js` (EffectComposer pipeline, wired from `toy-town.html` via `options.createLens`; any failure falls back to plain `renderer.render`):
+  - render → GTAO contact shadows (desktop real GPU only; auto-disabled after sustained >34 ms frames; skipped on phones and software GL) → NaN/overflow clean pass → UnrealBloom (**dusk-only**: by day the sun's glints on the river bloomed into a milky haze) → OutputPass → separable tilt-shift with bokeh-weighted highlights, focus band tightening with zoom → filmic grade (split tone, saturation, S-curve, vignette, grain).
+  - Replaces the CSS `saturate(1.42) contrast(1.11)` filter when active (`#town-3d.lens`). `?nolens` = plain WebGL; `?lensoff=ao,bloom,tilt,grade` for A/B.
+  - Intentional reversal of the earlier note "Direct WebGL won the mobile A/B audit… No blurry extra pass": the owner explicitly asked for this miniature-photo look. The phone focus band stays wide and the blur smaller (6 px vs 10 px), with no AO or MSAA.
+- `assets/toy-town-3d.js` (v39):
+  - wet cobbles: relief bump map plus a roughness map with glossy joints and puddles, `envMapIntensity` 3.2;
+  - cast-iron lanterns mid-block on every street at the pavement edge (clear of the zebra crossing and bridges), with dedicated glass emissive and additive warm light pools that scale with dusk;
+  - tree canopies use a shared `clump` geometry: displaced icosphere with baked vertex shading plus a leaf-grain bump;
+  - lower, warmer late-afternoon sun with a dimmer hemisphere; richer lawn pigment;
+  - `PCFSoftShadowMap` (removed in r18x) → `PCFShadowMap`.
+- `toy-town.html`: Nunito at gentler weights (the owner said the text was too bold); lens imports.
+- Tests:
+  - new `tests/toy-town-lens.test.cjs` (pass order, dusk-only bloom, focus, phone and software skip AO);
+  - `tests/toy-town-3d.test.cjs` version bump; workflow runs the lens test;
+  - all `tests/*.test.cjs` pass locally (pip-run takes ~5.5 min).
+- Visual checks:
+  - local Chromium (SwiftShader) screenshots reviewed: desktop close (day and dusk), wide, mobile. AO was checked locally before the software-GL skip was added.
+  - CI `toy-town-visual` run 41363521403 green. The first run (41362596694) timed out capturing the desktop frame on SwiftShader with AO + MSAA, which led to the software-GL skip.
+- Not verified: AO and MSAA on a real GPU / physical iPhone frame rate, since CI and local are software GL. Please check on a device.
+- Known gaps / next:
+  - the street-level perspective camera and dense shop clutter from the reference are not done;
+  - lantern placement is fixed mid-block and may brush props on some seeds;
+  - the earlier canvas-era ideas (Picture-of-the-Day cinema, "on this day" visitor, paper round, fireflies, tap-to-chat) are not yet ported to v52.
+
 ### START — Claude (Claude Code) — 2026-11-01
 - Base: `aa4b0a7` (latest `master` at start; fetched and re-read this file, `CLAUDE.md`, recent v50–v52 commits).
 - Task (owner request): make the city look like a photographed hand-built miniature instead of basic polygons. The owner's reference is a tilt-shift miniature street at dusk: wet reflective cobbles, warm lanterns and lit windows, bokeh, tiled roofs, gnarled trees, dense props. Keep the current village architecture (the owner did not choose a Japanese restyle); add the miniature-photo finish across the whole town, phone-safe. Also soften the over-bold UI/canvas type the owner flagged.
