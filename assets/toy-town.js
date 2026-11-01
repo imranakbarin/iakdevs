@@ -262,7 +262,8 @@ const ToyTown = (() => {
   const directionAngle = d => [0, Math.PI, Math.PI / 2, -Math.PI / 2][d] || 0;
   function spawnCar(r = Math.random, kind) {
     const p = randomRoadPoint(r), k = kind || (r() < .12 ? 'bus' : r() < .15 ? 'taxi' : 'car');
-    const m = {type: 'car', kind: k, x: p.x, y: p.y, d: p.d, heading: directionAngle(p.d), v: 0, travel: 0, max: k === 'bus' ? .9 : 1.2 + r() * .5, col: k === 'taxi' ? '#f6c541' : k === 'bus' ? '#3f8fd6' : PASTEL[r() * PASTEL.length | 0], wait: 0, lane: .2};
+    const m = {type: 'car', kind: k, x: p.x, y: p.y, d: p.d, heading: directionAngle(p.d), v: 0, travel: 0, moved:0, max: k === 'bus' ? .9 : 1.2 + r() * .5, col: k === 'taxi' ? '#f6c541' : k === 'bus' ? '#3f8fd6' : PASTEL[r() * PASTEL.length | 0], wait: 0, lane: .2};
+    findSafeSpawn(m,r);
     movers.push(m); return m;
   }
   function spawnPerson(r = Math.random, opts = {}) {
@@ -272,7 +273,7 @@ const ToyTown = (() => {
       bag: r() < .25, scarf: r() < .24, hair: r() < .5 ? '#49362d' : '#333947',
       lane: (r() < .5 ? 1 : -1) * (.4 + r() * .07), ph: r() * 6, wait: 0,
       intent:'walking', nextNotice:clock+7+r()*10, observeUntil:0,
-      attention:null}, opts);
+      attention:null,moved:0}, opts);
     movers.push(m); return m;
   }
   // These neighbors stay within open paths; the bakery, bookshop, bench and
@@ -444,7 +445,8 @@ const ToyTown = (() => {
     }
   }
   function spawnBike(r = Math.random) {
-    const p = randomRoadPoint(r), m = {type: 'car', kind: 'bike', x: p.x, y: p.y, d: p.d, heading: directionAngle(p.d), v: 0, travel: 0, max: .55 + r() * .15, col: PASTEL[r() * PASTEL.length | 0], skin: ['#f1c9a5', '#d8a77c', '#a8754f', '#7a4e33'][r() * 4 | 0], wait: 0, lane: .36, ph: r() * 6};
+    const p = randomRoadPoint(r), m = {type: 'car', kind: 'bike', x: p.x, y: p.y, d: p.d, heading: directionAngle(p.d), v: 0, travel: 0, moved:0, max: .55 + r() * .15, col: PASTEL[r() * PASTEL.length | 0], skin: ['#f1c9a5', '#d8a77c', '#a8754f', '#7a4e33'][r() * 4 | 0], wait: 0, lane: .36, ph: r() * 6};
+    findSafeSpawn(m,r);
     movers.push(m); return m;
   }
   // Traffic lights: the two directions take turns, with a short amber in between.
@@ -456,9 +458,72 @@ const ToyTown = (() => {
     for (const l of LINES) { const dist = (l + .5 - pos) * sign; if (dist > stopAt - .3 && dist < stopAt + .35) return true; }
     return false;
   }
-  function laneOffset(m) { const s = m.type === 'car' ? (m.d === 0 || m.d === 3 ? 1 : -1) * m.lane : m.lane; return m.d < 2 ? [0, s] : [-s, 0]; }
+  // Both renderers and the traffic planner use one actual occupied lane.
+  // Positive x and positive y have opposite right-hand transverse offsets.
+  function laneOffset(m) {
+    const lane=m.lane||0;
+    if(m.type!=='car')return m.d<2?[0,lane]:[-lane,0];
+    return m.d<2?[0,(m.d===0?1:-1)*lane]:
+      [(m.d===2?-1:1)*lane,0];
+  }
+  function vehiclePoint(m,x=m.x,y=m.y){
+    const [ox,oy]=m.path?[0,0]:laneOffset(m);
+    return {x:x+ox,y:y+oy};
+  }
+  // Oriented rectangular clearance: oncoming traffic in the opposite
+  // half of the road must not cause phantom brakes, but same-lane followers
+  // and crossing traffic must not occupy the same body footprint.
+  function bodyExtent(m,ux,uy){
+    const d=DIRS[m.d],along=Math.abs(d[0]*ux+d[1]*uy);
+    const across=Math.abs(d[0]*uy-d[1]*ux);
+    const length=m.kind==='bus'?.405:m.kind==='bike'?.235:.285;
+    const width=m.kind==='bike'?.105:.177;
+    return {front:length*along+width*across,
+      side:length*across+width*along};
+  }
+  function vehicleClearance(m,o,ux,uy){
+    const a=bodyExtent(m,ux,uy),b=bodyExtent(o,ux,uy);
+    return {front:a.front+b.front+.027,side:a.side+b.side+.018};
+  }
+  // Swept forward clearance is imposed *before* moving each car. A red
+  // light alone is not collision detection, especially after scripted paths.
+  function safeVehicleTravel(m,ux,uy,request){
+    if(request<=0)return 0;
+    const here=vehiclePoint(m);
+    let allowed=request;
+    for(const o of movers){
+      if(o===m||o.type!=='car')continue;
+      const other=vehiclePoint(o);
+      const rx=other.x-here.x,ry=other.y-here.y;
+      const front=rx*ux+ry*uy,side=Math.abs(rx*uy-ry*ux);
+      const gap=vehicleClearance(m,o,ux,uy);
+      if(front>-.02&&side<gap.side&&front<request+gap.front+.20){
+        allowed=Math.min(allowed,Math.max(0,front-gap.front));
+      }
+    }
+    return Math.max(0,allowed);
+  }
+  function findSafeSpawn(m,r){
+    const isolated=()=>{
+      const p=vehiclePoint(m);
+      return movers.every(o=>{
+        if(o.type!=='car')return true;
+        const q=vehiclePoint(o);
+        const a=bodyExtent(m,1,0),b=bodyExtent(o,1,0);
+        const c=bodyExtent(m,0,1),d=bodyExtent(o,0,1);
+        return Math.abs(p.x-q.x)>a.front+b.front+.09||
+          Math.abs(p.y-q.y)>c.front+d.front+.09;
+      });
+    };
+    for(let tries=0;tries<80&&!isolated();tries++){
+      const p=randomRoadPoint(r);
+      m.x=p.x;m.y=p.y;m.d=p.d;m.heading=directionAngle(p.d);
+    }
+  }
   function atNode(m) { return LINES.some(l => Math.abs((m.d < 2 ? m.x : m.y) - (l + .5)) < .02); }
   function step(m, dt) {
+    // Explicit displacement, not requested speed, powers character gaits.
+    m.moved=0;
     // An attention pause has a finite lifetime even when another activity
     // starts before the next ordinary walking step (for example, a town
     // event assigning a route or waiting for an intersection).
@@ -494,8 +559,10 @@ const ToyTown = (() => {
     let want = m.max;
     if (m.type === 'car') {   // keep a gap to whatever is ahead in the lane, and stop for red lights
       for (const o of movers) if (o !== m && o.type === 'car' && o.d === m.d) {
-        const ahead = (o.x - m.x) * dx + (o.y - m.y) * dy, side = Math.abs((o.x - m.x) * dy) + Math.abs((o.y - m.y) * dx);
-        if (ahead > 0 && ahead < 1.55 && side < .30){
+        const p=vehiclePoint(m),q=vehiclePoint(o);
+        const ahead=(q.x-p.x)*dx+(q.y-p.y)*dy;
+        const side=Math.abs((q.x-p.x)*dy-(q.y-p.y)*dx);
+        if (ahead > 0 && ahead < 1.55 && side < vehicleClearance(m,o,dx,dy).side){
           // Begin braking before reaching the vehicle ahead, scaled by
           // the space available. Avoid the abrupt 0.6m emergency stop.
           const safe=Math.max(0,ahead-.42);
@@ -569,14 +636,30 @@ const ToyTown = (() => {
     }
     m.v += (want - m.v) * Math.min(1, dt * (m.type==='car'?2.1:3));
     const before = m.d < 2 ? m.x : m.y;
-    m.x += dx * m.v * dt; m.y += dy * m.v * dt;
-    m.travel = (m.travel || 0) + Math.abs(m.v * dt); // footsteps/wheels follow distance, not wall-clock time
+    const requested=Math.max(0,m.v*dt);
+    const advance=m.type==='car'?
+      safeVehicleTravel(m,dx,dy,requested):requested;
+    if(m.type==='car'&&advance<requested-.00001){
+      m.braking=true;m.v=Math.min(m.v,advance/Math.max(dt,.00001));
+    }
+    m.x += dx*advance;m.y += dy*advance;
+    m.moved=advance;
+    m.travel=(m.travel||0)+advance; // only real displacement drives footsteps and wheels
     const now = m.d < 2 ? m.x : m.y;
     for (const l of LINES) {   // crossing an intersection centre: maybe turn
       const c = l + .5;
       if ((before - c) * (now - c) <= 0 && before !== now) {
         const opts = DIRS.map((_, i) => i).filter(i => i !== (m.d ^ 1)).filter(i => { const nx = Math.round((m.d < 2 ? c : m.x) - .5 + DIRS[i][0]), ny = Math.round((m.d < 2 ? m.y : c) - .5 + DIRS[i][1]); const t = tile(nx, ny); return t && (t.kind === 'road' || t.kind === 'bridge'); });
-        if (opts.length && (Math.random() < .45 || !opts.includes(m.d))) { const nd = opts[Math.random() * opts.length | 0]; if (nd !== m.d) {
+        if (opts.length && (Math.random() < .45 || !opts.includes(m.d))) { const nd = opts[Math.random() * opts.length | 0]; if (nd !== m.d &&
+          (m.type!=='car'||movers.every(o=>{
+            if(o===m||o.type!=='car')return true;
+            const p=vehiclePoint({...m,d:nd});
+            const q=vehiclePoint(o);
+            const a=bodyExtent({...m,d:nd},1,0),b=bodyExtent(o,1,0);
+            const c=bodyExtent({...m,d:nd},0,1),d=bodyExtent(o,0,1);
+            return Math.abs(p.x-q.x)>a.front+b.front+.03||
+              Math.abs(p.y-q.y)>c.front+d.front+.03;
+          }))) {
           const cross=DIRS[m.d][0]*DIRS[nd][1]-DIRS[m.d][1]*DIRS[nd][0];
           if(m.type==='car'){m.turnSignal=cross>0?'left':'right';m.turnUntil=clock+1.1;}
           if (m.d < 2) m.x = c; else m.y = c; m.d = nd;
@@ -601,11 +684,24 @@ const ToyTown = (() => {
     // reach its destination instead of getting stuck against a hard border.
     const targetX=clamp(.08,p.x,17.92),targetY=clamp(.08,p.y,17.92);
     const dx = targetX - m.x, dy = targetY - m.y;
-    const dist = Math.hypot(dx, dy), sp = (p.speed || m.max) * dt;
-    m.v = p.speed || m.max;
-    m.travel = (m.travel || 0) + Math.min(dist, sp);
+    const dist = Math.hypot(dx, dy), sp = Math.max(0,(p.speed || m.max) * dt);
+    if(dist<.00001){
+      m.v=0;m.path.shift();if(p.then)p.then(m);return;
+    }
     if (Math.abs(dx) > Math.abs(dy)) m.d = dx > 0 ? 0 : 1; else m.d = dy > 0 ? 2 : 3;
-    if (dist <= sp) { m.x = targetX; m.y = targetY; m.path.shift(); if (p.then) p.then(m); } else { m.x += dx / dist * sp; m.y += dy / dist * sp; }
+    const ux=dx/dist,uy=dy/dist;
+    const requested=Math.min(dist,sp);
+    const advance=m.type==='car'?
+      safeVehicleTravel(m,ux,uy,requested):requested;
+    m.moved=advance;
+    m.v=advance/Math.max(dt,.00001);
+    m.travel=(m.travel||0)+advance;
+    if(m.type==='car')m.braking=advance<requested-.00001;
+    if(dist<=advance+.00001){
+      m.x=targetX;m.y=targetY;m.path.shift();if(p.then)p.then(m);
+    }else{
+      m.x+=ux*advance;m.y+=uy*advance;
+    }
   }
   // A route along the streets from (x,y) to (tx,ty): along the current line, then the other axis.
   function route(x, y, tx, ty, speed) {

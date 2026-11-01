@@ -130,11 +130,11 @@ assert.match(moduleCode,/eye.scale.y=blink/,'eyelids blink without a separate an
 assert.match(html,/type="importmap"/);
 assert.match(html,/three@0\.187\.0\/build\/three\.module\.js/);
 assert.match(html,/three@0\.187\.0\/examples\/jsm\//);
-assert.match(html,/toy-town-3d\.js\?v=31/);
+assert.match(html,/toy-town-3d\.js\?v=32/);
 assert.match(html,/toy-town-landmarks\.js\?v=7/,'the independent models are requested alongside Three');
 assert.match(html,/buildLandmark:landmarks\.buildLandmark/,
   'loader injects the authored model builder into the 3D simulation');
-assert.match(html,/toy-town\.js\?v=21/);
+assert.match(html,/toy-town\.js\?v=22/);
 const classicScript=html.match(/src="assets\/toy-town\.js\?v=\d+"/);
 assert.ok(classicScript&&
   html.indexOf(classicScript[0])<html.indexOf("import('three')"),
@@ -451,6 +451,13 @@ assert.equal(motorcar.userData.vehicleRig.indicators.length,2,
   'car indicators can flash independently on either side');
 const cycle=sceneWorld.children.find(o=>o.userData?.bicycleRig);
 assert.ok(cycle?.userData?.bicycleRig?.crank,'bicycle has a real chainring crank');
+assert.equal(cycle.userData.bicycleRig.legs.length,2,
+  'bicycle riders have articulated knee chains on both sides');
+const bikeTire=cycle.userData.bicycleRig.wheels[0].children.find(o=>o.geometry);
+assert.equal(bikeTire.rotation.y,0,
+  'bicycle wheels face the direction of travel rather than rotating sideways');
+assert.ok(cycle.userData.bicycleRig.wheels[0].children.length>=8,
+  'bike wheels have visible spokes, so distance-based rotation can be seen');
 pedestrians[0].attention={x:8.1,y:10.0};
 pedestrians[1].braking=true;pedestrians[1].travel=7;
 pedestrians[2].travel=5;
@@ -461,6 +468,10 @@ assert.ok(motorcar.userData.vehicleRig.brakeMaterial.emissiveIntensity>.5,
   'car brake lamps visibly brighten on traffic slowdown');
 assert.ok(Math.abs(cycle.userData.bicycleRig.crank.rotation.z)>1,
   'pedals and bicycle wheels rotate with physical distance');
+const footBefore=cycle.userData.bicycleRig.legs[0].shoe.position.y;
+pedestrians[2].travel+=.20;frameClock+=1/30;callbacks.shift()();
+assert.ok(Math.abs(cycle.userData.bicycleRig.legs[0].shoe.position.y-footBefore)>.012,
+  'the cyclist foot physically follows a changing pedal position');
 const testDog={type:'person',kind:'dog',x:9.1,y:8.3,d:0,
   v:.5,travel:3,ph:1};
 testDog.watch='owner';testDog.sit=true;testDog.attention={x:9.55,y:8.3};

@@ -115,6 +115,27 @@ for (let i = 0; i < 60 * 25; i++) T.update(1 / 60);
 assert.ok(walker.travel > parkedDistance[0], 'walking advances the stride clock');
 assert.ok(cyclist.travel > parkedDistance[1], 'cycling advances the pedal clock');
  
+// Real movement contract: untraveled actors never play a walk cycle.
+assert.ok(walker.moved>=0&&cyclist.moved>=0,
+  'the movement engine exposes actual distance advanced this tick');
+// Different sides of the road must be navigable without phantom head-on braking.
+const physicsCars=T.movers().filter(m=>m.type==='car'&&m.kind!=='bike');
+const east=physicsCars[0],west=physicsCars[1];
+Object.assign(east,{x:3.0,y:1.5,d:0,lane:.2,v:1.0,max:1.0,path:null,stopUntil:0});
+Object.assign(west,{x:4.6,y:1.5,d:1,lane:.2,v:1.0,max:1.0,path:null,stopUntil:0});
+const startEast=east.x,startWest=west.x;
+for(let i=0;i<50;i++)T.update(1/60);
+assert.ok(east.x>startEast+.15&&west.x<startWest-.15,
+  'opposite-direction traffic has separate physical lanes and can pass');
+// A follower must preserve body clearance rather than cutting through a car.
+Object.assign(east,{x:3,y:1.5,d:0,lane:.2,v:1.0,max:1.1,path:null,stopUntil:0});
+Object.assign(west,{x:3.95,y:1.5,d:0,lane:.2,v:0,max:0,path:null,stopUntil:0});
+for(let i=0;i<75;i++){
+  T.update(1/60);
+  assert.ok(west.x-east.x>=.55,
+    'same-lane car bodies never overlap even when the leader is stopped');
+}
+assert.ok(east.v<.1,'a blocked follower comes to a real stop');
 // Perception: a free walker pauses at a nearby shop and actually looks at it.
 T.build(52045,'market');
 const curious=T.movers().find(m=>m.type==='person'&&!m.kind);

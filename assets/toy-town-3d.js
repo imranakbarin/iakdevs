@@ -2209,8 +2209,15 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
     for(const x of [-.19,.19]){
       const spin=new THREE.Group();spin.position.set(x,.169,0);g.add(spin);
       const tire=object(spin,geo('torus',.113,.015),mat('#465357'),0,0,0);
-      tire.rotation.y=Math.PI/2;wheels.push(spin);
+      // The frame runs along local X; wheel circles MUST lie in XY.
+      // Turning a torus by 90° made the bicycle wheels edge-on/flat.
+      for(let k=0;k<6;k++){
+        const spoke=cylinder(spin,.0035,.0035,.190,'#d2d8d0');
+        spoke.rotation.z=k*Math.PI/6;
+        spoke.castShadow=false;
+      }
       const hub=ball(spin,.024,'#d2d8d0',0,0,0);hub.castShadow=false;
+      wheels.push(spin);
     }
     // Triangle-frame tubes connecting realistic physical points.
     const rod=(x1,y1,x2,y2,color=col,thickness=.014)=>{
@@ -2235,13 +2242,24 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
     ball(g,.067,ref.skin||'#d6ae87',-.047,.628,0);
     const helmet=ball(g,.071,'#668b96',-.045,.684,0);
     helmet.scale.set(1,.43,1);helmet.castShadow=false;
+    // Jointed rider legs follow the actual crank/pedal orbit, rather than
+    // two decorative tubes permanently stuck to the bicycle frame.
     const legs=[];
-    for(const sx of [-1,1]){
-      const leg=new THREE.Group();leg.position.set(-.067,.402,sx*.040);g.add(leg);
-      rod(-.067,.402,.018,.281,'#526a72',.023);
-      legs.push(leg);
+    for(const side of [-1,1]){
+      const z=side*.055;
+      const thigh=cylinder(g,.024,.025,.125,'#526a72',-.05,.34,z);
+      const shin=cylinder(g,.019,.023,.113,'#586c76',.012,.245,z);
+      const shoe=box(g,.078,.025,.044,'#5d5550',.038,.12,z);
+      legs.push({side,z,thigh,shin,shoe});
+    }
+    const grip=mat('#636b68');
+    for(const side of [-1,1]){
+      const hand=ball(g,.021,ref.skin||'#d6ae87',.139,.379,side*.09);
+      const arm=cylinder(g,.018,.019,.145,ref.col||'#b88d86',.047,.428,side*.068);
+      arm.rotation.z=-.48;
     }
     g.userData.bicycleRig={wheels,crank,legs};
+    g.userData.vehicleClass='bike';
     return g;
   }
   function creature(ref){
@@ -2361,10 +2379,11 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
     for(const ref of live) {
       if(!actors.has(ref))actor(ref);
       const item=actors.get(ref),g=item.group;
-      const lane=ref.lane||0;
-      const d=ref.d||0;
-      const off=(d===0||d===1)?{x:0,z:lane}:{x:lane,z:0};
-      const path=!!ref.path;
+      const lane=ref.lane||0,d=ref.d||0,path=!!ref.path;
+      const off=ref.type==='car'?
+        (d<2?{x:0,z:(d===0?1:-1)*lane}:
+          {x:(d===2?-1:1)*lane,z:0}):
+        (d<2?{x:0,z:lane}:{x:-lane,z:0});
       const desiredX=ref.x+(path?0:off.x),desiredZ=ref.y+(path?0:off.z);
       // Ground-contact calibration: wheels touch the road instead of floating.
       const baseY=item.kind==='car'?.078:item.kind==='bike'?.11:
@@ -2399,10 +2418,10 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
         const facingError=Math.atan2(Math.sin(desiredFacing-g.rotation.y),
           Math.cos(desiredFacing-g.rotation.y));
         g.rotation.y+=THREE.MathUtils.clamp(facingError,-3.8*dt,3.8*dt);
-        const moving=ref.v>.032&&!ref.sit&&
-          (!ref.stopUntil||worldTime>=ref.stopUntil);
+        const moving=(ref.moved===undefined?ref.v>.032:ref.moved>.00015)&&
+          !ref.sit&&(!ref.stopUntil||worldTime>=ref.stopUntil);
         state.speed=ease(state.speed,moving&&!reducedMotion?
-          THREE.MathUtils.clamp(ref.v/(ref.max||.55),0,1):0,8.5);
+          THREE.MathUtils.clamp(ref.v/(ref.max||.55),0,1):0,11.0);
         state.sit=ease(state.sit,ref.sit?1:0,5.2);
         state.chat=ease(state.chat,ref.intent==='chat'&&!reducedMotion?1:0,4.4);
         const speaking=Math.max(0,Math.sin(worldTime*1.35+(ref.ph||0)));
@@ -2421,11 +2440,11 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
           const swing=phase*state.speed;
           const recover=Math.max(0,-phase)*state.speed;
           limbs.legs[k].rotation.x=-1.16*state.sit+
-            (1-state.sit)*swing*.43;
+            (1-state.sit)*swing*.62;
           limbs.shins[k].rotation.x=state.sit*.75+
             (1-state.sit)*recover*.94;
           limbs.feet[k].rotation.x=(1-state.sit)*
-            (Math.max(0,phase)*.23-recover*.16);
+            (Math.max(0,phase)*.30-recover*.18);
           // A very small independent hip rise prevents both toes from
           // scraping the ground during the recovery half of the cycle.
           limbs.legs[k].position.y=.178+
@@ -2511,8 +2530,27 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
         }
         const bike=g.userData.bicycleRig;
         if(bike){
-          for(const wheel of bike.wheels)wheel.rotation.z=-(ref.travel||0)*9.0;
-          bike.crank.rotation.z=(ref.travel||0)*15;
+          const angle=(ref.travel||0)*15;
+          for(const wheel of bike.wheels)wheel.rotation.z=-(ref.travel||0)*8.85;
+          bike.crank.rotation.z=angle;
+          // Solve the tiny rider's two knee chains against rotating pedals.
+          // Shoes, knees and ankles move in contact with their bicycle.
+          const link=(part,ax,ay,bx,by,z,rest)=>{
+            part.position.set((ax+bx)*.5,(ay+by)*.5,z);
+            part.rotation.z=-Math.atan2(bx-ax,by-ay);
+            part.scale.y=Math.hypot(bx-ax,by-ay)/rest;
+          };
+          for(const leg of bike.legs){
+            const phase=angle+(leg.side>0?0:Math.PI);
+            const footX=.038+.078*Math.sin(phase);
+            const footY=.172+.078*Math.cos(phase);
+            const kneeX=(-.067+footX)*.5+.060;
+            const kneeY=(.402+footY)*.5+.036;
+            link(leg.thigh,-.067,.402,kneeX,kneeY,leg.z,.125);
+            link(leg.shin,kneeX,kneeY,footX,footY,leg.z,.113);
+            leg.shoe.position.set(footX+.015,footY-.009,leg.z);
+            leg.shoe.rotation.z=.10*Math.sin(phase);
+          }
         }
       }
       if(item.kind==='animal' && !reducedMotion){
