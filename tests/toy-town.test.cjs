@@ -89,4 +89,24 @@ for (let i = 0; i < 60 * 120; i++) {
 }
 assert.ok(clashes / samples < .05, `cross traffic rarely meets in a crossing (${clashes} near misses in ${samples} samples)`);
 assert.ok(T.events().length <= 6, 'the gentle moments end too');
-console.log(`Toy Town PASS: ${T.VARIANTS.length} news variants (cricket to Diwali to dinosaurs) each with its own event, grim stories never become themes, light ones pick ${Object.keys(T.THEMES).length - 1} kinds of day, the same day builds the same town with its theme block and fire station, and every event in every theme runs to its end with the streets kept busy.`);
+
+// The rest of the day's feed: the picture of the day, gentle "on this day" moments, what people are reading; grim ones never.
+const extra = T.feedExtras({image: {thumbnail: {source: 'https://upload.wikimedia.org/x.jpg'}, description: {text: 'A <b>kingfisher</b> on a branch'}},
+  onthisday: [{year: 1969, text: 'Apollo 11 lands on the Moon.'}, {year: 1945, text: 'An atomic bomb is dropped.'}],
+  mostread: {articles: [{type: 'standard', normalizedtitle: 'Halloween'}, {type: 'standard', normalizedtitle: 'Deaths in 2026'}, {type: 'standard', normalizedtitle: 'Some band', description: 'killed in a crash'}]}});
+assert.equal(extra.potd.src, 'https://upload.wikimedia.org/x.jpg'); assert.equal(extra.potd.desc, 'A kingfisher on a branch');
+assert.equal(JSON.stringify(extra.otd), JSON.stringify([{year: 1969, text: 'Apollo 11 lands on the Moon.'}]), 'only light moments from history');
+assert.equal(JSON.stringify(extra.trending), JSON.stringify(['Halloween']), 'and only light pages from the most read');
+// The open-air cinema stands on the left corner, deckchairs in front; the time traveller, paper round and stargazer run to their end.
+T.build(20261030, 'festival'); T.setToday([{key: 'festival', variant: 'halloween', title: 'Halloween', emoji: '🎃', story: 'Halloween parades fill the streets', name: 'Halloween'}]); T.decorate([{key: 'festival', variant: 'halloween'}]);
+const scr = T.props().find(p => p.kind === 'cinema');
+assert.ok(scr && scr.x < 1.5 && scr.y > 16, 'the cinema is on the left corner, clear of the town');
+assert.equal(T.props().filter(p => p.kind === 'seat').length, 3);
+T.setFeed(extra);
+assert.ok(/Halloween|Lovely|shops|ducks|bakery|Tuesday|Happy|lights|sweets|Same/.test(T.opinion()), 'a tapped passer-by talks about the day');
+T.nightAt(150);
+const started = ['timetrip', 'paperround', 'stargazer'].map(name => { const e = T.startEvent(name); assert.ok(e, name + ' starts'); return e; });
+for (let i = 0; i < 60 * 45; i++) T.update(1 / 60);
+assert.ok(!started.some(e => T.events().includes(e)), 'and each runs to its end');
+assert.ok(T.props().some(p => p.kind === 'paper'), "the paper round leaves today's Times on doorsteps");
+console.log(`Toy Town PASS: ${T.VARIANTS.length} news variants (cricket to Diwali to dinosaurs) each with its own event, grim stories never become themes, light ones pick ${Object.keys(T.THEMES).length - 1} kinds of day, the same day builds the same town with its theme block and fire station, every event in every theme runs to its end with the streets kept busy, and the cinema, time traveller, paper round and stargazer bring in the rest of the day's feed.`);
