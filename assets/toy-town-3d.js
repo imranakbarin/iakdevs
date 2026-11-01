@@ -12,7 +12,7 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
   renderer.toneMappingExposure = 1.02;
   renderer.shadowMap.enabled = true;
-  renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+  renderer.shadowMap.type = THREE.PCFShadowMap;   // PCFSoft was removed in r18x; PCF + radius gives the soft edge
   renderer.domElement.setAttribute('aria-hidden', 'true');
   renderer.domElement.style.cssText = 'display:block;width:100%;height:100%;pointer-events:none';
   host.appendChild(renderer.domElement);
@@ -20,11 +20,11 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
   scene.background = new THREE.Color('#cee9f5');
   scene.fog = new THREE.Fog('#cee9f5', 24, 62);
   const camera = new THREE.OrthographicCamera(-15, 15, 15, -15, .1, 120);
-  const hemisphere = new THREE.HemisphereLight('#fff5df', '#8b9f9c', 1.08);
+  const hemisphere = new THREE.HemisphereLight('#fff1dc', '#6f8580', .86);
   scene.add(hemisphere);
-  const sun = new THREE.DirectionalLight('#ffe3b9', 2.24);
+  const sun = new THREE.DirectionalLight('#ffd7a4', 2.6);
   // A single large, raking key connects roofs, trees, streets and residents.
-  sun.position.set(-17, 22, 13);
+  sun.position.set(-18, 16, 12);   // late afternoon: longer, warmer shadows
   sun.castShadow = true;
   sun.shadow.mapSize.set(desktop() ? 1024 : 512, desktop() ? 1024 : 512);
   sun.shadow.camera.left = -20; sun.shadow.camera.right = 20;
@@ -87,6 +87,7 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
   const windowMaterials=new Set();
   let gardenElements = 0, woodlandShapes = 0, terrainContours = 0, composedBuildings = 0, districtGardenRooms = 0;
   let worldSeed = null, worldBuildings = null, worldPropCount = 0, sceneTime = 0, landmarkCount = 0;
+  let lens = null;
   let stopped = false, frozen = false, raf = 0, frames = 0, redrawCount = 0, lastSize = '', lastFrameAt = 0;
   const TAU = Math.PI * 2, LINES = [1,6,11,16];
   const rgb = (c) => new THREE.Color(c);
@@ -138,9 +139,42 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
       else if (kind === 'cylinder') shape = new THREE.CylinderGeometry(...dims,10);
       else if (kind === 'torus') shape = new THREE.TorusGeometry(...dims,7,12);
       else if (kind === 'plane') shape = new THREE.PlaneGeometry(...dims);
+      else if (kind === 'clump') shape = clumpGeometry(dims[0], dims[1]);
       geometryCache.set(key,shape);
     }
     return geometryCache.get(key);
+  };
+  // Foliage like model-railway flock: a lumpy cluster of small leaf balls with
+  // baked shading (darker underside and crevices, sunlit tips) instead of a
+  // smooth sphere. Four seeded variants are shared by every tree.
+  function clumpGeometry(radius, variant) {
+    const g = new THREE.IcosahedronGeometry(radius, 3), pos = g.attributes?.position, n = new THREE.Vector3();
+    if (!pos) return g;   // headless test doubles carry no vertex data
+    const lumps = Array.from({length: 11}, (_, k) => new THREE.Vector3(Math.sin(k * 2.4 + variant) * Math.cos(k * 1.3), Math.cos(k * 1.7 + variant * .7), Math.sin(k * 1.3) * Math.sin(k * 2.4 + variant)).normalize());
+    const colors = new Float32Array(pos.count * 3);
+    for (let i = 0; i < pos.count; i++) {
+      n.fromBufferAttribute(pos, i).normalize();
+      let bump = 0; for (const l of lumps) bump = Math.max(bump, Math.pow(Math.max(0, n.dot(l)), 7));
+      const fine = Math.sin(n.x * 23 + variant) * Math.sin(n.y * 19) * Math.sin(n.z * 21 + variant * 2) * .5 + .5;
+      const d = .78 + bump * .26 + fine * .07;
+      pos.setXYZ(i, n.x * radius * d, n.y * radius * d * .92, n.z * radius * d);
+      const shade = THREE.MathUtils.clamp(.62 + n.y * .2 + bump * .22 + fine * .1, .42, 1.12);
+      colors[i * 3] = shade * .97; colors[i * 3 + 1] = shade; colors[i * 3 + 2] = shade * .9;
+    }
+    g.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+    g.computeVertexNormals();
+    return g;
+  }
+  const leafGrain = (() => {
+    const c = document.createElement('canvas'); c.width = c.height = 128; const p = c.getContext('2d');
+    p.fillStyle = '#808080'; p.fillRect(0, 0, 128, 128);
+    for (let i = 0; i < 900; i++) { const v = 60 + Math.floor(Math.random() * 150); p.fillStyle = `rgb(${v},${v},${v})`; p.beginPath(); p.ellipse(Math.random() * 128, Math.random() * 128, 1 + Math.random() * 2.2, .8 + Math.random() * 1.4, Math.random() * 3, 0, 6.3); p.fill(); }
+    const t = new THREE.CanvasTexture(c); t.wrapS = t.wrapT = THREE.RepeatWrapping; t.repeat?.set(3, 3); return t;
+  })();
+  const leafCache = new Map();
+  const leafMat = hex => {
+    if (!leafCache.has(hex)) leafCache.set(hex, new THREE.MeshStandardMaterial({color: hex, vertexColors: true, roughness: .9, metalness: 0, bumpMap: leafGrain, bumpScale: 1.6}));
+    return leafCache.get(hex);
   };
   const object = (parent, geometry, material, x=0,y=0,z=0, cast=true) => {
     const o = new THREE.Mesh(geometry,material);
@@ -219,7 +253,9 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
     if(grassMaterialCache.has(key))return grassMaterialCache.get(key);
     const cv=document.createElement('canvas'); cv.width=256;cv.height=256;
     const ctx=cv.getContext('2d');
-    const pale=tint(color,'#f4e7bd',.18);
+    // Living meadow green rather than a chalky mint: the photographed-miniature
+    // grade needs real colour in the lawns to read as flock grass.
+    const pale=tint(tint(color,'#5d9850',.38),'#f4e7bd',.06);
     // Broad transparent pigments unify adjacent lots before fine grass grain.
     const wash=ctx.createLinearGradient(0,0,256,256);
     wash.addColorStop(0,tint(pale,'#ecdec0',.12));
@@ -292,7 +328,27 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
     const map=new THREE.CanvasTexture(canvas);map.colorSpace=THREE.SRGBColorSpace;
     map.wrapS=map.wrapT=THREE.RepeatWrapping;
     if(map.repeat?.set)map.repeat.set(axis==='east-west'?12:1,axis==='north-south'?12:1);
-    const surface=new THREE.MeshStandardMaterial({map,color:'#ffffff',roughness:1,metalness:0});
+    // Relief and wetness: stones stand proud of their joints; the joints and
+    // a few puddles hold water, so they turn glossy and catch the sky and lamps.
+    const relief=document.createElement('canvas');relief.width=relief.height=256;
+    const q=relief.getContext('2d');q.fillStyle='#202020';q.fillRect(0,0,256,256);
+    const wet=document.createElement('canvas');wet.width=wet.height=256;
+    const w=wet.getContext('2d');w.fillStyle='#4a4a4a';w.fillRect(0,0,256,256);
+    for(let row=0;row<15;row++)for(let col=-1;col<10;col++){
+      const x=col*29+(row%2)*14.5,y=row*18.5,g=q.createRadialGradient(x+14,y+8,2,x+14,y+9,16);
+      g.addColorStop(0,'#f0f0f0');g.addColorStop(1,'#8a8a8a');
+      q.fillStyle=g;q.beginPath();q.roundRect(x+2,y+2,25,14.5,5);q.fill();
+      const dry=150+Math.floor(rng(row*31+col,903)*60);
+      w.fillStyle=`rgb(${dry},${dry},${dry})`;w.beginPath();w.roundRect(x+2.5,y+2.5,24,13.5,5);w.fill();
+    }
+    for(let i=0;i<5;i++){
+      const x=rng(i,461)*256,y=rng(i,977)*256,r=14+rng(i,233)*22,g=w.createRadialGradient(x,y,1,x,y,r);
+      g.addColorStop(0,'rgba(18,18,18,.95)');g.addColorStop(.7,'rgba(30,30,30,.6)');g.addColorStop(1,'rgba(30,30,30,0)');
+      w.fillStyle=g;w.beginPath();w.ellipse(x,y,r,r*.6,rng(i,51)*TAU,0,TAU);w.fill();
+    }
+    const tex=c=>{const t=new THREE.CanvasTexture(c);t.wrapS=t.wrapT=THREE.RepeatWrapping;if(map.repeat)t.repeat?.copy(map.repeat);return t;};
+    const surface=new THREE.MeshStandardMaterial({map,color:'#c9c6b8',roughness:1,metalness:0,
+      bumpMap:tex(relief),bumpScale:2.2,roughnessMap:tex(wet),envMapIntensity:3.2});
     roadSurfaces.set(axis,surface);return surface;
   }
   const studioMat=(()=>{
@@ -1076,7 +1132,7 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
     const family=i%13===0?'cypress':i%13===6?'willow':i%11===0?'orchard':'oak';
     const mist=THREE.MathUtils.clamp((9-z)/17,0,.28);
     const plantedHue=p.c?tint(p.c,'#839d89',.76):'#86a58b';
-    const foliage=(color)=>mat(tint(tint(color,plantedHue,.13),'#d4dbc4',mist));
+    const foliage=(color)=>leafMat(tint(tint(tint(color,plantedHue,.13),'#d4dbc4',mist),'#3f7a45',.22));
     groundingShadow(x,z,1.15*sc,1.04*sc,.166);
     const height=family==='cypress'?.69:family==='willow'?.70:.66;
     const trunk=cylinder(g,.044,.080,height,'#826b54',0,height*.51,0);
@@ -1093,7 +1149,7 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
       // Slender Tuscan spires are tapered through four overlapping ellipsoids.
       for(let k=0;k<4;k++){
         const radius=.27-k*.051;
-        const leaf=object(g,geo('sphere',radius),foliage(
+        const leaf=object(g,geo('clump',radius,k%4),foliage(
           ['#4d846e','#628f78','#74a186','#8cb39a'][k]),0,
           .66+k*.165,0,false);
         leaf.scale.set(.67,.83,.72);
@@ -1104,7 +1160,7 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
     const shade=family==='orchard'?'#8b9f80':family==='willow'?'#679981':'#5a8978';
     // Dark undercanopy creates a continuous shaded mass; five unequal outer
     // lobes build a leaf silhouette instead of many equally sized balls.
-    const under=object(g,geo('sphere',.38),foliage(shade),
+    const under=object(g,geo('clump',.38,i%4),foliage(shade),
       .025,.84,-.016,false);
     under.scale.set(1.18,.49,1.04);
     const branching=[[-.19,.73,-.02,.46],[.19,.72,.02,-.46],[0,.77,.15,.14]];
@@ -1127,7 +1183,7 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
         ['#b9c69b','#d8c6b5','#e4c6bf','#c5bea4','#d5b5ae'][k%5]:
         isWeeping?['#719c87','#8caf94','#9dbfa2','#78a88c'][k%4]:
         ['#79a58c','#96b79a','#a3c29d','#87ac93','#6f9d87'][k%5];
-      const leaf=object(g,geo('sphere',.40),foliage(col),xx,yy,zz,false);
+      const leaf=object(g,geo('clump',.40,(i+k)%4),foliage(col),xx,yy,zz,false);
       leaf.scale.set(rx/.4,ry/.4,rz/.4);
       leaf.rotation.y=(rng(i,k+52)-.5)*.55;
     }
@@ -2130,6 +2186,31 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
       ambient.push({kind:'marketCounter',mesh:shop,phase:place.kind==='bakery'?0:1.3});
     }
   }
+  // Cast-iron lanterns along every street, at the outer edge of the pavement,
+  // mid-block (clear of crossings and the river bridges). At dusk the glass
+  // glows, the lens blooms it, and a warm pool spreads over the wet cobbles.
+  const lanternPools=[];
+  const lanternGlass=new THREE.MeshStandardMaterial({color:'#fff3d6',roughness:.3,metalness:0,emissive:'#ffb45e',emissiveIntensity:.1});
+  const poolTexture=(()=>{const c=document.createElement('canvas');c.width=c.height=64;const p=c.getContext('2d');
+    const g=p.createRadialGradient(32,32,0,32,32,32);g.addColorStop(0,'rgba(255,196,120,1)');g.addColorStop(.45,'rgba(255,170,90,.42)');g.addColorStop(1,'rgba(255,160,80,0)');
+    p.fillStyle=g;p.fillRect(0,0,64,64);const t=new THREE.CanvasTexture(c);t.colorSpace=THREE.SRGBColorSpace;return t;})();
+  function streetLanterns(){
+    lanternPools.length=0;
+    const iron='#33403f';
+    let n=0;
+    for(const l of LINES)for(const mid of [3.5,9.5,13.5])for(const along of [true,false]){
+      if(!along&&mid===13.5)continue;                      // north-south streets cross the river here
+      const side=(n++%2?1:-1)*.47,x=along?mid:l+.5+side,z=along?l+.5+side:mid;
+      const g=new THREE.Group();g.position.set(x,.17,z);world.add(g);
+      cylinder(g,.022,.034,.82,iron,0,.41,0);
+      cylinder(g,.05,.05,.04,iron,0,.04,0);
+      const head=box(g,.11,.13,.11,lanternGlass,0,.89,0,false);head.castShadow=false;
+      cylinder(g,.0,.095,.07,iron,0,.99,0);
+      box(g,.13,.02,.13,iron,0,.83,0,false);
+      const pool=new THREE.Mesh(geo('plane',2,2),new THREE.MeshBasicMaterial({map:poolTexture,transparent:true,opacity:0,depthWrite:false,blending:THREE.AdditiveBlending}));
+      pool.rotation.x=-Math.PI/2;pool.position.set(x,.205,z);world.add(pool);lanternPools.push(pool);
+    }
+  }
   function rebuild(){
     ambient.length = 0; plazaLights.length = 0; festoonBulbs.length = 0;
     windowMaterials.clear();
@@ -2171,6 +2252,7 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
     }
     const ps=town.props();
     for(let i=0;i<ps.length;i++)smallProps(ps[i],i);
+    streetLanterns();
     createStorybookVillage();
     paintVillageLife();
     createWorkingShops();
@@ -3015,12 +3097,14 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
     // Continuous color-temperature progression (no dusk hue snapping).
     // Daylight, shadow fill, haze and lanterns now belong to one exposure.
     const dusk=dark*dark*(3-2*dark);
-    hemisphere.intensity=1.08-dark*.36;
-    sun.intensity=2.24-dark*1.54;
+    hemisphere.intensity=.86-dark*.3;
+    sun.intensity=2.6-dark*1.9;
     rim.intensity=.39+dark*.06;
-    sun.color.set(tint('#ffe3b9','#efad8a',dusk));
+    sun.color.set(tint('#ffd7a4','#ee9c70',dusk));
     rim.color.set(tint('#c0dedb','#a8b6cb',dusk));
     for(const lantern of plazaLights)lantern.intensity=dark*7.2;
+    for(const pool of lanternPools)pool.material.opacity=Math.min(1,Math.max(0,dark-.12)*1.3);
+    lanternGlass.emissiveIntensity=.1+dark*4.2;
     for(const bulb of festoonBulbs)bulb.material.emissiveIntensity=.32+dark*1.65;
     for(const pane of windowMaterials){
       pane.emissiveIntensity=(pane.userData?.warm?.12:.04)+
@@ -3029,6 +3113,7 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
     scene.background.set(tint('#cee9f5','#91a9c5',dusk));
     scene.fog.color.copy(scene.background);
     renderer.toneMappingExposure=.98-dark*.12;
+    lens?.setDusk(dark);
     for(const p of materialCache.values()){
       if(p.emissive && p.emissive.r>.03) p.emissiveIntensity=.14+dark*1.25;
     }
@@ -3038,7 +3123,7 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
     const h=Math.max(1,host.clientHeight||window.innerHeight);
     const sz=w+'x'+h;
     if(sz===lastSize)return;
-    lastSize=sz;renderer.setSize(w,h,false);
+    lastSize=sz;renderer.setSize(w,h,false);lens?.setSize(w,h);
     const a=w/h;
     camera.left=-14*a;camera.right=14*a;
     camera.top=14;camera.bottom=-14;
@@ -3054,6 +3139,7 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
     // At close-up, lower the virtual eye to show windows, porch geometry and
     // faces; a gentle interpolation preserves the calm overview perspective.
     const closeness=THREE.MathUtils.clamp((v.z-1.0)/2.7,0,1);
+    lens?.setFocus(THREE.MathUtils.clamp((v.z-.6)/1.6,0,1));
     // Bring the eye down as we approach: rooftops remain visible, but
     // shop glazing, porches and characters occupy more of the composition.
     // More architectural eye-level at zoom: the previous high camera showed
@@ -3089,8 +3175,8 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
       if(worldBuildings!==town.buildings()||worldSeed!==state.seed)rebuild();
       syncActors();syncCamera();light(state.night||0);
       animateAmbient(state.clock||0);
-      renderer.render(scene,camera);
-      frames++;
+      if(lens)lens.render(timestamp-(api.lastAt||timestamp));else renderer.render(scene,camera);
+      api.lastAt=timestamp;frames++;
       if(!api.active) {
         api.active=true;window.ToyTown3D.active=true;
         host.style.display='block';document.getElementById('town').style.opacity='0';
@@ -3110,7 +3196,7 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
   renderer.domElement.addEventListener('webglcontextrestored',restored,false);
   const api={
     active:false,renderer,scene,camera,
-    getStats:()=>({frames,redrawCount,actors:actors.size,ambient:ambient.length,plazaLights:plazaLights.length,festoonBulbs:festoonBulbs.length,gardenElements,woodlandShapes,terrainContours,composedBuildings,districtGardenRooms,landmarks:landmarkCount,windowMaterials:windowMaterials.size,photographicLens:false,buildings:town.buildings().length,webgl:true,frozen}),
+    getStats:()=>({frames,redrawCount,actors:actors.size,ambient:ambient.length,plazaLights:plazaLights.length,festoonBulbs:festoonBulbs.length,gardenElements,woodlandShapes,terrainContours,composedBuildings,districtGardenRooms,landmarks:landmarkCount,windowMaterials:windowMaterials.size,photographicLens:!!lens,lens:lens?.stats?.()||null,buildings:town.buildings().length,webgl:true,frozen}),
     // A stable actual GPU-rendered frame for visual regression screenshots.
     // Unlike stop(), freeze does not switch to the Canvas fallback.
     freeze(){frozen=true;cancelAnimationFrame(raf);},
@@ -3119,6 +3205,9 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
       host.style.display='none';document.getElementById('town').style.opacity='1';},
     dispose(){this.stop();scene.environment?.dispose?.();renderer.dispose();}
   };
+  // The photographed-miniature lens (tilt-shift, bloom, AO, grade); plain WebGL if it cannot start.
+  try{lens=options.createLens?options.createLens(renderer,scene,camera,{mobile:!desktop()}):null;}catch(error){console.warn('Toy Town lens unavailable; plain render',error);lens=null;}
+  if(lens)host.classList.add('lens');
   window.ToyTown3D=api;
   renderer.domElement.addEventListener('dblclick',()=>{},false);
   raf=requestAnimationFrame(frame);
