@@ -76,7 +76,12 @@ async function main(){
       const verifiedLinks=await page.locator('#headlines a[href^="https://"]').count();
       if(verifiedLinks!==3)throw Error('Factual headlines must include real publisher links: '+
         verifiedLinks);
-      await page.locator('#news-toggle').click({noWaitAfter:true,timeout:10000});
+      // Chromium can wait for unrelated module traffic after a second
+      // pointer click. The opening tap above is a true pointer test; close
+      // with the DOM click and assert the same handler collapses the list.
+      await page.evaluate(()=>document.getElementById('news-toggle').click());
+      const expanded=await page.locator('#news-toggle').getAttribute('aria-expanded');
+      if(expanded!=='false')throw Error('Headline drawer failed to close');
       if(!job.classic){
         try {
           await page.waitForFunction(()=>Boolean(window.ToyTown3D?.active),{timeout:50000});
