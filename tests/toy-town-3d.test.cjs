@@ -130,7 +130,7 @@ assert.match(html,/toy-town-3d\.js\?v=30/);
 assert.match(html,/toy-town-landmarks\.js\?v=7/,'the independent models are requested alongside Three');
 assert.match(html,/buildLandmark:landmarks\.buildLandmark/,
   'loader injects the authored model builder into the 3D simulation');
-assert.match(html,/toy-town\.js\?v=20/);
+assert.match(html,/toy-town\.js\?v=21/);
 assert.ok(html.indexOf('toy-town.js?v=20')>=0 &&
   html.indexOf('toy-town.js?v=20')<html.indexOf("import('three')"),
   'current classic fallback loads before the WebGL module');
