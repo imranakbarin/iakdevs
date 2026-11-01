@@ -517,7 +517,7 @@ function makeKit(T,Round){
   function raisedRoofTiles(g,width,depth,top,pigment,{arch=.10,crest=.34}={}){
     if(!T.InstancedMesh||!T.Object3D||!T.Color)return;
     const rows=8,cols=8,count=rows*cols*2;
-    const tileMat=material(pigment,.89,'ceramic');
+    const tileMat=material('#ffffff',.89,'ceramic');
     const shells=new T.InstancedMesh(tileGeometry,tileMat,count);
     const helper=new T.Object3D();
     const base=new T.Color(pigment);
