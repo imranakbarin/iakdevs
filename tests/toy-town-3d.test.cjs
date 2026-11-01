@@ -140,11 +140,11 @@ assert.match(moduleCode,/eye.scale.y=blink/,'eyelids blink without a separate an
 assert.match(html,/type="importmap"/);
 assert.match(html,/three@0\.187\.0\/build\/three\.module\.js/);
 assert.match(html,/three@0\.187\.0\/examples\/jsm\//);
-assert.match(html,/toy-town-3d\.js\?v=36/);
+assert.match(html,/toy-town-3d\.js\?v=37/);
 assert.match(html,/toy-town-landmarks\.js\?v=7/,'the independent models are requested alongside Three');
 assert.match(html,/buildLandmark:landmarks\.buildLandmark/,
   'loader injects the authored model builder into the 3D simulation');
-assert.match(html,/toy-town\.js\?v=24/);
+assert.match(html,/toy-town\.js\?v=25/);
 const classicScript=html.match(/src="assets\/toy-town\.js\?v=\d+"/);
 assert.ok(classicScript&&
   html.indexOf(classicScript[0])<html.indexOf("import('three')"),
@@ -513,6 +513,25 @@ assert.equal(buyerModel.userData.shopProps.bread.visible,true,
 buyerRef.shopAction='eating';frameClock+=1/30;callbacks.shift()();
 assert.ok(buyerModel.userData.pose.enjoy>.05,
   'the customer has a distinct using-the-purchase animation');
+shopkeeperRef.newsMood='cheer';frameClock+=1/30;callbacks.shift()();
+assert.ok(sellerModel.userData.pose.celebrate>.05,
+  'verified sports headlines create a visible arms-up reaction in residents');
+pedestrians.splice(-2,2);frameClock+=1/30;callbacks.shift()();
+const guitarist={type:'person',kind:'busker',guitar:true,
+  shopAction:'performing',x:9.0,y:9.8,d:3,
+  max:.38,v:0,travel:0,ph:2};
+const audience={type:'person',kind:'neighbor',dance:true,
+  x:8.7,y:9.9,d:3,v:0,travel:0,ph:3};
+pedestrians.push(guitarist,audience);
+frameClock+=1/30;callbacks.shift()();
+const musicModel=sceneWorld.children.find(o=>o.userData?.buskerGuitar);
+const dancer=sceneWorld.children.find(o=>o.position.x===8.7&&o.position.z===9.9);
+assert.ok(musicModel?.userData.buskerGuitar,
+  'the live town concert has a modeled instrument in actual character space');
+assert.ok(musicModel.userData.pose.play>.05,
+  'busker uses instrument-playing articulation rather than walking in place');
+assert.ok(dancer?.userData?.pose?.dance>.05,
+  'listeners visibly dance to a concert instead of standing motionless');
 pedestrians.splice(-2,2);frameClock+=1/30;callbacks.shift()();
 const footBefore=cycle.userData.bicycleRig.legs[0].shoe.position.y;
 pedestrians[2].travel+=.20;frameClock+=1/30;callbacks.shift()();

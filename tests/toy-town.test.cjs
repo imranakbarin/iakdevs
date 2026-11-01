@@ -239,6 +239,8 @@ assert.equal(T.debug().trade.mood,'cheer','the public story produces a specific 
 assert.ok(stallWorkers.some(m=>m.waveUntil>T.debug().clock),
   'clerks visibly greet the moment instead of leaving a headline unconnected');
 assert.equal(T.debug().newsReactions,1,'news reactions are counted separately from fiction events');
+assert.ok(T.debug().streetPerformances>=1,
+  'the town hosts recurring physical concerts rather than silent decoration');
 for(let i=0;i<60*9;i++)T.update(1/60);
 assert.equal(T.debug().trade.mood,null,'news reactions expire instead of looping indefinitely');
 
@@ -420,7 +422,7 @@ const townPage = fs.readFileSync(path.join(root, 'toy-town.html'), 'utf8');
 for (const id of ['zoom-in', 'zoom-out', 'zoom-reset']) {
   assert.match(townPage, new RegExp('id="' + id + '"[^>]*aria-label="[^"]+"'), id + ' is accessible');
 }
-assert.match(townPage, /toy-town\.js\?v=24/, 'diorama engine is loaded');
+assert.match(townPage, /toy-town\.js\?v=25/, 'diorama engine is loaded');
 assert.match(townPage, /toy-town-news\.js\?v=1/, 'sourced news loads before the simulation');
 assert.match(townPage, /HEADLINES/, 'real reporting has a dedicated source panel');
 assert.match(townPage, /AROUND TOWN · FICTION/, 'fiction and real news are explicitly separated');

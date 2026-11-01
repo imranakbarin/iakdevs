@@ -30,6 +30,7 @@ const ToyTown = (() => {
   let clock = 0, playing = true, last = 0, nextEvent = 2, director = null, directorUntil = 0;
   let community = null, communityEncounters = 0, communityVisits = 0;
   let streetTrade=null,streetTransactions=0,streetShopVisits=0,newsReactions=0;
+  let nextPerformance=13,streetPerformances=0;
   const STREETS = ['Maple St', 'Elm Ave', 'Pickle Lane', 'Gumdrop Rd', 'Button Way', 'Teapot St', 'Biscuit Ave', 'Puddle Lane'];
   const streetOf = (x, y) => STREETS[(isRoad(Math.floor(x)) ? LINES.indexOf(Math.floor(x)) : 4 + Math.max(0, LINES.indexOf(Math.floor(y)))) % STREETS.length];
 
@@ -132,6 +133,7 @@ const ToyTown = (() => {
     buildings = []; props = []; movers = []; events = []; parts = []; bubbles = [];
     community=null;communityEncounters=0;communityVisits=0;
     streetTrade=null;streetTransactions=0;streetShopVisits=0;newsReactions=0;
+    nextPerformance=13;streetPerformances=0;
     nextStreetMoment = 16; streetMoments = 0;
     const blocks = [];
     for (const [ya, yb] of [[2, 5], [7, 10], [12, 15]]) for (const [xa, xb] of [[2, 5], [7, 10], [12, 15]]) blocks.push({xa, xb, ya, yb, river: ya === 12});
@@ -561,6 +563,10 @@ const ToyTown = (() => {
       variant.key==='market'?'trade':'observe';
     streetTrade.newsMood=mood;
     streetTrade.reactionUntil=clock+7;
+    // Cultural and sporting stories bring a neighborhood performance
+    // forward; the factual headline stays in the attributed news panel.
+    if(mood==='celebrate'||mood==='cheer')
+      nextPerformance=Math.min(nextPerformance,clock+4);
     for(const [i,m] of [...streetTrade.customers,...streetTrade.stalls.map(s=>s.clerk)].entries()){
       m.newsMood=mood;
       // The existing 3D gesture rig responds to an observable news
@@ -1045,12 +1051,38 @@ const ToyTown = (() => {
       return {x: 2, y: 9, dur: 30, sky: {kind: 'hotair', x: -2, y: 4, z: 150, vx: .5, vy: .25}, update(e, dt) { e.sky.x += e.sky.vx * dt; e.sky.y += e.sky.vy * dt; e.x = e.sky.x; e.y = e.sky.y; if (e.t > 6 && !e.s) { e.s = 1; say({x: e.sky.x, y: e.sky.y, z: e.sky.z + 30}, 'Hello down there!', 2.5); } }};
     },
     busker() {
-      const m = movers.find(o => o.type === 'person' && !o.kind && !o.path) || spawnPerson();
-      m.stopUntil = clock + 16; m.guitar = true; say(m, '♪ la la laaa ♪', 3);
-      tick(`A street musician on ${streetOf(m.x, m.y)} has started a dance party.`);
-      const fans = peopleNear(m.x, m.y, 3).filter(o => o !== m).slice(0, 4);
-      for (const f of fans) { f.stopUntil = clock + 14; f.dance = true; }
-      return {x: m.x, y: m.y, dur: 16, notes: [m], end() { m.guitar = false; for (const f of fans) f.dance = false; }};
+      // A real arrival from the garden arch. No musician materializes on
+      // the road, and listeners walk to the performance before dancing.
+      const hb=town.blocks.find(b=>b.hero);
+      if(!hb)return null;
+      const x=hb.xa+1.84,y=hb.ya+2.83;
+      const musician=spawnPerson(Math.random,{
+        kind:'busker',x:hb.xa+1.05,y:hb.ya+3.68,
+        lane:0,d:3,max:.38,col:'#d18b83',bag:false,hat:'beanie',
+        guitar:true,shopAction:'arriving'});
+      musician.path=[{x,y,speed:.38,then:q=>{
+        q.v=0;q.shopAction='performing';q.stopUntil=clock+18;
+        say(q,'♪',1.6);
+      }}];
+      const listeners=movers.filter(o=>o.heroResident).slice(0,2);
+      for(let i=0;i<listeners.length;i++){
+        const audience=listeners[i],at={x:x+(i?-.34:.37),y:y+.24};
+        audience.path=[{...at,speed:audience.max,then:q=>{
+          q.dance=true;q.intent='concert';q.attention={x,y};
+          q.stopUntil=clock+14;
+        }}];
+        audience.sit=false;audience.stopUntil=0;
+      }
+      tick('A little live concert is gathering in the village square.');
+      return {x,y,dur:24,streetConcert:true,notes:[musician],
+        update(e){e.x=musician.x;e.y=musician.y;},
+        end(){
+          musician.guitar=false;remove(musician);
+          for(const listener of listeners){
+            listener.dance=false;listener.intent='walking';
+            listener.attention=null;listener.stopUntil=clock+.5;
+          }
+        }};
     },
     hat() {
       const m = movers.find(o => o.type === 'person' && !o.kind && !o.path) || spawnPerson();
@@ -1947,6 +1979,16 @@ const ToyTown = (() => {
     }
     if ((nextEvent -= dt) <= 0) { if (events.length < 3) randomEvent(); nextEvent = 7 + Math.random() * 6; }
     if (clock >= nextStreetMoment) { streetMoment(); nextStreetMoment = clock + 20 + Math.random() * 8; }   // an unhurried rhythm
+    if(clock>=nextPerformance){
+      // One scheduled live performance roughly every two miniature minutes,
+      // only when there is room in the event budget. This is visible civic
+      // life, not a burst of extra permanent residents.
+      if(events.length<3&&!events.some(e=>e.streetConcert)){
+        const concert=startEvent('busker');
+        if(concert)streetPerformances++;
+      }
+      nextPerformance=clock+88;
+    }
     // Traffic: keep the streets busy as cars leave and events come and go.
     while (movers.filter(m => m.type === 'car' && (m.kind === 'car' || m.kind === 'bus' || m.kind === 'taxi')).length < CARS) spawnCar();
     while (movers.filter(m => m.kind === 'bike').length < BIKES) spawnBike();
@@ -2247,7 +2289,7 @@ const ToyTown = (() => {
     addEventListener('hashchange', () => location.reload());
     start();
   }
-  return {layout, render, zoomAt, resetView, fitView, pinchTo, screenWorld, streetMoment, reactToNews, hero: () => town.blocks.find(b => b.hero), TALK, nameOf, headline, dateKey, CALM, lightPhase, themeFromNews, newsThemes, VARIANTS, VARIANT_EVENTS: () => Object.keys(VARIANT_EVENTS), decorate, setToday: l => { today_ = l; }, PACE, THEMES, GRIM, build, update, events: () => events, movers: () => movers, buildings: () => buildings, props: () => props, startEvent, randomEvent, setPlaying: v => { playing = v; }, debug: () => ({clock, theme, seed, night: nightLevel(), cam: {...cam}, fitZoom, streetMoments,communityEncounters,communityVisits,streetTransactions,streetShopVisits,newsReactions,
+  return {layout, render, zoomAt, resetView, fitView, pinchTo, screenWorld, streetMoment, reactToNews, hero: () => town.blocks.find(b => b.hero), TALK, nameOf, headline, dateKey, CALM, lightPhase, themeFromNews, newsThemes, VARIANTS, VARIANT_EVENTS: () => Object.keys(VARIANT_EVENTS), decorate, setToday: l => { today_ = l; }, PACE, THEMES, GRIM, build, update, events: () => events, movers: () => movers, buildings: () => buildings, props: () => props, startEvent, randomEvent, setPlaying: v => { playing = v; }, debug: () => ({clock, theme, seed, night: nightLevel(), cam: {...cam}, fitZoom, streetMoments,communityEncounters,communityVisits,streetTransactions,streetShopVisits,newsReactions,streetPerformances,
     trade:streetTrade?{mood:streetTrade.newsMood,staff:streetTrade.stalls.length,
       customers:streetTrade.customers.length,latestSale:streetTrade.latestSale}:null,
     community:community?{meetingUntil:community.meetingUntil,nextMeeting:community.nextMeeting,meetingCount:community.meetingCount}:null})};

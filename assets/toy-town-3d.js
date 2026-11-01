@@ -2272,6 +2272,20 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
     }else if(ref.kind==='newsie'){
       const satchel=box(g,.092,.130,.078,'#a88367',-.129,.228,.057);
       box(g,.103,.022,.031,'#f9e8d0',-.129,.285,.099);
+    }else if(ref.kind==='busker'){
+      // Physical body and a narrow neck: a musician holds an instrument,
+      // rather than swaying empty-handed to an invisible soundtrack.
+      const guitar=new THREE.Group();g.add(guitar);
+      ball(guitar,.12,'#b4774f',0,.250,.114).scale.set(1.0,1.2,.46);
+      ball(guitar,.071,'#d7a16b',-.020,.330,.117).scale.set(1,.94,.53);
+      const neck=cylinder(guitar,.016,.019,.253,'#725342',.076,.393,.124);
+      neck.rotation.z=-.48;
+      const saddle=box(guitar,.090,.022,.027,'#685143',.001,.238,.173);
+      const bridge=ball(guitar,.036,'#5b453c',0,.280,.163);
+      bridge.scale.set(.9,.85,.24);
+      const strap=box(guitar,.012,.26,.016,'#e9ca96',-.097,.323,.024);
+      strap.rotation.z=.28;
+      g.userData.buskerGuitar=guitar;
     }
     if(ref.shopRole==='vendor'){
       // Vendors are visibly different from idle residents. Color-coded
@@ -2322,7 +2336,8 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
       eyelids,headPivot,upperBody,smile,brows};
     g.userData.shopProps=shopProps;
     g.userData.pose={speed:0,sit:0,chat:0,speak:0,greet:0,observe:0,
-      serve:0,enjoy:0,receive:0,lastClock:null,turned:false};
+      serve:0,enjoy:0,receive:0,celebrate:0,play:0,dance:0,
+      lastClock:null,turned:false};
     // Lightweight deterministic silhouette variation: coat, satchel or vest,
     // plus narrow waist and different hats already supplied by simulation.
     if(ref.bag){
@@ -2664,6 +2679,11 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
           (ref.shopAction==='receiving'||ref.shopAction==='handoff')?1:0,7.0);
         state.enjoy=ease(state.enjoy,!reducedMotion&&
           (ref.shopAction==='reading'||ref.shopAction==='eating')?1:0,5.5);
+        const celebration=ref.newsMood==='cheer'||ref.newsMood==='celebrate';
+        state.celebrate=ease(state.celebrate,!reducedMotion&&celebration?1:0,5);
+        const playing=ref.guitar&&ref.shopAction==='performing';
+        state.play=ease(state.play,!reducedMotion&&playing?1:0,6);
+        state.dance=ease(state.dance,!reducedMotion&&ref.dance?1:0,5);
         const goods=g.userData.shopProps;
         if(goods){
           const vendorProduct=ref.shopRole==='vendor'?
@@ -2682,7 +2702,8 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
           const swing=phase*state.speed;
           const recover=Math.max(0,-phase)*state.speed;
           limbs.legs[k].rotation.x=-1.16*state.sit+
-            (1-state.sit)*swing*.62;
+            (1-state.sit)*swing*.62+
+            state.dance*.19*Math.sin(worldTime*4.2+k*Math.PI);
           limbs.shins[k].rotation.x=state.sit*.75+
             (1-state.sit)*recover*.94;
           limbs.feet[k].rotation.x=(1-state.sit)*
@@ -2709,13 +2730,17 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
           limbs.arms[k].rotation.x=state.sit*.20-
             swing*state.speed*(carrying?.14:.34)-
             state.chat*(dominant?.25:.07)-speech*.30-inspect*.22-wave*.52-
-            trading*.72-receiving*.56-using*1.18;
+            trading*.72-receiving*.56-using*1.18-
+            state.celebrate*(dominant?1.85:1.35)-
+            state.dance*.66-
+            (dominant?state.play*.62:state.play*.39);
           limbs.arms[k].rotation.z=(k===0?1:-1)*
             (.07+.10*state.chat+.06*state.observe)-
             wave*.89;
           limbs.elbows[k].rotation.x=
             -.56*speech-.46*inspect-.84*wave-
-            trading*.50-receiving*.80-using*.70+
+            trading*.50-receiving*.80-using*.70-
+            state.celebrate*.47-state.dance*.58-state.play*.65+
             (carrying?.20:0)+state.sit*.15;
           limbs.wrists[k].rotation.x=
             -.14*speech-.30*inspect-.25*wave;
@@ -2731,9 +2756,13 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
           state.serve*.080+state.receive*.12+state.enjoy*.045+
           state.chat*.036*Math.sin(worldTime*1.5+(ref.ph||0));
         limbs.upperBody.rotation.z=.020*state.speed*stride+
-          .032*state.chat*(ref.ph%2?1:-1);
+          .032*state.chat*(ref.ph%2?1:-1)+
+          state.play*.065*Math.sin(worldTime*7)+
+          state.dance*.12*Math.sin(worldTime*4.2+(ref.ph||0));
         limbs.upperBody.position.y=.006*Math.sin(worldTime*2.0+(ref.ph||0))+
-          Math.abs(beat)*state.speed*.009;
+          Math.abs(beat)*state.speed*.009+
+          state.celebrate*.038*Math.abs(Math.sin(worldTime*5.4+(ref.ph||0)))+
+          state.dance*.017*Math.abs(Math.sin(worldTime*4.2+(ref.ph||0)));
         // A head turn follows an actual attention target; a chat creates
         // a subtle listening nod rather than repetitive random swivels.
         const target=ref.attention;
@@ -2752,7 +2781,8 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
           Math.sin(worldTime*.95+(ref.ph||0));
         // A mouth and eyebrows that answer the conversation, instead of
         // faces that stay frozen while the arms perform gestures.
-        limbs.smile.scale.y=.40+.30*state.chat+.22*state.speak;
+        limbs.smile.scale.y=.40+.30*state.chat+.22*state.speak+
+          .16*state.celebrate+.12*state.play;
         for(let k=0;k<2;k++)
           limbs.brows[k].rotation.z=(k===0?1:-1)*
             (.12+.15*state.speak+.10*state.observe);
