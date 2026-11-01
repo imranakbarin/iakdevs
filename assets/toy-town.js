@@ -7,8 +7,8 @@
  * usable story (or offline) the date picks the theme. Cars and people move on
  * the streets and chaos events overlap: runaway carts, burst hydrants, cats
  * on roofs and the fire truck that comes for them, escaping balloons,
- * pigeons, banana peels, a UFO now and then. A director camera glides to the
- * action, a ticker reports it, and a tap anywhere pokes the town. */
+ * pigeons, banana peels, a UFO now and then. The camera stays still until dragged, a ticker reports the action,
+ * and a tap anywhere pokes the town. */
 const ToyTown = (() => {
   const cv = document.getElementById('town'), ctx = cv && cv.getContext ? cv.getContext('2d') : null;
   const N = 18, TW = 32, TH = 16, LINES = [1, 6, 11, 16];
@@ -16,14 +16,24 @@ const ToyTown = (() => {
   const hash = (a, b) => { let h = Math.imul(a ^ 0x9e3779b9, 0x85ebca6b) ^ Math.imul((b + 0x632be5ab) | 0, 0xc2b2ae35); h ^= h >>> 16; h = Math.imul(h, 0x7feb352d); h ^= h >>> 15; return h >>> 0; };
   const mulberry32 = a => () => { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; };
   const clamp = (a, x, b) => Math.max(a, Math.min(b, x)), lerp = (a, b, t) => a + (b - a) * t, TAU = Math.PI * 2;
-  const today = () => new Date().toISOString().slice(0, 10), narrow = () => typeof innerWidth === 'number' && innerWidth < 700;
+  const dateKey = (d = new Date()) => {
+    const pad = n => String(n).padStart(2, '0');
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+  };
+  const today = () => dateKey(), narrow = () => typeof innerWidth === 'number' && innerWidth < 700;
   let rnd = Math.random, seed = 0, day = '', theme = null, newsLine = '', today_ = [], nextHeadline = 12, headIx = 0;
   let W = 0, H = 0, dpr = 1, S = 1, cam = {x: N / 2, y: N / 2, z: 1, tx: N / 2, ty: N / 2, tz: 1}, base = 1;
   let grid = [], buildings = [], props = [], movers = [], events = [], parts = [], bubbles = [], ground = null, sprites = new Map();
+  const MIN_ZOOM = .42, MAX_ZOOM = 3.25;
+  let zoomAnchor = null, nextStreetMoment = 16, streetMoments = 0, fitZoom = 1;
   const PACE = .6, CARS = 7, BIKES = 4, PEOPLE = 14, LIGHT = 10;   // a calm town: few cars, a handful of cyclists, people taking their time   // the whole town runs at 60% speed: easier to follow, calmer to watch
   const FONT = 'Nunito, system-ui, sans-serif';   // a rounded, friendly face at gentle weights
   let feed = {potd: null, otd: [], trending: []}, potdImg = null;
   let clock = 0, playing = true, last = 0, nextEvent = 2, director = null, directorUntil = 0;
+  let community = null, communityEncounters = 0, communityVisits = 0;
+  let streetTrade=null,streetTransactions=0,streetShopVisits=0,newsReactions=0;
+  let nextPerformance=13,streetPerformances=0;
+  let districts=[],districtVisits=0,districtMeetings=0,districtTasks=0;
   const STREETS = ['Maple St', 'Elm Ave', 'Pickle Lane', 'Gumdrop Rd', 'Button Way', 'Teapot St', 'Biscuit Ave', 'Puddle Lane'];
   const streetOf = (x, y) => STREETS[(isRoad(Math.floor(x)) ? LINES.indexOf(Math.floor(x)) : 4 + Math.max(0, LINES.indexOf(Math.floor(y)))) % STREETS.length];
 
@@ -107,28 +117,9 @@ const ToyTown = (() => {
   // A story shortened to a headline the town can shout.
   const headline = story => { const t = String(story).split(/[;:]|, (?:and|while|after|as) /)[0]; return t.length > 70 ? t.slice(0, t.lastIndexOf(' ', 68)) + '…' : t; };
   function themeFromNews(stories) { return newsThemes(stories, 1)[0] || null; }
-  const strip = html => String(html).replace(/<[^>]*>/g, '').replace(/&[a-z#0-9]+;/gi, ' ').replace(/\s+/g, ' ').trim();
-  // The rest of the day's feed, kept light: the picture of the day, gentle "on this day" moments, what people are reading.
-  const light = t => t && !GRIM.some(w => has(t, w));
-  function feedExtras(data) {
-    const img = data.image || {}, src = (img.thumbnail || {}).source, desc = strip((img.description || {}).text || '').slice(0, 140);
-    const otd = (data.onthisday || []).map(o => ({year: o.year, text: strip(o.text)})).filter(o => o.year && light(o.text)).slice(0, 6);
-    const trending = ((data.mostread || {}).articles || []).filter(a => a.type === 'standard' && light(`${a.normalizedtitle} ${a.description || ''} ${a.extract || ''}`) && !/^(Deaths in|List of)/.test(a.normalizedtitle)).map(a => a.normalizedtitle).slice(0, 8);
-    return {potd: src ? {src, desc: light(desc) ? desc : ''} : null, otd, trending};
-  }
-  async function fetchNews(date) {
-    const key = 'toy-town:news:' + date;
-    try { const c = JSON.parse(localStorage.getItem(key)), x = JSON.parse(localStorage.getItem(key + ':more')); if (c && x) { feed = x; return c; } } catch (_) {}
-    const [y, m, d] = date.split('-');
-    const ctl = typeof AbortController !== 'undefined' ? new AbortController() : null, timer = setTimeout(() => ctl && ctl.abort(), 4000);
-    try {
-      const res = await fetch(`https://api.wikimedia.org/feed/v1/wikipedia/en/featured/${y}/${m}/${d}`, ctl ? {signal: ctl.signal} : {});
-      const data = await res.json(), stories = (data.news || []).map(n => strip(n.story)).filter(Boolean);
-      feed = feedExtras(data);
-      try { localStorage.setItem(key, JSON.stringify(stories)); localStorage.setItem(key + ':more', JSON.stringify(feed)); } catch (_) {}
-      return stories;
-    } catch (_) { return []; } finally { clearTimeout(timer); }
-  }
+  // News is now a separate publisher-attributed, freshness-checked feed.
+  // No Wikimedia one-shot feed, endless localStorage cache, or fabricated
+  // breaking-news events when RSS updates fail.
 
   /* ---------------- the town ---------------- */
   const PASTEL = ['#f6a6a0', '#f7c873', '#a8d8a0', '#9cc7ef', '#c9a6e8', '#f4b6d2', '#ffe08a', '#8fd3c9'];
@@ -143,18 +134,31 @@ const ToyTown = (() => {
       return {kind: road ? (water ? 'bridge' : 'road') : water ? 'water' : (x === 0 || y === 0 || x === N - 1 || y === N - 1) ? 'edge' : 'lot', block: null};
     }));
     buildings = []; props = []; movers = []; events = []; parts = []; bubbles = [];
+    community=null;communityEncounters=0;communityVisits=0;
+    streetTrade=null;streetTransactions=0;streetShopVisits=0;newsReactions=0;
+    nextPerformance=13;streetPerformances=0;
+    districts=[];districtVisits=0;districtMeetings=0;districtTasks=0;
+    nextStreetMoment = 16; streetMoments = 0;
     const blocks = [];
     for (const [ya, yb] of [[2, 5], [7, 10], [12, 15]]) for (const [xa, xb] of [[2, 5], [7, 10], [12, 15]]) blocks.push({xa, xb, ya, yb, river: ya === 12});
-    const land = blocks.filter(b => !b.river), order = land.map(b => b).sort(() => r() - .5);
+    // The centre remains a handcrafted neighborhood on every date; everything
+    // around it is still shuffled by theme and seed.
+    const hero = blocks.find(b => b.xa === 7 && b.ya === 7);
+    const land = blocks.filter(b => !b.river && b !== hero), order = land.map(b => b).sort(() => r() - .5);
     const special = {sports: 'stadium', space: 'launchpad', election: 'stage', festival: 'stage', awards: 'stage', tech: 'lab', animals: 'zoo', market: 'market', science: 'lab', weather: 'park'}[themeKey] || 'park';
-    const kinds = [special, 'fire', special === 'park' ? 'towers' : 'park', 'shops', 'houses', r() < .5 ? 'construction' : 'houses'];
+    const kinds = [special, 'fire', special === 'park' ? 'towers' : 'park', 'houses', r() < .5 ? 'construction' : 'houses'];
     order.forEach((b, i) => { b.type = kinds[i] || 'houses'; });
+    hero.type = 'hero';
     for (const b of blocks.filter(b => b.river)) b.type = 'riverside';
     for (const b of blocks) fill(b, r);
     for (let x = 0; x < N; x++) for (let y = 0; y < N; y++) if (tile(x, y).kind === 'edge' && r() < .55) props.push({kind: 'tree', x: x + .5, y: y + .5, s: .8 + r() * .4, c: r() < .5 ? '#5cb85c' : '#7cc65a'});
     for (let k = 0; k < CARS; k++) spawnCar(r);
     for (let k = 0; k < BIKES; k++) spawnBike(r);
     for (let k = 0; k < PEOPLE; k++) spawnPerson(r);
+    spawnHeroResidents(hero, r);
+    spawnNeighborhoodLife(hero, r);
+    spawnStreetTrade(hero, r);
+    spawnDistrictLife(blocks,r);
     for (const b of buildings) if (b.kind === 'house' && r() < .75) props.push({kind: 'flowers', x: b.x + .5, y: b.y + .88, c: [PASTEL[r() * 8 | 0], PASTEL[r() * 8 | 0]]});
     for (let k = 0; k < 5; k++) props.push({kind: 'duck', x: 1 + r() * 16, y: 13.2 + r() * 1.6, vx: (r() - .5) * .3, ph: r() * 6});
     sprites.clear(); ground = null;
@@ -162,14 +166,85 @@ const ToyTown = (() => {
   }
   const town = {blocks: []};
   function addBuilding(b) { buildings.push(b); tile(b.x, b.y).used = true; }
+  function fillHero(b, r) {
+    const {xa: x, ya: y} = b;
+    const site = (ix, iy, kind, details) => {
+      const bx = x + ix, by = y + iy;
+      addBuilding({x: bx, y: by, kind, hero: true, ...details});
+    };
+    // Only five carefully placed buildings: two corner shops and three homes.
+    // Their frontages face the path; the central two-by-two block is open.
+    site(1, 0, 'shop', {h: 40, wall: '#f0d8bd', awning: '#bf6657', name: 'BAKERY'});
+    site(2, 0, 'shop', {h: 38, wall: '#c6dfd3', awning: '#427c78', name: 'BOOKS'});
+    site(0, 0, 'house', {h: 34, wall: '#dfbba4', roof: '#a55a49'});
+    site(3, 1, 'house', {h: 34, wall: '#c4d7e7', roof: '#638db2'});
+    site(3, 3, 'house', {h: 36, wall: '#eedbb9', roof: '#b47742'});
+    for (let yy = y; yy <= b.yb; yy++) for (let xx = x; xx <= b.xb; xx++) {
+      const cell = tile(xx, yy);
+      cell.kind = (xx >= x + 1 && xx <= x + 2 && yy >= y + 1 && yy <= y + 2)
+        ? 'plaza' : cell.used ? 'lot' : 'park';
+    }
+    b.hero = true;
+    // Furniture occupies free tiles and is placed directly on the lawn/terrace.
+    props.push(
+      {kind:'hero-bench', x:x + 1.43, y:y + 2.52},
+      {kind:'hero-table', x:x + 2.49, y:y + 2.55, flower:true},
+      {kind:'hero-lamp', x:x + .65, y:y + 1.65},
+      {kind:'hero-lamp', x:x + 3.31, y:y + 2.65},
+      {kind:'hero-mail', x:x + .77, y:y + 3.35},
+      {kind:'hero-rack', x:x + 2.54, y:y + 1.4},
+      {kind:'hero-shrub', x:x + .44, y:y + 2.24, col:'#497e50'},
+      {kind:'hero-shrub', x:x + 3.35, y:y + .45, col:'#568e66'},
+      {kind:'hero-shrub', x:x + 2.62, y:y + 3.4, col:'#6d9a63'},
+      {kind:'tree', x:x + .55, y:y + 2.55, s:.78, c:'#508f69'}
+    );
+    return b;
+  }
   function fill(b, r) {
+    if (b.type === 'hero') { fillHero(b, r); return; }
     const tiles = []; for (let y = b.ya; y <= b.yb; y++) for (let x = b.xa; x <= b.xb; x++) { tile(x, y).block = b; tiles.push([x, y]); }
     const edge = ([x, y]) => x === b.xa || x === b.xb || y === b.ya || y === b.yb;
     const pastel = () => PASTEL[r() * PASTEL.length | 0], roof = () => ROOFS[r() * ROOFS.length | 0];
-    if (b.type === 'houses') for (const [x, y] of tiles) { if (edge([x, y]) && r() < .8) addBuilding({x, y, kind: 'house', h: 16 + r() * 8, wall: pastel(), roof: roof()}); else props.push({kind: 'tree', x: x + .5, y: y + .5, s: .7 + r() * .4, c: '#6cc35a'}); }
-    else if (b.type === 'shops') for (const [x, y] of tiles) { if (edge([x, y])) addBuilding({x, y, kind: 'shop', h: 22 + r() * 14, wall: pastel(), awning: roof(), name: ['BAKERY', 'PIZZA', 'TOYS', 'BOOKS', 'CAFE', 'SWEETS', 'PETS'][r() * 7 | 0]}); else tile(x, y).kind = 'plaza'; }
-    else if (b.type === 'towers') for (const [x, y] of tiles) { if (r() < .7) addBuilding({x, y, kind: 'tower', h: 50 + r() * 70, wall: ['#9fc4e8', '#b9d2e6', '#a8b8d8', '#c8d6e0'][r() * 4 | 0], roof: '#6b7c93'}); else tile(x, y).kind = 'plaza'; }
-    else if (b.type === 'fire') { for (const [x, y] of tiles) { if (x === b.xa && y === b.yb) addBuilding({x, y, kind: 'fire', h: 26, wall: '#e2463a', roof: '#a8281f'}); else if (edge([x, y]) && r() < .6) addBuilding({x, y, kind: 'house', h: 16 + r() * 8, wall: pastel(), roof: roof()}); else tile(x, y).kind = 'plaza'; } b.station = {x: b.xa + .5, y: b.yb + .5}; }
+    // Village composition: houses and tall buildings grow in coherent small
+    // clusters instead of filling every edge cell with another repeating roof.
+    // All lots, traffic lanes, landmarks and event positions remain unchanged.
+    if (b.type === 'houses') {
+      const frontageNorth = r() < .5;
+      for (const [x, y] of tiles) {
+        const primary = frontageNorth ? (y === b.ya || y === b.yb) :
+          (x === b.xa || x === b.xb);
+        const clustered = edge([x, y]) &&
+          (primary ? r() < .72 : r() < .39) &&
+          !(x === b.xa+1 && y === b.ya);
+        if (clustered) addBuilding({x,y,kind:'house',
+          h:29+r()*9,wall:pastel(),roof:roof()});
+        else {
+          tile(x,y).kind='park';
+          if (r()<.66) props.push({kind:'tree',x:x+.5,y:y+.5,
+            s:.70+r()*.33,c:r()<.5?'#6b9c70':'#88b289'});
+          else if(r()<.36)props.push({kind:'flowers',x:x+.5,y:y+.5,
+            c:['#e0c8ae','#d6e3b6']});
+        }
+      }
+    }
+    else if (b.type === 'shops') for (const [x, y] of tiles) { if (edge([x, y])) addBuilding({x, y, kind: 'shop', h: 32 + r() * 11, wall: pastel(), awning: roof(), name: ['BAKERY', 'PIZZA', 'TOYS', 'BOOKS', 'CAFE', 'SWEETS', 'PETS'][r() * 7 | 0]}); else tile(x, y).kind = 'plaza'; }
+    else if (b.type === 'towers') {
+      // Three or four varied spires form a readable district skyline;
+      // the remaining parcels become garden clearings.
+      const sites=[[0,0],[3,0],[0,3],[3,3],[1,2],[2,1]];
+      const selected=sites.filter((_,i)=>i<3||r()<.28);
+      for(const [x,y] of tiles){
+        const landmark=selected.some(([dx,dy])=>x===b.xa+dx&&y===b.ya+dy);
+        if(landmark)addBuilding({x,y,kind:'tower',
+          h:56+r()*60,wall:['#9fc4e8','#b9d2e6','#a8b8d8','#c8d6e0'][r()*4|0],roof:'#6b7c93'});
+        else {
+          tile(x,y).kind='park';
+          if(r()<.53)props.push({kind:'tree',x:x+.5,y:y+.5,
+            s:.74+r()*.39,c:'#85a994'});
+        }
+      }
+    }
+    else if (b.type === 'fire') { for (const [x, y] of tiles) { if (x === b.xa && y === b.yb) addBuilding({x, y, kind: 'fire', h: 26, wall: '#e2463a', roof: '#a8281f'}); else if (edge([x, y]) && r() < .38) addBuilding({x, y, kind: 'house', h: 29 + r() * 8, wall: pastel(), roof: roof()}); else tile(x, y).kind = 'plaza'; } b.station = {x: b.xa + .5, y: b.yb + .5}; }
     else if (b.type === 'construction') { for (const [x, y] of tiles) tile(x, y).kind = 'dirt'; addBuilding({x: b.xa + 1, y: b.ya + 1, kind: 'site', h: 20, wall: '#d8c79a', roof: '#c9a85a'}); props.push({kind: 'crane', x: b.xa + 2.5, y: b.ya + 2.5}); }
     else if (b.type === 'riverside') for (const [x, y] of tiles) { if (tile(x, y).kind === 'water') continue; if (r() < .35) props.push({kind: 'tree', x: x + .5, y: y + .5, s: .7 + r() * .3, c: '#5cb85c'}); else if (r() < .2) props.push({kind: 'bench', x: x + .5, y: y + .5}); }
     else {   // park and the theme blocks keep open ground
@@ -184,18 +259,507 @@ const ToyTown = (() => {
   // Movers travel along the road lines; ax is the axis they move on ('x' or 'y').
   const DIRS = [[1, 0], [-1, 0], [0, 1], [0, -1]];
   function randomRoadPoint(r) { const along = r() < .5, line = LINES[r() * 4 | 0] + .5, t = 1.5 + r() * 14.5; return along ? {x: t, y: line, d: r() < .5 ? 0 : 1} : {x: line, y: t, d: r() < .5 ? 2 : 3}; }
+  const directionAngle = d => [0, Math.PI, Math.PI / 2, -Math.PI / 2][d] || 0;
   function spawnCar(r = Math.random, kind) {
     const p = randomRoadPoint(r), k = kind || (r() < .12 ? 'bus' : r() < .15 ? 'taxi' : 'car');
-    const m = {type: 'car', kind: k, x: p.x, y: p.y, d: p.d, v: 0, max: k === 'bus' ? .9 : 1.2 + r() * .5, col: k === 'taxi' ? '#f6c541' : k === 'bus' ? '#3f8fd6' : PASTEL[r() * PASTEL.length | 0], wait: 0, lane: .2};
+    const m = {type: 'car', kind: k, x: p.x, y: p.y, d: p.d, heading: directionAngle(p.d), v: 0, travel: 0, moved:0, max: k === 'bus' ? .9 : 1.2 + r() * .5, col: k === 'taxi' ? '#f6c541' : k === 'bus' ? '#3f8fd6' : PASTEL[r() * PASTEL.length | 0], wait: 0, lane: .2};
+    findSafeSpawn(m,r);
     movers.push(m); return m;
   }
   function spawnPerson(r = Math.random, opts = {}) {
     const p = randomRoadPoint(r);
-    const m = Object.assign({type: 'person', x: p.x, y: p.y, d: p.d, v: 0, max: .35 + r() * .25, col: PASTEL[r() * PASTEL.length | 0], skin: ['#f1c9a5', '#d8a77c', '#a8754f', '#7a4e33'][r() * 4 | 0], lane: (r() < .5 ? 1 : -1) * (.4 + r() * .07), ph: r() * 6, wait: 0}, opts);
+    const m = Object.assign({type: 'person', x: p.x, y: p.y, d: p.d, v: 0, travel: 0, max: .35 + r() * .25, col: PASTEL[r() * PASTEL.length | 0], skin: ['#f1c9a5', '#d8a77c', '#a8754f', '#7a4e33'][r() * 4 | 0],
+      hat: r() < .23 ? (r() < .5 ? 'cap' : 'beanie') : null,
+      bag: r() < .25, scarf: r() < .24, hair: r() < .5 ? '#49362d' : '#333947',
+      lane: (r() < .5 ? 1 : -1) * (.4 + r() * .07), ph: r() * 6, wait: 0,
+      intent:'walking', nextNotice:clock+7+r()*10, observeUntil:0,
+      attention:null,moved:0}, opts);
     movers.push(m); return m;
   }
+  // These neighbors stay within open paths; the bakery, bookshop, bench and
+  // terrace are actual destinations. No teleporting, clipping through roofs,
+  // or randomly jittering between points.
+  function spawnHeroResidents(b, r) {
+    const {xa:x, ya:y} = b;
+    const routes = [
+      [{x:x+1.49,y:y+1.18,dwell:3,wave:true},{x:x+1.49,y:y+1.96,dwell:1.2},
+       {x:x+1.42,y:y+2.53,dwell:4.4,sit:true},{x:x+1.48,y:y+1.87,dwell:1}],
+      [{x:x+2.48,y:y+1.2,dwell:3,wave:true},{x:x+2.46,y:y+1.85,dwell:1},
+       {x:x+2.49,y:y+2.62,dwell:3.8},{x:x+2.39,y:y+1.7,dwell:1}],
+      [{x:x+1.43,y:y+2.52,dwell:4,sit:true},{x:x+1.64,y:y+1.88,dwell:1.4},
+       {x:x+1.5,y:y+3.72,dwell:.8},
+       {x:x+1.5,y:y+5.2,dwell:1.4,cross:true},  // reach the riverside across the marked road
+       {x:x+1.5,y:y+3.72,dwell:1.2,cross:true},
+       {x:x+2.42,y:y+1.82,dwell:2,wave:true},{x:x+2.48,y:y+2.58,dwell:3.5}]
+    ];
+    const origins = [[x+1.48,y+1.88],[x+2.45,y+1.83],[x+2.41,y+2.63]];
+    for (let i = 0; i < routes.length; i++) {
+      const m = spawnPerson(r, {x:origins[i][0], y:origins[i][1], d:i===1?2:3,
+        lane:0, max:.26 + r() * .07, heroResident:true, heroStops:routes[i],
+        heroIndex:i, stopUntil:clock + .2 + i * 1.3});
+      m.v = 0;
+    }
+  }
+  function updateHeroResident(m) {
+    if (!m.heroResident || m.path && m.path.length || clock < (m.stopUntil || 0)) return;
+    const dest = m.heroStops[m.heroIndex % m.heroStops.length];
+    // Wait until the crossing is clear before the pedestrian leaves the curb.
+    // Cars arriving afterwards yield while the crossing remains occupied.
+    const b = town.blocks.find(q => q.hero);
+    const crossX = b.xa + 1.5, crossY = b.yb + 1.5;
+    if (dest.cross && movers.some(o => o.type === 'car' && o.d < 2 &&
+      Math.abs(o.y - crossY) < .25 && Math.abs(o.x - crossX) < 1.1)) {
+      m.v = 0; m.stopUntil = clock + .35; return;
+    }
+    m.heroIndex++;
+    m.sit = false; m.crossing = !!dest.cross;
+    m.intent=dest.cross?'crossing':'destination';m.attention={x:dest.x,y:dest.y};
+    m.path = [{x:dest.x,y:dest.y,speed:m.max,then:walker=>{
+      walker.v = 0; walker.crossing = false;
+      walker.stopUntil = clock + dest.dwell;
+      walker.intent=dest.sit?'rest':dest.wave?'greeting':'waiting';
+      walker.sit = !!dest.sit;
+      if (dest.wave) walker.waveUntil = clock + Math.min(dest.dwell, 1.4);
+    }}];
+  }
+
+  // Small, persistent social ecology in the real central square. Not another
+  // timed chaos event: this routine carries on while news themes change.
+  // It uses the free 2x2 plaza, avoiding storefront walls and the busy roads.
+  function spawnNeighborhoodLife(hero,r){
+    const x=hero.xa,y=hero.ya;
+    const residents=[
+      spawnPerson(r,{kind:'neighbor',x:x+1.70,y:y+2.12,d:3,lane:0,max:.28,
+        communityResident:true,ph:r()*6,stopUntil:clock+2.4}),
+      spawnPerson(r,{kind:'neighbor',x:x+2.35,y:y+2.10,d:3,lane:0,max:.31,
+        communityResident:true,ph:r()*6,stopUntil:clock+5.8})
+    ];
+    for(const m of residents){m.intent='strolling';m.busy=false;}
+    const dog=spawnPerson(r,{kind:'dog',x:x+2.11,y:y+2.36,d:3,
+      lane:0,max:.39,ph:r()*6,companionDog:true});
+    dog.attention={x:residents[1].x,y:residents[1].y};
+    community={
+      residents,dog,nextMeeting:clock+12+r()*4,
+      meetingUntil:0,meetingCount:0,
+      destinations:[
+        {name:'bakery',x:x+1.49,y:y+1.66},
+        {name:'books',x:x+2.49,y:y+1.67},
+        {name:'garden',x:x+1.82,y:y+2.16},
+        {name:'terrace',x:x+2.24,y:y+2.17}
+      ]
+    };
+    residents.forEach((m,i)=>{
+      m.communityDestination=i===0?'bakery':'terrace';
+      m.communityNext=clock+4+i*3;
+    });
+  }
+  function nearbyCompanionPoint(owner,dog){
+    // Follow the back quarter of the owner's walking vector, not an arbitrary
+    // global waypoint that would send the dog through a shopfront.
+    const vx=owner.x-dog.x,vy=owner.y-dog.y;
+    const dist=Math.hypot(vx,vy)||1;
+    return {x:owner.x-vx/dist*.20,y:owner.y-vy/dist*.20};
+  }
+  function updateNeighborhoodLife(dt){
+    const life=community;if(!life)return;
+    const [a,b]=life.residents;
+    if(!movers.includes(a)||!movers.includes(b))return;
+    if(life.meetingUntil>clock){
+      for(const m of life.residents){
+        m.v=0;m.stopUntil=Math.max(m.stopUntil||0,life.meetingUntil);
+        m.intent='chat';m.attention={x:m===a?b.x:a.x,y:m===a?b.y:a.y};
+      }
+    }else{
+      if(life.meetingUntil){
+        for(const m of life.residents){
+          m.stopUntil=0;m.intent='strolling';m.attention=null;
+          m.communityNext=clock+2+(m===b?1.5:0);
+        }
+        life.meetingUntil=0;
+      }
+      // Both arrive at a socially credible meeting point on the walkway.
+      if(clock>=life.nextMeeting&&!life.meetingUntil){
+        const close=Math.hypot(a.x-b.x,a.y-b.y)<.86;
+        if(close){
+          // A real neighbor recognizes their friend along the approach.
+          // Stop at the place they actually meet, instead of robotically
+          // finishing two exact waypoints before acknowledging each other.
+          for(const m of life.residents)m.path=null;
+          life.meetingUntil=clock+3.3;
+          life.nextMeeting=clock+25;
+          life.meetingCount++;communityEncounters++;
+          for(const m of life.residents){
+            m.stopUntil=life.meetingUntil;m.v=0;
+            m.waveUntil=clock+.9;m.intent='chat';
+            m.attention={x:m===a?b.x:a.x,y:m===a?b.y:a.y};
+          }
+        }else if(!a.path&&!b.path){
+          // A shared safe plaza rendezvous. No intersection crossing and no
+          // snapping positions; the two neighbors converge normally.
+          for(const [i,m] of life.residents.entries()){
+            m.communityNext=clock+8;
+            m.path=[{x:life.destinations[i+2].x,
+              y:life.destinations[i+2].y,speed:m.max}];
+            m.intent='meeting';m.attention={
+              x:life.destinations[i+2].x,y:life.destinations[i+2].y};
+          }
+        }
+      }
+      if(clock<life.nextMeeting-3){
+        for(const [i,m] of life.residents.entries()){
+          if(m.path||clock<(m.stopUntil||0)||clock<(m.communityNext||0))continue;
+          const candidates=life.destinations.filter(p=>
+            p.name!==(m.communityDestination||'') &&
+            life.residents.every(other=>other===m||
+              Math.hypot(p.x-other.x,p.y-other.y)>.37));
+          if(!candidates.length)continue;
+          // Choose a real place with low current occupancy, not the next
+          // element in a synchronized loop. Phase makes visits staggered.
+          const chosen=candidates[(life.meetingCount+i+
+            Math.floor(clock/13))%candidates.length];
+          m.communityDestination=chosen.name;
+          m.intent='visiting';m.attention={x:chosen.x,y:chosen.y};
+          m.path=[{x:chosen.x,y:chosen.y,speed:m.max,then:walker=>{
+            walker.v=0;walker.intent='visiting';
+            walker.stopUntil=clock+2.3+(i*.7);
+            walker.communityNext=walker.stopUntil+1.8;
+            communityVisits++;
+          }}];
+        }
+      }
+    }
+    const dog=life.dog,owner=b;
+    if(!movers.includes(dog))return;
+    const gap=Math.hypot(owner.x-dog.x,owner.y-dog.y);
+    const ownerStill=(owner.v||0)<.05&&!owner.path;
+    dog.intent=ownerStill?'rest':'following';
+    dog.attention={x:owner.x,y:owner.y};
+    dog.watch=ownerStill?'owner':'walk';
+    dog.sit=ownerStill&&gap<.43;
+    if(ownerStill&&gap<.43){
+      dog.v=0;dog.path=null;dog.stopUntil=clock+.13;
+    }else if(gap>.34&&clock>=(dog.nextFollow||0)){
+      const to=nearbyCompanionPoint(owner,dog);
+      dog.path=[{x:to.x,y:to.y,speed:.34}];
+      dog.nextFollow=clock+.45;
+    }
+  }
+  /* --------- living market: physical service, not a rotating tableau --------
+   * Two clerks remain at the shop frontage and serve actual arriving
+   * customers. Goods appear in a hand only AFTER reaching the counter.
+   * Shoppers walk to the bakery or bookshop, receive a purchase, then
+   * actually walk to a cafe/reading spot before returning for another visit.
+   * Every transition is driven by distance and timed dwell, not teleport.
+   */
+  function spawnStreetTrade(hero,r){
+    const x=hero.xa,y=hero.ya;
+    const places=[
+      {kind:'bakery',product:'bread',vendor:{x:x+1.07,y:y+1.42},
+        serve:{x:x+1.32,y:y+1.78},rest:{x:x+1.17,y:y+2.31}},
+      {kind:'bookshop',product:'book',vendor:{x:x+2.93,y:y+1.42},
+        serve:{x:x+2.68,y:y+1.78},rest:{x:x+2.78,y:y+2.34}}
+    ];
+    const stalls=places.map((place,i)=>{
+      const clerk=spawnPerson(r,{kind:'shopkeeper',shopRole:'vendor',
+        shopVenue:place.kind,x:place.vendor.x,y:place.vendor.y,
+        d:2,lane:0,max:0,v:0,col:i?'#508f8a':'#de8f69',
+        hat:i?'cap':null,bag:false,scarf:false,
+        stopUntil:1e8,shopAction:'offering',
+        attention:{...place.serve}});
+      return {...place,clerk,customer:null,serveUntil:0};
+    });
+    const startingPoints=[
+      [x+1.21,y+2.56],[x+2.83,y+2.52],[x+2.08,y+2.38]
+    ];
+    const customers=startingPoints.map(([px,py],i)=>{
+      const shopper=spawnPerson(r,{kind:'shopper',shopRole:'customer',
+        x:px,y:py,d:3,lane:0,max:.36+r()*.10,v:0,bag:false,
+        col:['#db7d99','#e2b46d','#7da6bd'][i],
+        shopAction:'looking',shopPhase:'ready',shopOrder:i,
+        nextShop:clock+i*.85,stopUntil:clock+i*.85});
+      shopper.shopHome=i%2;
+      return shopper;
+    });
+    streetTrade={stalls,customers,latestSale:null,newsMood:null,
+      reactionUntil:0};
+  }
+  function updateStreetTrade(){
+    const trade=streetTrade;
+    if(!trade)return;
+    for(const stall of trade.stalls){
+      const seller=stall.clerk;
+      if(!movers.includes(seller))continue;
+      // A seller never drifts away from the counter while distracted by
+      // a theme event, nor performs a stationary walk cycle.
+      seller.v=0;
+      seller.shopAction=stall.customer?.shopPhase==='receiving'?
+        'handoff':stall.customer?'serving':'offering';
+      seller.attention=stall.customer?
+        {x:stall.customer.x,y:stall.customer.y}:{...stall.serve};
+    }
+    for(const shopper of trade.customers){
+      if(!movers.includes(shopper))continue;
+      if(shopper.shopPhase==='ready'&&clock>=(shopper.nextShop||0)){
+        const preferred=trade.stalls[shopper.shopOrder%2];
+        const available=[preferred,...trade.stalls].find(s=>!s.customer);
+        if(!available){shopper.nextShop=clock+.55;continue;}
+        available.customer=shopper;
+        shopper.shopAt=available.kind;
+        shopper.shopOrder++;
+        shopper.shopPhase='approaching';
+        shopper.shopAction='visiting';
+        shopper.attention={...available.vendor};
+        shopper.path=[{x:available.serve.x,y:available.serve.y,
+          speed:shopper.max,then:o=>{
+            o.shopPhase='ordering';o.shopAction='ordering';
+            o.stopUntil=clock+1.25;o.shopNext=clock+1.25;
+            o.attention={...available.vendor};
+            streetShopVisits++;
+          }}];
+      }else if(shopper.shopPhase==='ordering'&&clock>=(shopper.shopNext||0)){
+        const stall=trade.stalls.find(s=>s.customer===shopper);
+        if(!stall)continue;
+        // The hand-off can only occur after the customer physically reaches
+        // the service point and faces the right clerk.
+        const gap=Math.hypot(shopper.x-stall.serve.x,shopper.y-stall.serve.y);
+        if(gap>.13)continue;
+        shopper.carrying=stall.product;
+        shopper.shopPhase='receiving';shopper.shopAction='receiving';
+        shopper.stopUntil=clock+.95;shopper.shopNext=clock+.95;
+        stall.serveUntil=clock+.95;
+        stall.clerk.shopAction='serving';
+        shopper.attention={...stall.vendor};
+        streetTransactions++;
+        trade.latestSale={shop:stall.kind,product:stall.product,at:clock};
+      }else if(shopper.shopPhase==='receiving'&&clock>=(shopper.shopNext||0)){
+        const stall=trade.stalls.find(s=>s.customer===shopper);
+        if(!stall)continue;
+        stall.customer=null;
+        shopper.shopPhase='leaving';shopper.shopAction='carrying';
+        shopper.stopUntil=0;shopper.attention={...stall.rest};
+        shopper.path=[{x:stall.rest.x,y:stall.rest.y,speed:shopper.max,
+          then:o=>{
+            o.shopPhase='enjoying';
+            o.shopAction=o.carrying==='book'?'reading':'eating';
+            o.shopNext=clock+3.5+(o.shopHome*.6);
+            o.stopUntil=o.shopNext;
+            o.attention={x:stall.rest.x+.3,y:stall.rest.y+.24};
+          }}];
+      }else if(shopper.shopPhase==='enjoying'&&clock>=(shopper.shopNext||0)){
+        shopper.carrying=null;
+        shopper.shopAction='looking';shopper.shopPhase='ready';
+        shopper.nextShop=clock+1.2+(shopper.shopHome*.6);
+        shopper.stopUntil=shopper.nextShop;
+        shopper.attention=null;
+      }
+    }
+    if(trade.reactionUntil&&clock>=trade.reactionUntil){
+      trade.reactionUntil=0;
+      trade.newsMood=null;
+      for(const m of [...trade.customers,...trade.stalls.map(s=>s.clerk)])
+        m.newsMood=null;
+    }
+  }
+  function reactToNews(variant){
+    if(!streetTrade||!variant||!variant.story)return false;
+    const mood=variant.key==='sports'?'cheer':
+      variant.key==='festival'||variant.key==='awards'?'celebrate':
+      variant.key==='space'||variant.key==='science'||variant.key==='tech'?'curious':
+      variant.key==='market'?'trade':'observe';
+    streetTrade.newsMood=mood;
+    streetTrade.reactionUntil=clock+7;
+    // Cultural and sporting stories bring a neighborhood performance
+    // forward; the factual headline stays in the attributed news panel.
+    if(mood==='celebrate'||mood==='cheer')
+      nextPerformance=Math.min(nextPerformance,clock+4);
+    for(const area of districts)for(const m of area.participants){
+      m.newsMood=mood;
+      if(mood==='cheer'||mood==='celebrate')m.waveUntil=clock+1.6;
+    }
+    for(const [i,m] of [...streetTrade.customers,...streetTrade.stalls.map(s=>s.clerk)].entries()){
+      m.newsMood=mood;
+      // The existing 3D gesture rig responds to an observable news
+      // pulse without disturbing current service or customer paths.
+      if(mood==='cheer'||mood==='celebrate')
+        m.waveUntil=clock+1.8+(i%3)*.35;
+      else if(mood==='curious')m.attention={x:9,y:8.8};
+    }
+    newsReactions++;
+    return true;
+  }
+  /* Four outer quadrants can host their own little working neighborhoods.
+   * A visitor takes an unobstructed graph of free lot cells to a service;
+   * a worker genuinely walks a short local round and returns to the job.
+   * Never invent a path through a structure or a road just to fill space.
+   */
+  const DISTRICT_ROLES=['garden','post','art','produce'];
+  const DISTRICT_STEPS=[[1,0],[-1,0],[0,1],[0,-1]];
+  const districtKey=(x,y)=>x+','+y;
+  function districtRoute(area,from,to){
+    const start=districtKey(from.x,from.y),goal=districtKey(to.x,to.y);
+    if(start===goal)return [];
+    const nodes=new Map(area.cells.map(c=>[districtKey(c.x,c.y),c]));
+    const previous=new Map([[start,null]]),queue=[start];
+    for(let i=0;i<queue.length&&!previous.has(goal);i++){
+      const node=nodes.get(queue[i]);if(!node)continue;
+      for(const [dx,dy] of DISTRICT_STEPS){
+        const key=districtKey(node.x+dx,node.y+dy);
+        if(nodes.has(key)&&!previous.has(key)){
+          previous.set(key,queue[i]);queue.push(key);
+        }
+      }
+    }
+    if(!previous.has(goal))return [];
+    const out=[];for(let at=goal;at!==start;at=previous.get(at)){
+      const node=nodes.get(at);out.push({x:node.x+.5,y:node.y+.5});
+    }
+    return out.reverse();
+  }
+  function spawnDistrictLife(blocks,r){
+    const outer=blocks.filter(b=>b.ya<12&&b.xa!==7)
+      .sort((a,b)=>a.ya-b.ya||a.xa-b.xa);
+    const adjacent=(node,pool)=>DISTRICT_STEPS.map(([dx,dy])=>pool.find(c=>
+      c.x===node.x+dx&&c.y===node.y+dy)).filter(Boolean);
+    for(const [i,b] of outer.entries()){
+      const candidates=[];
+      for(let y=b.ya;y<=b.yb;y++)for(let x=b.xa;x<=b.xb;x++){
+        const cell=tile(x,y);
+        if(!cell||cell.used||cell.kind==='water'||cell.kind==='road')continue;
+        // Giant theme props sit in the center of some squares; do not
+        // route residents through a stage, crane, stadium or fountain.
+        if(props.some(p=>['fountain','market','stage','lab','zoo',
+          'launchpad','stadium','crane'].includes(p.kind)&&
+          Math.hypot(p.x-x-.5,p.y-y-.5)<1.28))continue;
+        candidates.push({x,y});
+      }
+      // Prefer two different service-front spaces. On dense procedural
+      // layouts, accept one frontage plus a connected second clear tile.
+      const sites=candidates.filter(c=>adjacent(c,candidates).length>=1)
+        .sort((a,b)=>{
+          const degree=adjacent(b,candidates).length-
+            adjacent(a,candidates).length;
+          return degree||Math.hypot(a.x-b.xa-1.5,a.y-b.ya-1.5)-
+            Math.hypot(b.x-b.xa-1.5,b.y-b.ya-1.5);
+        });
+      let chosen=null;
+      for(const site of sites){
+        const cells=candidates.filter(c=>c!==site);
+        const front=adjacent(site,cells);
+        if(!front.length)continue;
+        const probe={cells};
+        const work=front[0];
+        const remaining=cells.filter(c=>c!==work&&districtRoute(probe,work,c).length);
+        const visit=front[1]||remaining.sort((a,b)=>
+          Math.hypot(a.x-site.x,a.y-site.y)-
+          Math.hypot(b.x-site.x,b.y-site.y))[0];
+        if(!visit||visit===work)continue;
+        const far=cells.filter(c=>c!==visit&&c!==work&&
+          districtRoute(probe,visit,c).length)
+          .sort((a,b)=>Math.hypot(b.x-visit.x,b.y-visit.y)-
+            Math.hypot(a.x-visit.x,a.y-visit.y))[0];
+        if(!far)continue;
+        chosen={site,cells,work,visit,far};break;
+      }
+      if(!chosen)continue;
+      const {site,cells,work,visit,far}=chosen;
+      const role=DISTRICT_ROLES[i],area={
+        role,x:site.x+.5,y:site.y+.5,block:{xa:b.xa,ya:b.ya},
+        cells,workerStop:work,visitorStop:visit,far,
+        arrivals:0,interactions:0
+      };
+      // Replace only foliage along the exact walking corridor or service.
+      // Buildings and special-theme pieces are never displaced.
+      const walkToVisit=districtRoute(area,far,visit);
+      const walkToWork=districtRoute(area,work,
+        cells.find(c=>c!==work&&
+          Math.abs(c.x-work.x)+Math.abs(c.y-work.y)===1)||work);
+      const reserved=[site,work,visit,far,
+        ...walkToVisit.map(p=>({x:Math.round(p.x-.5),y:Math.round(p.y-.5)})),
+        ...walkToWork.map(p=>({x:Math.round(p.x-.5),y:Math.round(p.y-.5)}))];
+      for(let j=props.length-1;j>=0;j--){
+        const p=props[j];
+        if(['tree','flowers','bench'].includes(p.kind)&&reserved.some(c=>
+          Math.hypot(p.x-c.x-.5,p.y-c.y-.5)<.33))props.splice(j,1);
+      }
+      props.push({kind:'district-scene',role,x:area.x,y:area.y});
+      const colors=['#78a995','#d79d70','#a38abf','#ce8276'];
+      const worker=spawnPerson(r,{
+        kind:'district-worker',districtResident:true,districtWorker:true,
+        districtRole:role,x:work.x+.5,y:work.y+.5,d:2,lane:0,max:.27,
+        col:colors[i],bag:false,hat:null,stopUntil:clock+2+i*.7,
+        districtAction:'working',intent:'visiting',
+        attention:{x:area.x,y:area.y}});
+      const visitor=spawnPerson(r,{
+        kind:'district-visitor',districtResident:true,districtWorker:false,
+        districtRole:role,x:far.x+.5,y:far.y+.5,d:1,lane:0,
+        max:.32+r()*.06,col:['#d88a82','#8aadc0','#e0ad74','#8aaf8b'][i],
+        bag:role==='post',stopUntil:clock+2.5+i*1.9,
+        districtAction:'strolling',intent:'destination',
+        attention:{x:area.x,y:area.y}});
+      worker.districtPlace=area;visitor.districtPlace=area;
+      worker.districtAtWork=true;visitor.districtAtWork=false;
+      area.worker=worker;area.visitor=visitor;
+      area.participants=[worker,visitor];districts.push(area);
+    }
+  }
+  function updateDistrictLife(){
+    for(const area of districts){
+      const {worker,visitor}=area;
+      if(!movers.includes(worker)||!movers.includes(visitor))continue;
+      for(const m of area.participants){
+        if(m.path?.length||clock<(m.stopUntil||0))continue;
+        const isWorker=m===worker;
+        // The worker steps to the adjoining free lot, then returns
+        // to work; the visitor travels from home to the service and back.
+        const dest=isWorker?
+          (m.districtAtWork?
+            (area.cells.find(c=>c!==area.workerStop&&
+              Math.abs(c.x-area.workerStop.x)+
+              Math.abs(c.y-area.workerStop.y)===1)||area.workerStop):
+            area.workerStop):
+          (m.districtAtWork?area.far:area.visitorStop);
+        const origin={x:Math.round(m.x-.5),y:Math.round(m.y-.5)};
+        const path=districtRoute(area,origin,dest);
+        if(!path.length){
+          m.districtAction=isWorker?'working':'strolling';
+          m.v=0;m.stopUntil=clock+3;continue;
+        }
+        m.path=path.map((p,i)=>({...p,speed:m.max,
+          ...(i===path.length-1?{then:o=>{
+            o.v=0;o.districtAtWork=!o.districtAtWork;
+            if(isWorker){
+              o.districtAction=o.districtAtWork?'working':'checking';
+              o.intent='visiting';o.stopUntil=clock+
+                (o.districtAtWork?7:2.5);
+              o.attention={x:area.x,y:area.y};
+              if(o.districtAtWork)districtTasks++;
+            }else{
+              const arrived=o.districtAtWork;
+              o.districtAction=arrived?'greeting':'strolling';
+              o.intent=arrived?'chat':'destination';
+              o.stopUntil=clock+(arrived?4.3:2.7);
+              o.attention=arrived?
+                {x:worker.x,y:worker.y}:{x:area.x,y:area.y};
+              if(arrived){
+                o.waveUntil=clock+1.5;
+                worker.waveUntil=clock+.9;
+                districtVisits++;area.arrivals++;
+                if(Math.hypot(worker.x-o.x,worker.y-o.y)<1.65){
+                  districtMeetings++;area.interactions++;
+                }
+              }
+            }
+          }}:{})
+        }));
+        m.intent='destination';
+        m.districtAction=isWorker?'checking':'strolling';
+        m.attention={x:dest.x+.5,y:dest.y+.5};
+      }
+    }
+  }
   function spawnBike(r = Math.random) {
-    const p = randomRoadPoint(r), m = {type: 'car', kind: 'bike', x: p.x, y: p.y, d: p.d, v: 0, max: .55 + r() * .15, col: PASTEL[r() * PASTEL.length | 0], skin: ['#f1c9a5', '#d8a77c', '#a8754f', '#7a4e33'][r() * 4 | 0], wait: 0, lane: .36, ph: r() * 6};
+    const p = randomRoadPoint(r), m = {type: 'car', kind: 'bike', x: p.x, y: p.y, d: p.d, heading: directionAngle(p.d), v: 0, travel: 0, moved:0, max: .55 + r() * .15, col: PASTEL[r() * PASTEL.length | 0], skin: ['#f1c9a5', '#d8a77c', '#a8754f', '#7a4e33'][r() * 4 | 0], wait: 0, lane: .36, ph: r() * 6};
+    findSafeSpawn(m,r);
     movers.push(m); return m;
   }
   // Traffic lights: the two directions take turns, with a short amber in between.
@@ -207,44 +771,265 @@ const ToyTown = (() => {
     for (const l of LINES) { const dist = (l + .5 - pos) * sign; if (dist > stopAt - .3 && dist < stopAt + .35) return true; }
     return false;
   }
-  function laneOffset(m) { const s = m.type === 'car' ? (m.d === 0 || m.d === 3 ? 1 : -1) * m.lane : m.lane; return m.d < 2 ? [0, s] : [-s, 0]; }
+  // Both renderers and the traffic planner use one actual occupied lane.
+  // Positive x and positive y have opposite right-hand transverse offsets.
+  function laneOffset(m) {
+    const lane=m.lane||0;
+    if(m.type!=='car')return m.d<2?[0,lane]:[-lane,0];
+    return m.d<2?[0,(m.d===0?1:-1)*lane]:
+      [(m.d===2?-1:1)*lane,0];
+  }
+  function vehiclePoint(m,x=m.x,y=m.y){
+    const [ox,oy]=m.path?[0,0]:laneOffset(m);
+    return {x:x+ox,y:y+oy};
+  }
+  // Oriented rectangular clearance: oncoming traffic in the opposite
+  // half of the road must not cause phantom brakes, but same-lane followers
+  // and crossing traffic must not occupy the same body footprint.
+  function bodyExtent(m,ux,uy){
+    const d=DIRS[m.d],along=Math.abs(d[0]*ux+d[1]*uy);
+    const across=Math.abs(d[0]*uy-d[1]*ux);
+    const length=m.kind==='bus'?.405:m.kind==='bike'?.235:.285;
+    const width=m.kind==='bike'?.105:.177;
+    return {front:length*along+width*across,
+      side:length*across+width*along};
+  }
+  function vehicleClearance(m,o,ux,uy){
+    const a=bodyExtent(m,ux,uy),b=bodyExtent(o,ux,uy);
+    return {front:a.front+b.front+.027,side:a.side+b.side+.018};
+  }
+  // Swept forward clearance is imposed *before* moving each car. A red
+  // light alone is not collision detection, especially after scripted paths.
+  function safeVehicleTravel(m,ux,uy,request){
+    if(request<=0)return 0;
+    const here=vehiclePoint(m);
+    let allowed=request;
+    for(const o of movers){
+      if(o===m||o.type!=='car')continue;
+      const other=vehiclePoint(o);
+      const rx=other.x-here.x,ry=other.y-here.y;
+      const front=rx*ux+ry*uy,side=Math.abs(rx*uy-ry*ux);
+      const gap=vehicleClearance(m,o,ux,uy);
+      if(front>-.02&&side<gap.side&&front<request+gap.front+.20){
+        allowed=Math.min(allowed,Math.max(0,front-gap.front));
+      }
+    }
+    return Math.max(0,allowed);
+  }
+  function findSafeSpawn(m,r){
+    const isolated=()=>{
+      const p=vehiclePoint(m);
+      return movers.every(o=>{
+        if(o.type!=='car')return true;
+        const q=vehiclePoint(o);
+        const a=bodyExtent(m,1,0),b=bodyExtent(o,1,0);
+        const c=bodyExtent(m,0,1),d=bodyExtent(o,0,1);
+        return Math.abs(p.x-q.x)>a.front+b.front+.09||
+          Math.abs(p.y-q.y)>c.front+d.front+.09;
+      });
+    };
+    for(let tries=0;tries<80&&!isolated();tries++){
+      const p=randomRoadPoint(r);
+      m.x=p.x;m.y=p.y;m.d=p.d;m.heading=directionAngle(p.d);
+    }
+  }
   function atNode(m) { return LINES.some(l => Math.abs((m.d < 2 ? m.x : m.y) - (l + .5)) < .02); }
   function step(m, dt) {
+    // Never dead-end inside the last junction: turn at the road-end apron
+    // before another lane can trap the vehicle against the tabletop edge.
+    if(m.type==='car'&&!m.path&&(
+      (m.d===0&&m.x>=16.02)||(m.d===1&&m.x<=1.98)||
+      (m.d===2&&m.y>=16.02)||(m.d===3&&m.y<=1.98))){
+      m.d^=1;m.v=0;
+    }
+    // Explicit displacement, not requested speed, powers character gaits.
+    m.moved=0;
+    // An attention pause has a finite lifetime even when another activity
+    // starts before the next ordinary walking step (for example, a town
+    // event assigning a route or waiting for an intersection).
+    if(m.intent==='browse'&&clock>=(m.observeUntil||0)){
+      m.intent='walking';m.attention=null;m.observeUntil=0;
+    }
     if (m.stopUntil && clock < m.stopUntil) { m.v = 0; return; }
     if (m.path) return stepPath(m, dt);
+    if(m.communityResident&&m.intent==='chat'&&clock<(m.stopUntil||0)){
+      m.v=0;return;
+    }
+    // Free pedestrians have local awareness, not a global scripted parade.
+    // They notice nearby storefronts, pause briefly, then resume their route.
+    // They never teleport or step into the shop/road center to do so.
+    if(m.type==='person'&&!m.kind&&!m.heroResident){
+      if(clock<(m.observeUntil||0)){m.v=0;return;}
+
+      if(clock>=(m.nextNotice||0)&&m.max>.05){
+        m.nextNotice=clock+13+Math.random()*9;
+        const nearby=buildings.filter(b=>b.kind==='shop')
+          .map(b=>({x:b.x+.5,y:b.y+.5,d:Math.hypot(b.x+.5-m.x,b.y+.5-m.y)}))
+          .filter(b=>b.d>.58&&b.d<1.70)
+          .sort((a,b)=>a.d-b.d)[0];
+        const atJunction=LINES.some(l=>Math.abs(m.x-(l+.5))<.36&&
+          Math.abs(m.y-(l+.5))<.36);
+        if(nearby&&!atJunction){
+          m.intent='browse';m.attention={x:nearby.x,y:nearby.y};
+          m.observeUntil=clock+1.7+Math.random()*1.5;m.v=0;return;
+        }
+      }
+    }
     const [dx, dy] = DIRS[m.d];
     let want = m.max;
     if (m.type === 'car') {   // keep a gap to whatever is ahead in the lane, and stop for red lights
       for (const o of movers) if (o !== m && o.type === 'car' && o.d === m.d) {
-        const ahead = (o.x - m.x) * dx + (o.y - m.y) * dy, side = Math.abs((o.x - m.x) * dy) + Math.abs((o.y - m.y) * dx);
-        if (ahead > 0 && ahead < 1 && side < .3) want = Math.min(want, o.v * .9, ahead < .6 ? 0 : want);
+        const p=vehiclePoint(m),q=vehiclePoint(o);
+        const ahead=(q.x-p.x)*dx+(q.y-p.y)*dy;
+        const side=Math.abs((q.x-p.x)*dy-(q.y-p.y)*dx);
+        if (ahead > 0 && ahead < 1.55 && side < vehicleClearance(m,o,dx,dy).side){
+          // Begin braking before reaching the vehicle ahead, scaled by
+          // the space available. Avoid the abrupt 0.6m emergency stop.
+          const safe=Math.max(0,ahead-.42);
+          const approach=Math.sqrt(2*.9*safe);
+          want=Math.min(want,Math.max(0,Math.min(m.max,o.v+approach)));
+          if(ahead<.50)want=Math.min(want,o.v*.55);
+        }
+      }
+      // Speed planning for the next intersection. Anticipate the red/amber
+      // phase from up to 2.3m, but never assume an upcoming green is safe.
+      const axis=m.d<2?'x':'y';
+      const pos=axis==='x'?m.x:m.y,sign=m.d===0||m.d===2?1:-1;
+      const phase=lightPhase();
+      if(phase.green!==axis||phase.amber){
+        const crossings=LINES.map(l=>(l+.5-pos)*sign)
+          .filter(d=>d>0&&d<2.35);
+        if(crossings.length){
+          const distance=Math.min(...crossings);
+          // A vehicle that already crossed the stop line MUST finish
+          // clearing the junction after a signal changes. Stopping in the
+          // middle causes a persistent cross-traffic deadlock.
+          if(distance>.70){
+            const room=Math.max(0,distance-.70);
+            want=Math.min(want,Math.sqrt(2*.92*room));
+          }
+        }
       }
       if (heldAtLight(m, .75)) want = 0;
+      // Cross-traffic clearance: a green signal does not authorize entering
+      // a junction still occupied by vehicles from the previous phase.
+      // Brake *before* the central conflict area and resume once it clears.
+      // No car is teleported or repositioned and event routes stay intact.
+      const fixed=axis==='x'?m.y:m.x;
+      for(const line of LINES){
+        const crossing=line+.5;
+        const approach=(crossing-pos)*sign;
+        if(approach<=-.15||approach>=1.75)continue;
+        const occupied=movers.some(o=>{
+          if(o===m||o.type!=='car'||o.path||(o.d<2)===(m.d<2))
+            return false;
+          const otherFixed=axis==='x'?o.x:o.y;
+          const otherAlong=axis==='x'?o.y:o.x;
+          return Math.abs(otherFixed-crossing)<.18&&
+            Math.abs(otherAlong-fixed)<.65;
+        });
+        if(occupied){
+          // Reserve the full vehicle footprint outside the conflict box,
+          // not just its center point. This leaves room for the occupant
+          // of the crossing to leave without side-by-side gridlock.
+          const clearance=Math.max(0,approach-.75);
+          want=Math.min(want,Math.sqrt(2*.79*clearance));
+        }
+      }
+      const hb = town.blocks.find(b => b.hero);
+      if (hb && m.d < 2 && Math.abs(m.y - (hb.yb + 1.5)) < .27 &&
+        movers.some(w => w.heroResident && w.crossing &&
+          Math.abs(w.x - (hb.xa + 1.5)) < .7 &&
+          w.y > hb.yb + .3 && w.y < hb.yb + 2)) {
+        const remaining = (hb.xa + 1.5 - m.x) * dx;
+        if (remaining > .15 && remaining < 2) want = 0;
+      }
       for (const e of events) if (e.blocks && Math.hypot(e.x - m.x, e.y - m.y) < 1.1) want = 0;
     } else if (!m.kind || m.kind === 'chef' || m.kind === 'farmer' || m.kind === 'keeper') {   // walkers wait at the crossing and keep a little room
       if (heldAtLight(m, .62)) want = 0;
       for (const o of movers) if (o !== m && o.type === 'person' && o.d === m.d) { const ahead = (o.x - m.x) * dx + (o.y - m.y) * dy, side = Math.abs((o.x - m.x) * dy) + Math.abs((o.y - m.y) * dx); if (ahead > 0 && ahead < .3 && side < .1) want = Math.min(want, o.v * .8); }
     }
-    m.v += (want - m.v) * Math.min(1, dt * 3);
+    if(m.type==='person'&&!m.path&&m.max>.05){
+      // Personal space: a pedestrian naturally eases behind another walker.
+      for(const o of movers)if(o!==m&&o.type==='person'&&!o.path){
+        const ahead=(o.x-m.x)*dx+(o.y-m.y)*dy;
+        const lateral=Math.abs((o.x-m.x)*dy-(o.y-m.y)*dx);
+        if(ahead>.03&&ahead<.40&&lateral<.16)
+          want=Math.min(want,ahead<.20?0:Math.max(0,o.v*.75));
+      }
+    }
+    if(m.type==='car'){
+      m.braking=want<m.max*.43&&m.v>.06;
+      if(clock>=(m.turnUntil||0))m.turnSignal=null;
+    }
+    m.v += (want - m.v) * Math.min(1, dt * (m.type==='car'?2.1:3));
     const before = m.d < 2 ? m.x : m.y;
-    m.x += dx * m.v * dt; m.y += dy * m.v * dt;
+    const requested=Math.max(0,m.v*dt);
+    const advance=m.type==='car'?
+      safeVehicleTravel(m,dx,dy,requested):requested;
+    if(m.type==='car'&&advance<requested-.00001){
+      m.braking=true;m.v=Math.min(m.v,advance/Math.max(dt,.00001));
+    }
+    m.x += dx*advance;m.y += dy*advance;
+    m.moved=advance;
+    m.travel=(m.travel||0)+advance; // only real displacement drives footsteps and wheels
     const now = m.d < 2 ? m.x : m.y;
     for (const l of LINES) {   // crossing an intersection centre: maybe turn
       const c = l + .5;
       if ((before - c) * (now - c) <= 0 && before !== now) {
         const opts = DIRS.map((_, i) => i).filter(i => i !== (m.d ^ 1)).filter(i => { const nx = Math.round((m.d < 2 ? c : m.x) - .5 + DIRS[i][0]), ny = Math.round((m.d < 2 ? m.y : c) - .5 + DIRS[i][1]); const t = tile(nx, ny); return t && (t.kind === 'road' || t.kind === 'bridge'); });
-        if (opts.length && (Math.random() < .45 || !opts.includes(m.d))) { const nd = opts[Math.random() * opts.length | 0]; if (nd !== m.d) { if (m.d < 2) m.x = c; else m.y = c; m.d = nd; } }
+        if (opts.length && (Math.random() < .45 || !opts.includes(m.d))) { const nd = opts[Math.random() * opts.length | 0]; if (nd !== m.d &&
+          (m.type!=='car'||movers.every(o=>{
+            if(o===m||o.type!=='car')return true;
+            const p=vehiclePoint({...m,d:nd});
+            const q=vehiclePoint(o);
+            const a=bodyExtent({...m,d:nd},1,0),b=bodyExtent(o,1,0);
+            const c=bodyExtent({...m,d:nd},0,1),d=bodyExtent(o,0,1);
+            return Math.abs(p.x-q.x)>a.front+b.front+.03||
+              Math.abs(p.y-q.y)>c.front+d.front+.03;
+          }))) {
+          const cross=DIRS[m.d][0]*DIRS[nd][1]-DIRS[m.d][1]*DIRS[nd][0];
+          if(m.type==='car'){m.turnSignal=cross>0?'left':'right';m.turnUntil=clock+1.1;}
+          if (m.d < 2) m.x = c; else m.y = c; m.d = nd;
+        } }
       }
     }
     if (m.x < 1.4 || m.x > 16.6 || m.y < 1.4 || m.y > 16.6) { m.d ^= 1; m.x = clamp(1.45, m.x, 16.55); m.y = clamp(1.45, m.y, 16.55); }
   }
   // Scripted movement (an event's chase, a fire truck's run): straight to each point in turn.
+  // Ease the rendered vehicle toward its actual lane direction during turns.
+  function easeHeading(m, dt) {
+    if (m.type !== 'car') return;
+    const target = directionAngle(m.d);
+    const from = Number.isFinite(m.heading) ? m.heading : target;
+    const delta = Math.atan2(Math.sin(target - from), Math.cos(target - from));
+    m.heading = from + clamp(-dt * 5, delta, dt * 5);
+  }
   function stepPath(m, dt) {
     const p = m.path[0]; if (!p) { m.path = null; return; }
-    const dx = p.x - m.x, dy = p.y - m.y, dist = Math.hypot(dx, dy), sp = (p.speed || m.max) * dt;
-    m.v = p.speed || m.max;
+    // Scripted event paths sometimes target coordinates beyond the tabletop.
+    // Clip *waypoints* before stepping, so the walker/vehicle can actually
+    // reach its destination instead of getting stuck against a hard border.
+    const targetX=clamp(.08,p.x,17.92),targetY=clamp(.08,p.y,17.92);
+    const dx = targetX - m.x, dy = targetY - m.y;
+    const dist = Math.hypot(dx, dy), sp = Math.max(0,(p.speed || m.max) * dt);
+    if(dist<.00001){
+      m.v=0;m.path.shift();if(p.then)p.then(m);return;
+    }
     if (Math.abs(dx) > Math.abs(dy)) m.d = dx > 0 ? 0 : 1; else m.d = dy > 0 ? 2 : 3;
-    if (dist <= sp) { m.x = p.x; m.y = p.y; m.path.shift(); if (p.then) p.then(m); } else { m.x += dx / dist * sp; m.y += dy / dist * sp; }
+    const ux=dx/dist,uy=dy/dist;
+    const requested=Math.min(dist,sp);
+    const advance=m.type==='car'?
+      safeVehicleTravel(m,ux,uy,requested):requested;
+    m.moved=advance;
+    m.v=advance/Math.max(dt,.00001);
+    m.travel=(m.travel||0)+advance;
+    if(m.type==='car')m.braking=advance<requested-.00001;
+    if(dist<=advance+.00001){
+      m.x=targetX;m.y=targetY;m.path.shift();if(p.then)p.then(m);
+    }else{
+      m.x+=ux*advance;m.y+=uy*advance;
+    }
   }
   // A route along the streets from (x,y) to (tx,ty): along the current line, then the other axis.
   function route(x, y, tx, ty, speed) {
@@ -408,7 +1193,7 @@ const ToyTown = (() => {
       const N_ = (news.name || '').toUpperCase(), BAN = {sports: N_ ? `GO ${N_}!` : 'GO TEAM!', space: N_ ? `${N_} 🚀` : 'TO THE STARS!', election: N_ ? `${N_}: VOTE!` : 'VOTE!', festival: N_ ? `HAPPY ${N_}!` : 'HAPPY DAY!', awards: N_ ? `★ ${N_} ★` : '★ BRAVO ★', tech: N_ ? `${N_} ✨` : 'THE FUTURE!', animals: N_ ? `WELCOME, ${N_}!` : 'HELLO, ANIMALS!', market: N_ ? `${N_} ↑↓` : 'BUY! SELL!', science: N_ ? `${N_} 🧪` : 'EUREKA!'};
       e.banner = BAN[news.key] || news.title.toUpperCase();
       if (news.name) for (const m of movers.filter(m => m.type === 'person' && !m.kind).slice(0, 4)) { m.sign = news.name.split(' ')[0].toUpperCase().slice(0, 10); setTimeout(() => { m.sign = null; }, 20000); }
-      if (Math.random() < .5) tick(`Today's news, toy-sized: ${headline(news.story)}`);
+      if (Math.random() < .5) tick('The village is reacting to a recent headline. The scene is fictional.');
     }
     e.name = name; e.t = 0; events.push(e); feature(e, name in VARIANT_EVENTS || name in THEME_EVENTS ? 11 : 7); return e;
   }
@@ -445,12 +1230,41 @@ const ToyTown = (() => {
       return {x: 2, y: 9, dur: 30, sky: {kind: 'hotair', x: -2, y: 4, z: 150, vx: .5, vy: .25}, update(e, dt) { e.sky.x += e.sky.vx * dt; e.sky.y += e.sky.vy * dt; e.x = e.sky.x; e.y = e.sky.y; if (e.t > 6 && !e.s) { e.s = 1; say({x: e.sky.x, y: e.sky.y, z: e.sky.z + 30}, 'Hello down there!', 2.5); } }};
     },
     busker() {
-      const m = movers.find(o => o.type === 'person' && !o.kind && !o.path) || spawnPerson();
-      m.stopUntil = clock + 16; m.guitar = true; say(m, '♪ la la laaa ♪', 3);
-      tick(`A street musician on ${streetOf(m.x, m.y)} has started a dance party.`);
-      const fans = peopleNear(m.x, m.y, 3).filter(o => o !== m).slice(0, 4);
-      for (const f of fans) { f.stopUntil = clock + 14; f.dance = true; }
-      return {x: m.x, y: m.y, dur: 16, notes: [m], end() { m.guitar = false; for (const f of fans) f.dance = false; }};
+      // A real arrival from the garden arch. No musician materializes on
+      // the road, and listeners walk to the performance before dancing.
+      const hb=town.blocks.find(b=>b.hero);
+      if(!hb)return null;
+      // The same event can be chosen by the ordinary town director or
+      // the regular concert schedule. Count it at creation, exactly once.
+      streetPerformances++;
+      const x=hb.xa+1.84,y=hb.ya+2.83;
+      const musician=spawnPerson(Math.random,{
+        kind:'busker',x:hb.xa+1.05,y:hb.ya+3.68,
+        lane:0,d:3,max:.38,col:'#d18b83',bag:false,hat:'beanie',
+        guitar:true,shopAction:'arriving'});
+      musician.path=[{x,y,speed:.38,then:q=>{
+        q.v=0;q.shopAction='performing';q.stopUntil=clock+18;
+        say(q,'♪',1.6);
+      }}];
+      const listeners=movers.filter(o=>o.heroResident).slice(0,2);
+      for(let i=0;i<listeners.length;i++){
+        const audience=listeners[i],at={x:x+(i?-.34:.37),y:y+.24};
+        audience.path=[{...at,speed:audience.max,then:q=>{
+          q.dance=true;q.intent='concert';q.attention={x,y};
+          q.stopUntil=clock+14;
+        }}];
+        audience.sit=false;audience.stopUntil=0;
+      }
+      tick('A little live concert is gathering in the village square.');
+      return {x,y,dur:24,streetConcert:true,notes:[musician],
+        update(e){e.x=musician.x;e.y=musician.y;},
+        end(){
+          musician.guitar=false;remove(musician);
+          for(const listener of listeners){
+            listener.dance=false;listener.intent='walking';
+            listener.attention=null;listener.stopUntil=clock+.5;
+          }
+        }};
     },
     hat() {
       const m = movers.find(o => o.type === 'person' && !o.kind && !o.path) || spawnPerson();
@@ -743,6 +1557,7 @@ const ToyTown = (() => {
   let decorN = 0;
   const TV_DAYS = ['sports', 'space', 'election', 'awards', 'festival'];
   function decorate(list) {
+    ground = null; // Decorations can change the tree shadows on the ground layer.
     const has = v => list.some(x => x.variant === v), plaza = () => { const t = []; for (let y = 2; y < 16; y++) for (let x = 2; x < 16; x++) if (tile(x, y).kind === 'plaza' && !tile(x, y).used && !tile(x, y).decor) t.push([x, y]); const pick = t[(t.length * (.5 + (decorN++ % 3) * .21)) % (t.length || 1) | 0] || [9, 9]; if (tile(...pick)) tile(...pick).decor = true; return pick; };   // each decoration its own tile
     if (has('diwali')) { for (const l of LINES) for (let t = 1.6; t < 16.5; t += 1.25) { props.push({kind: 'diya', x: l + .95, y: t, ph: t}); props.push({kind: 'diya', x: t, y: l + .95, ph: t + 1}); } const [x, y] = plaza(); props.push({kind: 'rangoli', x: x + .5, y: y + .5}); }
     if (has('christmas')) { const [x, y] = plaza(); props.push({kind: 'xtree', x: x + .5, y: y + .5}); }
@@ -765,6 +1580,29 @@ const ToyTown = (() => {
     const flags = {sports: ['#d9533e', '#ffffff', '#3f78c9'], festival: ['#ffb020', '#e2463a', '#ff8fd0', '#ffd23f'], election: ['#d9533e', '#ffffff', '#3f78c9'], awards: ['#ffd23f', '#2d3440']}[list[0] && list[0].key];
     if (flags) for (const l of LINES.slice(1, 3)) for (let t = 2.5; t < 16; t += 2.5) { props.push({kind: 'bunting', x: l + .5, y: t, along: 'x', cols: flags}); props.push({kind: 'bunting', x: t, y: l + .5, along: 'y', cols: flags}); }
     if (has('cricket') || has('tennis')) { const st = props.find(p => p.kind === 'stadium'); if (st) st.sport = has('cricket') ? 'cricket' : 'tennis'; }
+  }
+
+  // Occasional unhurried encounters in front of the shops.
+  function streetMoment() {
+    const shops = buildings.filter(b => b.kind === 'shop');
+    const people = movers.filter(m => m.type === 'person' && !m.kind && !m.busy &&
+      !m.heroResident && !m.path && (!m.stopUntil || clock >= m.stopUntil));
+    const near = [];
+    for (const m of people) for (const shop of shops) {
+      const distance = Math.hypot(m.x - shop.x - .5, m.y - shop.y - .5);
+      if (distance < 2.3) near.push({m, shop, distance});
+    }
+    if (!near.length) return false;
+    near.sort((a, b) => a.distance - b.distance);
+    const {m, shop} = near[Math.floor(Math.random() * Math.min(5, near.length))];
+    m.stopUntil = clock + 2.2; m.v = 0; m.waveUntil = clock + 1.6;
+    say(m, {BAKERY: 'Smells lovely!', BOOKS: 'New books!', CAFE: 'Morning coffee?',
+      PIZZA: 'Pizza tonight?', TOYS: 'Look at that!', SWEETS: 'A little treat?',
+      PETS: 'Hello, pups!'}[shop.name] || 'Lovely day!', 2.1);
+    const friend = people.find(o => o !== m && Math.hypot(o.x - m.x, o.y - m.y) < 1.15);
+    if (friend) { friend.stopUntil = clock + 1.5; friend.v = 0; friend.waveUntil = clock + 1.5; say(friend, 'Hello!', 1.5); }
+    streetMoments++;
+    return true;
   }
 
   /* ---------------- drawing ---------------- */
@@ -791,10 +1629,53 @@ const ToyTown = (() => {
     const [sx, sy] = P(x + .12, y + .12), g = c.createRadialGradient(sx, sy, 0, sx, sy, rx * TW * S);
     g.addColorStop(0, `rgba(40,60,40,${a})`); g.addColorStop(1, 'rgba(40,60,40,0)'); c.save(); c.translate(sx, sy); c.scale(1, .5); c.translate(-sx, -sy); c.fillStyle = g; c.beginPath(); c.arc(sx, sy, rx * TW * S, 0, TAU); c.fill(); c.restore();
   }
-  const GROUND = {lot: '#a6d877', edge: '#94cf6a', park: '#8fd16a', plaza: '#e9dcc0', dirt: '#d7b98a', road: '#6a7280', bridge: '#8a6f55', water: '#62c2ea'};
+  const GROUND = {lot: '#a7c892', edge: '#9ac490', park: '#8fc3a0', plaza: '#e2d6be', dirt: '#d1b697', road: '#69747a', bridge: '#927960', water: '#74b9cf'};
   function drawGround(c) {
     for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) {
       const t = tile(x, y); diamond(c, x, y); c.fillStyle = c.strokeStyle = GROUND[t.kind]; c.lineWidth = 1; c.fill(); c.stroke();
+      if (t.kind === 'park' || t.kind === 'edge' || t.kind === 'lot') {
+        // Deterministic tiny clumps remain physically attached to the ground (and stay cached).
+        const h = hash(x * 31 + y, 0x52b), u = .18 + ((h & 255) / 255) * .55, v = .17 + (((h >>> 8) & 255) / 255) * .58;
+        const [gx, gy] = P(x + u, y + v);
+        c.strokeStyle = 'rgba(54,120,54,.2)'; c.lineWidth = Math.max(.6, .8 * S);
+        c.beginPath(); c.moveTo(gx - 2 * S, gy); c.lineTo(gx - 1 * S, gy - 2.5 * S);
+        c.moveTo(gx, gy); c.lineTo(gx + .5 * S, gy - 2.1 * S);
+        c.moveTo(gx + 1.5 * S, gy); c.lineTo(gx + 2.4 * S, gy - 1.6 * S); c.stroke();
+      }
+      // A small-scale tactile surface: inset paving, short curb seams and a
+      // clear pedestrian crossing. These sit in the static layer under actors.
+      const hb = town.blocks.find(b => b.hero);
+      if (hb && x >= hb.xa && x <= hb.xb && y >= hb.ya && y <= hb.yb && t.kind !== 'water') {
+        const central = x >= hb.xa+1 && x <= hb.xa+2 && y >= hb.ya+1 && y <= hb.ya+2;
+        if (central) {
+          diamond(c,x+.07,y+.07,.86,.86); c.fillStyle='#efe3ca'; c.fill();
+          c.strokeStyle='rgba(255,255,255,.4)'; c.lineWidth=Math.max(.6,S*.65);
+          c.stroke();
+          for(let k=1;k<=2;k++) { c.beginPath();
+            c.moveTo(...P(x+.07+k*.86/3,y+.07));
+            c.lineTo(...P(x+.07+k*.86/3,y+.93)); c.stroke(); }
+        } else if (t.kind==='park' || t.kind==='lot') {
+          const edgePath = x===hb.xa+1 || x===hb.xa+2 || y===hb.ya+1 || y===hb.ya+2;
+          if(edgePath){diamond(c,x+.18,y+.18,.64,.64);c.fillStyle='rgba(229,216,183,.32)';c.fill();}
+        }
+      }
+      if (hb && y===hb.yb+1 && x===hb.xa+1) {
+        // Crossing stripes are painted on the street, not hovering above it.
+        for(let k=0;k<4;k++){diamond(c,x+.28+k*.12,y+.12,.07,.75);
+          c.fillStyle='rgba(255,250,231,.72)';c.fill();}
+      }
+      if (t.kind === 'lot' || t.kind === 'park') {
+        // Tiny moss, ground daisies and path stones become visible as the
+        // camera approaches: seeded per tile to avoid flicker.
+        const h1 = hash(x * 41 + y * 17, 0x791);
+        for (let i=0;i<3;i++) {
+          const u = .13 + ((h1 >>> (i*5)) & 31) / 42;
+          const v = .15 + ((h1 >>> (i*7+1)) & 31) / 42;
+          const p=P(x+u,y+v), r=(i===1?1.2:.8)*S;
+          c.fillStyle = i===1?'rgba(252,238,199,.76)':'rgba(74,132,95,.33)';
+          c.beginPath();c.arc(p[0],p[1],r,0,TAU);c.fill();
+        }
+      }
       if (t.kind === 'road' || t.kind === 'bridge') {
         const hor = isRoad(y) && !isRoad(x), ver = isRoad(x) && !isRoad(y);
         c.strokeStyle = 'rgba(255,255,255,.75)'; c.lineWidth = Math.max(1, S * 1.2); c.setLineDash([4 * S, 5 * S]); c.beginPath();
@@ -813,24 +1694,116 @@ const ToyTown = (() => {
     for (const bd of buildings) softShadow(c, bd.x + .5, bd.y + .5, .55 + Math.min(.5, bd.h / 160), .2);
     for (const p of props) if (p.kind === 'tree') softShadow(c, p.x, p.y, .3 * p.s, .18);
   }
+  function drawHeroFacade(c,b,night) {
+    if (!b.hero) return;
+    const x=b.x+.5, y=b.y+.5, h=b.h;
+    c.save(); c.lineCap='round'; c.lineJoin='round';
+    if (b.kind==='house') {
+      // A low stone plinth, eaves and two narrow shutters tie the window into the wall.
+      box(c,x,y,.375,.375,0,2,'#b5a18b','#ded1bb');
+      const a=P(x-.4,y+.38,h-1), d=P(x+.4,y+.38,h-1);
+      c.strokeStyle='rgba(255,245,215,.8)';c.lineWidth=Math.max(1.2,S*1.6);
+      c.beginPath();c.moveTo(...a);c.lineTo(...d);c.stroke();
+      for(const side of [-1,1]){
+        const xx=x-.17+side*.075, p=P(xx,y+.373,h*.55);
+        c.fillStyle=side<0?'#8c987c':'#708e7e';
+        c.fillRect(p[0]-1.1*S,p[1]-4*S,2.2*S,8*S);
+      }
+      const flower=P(x-.18,y+.41,h*.54-7);
+      c.fillStyle='#ae7650';c.fillRect(flower[0]-5*S,flower[1],10*S,1.7*S);
+      for(let k=0;k<3;k++){c.fillStyle=k===1?'#e7ad96':'#fff0cf';
+        c.beginPath();c.arc(flower[0]+(k-1)*3*S,flower[1]-1.6*S,1.3*S,0,TAU);c.fill();}
+    }else if(b.kind==='shop'){
+      // A low shop sill and hanging sign use the same wall-space perspective.
+      box(c,x,y+.43,.37,.035,2,3,'#b6a997','#ecdfd0');
+      const sign=P(x+.25,y+.44,h*.8);
+      c.strokeStyle='#574c42';c.lineWidth=Math.max(1,S);
+      c.beginPath();c.moveTo(sign[0],sign[1]-10*S);c.lineTo(sign[0],sign[1]-3*S);c.stroke();
+      c.fillStyle='#fff2db';c.beginPath();c.roundRect(sign[0]-7*S,sign[1]-3*S,14*S,8*S,1.5*S);c.fill();
+      c.strokeStyle=b.awning;c.lineWidth=Math.max(.8,S);c.stroke();
+      c.fillStyle=b.awning;c.font=`800 ${Math.max(5,4.5*S)}px system-ui`;
+      c.textAlign='center';c.fillText(b.name==='BAKERY'?'BREAD':'READ',sign[0],sign[1]+2*S);
+    }
+    c.restore();
+  }
   function drawBuilding(c, b, night) {
+    // Offscreen culling is important now that each shop has material layers:
+    // keep its full roof height in the vertical margin.
+    const foot = P(b.x+.5,b.y+.5);
+    if (foot[0] < -100*S || foot[0] > W+100*S ||
+        foot[1] < -95*S || foot[1] > H+(b.h+60)*S) return;
+    // All everyday houses and shops share one richer architectural language:
+    // pitched roofs, real glazing, deep awnings, inset doors and tactile trim.
+    if ((b.kind === 'house' || b.kind === 'shop') && typeof ToyTownDiorama !== 'undefined') {
+      ToyTownDiorama.building(c, b, night, {P, box, shade, S, TAU}); return;
+    }
     const cx = b.x + .5, cy = b.y + .5;
+    // House and shop lights are attached to the facade, not floating sprites.
+    const wallGlow = (x, y, power = .34) => {
+      if (!night) return;
+      const [sx, sy] = P(x, y, 8), rad = 13 * S;
+      c.save(); c.globalCompositeOperation = 'lighter';
+      const g = c.createRadialGradient(sx, sy, 0, sx, sy, rad);
+      g.addColorStop(0, `rgba(255,205,120,${power})`);
+      g.addColorStop(1, 'rgba(255,205,120,0)');
+      c.fillStyle = g; c.fillRect(sx - rad, sy - rad, 2 * rad, 2 * rad);
+      c.restore();
+    };
     if (b.kind === 'house') {
       box(c, cx, cy, .36, .36, 0, b.h, b.wall);
       const top = P(cx, cy, b.h + 16), corners = [[-.42, -.42], [.42, -.42], [.42, .42], [-.42, .42]].map(([x, y]) => P(cx + x, cy + y, b.h));
       c.fillStyle = shade(b.roof, .82); c.beginPath(); c.moveTo(...corners[3]); c.lineTo(...corners[2]); c.lineTo(...top); c.closePath(); c.fill();
       c.fillStyle = shade(b.roof, .66); c.beginPath(); c.moveTo(...corners[2]); c.lineTo(...corners[1]); c.lineTo(...top); c.closePath(); c.fill();
-      win(c, cx - .12, cy + .36, 5, b.h * .55, night, 'y'); c.fillStyle = '#7a4a2b'; door(c, cx + .1, cy + .36);
+      if (b.hero) {
+        // Roof courses follow the two actual sloped faces, giving zoomed-in
+        // houses dimensional clay tiles instead of stripes on flat canvas.
+        c.save(); c.strokeStyle = 'rgba(255,235,209,.46)';
+        c.lineWidth = Math.max(.8, 1 * S); c.lineCap = 'round';
+        for (let course = 1; course <= 4; course++) {
+          const t = course / 5;
+          const along = (a, d) => [top[0] + (a[0] - top[0])*t, top[1] + (a[1]-top[1])*t];
+          for (const pair of [[3,2],[2,1]]) {
+            const a = along(corners[pair[0]]), d = along(corners[pair[1]]);
+            c.beginPath(); c.moveTo(...a); c.lineTo(...d); c.stroke();
+          }
+        }
+        c.strokeStyle = 'rgba(91,61,43,.34)'; c.lineWidth = Math.max(.7, S);
+        c.beginPath(); c.moveTo(...top); c.lineTo(...corners[2]); c.stroke();
+        c.restore();
+      }
+      win(c, cx - .17, cy + .36, 5, b.h * .55, night, 'y');
+      win(c, cx + .36, cy - .13, 4.5, b.h * .58, night, 'x');
+      box(c, cx - .17, cy - .16, .08, .08, b.h + 11, 12, '#b97657', '#d99b72');
+      c.fillStyle = '#7a4a2b'; door(c, cx + .1, cy + .36);
+      const porch = P(cx + .1, cy + .39, 0);
+      c.fillStyle = '#d2bea2'; c.beginPath(); c.ellipse(porch[0], porch[1] + 1.5 * S, 4.5 * S, 1.6 * S, 0, 0, TAU); c.fill();
+      const lamp = P(cx + .29, cy + .37, b.h * .36);
+      c.fillStyle = night ? '#ffe4a0' : '#fff7dc'; c.beginPath(); c.arc(lamp[0], lamp[1], 1.5 * S, 0, TAU); c.fill();
+      wallGlow(cx + .29, cy + .37, .28);
+      drawHeroFacade(c,b,night);
     } else if (b.kind === 'shop') {
       box(c, cx, cy, .4, .4, 0, b.h, b.wall);
+      box(c, cx, cy, .43, .43, b.h, 2, shade(b.wall, .75), shade(b.wall, 1.08));
       c.fillStyle = b.awning; c.beginPath(); c.moveTo(...P(cx - .4, cy + .4, b.h * .62)); c.lineTo(...P(cx + .4, cy + .4, b.h * .62)); c.lineTo(...P(cx + .4, cy + .56, b.h * .45)); c.lineTo(...P(cx - .4, cy + .56, b.h * .45)); c.closePath(); c.fill();
       c.fillStyle = 'rgba(255,255,255,.7)'; for (let k = 0; k < 4; k++) { c.beginPath(); c.moveTo(...P(cx - .4 + k * .2, cy + .4, b.h * .62)); c.lineTo(...P(cx - .3 + k * .2, cy + .4, b.h * .62)); c.lineTo(...P(cx - .3 + k * .2, cy + .56, b.h * .45)); c.lineTo(...P(cx - .4 + k * .2, cy + .56, b.h * .45)); c.closePath(); c.fill(); }
       win(c, cx, cy + .4, 9, b.h * .3, night, 'y'); win(c, cx + .4, cy, 6, b.h * .7, night, 'x');
-      const s = P(cx, cy + .2, b.h + 7); c.fillStyle = '#ffffff'; const fs = Math.max(6, 6.5 * S); c.font = `600 ${fs}px ${FONT}`; c.textAlign = 'center'; const tw = c.measureText(b.name).width + 6; c.fillRect(s[0] - tw / 2, s[1] - fs * .8, tw, fs * 1.25); c.fillStyle = b.awning; c.fillText(b.name, s[0], s[1] + fs * .3);
+      // A pair of planted flowerpots are anchored at the storefront threshold.
+      for (const side of [-1, 1]) {
+        const px = cx + side * .32, py = cy + .46;
+        box(c, px, py, .055, .06, 0, 4, '#ac7958', '#d5a079');
+        const leaf = P(px, py, 6);
+        c.fillStyle = '#509b5d'; c.beginPath();
+        c.ellipse(leaf[0] - 1.6 * S, leaf[1], 2.1 * S, 3.5 * S, -.5, 0, TAU);
+        c.ellipse(leaf[0] + 1.8 * S, leaf[1] - 1 * S, 2.1 * S, 3.7 * S, .4, 0, TAU); c.fill();
+      }
+      wallGlow(cx, cy + .4, .26);
+      drawHeroFacade(c,b,night);
+      const s = P(cx, cy + .2, b.h + 7); c.fillStyle = '#ffffff'; const fs = Math.max(6, 6.5 * S); c.font = `800 ${fs}px system-ui`; c.textAlign = 'center'; const tw = c.measureText(b.name).width + 6; c.fillRect(s[0] - tw / 2, s[1] - fs * .8, tw, fs * 1.25); c.fillStyle = b.awning; c.fillText(b.name, s[0], s[1] + fs * .3);
     } else if (b.kind === 'tower') {
       box(c, cx, cy, .4, .4, 0, b.h, b.wall);
       for (let z = 8; z < b.h - 6; z += 9) { win(c, cx - .2, cy + .4, 4, z, night, 'y'); win(c, cx + .15, cy + .4, 4, z, night, 'y'); win(c, cx + .4, cy - .15, 4, z, night, 'x'); win(c, cx + .4, cy + .2, 4, z, night, 'x'); }
-      box(c, cx + .15, cy - .12, .1, .1, b.h, 8, '#c9cfd8');
+      box(c, cx, cy, .44, .44, b.h, 2.5, '#8c9dac', '#d7e3ec');
+      box(c, cx + .15, cy - .12, .1, .1, b.h + 2.5, 8, '#c9cfd8');
     } else if (b.kind === 'fire') {
       box(c, cx, cy, .44, .42, 0, b.h, b.wall);
       c.fillStyle = '#5a1d18'; const d0 = P(cx - .25, cy + .42, 0), d1 = P(cx + .25, cy + .42, 0), d2 = P(cx + .25, cy + .42, 16), d3 = P(cx - .25, cy + .42, 16); c.beginPath(); c.moveTo(...d0); c.lineTo(...d1); c.lineTo(...d2); c.lineTo(...d3); c.closePath(); c.fill();
@@ -845,10 +1818,19 @@ const ToyTown = (() => {
     const tv = night && TV_DAYS.includes(theme) && Math.sin(x * 53 + y * 71 + z * 3) > .55;   // the night of a big story: windows flicker blue with the telly
     c.fillStyle = tv ? (Math.sin(clock * 9 + x * 7) > 0 ? '#8fb8ff' : '#5f86d6') : night ? (Math.sin(x * 91 + y * 37 + z) > -.3 ? '#ffe59a' : '#3b4660') : '#cfe9ff';
     c.beginPath(); c.moveTo(...a); c.lineTo(...b); c.lineTo(b[0], b[1] - size * .9 * S); c.lineTo(a[0], a[1] - size * .9 * S); c.closePath(); c.fill();
+    c.strokeStyle = 'rgba(255,253,240,.8)'; c.lineWidth = Math.max(.55, .8 * S); c.stroke();
+    c.strokeStyle = 'rgba(88,111,137,.42)'; c.lineWidth = Math.max(.4, .6 * S);
+    c.beginPath(); c.moveTo((a[0] + b[0]) / 2, (a[1] + b[1]) / 2); c.lineTo((a[0] + b[0]) / 2, (a[1] + b[1]) / 2 - size * .9 * S); c.stroke();
   }
   function door(c, x, y) { const a = P(x - .07, y, 0), b = P(x + .07, y, 0); c.beginPath(); c.moveTo(...a); c.lineTo(...b); c.lineTo(b[0], b[1] - 9 * S); c.lineTo(a[0], a[1] - 9 * S); c.closePath(); c.fill(); }
   // A ball on a stick, lit from the upper left, swaying a touch in the breeze.
   function drawTree(c, p) {
+    const foot = P(p.x,p.y);
+    if (foot[0] < -65*S || foot[0] > W+65*S ||
+        foot[1] < -65*S || foot[1] > H+65*S) return;
+    if (typeof ToyTownDiorama !== 'undefined') {
+      ToyTownDiorama.tree(c, p, {P, S, shade, TAU, clock}); return;
+    }
     const [x, y] = P(p.x, p.y), k = S * p.s, sway = Math.sin(clock * .8 + p.x * 3) * .8 * k;
     c.strokeStyle = '#7a5235'; c.lineWidth = 3 * k; c.lineCap = 'round'; c.beginPath(); c.moveTo(x, y - 1 * k); c.lineTo(x + sway * .5, y - 12 * k); c.stroke();
     for (const [dy, r] of [[17, 8.5], [24, 6.5]]) { const cx = x + sway, cy = y - dy * k, g = c.createRadialGradient(cx - r * .4 * k, cy - r * .45 * k, r * .1 * k, cx, cy, r * k); g.addColorStop(0, shade(p.c, 1.3)); g.addColorStop(.55, p.c); g.addColorStop(1, shade(p.c, .72)); c.fillStyle = g; c.beginPath(); c.arc(cx, cy, r * k, 0, TAU); c.fill(); }
@@ -857,6 +1839,44 @@ const ToyTown = (() => {
     const [x, y] = P(p.x, p.y);
     if (p.kind === 'tree') drawTree(c, p);
     else if (p.kind === 'bench') { box(c, p.x, p.y, .25, .08, 3, 2, '#b8784a'); }
+    else if (p.kind === 'hero-bench') {
+      for(const d of [-.19,.19]) {box(c,p.x+d,p.y,.04,.075,0,5,'#41494b');}
+      box(c,p.x,p.y,.29,.12,5,2.3,'#a56b47','#c99366');
+      box(c,p.x,p.y-.09,.29,.035,8,10,'#a56b47','#d2a77c');
+      c.strokeStyle='#f6d0a0';c.lineWidth=Math.max(.5,S*.8);
+      for(const d of [-.12,.04]){const a=P(p.x-.26,p.y-.12,11+d*7),b=P(p.x+.26,p.y-.12,11+d*7);c.beginPath();c.moveTo(...a);c.lineTo(...b);c.stroke();}
+    }
+    else if (p.kind === 'hero-table') {
+      box(c,p.x,p.y,.17,.17,7,1.4,'#c9a37a','#e7c49a');
+      for(const d of [-.13,.13])for(const e of [-.13,.13])box(c,p.x+d,p.y+e,.025,.025,0,8,'#8b684c');
+      const [tx,ty]=P(p.x,p.y,10);
+      c.fillStyle='#fff6d8';c.beginPath();c.ellipse(tx,ty,3*S,1.6*S,0,0,TAU);c.fill();
+      c.fillStyle='#c77b55';c.beginPath();c.arc(tx,ty-1*S,1.2*S,0,TAU);c.fill();
+    }
+    else if (p.kind === 'hero-lamp') {
+      const a=P(p.x,p.y),b=P(p.x,p.y,25);
+      c.strokeStyle='#4b5557';c.lineWidth=Math.max(1.3,2.2*S);c.beginPath();c.moveTo(...a);c.lineTo(...b);c.stroke();
+      c.fillStyle='#fff0bd';c.beginPath();c.arc(b[0],b[1]-2*S,3*S,0,TAU);c.fill();
+      c.fillStyle='#475257';c.fillRect(b[0]-4*S,b[1]-6*S,8*S,2*S);
+      if(night){const g=c.createRadialGradient(b[0],b[1],0,b[0],b[1],23*S);
+        g.addColorStop(0,'rgba(255,210,129,.36)');g.addColorStop(1,'rgba(255,210,129,0)');
+        c.fillStyle=g;c.fillRect(b[0]-23*S,b[1]-23*S,46*S,46*S);}
+    }
+    else if (p.kind === 'hero-mail') {
+      box(c,p.x,p.y,.09,.1,7,9,'#4788a8','#79b7d1');box(c,p.x,p.y,.05,.05,0,7,'#4b5557');
+      const s=P(p.x,p.y+.1,12);c.fillStyle='#ecf7ff';c.fillRect(s[0]-2*S,s[1]-S,4*S,.8*S);
+    }
+    else if (p.kind === 'hero-rack') {
+      c.strokeStyle='#6a777a';c.lineWidth=Math.max(1,1.7*S);
+      for(const k of [-1,0,1]){const q=P(p.x+k*.16,p.y,0);c.beginPath();c.arc(q[0],q[1]-3*S,3*S,Math.PI,0);c.lineTo(q[0]+3*S,q[1]);c.stroke();}
+    }
+    else if (p.kind === 'hero-shrub') {
+      box(c,p.x,p.y,.16,.16,0,3,'#b58c67','#d5ac85');
+      for(const [dx,dy,rad] of [[-2.7,-8,3.8],[2.6,-8,4.1],[0,-12,4.5]]){
+        const grad=c.createRadialGradient(x+dx*S-1.3*S,y+dy*S-1.3*S,.3*S,x+dx*S,y+dy*S,rad*S);
+        grad.addColorStop(0,'#a1d69b');grad.addColorStop(1,p.col);c.fillStyle=grad;
+        c.beginPath();c.arc(x+dx*S,y+dy*S,rad*S,0,TAU);c.fill();}
+    }
     else if (p.kind === 'fountain') { diamond(c, p.x - .6, p.y - .6, 1.2, 1.2); c.fillStyle = '#c9d2dc'; c.fill(); diamond(c, p.x - .5, p.y - .5, 1, 1); c.fillStyle = '#7fd3ff'; c.fill(); if (Math.random() < .5) burst(p.x, p.y, 6, 1, '#bfe9ff', {up: 40, spread: .3, life: .9, r: 1.2}); }
     else if (p.kind === 'crane') {
       c.strokeStyle = '#e0a020'; c.lineWidth = Math.max(1.5, 2.4 * S); const b0 = P(p.x, p.y, 0), b1 = P(p.x, p.y, 120); c.beginPath(); c.moveTo(...b0); c.lineTo(...b1); c.stroke();
@@ -944,23 +1964,78 @@ const ToyTown = (() => {
     else if (p.a === 'giraffe') { c.fillStyle = '#f2c14e'; c.beginPath(); c.ellipse(x, y - 9 * s, 6 * s, 4 * s, 0, 0, TAU); c.fill(); c.fillRect(x + 3 * s, y - 26 * s, 2.5 * s, 16 * s); c.beginPath(); c.ellipse(x + 5 * s, y - 27 * s, 3 * s, 2 * s, 0, 0, TAU); c.fill(); c.fillRect(x - 4 * s, y - 6 * s, 1.6 * s, 6 * s); c.fillRect(x + 3 * s, y - 6 * s, 1.6 * s, 6 * s); }
     else { c.fillStyle = '#222'; c.beginPath(); c.ellipse(x, y - 5 * s, 2.6 * s, 4.2 * s, 0, 0, TAU); c.fill(); c.fillStyle = '#fff'; c.beginPath(); c.ellipse(x + .6 * s, y - 4.5 * s, 1.5 * s, 3 * s, 0, 0, TAU); c.fill(); c.fillStyle = '#f2a33a'; c.fillRect(x + 1.2 * s, y - 8 * s, 2 * s, 1 * s); }
   }
+  // A small rotated prism preserves the isometric perspective as vehicles turn.
+  function vehicleBox(c, cx, cy, halfLength, halfWidth, z, height, color, roof, angle) {
+    const co = Math.cos(angle), si = Math.sin(angle);
+    const corners = [[-halfLength, -halfWidth], [halfLength, -halfWidth],
+      [halfLength, halfWidth], [-halfLength, halfWidth]]
+      .map(([u, v]) => [cx + co * u - si * v, cy + si * u + co * v]);
+    const bottom = corners.map(([x, y]) => P(x, y, z));
+    const top = corners.map(([x, y]) => P(x, y, z + height));
+    const sides = corners.map((p, i) => {
+      const j = (i + 1) % 4;
+      return {i, j, depth: (corners[i][0] + corners[i][1] + corners[j][0] + corners[j][1]) / 2};
+    }).sort((a, b) => a.depth - b.depth);
+    c.save(); c.lineJoin = 'round'; c.lineWidth = Math.max(.6, S * .6);
+    for (const {i, j, depth} of sides) {
+      c.fillStyle = shade(color, depth < cx + cy ? .72 : .83);
+      c.beginPath(); c.moveTo(...bottom[i]); c.lineTo(...bottom[j]);
+      c.lineTo(...top[j]); c.lineTo(...top[i]); c.closePath(); c.fill();
+    }
+    c.fillStyle = roof || shade(color, 1.14); c.beginPath();
+    c.moveTo(...top[0]); for (const pt of top.slice(1)) c.lineTo(...pt);
+    c.closePath(); c.fill();
+    c.strokeStyle = 'rgba(255,255,255,.42)'; c.lineWidth = Math.max(.5, .75 * S);
+    c.beginPath(); c.moveTo(...top[3]); c.lineTo(...top[2]); c.lineTo(...top[1]); c.stroke();
+    c.restore();
+  }
   function drawMover(c, m, night) {
     const [ox, oy] = laneOffset(m), mx = m.x + (m.path ? 0 : ox), my = m.y + (m.path ? 0 : oy), [x, y] = P(mx, my, m.lift || 0), s = S;
+    // A contact shadow stays on the road while the person, bicycle or car moves above it.
+    const [gx, gy] = P(mx, my, 0);
+    c.fillStyle = 'rgba(38,52,54,.19)'; c.beginPath();
+    c.ellipse(gx + 1.2 * s, gy + 1.5 * s, (m.type === 'car' ? 10 : 3.5) * s, (m.type === 'car' ? 3.3 : 1.4) * s, 0, 0, TAU); c.fill();
     if (m.kind === 'bike') {
-      const f = DIRS[m.d], [ax, ay] = P(mx - f[0] * .1, my - f[1] * .1, 3), [bx, by] = P(mx + f[0] * .1, my + f[1] * .1, 3), spin = clock * 10 * m.v;
-      c.strokeStyle = '#2d3440'; c.lineWidth = Math.max(1, s); for (const [wx, wy] of [[ax, ay], [bx, by]]) { c.beginPath(); c.arc(wx, wy, 2.6 * s, 0, TAU); c.stroke(); c.beginPath(); c.moveTo(wx, wy); c.lineTo(wx + Math.cos(spin) * 2.6 * s, wy + Math.sin(spin) * 2.6 * s); c.stroke(); }
-      c.strokeStyle = m.col; c.lineWidth = 1.6 * s; c.beginPath(); c.moveTo(ax, ay); c.lineTo((ax + bx) / 2, (ay + by) / 2 - 4 * s); c.lineTo(bx, by); c.stroke();
-      const [rx, ry] = P(mx, my, 10); c.fillStyle = m.col; c.fillRect(rx - 2 * s, ry - 6 * s, 4 * s, 6 * s); c.fillStyle = m.skin; c.beginPath(); c.arc(rx, ry - 8.5 * s, 2.4 * s, 0, TAU); c.fill(); c.fillStyle = shade(m.col, .8); c.beginPath(); c.arc(rx, ry - 9.5 * s, 2.6 * s, Math.PI, 0); c.fill();
+      const f = DIRS[m.d], [ax, ay] = P(mx - f[0] * .18, my - f[1] * .18, 3), [bx, by] = P(mx + f[0] * .18, my + f[1] * .18, 3);
+      const spin = (m.travel || 0) * 27, pedal = (m.travel || 0) * 20 + (m.ph || 0);
+      c.lineCap = 'round'; c.strokeStyle = '#303d49'; c.lineWidth = Math.max(1, 1.05 * s);
+      for (const [wx, wy] of [[ax, ay], [bx, by]]) {
+        c.beginPath(); c.arc(wx, wy, 3.5 * s, 0, TAU); c.stroke();
+        for (let k = 0; k < 3; k++) { const a = spin + k * TAU / 3; c.beginPath(); c.moveTo(wx, wy); c.lineTo(wx + Math.cos(a) * 3.2 * s, wy + Math.sin(a) * 3.2 * s); c.stroke(); }
+      }
+      const midX = (ax + bx) / 2, midY = (ay + by) / 2 - 5.3 * s;
+      c.strokeStyle = shade(m.col, .85); c.lineWidth = 2 * s; c.beginPath();
+      c.moveTo(ax, ay); c.lineTo(midX, midY); c.lineTo(bx, by); c.lineTo(ax, ay);
+      c.moveTo(midX, midY); c.lineTo(midX + 2 * s, midY - 2 * s); c.stroke();
+      const [rx, ry] = P(mx, my, 12), lean = m.d < 2 ? 1 : -1, leg = Math.sin(pedal) * 2.7 * s;
+      c.strokeStyle = '#364451'; c.lineWidth = 2.1 * s; c.beginPath();
+      c.moveTo(rx, ry - 1.2 * s); c.lineTo(midX - 1.2 * s, midY + leg);
+      c.moveTo(rx, ry - 1.2 * s); c.lineTo(midX + 1.2 * s, midY - leg); c.stroke();
+      c.strokeStyle = m.col; c.lineWidth = 4.5 * s; c.beginPath(); c.moveTo(rx - lean * 2 * s, ry - 8 * s); c.lineTo(rx, ry - 1 * s); c.stroke();
+      c.strokeStyle = m.skin; c.lineWidth = 1.8 * s; c.beginPath();
+      c.moveTo(rx - lean * 1.5 * s, ry - 6 * s); c.lineTo(bx, by - 6 * s); c.stroke();
+      c.fillStyle = m.skin; c.beginPath(); c.arc(rx - lean * 2.2 * s, ry - 10 * s, 3 * s, 0, TAU); c.fill();
+      c.fillStyle = shade(m.col, .78); c.beginPath(); c.arc(rx - lean * 2.2 * s, ry - 11 * s, 3.2 * s, Math.PI, 0); c.fill();
+      c.fillStyle = '#f9f1d9'; c.beginPath(); c.arc(rx - lean * .7 * s, ry - 10 * s, .5 * s, 0, TAU); c.fill();
       return;
     }
     if (m.type === 'car') {
       const along = m.d < 2, len = m.kind === 'bus' ? .42 : m.kind === 'fire' ? .38 : m.kind === 'racer' ? .3 : .26, wid = .14;
       const hx = along ? len : wid, hy = along ? wid : len, hgt = m.kind === 'bus' ? 13 : m.kind === 'racer' ? 4 : 8;
-      c.fillStyle = '#2d3440'; for (const k of [-.6, .6]) { const [wx, wy] = P(mx + (along ? hx * k : hx + .01), my + (along ? hy + .01 : hy * k), (m.lift || 0) + 2); c.beginPath(); c.ellipse(wx, wy, 2.2 * s, 2.2 * s, 0, 0, TAU); c.fill(); }
-      box(c, mx, my, hx, hy, (m.lift || 0) + 3, hgt, m.col);
-      if (m.kind !== 'bus' && m.kind !== 'racer') box(c, mx - (along ? (m.d === 0 ? .05 : -.05) : 0), my - (along ? 0 : (m.d === 2 ? .05 : -.05)), hx * .55, hy * .9, (m.lift || 0) + 2 + hgt, 5, m.col, '#cfe9ff');
-      if (m.kind === 'racer') { const t = P(mx, my, hgt + 3); c.fillStyle = '#fff'; c.font = `700 ${5 * s}px ${FONT}`; c.textAlign = 'center'; c.fillText(String(m.num || 1), t[0], t[1]); }
-      if (m.kind === 'bus') { const dest = {sports: 'STADIUM', space: 'LAUNCH SITE', election: 'POLLS', festival: 'FESTIVAL', awards: 'PREMIERE', animals: 'ZOO', market: 'BANK', science: 'LAB', tech: 'EXPO'}[theme] || 'TOWN CENTRE', [tx, ty] = P(mx, my + (along ? hy : 0), hgt * .7); c.fillStyle = '#1d2230'; c.fillRect(tx - 11 * s, ty - 3 * s, 22 * s, 5 * s); c.fillStyle = '#ffb020'; c.font = `600 ${3.6 * s}px ${FONT}`; c.textAlign = 'center'; c.fillText(dest, tx, ty + .6 * s); }
+      const angle = Number.isFinite(m.heading) ? m.heading : directionAngle(m.d);
+      const co = Math.cos(angle), si = Math.sin(angle);
+      c.fillStyle = '#2d3440'; const wheelSpin = (m.travel || 0) * 21;
+      for (const k of [-.6, .6]) {
+        const [wx, wy] = P(mx + co * len * k - si * (wid + .01), my + si * len * k + co * (wid + .01), (m.lift || 0) + 2);
+        c.beginPath(); c.ellipse(wx, wy, 2.5 * s, 2.5 * s, 0, 0, TAU); c.fill();
+        c.strokeStyle = '#b7c4ce'; c.lineWidth = .7 * s; c.beginPath(); c.moveTo(wx - Math.cos(wheelSpin) * 1.3 * s, wy - Math.sin(wheelSpin) * 1.3 * s); c.lineTo(wx + Math.cos(wheelSpin) * 1.3 * s, wy + Math.sin(wheelSpin) * 1.3 * s); c.stroke();
+      }
+      vehicleBox(c, mx, my, len, wid, (m.lift || 0) + 3, hgt, m.col, null, angle);
+      if (m.kind !== 'bus' && m.kind !== 'racer')
+        vehicleBox(c, mx - co * .05, my - si * .05, len * .55, wid * .88,
+          (m.lift || 0) + 3 + hgt, 5, m.col, '#cfe9ff', angle);
+      if (m.kind === 'racer') { const t = P(mx, my, hgt + 3); c.fillStyle = '#fff'; c.font = `900 ${5 * s}px system-ui`; c.textAlign = 'center'; c.fillText(String(m.num || 1), t[0], t[1]); }
+      if (m.kind === 'bus') { const dest = {sports: 'STADIUM', space: 'LAUNCH SITE', election: 'POLLS', festival: 'FESTIVAL', awards: 'PREMIERE', animals: 'ZOO', market: 'BANK', science: 'LAB', tech: 'EXPO'}[theme] || 'TOWN CENTRE', [tx, ty] = P(mx, my + (along ? hy : 0), hgt * .7); c.fillStyle = '#1d2230'; c.fillRect(tx - 11 * s, ty - 3 * s, 22 * s, 5 * s); c.fillStyle = '#ffb020'; c.font = `800 ${3.6 * s}px system-ui`; c.textAlign = 'center'; c.fillText(dest, tx, ty + .6 * s); }
       if (m.kind === 'taxi') { const t = P(mx, my, (m.lift || 0) + hgt + 9); c.fillStyle = '#222'; c.fillRect(t[0] - 3 * s, t[1] - 2 * s, 6 * s, 2.5 * s); }
       if (m.kind === 'icecream') { const t = P(mx, my, hgt + 13); c.fillStyle = '#f7d9a8'; c.beginPath(); c.moveTo(t[0] - 3 * s, t[1]); c.lineTo(t[0] + 3 * s, t[1]); c.lineTo(t[0], t[1] + 7 * s); c.fill(); c.fillStyle = '#ff8fd0'; c.beginPath(); c.arc(t[0], t[1] - 1 * s, 3.4 * s, 0, TAU); c.fill(); }
       if (m.siren && Math.sin(clock * 14) > 0) { const t = P(mx, my, hgt + 6); c.fillStyle = '#4da3ff'; c.beginPath(); c.arc(t[0], t[1], 2.4 * s, 0, TAU); c.fill(); }
@@ -968,7 +2043,10 @@ const ToyTown = (() => {
       if (night) { const f = DIRS[m.d], h = P(mx + f[0] * len, my + f[1] * len, 6); c.fillStyle = 'rgba(255,240,170,.9)'; c.beginPath(); c.arc(h[0], h[1], 1.6 * s, 0, TAU); c.fill(); }
       return;
     }
-    const bob = m.dance ? Math.abs(Math.sin(clock * 7 + m.ph)) * 4 * s : Math.abs(Math.sin(clock * 8 * m.v + m.ph)) * 1.5 * s;
+    const moving = (m.v || 0) > .035 && !m.sit && !m.stopUntil || ((m.v || 0) > .035 && !m.sit && clock >= m.stopUntil);
+    const phase = (m.travel || 0) * 28 + (m.ph || 0), step = moving ? Math.sin(phase) * Math.min(1, m.v * 2.5) : 0;
+    const bob = m.dance ? Math.abs(Math.sin(clock * 7 + (m.ph || 0))) * 3 * s :
+      moving ? Math.abs(Math.sin(phase)) * 1.15 * s : (!m.sit ? .15 * Math.sin(clock * .85 + (m.ph || 0)) * s : 0);
     if (m.kind === 'cart') { box(c, mx, my, .12, .12, 3, 6, '#b8c2cc', '#dfe6ee'); return; }
     if (m.kind === 'dog') { c.fillStyle = '#b07a45'; c.beginPath(); c.ellipse(x, y - 4 * s - bob, 4.5 * s, 2.6 * s, 0, 0, TAU); c.fill(); c.beginPath(); c.arc(x + 4 * s * (m.d === 1 || m.d === 3 ? -1 : 1), y - 6.5 * s - bob, 2.2 * s, 0, TAU); c.fill(); c.strokeStyle = '#d95b5b'; c.lineWidth = 1.4 * s; c.beginPath(); c.moveTo(x + 5 * s, y - 6 * s - bob); c.quadraticCurveTo(x + 9 * s, y - 2 * s, x + 12 * s, y - 6 * s); c.stroke(); return; }
     if (m.kind === 'hen') { c.fillStyle = '#fff'; c.beginPath(); c.ellipse(x, y - 3.5 * s - bob, 3 * s, 2.4 * s, 0, 0, TAU); c.fill(); c.fillStyle = '#e2463a'; c.fillRect(x + 1.5 * s, y - 7 * s - bob, 1.6 * s, 1.6 * s); return; }
@@ -977,10 +2055,60 @@ const ToyTown = (() => {
     if (m.kind === 'ghost') { c.fillStyle = '#ffffff'; c.beginPath(); c.arc(x, y - 10 * s - bob, 4 * s, Math.PI, 0); c.lineTo(x + 4 * s, y - 2 * s - bob); for (let k = 0; k < 4; k++) c.lineTo(x + (4 - k * 2.6) * s, y - (k % 2 ? 3.5 : 1.5) * s - bob); c.closePath(); c.fill(); c.fillStyle = '#222'; c.fillRect(x - 2 * s, y - 11 * s - bob, 1.2 * s, 1.6 * s); c.fillRect(x + .8 * s, y - 11 * s - bob, 1.2 * s, 1.6 * s); return; }
     if (m.kind === 'dino') { const g = '#7cc65a'; c.fillStyle = g; c.beginPath(); c.ellipse(x, y - 14 * s - bob, 12 * s, 7 * s, 0, 0, TAU); c.fill(); c.beginPath(); c.moveTo(x - 10 * s, y - 14 * s); c.quadraticCurveTo(x - 22 * s, y - 12 * s, x - 26 * s, y - 6 * s); c.lineTo(x - 9 * s, y - 10 * s); c.fill(); c.beginPath(); c.moveTo(x + 6 * s, y - 18 * s); c.quadraticCurveTo(x + 10 * s, y - 34 * s, x + 14 * s, y - 36 * s); c.lineTo(x + 18 * s, y - 34 * s); c.quadraticCurveTo(x + 12 * s, y - 26 * s, x + 11 * s, y - 15 * s); c.fill(); c.beginPath(); c.ellipse(x + 17 * s, y - 37 * s, 5 * s, 3.4 * s, 0, 0, TAU); c.fill(); c.fillRect(x - 6 * s, y - 9 * s, 3.5 * s, 9 * s); c.fillRect(x + 3 * s, y - 9 * s, 3.5 * s, 9 * s); c.fillStyle = '#222'; c.beginPath(); c.arc(x + 18.5 * s, y - 38 * s, .9 * s, 0, TAU); c.fill(); c.fillStyle = '#4f9e4a'; for (let k = 0; k < 4; k++) { c.beginPath(); c.arc(x - 6 * s + k * 4 * s, y - 20 * s, 1.6 * s, 0, TAU); c.fill(); } return; }
     const slip = m.slip && clock - m.slip < 2.5, body = m.kind === 'robot' ? '#c0c8d4' : m.kind === 'runner' ? '#ffffff' : m.kind === 'band' ? '#d9533e' : m.col;
-    c.save(); c.translate(x, y - bob + (m.sit ? 3 * s : 0)); if (slip) c.rotate(Math.PI / 2 * Math.min(1, (clock - m.slip) * 4));
-    c.fillStyle = 'rgba(0,0,0,.15)'; c.beginPath(); c.ellipse(0, bob, 3 * s, 1.2 * s, 0, 0, TAU); c.fill();
-    { const g = c.createLinearGradient(-2.4 * s, 0, 2.4 * s, 0); g.addColorStop(0, shade(body.startsWith('#') ? body : '#cccccc', 1.12)); g.addColorStop(1, shade(body.startsWith('#') ? body : '#cccccc', .8)); c.fillStyle = g; c.beginPath(); c.roundRect(-2.4 * s, -9.5 * s, 4.8 * s, 7.6 * s, 2.2 * s); c.fill(); } c.fillStyle = '#3b3f4a'; c.fillRect(-2 * s, -2 * s, 1.6 * s, 2 * s); c.fillRect(.4 * s, -2 * s, 1.6 * s, 2 * s);
-    { const hc = m.kind === 'robot' ? '#9aa6b5' : m.skin, g = c.createRadialGradient(-1 * s, -12.5 * s, .3 * s, 0, -11.5 * s, 2.8 * s); g.addColorStop(0, shade(hc, 1.18)); g.addColorStop(1, shade(hc, .85)); c.fillStyle = g; c.beginPath(); c.arc(0, -11.8 * s, 2.8 * s, 0, TAU); c.fill(); }
+    c.save(); c.translate(x, y - bob + (m.sit ? 3 * s : 0));
+    const facing = m.d === 0 || m.d === 3 ? 1 : -1; c.scale(facing, 1);
+    if (slip) c.rotate(Math.PI / 2 * Math.min(1, (clock - m.slip) * 4));
+    // Opposite arm/leg swing; the planted shoe compensates for the body's vertical bob.
+    c.lineCap = 'round'; c.lineJoin = 'round';
+    for (const side of [-1, 1]) {
+      const stride = side * step, toeX = (side * 1.25 + stride * 2.5) * s;
+      const lift = Math.max(0, stride) * 1.9 * s;
+      c.strokeStyle = '#405068'; c.lineWidth = 1.75 * s; c.beginPath();
+      c.moveTo(side * 1.1 * s, -3.4 * s);
+      c.lineTo((side * 1.15 + stride * .6) * s, -1.35 * s);
+      c.lineTo(toeX, bob - .85 * s - lift); c.stroke();
+      c.strokeStyle = '#253647'; c.lineWidth = 2 * s; c.beginPath();
+      c.moveTo(toeX - .5 * s, bob - .6 * s - lift); c.lineTo(toeX + 1.15 * s, bob - .6 * s - lift); c.stroke();
+      c.strokeStyle = m.kind === 'robot' ? '#9aa6b5' : shade(body.startsWith('#') ? body : '#cccccc', .78);
+      c.lineWidth = 1.55 * s; c.beginPath(); c.moveTo(side * 2.15 * s, -8 * s);
+      c.lineTo((side * 3.3 - stride * 1.5) * s, -5.8 * s); c.stroke();
+      c.fillStyle = m.kind === 'robot' ? '#bdc7d3' : m.skin;
+      c.beginPath(); c.arc((side * 3.3 - stride * 1.5) * s, -5.8 * s, .8 * s, 0, TAU); c.fill();
+    }
+    if (m.bag && m.kind !== 'robot') {
+      c.fillStyle = '#7e634b'; c.beginPath(); c.roundRect(-3.7 * s, -8.7 * s, 3.5 * s, 5.2 * s, 1.3 * s); c.fill();
+      c.strokeStyle = '#c6a57a'; c.lineWidth = .75 * s; c.beginPath();
+      c.moveTo(-2.2 * s, -8.2 * s); c.lineTo(-2.2 * s, -4.3 * s); c.stroke();
+    }
+    { const g = c.createLinearGradient(-2.4 * s, 0, 2.4 * s, 0);
+      g.addColorStop(0, shade(body.startsWith('#') ? body : '#cccccc', 1.12));
+      g.addColorStop(1, shade(body.startsWith('#') ? body : '#cccccc', .8));
+      c.fillStyle = g; c.beginPath(); c.roundRect(-2.4 * s, -9.5 * s, 4.8 * s, 7.6 * s, 2.2 * s); c.fill();
+      c.fillStyle = 'rgba(255,255,255,.28)'; c.fillRect(-1.7 * s, -8.6 * s, .55 * s, 4.7 * s);
+    }
+    { const hc = m.kind === 'robot' ? '#9aa6b5' : m.skin,
+      g = c.createRadialGradient(-1 * s, -12.5 * s, .3 * s, 0, -11.5 * s, 2.8 * s);
+      g.addColorStop(0, shade(hc, 1.18)); g.addColorStop(1, shade(hc, .85));
+      c.fillStyle = g; c.beginPath(); c.arc(0, -11.8 * s, 2.8 * s, 0, TAU); c.fill();
+      if (m.kind !== 'robot') { // A small hairline, face and nose make each pedestrian legible.
+        c.fillStyle = m.hair || '#514034'; c.beginPath(); c.arc(-.25 * s, -12.7 * s, 2.8 * s, Math.PI * 1.08, Math.PI * 1.93); c.fill();
+        c.fillStyle = '#2d3440'; c.beginPath(); c.arc(1.45 * s, -11.9 * s, .43 * s, 0, TAU); c.fill();
+        c.fillStyle = shade(hc, .85); c.beginPath(); c.arc(2.3 * s, -10.85 * s, .65 * s, 0, TAU); c.fill();
+      }
+    }
+    if (m.scarf && m.kind !== 'robot') {
+      c.fillStyle = '#f4c661'; c.beginPath(); c.roundRect(-2.5 * s, -9.4 * s, 5 * s, 1.6 * s, .6 * s); c.fill();
+      c.fillRect(-1.1 * s, -8.5 * s, 1.2 * s, 3.1 * s);
+    }
+    if (m.hat && m.kind !== 'chef' && m.kind !== 'newsie') {
+      c.fillStyle = m.hat === 'beanie' ? '#9b6ed3' : '#387ea6';
+      c.beginPath(); c.ellipse(-.3 * s, -14.3 * s, 3.3 * s, m.hat === 'beanie' ? 2.6 * s : 1.8 * s, 0, Math.PI, TAU); c.fill();
+      if (m.hat === 'cap') c.fillRect(1.2 * s, -14.1 * s, 3.1 * s, .9 * s);
+    }
+    if (m.waveUntil && clock < m.waveUntil) {
+      c.strokeStyle = m.skin || '#d8a77c'; c.lineWidth = 1.5 * s; c.beginPath();
+      c.moveTo(2.1 * s, -8 * s); c.lineTo(5.5 * s, -12.5 * s - Math.sin(clock * 10) * s); c.stroke();
+    }
     if (m.kind === 'chef') { c.fillStyle = '#fff'; c.fillRect(-2.4 * s, -16.5 * s, 4.8 * s, 3.5 * s); }
     if (m.kind === 'robot') { c.fillStyle = '#ff5d5d'; c.fillRect(-.6 * s, -16 * s, 1.2 * s, 2.4 * s); }
     if (m.kind === 'newsie') { c.fillStyle = '#e9dcc0'; c.fillRect(1.5 * s, -7 * s, 4 * s, 5 * s); c.fillStyle = '#2d3440'; c.fillRect(2 * s, -6 * s, 3 * s, .6 * s); c.fillRect(2 * s, -4.8 * s, 3 * s, .6 * s); c.fillStyle = '#3f78c9'; c.beginPath(); c.arc(0, -13.5 * s, 2.8 * s, Math.PI, 0); c.fill(); }
@@ -1046,21 +2174,47 @@ const ToyTown = (() => {
 
   /* ---------------- frame ---------------- */
   function layout() {
+    zoomAnchor = null;
     dpr = Math.min(2, devicePixelRatio || 1); W = cv.width = Math.round(innerWidth * dpr); H = cv.height = Math.round(innerHeight * dpr);
     cv.style.width = innerWidth + 'px'; cv.style.height = innerHeight + 'px';
     const fit = Math.min(W / (N * TW * 2 + 60), H / (N * TH * 2 + 200));
-    base = innerWidth < 700 ? Math.max(fit, (W / (9 * TW * 2))) : fit;   // phones see part of the town and follow the action
-    sprites.clear();
+    base = innerWidth < 700 ? Math.max(fit, (W / (9 * TW * 2))) : fit;   // phones start closer for legibility
+    fitZoom = clamp(MIN_ZOOM, fit / base, 1);  // "Fit" shows the whole city, even on a narrow phone
+    sprites.clear(); ground = null;
   }
-  // A five-minute day: about three minutes of daylight, a dusk, a night and a dawn.
-  function nightLevel() { return clamp(0, -Math.cos(clock / 300 * TAU) * 2 - 1, 1); }
+  // A five-minute day in real time, though moving things run at 60% speed.
+  function nightLevel() { return clamp(0, -Math.cos(clock / (300 * PACE) * TAU) * 2 - 1, 1); }
   function update(dt) {
     clock += dt;
-    for (const m of movers.slice()) step(m, dt);
+    updateNeighborhoodLife(dt);
+    updateStreetTrade();
+    updateDistrictLife();
+    for (const m of movers.slice()) { step(m, dt); easeHeading(m, dt); updateHeroResident(m); }
     for (const e of events.slice()) { e.t += dt; if (e.follow) { e.x = e.follow.x; e.y = e.follow.y; } if (e.update) e.update(e, dt); if (e.t > e.dur) { if (e.end) e.end.call(e); events.splice(events.indexOf(e), 1); } }
     for (const m of movers.slice()) if (m.home && !m.path) remove(m);
-    for (let i = props.length - 1; i >= 0; i--) if (props[i].kind === 'paper' && clock > props[i].until) props.splice(i, 1);
-    for (const p of props) if (p.kind === 'duck') { p.x += p.vx * dt; if (p.x < .3 || p.x > 17.5) p.vx *= -1; }
+    // Event callbacks can reposition actors independently of the ordinary
+    // road stepper. Maintain a strict miniature-board boundary for every
+    // entity without interfering with paths, turn choices, or zoom gestures.
+    for (const m of movers.slice()) {
+      if (!Number.isFinite(m.x) || !Number.isFinite(m.y)) { remove(m); continue; }
+      m.x=clamp(.08,m.x,17.92);m.y=clamp(.08,m.y,17.92);
+    }
+    for(const p of props)if(p.kind==='duck'){
+      // Water birds notice activity near the bank and swim away gradually.
+      // They stay on their existing water line, never across the paving.
+      const near=movers.find(m=>m.type==='person'&&
+        Math.hypot(m.x-p.x,m.y-p.y)<1.12);
+      if(near){
+        const away=Math.sign(p.x-near.x)||1;
+        p.vx=away*Math.min(.18,Math.max(.065,Math.abs(p.vx||0)));
+        p.alertUntil=clock+1.5;
+      }else if(clock>(p.alertUntil||0)){
+        p.vx+=(Math.sign(p.vx||1)*.065-p.vx)*Math.min(1,dt*.5);
+      }
+      p.x+=p.vx*dt;
+      if(p.x<.3||p.x>17.5)p.vx*=-1;
+      p.x=clamp(.3,p.x,17.5);
+    }
     for (const p of props) if (p.kind === 'rover') { if (clock > p.t) { p.tx = p.x + (Math.random() - .5) * 2; p.ty = p.y + (Math.random() - .5) * 2; p.t = clock + 4; } p.x += (p.tx - p.x) * dt * .15; p.y += (p.ty - p.y) * dt * .15; }
     for (const p of props) if (p.kind === 'animal' && !p.out) { if (!p.t || clock > p.t) { const z = props.find(q => q.kind === 'zoo'); if (z) { p.tx = z.x + (Math.random() - .5) * 2.8; p.ty = z.y + (Math.random() - .5) * 2.8; } p.t = clock + 3 + Math.random() * 4; } p.x += (p.tx - p.x) * dt * .3; p.y += (p.ty - p.y) * dt * .3; }
     for (const q of parts) { q.t += dt; q.x += q.vx * dt; q.y += q.vy * dt; q.z += q.vz * dt; q.vz -= q.g * dt; if (q.z < 0) { q.z = 0; q.vz *= -.3; } }
@@ -1073,21 +2227,65 @@ const ToyTown = (() => {
     for (const m of movers) if (m.type === 'person') m.umbrella = raining && !m.kind;
     if (raining) for (let k = 0; k < 6; k++) parts.push({x: Math.random() * 18, y: Math.random() * 18, z: 160, vx: 0, vy: 0, vz: -260, g: 0, life: .6, t: 0, col: 'rgba(120,170,220,.7)', r: 1, rain: true});
     // Chaos: keep a few things going at once.
-    if ((nextHeadline -= dt) <= 0) { const st = today_.filter(v => v.story); if (st.length) tick(`TODAY'S NEWS ${st[(headIx++) % st.length].emoji} ${headline(st[(headIx - 1) % st.length].story)}`); nextHeadline = 30; }
-    if ((nextEvent -= dt) <= 0) { if (events.length < 3) randomEvent(); nextEvent = 7 + Math.random() * 6; }   // an unhurried rhythm
+    if ((nextHeadline -= dt) <= 0) {
+      // Real headlines stay in the attributed source panel. The ticker is
+      // exclusively fictional neighborhood life, never unsourced news.
+      const sale=streetTrade?.latestSale;
+      if(sale&&clock-sale.at<35)
+        tick(sale.product==='bread'?'Fresh bread just sold at the bakery!':
+          'A neighbor picked up a book and found a reading spot.');
+      else tick('The village is open: neighbors meet, shops trade and bicycles pass.');
+      nextHeadline=26;
+    }
+    if ((nextEvent -= dt) <= 0) { if (events.length < 3) randomEvent(); nextEvent = 7 + Math.random() * 6; }
+    if (clock >= nextStreetMoment) { streetMoment(); nextStreetMoment = clock + 20 + Math.random() * 8; }   // an unhurried rhythm
+    if(clock>=nextPerformance){
+      // One scheduled live performance roughly every two miniature minutes,
+      // only when there is room in the event budget. This is visible civic
+      // life, not a burst of extra permanent residents.
+      if(events.length<5&&!events.some(e=>e.streetConcert)){
+        startEvent('busker');
+      }
+      nextPerformance=clock+88;
+    }
     // Traffic: keep the streets busy as cars leave and events come and go.
     while (movers.filter(m => m.type === 'car' && (m.kind === 'car' || m.kind === 'bus' || m.kind === 'taxi')).length < CARS) spawnCar();
     while (movers.filter(m => m.kind === 'bike').length < BIKES) spawnBike();
     while (movers.filter(m => m.type === 'person' && !m.kind).length < PEOPLE) spawnPerson();
-    // The camera stays put (no zooming after events); a drag pans it, and it eases to where it was dragged.
-    const k = Math.min(1, dt * 4); cam.x += (cam.tx - cam.x) * k; cam.y += (cam.ty - cam.y) * k; cam.z = 1;
+    // Preserve the pointed-at block while easing wheel/button zoom.
+    if (Math.abs(cam.tz - cam.z) > .0002) {
+      cam.z = lerp(cam.z, cam.tz, Math.min(1, dt * 12));
+      if (zoomAnchor) focusCamera(zoomAnchor.world, zoomAnchor.sx, zoomAnchor.sy);
+    } else if (zoomAnchor) {
+      cam.z = cam.tz;
+      focusCamera(zoomAnchor.world, zoomAnchor.sx, zoomAnchor.sy);
+      zoomAnchor = null;
+    }
+    if (!zoomAnchor) {
+      const k = Math.min(1, dt * 4);
+      cam.x += (cam.tx - cam.x) * k; cam.y += (cam.ty - cam.y) * k;
+    }
   }
   function render() {
-    S = base * cam.z * dpr / dpr; S = base * cam.z;
+    // Keep the original 2D simulation alive for all gestures, news and traffic,
+    // but avoid drawing a duplicate city when WebGL is successfully visible.
+    if (typeof window !== 'undefined' && window.ToyTown3D?.active) return;
+    S = base * cam.z;
     const night = nightLevel();
     const sky = ctx.createLinearGradient(0, 0, 0, H); sky.addColorStop(0, night > .5 ? '#1d2747' : '#bfe6f7'); sky.addColorStop(1, night > .5 ? '#2e3a63' : '#e8f6fb');
     ctx.fillStyle = sky; ctx.fillRect(0, 0, W, H);
-    drawGround(ctx);
+    // Static streets, earth and contact shadows are cached between camera movements.
+    // Reuse the same buffer during panning instead of allocating a canvas every frame.
+    if (!ground || ground.w !== W || ground.h !== H || ground.x !== cam.x || ground.y !== cam.y || ground.s !== S) {
+      const buffer = ground ? ground.canvas : document.createElement('canvas');
+      if (buffer.width !== W) buffer.width = W;
+      if (buffer.height !== H) buffer.height = H;
+      const gc = buffer.getContext('2d');
+      gc.clearRect(0, 0, W, H);
+      drawGround(gc);
+      ground = {canvas: buffer, w: W, h: H, x: cam.x, y: cam.y, s: S};
+    }
+    ctx.drawImage(ground.canvas, 0, 0);
     // Water glints.
     ctx.fillStyle = 'rgba(255,255,255,.55)'; for (let k = 0; k < 40; k++) { const x = (k * 7.3 + clock * .2) % 18, y = 13 + (k * .37) % 2, s = P(x, y); if (Math.sin(clock * 2 + k) > .6) ctx.fillRect(s[0], s[1], 4 * S, 1.2 * S); }
     const list = [], push = (k, f) => list.push([k, f]);
@@ -1118,29 +2316,71 @@ const ToyTown = (() => {
   }
 
   /* ---------------- start ---------------- */
-  function setCard(list) {
-    const lead = list[0], short = t => t.length > 100 ? t.slice(0, 97) + '…' : t;
-    document.getElementById('date').textContent = new Date().toLocaleDateString(undefined, {weekday: 'short', day: 'numeric', month: 'short'});
-    document.getElementById('theme').textContent = `${lead.emoji} Today: ${lead.title}`;
-    document.getElementById('news').textContent = lead.story ? `Inspired by today's news: ${short(lead.story)}` + (list.length > 1 ? `  Also in town: ${list.slice(1).map(v => v.emoji + ' ' + v.title).join(', ')}.` : '') : 'A gentle little town, new every day.';
+  function setCard(list,linkedToNews=false) {
+    const lead = list[0];
+    document.getElementById('date').textContent = new Date().toLocaleDateString(undefined,
+      {weekday:'short',day:'numeric',month:'short'});
+    document.getElementById('theme').textContent = `${lead.emoji} ${lead.title}`;
+    document.getElementById('news').textContent = linkedToNews?
+      'A playful town scene inspired by a recent headline. Actual reporting is linked below.':
+      'Storybook city life · not a real news report.';
   }
   async function start() {
     layout();
+    // Start on the living village instead of a distant map of tiny boxes.
+    // "Fit" is always available when someone wants the whole city.
+    cam.z = cam.tz = innerWidth < 700 ? 1.52 : 1.72;
     const h = location.hash.slice(1), random = h.startsWith('new');
-    day = today();
-    const daySeed = hash(+day.replace(/-/g, ''), 0x70e);
-    today_ = random ? [] : newsThemes(await fetchNews(day));
-    if (!today_.length) today_ = [VARIANTS[(random ? Math.random() * 1e9 | 0 : daySeed) % VARIANTS.length]];   // no usable story: the date (or chance) picks one
-    if (feed.potd && typeof Image !== 'undefined') { potdImg = new Image(); potdImg.src = feed.potd.src; }
-    if (document.fonts && document.fonts.load) document.fonts.load(`600 12px ${FONT}`).catch(() => {});
-    build(random ? (Math.random() * 1e9) | 0 : daySeed, today_[0].key);
+    day=today();
+    const daySeed=hash(+day.replace(/-/g,''),0x70e);
+    const service=typeof window!=='undefined'?window.ToyTownNews:null;
+    service?.init();
+    // The daily town always exists, even if publishers or GitHub are offline.
+    // Factual headlines and whimsical city events have separate labels.
+    const snapshot=!random&&service?await service.load():null;
+    const liveStories=snapshot?.stories||[];
+    const matched=random?[]:newsThemes(liveStories.map(item=>item.title));
+    const linkedToNews=matched.length>0;
+    today_=linkedToNews?matched:[
+      VARIANTS[((random?Math.random()*1e9|0:daySeed)>>>0)%VARIANTS.length]
+    ];
+    build(random?(Math.random()*1e9)|0:daySeed,today_[0].key);
     decorate(today_);
-    setCard(today_);
-    clock = 0; nextEvent = 1.5;
-    setTimeout(() => randomEvent(), 400);
-    setTimeout(() => startEvent(today_[0].variant), 3500);
+    if(linkedToNews)reactToNews(today_[0]);
+    setCard(today_,linkedToNews);
+    service?.paint(snapshot);
+    clock=0;nextEvent=1.5;
+    setTimeout(()=>randomEvent(),400);
+    setTimeout(()=>startEvent(today_[0].variant),3500);
     requestAnimationFrame(frame);
-    setTimeout(() => { const el = document.getElementById('hint'); if (el) el.style.opacity = '0'; }, 6000);
+    setTimeout(()=>{const el=document.getElementById('hint');if(el)el.style.opacity='0';},6000);
+    // Refresh independently of animation and rebuild on the next local day,
+    // instead of displaying yesterday's city and stories indefinitely.
+    if(service&&!random){
+      let fetching=false;
+      const refresh=async()=>{
+        if(fetching||document.hidden)return;
+        if(today()!==day){location.reload();return;}
+        fetching=true;
+        try{
+          const next=await service.load();
+          service.paint(next);
+          const selected=newsThemes((next.stories||[]).map(item=>item.title));
+          if(selected.length){
+            if(selected[0].story!==today_[0].story){
+              today_=selected;
+              reactToNews(today_[0]);
+              setCard(today_,true);
+              startEvent(today_[0].variant); // update activity, never teleport the town
+            }else setCard(today_,true);
+          }else setCard(today_,false);
+        }finally{fetching=false;}
+      };
+      setInterval(refresh,15*60*1000);
+      document.addEventListener('visibilitychange',()=>{
+        if(!document.hidden)refresh();
+      });
+    }
   }
   // What a passer-by says when you tap them: the day's most-read pages and its news, in their own words.
   function opinion() {
@@ -1150,31 +2390,178 @@ const ToyTown = (() => {
     return ['Lovely day for it.', 'Just popping to the shops.', 'Mind the ducks!', 'Have you tried the bakery?', 'Is it Tuesday already?'][Math.random() * 5 | 0];
   }
   // A tap pokes the town: something happens right there.
+  // Inverse isometric projection used by both pokes and gestures.
+  function screenWorld(sx, sy) {
+    const scale = base * cam.z || S || 1;
+    const u = (sx - W / 2) / (TW * scale), v = (sy - H / 2) / (TH * scale);
+    return {x: cam.x + (u + v) / 2, y: cam.y + (v - u) / 2};
+  }
+  function focusCamera(world, sx, sy) {
+    const scale = base * cam.z || 1;
+    const u = (sx - W / 2) / (TW * scale), v = (sy - H / 2) / (TH * scale);
+    cam.x = cam.tx = clamp(1.1, world.x - (u + v) / 2, N - 1.1);
+    cam.y = cam.ty = clamp(1.1, world.y - (v - u) / 2, N - 1.1);
+  }
+  function zoomAt(factor, cx = innerWidth / 2, cy = innerHeight / 2) {
+    const sx = cx * dpr, sy = cy * dpr;
+    zoomAnchor = {world: screenWorld(sx, sy), sx, sy};
+    cam.tz = clamp(MIN_ZOOM, cam.tz * factor, MAX_ZOOM);
+    if (!playing) { cam.z = cam.tz; focusCamera(zoomAnchor.world, sx, sy); zoomAnchor = null; render(); }
+    return cam.tz;
+  }
+  function resetView() {
+    zoomAnchor = {world: {x: N / 2, y: N / 2}, sx: W / 2, sy: H / 2};
+    cam.tz = fitZoom;
+    if (!playing) { cam.z = fitZoom; focusCamera(zoomAnchor.world, W / 2, H / 2); zoomAnchor = null; render(); }
+  }
+  function fitView() { return fitZoom; }
+  function pinchTo(scale, centerX, centerY, anchorWorld) {
+    cam.z = cam.tz = clamp(MIN_ZOOM, scale, MAX_ZOOM);
+    zoomAnchor = null;
+    focusCamera(anchorWorld, centerX * dpr, centerY * dpr);
+    if (!playing) render();
+  }
   function poke(e) {
     const r = cv.getBoundingClientRect(), sx = (e.clientX - r.left) * dpr, sy = (e.clientY - r.top) * dpr;
-    const u = (sx - W / 2) / (TW * S), v = (sy - H / 2) / (TH * S), gx = (u + v) / 2 + cam.x, gy = (v - u) / 2 + cam.y;
-    const near = movers.filter(m => m.type === 'person' && !m.kind).map(m => { const [x, y] = P(m.x, m.y, 10); return {m, d: Math.hypot(x - sx, y - sy)}; }).sort((a, b) => a.d - b.d)[0];
-    if (near && near.d < 22 * S) { near.m.stopUntil = clock + 4; say(near.m, opinion(), 4); return; }
-    const scr = props.find(p => p.kind === 'cinema'); if (scr && feed.potd && feed.potd.desc) { const [x, y] = P(scr.x, scr.y, 0); if (Math.abs(sx - x) < 40 * Math.max(S, .9) && sy < y && sy > y - 90 * Math.max(S, .9)) { say({x: scr.x + .6, y: scr.y + .6, z: 30}, feed.potd.desc.length > 70 ? feed.potd.desc.slice(0, 68).replace(/\s\S*$/, '') + '…' : feed.potd.desc, 6); return; } }
-    const names = ['balloon', 'butterflies', 'kite', 'pigeons', 'busker', 'timetrip'];
+    const {x: gx, y: gy} = screenWorld(sx, sy);
+    const names = ['balloon', 'butterflies', 'kite', 'pigeons', 'busker'];
     startEvent(names[Math.random() * names.length | 0], clamp(1.5, gx, 16.5), clamp(1.5, gy, 16.5));
   }
   if (typeof window !== 'undefined' && cv) {
     addEventListener('resize', layout);
-    // A drag looks around (useful on phones, where the town is wider than the screen); a tap pokes.
-    let down = null;
-    cv.addEventListener('pointerdown', e => { down = {x: e.clientX, y: e.clientY, cx: cam.tx, cy: cam.ty, moved: false}; cv.setPointerCapture(e.pointerId); });
-    cv.addEventListener('pointermove', e => {
-      if (!down) return;
-      const dx = (e.clientX - down.x) * dpr / (TW * S), dy = (e.clientY - down.y) * dpr / (TH * S);
-      if (Math.hypot(e.clientX - down.x, e.clientY - down.y) > 8) down.moved = true;
-      if (down.moved) { cam.tx = clamp(2, down.cx - (dx + dy) / 2, N - 2); cam.ty = clamp(2, down.cy - (dy - dx) / 2, N - 2); cam.x = cam.tx; cam.y = cam.ty; }
+    // Single pointer: drag or poke. Two pointers: pinch and pan with a stable anchor.
+    const fingers = new Map();
+    let down = null, pinch = null;
+    const pair = () => [...fingers.values()].slice(0, 2);
+    const beginPinch = () => {
+      const [a, b] = pair(); if (!a || !b) return;
+      const cx = (a.x + b.x) / 2, cy = (a.y + b.y) / 2;
+      pinch = {distance: Math.max(1, Math.hypot(a.x - b.x, a.y - b.y)),
+        scale: cam.z, world: screenWorld(cx * dpr, cy * dpr)};
+      cam.tz = cam.z; zoomAnchor = null; down = null;
+    };
+    cv.addEventListener('pointerdown', e => {
+      if (e.pointerType === 'touch') return; // iOS uses dedicated TouchEvents below
+      fingers.set(e.pointerId, {x: e.clientX, y: e.clientY});
+      cv.setPointerCapture(e.pointerId);
+      if (fingers.size === 1) { pinch = null; zoomAnchor = null; cam.tz = cam.z;
+        down = {x: e.clientX, y: e.clientY, cx: cam.x, cy: cam.y, moved: false}; }
+      else beginPinch();
     });
-    cv.addEventListener('pointerup', e => { if (down && !down.moved) poke(e); down = null; });
-    cv.addEventListener('pointercancel', () => { down = null; });
+    cv.addEventListener('pointermove', e => {
+      if (e.pointerType === 'touch' || !fingers.has(e.pointerId)) return;
+      fingers.set(e.pointerId, {x: e.clientX, y: e.clientY});
+      if (fingers.size >= 2) {
+        if (!pinch) beginPinch();
+        const [a, b] = pair();
+        pinchTo(pinch.scale * Math.hypot(a.x - b.x, a.y - b.y) / pinch.distance,
+          (a.x + b.x) / 2, (a.y + b.y) / 2, pinch.world);
+      } else if (down) {
+        const dx = (e.clientX - down.x) * dpr / (TW * base * cam.z);
+        const dy = (e.clientY - down.y) * dpr / (TH * base * cam.z);
+        if (Math.hypot(e.clientX - down.x, e.clientY - down.y) > 8) down.moved = true;
+        if (down.moved) { cam.tx = cam.x = clamp(1.1, down.cx - (dx + dy) / 2, N - 1.1);
+          cam.ty = cam.y = clamp(1.1, down.cy - (dy - dx) / 2, N - 1.1);
+          if (!playing) render(); }
+      }
+    });
+    function releasePointer(e, cancelled = false) {
+      if (!fingers.has(e.pointerId)) return;
+      const wasPinch = !!pinch || fingers.size > 1;
+      fingers.delete(e.pointerId);
+      if (!cancelled && !wasPinch && down && !down.moved) poke(e);
+      down = null;
+      if (fingers.size === 1) {
+        const remaining = [...fingers.values()][0];
+        down = {x: remaining.x, y: remaining.y, cx: cam.x, cy: cam.y, moved: true};
+      } else pinch = null;
+    }
+    cv.addEventListener('pointerup', e => { if (e.pointerType !== 'touch') releasePointer(e); });
+    cv.addEventListener('pointercancel', e => { if (e.pointerType !== 'touch') releasePointer(e, true); });
+    // Mobile Safari can cancel the second PointerEvent of a pinch inside an
+    // iframe. TouchEvents are therefore the primary mobile gesture path.
+    let touchStart = null, touchPinch = null, hadPinch = false;
+    const centerOf = (a, b) => ({x: (a.clientX + b.clientX) / 2, y: (a.clientY + b.clientY) / 2});
+    const startPinch = ts => {
+      const {x, y} = centerOf(ts[0], ts[1]);
+      const rect = cv.getBoundingClientRect();
+      touchPinch = {distance: Math.max(1, Math.hypot(ts[0].clientX - ts[1].clientX, ts[0].clientY - ts[1].clientY)),
+        scale: cam.z, world: screenWorld((x - rect.left) * dpr, (y - rect.top) * dpr)};
+      touchStart = null; hadPinch = true; cam.tz = cam.z; zoomAnchor = null;
+    };
+    cv.addEventListener('touchstart', e => {
+      e.preventDefault();
+      const ts = e.touches;
+      if (ts.length >= 2) startPinch(ts);
+      else if (ts.length === 1 && !hadPinch) {
+        const t = ts[0]; const rect = cv.getBoundingClientRect();
+        cam.tz = cam.z; zoomAnchor = null;
+        touchStart = {x: t.clientX, y: t.clientY, cx: cam.x, cy: cam.y,
+          left: rect.left, top: rect.top, moved: false};
+      }
+    }, {passive: false});
+    cv.addEventListener('touchmove', e => {
+      e.preventDefault();
+      const ts = e.touches;
+      if (ts.length >= 2) {
+        if (!touchPinch) startPinch(ts);
+        const c = centerOf(ts[0], ts[1]), rect = cv.getBoundingClientRect();
+        const dist = Math.hypot(ts[0].clientX - ts[1].clientX, ts[0].clientY - ts[1].clientY);
+        pinchTo(touchPinch.scale * dist / touchPinch.distance,
+          c.x - rect.left, c.y - rect.top, touchPinch.world);
+      } else if (ts.length === 1 && touchStart && !hadPinch) {
+        const dx = (ts[0].clientX - touchStart.x) * dpr / (TW * base * cam.z);
+        const dy = (ts[0].clientY - touchStart.y) * dpr / (TH * base * cam.z);
+        if (Math.hypot(ts[0].clientX - touchStart.x, ts[0].clientY - touchStart.y) > 7)
+          touchStart.moved = true;
+        if (touchStart.moved) {
+          cam.tx = cam.x = clamp(1.1, touchStart.cx - (dx + dy) / 2, N - 1.1);
+          cam.ty = cam.y = clamp(1.1, touchStart.cy - (dy - dx) / 2, N - 1.1);
+          if (!playing) render();
+        }
+      }
+    }, {passive: false});
+    cv.addEventListener('touchend', e => {
+      e.preventDefault();
+      if (!e.touches.length) {
+        if (!hadPinch && touchStart && !touchStart.moved && e.changedTouches[0])
+          poke(e.changedTouches[0]);
+        touchStart = null; touchPinch = null; hadPinch = false;
+      } else if (hadPinch) { touchStart = null; touchPinch = null; }
+    }, {passive: false});
+    cv.addEventListener('touchcancel', e => {
+      e.preventDefault(); touchStart = null; touchPinch = null; hadPinch = false;
+    }, {passive: false});
+    cv.addEventListener('wheel', e => {
+      e.preventDefault();
+      const rect = cv.getBoundingClientRect();
+      zoomAt(Math.exp(-clamp(-120, e.deltaY, 120) * .0025),
+        e.clientX - rect.left, e.clientY - rect.top);
+    }, {passive: false});
+    for (const [id, factor] of [['zoom-in', 1.35], ['zoom-out', 1 / 1.35]]) {
+      const button = document.getElementById(id);
+      if (button) button.addEventListener('click', () => zoomAt(factor));
+    }
+    const resetButton = document.getElementById('zoom-reset');
+    if (resetButton) resetButton.addEventListener('click', resetView);
+    // The parent page has its own zoom buttons so iOS users can adjust the
+    // camera even if their browser doesn't deliver multi-pointer events in an iframe.
+    addEventListener('message', e => {
+      if (e.origin !== location.origin || !e.data) return;
+      if (e.data.type === 'town:zoom' && Number.isFinite(e.data.factor) && e.data.factor > 0)
+        zoomAt(clamp(.5, e.data.factor, 2));
+      else if (e.data.type === 'town:fit') resetView();
+    });
     addEventListener('message', e => { if (e.origin === location.origin && e.data && e.data.type === 'town:motion') playing = !!e.data.playing; });
     addEventListener('hashchange', () => location.reload());
     start();
   }
-  return {TALK, nameOf, headline, CALM, lightPhase, themeFromNews, newsThemes, VARIANTS, VARIANT_EVENTS: () => Object.keys(VARIANT_EVENTS), decorate, setToday: l => { today_ = l; }, setFeed: f => { feed = f; }, feedExtras, opinion, nightAt: c => { clock = c; return nightLevel(); }, PACE, THEMES, GRIM, build, update, events: () => events, movers: () => movers, buildings: () => buildings, props: () => props, startEvent, randomEvent, setPlaying: v => { playing = v; }, debug: () => ({clock, theme, seed, night: nightLevel(), cam: {...cam}})};
+  return {layout, render, zoomAt, resetView, fitView, pinchTo, screenWorld, streetMoment, reactToNews, hero: () => town.blocks.find(b => b.hero), TALK, nameOf, headline, dateKey, CALM, lightPhase, themeFromNews, newsThemes, VARIANTS, VARIANT_EVENTS: () => Object.keys(VARIANT_EVENTS), decorate, setToday: l => { today_ = l; }, PACE, THEMES, GRIM, build, update, events: () => events, movers: () => movers, buildings: () => buildings, props: () => props, startEvent, randomEvent, setPlaying: v => { playing = v; }, debug: () => ({clock, theme, seed, night: nightLevel(), cam: {...cam}, fitZoom, streetMoments,communityEncounters,communityVisits,streetTransactions,streetShopVisits,newsReactions,streetPerformances,
+    districts:{count:districts.length,visits:districtVisits,
+      meetings:districtMeetings,tasks:districtTasks,
+      areas:districts.map(a=>({role:a.role,block:a.block,
+        arrivals:a.arrivals,interactions:a.interactions,x:a.x,y:a.y}))},
+    trade:streetTrade?{mood:streetTrade.newsMood,staff:streetTrade.stalls.length,
+      customers:streetTrade.customers.length,latestSale:streetTrade.latestSale}:null,
+    community:community?{meetingUntil:community.meetingUntil,nextMeeting:community.nextMeeting,meetingCount:community.meetingCount}:null})};
 })();

@@ -1,0 +1,47 @@
+name: Toy Town WebGL visual check
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - 'assets/toy-town-3d.js'
+      - 'assets/toy-town-landmarks.js'
+      - 'assets/toy-town.js'
+      - 'assets/toy-town-news.js'
+      - 'toy-town.html'
+      - 'tests/toy-town-visual.cjs'
+      - 'tests/toy-town-3d.test.cjs'
+      - 'tests/toy-town.test.cjs'
+      - '.github/workflows/toy-town-visual.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  real-browser-screenshots:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install Chromium for Playwright
+        run: |
+          npm install --no-save --no-package-lock playwright@1.58.2
+          npx playwright install --with-deps chromium
+      - name: Verify town logic, camera controls and 3D environment
+        run: |
+          node tests/toy-town.test.cjs
+          node tests/toy-town-3d.test.cjs
+          node tests/toy-town-news.test.cjs
+      - name: Test real WebGL and capture close-up views
+        run: node tests/toy-town-visual.cjs
+      - name: Keep rendered screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: toy-town-visual-${{ github.run_number }}
+          path: visual-artifacts/
+          if-no-files-found: ignore
+          retention-days: 14

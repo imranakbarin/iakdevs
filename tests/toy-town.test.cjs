@@ -4,11 +4,16 @@
 // without error; and traffic and people keep the streets busy.
 const fs = require('node:fs'), path = require('node:path'), vm = require('node:vm'), assert = require('node:assert/strict');
 const root = path.join(__dirname, '..'), html = fs.readFileSync(path.join(root, 'index.html'), 'utf8');
+const dioramaSource = fs.readFileSync(path.join(root, 'assets/toy-town-diorama.js'), 'utf8');
+assert.match(dioramaSource, /function building\(/, 'new architectural renderer exists');
+assert.match(dioramaSource, /function tree\(/, 'new organic tree renderer exists');
+assert.match(dioramaSource, /function gable\(/, 'real pitched roof renderer exists');
+assert.match(dioramaSource, /function glazing\(/, 'framed glazing renderer exists');
 assert.match(html, /<option value="town">Toy Town<\/option>/, 'Toy Town is in the menu');
-assert.match(html, /townFrame\.src='toy-town\.html'/, 'and opens its page');
+assert.match(html, /townFrame\.src='toy-town\.html\?v=52&embed=1'/, 'and opens its current embedded page');
 assert.match(fs.readFileSync(path.join(root, 'toy-town.html'), 'utf8'), /assets\/toy-town\.js\?v=\d+/);
 const box = vm.createContext({Math, Object, Array, JSON, Date, String, Number, RegExp, setTimeout: () => 0, document: {getElementById: () => ({textContent: ''})}});
-vm.runInContext(fs.readFileSync(path.join(root, 'assets/toy-town.js'), 'utf8') + ';this.T = ToyTown;', box);
+vm.runInContext((dioramaSource + '\n' + fs.readFileSync(path.join(root, 'assets/toy-town.js'), 'utf8')) + ';this.T = ToyTown;', box);
 const T = box.T;
 
 // The news filter.
@@ -32,6 +37,14 @@ assert.equal(v('A pod of whales is seen in the harbour'), 'whale');
 const three = T.newsThemes(['Explosion kills four in a factory', 'A new smartphone goes on sale', 'Halloween parades fill the streets', 'The marathon record is broken', 'Another phone story']);
 assert.equal(JSON.stringify(three.map(x => x.variant)), JSON.stringify(['phone', 'halloween', 'marathon']), 'up to three light stories, one per theme, grim ones skipped');
 assert.ok(T.VARIANTS.every(x => T.VARIANT_EVENTS().includes(x.variant)), 'every variant has its own event');
+// Local midnight can differ from UTC midnight; the date key must use local calendar fields.
+class LateEveningDate extends Date {
+  constructor(...args) { super(...(args.length ? args : ['2026-11-01T00:30:00Z'])); }
+  getFullYear() { return 2026; } getMonth() { return 9; } getDate() { return 31; }
+}
+const lateBox = vm.createContext({...box, Date: LateEveningDate});
+vm.runInContext((dioramaSource + '\n' + fs.readFileSync(path.join(root, 'assets/toy-town.js'), 'utf8')) + ';this.T = ToyTown;', lateBox);
+assert.equal(lateBox.T.dateKey(), '2026-10-31', 'late local evening remains on the local date');
 
 // The story's own name goes on the banners; a long story becomes a headline.
 assert.equal(T.nameOf('India win the second Test against England by an innings'), 'India');
@@ -44,6 +57,16 @@ assert.ok(T.headline('In tennis, the Toy Open final is won in five sets, while t
 const layout = () => T.buildings().map(b => b.kind + b.x + ',' + b.y).join('|');
 T.build(12345, 'space'); const a = layout(); T.build(12345, 'space');
 assert.equal(layout(), a, 'the same seed builds the same town');
+T.build(2468,'weather');
+const condensedSkyline=T.buildings().filter(b=>b.kind==='tower');
+assert.ok(condensedSkyline.length>=3 && condensedSkyline.length<=6,
+  'the background skyline has three to six distinct spires, not a packed tower grid');
+const assembledLots=new Set(T.buildings().map(b=>b.x+','+b.y));
+assert.equal(assembledLots.size,T.buildings().length,
+  'clustered districts have no overlapping occupied lots');
+assert.ok(T.buildings().every(b=>b.x>=2 && b.x<=15 && b.y>=2 && b.y<=15),
+  'the composed town never puts permanent buildings on road or water lanes');
+
 for (const [key, kind] of Object.entries({space: 'launchpad', sports: 'stadium', election: 'stage', animals: 'zoo', market: 'market', science: 'lab'})) {
   T.build(777, key);
   assert.ok(T.props().some(p => p.kind === kind), `${key}: the town has its ${kind}`);
@@ -61,12 +84,14 @@ for (const key of Object.keys(T.THEMES)) {
 // Every news variant, with its decorations, runs to its end (as the day's lead story).
 for (const x of T.VARIANTS) {
   T.build(99, x.key); T.decorate([x]); T.setToday([x]);
-  T.startEvent(x.variant); for (let i = 0; i < 60 * 40; i++) T.update(1 / 60);
+  const started = T.startEvent(x.variant);
+  assert.ok(started, `${x.variant}: the event starts`);
+  for (let i = 0; i < 60 * 40; i++) T.update(1 / 60);
   assert.ok(T.movers().every(m => Number.isFinite(m.x + m.y)), `${x.variant}: everyone is somewhere`);
-  assert.ok(!T.events().some(e => e.name === x.variant) || true);
+  assert.ok(!T.events().includes(started), `${x.variant}: the original event finishes`);
 }
 assert.ok(T.PACE < 1, 'the town runs slower than real time');
-// The Toy Town Times stands on a roof, never on a road; neighbours chat about the story by name; a plane tows the headline.
+// The Toy Town Times stands at the town corner, clear of houses; neighbours chat and a plane tows the headline.
 { const lead = {...T.VARIANTS.find(v => v.variant === 'cricket'), story: 'India win the second Test', name: 'India'};
   T.build(2024, 'sports'); T.decorate([lead]); T.setToday([lead]);
   const board = T.props().find(p => p.kind === 'times');
@@ -76,6 +101,385 @@ assert.ok(T.PACE < 1, 'the town runs slower than real time');
   assert.ok(chat && plane && /India|Test/.test(plane.towed), 'a plane tows the headline');
   for (let i = 0; i < 60 * 40; i++) T.update(1 / 60);
   assert.ok(T.TALK.sports.some(l => l.includes('{N}')), 'some lines name the story'); }
+// Travel distance rather than elapsed time drives footsteps and spinning wheels.
+T.build(777, 'weather');
+const walkers = T.movers().filter(m => m.type === 'person' && !m.kind);
+const cyclist = T.movers().find(m => m.kind === 'bike'), walker = walkers[0];
+walker.v = 0; walker.max = 0; cyclist.v = 0; cyclist.max = 0;
+// Explicit pause is required: theme events may legally assign a route
+// even to a pedestrian with max=0. Test standing, not event scheduling.
+walker.stopUntil=T.debug().clock+3;
+cyclist.stopUntil=T.debug().clock+3;
+const parkedDistance = [walker.travel, cyclist.travel];
+for (let i = 0; i < 120; i++) T.update(1 / 60);
+assert.equal(walker.travel, parkedDistance[0], 'a standing walker does not advance animation distance');
+assert.equal(cyclist.travel, parkedDistance[1], 'a stopped bicycle does not pedal');
+walker.max = .6; cyclist.max = .65;
+walker.stopUntil=0;cyclist.stopUntil=0;
+for (let i = 0; i < 60 * 25; i++) T.update(1 / 60);
+assert.ok(walker.travel > parkedDistance[0], 'walking advances the stride clock');
+assert.ok(cyclist.travel > parkedDistance[1], 'cycling advances the pedal clock');
+ 
+// Real movement contract: untraveled actors never play a walk cycle.
+assert.ok(walker.moved>=0&&cyclist.moved>=0,
+  'the movement engine exposes actual distance advanced this tick');
+// Different sides of the road must be navigable without phantom head-on braking.
+const physicsCars=T.movers().filter(m=>m.type==='car'&&m.kind!=='bike');
+const east=physicsCars[0],west=physicsCars[1];
+Object.assign(east,{x:3.0,y:1.5,d:0,lane:.2,v:1.0,max:1.0,path:null,stopUntil:0});
+Object.assign(west,{x:4.6,y:1.5,d:1,lane:.2,v:1.0,max:1.0,path:null,stopUntil:0});
+const startEast=east.x,startWest=west.x;
+for(let i=0;i<50;i++)T.update(1/60);
+assert.ok(east.x>startEast+.15&&west.x<startWest-.15,
+  'opposite-direction traffic has separate physical lanes and can pass');
+// A follower must preserve body clearance rather than cutting through a car.
+Object.assign(east,{x:3,y:1.5,d:0,lane:.2,v:1.0,max:1.1,path:null,stopUntil:0});
+Object.assign(west,{x:3.95,y:1.5,d:0,lane:.2,v:0,max:0,path:null,stopUntil:0});
+for(let i=0;i<75;i++){
+  T.update(1/60);
+  assert.ok(west.x-east.x>=.55,
+    'same-lane car bodies never overlap even when the leader is stopped');
+}
+assert.ok(east.v<.1,'a blocked follower comes to a real stop');
+// Perception: a free walker pauses at a nearby shop and actually looks at it.
+T.build(52045,'market');
+const curious=T.movers().find(m=>m.type==='person'&&!m.kind);
+const storefront=T.buildings().find(b=>b.kind==='shop');
+assert.ok(curious&&storefront,'behavior test has a walker and a destination');
+curious.x=storefront.x+.5;curious.y=storefront.y+1.38;
+curious.d=0;curious.max=.53;curious.stopUntil=0;curious.path=null;
+curious.nextNotice=0;curious.observeUntil=0;
+T.update(1/60);
+assert.equal(curious.intent,'browse','nearby storefront triggers a purposeful stop');
+assert.ok(curious.attention&&Math.abs(curious.attention.x-storefront.x-.5)<.01,
+  'shop browsing has a real look-at destination');
+assert.equal(curious.v,0,'a browsing pedestrian stops their footsteps');
+for(let i=0;i<60*5;i++)T.update(1/60);
+assert.notEqual(curious.intent,'browse','a pause is temporary; walkers resume their journeys');
+// A following driver brakes for a stationary vehicle without phasing through it.
+const drivers=T.movers().filter(m=>m.type==='car'&&m.kind!=='bike');
+const following=drivers[0],leading=drivers[1];
+assert.ok(following&&leading,'reactive traffic test has at least two vehicles');
+Object.assign(following,{x:3,y:1.5,d:0,lane:.20,v:.7,max:1.3,path:null});
+Object.assign(leading,{x:3.31,y:1.5,d:0,lane:.20,v:0,max:1.1,path:null});
+T.update(1/60);
+assert.equal(following.braking,true,
+  'a moving vehicle exposes a brake-light intention when closing on traffic');
+
+// Outer neighborhoods are services with meaningful safe routes, not scenery.
+T.build(60624,'market');
+assert.equal(T.debug().districts.count,4,
+  'four outer quadrants each have an active local service');
+assert.equal(T.debug().districts.areas.map(a=>a.role).join(','),
+  'garden,post,art,produce','each district has its own recognizable job');
+const localWorkers=T.movers().filter(m=>m.districtResident);
+assert.equal(localWorkers.length,8,
+  'four workers and four visitors populate the outlying neighborhoods');
+assert.equal(T.props().filter(p=>p.kind==='district-scene').length,4,
+  'each outer district has a physical work destination');
+let throughHomes=0,travelled=0;
+for(let i=0;i<60*72;i++){
+  T.update(1/60);
+  if(i%60)continue;
+  for(const m of localWorkers){
+    travelled=Math.max(travelled,m.travel||0);
+    if(T.buildings().some(b=>Math.abs(m.x-b.x-.5)<.30&&
+      Math.abs(m.y-b.y-.5)<.30))throughHomes++;
+  }
+}
+assert.equal(throughHomes,0,'district residents never walk through houses');
+assert.ok(travelled>4,'residents visibly walk between distinct destinations');
+assert.ok(T.debug().districts.visits>=5,
+  'local visitors repeatedly reach real workplaces');
+assert.ok(T.debug().districts.tasks>=8,
+  'local workers perform repeat tasks only after arriving');
+assert.ok(T.debug().districts.meetings>=1,
+  'visitors greet people in actual nearby positions');
+
+// Persistent life should continue without an event, new button or teleport.
+// The two locals make independent visits, converge to chat, then separate.
+T.build(46112,'weather');
+const neighbors=T.movers().filter(m=>m.communityResident);
+const companion=T.movers().find(m=>m.companionDog);
+assert.equal(neighbors.length,2,'two persistent neighbors live in the plaza');
+assert.ok(companion&&companion.kind==='dog','a dog accompanies one of the locals');
+assert.equal(T.debug().communityEncounters,0,'new-day routines reset correctly');
+let furthestDog=0,met=false;
+for(let i=0;i<60*77;i++){
+  T.update(1/60);
+  const gap=Math.hypot(companion.x-neighbors[1].x,companion.y-neighbors[1].y);
+  furthestDog=Math.max(furthestDog,gap);
+  if(neighbors.every(m=>m.intent==='chat')){
+    met=true;
+    assert.ok(Math.hypot(neighbors[0].x-neighbors[1].x,
+      neighbors[0].y-neighbors[1].y)<.90,
+      'the pair meets in physical space, rather than telepathically');
+    assert.ok(neighbors.every(m=>m.attention),'conversation establishes eye contact');
+  }
+}
+assert.ok(T.debug().communityVisits>=2,'residents independently visit real destinations');
+assert.ok(T.debug().communityEncounters>=1&&met,'neighbors meet and talk in the square');
+assert.ok(furthestDog<2.2,'dog stays near its owner throughout the neighborhood routine');
+T.build(827741530,'market');
+let joinedOnApproach=false;
+for(let i=0;i<60*69;i++){
+  T.update(1/60);
+  if(T.debug().communityEncounters>0){joinedOnApproach=true;break;}
+}
+assert.ok(joinedOnApproach,
+  'neighbors can recognize a friend during the approach instead of missing the exact meeting waypoint');
+assert.ok(T.movers().every(m=>Number.isFinite(m.x+m.y)&&m.x>0&&m.y>0&&
+  m.x<18&&m.y<18),'coordinated motion respects the town bounds');
+
+
+
+// The main plaza is now a working community economy: shoppers travel to
+// counters, physically receive items, then walk away to use their purchases.
+T.build(60624,'market');
+const stallWorkers=T.movers().filter(m=>m.shopRole==='vendor');
+const marketCustomers=T.movers().filter(m=>m.shopRole==='customer');
+assert.equal(stallWorkers.length,2,'a baker and bookseller staff the real storefronts');
+assert.equal(marketCustomers.length,3,'three independent shoppers form a small active market');
+assert.ok(stallWorkers.every(m=>m.max===0&&m.x>7&&m.x<11&&m.y>8&&m.y<9),
+  'shopkeepers remain grounded at their own storefront counters');
+const marketMetrics={peakHolding:0,peakService:0,furthestTravel:0};
+for(let i=0;i<60*80;i++){
+  T.update(1/60);
+  marketMetrics.peakHolding=Math.max(marketMetrics.peakHolding,
+    marketCustomers.filter(m=>m.carrying).length);
+  marketMetrics.peakService=Math.max(marketMetrics.peakService,
+    stallWorkers.filter(m=>m.shopAction==='serving').length);
+  marketMetrics.furthestTravel=Math.max(marketMetrics.furthestTravel,
+    ...marketCustomers.map(m=>m.travel||0));
+  for(const buyer of marketCustomers)if(buyer.shopPhase==='receiving'){
+    const worker=stallWorkers.find(w=>w.shopVenue===buyer.shopAt);
+    assert.ok(worker&&Math.hypot(buyer.x-worker.x,buyer.y-worker.y)<.65,
+      'a purchase occurs only face-to-face at the intended real storefront');
+  }
+}
+assert.ok(T.debug().streetShopVisits>=8,'residents genuinely revisit shops');
+assert.ok(T.debug().streetTransactions>=6,
+  'bread and books actually exchange hands repeatedly');
+assert.ok(marketMetrics.peakHolding>=1,'the purchaser physically holds the merchandise');
+assert.ok(marketMetrics.peakService>=1,'staff perform distinct serving actions');
+assert.ok(marketMetrics.furthestTravel>2,'visitors physically travel around the village');
+const mood=T.newsThemes(['A football championship victory celebrated by fans'])[0];
+assert.ok(T.reactToNews(mood),'a sourced matching headline triggers a town reaction');
+assert.equal(T.debug().trade.mood,'cheer','the public story produces a specific social mood');
+assert.ok(stallWorkers.some(m=>m.waveUntil>T.debug().clock),
+  'clerks visibly greet the moment instead of leaving a headline unconnected');
+assert.equal(T.debug().newsReactions,1,'news reactions are counted separately from fiction events');
+assert.ok(T.debug().streetPerformances>=1,
+  'the town hosts recurring physical concerts rather than silent decoration');
+for(let i=0;i<60*9;i++)T.update(1/60);
+assert.equal(T.debug().trade.mood,null,'news reactions expire instead of looping indefinitely');
+
+// Canvas smoke: rich buildings, human poses and all event types must draw without errors.
+// The same camera frame reuses its static ground buffer until the world changes.
+const strokes = {groundDraws: 0, buffers: 0, screenBlits: 0, detailPaths: 0, gradients: 0};
+const fakeContext = isGround => new Proxy({}, {get(_, key) {
+  if (key === 'createLinearGradient' || key === 'createRadialGradient') return () => {strokes.gradients++; return {addColorStop() {}};};
+  if (key === 'beginPath') return () => {strokes.detailPaths++;};
+  if (key === 'measureText') return txt => ({width: String(txt).length * 5});
+  if (key === 'clearRect') return () => { if (isGround) strokes.groundDraws++; };
+  if (key === 'drawImage') return () => { if (!isGround) strokes.screenBlits++; };
+  return () => {};
+}});
+const fakeCanvas = isGround => ({width: 0, height: 0, style: {}, getContext: () => fakeContext(isGround)});
+const sceneCanvas = fakeCanvas(false);
+// Native mobile touch events are the primary Safari gesture path; desktop PointerEvents
+// must not swallow or duplicate them.
+const touchHandlers = {}, hostHandlers = {}, fallbackButtons = {};
+let captured = 0, defaultBlocked = 0, singlePokes = 0;
+const touchCanvas = {
+  style: {}, getContext: () => fakeContext(false),
+  getBoundingClientRect: () => ({left: 0, top: 0}),
+  addEventListener: (name, handler) => {touchHandlers[name] = handler;},
+  setPointerCapture: () => {captured++;}
+};
+const touchDoc = {getElementById: id => id === 'town' ? touchCanvas :
+  ({textContent: '', style: {}, addEventListener:(name, handler) => {fallbackButtons[id] = handler;}}),
+  createElement: () => fakeCanvas(true)};
+const touchCtx = vm.createContext({
+  document:touchDoc, window:{}, location:{origin:'https://example.test',hash:'#new'},
+  innerWidth:390,innerHeight:844,devicePixelRatio:2,
+  Math,Object,Array,JSON,Date,String,Number,RegExp,
+  requestAnimationFrame:()=>0,setTimeout:()=>0,
+  addEventListener:(name,handler)=>{(hostHandlers[name] ||= []).push(handler);}
+});
+vm.runInContext((dioramaSource + '\n' + fs.readFileSync(path.join(root,'assets/toy-town.js'),'utf8'))+';this.T=ToyTown;', touchCtx);
+const phone = touchCtx.T;
+phone.layout(); phone.build(2026,'weather');
+touchHandlers.pointerdown({pointerType:'touch',pointerId:7,clientX:100,clientY:200});
+assert.equal(captured,0,'iPhone taps do not call pointer capture');
+const point=(x,y)=>({clientX:x,clientY:y});
+const ev=touches=>({touches,changedTouches:touches,preventDefault(){defaultBlocked++}});
+touchHandlers.touchstart(ev([point(90,200)]));
+touchHandlers.touchstart(ev([point(90,200),point(190,200)]));
+const initialZoom=phone.debug().cam.z;
+touchHandlers.touchmove(ev([point(90,200),point(260,200)]));
+assert.ok(phone.debug().cam.z>initialZoom*1.5,'native iOS pinch enlarges the city');
+const beforeRelease=phone.events().length;
+touchHandlers.touchend(ev([]));
+assert.equal(phone.events().length,beforeRelease,'pinch release is not a tap');
+touchHandlers.touchstart(ev([point(120,270)]));
+touchHandlers.touchend({touches:[],changedTouches:[point(120,270)],preventDefault(){defaultBlocked++}});
+assert.ok(phone.events().length>beforeRelease,'single-finger tap still works');
+assert.ok(defaultBlocked>=4,'touch gestures suppress browser scrolling');
+const zoomBeforeButton=phone.debug().cam.z;
+hostHandlers.message.forEach(fn=>fn({origin:'https://example.test',data:{type:'town:zoom',factor:1.4}}));
+for(let k=0;k<90;k++)phone.update(1/60);
+assert.ok(phone.debug().cam.z>zoomBeforeButton,'zoom button on main page reaches iframe');
+const beforeForeign=phone.debug().cam.tz;
+hostHandlers.message.forEach(fn=>fn({origin:'https://untrusted.test',data:{type:'town:zoom',factor:.5}}));
+assert.equal(phone.debug().cam.tz,beforeForeign,'foreign frame message ignored');
+hostHandlers.message.forEach(fn=>fn({origin:'https://example.test',data:{type:'town:fit'}}));
+for(let k=0;k<90;k++)phone.update(1/60);
+assert.ok(phone.fitView()<.8,'Fit fits the whole city on a narrow phone');
+assert.ok(Math.abs(phone.debug().cam.z-phone.fitView())<.02,'parent Fit uses mobile fit scale');
+assert.ok(fallbackButtons['zoom-in']&&fallbackButtons['zoom-out']&&fallbackButtons['zoom-reset'],
+ 'standalone fallback zoom controls remain wired');
+
+
+const sceneDoc = {
+  getElementById: id => id === 'town' ? sceneCanvas : {textContent: '', style: {}},
+  createElement: tag => { assert.equal(tag, 'canvas'); strokes.buffers++; return fakeCanvas(true); }
+};
+const drawBox = vm.createContext({Math, Object, Array, JSON, Date, String, Number, RegExp, document: sceneDoc, innerWidth: 1280, innerHeight: 720, devicePixelRatio: 1, setTimeout: () => 0});
+vm.runInContext((dioramaSource + '\n' + fs.readFileSync(path.join(root, 'assets/toy-town.js'), 'utf8')) + ';this.T = ToyTown;', drawBox);
+const scene = drawBox.T;
+scene.layout(); scene.build(2026, 'sports'); scene.decorate([scene.VARIANTS.find(v => v.variant === 'cricket')]);
+scene.render(); scene.render();
+assert.ok(strokes.detailPaths > 100, 'miniature buildings use layered projected outlines');
+assert.ok(strokes.gradients > 40, 'glazing, soft shadows and foliage use tonal shading');
+assert.equal(strokes.buffers, 1, 'only one backing canvas is allocated');
+assert.equal(strokes.groundDraws, 1, 'static ground is not redrawn each idle frame');
+assert.equal(strokes.screenBlits, 2, 'cached ground is blitted each frame');
+scene.build(2027, 'festival'); scene.decorate([scene.VARIANTS.find(v => v.variant === 'halloween')]);
+scene.render();
+assert.equal(strokes.groundDraws, 2, 'new town invalidates static ground');
+for (const key of Object.keys(scene.THEMES)) { scene.build(4242, key); scene.render(); }
+assert.ok(strokes.screenBlits >= 12, 'all themed scenes complete a render pass');
+scene.pinchTo(3.2, 640, 360, {x: 9, y: 9});
+const previousPaths = strokes.detailPaths;
+scene.render();
+assert.ok(strokes.detailPaths > previousPaths, 'diorama geometry draws at close zoom');
+scene.pinchTo(.55, 640, 360, {x: 9, y: 9});
+scene.render();
+
+// Hero neighborhood remains central and landscaped on every seed, while the
+// surrounding plots still respond to the day's theme.
+const hero = scene.hero();
+assert.ok(hero && hero.xa === 7 && hero.ya === 7 && hero.type === 'hero', 'hero neighborhood stays central');
+const heroBuildings = scene.buildings().filter(b => b.hero);
+assert.equal(heroBuildings.length, 5, 'hero block has five individually placed buildings');
+assert.equal(heroBuildings.filter(b => b.kind === 'shop').length, 2, 'hero block includes two small shops');
+assert.equal(heroBuildings.filter(b => b.kind === 'house').length, 3, 'hero block includes three homes');
+const heroProps = scene.props().filter(p => p.kind.startsWith('hero-'));
+for (const k of ['hero-bench','hero-table','hero-lamp','hero-mail','hero-rack','hero-shrub'])
+  assert.ok(heroProps.some(p => p.kind === k), k + ' furniture is present');
+assert.ok(heroProps.every(p => p.x >= hero.xa && p.x < hero.xb + 1 &&
+  p.y >= hero.ya && p.y < hero.yb + 1), 'each decorative object sits within the central block');
+const locals = scene.movers().filter(m => m.heroResident);
+assert.equal(locals.length, 3, 'three neighbors follow local neighborhood routes');
+for (let k = 0; k < 60 * 75; k++) scene.update(1 / 60);
+assert.ok(locals.every(m => m.x > hero.xa && m.x < hero.xb + 1 &&
+  m.y > hero.ya && m.y < hero.yb + 2.3 && Number.isFinite(m.x + m.y)),
+  'residents stay on the neighborhood paths and marked crossing');
+assert.ok(locals.every(m => m.heroIndex >= 2), 'residents reach multiple real destinations');
+assert.ok(locals.some(m => m.heroStops.some(p => p.cross)), 'a resident has a marked riverside crossing');
+// A car approaches the crosswalk while a resident is already crossing:
+const crossingWalker = locals[0];
+const crossingCar = scene.movers().find(m => m.type === 'car' && m.kind === 'car');
+assert.ok(crossingCar, 'ordinary traffic is present for crossing test');
+crossingWalker.x = hero.xa + 1.5; crossingWalker.y = hero.yb + 1.1;
+crossingWalker.crossing = true; crossingWalker.stopUntil = 0;
+crossingWalker.path = [{x:hero.xa + 1.5, y:hero.yb + 1.85, speed:.18}];
+crossingCar.x = hero.xa + .5; crossingCar.y = hero.yb + 1.5;
+crossingCar.d = 0; crossingCar.v = .8; crossingCar.max = 1.3;
+scene.update(.10);
+assert.ok(crossingCar.v < .8, 'driver slows for a pedestrian on the zebra crossing');
+crossingWalker.crossing = false; crossingWalker.path = null; crossingWalker.stopUntil = scene.debug().clock + 1;
+
+assert.ok(locals.some(m => m.heroStops.some(p => p.sit)), 'benches are activity destinations');
+scene.render();
+const oldHero = scene.hero();
+scene.build(654321, 'market');
+assert.equal(scene.hero().type, 'hero', 'a different news theme retains the hero neighborhood');
+assert.equal(scene.buildings().filter(b => b.hero).length, heroBuildings.length,
+  'theme changes retain the same neighborhood architecture');
+assert.ok(oldHero !== scene.hero(), 'a new town creates fresh block references');
+
+// Camera zoom is bounded, preserves a focal world point, and can reset to fit.
+scene.resetView();
+for (let i = 0; i < 90; i++) scene.update(1 / 60);
+const beforeZoom = scene.screenWorld(800, 300), oldZoom = scene.debug().cam.z;
+scene.zoomAt(1.7, 800, 300);
+for (let i = 0; i < 90; i++) scene.update(1 / 60);
+assert.ok(scene.debug().cam.z > oldZoom * 1.65, 'zoom in gets closer');
+const afterZoom = scene.screenWorld(800, 300);
+assert.ok(Math.hypot(beforeZoom.x - afterZoom.x, beforeZoom.y - afterZoom.y) < .02,
+  'wheel zoom keeps the same world point beneath the cursor');
+scene.zoomAt(.2, 800, 300);
+for (let i = 0; i < 90; i++) scene.update(1 / 60);
+assert.ok(scene.debug().cam.z < .7, 'zoom out sees more of the town');
+scene.pinchTo(100, 640, 360, {x: 9, y: 9});
+assert.ok(scene.debug().cam.z <= 3.25, 'pinch maximum is clamped');
+scene.pinchTo(.01, 640, 360, {x: 9, y: 9});
+assert.ok(scene.debug().cam.z >= .42, 'pinch minimum is clamped');
+scene.resetView();
+for (let i = 0; i < 90; i++) scene.update(1 / 60);
+assert.ok(Math.abs(scene.debug().cam.z - 1) < .02, 'Fit restores starting zoom');
+assert.ok(Math.abs(scene.debug().cam.x - 9) < .02 && Math.abs(scene.debug().cam.y - 9) < .02,
+  'Fit recentres the whole town');
+scene.setPlaying(false); scene.zoomAt(1.25); // controls still work while paused
+assert.ok(scene.debug().cam.z > 1.2, 'zoom controls work while paused');
+scene.setPlaying(true);
+
+// Neighborhood encounters use nearby shops, rather than placing floating scenes.
+scene.build(12457, 'weather');
+const walkersWithAccessories = scene.movers().filter(m => m.type === 'person' && !m.kind)
+  .filter(m => m.hat || m.bag || m.scarf);
+assert.ok(walkersWithAccessories.length >= 1, 'neighbors have varied outfits');
+const shop = scene.buildings().find(b => b.kind === 'shop');
+const neighbor = scene.movers().find(m => m.type === 'person' && !m.kind);
+assert.ok(shop && neighbor, 'shop and neighbor exist');
+neighbor.x = shop.x + .5; neighbor.y = shop.y + .5;
+assert.ok(scene.streetMoment(), 'a nearby person can stop to greet a shop');
+assert.equal(scene.debug().streetMoments, 1, 'shop encounter increments the town moment counter');
+scene.render();
+const townPage = fs.readFileSync(path.join(root, 'toy-town.html'), 'utf8');
+for (const id of ['zoom-in', 'zoom-out', 'zoom-reset']) {
+  assert.match(townPage, new RegExp('id="' + id + '"[^>]*aria-label="[^"]+"'), id + ' is accessible');
+}
+assert.match(townPage, /toy-town\.js\?v=26/, 'diorama engine is loaded');
+assert.match(townPage, /toy-town-news\.js\?v=1/, 'sourced news loads before the simulation');
+assert.match(townPage, /HEADLINES/, 'real reporting has a dedicated source panel');
+assert.match(townPage, /AROUND TOWN · FICTION/, 'fiction and real news are explicitly separated');
+assert.ok(townPage.indexOf('toy-town-news.js')<townPage.indexOf('toy-town.js'),
+  'the news client is initialized before the town engine');
+assert.match(townPage, /toy-town-diorama\.js\?v=1/, 'diorama is loaded before the engine');
+assert.match(townPage, /id="town-3d"/, 'WebGL mounts into its own overlay');
+assert.match(townPage, /pointer-events:none/, 'WebGL overlay allows iPhone touch gestures through to original canvas');
+assert.match(townPage, /WebGL2RenderingContext/, '3D is only attempted on supported browsers');
+assert.match(townPage, /classic/, 'original 2D scene remains selectable with classic URL option');
+assert.match(townPage, /three@0\.187\.0/, '3D package is pinned to a reproducible version');
+assert.match(townPage, /\.catch\(error => console\.warn/, '3D dependency failure falls back to the original renderer');
+assert.match(fs.readFileSync(path.join(root,'assets/toy-town.js'),'utf8'),
+  /window\.ToyTown3D\?\.active/, 'classic simulation skips redundant Canvas rendering only when WebGL is active');
+
+assert.ok(townPage.indexOf('toy-town-diorama.js') < townPage.indexOf('toy-town.js'),
+  'material renderer loads before the world engine');
+assert.match(fs.readFileSync(path.join(root,'assets/toy-town.js'),'utf8'),
+  /cam.z = cam.tz = innerWidth < 700 \? 1\.52 : 1\.72/,
+  'opening view frames the village more closely');
+
+assert.match(html, /id="town-zoom"/, 'zoom controls live outside the iframe');
+assert.match(html, /id="town-fit"/, 'mobile has a fit-the-city button');
+assert.match(html, /town:zoom/, 'outer buttons message the city');
+assert.match(townPage, /embedded/, 'embedded page hides duplicate controls');
+
+
 // A calm town: gentle moments run to their end, and traffic waits at red lights instead of piling into the crossings.
 T.build(31337, 'weather'); T.setToday([]);
 for (const name of T.CALM) T.startEvent(name);
@@ -89,24 +493,10 @@ for (let i = 0; i < 60 * 120; i++) {
 }
 assert.ok(clashes / samples < .05, `cross traffic rarely meets in a crossing (${clashes} near misses in ${samples} samples)`);
 assert.ok(T.events().length <= 6, 'the gentle moments end too');
-
-// The rest of the day's feed: the picture of the day, gentle "on this day" moments, what people are reading; grim ones never.
-const extra = T.feedExtras({image: {thumbnail: {source: 'https://upload.wikimedia.org/x.jpg'}, description: {text: 'A <b>kingfisher</b> on a branch'}},
-  onthisday: [{year: 1969, text: 'Apollo 11 lands on the Moon.'}, {year: 1945, text: 'An atomic bomb is dropped.'}],
-  mostread: {articles: [{type: 'standard', normalizedtitle: 'Halloween'}, {type: 'standard', normalizedtitle: 'Deaths in 2026'}, {type: 'standard', normalizedtitle: 'Some band', description: 'killed in a crash'}]}});
-assert.equal(extra.potd.src, 'https://upload.wikimedia.org/x.jpg'); assert.equal(extra.potd.desc, 'A kingfisher on a branch');
-assert.equal(JSON.stringify(extra.otd), JSON.stringify([{year: 1969, text: 'Apollo 11 lands on the Moon.'}]), 'only light moments from history');
-assert.equal(JSON.stringify(extra.trending), JSON.stringify(['Halloween']), 'and only light pages from the most read');
-// The open-air cinema stands on the left corner, deckchairs in front; the time traveller, paper round and stargazer run to their end.
-T.build(20261030, 'festival'); T.setToday([{key: 'festival', variant: 'halloween', title: 'Halloween', emoji: '🎃', story: 'Halloween parades fill the streets', name: 'Halloween'}]); T.decorate([{key: 'festival', variant: 'halloween'}]);
-const scr = T.props().find(p => p.kind === 'cinema');
-assert.ok(scr && scr.x < 1.5 && scr.y > 16, 'the cinema is on the left corner, clear of the town');
-assert.equal(T.props().filter(p => p.kind === 'seat').length, 3);
-T.setFeed(extra);
-assert.ok(/Halloween|Lovely|shops|ducks|bakery|Tuesday|Happy|lights|sweets|Same/.test(T.opinion()), 'a tapped passer-by talks about the day');
-T.nightAt(150);
-const started = ['timetrip', 'paperround', 'stargazer'].map(name => { const e = T.startEvent(name); assert.ok(e, name + ' starts'); return e; });
-for (let i = 0; i < 60 * 45; i++) T.update(1 / 60);
-assert.ok(!started.some(e => T.events().includes(e)), 'and each runs to its end');
-assert.ok(T.props().some(p => p.kind === 'paper'), "the paper round leaves today's Times on doorsteps");
-console.log(`Toy Town PASS: ${T.VARIANTS.length} news variants (cricket to Diwali to dinosaurs) each with its own event, grim stories never become themes, light ones pick ${Object.keys(T.THEMES).length - 1} kinds of day, the same day builds the same town with its theme block and fire station, every event in every theme runs to its end with the streets kept busy, and the cinema, time traveller, paper round and stargazer bring in the rest of the day's feed.`);
+// The simulation is slow, but daylight/night cycle still lasts five real minutes.
+const dayCycle = 300 * T.PACE, phase = T.debug().clock % dayCycle;
+T.update((dayCycle / 2 - phase + dayCycle) % dayCycle);
+assert.ok(T.debug().night > .99, 'night halfway through the real-time cycle');
+T.update(dayCycle / 2);
+assert.ok(T.debug().night < .01, 'daylight returns after a five-minute cycle');
+console.log(`Toy Town PASS: ${T.VARIANTS.length} news variants (cricket to Diwali to dinosaurs) each with its own event, grim stories never become themes, light ones pick ${Object.keys(T.THEMES).length - 1} kinds of day, the same day builds the same town with its theme block and fire station, and every event in every theme runs to its end with the streets kept busy.`);
