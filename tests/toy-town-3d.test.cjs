@@ -33,7 +33,7 @@ assert.match(moduleCode,/const cafeSet=/,'the village includes modeled cafe seat
 assert.match(moduleCode,/const archCurve=new THREE.CatmullRomCurve3/,
   'rose arbour has a sculpted curved timber span');
 assert.match(moduleCode,/const strings=\[\[anchors\[0\],anchors\[1\]\]/,
-  'suspended festoon strands connect actual supports');
+  'restrained parallel festoon strands connect actual supports');
 assert.match(moduleCode,/createStorybookVillage\(\);/,
   'complete village set is mounted during world rebuild');
 assert.match(moduleCode,/groundPiece\(3\.96,3\.96,grassMaterial/,'central landscaping is one courtyard not sixteen tiles');
@@ -47,13 +47,13 @@ assert.match(moduleCode,/eye.scale.y=blink/,'eyelids blink without a separate an
 assert.match(html,/type="importmap"/);
 assert.match(html,/three@0\.187\.0\/build\/three\.module\.js/);
 assert.match(html,/three@0\.187\.0\/examples\/jsm\//);
-assert.match(html,/toy-town-3d\.js\?v=15/);
+assert.match(html,/toy-town-3d\.js\?v=16/);
 assert.match(html,/toy-town-landmarks\.js\?v=2/,'the independent models are requested alongside Three');
 assert.match(html,/buildLandmark:landmarks\.buildLandmark/,
   'loader injects the authored model builder into the 3D simulation');
 assert.match(html,/toy-town\.js\?v=14/);
 assert.ok(html.indexOf('toy-town.js?v=14')<html.indexOf("import('three')"), 'classic fallback starts first');
-assert.match(page,/toy-town\.html\?v=28&embed=1/);
+assert.match(page,/toy-town\.html\?v=29&embed=1/);
 assert.match(moduleCode,/export function mountToyTown3D/);
 assert.match(moduleCode,/new THREE\.WebGLRenderer/);
 assert.match(moduleCode,/window\.ToyTown3D=api/);
@@ -170,7 +170,7 @@ assert.equal(host.style.display,'block');
 assert.equal(townCanvas.style.opacity,'0');
 assert.ok(stats.renders>=1);
 assert.ok(api.getStats().gardenElements>=140,'village has substantial coordinated landscaping and furniture');
-assert.equal(api.getStats().festoonBulbs,28,'four supported cables contain 28 miniature lamps');
+assert.equal(api.getStats().festoonBulbs,14,'two suspended spans contain 14 miniature lamps');
 const initialGardenCount=api.getStats().gardenElements;
 const sceneWorld=api.scene.children.find(o=>o.children?.some(x=>x.userData?.uniqueAsset));
 assert.ok(sceneWorld,'scene has a populated world group');
@@ -269,7 +269,7 @@ assert.equal(api.getStats().actors,2,'departing vehicles are removed');
 assert.ok(stats.renders>oldCount);
 seed++;buildings=buildings.slice();callbacks.shift()();
 assert.equal(api.getStats().redrawCount,2,'new daily town triggers a full rebuild');
-assert.equal(api.getStats().festoonBulbs,28,'garden lighting is recreated, never duplicated');
+assert.equal(api.getStats().festoonBulbs,14,'garden lighting is recreated, never duplicated');
 assert.equal(api.getStats().gardenElements,initialGardenCount,
   'curated surroundings are deterministic across world rebuilds');
 const cameraZoom=api.camera.zoom;
