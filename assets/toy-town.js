@@ -202,10 +202,46 @@ const ToyTown = (() => {
     const tiles = []; for (let y = b.ya; y <= b.yb; y++) for (let x = b.xa; x <= b.xb; x++) { tile(x, y).block = b; tiles.push([x, y]); }
     const edge = ([x, y]) => x === b.xa || x === b.xb || y === b.ya || y === b.yb;
     const pastel = () => PASTEL[r() * PASTEL.length | 0], roof = () => ROOFS[r() * ROOFS.length | 0];
-    if (b.type === 'houses') for (const [x, y] of tiles) { if (edge([x, y]) && r() < .8) addBuilding({x, y, kind: 'house', h: 29 + r() * 8, wall: pastel(), roof: roof()}); else props.push({kind: 'tree', x: x + .5, y: y + .5, s: .7 + r() * .4, c: '#6cc35a'}); }
+    // Village composition: houses and tall buildings grow in coherent small
+    // clusters instead of filling every edge cell with another repeating roof.
+    // All lots, traffic lanes, landmarks and event positions remain unchanged.
+    if (b.type === 'houses') {
+      const frontageNorth = r() < .5;
+      for (const [x, y] of tiles) {
+        const primary = frontageNorth ? (y === b.ya || y === b.yb) :
+          (x === b.xa || x === b.xb);
+        const clustered = edge([x, y]) &&
+          (primary ? r() < .72 : r() < .39) &&
+          !(x === b.xa+1 && y === b.ya);
+        if (clustered) addBuilding({x,y,kind:'house',
+          h:29+r()*9,wall:pastel(),roof:roof()});
+        else {
+          tile(x,y).kind='park';
+          if (r()<.66) props.push({kind:'tree',x:x+.5,y:y+.5,
+            s:.70+r()*.33,c:r()<.5?'#6b9c70':'#88b289'});
+          else if(r()<.36)props.push({kind:'flowers',x:x+.5,y:y+.5,
+            c:['#e0c8ae','#d6e3b6']});
+        }
+      }
+    }
     else if (b.type === 'shops') for (const [x, y] of tiles) { if (edge([x, y])) addBuilding({x, y, kind: 'shop', h: 32 + r() * 11, wall: pastel(), awning: roof(), name: ['BAKERY', 'PIZZA', 'TOYS', 'BOOKS', 'CAFE', 'SWEETS', 'PETS'][r() * 7 | 0]}); else tile(x, y).kind = 'plaza'; }
-    else if (b.type === 'towers') for (const [x, y] of tiles) { if (r() < .7) addBuilding({x, y, kind: 'tower', h: 50 + r() * 70, wall: ['#9fc4e8', '#b9d2e6', '#a8b8d8', '#c8d6e0'][r() * 4 | 0], roof: '#6b7c93'}); else tile(x, y).kind = 'plaza'; }
-    else if (b.type === 'fire') { for (const [x, y] of tiles) { if (x === b.xa && y === b.yb) addBuilding({x, y, kind: 'fire', h: 26, wall: '#e2463a', roof: '#a8281f'}); else if (edge([x, y]) && r() < .6) addBuilding({x, y, kind: 'house', h: 29 + r() * 8, wall: pastel(), roof: roof()}); else tile(x, y).kind = 'plaza'; } b.station = {x: b.xa + .5, y: b.yb + .5}; }
+    else if (b.type === 'towers') {
+      // Three or four varied spires form a readable district skyline;
+      // the remaining parcels become garden clearings.
+      const sites=[[0,0],[3,0],[0,3],[3,3],[1,2],[2,1]];
+      const selected=sites.filter((_,i)=>i<3||r()<.28);
+      for(const [x,y] of tiles){
+        const landmark=selected.some(([dx,dy])=>x===b.xa+dx&&y===b.ya+dy);
+        if(landmark)addBuilding({x,y,kind:'tower',
+          h:56+r()*60,wall:['#9fc4e8','#b9d2e6','#a8b8d8','#c8d6e0'][r()*4|0],roof:'#6b7c93'});
+        else {
+          tile(x,y).kind='park';
+          if(r()<.53)props.push({kind:'tree',x:x+.5,y:y+.5,
+            s:.74+r()*.39,c:'#85a994'});
+        }
+      }
+    }
+    else if (b.type === 'fire') { for (const [x, y] of tiles) { if (x === b.xa && y === b.yb) addBuilding({x, y, kind: 'fire', h: 26, wall: '#e2463a', roof: '#a8281f'}); else if (edge([x, y]) && r() < .38) addBuilding({x, y, kind: 'house', h: 29 + r() * 8, wall: pastel(), roof: roof()}); else tile(x, y).kind = 'plaza'; } b.station = {x: b.xa + .5, y: b.yb + .5}; }
     else if (b.type === 'construction') { for (const [x, y] of tiles) tile(x, y).kind = 'dirt'; addBuilding({x: b.xa + 1, y: b.ya + 1, kind: 'site', h: 20, wall: '#d8c79a', roof: '#c9a85a'}); props.push({kind: 'crane', x: b.xa + 2.5, y: b.ya + 2.5}); }
     else if (b.type === 'riverside') for (const [x, y] of tiles) { if (tile(x, y).kind === 'water') continue; if (r() < .35) props.push({kind: 'tree', x: x + .5, y: y + .5, s: .7 + r() * .3, c: '#5cb85c'}); else if (r() < .2) props.push({kind: 'bench', x: x + .5, y: y + .5}); }
     else {   // park and the theme blocks keep open ground
