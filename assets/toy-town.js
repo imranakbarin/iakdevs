@@ -485,8 +485,8 @@ const ToyTown = (() => {
       // A seller never drifts away from the counter while distracted by
       // a theme event, nor performs a stationary walk cycle.
       seller.v=0;
-      seller.shopAction=stall.customer&&
-        clock<(stall.serveUntil||0)?'serving':'offering';
+      seller.shopAction=stall.customer?.shopPhase==='receiving'?
+        'handoff':stall.customer?'serving':'offering';
       seller.attention=stall.customer?
         {x:stall.customer.x,y:stall.customer.y}:{...stall.serve};
     }

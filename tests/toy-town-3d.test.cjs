@@ -140,11 +140,11 @@ assert.match(moduleCode,/eye.scale.y=blink/,'eyelids blink without a separate an
 assert.match(html,/type="importmap"/);
 assert.match(html,/three@0\.187\.0\/build\/three\.module\.js/);
 assert.match(html,/three@0\.187\.0\/examples\/jsm\//);
-assert.match(html,/toy-town-3d\.js\?v=35/);
+assert.match(html,/toy-town-3d\.js\?v=36/);
 assert.match(html,/toy-town-landmarks\.js\?v=7/,'the independent models are requested alongside Three');
 assert.match(html,/buildLandmark:landmarks\.buildLandmark/,
   'loader injects the authored model builder into the 3D simulation');
-assert.match(html,/toy-town\.js\?v=23/);
+assert.match(html,/toy-town\.js\?v=24/);
 const classicScript=html.match(/src="assets\/toy-town\.js\?v=\d+"/);
 assert.ok(classicScript&&
   html.indexOf(classicScript[0])<html.indexOf("import('three')"),
@@ -282,6 +282,11 @@ assert.equal(host.style.display,'block');
 assert.equal(townCanvas.style.opacity,'0');
 assert.ok(stats.renders>=1);
 assert.ok(api.getStats().gardenElements>=140,'village has substantial coordinated landscaping and furniture');
+const workingDesks=api.scene.children.flatMap(n=>n.children||[])
+  .filter(n=>n.userData?.workingShop);
+assert.equal(workingDesks.length,2,'two decorated real merchandise counters occupy shop frontage');
+assert.ok(workingDesks.every(s=>s.position.x>7&&s.position.x<11&&
+  s.position.z>8&&s.position.z<9),'shop counters are on the living village frontage');
 assert.ok(api.getStats().woodlandShapes>=1,
   'simulation trees use the authored asymmetric crowns');
 assert.ok(api.getStats().terrainContours>=2,
@@ -478,6 +483,37 @@ assert.ok(motorcar.userData.vehicleRig.brakeMaterial.emissiveIntensity>.5,
   'car brake lamps visibly brighten on traffic slowdown');
 assert.ok(Math.abs(cycle.userData.bicycleRig.crank.rotation.z)>1,
   'pedals and bicycle wheels rotate with physical distance');
+// A vendor offers actual stock, a purchaser only carries it once purchased.
+const shopkeeperRef={type:'person',kind:'shopkeeper',shopRole:'vendor',
+  shopVenue:'bakery',shopAction:'offering',x:8.07,y:8.42,d:2,
+  max:0,v:0,travel:0,ph:2,col:'#de8f69',skin:'#d8ac8e'};
+const buyerRef={type:'person',kind:'shopper',shopRole:'customer',
+  shopAction:'ordering',x:8.32,y:8.78,d:3,max:.4,
+  v:0,travel:0,ph:1.5,col:'#a28bce',skin:'#d4b295'};
+pedestrians.push(shopkeeperRef,buyerRef);
+frameClock+=1/30;callbacks.shift()();
+const sellerModel=sceneWorld.children.find(o=>o.userData?.shopProps?.bread&&
+  o.position.x===shopkeeperRef.x);
+const buyerModel=sceneWorld.children.find(o=>o.userData?.shopProps?.book&&
+  o.position.x===buyerRef.x);
+assert.ok(sellerModel&&buyerModel,'both roles have real connected merchandise rigs');
+assert.equal(sellerModel.userData.shopProps.bread.visible,true,
+  'the baker visibly offers bread in an articulated hand');
+assert.equal(buyerModel.userData.shopProps.bread.visible,false,
+  'buyer cannot display a purchase before the handoff');
+const rightArm=sellerModel.userData.limbs.arms[1];
+assert.ok(Math.abs(rightArm.rotation.x)>.02,'vendor extends a serving arm');
+shopkeeperRef.shopAction='handoff';
+buyerRef.shopAction='receiving';buyerRef.carrying='bread';
+frameClock+=1/30;callbacks.shift()();
+assert.equal(sellerModel.userData.shopProps.bread.visible,false,
+  'the vendor releases the bread after the transaction');
+assert.equal(buyerModel.userData.shopProps.bread.visible,true,
+  'the same product appears in the buyer hand');
+buyerRef.shopAction='eating';frameClock+=1/30;callbacks.shift()();
+assert.ok(buyerModel.userData.pose.enjoy>.05,
+  'the customer has a distinct using-the-purchase animation');
+pedestrians.splice(-2,2);frameClock+=1/30;callbacks.shift()();
 const footBefore=cycle.userData.bicycleRig.legs[0].shoe.position.y;
 pedestrians[2].travel+=.20;frameClock+=1/30;callbacks.shift()();
 assert.ok(Math.abs(cycle.userData.bicycleRig.legs[0].shoe.position.y-footBefore)>.012,

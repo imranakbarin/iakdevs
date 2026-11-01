@@ -2018,6 +2018,61 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
       }
     }
   }
+  // The two village shops are inhabited places, not static signage.
+  // A shallow service counter, real merchandise and warm tabletop lamps
+  // occupy their frontage margins. Hero residents still have clear walking
+  // corridors at x=8.5 and x=9.5; nothing is placed on a traffic lane.
+  function createWorkingShops(){
+    const workplaces=[
+      {kind:'bakery',x:8.17,z:8.56,color:'#d69072',trim:'#f8dcab'},
+      {kind:'bookshop',x:9.83,z:8.56,color:'#478d89',trim:'#d7e5c7'}
+    ];
+    for(const place of workplaces){
+      const shop=new THREE.Group();
+      shop.position.set(place.x,.176,place.z);
+      shop.userData.workingShop=place.kind;world.add(shop);
+      const base=box(shop,.54,.315,.26,place.color,0,.168,0);
+      const top=box(shop,.61,.045,.30,'#f2ddbd',0,.347,0);
+      for(const side of [-1,1]){
+        box(shop,.046,.30,.29,'#f4e4c7',side*.265,.169,0);
+        // A standing rib gives the tiny display readable edges at mobile scale.
+        box(shop,.031,.23,.016,place.trim,side*.22,.186,.143);
+      }
+      box(shop,.40,.056,.021,place.trim,0,.22,.143);
+      if(place.kind==='bakery'){
+        // Loaves nest in an actual countertop basket. Shallow scored crusts
+        // are part of the goods, not painted dots on the roof behind them.
+        const basket=box(shop,.36,.048,.20,'#ab875f',0,.405,-.010);
+        for(let i=0;i<4;i++){
+          const loaf=ball(shop,.069,i%2?'#e6a761':'#d68e55',
+            (i-1.5)*.084,.465,(i%2?-.034:.034));
+          loaf.scale.set(.65,.49,1.0);
+          box(shop,.022,.008,.048,'#f8ddab',
+            (i-1.5)*.084,.497,(i%2?-.034:.034));
+        }
+        // A low warm lamp keeps the bread counter readable after dusk.
+        const light=ball(shop,.038,mat('#ffe5a4',.5,'#e9b974'),
+          -.235,.435,-.098);light.castShadow=false;
+      }else{
+        // A visibly different silhouette: book covers standing on a
+        // slanted rack, with a dedicated little bookmark pile.
+        for(let i=0;i<5;i++){
+          const book=box(shop,.062,.148,.105,
+            ['#f1c47d','#ad8cac','#c87774','#e3d1ab','#6da8a0'][i],
+            (i-2)*.087,.475,-.022);
+          book.rotation.z=(i%2?.13:-.11);
+          box(shop,.045,.008,.082,'#f9ebd8',(i-2)*.087,.540,-.020);
+        }
+        box(shop,.15,.027,.11,'#edcd91',.137,.405,.067);
+        box(shop,.14,.020,.11,'#ad897b',.132,.430,.067);
+      }
+      const smallSign=sign(shop,place.kind==='bakery'?'FRESH':'OPEN',
+        0,.247,.148,.27,'#574a42','#f8eed8');
+      // Visible from street side; miniature sign shares stall's coordinate
+      // system and never floats independently of the desk.
+      ambient.push({kind:'marketCounter',mesh:shop,phase:place.kind==='bakery'?0:1.3});
+    }
+  }
   function rebuild(){
     ambient.length = 0; plazaLights.length = 0; festoonBulbs.length = 0;
     windowMaterials.clear();
@@ -2061,6 +2116,7 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
     for(let i=0;i<ps.length;i++)smallProps(ps[i],i);
     createStorybookVillage();
     paintVillageLife();
+    createWorkingShops();
     // Landmark panes are pooled across the five models. Update material
     // intensity only, not every individual window mesh, on each frame.
     const visit=node=>{
@@ -2217,6 +2273,42 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
       const satchel=box(g,.092,.130,.078,'#a88367',-.129,.228,.057);
       box(g,.103,.022,.031,'#f9e8d0',-.129,.285,.099);
     }
+    if(ref.shopRole==='vendor'){
+      // Vendors are visibly different from idle residents. Color-coded
+      // aprons and a baker's soft cap make each trade legible from a glance.
+      box(g,.149,.194,.031,ref.shopVenue==='bakery'?'#fff1d9':'#e9e2c4',
+        0,.262,.086);
+      if(ref.shopVenue==='bakery'){
+        const bakerHat=cylinder(g,.078,.081,.074,'#fff5e2',0,.549,0);
+        const crown=ball(g,.082,'#fff9eb',0,.594,0);
+        crown.scale.set(1,.47,1);
+      }else{
+        // Bookshop keeper wears a short dark waistcoat and pen.
+        box(g,.029,.088,.019,'#53655c',-.039,.269,.105);
+      }
+    }
+    const shopProps={};
+    if(ref.shopRole){
+      // Objects belong to the right wrist and follow the complete joint
+      // chain; the customer receives them only at physical service time.
+      const bread=new THREE.Group();bread.position.set(0,-.081,.043);
+      hands[1].add(bread);
+      const roll=ball(bread,.069,'#e3a263',0,0,0);
+      roll.scale.set(1.17,.61,.79);
+      for(let i=-1;i<=1;i++){
+        const score=box(bread,.009,.011,.049,'#f9d59a',i*.031,.039,0);
+        score.rotation.z=.18;
+      }
+      bread.userData.heldProduct='bread';bread.visible=false;
+      const book=new THREE.Group();book.position.set(0,-.082,.053);
+      hands[1].add(book);
+      box(book,.122,.157,.026,'#538c86',0,0,0);
+      box(book,.101,.139,.025,'#f6e5bf',0,0,.018);
+      box(book,.086,.105,.008,'#f7c678',0,.009,.039);
+      book.rotation.x=-.11;
+      book.userData.heldProduct='book';book.visible=false;
+      shopProps.bread=bread;shopProps.book=book;
+    }
     // One upper-body pivot carries torso, neck, hair, clothes and arms.
     // Hip and ankle anchors stay in the ground-space leg rig. In particular,
     // hats and eyes cannot detach when the resident leans to greet somebody.
@@ -2228,8 +2320,9 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
     g.add(upperBody);
     g.userData.limbs={legs,arms,elbows,wrists,hands,shins,feet,
       eyelids,headPivot,upperBody,smile,brows};
+    g.userData.shopProps=shopProps;
     g.userData.pose={speed:0,sit:0,chat:0,speak:0,greet:0,observe:0,
-      lastClock:null,turned:false};
+      serve:0,enjoy:0,receive:0,lastClock:null,turned:false};
     // Lightweight deterministic silhouette variation: coat, satchel or vest,
     // plus narrow waist and different hats already supplied by simulation.
     if(ref.bag){
@@ -2244,7 +2337,8 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
     g.userData.characterSilhouette=true;
     // Deterministic build and height variation, never a random change
     // between frames. Hero residents remain slightly larger at close zoom.
-    const scale=ref.heroResident?1.10:1;
+    const scale=ref.shopRole==='vendor'?1.19:
+      ref.shopRole==='customer'?1.13:ref.heroResident?1.10:1;
     const characterPhase=ref.ph||0;
     g.scale.set(scale*(.97+.045*Math.sin(characterPhase*1.3)),
       scale*(.98+.055*Math.cos(characterPhase*.9)),
@@ -2543,7 +2637,7 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
         const focus=ref.attention;
         const toward=focus?Math.hypot(focus.x-ref.x,focus.y-ref.y):0;
         const social=(ref.intent==='chat'||ref.intent==='greeting'||
-          ref.intent==='browse'||ref.intent==='visiting');
+          ref.intent==='browse'||ref.intent==='visiting'||!!ref.shopRole);
         const turnToFocus=focus&&toward>.11&&social&&(ref.v||0)<.055;
         const desiredFacing=turnToFocus?
           Math.atan2(focus.x-ref.x,focus.y-ref.y):travelFacing;
@@ -2564,6 +2658,21 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
         state.observe=ease(state.observe,!reducedMotion&&
           (ref.intent==='browse'||ref.intent==='visiting')&&
           toward>.11&&(ref.v||0)<.05?1:0,3);
+        state.serve=ease(state.serve,!reducedMotion&&
+          (ref.shopAction==='offering'||ref.shopAction==='serving')?1:0,6.0);
+        state.receive=ease(state.receive,!reducedMotion&&
+          (ref.shopAction==='receiving'||ref.shopAction==='handoff')?1:0,7.0);
+        state.enjoy=ease(state.enjoy,!reducedMotion&&
+          (ref.shopAction==='reading'||ref.shopAction==='eating')?1:0,5.5);
+        const goods=g.userData.shopProps;
+        if(goods){
+          const vendorProduct=ref.shopRole==='vendor'?
+            (ref.shopVenue==='bakery'?'bread':'book'):null;
+          const available=ref.carrying||
+            (ref.shopAction==='handoff'?null:vendorProduct);
+          if(goods.bread)goods.bread.visible=available==='bread';
+          if(goods.book)goods.book.visible=available==='book';
+        }
         const stridePhase=(ref.travel||0)*17+(ref.ph||0);
         const stride=Math.sin(stridePhase);
         // Strongest motion happens in swing; each foot rocks toward the
@@ -2594,14 +2703,19 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
           const wave=dominant?state.greet:0;
           const carrying=k===0&&(ref.bag||ref.kind==='farmer'||
             ref.kind==='keeper');
+          const trading=dominant?state.serve:state.serve*.18;
+          const receiving=dominant?state.receive:state.receive*.12;
+          const using=dominant?state.enjoy:state.enjoy*.48;
           limbs.arms[k].rotation.x=state.sit*.20-
             swing*state.speed*(carrying?.14:.34)-
-            state.chat*(dominant?.25:.07)-speech*.30-inspect*.22-wave*.52;
+            state.chat*(dominant?.25:.07)-speech*.30-inspect*.22-wave*.52-
+            trading*.72-receiving*.56-using*1.18;
           limbs.arms[k].rotation.z=(k===0?1:-1)*
             (.07+.10*state.chat+.06*state.observe)-
             wave*.89;
           limbs.elbows[k].rotation.x=
-            -.56*speech-.46*inspect-.84*wave+
+            -.56*speech-.46*inspect-.84*wave-
+            trading*.50-receiving*.80-using*.70+
             (carrying?.20:0)+state.sit*.15;
           limbs.wrists[k].rotation.x=
             -.14*speech-.30*inspect-.25*wave;
@@ -2614,6 +2728,7 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
         const lean=state.speed*.043;
         const beat=Math.sin(stridePhase*2);
         limbs.upperBody.rotation.x=lean+
+          state.serve*.080+state.receive*.12+state.enjoy*.045+
           state.chat*.036*Math.sin(worldTime*1.5+(ref.ph||0));
         limbs.upperBody.rotation.z=.020*state.speed*stride+
           .032*state.chat*(ref.ph%2?1:-1);
@@ -2759,6 +2874,8 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
       } else if(a.kind==='balloon'){
         a.mesh.rotation.z=.065*Math.sin(time*.95+a.phase);
         a.mesh.rotation.x=.065*Math.cos(time*.72+a.phase);
+      } else if(a.kind==='marketCounter'){
+        a.mesh.rotation.y=.003*Math.sin(time*1.2+a.phase);
       } else if(a.kind==='butterfly'){
         a.mesh.position.set(a.x+.13*Math.cos(time*.65+a.phase),
           .72+.085*Math.sin(time*1.1+a.phase),
