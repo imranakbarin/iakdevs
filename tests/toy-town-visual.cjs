@@ -99,6 +99,25 @@ async function main(){
         await page.waitForFunction(n=>window.ToyTown3D?.getStats?.().frames>n,
           beforeFrame,{timeout:45000,polling:100});
       }
+      if(job.social){
+        // Verify the new pose controller actually reaches the GPU scene,
+        // not just the underlying simulation's chat intent.
+        const animated=await page.evaluate(()=>{
+          const humans=[],dogs=[];
+          ToyTown3D.scene.traverse(o=>{
+            if(o.userData?.pose)humans.push(o.userData.pose);
+            if(o.userData?.creatureRig?.kind==='dog')
+              dogs.push(o.userData.creatureRig);
+          });
+          return {people:humans.length,
+            speaking:humans.filter(p=>p.chat>.015).length,
+            dogCount:dogs.length,
+            responsiveDog:dogs.some(d=>d.ears?.length===2&&d.body)};
+        });
+        if(animated.speaking<2||!animated.responsiveDog)
+          throw Error('Choreographed 3D scene failed to express live social interaction: '+
+            JSON.stringify(animated));
+      }
       await page.addStyleTag({content:'#card,#ticker,#hint,#zoom-controls{display:none!important}'});
       await page.waitForTimeout(150);
       // A moving WebGL canvas may never satisfy Playwright's stability check.
