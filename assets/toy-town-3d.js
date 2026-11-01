@@ -1949,25 +1949,29 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
     }
     box(g,.032,.099,.023,'#f6e5ce',0,.319,.080);
     const neck=cylinder(g,.031,.032,.055,skin,0,.374,0);
-    const head=ball(g,.095,skin,0,.457,0);
+    // Every resident has a real neck pivot. Attention is driven by the
+    // simulation's observed shop or destination, not an idle head-twitch.
+    const headPivot=new THREE.Group();headPivot.position.y=.405;g.add(headPivot);
+    const face=new THREE.Group();face.position.y=-.405;headPivot.add(face);
+    const head=ball(face,.095,skin,0,.457,0);
     head.scale.set(1,1.045,.95);
     const hairTone=ref.hair||'#5b4639';
-    const hair=ball(g,.099,hairTone,0,.515,-.014);
+    const hair=ball(face,.099,hairTone,0,.515,-.014);
     hair.scale.set(1,.46,1);
     // Distinct asymmetric hair silhouettes. No detached floating hair tufts.
     const hairStyle=(Math.round((ref.x||0)*11+(ref.y||0)*7))%3;
     if(!ref.hat){
       if(hairStyle===0){
         for(const side of [-1,1]){
-          const lock=ball(g,.043,hairTone,side*.073,.465,-.029);
+          const lock=ball(face,.043,hairTone,side*.073,.465,-.029);
           lock.scale.set(.64,1.22,.83);
         }
       } else if(hairStyle===1) {
-        const fringe=ball(g,.056,hairTone,-.023,.501,.059);
+        const fringe=ball(face,.056,hairTone,-.023,.501,.059);
         fringe.scale.set(1.32,.35,.69);
       } else {
         for(let k=0;k<3;k++){
-          const curl=ball(g,.031,hairTone,(k-1)*.055,.535,.016);
+          const curl=ball(face,.031,hairTone,(k-1)*.055,.535,.016);
           curl.scale.set(.98,.72,.96);
         }
       }
@@ -1976,27 +1980,30 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
     // not on a screen-aligned sprite; rotation follows actual walking.
     const eyelids=[];
     for(const sx of [-1,1]){
-      const eye=ball(g,.019,'#fff8ef',sx*.032,.455,.086);
-      ball(g,.009,'#354449',sx*.032,.457,.102);
+      const eye=ball(face,.019,'#fff8ef',sx*.032,.455,.086);
+      ball(face,.009,'#354449',sx*.032,.457,.102);
       eyelids.push(eye);
-      ball(g,.015,'#df978b',sx*.069,.417,.074);
-      ball(g,.024,skin,sx*.097,.439,.005);
+      ball(face,.015,'#df978b',sx*.069,.417,.074);
+      ball(face,.024,skin,sx*.097,.439,.005);
     }
-    ball(g,.017,skin,0,.425,.100);
-    const smile=object(g,geo('torus',.024,.004),mat('#925f5c'),0,.404,.094);
+    ball(face,.017,skin,0,.425,.100);
+    const smile=object(face,geo('torus',.024,.004),mat('#925f5c'),0,.404,.094);
     smile.scale.set(1,.40,.26);
     // Layers of clothing create a tiny character instead of a colored capsule.
-    box(g,.072,.075,.040,'#fff1da',0,.324,.071);
-    box(g,.023,.038,.031,'#d3a082',0,.304,.091);
+    box(face,.072,.075,.040,'#fff1da',0,.324,.071);
+    box(face,.023,.038,.031,'#d3a082',0,.304,.091);
     for(const sx of [-1,1]){
-      box(g,.014,.029,.022,'#f7e0c4',sx*.034,.305,.087);
+      box(face,.014,.029,.022,'#f7e0c4',sx*.034,.305,.087);
     }
-    const legs=[],arms=[];
+    const legs=[],arms=[],shins=[];
     for(const side of [-1,1]){
       const leg=new THREE.Group();leg.position.set(side*.041,.178,0);
-      cylinder(leg,.024,.026,.15,'#60717b',0,-.074,0);
-      box(leg,.062,.035,.102,'#5a524b',0,-.154,.027);
-      g.add(leg);legs.push(leg);
+      cylinder(leg,.026,.028,.086,'#60717b',0,-.043,0);
+      const knee=ball(leg,.027,'#627887',0,-.095,0);
+      const shin=new THREE.Group();shin.position.set(0,-.096,0);
+      cylinder(shin,.022,.025,.081,'#60717b',0,-.039,0);
+      box(shin,.065,.035,.108,'#5a524b',0,-.102,.035);
+      leg.add(shin);g.add(leg);legs.push(leg);shins.push(shin);
       const arm=new THREE.Group();arm.position.set(side*.097,.327,0);
       cylinder(arm,.024,.026,.132,coat,0,-.076,0);
       ball(arm,.025,'#f3e1ce',0,-.123,0);
@@ -2008,7 +2015,19 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
       if(ref.hat==='cap')box(g,.095,.017,.063,'#588f9e',0,.487,.089);
     }
     if(ref.bag)box(g,.06,.15,.12,'#ae8966',-.106,.24,-.038);
-    g.userData.limbs={legs,arms,eyelids};
+    g.userData.limbs={legs,arms,shins,eyelids,headPivot};
+    // Lightweight deterministic silhouette variation: coat, satchel or vest,
+    // plus narrow waist and different hats already supplied by simulation.
+    if(ref.bag){
+      const strap=box(g,.018,.21,.018,'#81684f',-.055,.29,.083);
+      strap.rotation.z=-.28;
+    }
+    if(ref.scarf){
+      const scarf=object(g,geo('torus',.062,.014),mat('#e8bd9e'),0,.37,0,false);
+      scarf.rotation.x=Math.PI/2;
+      box(g,.036,.12,.018,'#e8bd9e',-.041,.310,.081);
+    }
+    g.userData.characterSilhouette=true;
     g.scale.setScalar(ref.heroResident?1.1:1);
     return g;
   }
