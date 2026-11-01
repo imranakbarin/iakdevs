@@ -2002,15 +2002,18 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
     for(const sx of [-1,1]){
       box(face,.014,.029,.022,'#f7e0c4',sx*.034,.305,.087);
     }
-    const legs=[],arms=[],shins=[];
+    const legs=[],arms=[],shins=[],feet=[];
     for(const side of [-1,1]){
       const leg=new THREE.Group();leg.position.set(side*.041,.178,0);
       cylinder(leg,.026,.028,.086,'#60717b',0,-.043,0);
       const knee=ball(leg,.027,'#627887',0,-.095,0);
       const shin=new THREE.Group();shin.position.set(0,-.096,0);
       cylinder(shin,.022,.025,.081,'#60717b',0,-.039,0);
-      box(shin,.065,.035,.108,'#5a524b',0,-.102,.035);
+      const ankle=new THREE.Group();ankle.position.set(0,-.102,.028);
+      box(ankle,.065,.035,.108,'#5a524b',0,0,.007);
+      shin.add(ankle);
       leg.add(shin);g.add(leg);legs.push(leg);shins.push(shin);
+      feet.push(ankle);
       const arm=new THREE.Group();arm.position.set(side*.097,.327,0);
       cylinder(arm,.024,.026,.132,coat,0,-.076,0);
       ball(arm,.025,'#f3e1ce',0,-.123,0);
@@ -2047,7 +2050,18 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
       const satchel=box(g,.092,.130,.078,'#a88367',-.129,.228,.057);
       box(g,.103,.022,.031,'#f9e8d0',-.129,.285,.099);
     }
-    g.userData.limbs={legs,arms,shins,eyelids,headPivot};
+    // One upper-body pivot carries torso, neck, hair, clothes and arms.
+    // Hip and ankle anchors stay in the ground-space leg rig. In particular,
+    // hats and eyes cannot detach when the resident leans to greet somebody.
+    const upperBody=new THREE.Group();
+    for(const part of [...g.children]){
+      if(legs.includes(part))continue;
+      g.remove(part);upperBody.add(part);
+    }
+    g.add(upperBody);
+    g.userData.limbs={legs,arms,shins,feet,eyelids,headPivot,upperBody};
+    g.userData.pose={speed:0,sit:0,chat:0,look:0,
+      stride:0,breathe:0,lastClock:null};
     // Lightweight deterministic silhouette variation: coat, satchel or vest,
     // plus narrow waist and different hats already supplied by simulation.
     if(ref.bag){
@@ -2319,41 +2333,91 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
       g.rotation.y=a+(item.kind==='person'?Math.PI/2:0);
       const limbs=g.userData.limbs;
       if(limbs){
-        const moving=!!ref.v&&ref.v>.035&&!ref.sit&&(!ref.stopUntil||town.debug().clock>=ref.stopUntil);
-        const step=moving?Math.sin((ref.travel||0)*17+(ref.ph||0))*.44:0;
-        limbs.legs[0].rotation.x=ref.sit?-1.16:step;
-        limbs.legs[1].rotation.x=ref.sit?-1.16:-step;
-        // Each knee bends on the recovery stroke, not as rigid leg pendulums.
-        for(let k=0;k<(limbs.shins?.length||0);k++){
-          const gait=k===0?step:-step;
-          limbs.shins[k].rotation.x=ref.sit?.75:Math.max(0,-gait)*1.12;
+        // Distance owns the footstep clock. Time only smooths transitions and
+        // breathing, so a stopped person never runs in place or foot-slides.
+        const state=g.userData.pose,worldTime=town.debug().clock;
+        const dt=state.lastClock===null?1/30:
+          THREE.MathUtils.clamp(worldTime-state.lastClock,1/120,.09);
+        state.lastClock=worldTime;
+        const ease=(value,target,rate)=>value+(target-value)*
+          (1-Math.exp(-rate*dt));
+        const moving=ref.v>.032&&!ref.sit&&
+          (!ref.stopUntil||worldTime>=ref.stopUntil);
+        state.speed=ease(state.speed,moving?
+          THREE.MathUtils.clamp(ref.v/(ref.max||.55),0,1):0,8.5);
+        state.sit=ease(state.sit,ref.sit?1:0,5.2);
+        state.chat=ease(state.chat,ref.intent==='chat'?1:0,4.4);
+        const stridePhase=(ref.travel||0)*17+(ref.ph||0);
+        const stride=Math.sin(stridePhase);
+        // Strongest motion happens in swing; each foot rocks toward the
+        // street at contact rather than following a rigid pendulum.
+        for(let k=0;k<2;k++){
+          const phase=k===0?stride:-stride;
+          const swing=phase*state.speed;
+          const recover=Math.max(0,-phase)*state.speed;
+          limbs.legs[k].rotation.x=-1.16*state.sit+
+            (1-state.sit)*swing*.43;
+          limbs.shins[k].rotation.x=state.sit*.75+
+            (1-state.sit)*recover*.94;
+          limbs.feet[k].rotation.x=(1-state.sit)*
+            (Math.max(0,phase)*.23-recover*.16);
+          // A very small independent hip rise prevents both toes from
+          // scraping the ground during the recovery half of the cycle.
+          limbs.legs[k].position.y=.178+
+            Math.max(0,-phase)*state.speed*.017;
         }
-        limbs.arms[0].rotation.x=ref.sit?.22:-step*.85;
-        limbs.arms[1].rotation.x=ref.sit?.22:step*.85;
-        if(ref.waveUntil&&town.debug().clock<ref.waveUntil)
-          limbs.arms[1].rotation.z=-1.6;
-        else limbs.arms[1].rotation.z=0;
-        // Eye-line follows an actual chosen shop or destination; otherwise
-        // the resident looks forward, with a calm recovery after the stop.
+        const talk=Math.sin(worldTime*2.15+(ref.ph||0));
+        // Conversational gestures are grounded in interaction intent and
+        // asymmetrical, rather than both arms waving in lockstep.
+        for(let k=0;k<2;k++){
+          const swing=k===0?stride:-stride;
+          const listener=k===0?.35:1;
+          const gesture=state.chat*listener*(.34+.24*
+            (k===0?Math.max(0,-talk):Math.max(0,talk)));
+          limbs.arms[k].rotation.x=state.sit*.20-
+            swing*state.speed*.34-gesture;
+          limbs.arms[k].rotation.z=(k===0?1:-1)*
+            (.06+.19*state.chat);
+        }
+        const greeting=!!ref.waveUntil&&worldTime<ref.waveUntil;
+        if(greeting){
+          limbs.arms[1].rotation.x=-.52;
+          limbs.arms[1].rotation.z=-1.15-
+            .12*Math.sin(worldTime*6+(ref.ph||0));
+        }
+        // The whole torso shifts weight, leans into greetings and settles
+        // naturally after walking. Small limits preserve miniature balance.
+        const lean=state.speed*.043;
+        const beat=Math.sin(stridePhase*2);
+        limbs.upperBody.rotation.x=lean+
+          state.chat*.036*Math.sin(worldTime*1.5+(ref.ph||0));
+        limbs.upperBody.rotation.z=.020*state.speed*stride+
+          .032*state.chat*(ref.ph%2?1:-1);
+        limbs.upperBody.position.y=.006*Math.sin(worldTime*2.0+(ref.ph||0))+
+          Math.abs(beat)*state.speed*.009;
+        // A head turn follows an actual attention target; a chat creates
+        // a subtle listening nod rather than repetitive random swivels.
         const target=ref.attention;
         let yaw=0;
         if(target){
           const dx=target.x-ref.x,dz=target.y-ref.y;
           const angle=Math.atan2(dx,dz);
-          yaw=THREE.MathUtils.clamp(
-            Math.atan2(Math.sin(angle-g.rotation.y),Math.cos(angle-g.rotation.y)),
-            -.64,.64);
+          yaw=THREE.MathUtils.clamp(Math.atan2(
+            Math.sin(angle-g.rotation.y),Math.cos(angle-g.rotation.y)),-.64,.64);
         }
-        if(limbs.headPivot){
-          limbs.headPivot.rotation.y+=(yaw-limbs.headPivot.rotation.y)*.17;
-          limbs.headPivot.rotation.z=moving?Math.sin((ref.travel||0)*9)*.026:
-            Math.sin((sceneTime*.001+(ref.ph||0)))*.022;
-        }
-        // Slight offset blinks make residents feel alive even when standing.
-        // The head, eyes and clothes remain modeled in one coherent rig.
-        const blink=(sceneTime*.0016+(ref.x||0)*.31+(ref.y||0)*.19)%6.8;
-        for(const eye of limbs.eyelids||[])eye.scale.y=blink<.18?.16:1;
-        g.position.y+=moving?Math.abs(Math.sin((ref.travel||0)*17))*.012:0;
+        limbs.headPivot.rotation.y+=(yaw-limbs.headPivot.rotation.y)*
+          (1-Math.exp(-6.5*dt));
+        limbs.headPivot.rotation.x=.045*state.chat*
+          Math.sin(worldTime*2.0+(ref.ph||0));
+        limbs.headPivot.rotation.z=(1-state.chat)*.021*
+          Math.sin(worldTime*.95+(ref.ph||0));
+        const blink=(worldTime*.96+(ref.ph||0)*.53)%6.8;
+        for(const eye of limbs.eyelids||[])
+          eye.scale.y=blink<.12?.16:1;
+        // Body and shoes share one small bounce, which vanishes smoothly
+        // at a stop without changing the actual world-space position.
+        g.position.y+=Math.max(0,Math.sin(stridePhase*2))*
+          state.speed*.009;
       }
       if(item.kind==='car'||item.kind==='bike'){
         const rig=g.userData.vehicleRig;
