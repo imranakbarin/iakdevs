@@ -106,11 +106,16 @@ T.build(777, 'weather');
 const walkers = T.movers().filter(m => m.type === 'person' && !m.kind);
 const cyclist = T.movers().find(m => m.kind === 'bike'), walker = walkers[0];
 walker.v = 0; walker.max = 0; cyclist.v = 0; cyclist.max = 0;
+// Explicit pause is required: theme events may legally assign a route
+// even to a pedestrian with max=0. Test standing, not event scheduling.
+walker.stopUntil=T.debug().clock+3;
+cyclist.stopUntil=T.debug().clock+3;
 const parkedDistance = [walker.travel, cyclist.travel];
 for (let i = 0; i < 120; i++) T.update(1 / 60);
 assert.equal(walker.travel, parkedDistance[0], 'a standing walker does not advance animation distance');
 assert.equal(cyclist.travel, parkedDistance[1], 'a stopped bicycle does not pedal');
 walker.max = .6; cyclist.max = .65;
+walker.stopUntil=0;cyclist.stopUntil=0;
 for (let i = 0; i < 60 * 25; i++) T.update(1 / 60);
 assert.ok(walker.travel > parkedDistance[0], 'walking advances the stride clock');
 assert.ok(cyclist.travel > parkedDistance[1], 'cycling advances the pedal clock');
