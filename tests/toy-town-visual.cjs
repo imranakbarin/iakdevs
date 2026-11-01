@@ -107,6 +107,34 @@ async function main(){
         ToyTown.setPlaying(false);
         ToyTown.zoomAt(f);
       },job.zoom);
+      if(job.name==='mobile-3d-close'){
+        // A pretty frame is not proof of city life. Advance the REAL
+        // simulation in Chromium until trading and the street concert
+        // are active, then inspect the 3D actor rig in that same scene.
+        const market=await page.evaluate(()=>{
+          let held=false,served=false;
+          for(let i=0;i<60*22;i++){
+            ToyTown.update(1/60);
+            const actors=ToyTown.movers();
+            if(actors.some(m=>m.shopRole==='customer'&&m.carrying))held=true;
+            if(actors.some(m=>m.shopRole==='vendor'&&
+              (m.shopAction==='serving'||m.shopAction==='handoff')))served=true;
+          }
+          const movers=ToyTown.movers();
+          const stats=ToyTown.debug();
+          return {sales:stats.streetTransactions,visits:stats.streetShopVisits,
+            concerts:stats.streetPerformances,reactions:stats.newsReactions,
+            held,served,performer:movers.some(m=>m.kind==='busker'&&m.guitar),
+            people:movers.filter(m=>m.shopRole).length};
+        });
+        if(market.sales<2||market.visits<2||market.concerts<1||
+          !market.held||!market.served||!market.performer||market.people!==5)
+          throw Error('The miniature market does not really trade and perform: '+
+            JSON.stringify(market));
+        console.log('LIVING_MARKET '+JSON.stringify(market));
+        beforeFrame=await page.evaluate(()=>
+          window.ToyTown3D?.getStats?.().frames||0);
+      }
       if(job.social){
         const social=await page.evaluate(()=>{
           let chat=false;
@@ -140,6 +168,18 @@ async function main(){
       if(!job.classic){
         await page.waitForFunction(n=>window.ToyTown3D?.getStats?.().frames>n,
           beforeFrame,{timeout:45000,polling:100});
+      }
+      if(job.name==='mobile-3d-close'){
+        await page.waitForFunction(()=>{
+          let playing=false,stocked=false;
+          window.ToyTown3D?.scene?.traverse(o=>{
+            if(o.userData?.buskerGuitar&&o.userData.pose?.play>.01)playing=true;
+            if(o.userData?.shopProps?.bread?.visible||
+              o.userData?.shopProps?.book?.visible)stocked=true;
+          });
+          return playing&&stocked;
+        },null,{timeout:30000,polling:100});
+        console.log('LIVING_MARKET_GPU PASS: performer plays modeled guitar and real goods attach to hands');
       }
       if(job.social){
         // A previous camera frame can satisfy the generic render counter
