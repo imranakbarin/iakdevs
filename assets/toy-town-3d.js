@@ -20,7 +20,7 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
   scene.background = new THREE.Color('#dce9e1');
   scene.fog = new THREE.Fog('#dce9e1', 24, 62);
   const camera = new THREE.OrthographicCamera(-15, 15, 15, -15, .1, 120);
-  const hemisphere = new THREE.HemisphereLight('#fff5df', '#8b9f9c', 1.18);
+  const hemisphere = new THREE.HemisphereLight('#fff5df', '#8b9f9c', 1.08);
   scene.add(hemisphere);
   const sun = new THREE.DirectionalLight('#ffe3b9', 2.42);
   // A single large, raking key connects roofs, trees, streets and residents.
@@ -37,7 +37,7 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
   scene.add(sun,sun.target);
   // One shadow-free cool fill catches window frames and sculpted character
   // shoulders; the warm key stays dominant (no extra shadow map cost).
-  const rim=new THREE.DirectionalLight('#c0dedb',.40);
+  const rim=new THREE.DirectionalLight('#c0dedb',.32);
   rim.position.set(19,13,-9);
   rim.castShadow=false;
   scene.add(rim);
@@ -45,7 +45,7 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
   // A painted studio reflection card gives glazed surfaces and roof pigments
   // one shared environment. This is generated locally: no remote textures,
   // high-memory HDR files or additional requests on the user's phone.
-  if(THREE.EquirectangularReflectionMapping!==undefined && !window.location?.search?.includes('noenv=1')){
+  if(THREE.EquirectangularReflectionMapping!==undefined){
     const c=document.createElement('canvas');c.width=512;c.height=256;
     const p=c.getContext('2d');
     const sky=p.createLinearGradient(0,0,0,256);
@@ -66,70 +66,10 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
     reflection.colorSpace=THREE.SRGBColorSpace;
     reflection.mapping=THREE.EquirectangularReflectionMapping;
     scene.environment=reflection;
-    scene.environmentIntensity=.38;
+    scene.environmentIntensity=.22;
   }
-  // Photographed-miniature finish: the center stays optically sharp for signs
-  // and people, with only the distant upper and near lower frame softened.
-  // The entire pass is optional; unrecognized WebGL drivers render directly.
-  let film=null;
-  if(THREE.WebGLRenderTarget&&THREE.ShaderMaterial&&THREE.Vector2 && !window.location?.search?.includes('direct=1')){
-    try{
-      const target=new THREE.WebGLRenderTarget(1,1,{
-        depthBuffer:false,stencilBuffer:false,
-        minFilter:THREE.LinearFilter,magFilter:THREE.LinearFilter
-      });
-      target.texture.colorSpace=THREE.SRGBColorSpace;
-      const uniforms={
-        tScene:{value:target.texture},
-        uTexel:{value:new THREE.Vector2(1,1)},
-        uFocus:{value:.54},
-        uStrength:{value:desktop()?1.18:.90}
-      };
-      const shader=new THREE.ShaderMaterial({
-        uniforms,depthTest:false,depthWrite:false,
-        vertexShader:`varying vec2 vUv;
-          void main(){vUv=uv;gl_Position=vec4(position.xy,0.0,1.0);}`,
-        fragmentShader:`varying vec2 vUv;
-          uniform sampler2D tScene;
-          uniform vec2 uTexel;
-          uniform float uFocus;
-          uniform float uStrength;
-          void main(){
-            vec3 core=texture2D(tScene,vUv).rgb;
-            float distanceFromFocus=abs(vUv.y-uFocus);
-            float fade=smoothstep(.16,.53,distanceFromFocus)*uStrength;
-            vec2 tap=uTexel*(1.0+fade*2.6);
-            vec3 softened=core*.40;
-            softened+=texture2D(tScene,vUv+tap*vec2(1.,1.)).rgb*.15;
-            softened+=texture2D(tScene,vUv+tap*vec2(-1.,1.)).rgb*.15;
-            softened+=texture2D(tScene,vUv+tap*vec2(1.,-1.)).rgb*.15;
-            softened+=texture2D(tScene,vUv+tap*vec2(-1.,-1.)).rgb*.15;
-            vec3 color=mix(core,softened,clamp(fade*.62,0.,.8));
-            // Low-amplitude cinematic print contrast, warm sun and cool shade.
-            color=(color-.5)*1.035+.5;
-            color*=vec3(1.016,1.006,.985);
-            float vignette=1.-.085*smoothstep(.28,.76,
-              length((vUv-.5)*vec2(1.08,1.0)));
-            color*=vignette;
-            // The scene was rendered to a linear offscreen target. Apply
-            // ACES tone mapping here, once, just as the direct renderer does.
-            // Omitting this produced a washed-out, overbright village.
-            gl_FragColor=vec4(max(color,vec3(0.)),1.);
-            #include <tonemapping_fragment>
-            #include <colorspace_fragment>
-          }`,
-        toneMapped:true
-      });
-      const screen=new THREE.Scene();
-      screen.add(new THREE.Mesh(new THREE.PlaneGeometry(2,2),shader));
-      const lensCamera=new THREE.OrthographicCamera(-1,1,1,-1,0,1);
-      film={target,uniforms,screen,camera:lensCamera,shader};
-    }catch(error){
-      console.warn('Miniature lens unavailable; using direct WebGL',error);
-      film?.target?.dispose?.();film=null;
-    }
-  }
-
+  // Direct WebGL won the mobile A/B audit: retain its crisp roof tiles,
+  // storefront signage and full shadow contrast. No blurry extra pass.
   const materialCache = new Map(), geometryCache = new Map(), paintedRoofCache = new Map(), stuccoCache = new Map();
   // Studio-grade warm pastel cohesion across the different news-generated
   // building colors. Keep the recognizable roof hue but avoid plastic neon.
@@ -1990,9 +1930,9 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
     // Continuous color-temperature progression (no dusk hue snapping).
     // Daylight, shadow fill, haze and lanterns now belong to one exposure.
     const dusk=dark*dark*(3-2*dark);
-    hemisphere.intensity=1.18-dark*.39;
+    hemisphere.intensity=1.08-dark*.36;
     sun.intensity=2.42-dark*1.72;
-    rim.intensity=.40+dark*.04;
+    rim.intensity=.32+dark*.06;
     sun.color.set(tint('#ffe3b9','#efad8a',dusk));
     rim.color.set(tint('#c0dedb','#a8b6cb',dusk));
     for(const lantern of plazaLights)lantern.intensity=dark*7.2;
@@ -2014,12 +1954,6 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
     const sz=w+'x'+h;
     if(sz===lastSize)return;
     lastSize=sz;renderer.setSize(w,h,false);
-    if(film){
-      const rw=Math.max(1,renderer.domElement.width||w);
-      const rh=Math.max(1,renderer.domElement.height||h);
-      film.target.setSize(rw,rh);
-      film.uniforms.uTexel.value.set(1/rw,1/rh);
-    }
     const a=w/h;
     camera.left=-14*a;camera.right=14*a;
     camera.top=14;camera.bottom=-14;
@@ -2060,20 +1994,7 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
       if(worldBuildings!==town.buildings()||worldSeed!==state.seed)rebuild();
       syncActors();syncCamera();light(state.night||0);
       animateAmbient(state.clock||0);
-      if(film){
-        try{
-          renderer.setRenderTarget(film.target);
-          renderer.render(scene,camera);
-          renderer.setRenderTarget(null);
-          renderer.render(film.screen,film.camera);
-        }catch(error){
-          // Never sacrifice the working world or mobile zoom for a lens.
-          renderer.setRenderTarget(null);
-          film?.target?.dispose?.();
-          film=null;
-          renderer.render(scene,camera);
-        }
-      }else renderer.render(scene,camera);
+      renderer.render(scene,camera);
       frames++;
       if(!api.active) {
         api.active=true;window.ToyTown3D.active=true;
@@ -2094,15 +2015,14 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
   renderer.domElement.addEventListener('webglcontextrestored',restored,false);
   const api={
     active:false,renderer,scene,camera,
-    getStats:()=>({frames,redrawCount,actors:actors.size,ambient:ambient.length,plazaLights:plazaLights.length,festoonBulbs:festoonBulbs.length,gardenElements,woodlandShapes,terrainContours,landmarks:landmarkCount,windowMaterials:windowMaterials.size,photographicLens:!!film,buildings:town.buildings().length,webgl:true,frozen}),
+    getStats:()=>({frames,redrawCount,actors:actors.size,ambient:ambient.length,plazaLights:plazaLights.length,festoonBulbs:festoonBulbs.length,gardenElements,woodlandShapes,terrainContours,landmarks:landmarkCount,windowMaterials:windowMaterials.size,photographicLens:false,buildings:town.buildings().length,webgl:true,frozen}),
     // A stable actual GPU-rendered frame for visual regression screenshots.
     // Unlike stop(), freeze does not switch to the Canvas fallback.
     freeze(){frozen=true;cancelAnimationFrame(raf);},
     unfreeze(){if(!stopped&&frozen){frozen=false;raf=requestAnimationFrame(frame);}},
     stop(){stopped=true;cancelAnimationFrame(raf);this.active=false;window.ToyTown3D.active=false;
       host.style.display='none';document.getElementById('town').style.opacity='1';},
-    dispose(){this.stop();film?.target?.dispose?.();film?.shader?.dispose?.();
-      scene.environment?.dispose?.();renderer.dispose();}
+    dispose(){this.stop();scene.environment?.dispose?.();renderer.dispose();}
   };
   window.ToyTown3D=api;
   renderer.domElement.addEventListener('dblclick',()=>{},false);
