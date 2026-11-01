@@ -293,7 +293,7 @@ const townPage = fs.readFileSync(path.join(root, 'toy-town.html'), 'utf8');
 for (const id of ['zoom-in', 'zoom-out', 'zoom-reset']) {
   assert.match(townPage, new RegExp('id="' + id + '"[^>]*aria-label="[^"]+"'), id + ' is accessible');
 }
-assert.match(townPage, /toy-town\.js\?v=15/, 'diorama engine is loaded');
+assert.match(townPage, /toy-town\.js\?v=16/, 'diorama engine is loaded');
 assert.match(townPage, /toy-town-diorama\.js\?v=1/, 'diorama is loaded before the engine');
 assert.match(townPage, /id="town-3d"/, 'WebGL mounts into its own overlay');
 assert.match(townPage, /pointer-events:none/, 'WebGL overlay allows iPhone touch gestures through to original canvas');
