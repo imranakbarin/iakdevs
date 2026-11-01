@@ -1185,7 +1185,8 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
     // Two authentic cafe tables beside the shops, not at the scripted
     // customers' destinations. Tiny stools, ceramic cups and planted barrels.
     const cafeSet=(x,z,turn=0)=>{
-      const g=new THREE.Group();g.position.set(x,0,z);g.rotation.y=turn;world.add(g);
+      const g=new THREE.Group();g.position.set(x,0,z);g.rotation.y=turn;
+      g.scale.setScalar(.83);world.add(g);
       const pedestal=cylinder(g,.023,.04,.37,wood,0,.40,0);
       const tabletop=cylinder(g,.26,.26,.05,'#d0a681',0,.605,0);
       const edge=cylinder(g,.271,.271,.024,'#f1dbbb',0,.58,0);
@@ -1205,16 +1206,16 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
     // An original rose-covered arbour welcomes walkers from the south.
     // Its opening aligns with the plaza, not any vehicle lane.
     const arch=new THREE.Group();
-    arch.position.set(9.18,0,10.78);world.add(arch);
+    arch.position.set(8.52,0,10.66);world.add(arch);
     for(const dx of [-.41,.41]){
       const post=cylinder(arch,.047,.057,1.18,'#9a7860',dx,.78,0);
       box(arch,.17,.13,.19,sandstone,dx,.244,0);
       box(arch,.11,.10,.13,'#f0dec5',dx,1.405,0);
-      for(let k=0;k<7;k++){
-        const a=k*1.35+dx,yy=.48+k*.12;
-        const foliage=ball(arch,.105,k%2?'#7da481':'#628e78',
+      for(let k=0;k<4;k++){
+        const a=k*1.7+dx,yy=.73+k*.15;
+        const foliage=ball(arch,.083,k%2?'#7da481':'#628e78',
           dx+(dx<0?.03:-.03)+Math.sin(a)*.045,yy,.035);
-        foliage.scale.set(1.15,.58,.7);foliage.castShadow=false;
+        foliage.scale.set(1.05,.60,.69);foliage.castShadow=false;
         if(k%2===0){
           const rose=ball(arch,.037,k%4?'#e9b4bb':'#f2d4b7',
             dx+(dx<0?.04:-.04),yy+.06,.098);
@@ -1239,11 +1240,11 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
       if(k%4===0)ball(arch,.038,'#e9b2ba',
         Math.cos(a)*.42,1.25+Math.sin(a)*.39,.087);
     }
-    gardenElements+=38;
+    gardenElements+=32;
 
     // Physically suspended festoons between four slim timber poles.
     // Warm individual bulbs brighten at sunset without extra point lights.
-    const anchors=[[7.94,8.30],[10.08,8.30],[7.95,10.46],[10.05,10.45]];
+    const anchors=[[7.94,9.05],[10.08,9.05],[7.95,10.38],[10.05,10.38]];
     for(const [x,z] of anchors){
       const pole=cylinder(world,.024,.037,1.57,'#947b62',x,.99,z);
       const foot=cylinder(world,.074,.084,.082,'#d5c2a5',x,.24,z);
@@ -1253,8 +1254,7 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
       color:'#ffebbd',emissive:'#ffc67f',emissiveIntensity:.36,
       roughness:.38,metalness:0
     });
-    const strings=[[anchors[0],anchors[1]],[anchors[2],anchors[3]],
-      [anchors[0],anchors[2]],[anchors[1],anchors[3]]];
+    const strings=[[anchors[0],anchors[1]],[anchors[2],anchors[3]]];
     for(let k=0;k<strings.length;k++){
       const [a,b]=strings[k],x0=a[0],z0=a[1],x1=b[0],z1=b[1];
       const points=[];
@@ -1276,7 +1276,7 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
         festoonBulbs.push(bulb);
       }
     }
-    gardenElements+=44;
+    gardenElements+=30;
   }
 
   function createGround(){
