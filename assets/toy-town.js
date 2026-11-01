@@ -455,6 +455,12 @@ const ToyTown = (() => {
   function laneOffset(m) { const s = m.type === 'car' ? (m.d === 0 || m.d === 3 ? 1 : -1) * m.lane : m.lane; return m.d < 2 ? [0, s] : [-s, 0]; }
   function atNode(m) { return LINES.some(l => Math.abs((m.d < 2 ? m.x : m.y) - (l + .5)) < .02); }
   function step(m, dt) {
+    // An attention pause has a finite lifetime even when another activity
+    // starts before the next ordinary walking step (for example, a town
+    // event assigning a route or waiting for an intersection).
+    if(m.intent==='browse'&&clock>=(m.observeUntil||0)){
+      m.intent='walking';m.attention=null;m.observeUntil=0;
+    }
     if (m.stopUntil && clock < m.stopUntil) { m.v = 0; return; }
     if (m.path) return stepPath(m, dt);
     if(m.communityResident&&m.intent==='chat'&&clock<(m.stopUntil||0)){
@@ -465,7 +471,7 @@ const ToyTown = (() => {
     // They never teleport or step into the shop/road center to do so.
     if(m.type==='person'&&!m.kind&&!m.heroResident){
       if(clock<(m.observeUntil||0)){m.v=0;return;}
-      if(m.intent==='browse'){m.intent='walking';m.attention=null;}
+
       if(clock>=(m.nextNotice||0)&&m.max>.05){
         m.nextNotice=clock+13+Math.random()*9;
         const nearby=buildings.filter(b=>b.kind==='shop')
