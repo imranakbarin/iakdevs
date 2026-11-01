@@ -85,7 +85,7 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
   const world = new THREE.Group(); scene.add(world);
   const actors = new Map(), ambient = [], plazaLights = [], festoonBulbs = [];
   const windowMaterials=new Set();
-  let gardenElements = 0, woodlandShapes = 0, terrainContours = 0, composedBuildings = 0;
+  let gardenElements = 0, woodlandShapes = 0, terrainContours = 0, composedBuildings = 0, districtGardenRooms = 0;
   let worldSeed = null, worldBuildings = null, worldPropCount = 0, sceneTime = 0, landmarkCount = 0;
   let stopped = false, frozen = false, raf = 0, frames = 0, redrawCount = 0, lastSize = '', lastFrameAt = 0;
   const TAU = Math.PI * 2, LINES = [1,6,11,16];
@@ -1066,12 +1066,17 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
   // The geometry stays inexpensive: wide, interlocking ellipsoids with exposed
   // branching and planted, shadowed root flares; no leaf particle systems.
   function tree(p,i){
-    const x=p.x,z=p.y,sc=p.s||1;
+    const x=p.x,z=p.y;
+    // Keep the foreground riverbank open so the miniature village can be
+    // read through the trees. The side orchards still frame the lens.
+    const riverForeground=z>=10.85&&z<=13.15&&x>6&&x<12;
+    const sc=(p.s||1)*(riverForeground?.72:z<7?1.05:1);
     const g=new THREE.Group();g.position.set(x,0,z);world.add(g);g.scale.setScalar(sc);
     g.userData.woodlandSilhouette=true;
     const family=i%13===0?'cypress':i%13===6?'willow':i%11===0?'orchard':'oak';
     const mist=THREE.MathUtils.clamp((9-z)/17,0,.28);
-    const foliage=(color)=>mat(tint(color,'#d4dbc4',mist));
+    const plantedHue=p.c?tint(p.c,'#839d89',.76):'#86a58b';
+    const foliage=(color)=>mat(tint(tint(color,plantedHue,.13),'#d4dbc4',mist));
     groundingShadow(x,z,1.15*sc,1.04*sc,.166);
     const height=family==='cypress'?.69:family==='willow'?.70:.66;
     const trunk=cylinder(g,.044,.080,height,'#826b54',0,height*.51,0);
@@ -1553,6 +1558,50 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
       }
       if(segment>1)terrainContours++;
     }
+
+    // Five district pockets form small natural gardens between staggered
+    // houses. Candidate centers are collision-tested against real generated
+    // buildings, trees, stage props, roads and the hero plaza. The resulting
+    // composition adapts to each day's thematic blocks without floating pots
+    // or fences across the moving traffic.
+    const rooms=[[3.9,3.9],[8.9,3.9],[13.9,3.9],[3.9,8.9],[13.9,8.9]];
+    const offsets=[[0,0],[.58,.38],[-.58,-.40],[.55,-.58],[-.55,.57],
+      [0,.80],[.80,0]];
+    for(let district=0;district<rooms.length;district++){
+      const [cx,cz]=rooms[district];
+      let chosen=null;
+      for(const [dx,dz] of offsets){
+        if(clear(cx+dx,cz+dz,.39)){
+          chosen=[cx+dx,cz+dz];break;
+        }
+      }
+      if(!chosen)continue;
+      const [x,z]=chosen,seed=district+town.debug().seed%97;
+      const terrace=object(world,geo('sphere',.53),
+        mat(district%2?'#a9b895':'#abbda0'),x,.183,z,false);
+      terrace.scale.set(1,.095,.78);
+      terrace.userData.districtGarden=true;
+      const ring=object(world,geo('torus',.36,.027),
+        mat('#d9cab0'),x,.215,z,false);
+      ring.rotation.x=-Math.PI/2;
+      ring.scale.set(1,.82,1);
+      // Two paired flowering beds have height but never cover a shopfront.
+      for(let k=0;k<4;k++){
+        const a=k*TAU/4+(district%2)*.42;
+        const px=x+Math.cos(a)*.28,pz=z+Math.sin(a)*.25;
+        const bush=ball(world,.13,k%2?'#729c7f':'#93b297',px,.268,pz);
+        bush.scale.set(1.15,.56,.84);
+        bush.castShadow=false;
+        if(k%2===0){
+          const bloom=ball(world,.035,district%2?'#f0d2ad':'#e7b4b6',
+            px,.35,pz);
+          bloom.castShadow=false;
+        }
+      }
+      const marker=ball(world,.068,'#d1baa0',x,.227,z);
+      marker.scale.set(1.15,.27,.75);marker.castShadow=false;
+      districtGardenRooms++;
+    }
   }
 
   function createGround(){
@@ -1724,7 +1773,7 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
   function rebuild(){
     ambient.length = 0; plazaLights.length = 0; festoonBulbs.length = 0;
     windowMaterials.clear();
-    gardenElements = 0; woodlandShapes = 0; terrainContours = 0; composedBuildings = 0; landmarkCount = 0;
+    gardenElements = 0; woodlandShapes = 0; terrainContours = 0; composedBuildings = 0; districtGardenRooms = 0; landmarkCount = 0;
     while(world.children.length)world.remove(world.children[0]);
     for(const [ref,obj] of actors){obj.group.parent?.remove(obj.group);}
     actors.clear();
@@ -2104,7 +2153,7 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
   renderer.domElement.addEventListener('webglcontextrestored',restored,false);
   const api={
     active:false,renderer,scene,camera,
-    getStats:()=>({frames,redrawCount,actors:actors.size,ambient:ambient.length,plazaLights:plazaLights.length,festoonBulbs:festoonBulbs.length,gardenElements,woodlandShapes,terrainContours,composedBuildings,landmarks:landmarkCount,windowMaterials:windowMaterials.size,photographicLens:false,buildings:town.buildings().length,webgl:true,frozen}),
+    getStats:()=>({frames,redrawCount,actors:actors.size,ambient:ambient.length,plazaLights:plazaLights.length,festoonBulbs:festoonBulbs.length,gardenElements,woodlandShapes,terrainContours,composedBuildings,districtGardenRooms,landmarks:landmarkCount,windowMaterials:windowMaterials.size,photographicLens:false,buildings:town.buildings().length,webgl:true,frozen}),
     // A stable actual GPU-rendered frame for visual regression screenshots.
     // Unlike stop(), freeze does not switch to the Canvas fallback.
     freeze(){frozen=true;cancelAnimationFrame(raf);},
