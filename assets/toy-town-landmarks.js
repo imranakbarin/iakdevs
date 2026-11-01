@@ -61,10 +61,18 @@ function makeKit(T,Round){
     const c=document.createElement('canvas');c.width=256;c.height=256;
     const ctx=c.getContext('2d');ctx.fillStyle=base;ctx.fillRect(0,0,256,256);
     if(type==='stucco'){
-      for(let i=0;i<1100;i++){
+      // Hand-trowelled warm plaster: several broad, low-contrast sweeps
+      // beneath fine mineral grain. No high-contrast noisy TV-static walls.
+      for(let n=0;n<24;n++){
+        const x=rng(n*19+32)*256,y=rng(n*37+64)*256;
+        ctx.fillStyle=n%2?'rgba(255,245,219,.08)':'rgba(108,79,58,.045)';
+        ctx.beginPath();ctx.ellipse(x,y,16+rng(n,7)*22,4+rng(n,3)*8,
+          -.12+rng(n,5)*.24,0,Math.PI*2);ctx.fill();
+      }
+      for(let i=0;i<1750;i++){
         const x=rng(i*13+2)*256,y=rng(i*31+3)*256;
-        ctx.fillStyle=i%5?'rgba(99,72,55,.055)':'rgba(255,255,241,.26)';
-        ctx.fillRect(x,y,.4+rng(i+19)*1.5,.4+rng(i+22)*1.1);
+        ctx.fillStyle=i%5?'rgba(99,72,55,.055)':'rgba(255,255,241,.23)';
+        ctx.fillRect(x,y,.4+rng(i+19)*1.7,.4+rng(i+22)*1.1);
       }
     } else {
       for(let row=0;row<18;row++)for(let col=-1;col<18;col++){
@@ -222,17 +230,33 @@ function makeKit(T,Round){
         x+(i-1.5)*.044,.39*sz,z+.04);
     }
   }
-  function sign(g,txt,x,y,z,width,background='#f9e9cd',ink='#7d6757'){
-    const c=document.createElement('canvas');c.width=384;c.height=128;
-    const p=c.getContext('2d');p.fillStyle=background;
-    p.beginPath();p.roundRect(5,8,374,111,18);p.fill();
-    p.strokeStyle='rgba(136,100,74,.45)';p.lineWidth=7;p.stroke();
+  function sign(g,txt,x,y,z,width,background='#f9e9cd',ink='#594a3a'){
+    // Enlarged hand-painted sign: typography must survive at 390px mobile.
+    // The dark backing and un-tone-mapped lettering avoid a white-on-white
+    // blur against pale plaster, evident in the previous WebGL screenshots.
+    const c=document.createElement('canvas');c.width=768;c.height=256;
+    const p=c.getContext('2d');
+    p.clearRect(0,0,768,256);
+    p.fillStyle='#7a5b4c';
+    p.beginPath();p.roundRect(5,5,758,246,24);p.fill();
+    p.fillStyle=background;
+    p.beginPath();p.roundRect(17,17,734,222,17);p.fill();
+    p.strokeStyle='#c7a982';p.lineWidth=5;p.stroke();
     p.fillStyle=ink;p.textAlign='center';p.textBaseline='middle';
-    p.font=txt.length>12?'bold 33px Georgia,serif':'bold 50px Georgia,serif';
-    p.fillText(txt,192,65,352);
+    p.font=txt.length>11?'bold 73px Georgia,serif':'bold 110px Georgia,serif';
+    p.shadowColor='rgba(35,31,27,.21)';p.shadowBlur=2;p.shadowOffsetY=2;
+    p.fillText(txt,384,132,696);
+    p.shadowBlur=0;p.shadowOffsetY=0;
     const tex=new T.CanvasTexture(c);tex.colorSpace=T.SRGBColorSpace;
-    const m=new T.MeshBasicMaterial({map:tex,transparent:true,side:T.DoubleSide});
-    mesh(g,geom('plane',width,width/3),m,x,y,z,false);
+    const material=new T.MeshBasicMaterial({
+      map:tex,transparent:true,side:T.DoubleSide,depthWrite:false,
+      toneMapped:false
+    });
+    block(g,width+.075,width/3+.033,.064,'#a77d60',x,y,z-.035);
+    mesh(g,geom('plane',width,width/3),material,x,y,z+.011,false);
+    for(const sx of [-1,1]) {
+      sphere(g,.017,'#c5a976',x+sx*width*.43,y+width*.13,z+.02);
+    }
   }
   function awning(g,x,y,z,w,color,depth=.33) {
     // A scalloped canopy follows a curved valance, not a row of floating bars.
@@ -245,7 +269,28 @@ function makeKit(T,Round){
       p.scale.set(1,.58,.55);
     }
   }
+  const shadowTex=(()=>{
+    const c=document.createElement('canvas');c.width=128;c.height=128;
+    const p=c.getContext('2d');
+    const grad=p.createRadialGradient(64,64,5,64,64,64);
+    grad.addColorStop(0,'rgba(54,55,49,.38)');
+    grad.addColorStop(.44,'rgba(66,62,51,.19)');
+    grad.addColorStop(1,'rgba(64,61,51,0)');
+    p.fillStyle=grad;p.fillRect(0,0,128,128);
+    const tex=new T.CanvasTexture(c);tex.colorSpace=T.SRGBColorSpace;
+    return tex;
+  })();
+  const shadowMat=new T.MeshBasicMaterial({
+    map:shadowTex,transparent:true,depthWrite:false,
+    color:'#ffffff',opacity:.75,side:T.DoubleSide,toneMapped:false
+  });
   function ground(g,tint='#dbc7ae',w=.9,d=.85) {
+    // Soft baked ambient-occlusion footprint anchors the buildings to
+    // the walkway without adding five dynamic shadow-casting light sources.
+    const contact=mesh(g,geom('plane',w*1.35,d*1.35),
+      shadowMat,0,.153,0,false);
+    contact.rotation.x=-Math.PI/2;
+    contact.receiveShadow=false;
     block(g,w,.085,d,tint,0,.08,0);
     block(g,w+.035,.029,d+.045,'#f5e2c6',0,.132,0);
   }
@@ -291,7 +336,7 @@ function makeKit(T,Round){
     glazing(g,-.248,.62,.627,.37,.33);
     awning(g,-.234,1.015,.57,.53,'#c87967');
     block(g,.84,.063,.20,'#e4c5a6',0,1.118,.455);
-    sign(g,'BAKERY',0,1.17,.545,.60,'#f8ebd4','#8d5647');
+    sign(g,'BAKERY',0,1.215,.584,.73,'#f8e8cd','#593c34');
     // Bread trays sit inside the display, visually behind the glass.
     for(let i=-1;i<=1;i++){
       const bun=sphere(g,.045,'#bd8c57',-.25+i*.105,.47,.645);
@@ -323,7 +368,7 @@ function makeKit(T,Round){
         -.012+i*.084,.44,.653);
     }
     block(g,.87,.068,.18,'#f2dfc4',0,1.09,.47);
-    sign(g,'THE BOOK NOOK',0,1.16,.553,.65,'#e2efe0','#496f67');
+    sign(g,'BOOK NOOK',0,1.218,.589,.74,'#e3eedf','#305c50');
     planter(g,.35,.54,'#6e9880');pot(g,-.40,.56,.80,'#729c89');
     // Thin, suspended store sign with a wrought-iron bracket.
     block(g,.18,.016,.02,'#687a71',-.38,1.01,.49);

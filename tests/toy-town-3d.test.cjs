@@ -16,16 +16,23 @@ assert.match(landmarkCode,/function honeyCottage\(/);
 assert.match(landmarkCode,/function roundedFootprint\(/,'unique facades use extruded footprint geometry');
 assert.match(landmarkCode,/function volumeRoof\(/,'bespoke roofs are actual modeled shells');
 assert.match(landmarkCode,/function arch\(/,'landmark doors have hollow shaped frames');
+assert.match(landmarkCode,/const shadowTex=/,'landmarks have baked foundation occlusion');
+assert.match(landmarkCode,/createRadialGradient/,'grounding uses a soft, feathered shadow');
+assert.match(landmarkCode,/toneMapped:false/,'sign lettering is legible without harsh tone mapping');
+assert.match(landmarkCode,/BOOK NOOK/,'bookshop sign is compact enough for mobile');
+assert.match(moduleCode,/const rim=new THREE.DirectionalLight/,'sculpted character surfaces have shadow-free fill');
+assert.match(moduleCode,/g.userData.limbs=\{legs,arms,eyelids\}/,'figures animate eyelids');
+assert.match(moduleCode,/eye.scale.y=blink/,'eyelids blink without a separate animation thread');
 assert.match(html,/type="importmap"/);
 assert.match(html,/three@0\.187\.0\/build\/three\.module\.js/);
 assert.match(html,/three@0\.187\.0\/examples\/jsm\//);
-assert.match(html,/toy-town-3d\.js\?v=11/);
-assert.match(html,/toy-town-landmarks\.js\?v=1/,'the independent models are requested alongside Three');
+assert.match(html,/toy-town-3d\.js\?v=12/);
+assert.match(html,/toy-town-landmarks\.js\?v=2/,'the independent models are requested alongside Three');
 assert.match(html,/buildLandmark:landmarks\.buildLandmark/,
   'loader injects the authored model builder into the 3D simulation');
 assert.match(html,/toy-town\.js\?v=14/);
 assert.ok(html.indexOf('toy-town.js?v=14')<html.indexOf("import('three')"), 'classic fallback starts first');
-assert.match(page,/toy-town\.html\?v=24&embed=1/);
+assert.match(page,/toy-town\.html\?v=25&embed=1/);
 assert.match(moduleCode,/export function mountToyTown3D/);
 assert.match(moduleCode,/new THREE\.WebGLRenderer/);
 assert.match(moduleCode,/window\.ToyTown3D=api/);
@@ -91,7 +98,7 @@ const THREE={
 };
 const win={WebGL2RenderingContext:function(){},innerWidth:390,innerHeight:844,
   devicePixelRatio:3,matchMedia:()=>({matches:false})};
-const canvas2d={fillText(){},beginPath(){},roundRect(){},ellipse(){},arc(){},fill(){stats.paintOperations++;},stroke(){},fillRect(){stats.paintOperations++;},moveTo(){},lineTo(){},createLinearGradient:()=>({addColorStop(){}})};
+const canvas2d={fillText(){},clearRect(){},beginPath(){},roundRect(){},ellipse(){},arc(){},fill(){stats.paintOperations++;},stroke(){},fillRect(){stats.paintOperations++;},moveTo(){},lineTo(){},createLinearGradient:()=>({addColorStop(){}}),createRadialGradient:()=>({addColorStop(){}})};
 const townCanvas={style:{opacity:'1'}};
 const host={style:{display:'none'},clientWidth:390,clientHeight:844,
   appendChild(o){this.child=o;}};

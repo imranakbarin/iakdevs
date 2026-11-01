@@ -34,6 +34,12 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
   sun.shadow.radius = 3;
   sun.target.position.set(9,0,9);
   scene.add(sun,sun.target);
+  // One shadow-free cool fill catches window frames and sculpted character
+  // shoulders; the warm key stays dominant (no extra shadow map cost).
+  const rim=new THREE.DirectionalLight('#b8d8d8',.52);
+  rim.position.set(19,13,-9);
+  rim.castShadow=false;
+  scene.add(rim);
   const materialCache = new Map(), geometryCache = new Map(), paintedRoofCache = new Map(), stuccoCache = new Map();
   // Studio-grade warm pastel cohesion across the different news-generated
   // building colors. Keep the recognizable roof hue but avoid plastic neon.
@@ -1106,16 +1112,46 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
     // Rounded head and tapered torso read as a small character at close zoom.
     const torso=ball(g,.088,coat,0,.26,0);
     torso.scale.set(.92,1.2,.74);
+    // Sculpted layered clothing: the coat reads as a garment, not a capsule.
+    const hem=ball(g,.075,coat,0,.207,0);
+    hem.scale.set(1.16,.48,.87);
+    for(const sx of [-1,1]){
+      const shoulder=ball(g,.049,coat,sx*.082,.323,0);
+      shoulder.scale.set(.90,.84,.86);
+      box(g,.014,.125,.017,'#f8e7d5',sx*.034,.253,.079);
+    }
+    box(g,.032,.099,.023,'#f6e5ce',0,.319,.080);
     const neck=cylinder(g,.031,.032,.055,skin,0,.374,0);
     const head=ball(g,.095,skin,0,.457,0);
     head.scale.set(1,1.045,.95);
-    const hair=ball(g,.099,ref.hair||'#5b4639',0,.515,-.014);
+    const hairTone=ref.hair||'#5b4639';
+    const hair=ball(g,.099,hairTone,0,.515,-.014);
     hair.scale.set(1,.46,1);
+    // Distinct asymmetric hair silhouettes. No detached floating hair tufts.
+    const hairStyle=(Math.round((ref.x||0)*11+(ref.y||0)*7))%3;
+    if(!ref.hat){
+      if(hairStyle===0){
+        for(const side of [-1,1]){
+          const lock=ball(g,.043,hairTone,side*.073,.465,-.029);
+          lock.scale.set(.64,1.22,.83);
+        }
+      } else if(hairStyle===1) {
+        const fringe=ball(g,.056,hairTone,-.023,.501,.059);
+        fringe.scale.set(1.32,.35,.69);
+      } else {
+        for(let k=0;k<3;k++){
+          const curl=ball(g,.031,hairTone,(k-1)*.055,.535,.016);
+          curl.scale.set(.98,.72,.96);
+        }
+      }
+    }
     // Eyes and a soft nose sit on the forward (+Z) face of the head,
     // not on a screen-aligned sprite; rotation follows actual walking.
+    const eyelids=[];
     for(const sx of [-1,1]){
-      ball(g,.019,'#fff8ef',sx*.032,.455,.086);
+      const eye=ball(g,.019,'#fff8ef',sx*.032,.455,.086);
       ball(g,.009,'#354449',sx*.032,.457,.102);
+      eyelids.push(eye);
       ball(g,.015,'#df978b',sx*.069,.417,.074);
       ball(g,.024,skin,sx*.097,.439,.005);
     }
@@ -1135,8 +1171,9 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
       box(leg,.062,.035,.102,'#5a524b',0,-.154,.027);
       g.add(leg);legs.push(leg);
       const arm=new THREE.Group();arm.position.set(side*.097,.327,0);
-      cylinder(arm,.021,.022,.132,coat,0,-.076,0);
-      ball(arm,.027,skin,0,-.15,0);g.add(arm);arms.push(arm);
+      cylinder(arm,.024,.026,.132,coat,0,-.076,0);
+      ball(arm,.025,'#f3e1ce',0,-.123,0);
+      ball(arm,.027,skin,0,-.154,0);g.add(arm);arms.push(arm);
     }
     if(ref.hat){
       const cap=ball(g,.099,ref.hat==='beanie'?'#b18cbd':'#588f9e',0,.534,0);
@@ -1144,7 +1181,7 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
       if(ref.hat==='cap')box(g,.095,.017,.063,'#588f9e',0,.487,.089);
     }
     if(ref.bag)box(g,.06,.15,.12,'#ae8966',-.106,.24,-.038);
-    g.userData.limbs={legs,arms};
+    g.userData.limbs={legs,arms,eyelids};
     g.scale.setScalar(ref.heroResident?1.1:1);
     return g;
   }
@@ -1274,6 +1311,10 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
         limbs.arms[1].rotation.x=ref.sit?.22:step*.85;
         if(ref.waveUntil&&town.debug().clock<ref.waveUntil)limbs.arms[1].rotation.z=-1.6;
         else limbs.arms[1].rotation.z=0;
+        // Slight offset blinks make residents feel alive even when standing.
+        // The head, eyes and clothes remain modeled in one coherent rig.
+        const blink=(sceneTime*.0016+(ref.x||0)*.31+(ref.y||0)*.19)%6.8;
+        for(const eye of limbs.eyelids||[])eye.scale.y=blink<.18?.16:1;
         g.position.y+=moving?Math.abs(Math.sin((ref.travel||0)*17))*.012:0;
       }
       if(item.kind==='animal' && !reducedMotion) {
@@ -1298,6 +1339,7 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
     const dark=THREE.MathUtils.clamp(time,0,1);
     hemisphere.intensity=1.30-dark*.58;
     sun.intensity=2.20-dark*1.24;
+    rim.intensity=.52-dark*.24;
     sun.color.set(dark>.5?'#f9c59f':'#fff0d7');
     for(const lantern of plazaLights)lantern.intensity=dark*7.2;
     scene.background.set(dark>.52?'#a3b9ce':'#d1e8e4');
@@ -1343,7 +1385,7 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
       const interval = reducedMotion ? 70 : desktop() ? 15 : 30;
       if(timestamp-lastFrameAt < interval)return;
     }
-    if(Number.isFinite(timestamp))lastFrameAt=timestamp;
+    if(Number.isFinite(timestamp)){lastFrameAt=timestamp;sceneTime=timestamp;}
     try {
       resize();
       const state=town.debug();
