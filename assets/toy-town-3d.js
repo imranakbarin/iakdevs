@@ -2383,9 +2383,21 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
           for(let k=0;k<rig.wings.length;k++)
             rig.wings[k].rotation.x=(k%2?-1:1)*Math.sin(phase)*motion*.30;
           if(rig.tail)rig.tail.rotation.y=Math.sin(
-            town.debug().clock*3.1+(ref.ph||0))*.25;
-          if(rig.head?.rotation)rig.head.rotation.z=
-            Math.sin(town.debug().clock*1.8+(ref.ph||0))*.06;
+            town.debug().clock*(ref.watch==='owner'?5.1:3.1)+(ref.ph||0))*
+            (ref.sit?.38:.25);
+          if(rig.head?.rotation){
+            const target=ref.attention;
+            const dx=target?target.x-ref.x:0,dz=target?target.y-ref.y:0;
+            const desired=target?THREE.MathUtils.clamp(
+              Math.atan2(dx,dz)-g.rotation.y,-.52,.52):0;
+            rig.head.rotation.y+=(desired-rig.head.rotation.y)*.19;
+            rig.head.rotation.z=Math.sin(town.debug().clock*1.8+(ref.ph||0))*.045;
+          }
+          // Sitting lowers the hips while paws remain visually anchored.
+          if(ref.sit&&rig.kind==='dog'){
+            g.position.y-=.035;
+            for(const leg of rig.legs)leg.rotation.z*=.30;
+          }
         }
         g.position.y+=Math.abs(Math.sin(phase))*Math.min(.013,(ref.v||0)*.025);
       }
