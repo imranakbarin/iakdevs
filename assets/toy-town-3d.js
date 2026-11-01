@@ -1681,7 +1681,8 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
     shape.closePath();
     const mesh=object(world,new THREE.ExtrudeGeometry(shape,{
       depth:.045,bevelEnabled:false,steps:1
-    }),roadSurface(axis),axis==='north-south'?n+.5:9,.134,
+    }),roadSurface(axis),axis==='north-south'?n+.5:9,
+       axis==='north-south'?.134:.146,
        axis==='north-south'?9:n+.5,false);
     mesh.rotation.x=-Math.PI/2;mesh.receiveShadow=true;
     mesh.userData.organicRoad=axis;
