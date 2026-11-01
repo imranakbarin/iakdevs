@@ -65,7 +65,7 @@ async function main(){
       // fraction of the easing animation a slow software GPU happened to reach.
       // Pause the world before requesting zoom: ToyTown.zoomAt then snaps its
       // camera to the target, while the real WebGL render loop stays alive.
-      const beforeFrame=await page.evaluate(()=>window.ToyTown3D?.getStats?.().frames||0);
+      let beforeFrame=await page.evaluate(()=>window.ToyTown3D?.getStats?.().frames||0);
       await page.evaluate(f=>{
         ToyTown.setPlaying(false);
         ToyTown.zoomAt(f);
@@ -88,6 +88,11 @@ async function main(){
         if(!social.chat||social.debug.communityVisits<1)
           throw Error('Real browser never reached an actual plaza encounter: '+
             JSON.stringify(social));
+        // The camera zoom may have already produced a render before the
+        // simulation advanced. Only a NEW frame after the chat is valid
+        // evidence of animated gesture blending in the GPU scene.
+        beforeFrame=await page.evaluate(()=>
+          window.ToyTown3D?.getStats?.().frames||0);
       }
       const actualZoom=await page.evaluate(()=>{
         const {z,tz}=ToyTown.debug().cam;
