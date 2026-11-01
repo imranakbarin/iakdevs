@@ -31,6 +31,7 @@ const ToyTown = (() => {
   let community = null, communityEncounters = 0, communityVisits = 0;
   let streetTrade=null,streetTransactions=0,streetShopVisits=0,newsReactions=0;
   let nextPerformance=13,streetPerformances=0;
+  let districts=[],districtVisits=0,districtMeetings=0,districtTasks=0;
   const STREETS = ['Maple St', 'Elm Ave', 'Pickle Lane', 'Gumdrop Rd', 'Button Way', 'Teapot St', 'Biscuit Ave', 'Puddle Lane'];
   const streetOf = (x, y) => STREETS[(isRoad(Math.floor(x)) ? LINES.indexOf(Math.floor(x)) : 4 + Math.max(0, LINES.indexOf(Math.floor(y)))) % STREETS.length];
 
@@ -134,6 +135,7 @@ const ToyTown = (() => {
     community=null;communityEncounters=0;communityVisits=0;
     streetTrade=null;streetTransactions=0;streetShopVisits=0;newsReactions=0;
     nextPerformance=13;streetPerformances=0;
+    districts=[];districtVisits=0;districtMeetings=0;districtTasks=0;
     nextStreetMoment = 16; streetMoments = 0;
     const blocks = [];
     for (const [ya, yb] of [[2, 5], [7, 10], [12, 15]]) for (const [xa, xb] of [[2, 5], [7, 10], [12, 15]]) blocks.push({xa, xb, ya, yb, river: ya === 12});
@@ -154,6 +156,7 @@ const ToyTown = (() => {
     spawnHeroResidents(hero, r);
     spawnNeighborhoodLife(hero, r);
     spawnStreetTrade(hero, r);
+    spawnDistrictLife(blocks,r);
     for (const b of buildings) if (b.kind === 'house' && r() < .75) props.push({kind: 'flowers', x: b.x + .5, y: b.y + .88, c: [PASTEL[r() * 8 | 0], PASTEL[r() * 8 | 0]]});
     for (let k = 0; k < 5; k++) props.push({kind: 'duck', x: 1 + r() * 16, y: 13.2 + r() * 1.6, vx: (r() - .5) * .3, ph: r() * 6});
     sprites.clear(); ground = null;
@@ -567,6 +570,10 @@ const ToyTown = (() => {
     // forward; the factual headline stays in the attributed news panel.
     if(mood==='celebrate'||mood==='cheer')
       nextPerformance=Math.min(nextPerformance,clock+4);
+    for(const area of districts)for(const m of area.participants){
+      m.newsMood=mood;
+      if(mood==='cheer'||mood==='celebrate')m.waveUntil=clock+1.6;
+    }
     for(const [i,m] of [...streetTrade.customers,...streetTrade.stalls.map(s=>s.clerk)].entries()){
       m.newsMood=mood;
       // The existing 3D gesture rig responds to an observable news
@@ -577,6 +584,176 @@ const ToyTown = (() => {
     }
     newsReactions++;
     return true;
+  }
+  /* Four outer quadrants can host their own little working neighborhoods.
+   * A visitor takes an unobstructed graph of free lot cells to a service;
+   * a worker genuinely walks a short local round and returns to the job.
+   * Never invent a path through a structure or a road just to fill space.
+   */
+  const DISTRICT_ROLES=['garden','post','art','produce'];
+  const DISTRICT_STEPS=[[1,0],[-1,0],[0,1],[0,-1]];
+  const districtKey=(x,y)=>x+','+y;
+  function districtRoute(area,from,to){
+    const start=districtKey(from.x,from.y),goal=districtKey(to.x,to.y);
+    if(start===goal)return [];
+    const nodes=new Map(area.cells.map(c=>[districtKey(c.x,c.y),c]));
+    const previous=new Map([[start,null]]),queue=[start];
+    for(let i=0;i<queue.length&&!previous.has(goal);i++){
+      const node=nodes.get(queue[i]);if(!node)continue;
+      for(const [dx,dy] of DISTRICT_STEPS){
+        const key=districtKey(node.x+dx,node.y+dy);
+        if(nodes.has(key)&&!previous.has(key)){
+          previous.set(key,queue[i]);queue.push(key);
+        }
+      }
+    }
+    if(!previous.has(goal))return [];
+    const out=[];for(let at=goal;at!==start;at=previous.get(at)){
+      const node=nodes.get(at);out.push({x:node.x+.5,y:node.y+.5});
+    }
+    return out.reverse();
+  }
+  function spawnDistrictLife(blocks,r){
+    const outer=blocks.filter(b=>b.ya<12&&b.xa!==7)
+      .sort((a,b)=>a.ya-b.ya||a.xa-b.xa);
+    const adjacent=(node,pool)=>DISTRICT_STEPS.map(([dx,dy])=>pool.find(c=>
+      c.x===node.x+dx&&c.y===node.y+dy)).filter(Boolean);
+    for(const [i,b] of outer.entries()){
+      const candidates=[];
+      for(let y=b.ya;y<=b.yb;y++)for(let x=b.xa;x<=b.xb;x++){
+        const cell=tile(x,y);
+        if(!cell||cell.used||cell.kind==='water'||cell.kind==='road')continue;
+        // Giant theme props sit in the center of some squares; do not
+        // route residents through a stage, crane, stadium or fountain.
+        if(props.some(p=>['fountain','market','stage','lab','zoo',
+          'launchpad','stadium','crane'].includes(p.kind)&&
+          Math.hypot(p.x-x-.5,p.y-y-.5)<1.28))continue;
+        candidates.push({x,y});
+      }
+      // Prefer two different service-front spaces. On dense procedural
+      // layouts, accept one frontage plus a connected second clear tile.
+      const sites=candidates.filter(c=>adjacent(c,candidates).length>=1)
+        .sort((a,b)=>{
+          const degree=adjacent(b,candidates).length-
+            adjacent(a,candidates).length;
+          return degree||Math.hypot(a.x-b.xa-1.5,a.y-b.ya-1.5)-
+            Math.hypot(b.x-b.xa-1.5,b.y-b.ya-1.5);
+        });
+      let chosen=null;
+      for(const site of sites){
+        const cells=candidates.filter(c=>c!==site);
+        const front=adjacent(site,cells);
+        if(!front.length)continue;
+        const probe={cells};
+        const work=front[0];
+        const remaining=cells.filter(c=>c!==work&&districtRoute(probe,work,c).length);
+        const visit=front[1]||remaining.sort((a,b)=>
+          Math.hypot(a.x-site.x,a.y-site.y)-
+          Math.hypot(b.x-site.x,b.y-site.y))[0];
+        if(!visit||visit===work)continue;
+        const far=cells.filter(c=>c!==visit&&c!==work&&
+          districtRoute(probe,visit,c).length)
+          .sort((a,b)=>Math.hypot(b.x-visit.x,b.y-visit.y)-
+            Math.hypot(a.x-visit.x,a.y-visit.y))[0];
+        if(!far)continue;
+        chosen={site,cells,work,visit,far};break;
+      }
+      if(!chosen)continue;
+      const {site,cells,work,visit,far}=chosen;
+      const role=DISTRICT_ROLES[i],area={
+        role,x:site.x+.5,y:site.y+.5,block:{xa:b.xa,ya:b.ya},
+        cells,workerStop:work,visitorStop:visit,far,
+        arrivals:0,interactions:0
+      };
+      // Replace only foliage along the exact walking corridor or service.
+      // Buildings and special-theme pieces are never displaced.
+      const walkToVisit=districtRoute(area,far,visit);
+      const walkToWork=districtRoute(area,work,
+        cells.find(c=>c!==work&&
+          Math.abs(c.x-work.x)+Math.abs(c.y-work.y)===1)||work);
+      const reserved=[site,work,visit,far,
+        ...walkToVisit.map(p=>({x:Math.round(p.x-.5),y:Math.round(p.y-.5)})),
+        ...walkToWork.map(p=>({x:Math.round(p.x-.5),y:Math.round(p.y-.5)}))];
+      for(let j=props.length-1;j>=0;j--){
+        const p=props[j];
+        if(['tree','flowers','bench'].includes(p.kind)&&reserved.some(c=>
+          Math.hypot(p.x-c.x-.5,p.y-c.y-.5)<.33))props.splice(j,1);
+      }
+      props.push({kind:'district-scene',role,x:area.x,y:area.y});
+      const colors=['#78a995','#d79d70','#a38abf','#ce8276'];
+      const worker=spawnPerson(r,{
+        kind:'district-worker',districtResident:true,districtWorker:true,
+        districtRole:role,x:work.x+.5,y:work.y+.5,d:2,lane:0,max:.27,
+        col:colors[i],bag:false,hat:null,stopUntil:clock+2+i*.7,
+        districtAction:'working',intent:'visiting',
+        attention:{x:area.x,y:area.y}});
+      const visitor=spawnPerson(r,{
+        kind:'district-visitor',districtResident:true,districtWorker:false,
+        districtRole:role,x:far.x+.5,y:far.y+.5,d:1,lane:0,
+        max:.32+r()*.06,col:['#d88a82','#8aadc0','#e0ad74','#8aaf8b'][i],
+        bag:role==='post',stopUntil:clock+2.5+i*1.9,
+        districtAction:'strolling',intent:'destination',
+        attention:{x:area.x,y:area.y}});
+      worker.districtPlace=area;visitor.districtPlace=area;
+      worker.districtAtWork=true;visitor.districtAtWork=false;
+      area.worker=worker;area.visitor=visitor;
+      area.participants=[worker,visitor];districts.push(area);
+    }
+  }
+  function updateDistrictLife(){
+    for(const area of districts){
+      const {worker,visitor}=area;
+      if(!movers.includes(worker)||!movers.includes(visitor))continue;
+      for(const m of area.participants){
+        if(m.path?.length||clock<(m.stopUntil||0))continue;
+        const isWorker=m===worker;
+        // The worker steps to the adjoining free lot, then returns
+        // to work; the visitor travels from home to the service and back.
+        const dest=isWorker?
+          (m.districtAtWork?
+            (area.cells.find(c=>c!==area.workerStop&&
+              Math.abs(c.x-area.workerStop.x)+
+              Math.abs(c.y-area.workerStop.y)===1)||area.workerStop):
+            area.workerStop):
+          (m.districtAtWork?area.far:area.visitorStop);
+        const origin={x:Math.round(m.x-.5),y:Math.round(m.y-.5)};
+        const path=districtRoute(area,origin,dest);
+        if(!path.length){
+          m.districtAction=isWorker?'working':'strolling';
+          m.v=0;m.stopUntil=clock+3;continue;
+        }
+        m.path=path.map((p,i)=>({...p,speed:m.max,
+          ...(i===path.length-1?{then:o=>{
+            o.v=0;o.districtAtWork=!o.districtAtWork;
+            if(isWorker){
+              o.districtAction=o.districtAtWork?'working':'checking';
+              o.intent='visiting';o.stopUntil=clock+
+                (o.districtAtWork?7:2.5);
+              o.attention={x:area.x,y:area.y};
+              if(o.districtAtWork)districtTasks++;
+            }else{
+              const arrived=o.districtAtWork;
+              o.districtAction=arrived?'greeting':'strolling';
+              o.intent=arrived?'chat':'destination';
+              o.stopUntil=clock+(arrived?4.3:2.7);
+              o.attention=arrived?
+                {x:worker.x,y:worker.y}:{x:area.x,y:area.y};
+              if(arrived){
+                o.waveUntil=clock+1.5;
+                worker.waveUntil=clock+.9;
+                districtVisits++;area.arrivals++;
+                if(Math.hypot(worker.x-o.x,worker.y-o.y)<1.65){
+                  districtMeetings++;area.interactions++;
+                }
+              }
+            }
+          }}:{})
+        }));
+        m.intent='destination';
+        m.districtAction=isWorker?'checking':'strolling';
+        m.attention={x:dest.x+.5,y:dest.y+.5};
+      }
+    }
   }
   function spawnBike(r = Math.random) {
     const p = randomRoadPoint(r), m = {type: 'car', kind: 'bike', x: p.x, y: p.y, d: p.d, heading: directionAngle(p.d), v: 0, travel: 0, moved:0, max: .55 + r() * .15, col: PASTEL[r() * PASTEL.length | 0], skin: ['#f1c9a5', '#d8a77c', '#a8754f', '#7a4e33'][r() * 4 | 0], wait: 0, lane: .36, ph: r() * 6};
@@ -1932,6 +2109,7 @@ const ToyTown = (() => {
     clock += dt;
     updateNeighborhoodLife(dt);
     updateStreetTrade();
+    updateDistrictLife();
     for (const m of movers.slice()) { step(m, dt); easeHeading(m, dt); updateHeroResident(m); }
     for (const e of events.slice()) { e.t += dt; if (e.follow) { e.x = e.follow.x; e.y = e.follow.y; } if (e.update) e.update(e, dt); if (e.t > e.dur) { if (e.end) e.end.call(e); events.splice(events.indexOf(e), 1); } }
     for (const m of movers.slice()) if (m.home && !m.path) remove(m);
@@ -2292,6 +2470,10 @@ const ToyTown = (() => {
     start();
   }
   return {layout, render, zoomAt, resetView, fitView, pinchTo, screenWorld, streetMoment, reactToNews, hero: () => town.blocks.find(b => b.hero), TALK, nameOf, headline, dateKey, CALM, lightPhase, themeFromNews, newsThemes, VARIANTS, VARIANT_EVENTS: () => Object.keys(VARIANT_EVENTS), decorate, setToday: l => { today_ = l; }, PACE, THEMES, GRIM, build, update, events: () => events, movers: () => movers, buildings: () => buildings, props: () => props, startEvent, randomEvent, setPlaying: v => { playing = v; }, debug: () => ({clock, theme, seed, night: nightLevel(), cam: {...cam}, fitZoom, streetMoments,communityEncounters,communityVisits,streetTransactions,streetShopVisits,newsReactions,streetPerformances,
+    districts:{count:districts.length,visits:districtVisits,
+      meetings:districtMeetings,tasks:districtTasks,
+      areas:districts.map(a=>({role:a.role,block:a.block,
+        arrivals:a.arrivals,interactions:a.interactions,x:a.x,y:a.y}))},
     trade:streetTrade?{mood:streetTrade.newsMood,staff:streetTrade.stalls.length,
       customers:streetTrade.customers.length,latestSale:streetTrade.latestSale}:null,
     community:community?{meetingUntil:community.meetingUntil,nextMeeting:community.nextMeeting,meetingCount:community.meetingCount}:null})};

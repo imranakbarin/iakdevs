@@ -1183,9 +1183,66 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
     glow.position.set(p.x,1.03,p.y); glow.castShadow=false;
     world.add(glow);plazaLights.push(glow);
   }
+  // Distinct service fixtures occupy simulator-approved free lots.
+  // An outer district no longer consists of background buildings alone.
+  function districtFixture(p){
+    const g=new THREE.Group();g.position.set(p.x,.20,p.y);
+    g.userData.districtSceneRole=p.role;world.add(g);
+    const wood='#ac8665',cream='#f5e3c1';
+    if(p.role==='garden'){
+      box(g,.69,.16,.56,wood,0,.095,0);
+      box(g,.59,.05,.48,'#795e4b',0,.202,0);
+      for(let k=0;k<9;k++){
+        const x=(k%3-1)*.17,z=(Math.floor(k/3)-1)*.15;
+        cylinder(g,.01,.011,.17,'#689777',x,.31,z).castShadow=false;
+        const head=ball(g,.064,['#e98f8d','#f1c77e','#a5a6d6'][k%3],x,.4,z);
+        head.scale.set(.96,.58,.86);head.castShadow=false;
+      }
+      for(const x of [-.23,.23])cylinder(g,.019,.022,.44,wood,x,.345,-.31);
+      sign(g,'GARDEN',0,.55,-.31,.34);
+    }else if(p.role==='post'){
+      for(const x of [-.33,.33])cylinder(g,.029,.032,.88,wood,x,.62,-.24);
+      box(g,.84,.085,.54,'#e18a6b',0,1.07,-.10);
+      box(g,.74,.16,.39,'#719fa2',0,.51,0);
+      box(g,.80,.055,.43,cream,0,.62,0);
+      for(let k=0;k<4;k++){
+        const x=(k-1.5)*.17;
+        box(g,.14,.13+(k%2)*.08,.17,k%2?'#f0c991':'#d2aa78',
+          x,.72+(k%2)*.04,-.04);
+        box(g,.018,.01,.17,'#fff0d0',x,.797+(k%2)*.080,-.04);
+      }
+      sign(g,'POST',0,.89,.19,.40);
+    }else if(p.role==='art'){
+      for(const side of [-1,1]){
+        const leg=cylinder(g,.025,.027,.92,wood,side*.21,.54,-.12);
+        leg.rotation.z=side*.20;
+      }
+      const board=box(g,.72,.68,.048,'#fff0da',0,.85,.047);
+      board.rotation.x=-.11;
+      box(g,.56,.13,.056,'#80b7bf',0,1.03,.105);
+      box(g,.55,.11,.057,'#e4a681',0,.64,.105);
+      for(let k=0;k<6;k++){
+        const paint=ball(g,.088,['#db8e86','#ebc682','#86aa9a'][k%3],
+          (k%3-1)*.17,.87-(k>2?.1:0),.157);
+        paint.scale.set(1.18,.68,.22);paint.castShadow=false;
+      }
+      box(g,.72,.045,.16,wood,0,.49,.21);
+    }else{
+      for(const x of [-.31,.31])cylinder(g,.028,.030,.84,wood,x,.59,-.22);
+      box(g,.85,.082,.61,'#7cb8a3',0,1.04,-.10);
+      box(g,.81,.055,.44,cream,0,.61,.03);
+      for(let k=0;k<12;k++){
+        const x=(k%4-1.5)*.16,z=(Math.floor(k/4)-1)*.12;
+        ball(g,.066,['#e59d75','#dc7772','#e7c65b','#98b978'][k%4],
+          x,.68,z+.03).castShadow=false;
+      }
+      sign(g,'MARKET',0,.89,.20,.43);
+    }
+  }
   function smallProps(p,i){
     const k=p.kind;
     if(k==='tree')tree(p,i);
+    else if(k==='district-scene')districtFixture(p);
     else if(k==='hero-shrub') {
       box(world,.22,.16,.22,'#c5a080',p.x,.09,p.y);
       ball(world,.18,p.col||'#79a27c',p.x,.26,p.y);
@@ -2301,6 +2358,34 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
         box(g,.029,.088,.019,'#53655c',-.039,.269,.105);
       }
     }
+    if(ref.districtWorker){
+      // Real hand-held tools, with task-specific motions after arriving.
+      const tool=new THREE.Group();tool.position.set(0,-.072,.027);
+      hands[1].add(tool);
+      if(ref.districtRole==='garden'){
+        const can=ball(tool,.071,'#79a9a2',0,-.016,0);
+        can.scale.set(1.22,.76,.8);
+        const spout=cylinder(tool,.012,.016,.15,'#6b9891',.075,.012,.004);
+        spout.rotation.z=-1.13;
+        const loop=object(tool,geo('torus',.05,.009),mat('#a5c9b6'),
+          -.045,.006,0);loop.scale.z=.56;
+      }else if(ref.districtRole==='post'){
+        box(tool,.145,.11,.14,'#d5a675',0,-.016,0);
+        box(tool,.018,.12,.145,'#f6e6c7',0,-.01,0);
+      }else if(ref.districtRole==='art'){
+        const brush=cylinder(tool,.009,.011,.26,'#9d725a',0,-.12,0);
+        brush.rotation.z=-.31;
+        ball(tool,.023,'#5f9d9a',.037,-.243,.008).scale.set(.7,1.55,.65);
+      }else{
+        box(tool,.156,.073,.16,'#bc966b',0,-.042,0);
+        const handle=object(tool,geo('torus',.071,.009),mat('#93745a'),
+          0,.009,0);handle.scale.set(1,1,.54);
+        for(let i=0;i<3;i++)ball(tool,.039,
+          ['#e3a567','#da7e78','#c3c46e'][i],
+          (i-1)*.047,.011,.014).castShadow=false;
+      }
+      g.userData.districtTool=tool;
+    }
     const shopProps={};
     if(ref.shopRole){
       // Objects belong to the right wrist and follow the complete joint
@@ -2336,7 +2421,7 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
       eyelids,headPivot,upperBody,smile,brows};
     g.userData.shopProps=shopProps;
     g.userData.pose={speed:0,sit:0,chat:0,speak:0,greet:0,observe:0,
-      serve:0,enjoy:0,receive:0,celebrate:0,play:0,dance:0,
+      serve:0,enjoy:0,receive:0,celebrate:0,play:0,dance:0,work:0,
       lastClock:null,turned:false};
     // Lightweight deterministic silhouette variation: coat, satchel or vest,
     // plus narrow waist and different hats already supplied by simulation.
@@ -2353,7 +2438,8 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
     // Deterministic build and height variation, never a random change
     // between frames. Hero residents remain slightly larger at close zoom.
     const scale=ref.shopRole==='vendor'?1.19:
-      ref.shopRole==='customer'?1.13:ref.heroResident?1.10:1;
+      ref.shopRole==='customer'?1.13:ref.districtResident?1.15:
+      ref.heroResident?1.10:1;
     const characterPhase=ref.ph||0;
     g.scale.set(scale*(.97+.045*Math.sin(characterPhase*1.3)),
       scale*(.98+.055*Math.cos(characterPhase*.9)),
@@ -2652,7 +2738,8 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
         const focus=ref.attention;
         const toward=focus?Math.hypot(focus.x-ref.x,focus.y-ref.y):0;
         const social=(ref.intent==='chat'||ref.intent==='greeting'||
-          ref.intent==='browse'||ref.intent==='visiting'||!!ref.shopRole);
+          ref.intent==='browse'||ref.intent==='visiting'||
+          !!ref.shopRole||!!ref.districtResident);
         const turnToFocus=focus&&toward>.11&&social&&(ref.v||0)<.055;
         const desiredFacing=turnToFocus?
           Math.atan2(focus.x-ref.x,focus.y-ref.y):travelFacing;
@@ -2679,6 +2766,8 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
           (ref.shopAction==='receiving'||ref.shopAction==='handoff')?1:0,7.0);
         state.enjoy=ease(state.enjoy,!reducedMotion&&
           (ref.shopAction==='reading'||ref.shopAction==='eating')?1:0,5.5);
+        state.work=ease(state.work,!reducedMotion&&ref.districtWorker&&
+          ref.districtAction==='working'?1:0,5);
         const celebration=ref.newsMood==='cheer'||ref.newsMood==='celebrate';
         state.celebrate=ease(state.celebrate,!reducedMotion&&celebration?1:0,5);
         const playing=ref.guitar&&ref.shopAction==='performing';
@@ -2733,6 +2822,7 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
             trading*.72-receiving*.56-using*1.18-
             state.celebrate*(dominant?1.85:1.35)-
             state.dance*.66-
+            (dominant?state.work*.66:state.work*.14)-
             (dominant?state.play*.62:state.play*.39);
           limbs.arms[k].rotation.z=(k===0?1:-1)*
             (.07+.10*state.chat+.06*state.observe)-
@@ -2740,13 +2830,15 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
           limbs.elbows[k].rotation.x=
             -.56*speech-.46*inspect-.84*wave-
             trading*.50-receiving*.80-using*.70-
-            state.celebrate*.47-state.dance*.58-state.play*.65+
+            state.celebrate*.47-state.dance*.58-state.play*.65-
+            (dominant?state.work*.55:0)+
             (carrying?.20:0)+state.sit*.15;
           limbs.wrists[k].rotation.x=
             -.14*speech-.30*inspect-.25*wave;
           limbs.wrists[k].rotation.z=(dominant?-1:1)*
             (.08*state.chat+.11*state.observe)+
-            wave*.24*Math.sin(worldTime*5.4+(ref.ph||0));
+            wave*.24*Math.sin(worldTime*5.4+(ref.ph||0))+
+            (dominant?state.work*.25*Math.sin(worldTime*3.1+(ref.ph||0)):0);
         }
         // The whole torso shifts weight, leans into greetings and settles
         // naturally after walking. Small limits preserve miniature balance.
@@ -2754,6 +2846,7 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
         const beat=Math.sin(stridePhase*2);
         limbs.upperBody.rotation.x=lean+
           state.serve*.080+state.receive*.12+state.enjoy*.045+
+          state.work*.060+
           state.chat*.036*Math.sin(worldTime*1.5+(ref.ph||0));
         limbs.upperBody.rotation.z=.020*state.speed*stride+
           .032*state.chat*(ref.ph%2?1:-1)+

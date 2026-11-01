@@ -166,6 +166,36 @@ T.update(1/60);
 assert.equal(following.braking,true,
   'a moving vehicle exposes a brake-light intention when closing on traffic');
 
+// Outer neighborhoods are services with meaningful safe routes, not scenery.
+T.build(60624,'market');
+assert.equal(T.debug().districts.count,4,
+  'four outer quadrants each have an active local service');
+assert.equal(T.debug().districts.areas.map(a=>a.role).join(','),
+  'garden,post,art,produce','each district has its own recognizable job');
+const localWorkers=T.movers().filter(m=>m.districtResident);
+assert.equal(localWorkers.length,8,
+  'four workers and four visitors populate the outlying neighborhoods');
+assert.equal(T.props().filter(p=>p.kind==='district-scene').length,4,
+  'each outer district has a physical work destination');
+let throughHomes=0,travelled=0;
+for(let i=0;i<60*72;i++){
+  T.update(1/60);
+  if(i%60)continue;
+  for(const m of localWorkers){
+    travelled=Math.max(travelled,m.travel||0);
+    if(T.buildings().some(b=>Math.abs(m.x-b.x-.5)<.30&&
+      Math.abs(m.y-b.y-.5)<.30))throughHomes++;
+  }
+}
+assert.equal(throughHomes,0,'district residents never walk through houses');
+assert.ok(travelled>4,'residents visibly walk between distinct destinations');
+assert.ok(T.debug().districts.visits>=5,
+  'local visitors repeatedly reach real workplaces');
+assert.ok(T.debug().districts.tasks>=8,
+  'local workers perform repeat tasks only after arriving');
+assert.ok(T.debug().districts.meetings>=1,
+  'visitors greet people in actual nearby positions');
+
 // Persistent life should continue without an event, new button or teleport.
 // The two locals make independent visits, converge to chat, then separate.
 T.build(46112,'weather');

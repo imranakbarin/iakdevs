@@ -135,6 +135,23 @@ async function main(){
         beforeFrame=await page.evaluate(()=>
           window.ToyTown3D?.getStats?.().frames||0);
       }
+      if(job.name==='desktop-3d-wide'){
+        const local=await page.evaluate(()=>{
+          const actors=ToyTown.movers().filter(m=>m.districtResident);
+          for(let i=0;i<60*48;i++)ToyTown.update(1/60);
+          const debug=ToyTown.debug().districts;
+          return {count:debug.count,visits:debug.visits,tasks:debug.tasks,
+            meetings:debug.meetings,people:actors.length,
+            roles:debug.areas.map(a=>a.role)};
+        });
+        if(local.count<3||local.visits<3||local.tasks<3||
+          local.people!==local.count*2)
+          throw Error('Outer neighborhood activity not working in Chromium: '+
+            JSON.stringify(local));
+        console.log('OUTER_CITY_LIFE '+JSON.stringify(local));
+        beforeFrame=await page.evaluate(()=>
+          window.ToyTown3D?.getStats?.().frames||0);
+      }
       if(job.social){
         const social=await page.evaluate(()=>{
           let chat=false;
@@ -168,6 +185,17 @@ async function main(){
       if(!job.classic){
         await page.waitForFunction(n=>window.ToyTown3D?.getStats?.().frames>n,
           beforeFrame,{timeout:45000,polling:100});
+      }
+      if(job.name==='desktop-3d-wide'){
+        await page.waitForFunction(()=>{
+          let fixtures=0,tools=0;
+          window.ToyTown3D?.scene?.traverse(o=>{
+            if(o.userData?.districtSceneRole)fixtures++;
+            if(o.userData?.districtTool)tools++;
+          });
+          return fixtures>=3&&tools>=3;
+        },null,{timeout:30000,polling:100});
+        console.log('OUTER_CITY_GPU PASS: modeled workplaces and job tools are in the live 3D scene');
       }
       if(job.name==='mobile-3d-close'){
         await page.waitForFunction(()=>{

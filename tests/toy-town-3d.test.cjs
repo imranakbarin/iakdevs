@@ -97,6 +97,12 @@ assert.match(moduleCode,/function vergeMaterial\(axis\)/,'street edges have shar
 assert.match(moduleCode,/function paintedVerge\(/,'street verges have physically placed decals');
 assert.match(moduleCode,/function createStorybookVillage\(/,
   'village scenery is built as one cohesive 3D environmental set');
+assert.match(moduleCode,/function districtFixture\(p\)/,
+  'outer neighborhoods have separately modeled working places');
+assert.match(moduleCode,/districtSceneRole=p\.role/,
+  'workplace roles survive into the 3D scene');
+assert.match(moduleCode,/districtTool=tool/,
+  'real job-specific tools attach to resident wrists');
 assert.match(moduleCode,/scene\.background\.set\(tint\('#cee9f5'/,
   'the entire town shares a clearer, colorful daylight sky');
 assert.match(moduleCode,/kind:'umbrella'/,'visible animated café canopies add a lively street silhouette');
@@ -140,11 +146,11 @@ assert.match(moduleCode,/eye.scale.y=blink/,'eyelids blink without a separate an
 assert.match(html,/type="importmap"/);
 assert.match(html,/three@0\.187\.0\/build\/three\.module\.js/);
 assert.match(html,/three@0\.187\.0\/examples\/jsm\//);
-assert.match(html,/toy-town-3d\.js\?v=37/);
+assert.match(html,/toy-town-3d\.js\?v=38/);
 assert.match(html,/toy-town-landmarks\.js\?v=7/,'the independent models are requested alongside Three');
 assert.match(html,/buildLandmark:landmarks\.buildLandmark/,
   'loader injects the authored model builder into the 3D simulation');
-assert.match(html,/toy-town\.js\?v=25/);
+assert.match(html,/toy-town\.js\?v=26/);
 const classicScript=html.match(/src="assets\/toy-town\.js\?v=\d+"/);
 assert.ok(classicScript&&
   html.indexOf(classicScript[0])<html.indexOf("import('three')"),
@@ -252,11 +258,19 @@ const props=[
   {kind:'hero-lamp',x:8.2,y:8.3},{kind:'hero-mail',x:7.2,y:9.8},
   {kind:'hero-rack',x:9.4,y:8.3},{kind:'fountain',x:4.2,y:4.2},
   {kind:'stadium',x:12,y:4},{kind:'launchpad',x:4,y:12},{kind:'stage',x:12,y:8},
-  {kind:'times',x:17.2,y:.7}
+  {kind:'times',x:17.2,y:.7},
+  {kind:'district-scene',role:'garden',x:3.5,y:4.5},
+  {kind:'district-scene',role:'post',x:13.5,y:4.5},
+  {kind:'district-scene',role:'art',x:3.5,y:9.5},
+  {kind:'district-scene',role:'produce',x:13.5,y:9.5}
 ];
 const pedestrians=[{type:'person',x:8.1,y:8.7,d:0,v:.26,travel:4,col:'#d5a6a0',skin:'#d8a984',heroResident:true},
   {type:'car',kind:'car',x:6.2,y:6.5,d:0,heading:0,v:.5,col:'#a7c9dc',travel:6},
-  {type:'car',kind:'bike',x:8.4,y:11.4,d:2,v:.4,col:'#97b2a0',skin:'#dfa586'}];
+  {type:'car',kind:'bike',x:8.4,y:11.4,d:2,v:.4,col:'#97b2a0',skin:'#dfa586'},
+  {type:'person',kind:'district-worker',districtResident:true,districtWorker:true,
+    districtRole:'garden',districtAction:'working',
+    x:3.5,y:3.5,d:2,v:0,moved:0,col:'#78a995',skin:'#d8a984',
+    attention:{x:3.5,y:4.5}}];
 let seed=20261031,frameClock=6,currentCamZoom=1.52,nightValue=.25;
 const town={
  buildings:()=>buildings,props:()=>props,movers:()=>pedestrians,
@@ -312,6 +326,14 @@ const initialGlow=allWindowMaterials[0].emissiveIntensity;
 const initialGardenCount=api.getStats().gardenElements;
 const sceneWorld=api.scene.children.find(o=>o.children?.some(x=>x.userData?.uniqueAsset));
 assert.ok(sceneWorld,'scene has a populated world group');
+const outerFixtures=sceneWorld.children.filter(o=>o.userData?.districtSceneRole);
+assert.equal(outerFixtures.length,4,
+  'all four outer district fixtures actually build in the scene');
+assert.equal(outerFixtures.map(o=>o.userData.districtSceneRole).join(','),
+  'garden,post,art,produce','the four workplaces have different models');
+const workingLocal=sceneWorld.children.find(o=>o.userData?.districtTool);
+assert.ok(workingLocal?.userData?.pose,
+  'a local worker holds a physical tool with an articulated pose');
 const contours=sceneWorld.children.filter(o=>o.userData?.landscapeContour);
 assert.ok(contours.length>=2,'real geometric lawn contours join several lots');
 const piazza=sceneWorld.children.find(o=>o.userData?.villagePiazza);
