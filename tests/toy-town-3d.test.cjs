@@ -76,6 +76,18 @@ assert.doesNotMatch(moduleCode,/new THREE\.WebGLRenderTarget/,
 assert.match(landmarkCode,/miniatureWindow:true,warm/,
   'landmark glass supports shared natural dusk illumination');
 assert.match(moduleCode,/function roadSurface\(axis\)/,'roads share tactile matte wear instead of flat plastic');
+assert.match(moduleCode,/function creature\(ref\)/,
+  'animals have their own expressive body rigs');
+assert.match(moduleCode,/const headPivot=new THREE.Group\(\)/,
+  'residents articulate a neck independently of their body');
+assert.match(moduleCode,/function car\(ref\)/,
+  'vehicles have separate class-specific model geometry');
+assert.match(moduleCode,/brakeMaterial\.emissiveIntensity=ref\.braking/,
+  'tail lamps respond to live simulated traffic braking');
+assert.match(moduleCode,/limbs\.headPivot\.rotation\.y\+=/,
+  'residents look toward genuinely noticed destinations');
+assert.match(moduleCode,/bike\.crank\.rotation\.z=/,
+  'bicycle drivetrain moves with traveled distance');
 assert.match(moduleCode,/const landscapeAtlas=/,'town has a continuous non-repeating terrain paint layer');
 assert.match(moduleCode,/function vergeMaterial\(axis\)/,'street edges have shared soft painted vegetation');
 assert.match(moduleCode,/function paintedVerge\(/,'street verges have physically placed decals');
@@ -394,6 +406,37 @@ nightValue=.25;callbacks.shift()();
 assert.ok(api.renderer.toneMappingExposure <= 1.1,'balanced lighting avoids blowing out pastel facades');
 const initialPedestrian=api.scene.children.find(g=>g.children&&g.children.some(x=>x.userData&&x.userData.limbs));
 assert.ok(initialPedestrian,'3D inhabitants have articulated limbs');
+const residentRig=sceneWorld.children.find(o=>o.userData?.characterSilhouette);
+assert.ok(residentRig?.userData?.limbs?.headPivot,
+  'each resident has a separate head and neck rig');
+assert.equal(residentRig.userData.limbs.shins.length,2,
+  'both knees bend independently of the hip');
+const motorcar=sceneWorld.children.find(o=>o.userData?.vehicleRig);
+assert.equal(motorcar.userData.vehicleRig.wheels.length,4,
+  'each car has four individually articulated wheels');
+assert.equal(motorcar.userData.vehicleRig.indicators.length,2,
+  'car indicators can flash independently on either side');
+const cycle=sceneWorld.children.find(o=>o.userData?.bicycleRig);
+assert.ok(cycle?.userData?.bicycleRig?.crank,'bicycle has a real chainring crank');
+pedestrians[0].attention={x:8.1,y:10.0};
+pedestrians[1].braking=true;pedestrians[1].travel=7;
+pedestrians[2].travel=5;
+callbacks.shift()();
+assert.ok(Math.abs(residentRig.userData.limbs.headPivot.rotation.y)>.02,
+  'the simulated shop-look intent actually rotates the 3D head');
+assert.ok(motorcar.userData.vehicleRig.brakeMaterial.emissiveIntensity>.5,
+  'car brake lamps visibly brighten on traffic slowdown');
+assert.ok(Math.abs(cycle.userData.bicycleRig.crank.rotation.z)>1,
+  'pedals and bicycle wheels rotate with physical distance');
+const testDog={type:'person',kind:'dog',x:9.1,y:8.3,d:0,
+  v:.5,travel:3,ph:1};
+pedestrians.push(testDog);callbacks.shift()();
+const animalRig=sceneWorld.children.find(o=>o.userData?.creatureRig);
+assert.ok(animalRig?.userData.creatureRig.tail,
+  'animals have connected animated tails instead of static toy blobs');
+assert.equal(animalRig.userData.creatureRig.legs.length,4,
+  'a dog is a four-legged creature, not a human capsule');
+pedestrians.pop();callbacks.shift()();
 const peopleGroup=api.scene.children.find(g=>g.children&&g.children.some(x=>x.position.x===8.1 && x.position.z===8.7));
 const firstPerson=peopleGroup.children.find(x=>x.position.x===8.1 && x.position.z===8.7);
 assert.ok(Math.abs(firstPerson.rotation.y-Math.PI/2)<.0001,'face points into walking direction, not sideways');
