@@ -158,7 +158,7 @@ assert.ok(sceneWorld,'scene has a populated world group');
 const groundedPads=sceneWorld.children.filter(o=>o.material?.transparent&&o.material?.map&&o.rotation.x===-Math.PI/2);
 assert.ok(groundedPads.length>=7,'soft contact shading integrates the slab, buildings and trees');
 assert.ok(groundedPads.some(p=>p.position.x===7.5&&p.position.z===7.5),
-  'the landmark's ground shadow is physically centered beneath its foundation');
+  "the landmark ground shadow is physically centered beneath its foundation");
 const roadMesh=sceneWorld.children.find(o=>o.position.x===1.5&&o.position.z===9);
 assert.ok(roadMesh?.material?.map,'roads have painted surface materials');
 assert.ok(stats.roofTextures>=2,'roof textures created for different colored gables');
