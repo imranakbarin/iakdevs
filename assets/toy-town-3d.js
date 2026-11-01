@@ -1604,6 +1604,115 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
     }
   }
 
+
+  // Naturalistic cutaway base and gently wandering road edges. Physics and
+  // navigation continue to use the original perfectly straight road centers.
+  // Only the physical visible outer shoulders are irregular.
+  function organicBoardOutline(inset=0){
+    const half=9.25-inset,corner=1.72+inset*.12;
+    const shape=new THREE.Shape();
+    const corners=[
+      [half-corner,half-corner,0],
+      [-half+corner,half-corner,Math.PI/2],
+      [-half+corner,-half+corner,Math.PI],
+      [half-corner,-half+corner,Math.PI*1.5]
+    ];
+    // Traverse counter-clockwise around four gently weathered corners.
+    let started=false;
+    for(const [cx,cz,start] of corners){
+      for(let k=0;k<=10;k++){
+        const angle=start+k*Math.PI/20;
+        const jitter=.055*Math.sin(5*angle+1.1)+.024*Math.sin(13*angle);
+        const radius=corner+jitter;
+        const x=cx+Math.cos(angle)*radius,z=cz+Math.sin(angle)*radius;
+        if(!started){shape.moveTo(x,-z);started=true;}
+        else shape.lineTo(x,-z);
+      }
+    }
+    shape.closePath();
+    return shape;
+  }
+  function terrainCutaway(){
+    // A single sculpted piece makes wood, soil and meadow follow one outline,
+    // with exposed earthy depth rather than four machined vertical walls.
+    const wood=object(world,new THREE.ExtrudeGeometry(organicBoardOutline(),{
+      depth:1.10,bevelEnabled:true,bevelThickness:.038,bevelSize:.047,
+      bevelSegments:2,steps:1
+    }),mat('#9a816d'),9,-1.12,9,false);
+    wood.rotation.x=-Math.PI/2;wood.receiveShadow=true;
+    wood.userData.terrainCutaway='wood';
+    const earth=object(world,new THREE.ExtrudeGeometry(organicBoardOutline(.07),{
+      depth:.21,bevelEnabled:true,bevelThickness:.020,bevelSize:.025,
+      bevelSegments:2,steps:1
+    }),grassMaterial('#b9cba7',10),9,-.10,9,false);
+    earth.rotation.x=-Math.PI/2;earth.receiveShadow=true;
+    earth.userData.terrainCutaway='meadow';
+    // A narrow stratified sediment seam just below the lawn provides a
+    // delicate hand-built cutaway rather than a heavy square board outline.
+    const seam=object(world,new THREE.ExtrudeGeometry(organicBoardOutline(.045),{
+      depth:.047,bevelEnabled:false,steps:1
+    }),mat('#bdad8a'),9,-.099,9,false);
+    seam.rotation.x=-Math.PI/2;seam.receiveShadow=false;
+    seam.userData.terrainCutaway='soil';
+  }
+  function organicRoad(n,axis){
+    // A minimum 1.02m clear width stays beneath traffic lanes. The material
+    // follows the same old centerline, no vehicle steering changes at all.
+    const shape=new THREE.Shape();
+    const count=48,pts=[];
+    for(let i=0;i<=count;i++){
+      const t=i/count,along=-8.015+t*16.03;
+      const wobble=.025*Math.sin(t*TAU*2+n*.7)+
+        .018*Math.sin(t*TAU*6+n*.41);
+      const width=.554+wobble;
+      pts.push([along,width]);
+    }
+    const local=(at,edge)=>{
+      const [along,width]=pts[at],side=width*edge;
+      return axis==='north-south'?[side,-along]:[along,side];
+    };
+    for(let i=0;i<=count;i++){
+      const [x,y]=local(i,-1);if(i===0)shape.moveTo(x,y);
+      else shape.lineTo(x,y);
+    }
+    for(let i=count;i>=0;i--){
+      const [x,y]=local(i,1);shape.lineTo(x,y);
+    }
+    shape.closePath();
+    const mesh=object(world,new THREE.ExtrudeGeometry(shape,{
+      depth:.045,bevelEnabled:false,steps:1
+    }),roadSurface(axis),axis==='north-south'?n+.5:9,.134,
+       axis==='north-south'?9:n+.5,false);
+    mesh.rotation.x=-Math.PI/2;mesh.receiveShadow=true;
+    mesh.userData.organicRoad=axis;
+    return mesh;
+  }
+  function stoneShoulder(n,a,b,axis,side){
+    // No long straight curb wall: a low, irregular soil-and-stone verge
+    // integrated with the painted grass and clear of every intersection.
+    const length=b-a;
+    const count=Math.max(8,Math.ceil(length*9));
+    const shape=new THREE.Shape();
+    const vertices=[];
+    for(let i=0;i<=count;i++){
+      const t=i/count,along=a+(b-a)*t;
+      const bend=.027*Math.sin(t*TAU*1.5+n)+.018*Math.sin(t*TAU*4.4);
+      vertices.push([along,side*(.55+bend),side*(.68+bend)]);
+    }
+    const at=(v,outside)=>{
+      const p=v,across=outside?p[2]:p[1];
+      return axis==='north-south'?[n+.5+across,-p[0]]:
+        [p[0],-(n+.5+across)];
+    };
+    vertices.forEach((v,i)=>{const [x,y]=at(v,false);if(i===0)shape.moveTo(x,y);else shape.lineTo(x,y);});
+    for(let i=vertices.length-1;i>=0;i--){const [x,y]=at(vertices[i],true);shape.lineTo(x,y);}
+    shape.closePath();
+    const mesh=object(world,new THREE.ExtrudeGeometry(shape,{depth:.014,
+      bevelEnabled:false,steps:1}),mat('#c8b99d'),0,.150,0,false);
+    mesh.rotation.x=-Math.PI/2;mesh.receiveShadow=false;
+    mesh.userData.stoneShoulder=axis;
+  }
+
   function createGround(){
     // A generous matte studio table under the actual miniature slab.
     // Soft ambient contrast makes the scene read like a photographed model.
@@ -1612,10 +1721,9 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
     // A feathered shadow between the wood slab and studio table completes the
     // real-world tabletop scale; this stays outside the town's active streets.
     groundingShadow(9,9,23.5,23.5,-1.205);
-    box(world,18.6,1.12,18.6,'#9b8069',9,-.60,9);
-    // A single soft landscape wash bridges the individual lots without
-    // removing their real raised foundations or affecting the 2D fallback.
-    box(world,18.35,.20,18.35,grassMaterial('#b9cba7',10),9,.025,9);
+    terrainCutaway();
+    // One continuous painted meadow rests over the sculpted board. Its
+    // geometry is shared with the rounded earth outline, not a square slab.
     const meadow=object(world,geo('plane',18.35,18.35),landscapeAtlas,9,.129,9,false);
     meadow.rotation.x=-Math.PI/2;meadow.receiveShadow=false;
     meadow.userData.continuousLandscape=true;
@@ -1623,8 +1731,8 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
     groundPiece(18.02,1.97,'#8dbfc0',9,14,.105);
     const isRoad = v=>LINES.includes(v);
     for(const n of LINES){
-      groundPiece(1.01,16.03,roadSurface('north-south'),n+.5,9,.132);
-      groundPiece(16.03,1.01,roadSurface('east-west'),9,n+.5,.143);
+      organicRoad(n,'north-south');
+      organicRoad(n,'east-west');
       // No repeated bright highway centre dashes. Cobble seams and garden
       // verges now give the lanes scale; keep a few discreet travel cues far
       // from the village square for vehicle readability on mobile.
@@ -1645,9 +1753,9 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
           paintedVerge((a+b)/2,n+(side<0?-.17:1.17),
             length,.40,'east-west');
         }
-        for(const edge of [-.068,1.068]) {
-          groundPiece(.054,length,'#bfb5a1',n+edge,(a+b)/2,.185);
-          groundPiece(length,.054,'#bfb5a1',(a+b)/2,n+edge,.185);
+        for(const side of [-1,1]){
+          stoneShoulder(n,a,b,'north-south',side);
+          stoneShoulder(n,a,b,'east-west',side);
         }
       }
       // River bridges have pale stone shoulders, anchored to the same lanes.
