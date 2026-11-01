@@ -66,7 +66,7 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
     reflection.colorSpace=THREE.SRGBColorSpace;
     reflection.mapping=THREE.EquirectangularReflectionMapping;
     scene.environment=reflection;
-    scene.environmentIntensity=.62;
+    scene.environmentIntensity=.38;
   }
   // Photographed-miniature finish: the center stays optically sharp for signs
   // and people, with only the distant upper and near lower frame softened.
@@ -111,10 +111,14 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
             float vignette=1.-.085*smoothstep(.28,.76,
               length((vUv-.5)*vec2(1.08,1.0)));
             color*=vignette;
-            gl_FragColor=vec4(clamp(color,0.,1.),1.);
+            // The scene was rendered to a linear offscreen target. Apply
+            // ACES tone mapping here, once, just as the direct renderer does.
+            // Omitting this produced a washed-out, overbright village.
+            gl_FragColor=vec4(max(color,vec3(0.)),1.);
+            #include <tonemapping_fragment>
             #include <colorspace_fragment>
           }`,
-        toneMapped:false
+        toneMapped:true
       });
       const screen=new THREE.Scene();
       screen.add(new THREE.Mesh(new THREE.PlaneGeometry(2,2),shader));
