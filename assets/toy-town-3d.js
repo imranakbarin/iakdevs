@@ -54,7 +54,8 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
     color:'#304746',transparent:true,opacity:.17,depthWrite:false
   });
   const world = new THREE.Group(); scene.add(world);
-  const actors = new Map(), ambient = [], plazaLights = [];
+  const actors = new Map(), ambient = [], plazaLights = [], festoonBulbs = [];
+  let gardenElements = 0;
   let worldSeed = null, worldBuildings = null, worldPropCount = 0, sceneTime = 0, landmarkCount = 0;
   let stopped = false, frozen = false, raf = 0, frames = 0, redrawCount = 0, lastSize = '', lastFrameAt = 0;
   const TAU = Math.PI * 2, LINES = [1,6,11,16];
@@ -1077,6 +1078,207 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
       sign(world,'TOWN TIMES',p.x,1.16,p.y+.05,.6);
     }
   }
+
+  // CURATED VILLAGE SET — every piece uses the original town coordinates.
+  // We decorate the clear garden margins, not the plaza residents' routes:
+  // x=8.43/9.49 are the two shop-to-bench walking corridors and x=8.5
+  // is the zebra crossing. Landscaping stays either side of those paths.
+  function createStorybookVillage(){
+    const gardenColors=['#5f9278','#84ad84','#a1bd93','#6a9e87','#c0cc97'];
+    const petalColors=['#f4c6c2','#f6e5b0','#cfb7ce','#fff0d6','#dcaab0'];
+    const clay=mat('#c49372'),sandstone=mat('#e3d2b7'),wood=mat('#9b795e');
+    const seed=town.debug().seed|0;
+    const flower=(x,z,kind=0,size=1)=>{
+      const stem=cylinder(world,.009*size,.012*size,.13*size,
+        '#709b71',x,.275+.058*size,z);stem.castShadow=false;
+      const head=ball(world,.037*size,petalColors[kind%petalColors.length],
+        x,.342+.11*size,z);
+      head.scale.set(1.0,.52,1.05);
+      if(kind%4===0){
+        const core=ball(world,.013*size,'#edce7f',x,.360+.11*size,z);
+        core.castShadow=false;
+      }
+      gardenElements+=2;
+    };
+    const thicket=(x,z,spread=.2,seedNo=0)=>{
+      const palette=gardenColors;
+      for(let k=0;k<5;k++){
+        const a=(k*2.4+seedNo*.31);
+        const xx=x+Math.cos(a)*spread*(.33+.45*rng(k+seedNo,81));
+        const zz=z+Math.sin(a)*spread*(.33+.45*rng(k+seedNo,93));
+        const shrub=ball(world,.105+(k%3)*.021,
+          palette[(k+seedNo)%palette.length],xx,.29+(k%2)*.029,zz);
+        shrub.scale.set(1.35,.53,.95);
+        shrub.castShadow=false;
+        if(k%2===0)flower(xx+.036,zz+.028,(k+seedNo)%5,.71);
+      }
+      gardenElements+=5;
+    };
+    function gardenIsland(x,z,rx,rz,paletteIndex=0){
+      // Actual rounded, shallow extruded earth — not floating foliage
+      // or a box paved into the lawn. Its profile differs per location.
+      const outline=new THREE.Shape(),N=20;
+      for(let i=0;i<=N;i++){
+        const a=i*TAU/N,undulate=1+.08*Math.sin(a*3+paletteIndex);
+        const px=Math.cos(a)*rx*undulate,pz=Math.sin(a)*rz*undulate;
+        if(i===0)outline.moveTo(px,pz);else outline.lineTo(px,pz);
+      }
+      outline.closePath();
+      const bed=object(world,new THREE.ExtrudeGeometry(outline,{
+        depth:.038,bevelEnabled:true,bevelSize:.012,bevelThickness:.009,
+        bevelSegments:1,steps:1,curveSegments:8
+      }),mat(paletteIndex%2?'#8e8c69':'#8b9872'),x,.219,z,false);
+      bed.rotation.x=-Math.PI/2;
+      bed.receiveShadow=true;
+      // Pebble edge follows the soil contour in tiny warm set stones.
+      const edging=9;
+      for(let k=0;k<edging;k++){
+        const a=k*TAU/edging,rr=1+.06*Math.sin(a*3+paletteIndex);
+        const pebble=ball(world,.047,k%3?'#d1bea1':'#dfd1b7',
+          x+Math.cos(a)*(rx+.028)*rr,.255,
+          z+Math.sin(a)*(rz+.028)*rr);
+        pebble.scale.set(1.2,.24,.85);pebble.castShadow=false;
+      }
+      thicket(x,z,Math.min(rx,rz)*1.45,paletteIndex);
+      gardenElements+=10;
+    }
+    // Repeat only in the *perimeter*, leaving the bakery, bookshop,
+    // door thresholds, table, bench and pedestrian corridors untouched.
+    const beds=[
+      [7.19,8.38,.27,.37,2],[7.19,10.37,.28,.31,3],
+      [10.80,9.53,.28,.34,1],[10.78,7.73,.25,.28,4],
+      [7.83,8.15,.16,.22,0],[9.95,8.13,.17,.20,2],
+      [7.85,10.54,.18,.23,4],[9.90,10.59,.18,.23,1],
+      [8.03,9.77,.13,.21,3],[9.97,9.65,.13,.20,1]
+    ];
+    for(const [x,z,rx,rz,variant] of beds)gardenIsland(x,z,rx,rz,variant);
+    // Smaller lawn islands soften the outer borough blocks as well, without
+    // landing inside any home, river, street, or procedural event building.
+    const buildings=town.buildings(),props=town.props();
+    const obstacles=[...buildings.map(b=>[b.x+.5,b.y+.5,.78]),
+      ...props.filter(p=>p.kind==='tree').map(p=>[p.x,p.y,.42])];
+    for(let by of [3.2,4.7,8.1,9.8,12.4,15.2]){
+      for(let bx of [2.4,4.8,8.2,9.8,12.5,15.3]){
+        if(bx>=7&&bx<=11&&by>=7&&by<=11)continue;
+        if(by>=12.8&&by<=15.0)continue;
+        if(LINES.some(line=>Math.abs(bx-(line+.5))<.72||
+            Math.abs(by-(line+.5))<.72))continue;
+        if(obstacles.some(([ox,oz,r])=>Math.hypot(ox-bx,oz-by)<r+.22))continue;
+        gardenIsland(bx,by,.24,.29,Math.abs(Math.floor(bx*7+by))%5);
+      }
+    }
+    // Hand-set flagstones curve toward the courtyard. Keep both original
+    // clear walking lanes; the narrow small stones occupy their margins.
+    const stones=[
+      [8.14,8.74,.22,.16],[8.10,9.13,.23,.16],[8.10,9.53,.21,.15],
+      [9.88,8.71,.22,.17],[9.90,9.08,.24,.16],[9.88,9.46,.22,.16],
+      [8.78,10.34,.23,.17],[9.16,10.51,.23,.17],[9.52,10.73,.23,.16]
+    ];
+    for(let i=0;i<stones.length;i++){
+      const [x,z,w,d]=stones[i],r=rng(i+seed,749);
+      const slab=ball(world,.5,i%3?'#e4d4b8':'#f0e0c6',x,.221,z);
+      slab.scale.set(w*1.1,.043,d*1.1);slab.castShadow=false;
+      slab.rotation.y=(r-.5)*.20;
+    }
+    gardenElements+=stones.length;
+
+    // Two authentic cafe tables beside the shops, not at the scripted
+    // customers' destinations. Tiny stools, ceramic cups and planted barrels.
+    const cafeSet=(x,z,turn=0)=>{
+      const g=new THREE.Group();g.position.set(x,0,z);g.rotation.y=turn;world.add(g);
+      const pedestal=cylinder(g,.023,.04,.37,wood,0,.40,0);
+      const tabletop=cylinder(g,.26,.26,.05,'#d0a681',0,.605,0);
+      const edge=cylinder(g,.271,.271,.024,'#f1dbbb',0,.58,0);
+      for(const dx of [-.34,.34]){
+        cylinder(g,.022,.025,.31,wood,dx,.315,0);
+        const seat=cylinder(g,.14,.14,.043,'#b88466',dx,.48,0);
+        seat.castShadow=false;
+      }
+      const cup=cylinder(g,.041,.036,.052,'#fff4df',-.07,.66,.055);
+      const saucer=cylinder(g,.067,.067,.012,'#e7d1b8',-.07,.635,.055);
+      ball(g,.028,'#e7bd9c',.095,.65,-.04).scale.set(1,.56,1);
+      gardenElements+=9;
+    };
+    cafeSet(7.74,8.75,.25);
+    cafeSet(10.25,9.95,-.50);
+
+    // An original rose-covered arbour welcomes walkers from the south.
+    // Its opening aligns with the plaza, not any vehicle lane.
+    const arch=new THREE.Group();
+    arch.position.set(9.18,0,10.78);world.add(arch);
+    for(const dx of [-.41,.41]){
+      const post=cylinder(arch,.047,.057,1.18,'#9a7860',dx,.78,0);
+      box(arch,.17,.13,.19,sandstone,dx,.244,0);
+      box(arch,.11,.10,.13,'#f0dec5',dx,1.405,0);
+      for(let k=0;k<7;k++){
+        const a=k*1.35+dx,yy=.48+k*.12;
+        const foliage=ball(arch,.105,k%2?'#7da481':'#628e78',
+          dx+(dx<0?.03:-.03)+Math.sin(a)*.045,yy,.035);
+        foliage.scale.set(1.15,.58,.7);foliage.castShadow=false;
+        if(k%2===0){
+          const rose=ball(arch,.037,k%4?'#e9b4bb':'#f2d4b7',
+            dx+(dx<0?.04:-.04),yy+.06,.098);
+          rose.castShadow=false;
+        }
+      }
+    }
+    // Curved timber arch: geometry is one actual connected 3D beam.
+    const points=[];
+    for(let k=0;k<=16;k++){
+      const a=Math.PI-k*Math.PI/16;
+      points.push(new THREE.Vector3(Math.cos(a)*.42,1.19+Math.sin(a)*.39,0));
+    }
+    const archCurve=new THREE.CatmullRomCurve3(points);
+    object(arch,new THREE.TubeGeometry(archCurve,32,.051,6,false),wood,0,0,0,false);
+    for(let k=1;k<15;k++){
+      const a=Math.PI-k*Math.PI/16;
+      if(k%2)continue;
+      const leaf=ball(arch,.09,k%4?'#7fa989':'#90b38e',
+        Math.cos(a)*.42,1.2+Math.sin(a)*.39,.01);
+      leaf.scale.set(.9,.7,.8);leaf.castShadow=false;
+      if(k%4===0)ball(arch,.038,'#e9b2ba',
+        Math.cos(a)*.42,1.25+Math.sin(a)*.39,.087);
+    }
+    gardenElements+=38;
+
+    // Physically suspended festoons between four slim timber poles.
+    // Warm individual bulbs brighten at sunset without extra point lights.
+    const anchors=[[7.94,8.30],[10.08,8.30],[7.95,10.46],[10.05,10.45]];
+    for(const [x,z] of anchors){
+      const pole=cylinder(world,.024,.037,1.57,'#947b62',x,.99,z);
+      const foot=cylinder(world,.074,.084,.082,'#d5c2a5',x,.24,z);
+      pole.castShadow=false;foot.castShadow=false;
+    }
+    const candle=new THREE.MeshStandardMaterial({
+      color:'#ffebbd',emissive:'#ffc67f',emissiveIntensity:.36,
+      roughness:.38,metalness:0
+    });
+    const strings=[[anchors[0],anchors[1]],[anchors[2],anchors[3]],
+      [anchors[0],anchors[2]],[anchors[1],anchors[3]]];
+    for(let k=0;k<strings.length;k++){
+      const [a,b]=strings[k],x0=a[0],z0=a[1],x1=b[0],z1=b[1];
+      const points=[];
+      for(let j=0;j<=12;j++){
+        const t=j/12;
+        points.push(new THREE.Vector3(x0+(x1-x0)*t,
+          1.70-.20*Math.sin(t*Math.PI),z0+(z1-z0)*t));
+      }
+      const curve=new THREE.CatmullRomCurve3(points);
+      const wire=object(world,new THREE.TubeGeometry(curve,20,.008,3,false),
+        mat('#665b51'),0,0,0,false);
+      wire.castShadow=false;
+      for(let i=1;i<8;i++){
+        const t=i/8;
+        const x=x0+(x1-x0)*t,z=z0+(z1-z0)*t;
+        const y=1.70-.20*Math.sin(t*Math.PI);
+        const bulb=ball(world,.033,candle,x,y-.042,z);
+        bulb.castShadow=false;
+        festoonBulbs.push(bulb);
+      }
+    }
+    gardenElements+=44;
+  }
+
   function createGround(){
     // A generous matte studio table under the actual miniature slab.
     // Soft ambient contrast makes the scene read like a photographed model.
@@ -1224,7 +1426,8 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
     }
   }
   function rebuild(){
-    ambient.length = 0; plazaLights.length = 0; landmarkCount = 0;
+    ambient.length = 0; plazaLights.length = 0; festoonBulbs.length = 0;
+    gardenElements = 0; landmarkCount = 0;
     while(world.children.length)world.remove(world.children[0]);
     for(const [ref,obj] of actors){obj.group.parent?.remove(obj.group);}
     actors.clear();
@@ -1261,6 +1464,7 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
     }
     const ps=town.props();
     for(let i=0;i<ps.length;i++)smallProps(ps[i],i);
+    createStorybookVillage();
     worldSeed=town.debug().seed;worldBuildings=town.buildings();
     worldPropCount=ps.length;
     redrawCount++;
@@ -1505,6 +1709,7 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
     sun.color.set(tint('#ffe3b9','#efad8a',dusk));
     rim.color.set(tint('#c0dedb','#a8b6cb',dusk));
     for(const lantern of plazaLights)lantern.intensity=dark*7.2;
+    for(const bulb of festoonBulbs)bulb.material.emissiveIntensity=.32+dark*1.65;
     scene.background.set(tint('#dce9e1','#a6b5c5',dusk));
     scene.fog.color.copy(scene.background);
     renderer.toneMappingExposure=1.02-dark*.11;
@@ -1576,7 +1781,7 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
   renderer.domElement.addEventListener('webglcontextrestored',restored,false);
   const api={
     active:false,renderer,scene,camera,
-    getStats:()=>({frames,redrawCount,actors:actors.size,ambient:ambient.length,plazaLights:plazaLights.length,landmarks:landmarkCount,buildings:town.buildings().length,webgl:true,frozen}),
+    getStats:()=>({frames,redrawCount,actors:actors.size,ambient:ambient.length,plazaLights:plazaLights.length,festoonBulbs:festoonBulbs.length,gardenElements,landmarks:landmarkCount,buildings:town.buildings().length,webgl:true,frozen}),
     // A stable actual GPU-rendered frame for visual regression screenshots.
     // Unlike stop(), freeze does not switch to the Canvas fallback.
     freeze(){frozen=true;cancelAnimationFrame(raf);},
