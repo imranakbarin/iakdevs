@@ -106,7 +106,7 @@ assert.match(html,/toy-town-landmarks\.js\?v=7/,'the independent models are requ
 assert.match(html,/buildLandmark:landmarks\.buildLandmark/,
   'loader injects the authored model builder into the 3D simulation');
 assert.match(html,/toy-town\.js\?v=16/);
-assert.ok(html.indexOf('toy-town.js?v=15')<html.indexOf("import('three')"), 'classic fallback starts first');
+assert.ok(html.indexOf('toy-town.js?v=16')<html.indexOf("import('three')"), 'classic fallback starts first');
 assert.match(page,/toy-town\.html\?v=43&embed=1/);
 assert.match(fs.readFileSync(path.join(root,'assets/toy-town.js'),'utf8'),
   /targetX=clamp\(\.08,p\.x,17\.92\)/,
