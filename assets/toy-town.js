@@ -328,9 +328,9 @@ const ToyTown = (() => {
   function spawnNeighborhoodLife(hero,r){
     const x=hero.xa,y=hero.ya;
     const residents=[
-      spawnPerson(r,{x:x+1.70,y:y+2.12,d:3,lane:0,max:.28,
+      spawnPerson(r,{kind:'neighbor',x:x+1.70,y:y+2.12,d:3,lane:0,max:.28,
         communityResident:true,ph:r()*6,stopUntil:clock+2.4}),
-      spawnPerson(r,{x:x+2.35,y:y+2.10,d:3,lane:0,max:.31,
+      spawnPerson(r,{kind:'neighbor',x:x+2.35,y:y+2.10,d:3,lane:0,max:.31,
         communityResident:true,ph:r()*6,stopUntil:clock+5.8})
     ];
     for(const m of residents){m.intent='strolling';m.busy=false;}
