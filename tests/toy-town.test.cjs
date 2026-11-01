@@ -140,6 +140,33 @@ T.update(1/60);
 assert.equal(following.braking,true,
   'a moving vehicle exposes a brake-light intention when closing on traffic');
 
+// Persistent life should continue without an event, new button or teleport.
+// The two locals make independent visits, converge to chat, then separate.
+T.build(46112,'weather');
+const neighbors=T.movers().filter(m=>m.communityResident);
+const companion=T.movers().find(m=>m.companionDog);
+assert.equal(neighbors.length,2,'two persistent neighbors live in the plaza');
+assert.ok(companion&&companion.kind==='dog','a dog accompanies one of the locals');
+assert.equal(T.debug().communityEncounters,0,'new-day routines reset correctly');
+let furthestDog=0,met=false;
+for(let i=0;i<60*77;i++){
+  T.update(1/60);
+  const gap=Math.hypot(companion.x-neighbors[1].x,companion.y-neighbors[1].y);
+  furthestDog=Math.max(furthestDog,gap);
+  if(neighbors.every(m=>m.intent==='chat')){
+    met=true;
+    assert.ok(Math.hypot(neighbors[0].x-neighbors[1].x,
+      neighbors[0].y-neighbors[1].y)<.90,
+      'the pair meets in physical space, rather than telepathically');
+    assert.ok(neighbors.every(m=>m.attention),'conversation establishes eye contact');
+  }
+}
+assert.ok(T.debug().communityVisits>=2,'residents independently visit real destinations');
+assert.ok(T.debug().communityEncounters>=1&&met,'neighbors meet and talk in the square');
+assert.ok(furthestDog<2.2,'dog stays near its owner throughout the neighborhood routine');
+assert.ok(T.movers().every(m=>Number.isFinite(m.x+m.y)&&m.x>0&&m.y>0&&
+  m.x<18&&m.y<18),'coordinated motion respects the town bounds');
+
 
 // Canvas smoke: rich buildings, human poses and all event types must draw without errors.
 // The same camera frame reuses its static ground buffer until the world changes.
