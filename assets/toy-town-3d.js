@@ -45,7 +45,7 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
   // A painted studio reflection card gives glazed surfaces and roof pigments
   // one shared environment. This is generated locally: no remote textures,
   // high-memory HDR files or additional requests on the user's phone.
-  if(THREE.EquirectangularReflectionMapping!==undefined){
+  if(THREE.EquirectangularReflectionMapping!==undefined && !window.location?.search?.includes('noenv=1')){
     const c=document.createElement('canvas');c.width=512;c.height=256;
     const p=c.getContext('2d');
     const sky=p.createLinearGradient(0,0,0,256);
@@ -72,7 +72,7 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
   // and people, with only the distant upper and near lower frame softened.
   // The entire pass is optional; unrecognized WebGL drivers render directly.
   let film=null;
-  if(THREE.WebGLRenderTarget&&THREE.ShaderMaterial&&THREE.Vector2){
+  if(THREE.WebGLRenderTarget&&THREE.ShaderMaterial&&THREE.Vector2 && !window.location?.search?.includes('direct=1')){
     try{
       const target=new THREE.WebGLRenderTarget(1,1,{
         depthBuffer:false,stencilBuffer:false,
