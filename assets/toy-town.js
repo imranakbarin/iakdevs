@@ -112,19 +112,9 @@ const ToyTown = (() => {
   // A story shortened to a headline the town can shout.
   const headline = story => { const t = String(story).split(/[;:]|, (?:and|while|after|as) /)[0]; return t.length > 70 ? t.slice(0, t.lastIndexOf(' ', 68)) + '…' : t; };
   function themeFromNews(stories) { return newsThemes(stories, 1)[0] || null; }
-  const strip = html => String(html).replace(/<[^>]*>/g, '').replace(/&[a-z#0-9]+;/gi, ' ').replace(/\s+/g, ' ').trim();
-  async function fetchNews(date) {
-    const key = 'toy-town:news:' + date;
-    try { const c = JSON.parse(localStorage.getItem(key)); if (c) return c; } catch (_) {}
-    const [y, m, d] = date.split('-');
-    const ctl = typeof AbortController !== 'undefined' ? new AbortController() : null, timer = setTimeout(() => ctl && ctl.abort(), 4000);
-    try {
-      const res = await fetch(`https://api.wikimedia.org/feed/v1/wikipedia/en/featured/${y}/${m}/${d}`, ctl ? {signal: ctl.signal} : {});
-      const data = await res.json(), stories = (data.news || []).map(n => strip(n.story)).filter(Boolean);
-      try { localStorage.setItem(key, JSON.stringify(stories)); } catch (_) {}
-      return stories;
-    } catch (_) { return []; } finally { clearTimeout(timer); }
-  }
+  // News is now a separate publisher-attributed, freshness-checked feed.
+  // No Wikimedia one-shot feed, endless localStorage cache, or fabricated
+  // breaking-news events when RSS updates fail.
 
   /* ---------------- the town ---------------- */
   const PASTEL = ['#f6a6a0', '#f7c873', '#a8d8a0', '#9cc7ef', '#c9a6e8', '#f4b6d2', '#ffe08a', '#8fd3c9'];
@@ -1861,11 +1851,14 @@ const ToyTown = (() => {
   }
 
   /* ---------------- start ---------------- */
-  function setCard(list) {
-    const lead = list[0], short = t => t.length > 100 ? t.slice(0, 97) + '…' : t;
-    document.getElementById('date').textContent = new Date().toLocaleDateString(undefined, {weekday: 'short', day: 'numeric', month: 'short'});
-    document.getElementById('theme').textContent = `${lead.emoji} Today: ${lead.title}`;
-    document.getElementById('news').textContent = lead.story ? `Inspired by today's news: ${short(lead.story)}` + (list.length > 1 ? `  Also in town: ${list.slice(1).map(v => v.emoji + ' ' + v.title).join(', ')}.` : '') : 'A gentle little town, new every day.';
+  function setCard(list,linkedToNews=false) {
+    const lead = list[0];
+    document.getElementById('date').textContent = new Date().toLocaleDateString(undefined,
+      {weekday:'short',day:'numeric',month:'short'});
+    document.getElementById('theme').textContent = `${lead.emoji} ${lead.title}`;
+    document.getElementById('news').textContent = linkedToNews?
+      'A playful town scene inspired by a recent headline. Actual reporting is linked below.':
+      'Storybook city life · not a real news report.';
   }
   async function start() {
     layout();
@@ -1873,18 +1866,54 @@ const ToyTown = (() => {
     // "Fit" is always available when someone wants the whole city.
     cam.z = cam.tz = innerWidth < 700 ? 1.52 : 1.72;
     const h = location.hash.slice(1), random = h.startsWith('new');
-    day = today();
-    const daySeed = hash(+day.replace(/-/g, ''), 0x70e);
-    today_ = random ? [] : newsThemes(await fetchNews(day));
-    if (!today_.length) today_ = [VARIANTS[(random ? Math.random() * 1e9 | 0 : daySeed) % VARIANTS.length]];   // no usable story: the date (or chance) picks one
-    build(random ? (Math.random() * 1e9) | 0 : daySeed, today_[0].key);
+    day=today();
+    const daySeed=hash(+day.replace(/-/g,''),0x70e);
+    const service=typeof window!=='undefined'?window.ToyTownNews:null;
+    service?.init();
+    // The daily town always exists, even if publishers or GitHub are offline.
+    // Factual headlines and whimsical city events have separate labels.
+    const snapshot=!random&&service?await service.load():null;
+    const liveStories=snapshot?.stories||[];
+    const matched=random?[]:newsThemes(liveStories.map(item=>item.title));
+    const linkedToNews=matched.length>0;
+    today_=linkedToNews?matched:[
+      VARIANTS[((random?Math.random()*1e9|0:daySeed)>>>0)%VARIANTS.length]
+    ];
+    build(random?(Math.random()*1e9)|0:daySeed,today_[0].key);
     decorate(today_);
-    setCard(today_);
-    clock = 0; nextEvent = 1.5;
-    setTimeout(() => randomEvent(), 400);
-    setTimeout(() => startEvent(today_[0].variant), 3500);
+    setCard(today_,linkedToNews);
+    service?.paint(snapshot);
+    clock=0;nextEvent=1.5;
+    setTimeout(()=>randomEvent(),400);
+    setTimeout(()=>startEvent(today_[0].variant),3500);
     requestAnimationFrame(frame);
-    setTimeout(() => { const el = document.getElementById('hint'); if (el) el.style.opacity = '0'; }, 6000);
+    setTimeout(()=>{const el=document.getElementById('hint');if(el)el.style.opacity='0';},6000);
+    // Refresh independently of animation and rebuild on the next local day,
+    // instead of displaying yesterday's city and stories indefinitely.
+    if(service&&!random){
+      let fetching=false;
+      const refresh=async()=>{
+        if(fetching||document.hidden)return;
+        if(today()!==day){location.reload();return;}
+        fetching=true;
+        try{
+          const next=await service.load();
+          service.paint(next);
+          const selected=newsThemes((next.stories||[]).map(item=>item.title));
+          if(selected.length){
+            if(selected[0].story!==today_[0].story){
+              today_=selected;
+              setCard(today_,true);
+              startEvent(today_[0].variant); // update activity, never teleport the town
+            }else setCard(today_,true);
+          }else setCard(today_,false);
+        }finally{fetching=false;}
+      };
+      setInterval(refresh,15*60*1000);
+      document.addEventListener('visibilitychange',()=>{
+        if(!document.hidden)refresh();
+      });
+    }
   }
   // A tap pokes the town: something happens right there.
   // Inverse isometric projection used by both pokes and gestures.

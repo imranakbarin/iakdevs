@@ -2193,7 +2193,7 @@ modeBtn.onchange=()=>{
  mushroomMotion(mushroom&&playing);
  document.body.classList.toggle('pip-mode',pip);
  document.body.classList.toggle('town-mode',town);
- if(town&&!townFrame.getAttribute('src'))townFrame.src='toy-town.html?v=47&embed=1';
+ if(town&&!townFrame.getAttribute('src'))townFrame.src='toy-town.html?v=50&embed=1';
  townMotion(town&&playing);
  if(pip&&!pipFrame.getAttribute('src'))pipFrame.src='pip-run.html'+(pipShared?'#r='+pipShared:'');
  pipMotion(pip&&playing);if(pip)setTimeout(()=>pipFrame.contentWindow?.document.getElementById('game')?.focus(),50);

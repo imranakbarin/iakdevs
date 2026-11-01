@@ -1456,6 +1456,80 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
       }
     }
     gardenElements+=30;
+    // Market-hour rhythm: visible color and motion near the bakery and
+    // bookshop, without cluttering the central walking routes.
+    const canopyColors=['#de7966','#398f8b'];
+    for(let i=0;i<2;i++){
+      const x=i?10.23:7.75,z=i?9.95:8.75;
+      const umbrella=new THREE.Group();umbrella.position.set(x,0,z);
+      world.add(umbrella);
+      cylinder(umbrella,.022,.026,.67,'#94755c',0,.72,0);
+      const fabric=object(umbrella,new THREE.ConeGeometry(.43,.19,10),
+        mat(canopyColors[i],.83),0,1.15,0,false);
+      for(let k=0;k<10;k++){
+        const a=k*TAU/10;
+        const trim=ball(umbrella,.058,k%2?'#ffe1a6':'#fff3dc',
+          Math.cos(a)*.418,1.057,Math.sin(a)*.418);
+        trim.scale.set(1,.56,1);trim.castShadow=false;
+      }
+      ambient.push({kind:'umbrella',mesh:umbrella,phase:i*2.3});
+    }
+    // Colorful bunting is tied to the actual festoon supports; it does
+    // not hang across a vehicle lane or move independently of its anchor.
+    const buntingColors=['#ed816d','#f3bf62','#5ca59a','#b78eb8','#f2dfb8'];
+    for(const z of [9.60,10.58])for(let i=0;i<15;i++){
+      const x=7.67+i*.19;
+      const flag=new THREE.Group();flag.position.set(x,1.38-.12*
+        Math.sin((i+.5)/15*Math.PI),z);world.add(flag);
+      const fabric=box(flag,.087,.13,.012,buntingColors[(i+Math.round(z*10))%5],0,-.068,0);
+      fabric.rotation.z=.05*(i%3-1);
+      ambient.push({kind:'bunting',mesh:flag,phase:i*.36+z});
+    }
+    // Two hand-built flower wagons make the shops feel active even when
+    // no visitor is currently standing near their counter.
+    for(const [x,z,c] of [[7.25,7.91,'#de806d'],[10.70,8.35,'#5b9990']]){
+      const cart=new THREE.Group();cart.position.set(x,.21,z);world.add(cart);
+      box(cart,.35,.18,.24,c,0,.22,0);
+      box(cart,.38,.03,.28,'#f6dcac',0,.33,0);
+      for(const side of [-1,1])for(const dx of [-.12,.12]){
+        const wheel=cylinder(cart,.062,.062,.033,'#695b52',dx,.106,side*.136);
+        wheel.rotation.x=Math.PI/2;
+      }
+      for(let k=0;k<9;k++){
+        const xx=(k%3-1)*.10,zz=(Math.floor(k/3)-1)*.075;
+        const leaf=ball(cart,.046,'#619879',xx,.395,zz);
+        leaf.scale.set(.75,1.25,.80);
+        ball(cart,.035,['#ea7c71','#f4cc70','#ed9ac2'][k%3],
+          xx,.437,zz+.016).castShadow=false;
+      }
+    }
+    // Pinwheels and tethered balloons give the village a persistent
+    // slow heartbeat that is actually observable on a phone close-up.
+    for(const [x,z,phase] of [[7.29,9.12,.2],[10.64,10.02,1.8]]){
+      cylinder(world,.013,.016,.65,'#95775f',x,.55,z);
+      const rotor=new THREE.Group();rotor.position.set(x,.87,z);world.add(rotor);
+      for(let k=0;k<4;k++){
+        const blade=box(rotor,.085,.18,.014,
+          buntingColors[(k+Math.floor(phase))%5],0,.113,0);
+        blade.rotation.z=k*Math.PI/2+.27;
+        const bladeArm=new THREE.Group();
+        rotor.remove(blade);bladeArm.rotation.z=k*Math.PI/2;
+        blade.rotation.z=.25;bladeArm.add(blade);rotor.add(bladeArm);
+      }
+      ball(rotor,.031,'#f9dc92',0,0,.019);
+      ambient.push({kind:'pinwheel',mesh:rotor,phase});
+    }
+    for(const [x,z,phase,color] of [
+      [7.48,8.24,.3,'#e98583'],[10.55,8.30,1.5,'#f0c16b'],
+      [10.53,10.51,2.4,'#7ec4ba']
+    ]){
+      const g=new THREE.Group();g.position.set(x,.20,z);world.add(g);
+      cylinder(g,.006,.006,.74,'#b9a78b',0,.46,0).castShadow=false;
+      const balloon=ball(g,.105,color,0,1.06,0);
+      balloon.scale.set(.81,1.19,.84);balloon.castShadow=false;
+      ambient.push({kind:'balloon',mesh:g,phase});
+    }
+    gardenElements+=86;
   }
 
   // Painted landscape composition: irregular planted contours and natural
@@ -2617,6 +2691,15 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
         const pulse=.88+.16*Math.sin(time*1.1+a.phase);
         a.mesh.scale.set(pulse,pulse,pulse);
         a.mesh.position.y=.159+.004*Math.sin(time*.85+a.phase);
+      } else if(a.kind==='umbrella'){
+        a.mesh.rotation.y=.055*Math.sin(time*.28+a.phase);
+      } else if(a.kind==='bunting'){
+        a.mesh.rotation.x=.11*Math.sin(time*1.5+a.phase);
+      } else if(a.kind==='pinwheel'){
+        a.mesh.rotation.z=time*.85+a.phase;
+      } else if(a.kind==='balloon'){
+        a.mesh.rotation.z=.065*Math.sin(time*.95+a.phase);
+        a.mesh.rotation.x=.065*Math.cos(time*.72+a.phase);
       }
     }
   }
