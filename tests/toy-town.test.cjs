@@ -114,6 +114,32 @@ walker.max = .6; cyclist.max = .65;
 for (let i = 0; i < 60 * 25; i++) T.update(1 / 60);
 assert.ok(walker.travel > parkedDistance[0], 'walking advances the stride clock');
 assert.ok(cyclist.travel > parkedDistance[1], 'cycling advances the pedal clock');
+ 
+// Perception: a free walker pauses at a nearby shop and actually looks at it.
+T.build(52045,'market');
+const curious=T.movers().find(m=>m.type==='person'&&!m.kind);
+const storefront=T.buildings().find(b=>b.kind==='shop');
+assert.ok(curious&&storefront,'behavior test has a walker and a destination');
+curious.x=storefront.x+.5;curious.y=storefront.y+1.38;
+curious.d=0;curious.max=.53;curious.stopUntil=0;curious.path=null;
+curious.nextNotice=0;curious.observeUntil=0;
+T.update(1/60);
+assert.equal(curious.intent,'browse','nearby storefront triggers a purposeful stop');
+assert.ok(curious.attention&&Math.abs(curious.attention.x-storefront.x-.5)<.01,
+  'shop browsing has a real look-at destination');
+assert.equal(curious.v,0,'a browsing pedestrian stops their footsteps');
+for(let i=0;i<60*5;i++)T.update(1/60);
+assert.notEqual(curious.intent,'browse','a pause is temporary; walkers resume their journeys');
+// A following driver brakes for a stationary vehicle without phasing through it.
+const drivers=T.movers().filter(m=>m.type==='car'&&m.kind!=='bike');
+const following=drivers[0],leading=drivers[1];
+assert.ok(following&&leading,'reactive traffic test has at least two vehicles');
+Object.assign(following,{x:3,y:1.5,d:0,lane:.20,v:.7,max:1.3,path:null});
+Object.assign(leading,{x:3.31,y:1.5,d:0,lane:.20,v:0,max:1.1,path:null});
+T.update(1/60);
+assert.equal(following.braking,true,
+  'a moving vehicle exposes a brake-light intention when closing on traffic');
+
 
 // Canvas smoke: rich buildings, human poses and all event types must draw without errors.
 // The same camera frame reuses its static ground buffer until the world changes.
