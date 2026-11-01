@@ -16,6 +16,22 @@ assert.match(landmarkCode,/function honeyCottage\(/);
 assert.match(landmarkCode,/function roundedFootprint\(/,'unique facades use extruded footprint geometry');
 assert.match(landmarkCode,/function volumeRoof\(/,'bespoke roofs are actual modeled shells');
 assert.match(landmarkCode,/function arch\(/,'landmark doors have hollow shaped frames');
+assert.match(landmarkCode,/function crossGable\(/,
+  'independently sculpted front cross gables change the five landmark rooflines');
+assert.match(landmarkCode,/function shapedBay\(/,
+  'both shops gain angled multi-panel glass bays');
+assert.match(landmarkCode,/function timberFront\(/,
+  'storybook cottages include dimensional structural framing');
+assert.match(landmarkCode,/function masonryStripes\(/,
+  'shop walls share continuous dimensional stone courses');
+assert.match(landmarkCode,/function lanternBracket\(/,
+  'landmark entrance lanterns are connected to their facades');
+assert.match(landmarkCode,/const wing=new T.Group\(\);/,
+  'rose cottage has a separately modeled and projecting asymmetric wing');
+assert.match(landmarkCode,/volumeRoof\(dormer/,
+  'roof dormers use curved three-dimensional gable shells');
+assert.doesNotMatch(landmarkCode,/const cap=block\(g,\.29,\.047,\.26/,
+  'old flat dormer tops are removed');
 assert.match(landmarkCode,/const shadowTex=/,'landmarks have baked foundation occlusion');
 assert.match(landmarkCode,/createRadialGradient/,'grounding uses a soft, feathered shadow');
 assert.match(landmarkCode,/toneMapped:false/,'sign lettering is legible without harsh tone mapping');
@@ -47,13 +63,13 @@ assert.match(moduleCode,/eye.scale.y=blink/,'eyelids blink without a separate an
 assert.match(html,/type="importmap"/);
 assert.match(html,/three@0\.187\.0\/build\/three\.module\.js/);
 assert.match(html,/three@0\.187\.0\/examples\/jsm\//);
-assert.match(html,/toy-town-3d\.js\?v=16/);
-assert.match(html,/toy-town-landmarks\.js\?v=2/,'the independent models are requested alongside Three');
+assert.match(html,/toy-town-3d\.js\?v=17/);
+assert.match(html,/toy-town-landmarks\.js\?v=3/,'the independent models are requested alongside Three');
 assert.match(html,/buildLandmark:landmarks\.buildLandmark/,
   'loader injects the authored model builder into the 3D simulation');
 assert.match(html,/toy-town\.js\?v=14/);
 assert.ok(html.indexOf('toy-town.js?v=14')<html.indexOf("import('three')"), 'classic fallback starts first');
-assert.match(page,/toy-town\.html\?v=29&embed=1/);
+assert.match(page,/toy-town\.html\?v=30&embed=1/);
 assert.match(moduleCode,/export function mountToyTown3D/);
 assert.match(moduleCode,/new THREE\.WebGLRenderer/);
 assert.match(moduleCode,/window\.ToyTown3D=api/);
@@ -219,7 +235,9 @@ assert.match(moduleCode,/rounded suspended scallops/i,'shop awnings use dimensio
 assert.match(moduleCode,/roots taper out into the lawn/i,'tree trunks have naturally grounded roots');
 assert.match(moduleCode,/grassMaterial\('#b9cba7',10\)/,'land slab has layered grass instead of a flat green box');
 assert.match(moduleCode,/paver.rotation.y=/,'stone paths have irregular handmade placement');
-assert.match(moduleCode,/23-closeness\*10/,'close zoom lowers the eye to show character faces');
+assert.match(moduleCode,/23-closeness\*12\.5/,'close zoom lowers the eye to show character faces');
+assert.match(moduleCode,/if\(!b.hero && style===0/,
+  'ordinary houses have occasional attached side wings for skyline variety');
 assert.match(moduleCode,/function archedInset\(/,'doors/windows have dimensional arches');
 assert.match(moduleCode,/function turret\(/,'one hero cottage has its own curved tower');
 assert.match(moduleCode,/function sideCottageWing\(/,'another hero cottage has a secondary roof and wing');
