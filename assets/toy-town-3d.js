@@ -18,7 +18,7 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
   host.appendChild(renderer.domElement);
   const scene = new THREE.Scene();
   scene.background = new THREE.Color('#dce9e1');
-  scene.fog = new THREE.Fog('#dce9e1', 27, 66);
+  scene.fog = new THREE.Fog('#dce9e1', 24, 62);
   const camera = new THREE.OrthographicCamera(-15, 15, 15, -15, .1, 120);
   const hemisphere = new THREE.HemisphereLight('#fff5df', '#8b9f9c', 1.18);
   scene.add(hemisphere);
@@ -55,7 +55,7 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
   });
   const world = new THREE.Group(); scene.add(world);
   const actors = new Map(), ambient = [], plazaLights = [], festoonBulbs = [];
-  let gardenElements = 0;
+  let gardenElements = 0, woodlandShapes = 0, terrainContours = 0;
   let worldSeed = null, worldBuildings = null, worldPropCount = 0, sceneTime = 0, landmarkCount = 0;
   let stopped = false, frozen = false, raf = 0, frames = 0, redrawCount = 0, lastSize = '', lastFrameAt = 0;
   const TAU = Math.PI * 2, LINES = [1,6,11,16];
@@ -942,57 +942,91 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
     box(world,.65,.49,.07,'#6a6870',x,.32,z+.41);
     sign(world,'FIRE',x,.85,z+.46,.55,'#9b4339');
   }
+  // Four authored silhouettes replace the previous repeating broccoli crowns.
+  // The geometry stays inexpensive: wide, interlocking ellipsoids with exposed
+  // branching and planted, shadowed root flares; no leaf particle systems.
   function tree(p,i){
     const x=p.x,z=p.y,sc=p.s||1;
     const g=new THREE.Group();g.position.set(x,0,z);world.add(g);g.scale.setScalar(sc);
-    groundingShadow(x,z,.96*sc,.90*sc,.166);
-    const trunk=cylinder(g,.058,.087,.56,'#866e53',0,.30,0);
-    trunk.rotation.z=(rng(i,27)-.5)*.10;
+    g.userData.woodlandSilhouette=true;
+    const family=i%13===0?'cypress':i%13===6?'willow':i%11===0?'orchard':'oak';
+    const mist=THREE.MathUtils.clamp((9-z)/17,0,.28);
+    const foliage=(color)=>mat(tint(color,'#d4dbc4',mist));
+    groundingShadow(x,z,1.15*sc,1.04*sc,.166);
+    const height=family==='cypress'?.69:family==='willow'?.70:.66;
+    const trunk=cylinder(g,.044,.080,height,'#826b54',0,height*.51,0);
+    trunk.rotation.z=(rng(i,27)-.5)*.13;
     // Roots taper out into the lawn rather than meeting it as a cut cylinder.
-    for(let n=0;n<3;n++){
-      const a=n*TAU/3+.5;
-      const root=ball(g,.09,'#856a50',Math.cos(a)*.08,.065,Math.sin(a)*.08);
-      root.scale.set(1.20,.29,.80);
+    for(let n=0;n<4;n++){
+      const a=(n+.2)*TAU/4+(rng(i,29)-.5)*.2;
+      const root=ball(g,.086,'#8d7458',
+        Math.cos(a)*.083,.063,Math.sin(a)*.079);
+      root.scale.set(1.31,.28,.68);root.rotation.y=a;
+      root.castShadow=false;
     }
-    const branchTint=mat('#83694f');
-    for(let k=0;k<3;k++){
-      const a=k*TAU/3+.5;
-      const stem=cylinder(g,.019,.036,.40,branchTint,Math.cos(a)*.10,.54,Math.sin(a)*.10);
-      stem.rotation.z=Math.cos(a)*.53;stem.rotation.x=Math.sin(a)*.53;
-    }
-    if(i%7===0) {
-      // Slender cypress interspersed with the broader miniature shade trees:
-      // layered tapering foliage and exposed slender trunk.
-      for(let tier=0;tier<4;tier++) {
-        const layer=ball(g,.25-tier*.042,['#5b8c72','#649879','#6fa486','#88b296'][tier],
-          0,.57+tier*.17,0);
-        layer.scale.set(.74,.78,.75);
+    if(family==='cypress'){
+      // Slender Tuscan spires are tapered through four overlapping ellipsoids.
+      for(let k=0;k<4;k++){
+        const radius=.27-k*.051;
+        const leaf=object(g,geo('sphere',radius),foliage(
+          ['#4d846e','#628f78','#74a186','#8cb39a'][k]),0,
+          .66+k*.165,0,false);
+        leaf.scale.set(.67,.83,.72);
       }
+      woodlandShapes++;
       return;
     }
-    const blossom=i%11===0;
-    // One continuous asymmetric crown and smaller leaf clusters. Eight equal
-    // spheres previously resembled stacked broccoli balls in the screenshot.
-    const crown=ball(g,.35,blossom?'#adc29b':'#81ae91',0,.86,0);
-    crown.scale.set(1.10,.84,1.06);
-    crown.rotation.y=rng(i,312)*TAU;
-    for(let k=0;k<11;k++){
-      const a=k*TAU/11+.34,rad=.20+(rng(i,k+51)-.5)*.10;
-      const height=.84+(rng(i,k+29)-.5)*.22;
-      const col=blossom?['#deb6bb','#edcbd0','#cda8b9','#e6c1c8','#d8b5b5'][k%5]:
-        ['#78a98a','#93bb99','#a0c5a1','#6e9f85','#afd0aa'][k%5];
-      const puff=ball(g,.12+rng(i,k+9)*.075,col,
-        Math.cos(a)*rad,height,Math.sin(a)*rad);
-      puff.scale.set(1.20,.62+(k%3)*.08,1.10);
-      puff.rotation.set((rng(i,k+69)-.5)*.55,rng(i,k+73)*TAU,
-        (rng(i,k+86)-.5)*.45);
-      if(k%2===0){
-        const posX=Math.cos(a)*(rad+.06),posZ=Math.sin(a)*(rad+.04);
-        for(let q=0;q<3;q++)
-          ball(g,.033,blossom?'#f7dfde':'#bfd5a4',
-            posX+(q-1)*.05,height+.10+(q%2)*.025,posZ);
+    const shade=family==='orchard'?'#8b9f80':family==='willow'?'#679981':'#5a8978';
+    // Dark undercanopy creates a continuous shaded mass; five unequal outer
+    // lobes build a leaf silhouette instead of many equally sized balls.
+    const under=object(g,geo('sphere',.38),foliage(shade),
+      .025,.84,-.016,false);
+    under.scale.set(1.18,.49,1.04);
+    const branching=[[-.19,.73,-.02,.46],[.19,.72,.02,-.46],[0,.77,.15,.14]];
+    for(const [bx,by,bz,twist] of branching){
+      const stem=cylinder(g,.018,.032,.43,'#806b54',bx*.49,by,bz*.55);
+      stem.rotation.z=twist;stem.castShadow=false;
+    }
+    const isWeeping=family==='willow';
+    const lobes=isWeeping?[
+      [-.25,.86,-.03,.34,.32,.32], [.17,.99,-.11,.40,.27,.35],
+      [.06,.79,.20,.38,.26,.32],[-.05,1.12,.01,.31,.26,.30]
+    ]:[
+      [-.28,.92,-.06,.36,.29,.34],[.23,.97,-.13,.39,.31,.31],
+      [.10,.90,.25,.38,.29,.37],[-.10,1.15,.03,.34,.28,.33],
+      [.01,.84,-.30,.28,.25,.29]
+    ];
+    for(let k=0;k<lobes.length;k++){
+      const [xx,yy,zz,rx,ry,rz]=lobes[k];
+      const col=family==='orchard'?
+        ['#b9c69b','#d8c6b5','#e4c6bf','#c5bea4','#d5b5ae'][k%5]:
+        isWeeping?['#719c87','#8caf94','#9dbfa2','#78a88c'][k%4]:
+        ['#79a58c','#96b79a','#a3c29d','#87ac93','#6f9d87'][k%5];
+      const leaf=object(g,geo('sphere',.40),foliage(col),xx,yy,zz,false);
+      leaf.scale.set(rx/.4,ry/.4,rz/.4);
+      leaf.rotation.y=(rng(i,k+52)-.5)*.55;
+    }
+    if(isWeeping){
+      // Cascading willow fronds soften the repeated round-crown profile.
+      for(let k=0;k<8;k++){
+        const a=k*TAU/8+.17,rad=.29+(k%3)*.037;
+        const frond=object(g,geo('sphere',.20),
+          foliage(k%2?'#80ab8e':'#a2be9f'),
+          Math.cos(a)*rad,.67+(k%2)*.10,Math.sin(a)*rad,false);
+        frond.scale.set(.33,1.14,.30);
+        frond.rotation.z=Math.cos(a)*.19;
+      }
+    }else if(family==='orchard'){
+      // Subtle petals live inside the crown, not hovering in a ring.
+      for(let k=0;k<8;k++){
+        const a=k*2.4,rad=.18+.11*rng(i,k+69);
+        const petal=ball(g,.034,k%2?'#f0d9cf':'#ecd4cb',
+          Math.cos(a)*rad,1.05+(rng(i,k+47)-.5)*.25,
+          Math.sin(a)*rad+.11);
+        petal.scale.set(1.25,.50,.90);petal.castShadow=false;
       }
     }
+    woodlandShapes++;
   }
   function littleFlowers(x,z,i){
     for(let n=0;n<3;n++){
@@ -1292,6 +1326,115 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
     gardenElements+=30;
   }
 
+  // Painted landscape composition: irregular planted contours and natural
+  // hedgerow ribbons are fitted into *clear lots*, not onto streets, buildings,
+  // theme events, or scripted walking destinations. This is a visual-only
+  // terrain layer; the simulation's 18x18 road graph stays untouched.
+  function createLandscapeComposition(){
+    const occupied=[
+      ...town.buildings().map(b=>[b.x+.5,b.y+.5,b.kind==='site'?1.34:.81]),
+      ...town.props().filter(p=>!['flowers','duck'].includes(p.kind))
+        .map(p=>[p.x,p.y,p.kind==='tree'?.46:.61])
+    ];
+    const roadClear=(x,z,margin=.81)=>
+      !LINES.some(n=>Math.abs(x-(n+.5))<margin||
+        Math.abs(z-(n+.5))<margin);
+    const clear=(x,z,r)=>
+      x>=2.18&&x<=15.82&&z>=2.18&&z<=12.56&&
+      roadClear(x,z,.81+r*.25)&&
+      !(x>6.9&&x<11.2&&z>6.9&&z<11.2)&&
+      occupied.every(([ox,oz,size])=>Math.hypot(x-ox,z-oz)>size+r);
+    const leafMat=[
+      grassMaterial('#a1bb96'),grassMaterial('#aec6a3'),
+      grassMaterial('#b6c7a0'),grassMaterial('#91b39a')
+    ];
+    const raisedEarth=[
+      mat('#8fa68d'),mat('#95a98e'),mat('#9daf90'),mat('#91aa94')
+    ];
+    // Create one low, rounded natural contour from a wavy closed outline.
+    // The shallow bevel visibly connects the upper turf to the flat lawn.
+    function contour(x,z,rx,rz,variant){
+      const shape=new THREE.Shape();
+      for(let i=0;i<=24;i++){
+        const a=i*TAU/24;
+        const bend=1+.085*Math.sin(a*3+variant*1.8)+
+          .055*Math.cos(a*5-variant);
+        const px=rx*Math.cos(a)*bend,pz=rz*Math.sin(a)*bend;
+        if(i===0)shape.moveTo(px,pz);else shape.lineTo(px,pz);
+      }
+      shape.closePath();
+      const turf=object(world,new THREE.ExtrudeGeometry(shape,{
+        depth:.055,steps:1,bevelEnabled:true,bevelSize:.028,
+        bevelThickness:.014,bevelSegments:2
+      }),raisedEarth[variant%4],x,.155,z,false);
+      turf.rotation.x=-Math.PI/2;turf.receiveShadow=true;
+      turf.userData.landscapeContour=true;
+      // Two very flat foliage pillows blend the top into the turf; exposed
+      // soil remains visible at the outer scalloped boundary.
+      for(let i=0;i<2;i++){
+        const leaf=object(world,geo('sphere',.45),
+          leafMat[(i+variant)%4],x+(i?rx*.24:-rx*.22),
+          .205,z+(i?rz*.17:-rz*.21),false);
+        leaf.scale.set(rx*.70,.067,rz*.66);
+      }
+      for(let i=0;i<4;i++){
+        const a=i*TAU/4+.24,rr=.58+.14*rng(i,variant+91);
+        const xx=x+Math.cos(a)*rx*rr,zz=z+Math.sin(a)*rz*rr;
+        const grass=object(world,geo('sphere',.14),
+          mat(i%2?'#779d7f':'#8cae88'),xx,.264,zz,false);
+        grass.scale.set(.84,.39,.73);
+        if((i+variant)%3===0){
+          const flower=ball(world,.024,'#e8cfb9',xx,.319,zz);
+          flower.scale.set(1.2,.65,.9);flower.castShadow=false;
+        }
+      }
+      terrainContours++;
+    }
+    // Open neighborhood sites become small flowing gardens rather than
+    // isolated square parcels. Constrain size so road shoulders stay clear.
+    const blocks=[
+      [2,2],[7,2],[12,2],[2,7],[12,7],[2,12],[7,12],[12,12]
+    ];
+    for(let bi=0;bi<blocks.length;bi++){
+      const [bx,bz]=blocks[bi];
+      const choices=[
+        [bx+.88,bz+.85],[bx+2.04,bz+1.04],[bx+3.02,bz+2.78],
+        [bx+1.04,bz+2.86],[bx+2.78,bz+1.98],[bx+2.09,bz+3.02]
+      ];
+      let placed=0;
+      for(let k=0;k<choices.length;k++){
+        if(placed>=3)break;
+        const [x,z]=choices[(k+bi)%choices.length];
+        const rx=.35+.13*rng(bi,k+3),rz=.40+.12*rng(bi+15,k+3);
+        if(!clear(x,z,Math.max(rx,rz)+.10))continue;
+        contour(x,z,rx,rz,(bi+k)%4);
+        placed++;
+      }
+    }
+    // Meandering garden-edge hedges are intentionally broken into small
+    // separate runs; the road itself remains the original straight,
+    // predictable simulation lane. Irregular greenery hides hard curb seams.
+    const fringes=[
+      [2.25,5.08,4.93,5.08],[7.30,5.08,10.78,5.08],
+      [12.25,5.08,15.78,5.08],[2.25,10.92,5.09,10.92],
+      [12.25,10.92,15.78,10.92],[2.25,12.48,5.08,12.48]
+    ];
+    for(let j=0;j<fringes.length;j++){
+      const [ax,az,bx,bz]=fringes[j],samples=9;
+      let segment=0;
+      for(let k=0;k<samples;k++){
+        const t=k/(samples-1),x=ax+(bx-ax)*t;
+        const z=az+(bz-az)*t+.08*Math.sin(t*TAU+j);
+        if(!clear(x,z,.22))continue;
+        const hedge=object(world,geo('sphere',.22),
+          mat((j+k)%3===0?'#83aa89':'#70977f'),x,.236,z,false);
+        hedge.scale.set(.95,.38,.58);
+        segment++;
+      }
+      if(segment>1)terrainContours++;
+    }
+  }
+
   function createGround(){
     // A generous matte studio table under the actual miniature slab.
     // Soft ambient contrast makes the scene read like a photographed model.
@@ -1440,11 +1583,12 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
   }
   function rebuild(){
     ambient.length = 0; plazaLights.length = 0; festoonBulbs.length = 0;
-    gardenElements = 0; landmarkCount = 0;
+    gardenElements = 0; woodlandShapes = 0; terrainContours = 0; landmarkCount = 0;
     while(world.children.length)world.remove(world.children[0]);
     for(const [ref,obj] of actors){obj.group.parent?.remove(obj.group);}
     actors.clear();
     createGround();
+    createLandscapeComposition();
     for(const b of town.buildings()){
       // All structures share the same ground-contact light: five bespoke
       // landmarks should not seem pasted onto brighter pavement than houses.
@@ -1796,7 +1940,7 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
   renderer.domElement.addEventListener('webglcontextrestored',restored,false);
   const api={
     active:false,renderer,scene,camera,
-    getStats:()=>({frames,redrawCount,actors:actors.size,ambient:ambient.length,plazaLights:plazaLights.length,festoonBulbs:festoonBulbs.length,gardenElements,landmarks:landmarkCount,buildings:town.buildings().length,webgl:true,frozen}),
+    getStats:()=>({frames,redrawCount,actors:actors.size,ambient:ambient.length,plazaLights:plazaLights.length,festoonBulbs:festoonBulbs.length,gardenElements,woodlandShapes,terrainContours,landmarks:landmarkCount,buildings:town.buildings().length,webgl:true,frozen}),
     // A stable actual GPU-rendered frame for visual regression screenshots.
     // Unlike stop(), freeze does not switch to the Canvas fallback.
     freeze(){frozen=true;cancelAnimationFrame(raf);},
