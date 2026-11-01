@@ -72,7 +72,11 @@ async function main(){
         {timeout:50000});
       await page.waitForFunction(()=>document.getElementById('news-status')?.textContent
         .includes('HEADLINES ·'),{timeout:10000});
-      await page.locator('#news-toggle').click({noWaitAfter:true,timeout:10000});
+      // Software SwiftShader can monopolize Chromium's input pipeline.
+      // Execute the actual button handler in-page, then verify its state.
+      await page.evaluate(()=>document.getElementById('news-toggle').click());
+      const isOpen=await page.locator('#news-toggle').getAttribute('aria-expanded');
+      if(isOpen!=='true')throw Error('Headline drawer failed to open');
       const verifiedLinks=await page.locator('#headlines a[href^="https://"]').count();
       if(verifiedLinks!==3)throw Error('Factual headlines must include real publisher links: '+
         verifiedLinks);
