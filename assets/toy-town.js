@@ -1014,7 +1014,7 @@ const ToyTown = (() => {
       const N_ = (news.name || '').toUpperCase(), BAN = {sports: N_ ? `GO ${N_}!` : 'GO TEAM!', space: N_ ? `${N_} 🚀` : 'TO THE STARS!', election: N_ ? `${N_}: VOTE!` : 'VOTE!', festival: N_ ? `HAPPY ${N_}!` : 'HAPPY DAY!', awards: N_ ? `★ ${N_} ★` : '★ BRAVO ★', tech: N_ ? `${N_} ✨` : 'THE FUTURE!', animals: N_ ? `WELCOME, ${N_}!` : 'HELLO, ANIMALS!', market: N_ ? `${N_} ↑↓` : 'BUY! SELL!', science: N_ ? `${N_} 🧪` : 'EUREKA!'};
       e.banner = BAN[news.key] || news.title.toUpperCase();
       if (news.name) for (const m of movers.filter(m => m.type === 'person' && !m.kind).slice(0, 4)) { m.sign = news.name.split(' ')[0].toUpperCase().slice(0, 10); setTimeout(() => { m.sign = null; }, 20000); }
-      if (Math.random() < .5) tick(`Today's news, toy-sized: ${headline(news.story)}`);
+      if (Math.random() < .5) tick('The village is reacting to a recent headline. The scene is fictional.');
     }
     e.name = name; e.t = 0; events.push(e); feature(e, name in VARIANT_EVENTS || name in THEME_EVENTS ? 11 : 7); return e;
   }
@@ -1055,6 +1055,9 @@ const ToyTown = (() => {
       // the road, and listeners walk to the performance before dancing.
       const hb=town.blocks.find(b=>b.hero);
       if(!hb)return null;
+      // The same event can be chosen by the ordinary town director or
+      // the regular concert schedule. Count it at creation, exactly once.
+      streetPerformances++;
       const x=hb.xa+1.84,y=hb.ya+2.83;
       const musician=spawnPerson(Math.random,{
         kind:'busker',x:hb.xa+1.05,y:hb.ya+3.68,
@@ -1984,8 +1987,7 @@ const ToyTown = (() => {
       // only when there is room in the event budget. This is visible civic
       // life, not a burst of extra permanent residents.
       if(events.length<5&&!events.some(e=>e.streetConcert)){
-        const concert=startEvent('busker');
-        if(concert)streetPerformances++;
+        startEvent('busker');
       }
       nextPerformance=clock+88;
     }
