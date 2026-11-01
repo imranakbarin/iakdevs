@@ -53,20 +53,10 @@ assert.match(landmarkCode,/BOOK NOOK/,'bookshop sign is compact enough for mobil
 assert.match(moduleCode,/const rim=new THREE.DirectionalLight/,'sculpted character surfaces have shadow-free fill');
 assert.match(moduleCode,/EquirectangularReflectionMapping/,
   'window reflections and painted surfaces share a warm studio sky');
-assert.match(moduleCode,/THREE\.WebGLRenderTarget&&THREE\.ShaderMaterial/,
-  'filmic tilt-shift finish is optional when WebGL features are unsupported');
-assert.match(moduleCode,/film\.target\.setSize\(rw,rh\)/,
-  'the photographic render target follows mobile and desktop resize');
-assert.match(moduleCode,/#include <tonemapping_fragment>/,
-  'offscreen image receives the same ACES tone mapping as normal WebGL');
-assert.match(moduleCode,/toneMapped:true/,
-  'photographic lens does not bypass display-space tone mapping');
-assert.doesNotMatch(moduleCode,/gl_FragColor=vec4\(clamp\(color,0\.,1\.\),1\.\)/,
-  'HDR highlights are not clipped before display tone mapping');
-assert.match(moduleCode,/renderer\.setRenderTarget\(null\)/,
-  'the cinematic pass returns to the real device framebuffer');
-assert.match(moduleCode,/film=null;[\s\S]*?renderer\.render\(scene,camera\)/,
-  'a cinematic-pass error falls back to direct 3D WebGL rendering');
+assert.match(moduleCode,/renderer\.render\(scene,camera\);/,
+  'sharp direct-render pipeline preserves original WebGL details');
+assert.doesNotMatch(moduleCode,/new THREE\.WebGLRenderTarget/,
+  'experimentally washed-out offscreen image processing has been removed');
 assert.match(landmarkCode,/miniatureWindow:true,warm/,
   'landmark glass supports shared natural dusk illumination');
 assert.match(moduleCode,/function roadSurface\(axis\)/,'roads share tactile matte wear instead of flat plastic');
@@ -95,13 +85,13 @@ assert.match(moduleCode,/eye.scale.y=blink/,'eyelids blink without a separate an
 assert.match(html,/type="importmap"/);
 assert.match(html,/three@0\.187\.0\/build\/three\.module\.js/);
 assert.match(html,/three@0\.187\.0\/examples\/jsm\//);
-assert.match(html,/toy-town-3d\.js\?v=22/);
+assert.match(html,/toy-town-3d\.js\?v=23/);
 assert.match(html,/toy-town-landmarks\.js\?v=5/,'the independent models are requested alongside Three');
 assert.match(html,/buildLandmark:landmarks\.buildLandmark/,
   'loader injects the authored model builder into the 3D simulation');
 assert.match(html,/toy-town\.js\?v=15/);
 assert.ok(html.indexOf('toy-town.js?v=15')<html.indexOf("import('three')"), 'classic fallback starts first');
-assert.match(page,/toy-town\.html\?v=37&embed=1/);
+assert.match(page,/toy-town\.html\?v=38&embed=1/);
 assert.match(fs.readFileSync(path.join(root,'assets/toy-town.js'),'utf8'),
   /targetX=clamp\(\.08,p\.x,17\.92\)/,
   'scripted paths are clamped at the endpoint rather than freezing outside town');
