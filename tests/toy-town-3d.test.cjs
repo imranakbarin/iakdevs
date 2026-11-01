@@ -122,8 +122,8 @@ assert.match(moduleCode,/state.speed=ease\(/,
   'walk-to-stop transitions use rate-limited pose blends');
 assert.match(moduleCode,/limbs.upperBody.rotation.x=/,
   'a full body weight shift accompanies movement and social interaction');
-assert.match(moduleCode,/const gesture=state.chat\*listener/,
-  'conversation gestures use different motions for listeners and speakers');
+assert.match(moduleCode,/const speech=dominant\?state.speak/,
+  'conversation gestures use differentiated speaking and listening poses');
 assert.match(moduleCode,/k===0\|\|k===3\?0:Math.PI/,
   'four-legged animals trot with diagonal alternating paws');
 assert.match(moduleCode,/eye.scale.y=blink/,'eyelids blink without a separate animation thread');
