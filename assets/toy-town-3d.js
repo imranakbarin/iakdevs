@@ -1531,6 +1531,64 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
     }
     gardenElements+=86;
   }
+  function paintVillageLife(){
+    // One translucent painted-tile medallion transforms the visual center
+    // without adding a collider or hiding the articulated village residents.
+    const canvas=document.createElement('canvas');
+    canvas.width=512;canvas.height=512;
+    const pen=canvas.getContext('2d'),cx=256,cy=256;
+    pen.clearRect(0,0,512,512);
+    pen.strokeStyle='rgba(53,130,124,.80)';pen.lineWidth=7;
+    for(const r of [185,167,122,108]){
+      pen.beginPath();pen.arc(cx,cy,r,0,TAU);pen.stroke();
+    }
+    const paints=['#d78771','#efbe70','#6aafa1','#9aa4c3','#e3a3ac'];
+    for(let k=0;k<20;k++){
+      const a=k*TAU/20,x=cx+144*Math.cos(a),y=cy+144*Math.sin(a);
+      pen.fillStyle=paints[k%5];pen.beginPath();
+      pen.ellipse(x,y,17,10,a,0,TAU);pen.fill();
+      pen.fillStyle='rgba(255,245,220,.72)';
+      pen.beginPath();pen.arc(x,y,5,0,TAU);pen.fill();
+    }
+    for(let k=0;k<12;k++){
+      const a=k*TAU/12,x=cx+56*Math.cos(a),y=cy+56*Math.sin(a);
+      pen.fillStyle=paints[k%5];pen.beginPath();
+      pen.ellipse(x,y,41,20,a,0,TAU);pen.fill();
+    }
+    pen.fillStyle='#f9e4ad';pen.beginPath();pen.arc(cx,cy,29,0,TAU);pen.fill();
+    pen.strokeStyle='#ca7f67';pen.lineWidth=5;
+    pen.beginPath();pen.arc(cx,cy,29,0,TAU);pen.stroke();
+    for(let k=0;k<8;k++){
+      const a=k*TAU/8;pen.fillStyle='#609d8e';
+      pen.beginPath();pen.arc(cx+14*Math.cos(a),cy+14*Math.sin(a),4,0,TAU);
+      pen.fill();
+    }
+    const texture=new THREE.CanvasTexture(canvas);
+    texture.colorSpace=THREE.SRGBColorSpace;
+    const tile=object(world,geo('plane',2.15,2.15),
+      new THREE.MeshBasicMaterial({map:texture,transparent:true,opacity:.79,
+        depthWrite:false,side:THREE.DoubleSide}),9,.270,9,false);
+    tile.rotation.x=-Math.PI/2;tile.userData.plazaInlay=true;
+    // Three small inhabitants stay in their flowerbed territories; no
+    // repetitive cross-city flight paths through walls or traffic lanes.
+    for(const [x,z,phase,col] of [
+      [7.40,8.43,.3,'#e9877d'],
+      [10.43,9.46,2.4,'#f4c772'],
+      [7.46,10.38,4.6,'#7eaebc']
+    ]){
+      const insect=new THREE.Group();world.add(insect);
+      const wings=[];
+      for(const side of [-1,1]){
+        const wing=new THREE.Group();insect.add(wing);
+        const petal=ball(wing,.083,col,side*.065,0,0);
+        petal.scale.set(1.05,.46,1.27);petal.castShadow=false;
+        wings.push(wing);
+      }
+      ball(insect,.034,'#6b5b53',0,0,0).castShadow=false;
+      ambient.push({kind:'butterfly',mesh:insect,wings,x,z,phase});
+    }
+    gardenElements+=8;
+  }
 
   // Painted landscape composition: irregular planted contours and natural
   // hedgerow ribbons are fitted into *clear lots*, not onto streets, buildings,
@@ -2002,6 +2060,7 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
     const ps=town.props();
     for(let i=0;i<ps.length;i++)smallProps(ps[i],i);
     createStorybookVillage();
+    paintVillageLife();
     // Landmark panes are pooled across the five models. Update material
     // intensity only, not every individual window mesh, on each frame.
     const visit=node=>{
@@ -2700,6 +2759,14 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
       } else if(a.kind==='balloon'){
         a.mesh.rotation.z=.065*Math.sin(time*.95+a.phase);
         a.mesh.rotation.x=.065*Math.cos(time*.72+a.phase);
+      } else if(a.kind==='butterfly'){
+        a.mesh.position.set(a.x+.13*Math.cos(time*.65+a.phase),
+          .72+.085*Math.sin(time*1.1+a.phase),
+          a.z+.11*Math.sin(time*.47+a.phase));
+        a.mesh.rotation.y=time*.37+a.phase;
+        const flutter=Math.sin(time*12+a.phase)*.72;
+        a.wings[0].rotation.y=flutter;
+        a.wings[1].rotation.y=-flutter;
       }
     }
   }

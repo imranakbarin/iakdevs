@@ -103,6 +103,10 @@ assert.match(moduleCode,/kind:'umbrella'/,'visible animated café canopies add a
 assert.match(moduleCode,/kind:'bunting'/,'real suspended flags sway over the plaza');
 assert.match(moduleCode,/kind:'pinwheel'/,'living village pinwheels animate continuously');
 assert.match(moduleCode,/kind:'balloon'/,'tethered colored balloons enliven the village');
+assert.match(moduleCode,/plazaInlay=true/,'colorful authored art grounds the central plaza');
+assert.match(moduleCode,/kind:'butterfly'/,'butterflies animate over planted areas');
+assert.match(html,/saturate\(1\.42\) contrast\(1\.11\)/,
+  'mobile WebGL receives a coherent richer color grade');
 assert.match(moduleCode,/function gardenIsland\(/,
   'garden beds have shaped earth volumes rather than floating square props');
 assert.match(moduleCode,/const cafeSet=/,'the village includes modeled cafe seating');
@@ -136,7 +140,7 @@ assert.match(moduleCode,/eye.scale.y=blink/,'eyelids blink without a separate an
 assert.match(html,/type="importmap"/);
 assert.match(html,/three@0\.187\.0\/build\/three\.module\.js/);
 assert.match(html,/three@0\.187\.0\/examples\/jsm\//);
-assert.match(html,/toy-town-3d\.js\?v=34/);
+assert.match(html,/toy-town-3d\.js\?v=35/);
 assert.match(html,/toy-town-landmarks\.js\?v=7/,'the independent models are requested alongside Three');
 assert.match(html,/buildLandmark:landmarks\.buildLandmark/,
   'loader injects the authored model builder into the 3D simulation');
