@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generated_at": "2026-11-01T19:19:00.637Z",
+  "generated_at": "2026-11-01T22:53:20.240Z",
   "status": "ok",
   "successful_sources": [
     "BBC News",
@@ -12,11 +12,11 @@
   ],
   "stories": [
     {
-      "title": "Democrat endorses Republican candidate in key Michigan Senate race as party spat escalates",
-      "url": "https://www.bbc.co.uk/news/articles/c95ynzv88n68o?at_medium=RSS&at_campaign=rss",
+      "title": "Russian strikes cut power to thousands in Ukraine as Kherson ceasefire ends",
+      "url": "https://www.bbc.co.uk/news/articles/c64g1y90p71eo?at_medium=RSS&at_campaign=rss",
       "source": "BBC News",
       "category": "World",
-      "published_at": "2026-11-01T19:17:34.000Z"
+      "published_at": "2026-11-01T21:55:01.000Z"
     },
     {
       "title": "These firms you've never heard of are feeding fears the AI bubble could burst",
@@ -26,6 +26,27 @@
       "published_at": "2026-11-01T01:37:26.000Z"
     },
     {
+      "title": "'I've had people eating cat food': Rising cost of living top of mind for US voters",
+      "url": "https://www.bbc.co.uk/news/videos/cwly0eev3m44o?at_medium=RSS&at_campaign=rss",
+      "source": "BBC Business",
+      "category": "Business",
+      "published_at": "2026-11-01T22:25:51.000Z"
+    },
+    {
+      "title": "Rice relishing title race 'anxiety' after win at Liverpool",
+      "url": "https://www.bbc.co.uk/sport/football/videos/cxly47pyy8j6o?at_medium=RSS&at_campaign=rss",
+      "source": "BBC Sport",
+      "category": "Sport",
+      "published_at": "2026-11-01T22:50:05.000Z"
+    },
+    {
+      "title": "Russia's giant new radar in Kaliningrad raises alarm in NATO",
+      "url": "https://www.dw.com/en/russia-s-giant-new-radar-in-kaliningrad-raises-alarm-in-nato/a-79797815?maca=en-rss-en-world-4025-xml-mrss",
+      "source": "DW",
+      "category": "World",
+      "published_at": "2026-11-01T20:34:00.000Z"
+    },
+    {
       "title": "Thousands of jobs at Virgin Media O2 to be cut",
       "url": "https://www.bbc.co.uk/news/articles/c6rry8x9d9qko?at_medium=RSS&at_campaign=rss",
       "source": "BBC Business",
@@ -33,18 +54,18 @@
       "published_at": "2026-11-01T16:57:14.000Z"
     },
     {
-      "title": "Giant curiosity Hibs finally liberated from the sucker punch",
-      "url": "https://www.bbc.co.uk/sport/football/articles/cxr5yjpnd31eo?at_medium=RSS&at_campaign=rss",
+      "title": "Antonelli becomes world champion as Verstappen wins in Mexico",
+      "url": "https://www.bbc.co.uk/sport/formula1/articles/cv62y1e6wly6o?at_medium=RSS&at_campaign=rss",
       "source": "BBC Sport",
       "category": "Sport",
-      "published_at": "2026-11-01T18:45:49.000Z"
+      "published_at": "2026-11-01T22:40:27.000Z"
     },
     {
-      "title": "Ethnic Germans in Kazakhstan face legacy of the Soviet Union",
-      "url": "https://www.dw.com/en/ethnic-germans-in-kazakhstan-face-legacy-of-the-soviet-union/a-79754048?maca=en-rss-en-world-4025-xml-mrss",
-      "source": "DW",
+      "title": "Democrat endorses Republican candidate in key Michigan Senate race as party spat erupts",
+      "url": "https://www.bbc.co.uk/news/articles/c95ynzv88n68o?at_medium=RSS&at_campaign=rss",
+      "source": "BBC News",
       "category": "World",
-      "published_at": "2026-11-01T13:00:00.000Z"
+      "published_at": "2026-11-01T21:16:45.000Z"
     },
     {
       "title": "Crypto firm Binance covers 90% of losses after $6.3bn hack",
@@ -52,27 +73,6 @@
       "source": "BBC Business",
       "category": "Business",
       "published_at": "2026-11-01T13:11:37.000Z"
-    },
-    {
-      "title": "Rice rewarded, Wirtz must do more - Liverpool and Arsenal player ratings",
-      "url": "https://www.bbc.co.uk/sport/football/articles/cqj9kgyww478o?at_medium=RSS&at_campaign=rss",
-      "source": "BBC Sport",
-      "category": "Sport",
-      "published_at": "2026-11-01T18:38:45.000Z"
-    },
-    {
-      "title": "Peaceful protests in Germany spiral into violence and looting",
-      "url": "https://www.bbc.co.uk/news/videos/cqgm0der7zkmo?at_medium=RSS&at_campaign=rss",
-      "source": "BBC News",
-      "category": "World",
-      "published_at": "2026-11-01T18:51:56.000Z"
-    },
-    {
-      "title": "Shops looted as German cost-of-living protests turn violent",
-      "url": "https://www.bbc.co.uk/news/articles/cqj34gnd3n30o?at_medium=RSS&at_campaign=rss",
-      "source": "BBC Business",
-      "category": "Business",
-      "published_at": "2026-11-01T11:57:48.000Z"
     }
   ]
 }
