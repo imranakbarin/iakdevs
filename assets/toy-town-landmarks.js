@@ -569,9 +569,11 @@ function makeKit(T,Round){
       tile.rotation.x=Math.PI/2;
     }
     for(const side of [-1,1]){
-      const terminal=sphere(g,.058,'#d4b496',0,top+crest+.046,
+      // Small terra-cotta finial flush with the barrel ridge, not a bright
+      // oversized bead that competes with the modeled rooftop silhouette.
+      const terminal=sphere(g,.030,texture(color,'tile'),0,top+crest+.043,
         side*depth*.56,false);
-      terminal.scale.set(.92,.73,.68);
+      terminal.scale.set(1,.74,.72);
     }
   }
   function woodenShutters(g,x,y,z,w=.23,h=.37,color='#82998e'){
