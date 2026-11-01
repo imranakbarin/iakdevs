@@ -342,11 +342,16 @@ const ToyTown = (() => {
   }
   function stepPath(m, dt) {
     const p = m.path[0]; if (!p) { m.path = null; return; }
-    const dx = p.x - m.x, dy = p.y - m.y, dist = Math.hypot(dx, dy), sp = (p.speed || m.max) * dt;
+    // Scripted event paths sometimes target coordinates beyond the tabletop.
+    // Clip *waypoints* before stepping, so the walker/vehicle can actually
+    // reach its destination instead of getting stuck against a hard border.
+    const targetX=clamp(.08,p.x,17.92),targetY=clamp(.08,p.y,17.92);
+    const dx = targetX - m.x, dy = targetY - m.y;
+    const dist = Math.hypot(dx, dy), sp = (p.speed || m.max) * dt;
     m.v = p.speed || m.max;
     m.travel = (m.travel || 0) + Math.min(dist, sp);
     if (Math.abs(dx) > Math.abs(dy)) m.d = dx > 0 ? 0 : 1; else m.d = dy > 0 ? 2 : 3;
-    if (dist <= sp) { m.x = p.x; m.y = p.y; m.path.shift(); if (p.then) p.then(m); } else { m.x += dx / dist * sp; m.y += dy / dist * sp; }
+    if (dist <= sp) { m.x = targetX; m.y = targetY; m.path.shift(); if (p.then) p.then(m); } else { m.x += dx / dist * sp; m.y += dy / dist * sp; }
   }
   // A route along the streets from (x,y) to (tx,ty): along the current line, then the other axis.
   function route(x, y, tx, ty, speed) {
@@ -1400,6 +1405,13 @@ const ToyTown = (() => {
     for (const m of movers.slice()) { step(m, dt); easeHeading(m, dt); updateHeroResident(m); }
     for (const e of events.slice()) { e.t += dt; if (e.follow) { e.x = e.follow.x; e.y = e.follow.y; } if (e.update) e.update(e, dt); if (e.t > e.dur) { if (e.end) e.end.call(e); events.splice(events.indexOf(e), 1); } }
     for (const m of movers.slice()) if (m.home && !m.path) remove(m);
+    // Event callbacks can reposition actors independently of the ordinary
+    // road stepper. Maintain a strict miniature-board boundary for every
+    // entity without interfering with paths, turn choices, or zoom gestures.
+    for (const m of movers.slice()) {
+      if (!Number.isFinite(m.x) || !Number.isFinite(m.y)) { remove(m); continue; }
+      m.x=clamp(.08,m.x,17.92);m.y=clamp(.08,m.y,17.92);
+    }
     for (const p of props) if (p.kind === 'duck') { p.x += p.vx * dt; if (p.x < .3 || p.x > 17.5) p.vx *= -1; }
     for (const p of props) if (p.kind === 'rover') { if (clock > p.t) { p.tx = p.x + (Math.random() - .5) * 2; p.ty = p.y + (Math.random() - .5) * 2; p.t = clock + 4; } p.x += (p.tx - p.x) * dt * .15; p.y += (p.ty - p.y) * dt * .15; }
     for (const p of props) if (p.kind === 'animal' && !p.out) { if (!p.t || clock > p.t) { const z = props.find(q => q.kind === 'zoo'); if (z) { p.tx = z.x + (Math.random() - .5) * 2.8; p.ty = z.y + (Math.random() - .5) * 2.8; } p.t = clock + 3 + Math.random() * 4; } p.x += (p.tx - p.x) * dt * .3; p.y += (p.ty - p.y) * dt * .3; }
