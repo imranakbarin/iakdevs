@@ -288,6 +288,68 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
     return pad;
   }
 
+
+  // A single non-repeating landscape paint layer over the whole miniature:
+  // translucent broad meadow washes, soil undertones and fine grass flecks.
+  // Roads, paving and the water remain separate geometry above this surface.
+  const landscapeAtlas=(()=>{
+    const c=document.createElement('canvas');c.width=768;c.height=768;
+    const p=c.getContext('2d');p.clearRect(0,0,768,768);
+    for(let i=0;i<108;i++){
+      const x=rng(i,1001)*768,y=rng(i,1002)*768;
+      const radius=26+rng(i,1003)*105;
+      p.fillStyle=i%5===0?'rgba(227,191,142,.09)':
+        i%3===0?'rgba(238,225,178,.14)':'rgba(65,115,86,.072)';
+      p.beginPath();
+      p.ellipse(x,y,radius,radius*(.30+rng(i,1004)*.45),
+        rng(i,1005)*TAU,0,TAU);p.fill();
+    }
+    // Fine grass flecks share one ground plane, never thousands of meshes.
+    for(let i=0;i<3300;i++){
+      const x=rng(i,1006)*768,y=rng(i,1007)*768;
+      const r=.45+rng(i,1008)*1.45;
+      p.fillStyle=i%7===0?'rgba(255,246,217,.40)':
+        i%3===0?'rgba(103,131,93,.22)':'rgba(62,99,79,.115)';
+      p.beginPath();p.ellipse(x,y,r,r*.38,rng(i,1009)*TAU,0,TAU);p.fill();
+    }
+    const tex=new THREE.CanvasTexture(c);tex.colorSpace=THREE.SRGBColorSpace;
+    return new THREE.MeshBasicMaterial({map:tex,transparent:true,
+      opacity:.86,depthWrite:false,polygonOffset:true,polygonOffsetFactor:-1});
+  })();
+  const vergeMaterials=new Map();
+  function vergeMaterial(axis){
+    if(vergeMaterials.has(axis))return vergeMaterials.get(axis);
+    // Alpha falls to zero at the outside edges, letting grass softly nibble
+    // into the asphalt without blocking cars, markings or the raised kerb.
+    const c=document.createElement('canvas');c.width=128;c.height=256;
+    const p=c.getContext('2d');
+    const fade=axis==='north-south'?
+      p.createLinearGradient(0,0,128,0):
+      p.createLinearGradient(0,0,0,256);
+    fade.addColorStop(0,'rgba(110,140,99,0)');
+    fade.addColorStop(.22,'rgba(101,137,92,.16)');
+    fade.addColorStop(.49,'rgba(93,127,83,.52)');
+    fade.addColorStop(.78,'rgba(106,133,92,.17)');
+    fade.addColorStop(1,'rgba(110,140,99,0)');
+    p.fillStyle=fade;p.fillRect(0,0,128,256);
+    for(let i=0;i<95;i++){
+      const x=rng(i,1121)*128,y=rng(i,1122)*256;
+      p.fillStyle=i%4===0?'rgba(232,214,158,.18)':'rgba(60,105,69,.14)';
+      p.beginPath();p.ellipse(x,y,1.4+rng(i,1123)*3.8,
+        1.2+rng(i,1124)*5.4,rng(i,1125)*TAU,0,TAU);p.fill();
+    }
+    const tex=new THREE.CanvasTexture(c);tex.colorSpace=THREE.SRGBColorSpace;
+    const m=new THREE.MeshBasicMaterial({map:tex,transparent:true,
+      opacity:.89,depthWrite:false,side:THREE.DoubleSide});
+    vergeMaterials.set(axis,m);return m;
+  }
+  function paintedVerge(x,z,width,depth,axis,y=.171){
+    const mesh=object(world,geo('plane',1,1),vergeMaterial(axis),x,y,z,false);
+    mesh.rotation.x=-Math.PI/2;mesh.scale.set(width,depth,1);
+    mesh.receiveShadow=false;mesh.userData.terrainVerge=axis;
+    return mesh;
+  }
+
   // Storybook roof surfaces are modeled as curved, bevelled volumes rather
   // than rotated rectangular slabs. Two shared geometries cover every house,
   // so richer silhouettes do not multiply the mobile mesh budget.
@@ -1024,8 +1086,12 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
     // real-world tabletop scale; this stays outside the town's active streets.
     groundingShadow(9,9,23.5,23.5,-1.205);
     box(world,18.6,1.12,18.6,'#9b8069',9,-.60,9);
-    // Shared baked texture rather than a featureless green table.
+    // A single soft landscape wash bridges the individual lots without
+    // removing their real raised foundations or affecting the 2D fallback.
     box(world,18.35,.20,18.35,grassMaterial('#b9cba7',10),9,.025,9);
+    const meadow=object(world,geo('plane',18.35,18.35),landscapeAtlas,9,.129,9,false);
+    meadow.rotation.x=-Math.PI/2;meadow.receiveShadow=false;
+    meadow.userData.continuousLandscape=true;
     // Water sits below streets; bridges cross at the existing four lanes.
     groundPiece(18.02,1.97,'#8dbfc0',9,14,.105);
     const isRoad = v=>LINES.includes(v);
@@ -1039,10 +1105,20 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
       // Curbs are individual block-front segments, not giant floating strips
       // cutting across every junction and bridge.
       const segments=[[2.22,5.78],[7.22,10.78],[12.22,12.75],[15.25,15.78]];
-      for(const edge of [-.068,1.068])for(const [a,b] of segments) {
-        const size=b-a;
-        groundPiece(.063,size,'#d6c9b5',n+edge,(a+b)/2,.194);
-        groundPiece(size,.063,'#d6c9b5',(a+b)/2,n+edge,.194);
+      for(const [a,b] of segments) {
+        const length=b-a;
+        // Landscape frays into each kerb in four short, carefully bounded
+        // sections, never through intersections or across river bridges.
+        if(length>.75)for(const side of [-1,1]) {
+          paintedVerge(n+(side<0?-.17:1.17),(a+b)/2,
+            .40,length,'north-south');
+          paintedVerge((a+b)/2,n+(side<0?-.17:1.17),
+            length,.40,'east-west');
+        }
+        for(const edge of [-.068,1.068]) {
+          groundPiece(.063,length,'#d6c9b5',n+edge,(a+b)/2,.194);
+          groundPiece(length,.063,'#d6c9b5',(a+b)/2,n+edge,.194);
+        }
       }
       // River bridges have pale stone shoulders, anchored to the same lanes.
       groundPiece(1.12,2.05,'#a99f8c',n+.5,14,.17);
@@ -1051,23 +1127,22 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
         box(world,.052,.22,2.08,'#d8d1bf',n+.5+side,.29,14);
       }
     }
-    // The central hero has physically raised pavements, stone squares and grass.
-    for(let yy=7;yy<=10;yy++)for(let xx=7;xx<=10;xx++){
-      const middle=xx>7&&xx<10&&yy>7&&yy<10;
-      groundPiece(.97,.97,middle?'#e9d9ba':grassMaterial('#97bc9a'),xx+.5,yy+.5,.179);
-      if(middle) {
-        // Separate warm, irregular limestone pavers with recessed joints.
-        // Their subtle size and hue variations replace the rigid dark grid.
-        const stone=['#ede1c9','#e6d7ba','#e9ddc7','#e2d4bb'];
-        for(let row=0;row<3;row++)for(let col=0;col<3;col++){
-          const jitter=(rng(xx*17+col,yy*29+row)-.5)*.025;
-          const paver=groundPiece(.265+jitter,.264-jitter,stone[(xx+yy+col+row)%4],
-            xx+.205+col*.291+jitter*.3,yy+.205+row*.291-jitter*.3,
-            .221+((row+col)%2)*.006);
-          // Slight handmade irregularity removes the machine-perfect grid.
-          paver.rotation.y=(rng(xx*37+row,yy*17+col)-.5)*.075;
-        }
-      }
+    // The hero neighborhood is one continuous garden, not sixteen lawns
+    // boxed into independent tiles with dark grid joints between them.
+    groundPiece(3.96,3.96,grassMaterial('#a6c49f'),9,9,.179);
+    groundPiece(1.96,1.96,'#e5d7ba',9,9,.180);
+    // Separate warm, irregular limestone pavers with recessed joints:
+    // a staggered hand-set pattern keeps movement paths clear for residents.
+    const stone=['#ede1c9','#e6d7ba','#e9ddc7','#e2d4bb'];
+    for(let row=0;row<6;row++)for(let col=0;col<6;col++){
+      const px=8.16+col*.335+(row%2)*.07;
+      const pz=8.16+row*.338;
+      if(px>9.91||pz>9.91)continue;
+      const jitter=(rng(col*19+row,434)-.5)*.054;
+      const paver=groundPiece(.27+rng(col,row)*.040,.276+rng(row,col)*.042,
+        stone[(row*3+col)%4],px+jitter,pz-jitter*.7,.221);
+      // Slight handmade irregularity removes the machine-perfect grid.
+      paver.rotation.y=(rng(col*37+row,row*17+col)-.5)*.10;
     }
     // Hand-set garden ribbons transition the little courtyard into the grass,
     // instead of floating as a paved square cut out of a flat sheet.
@@ -1118,9 +1193,12 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
       ambient.push({kind:'water',mesh:ring,phase:i*.85,x,z});
     }
     // Riverside edge, small paths; never grow trees out of water.
+    // A continuous shoreline uses the same translucent verge pigment as
+    // street lawns; the bank is interrupted precisely at each bridge.
     for(let i=1;i<17;i++){
       if(!isRoad(i)) {
         groundPiece(.85,.15,'#e1d3b7',i+.5,12.90,.17);
+        paintedVerge(i+.5,12.98,.84,.24,'east-west',.174);
         littleFlowers(i+.35,12.63,i*17);
       }
     }
