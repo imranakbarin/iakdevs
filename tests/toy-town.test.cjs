@@ -164,6 +164,14 @@ for(let i=0;i<60*77;i++){
 assert.ok(T.debug().communityVisits>=2,'residents independently visit real destinations');
 assert.ok(T.debug().communityEncounters>=1&&met,'neighbors meet and talk in the square');
 assert.ok(furthestDog<2.2,'dog stays near its owner throughout the neighborhood routine');
+T.build(827741530,'market');
+let joinedOnApproach=false;
+for(let i=0;i<60*69;i++){
+  T.update(1/60);
+  if(T.debug().communityEncounters>0){joinedOnApproach=true;break;}
+}
+assert.ok(joinedOnApproach,
+  'neighbors can recognize a friend during the approach instead of missing the exact meeting waypoint');
 assert.ok(T.movers().every(m=>Number.isFinite(m.x+m.y)&&m.x>0&&m.y>0&&
   m.x<18&&m.y<18),'coordinated motion respects the town bounds');
 
