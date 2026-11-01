@@ -512,6 +512,13 @@ const ToyTown = (() => {
   }
   function atNode(m) { return LINES.some(l => Math.abs((m.d < 2 ? m.x : m.y) - (l + .5)) < .02); }
   function step(m, dt) {
+    // Never dead-end inside the last junction: turn at the road-end apron
+    // before another lane can trap the vehicle against the tabletop edge.
+    if(m.type==='car'&&!m.path&&(
+      (m.d===0&&m.x>=16.02)||(m.d===1&&m.x<=1.98)||
+      (m.d===2&&m.y>=16.02)||(m.d===3&&m.y<=1.98))){
+      m.d^=1;m.v=0;
+    }
     // Explicit displacement, not requested speed, powers character gaits.
     m.moved=0;
     // An attention pause has a finite lifetime even when another activity
@@ -571,8 +578,13 @@ const ToyTown = (() => {
           .filter(d=>d>0&&d<2.35);
         if(crossings.length){
           const distance=Math.min(...crossings);
-          const room=Math.max(0,distance-.70);
-          want=Math.min(want,Math.sqrt(2*.92*room));
+          // A vehicle that already crossed the stop line MUST finish
+          // clearing the junction after a signal changes. Stopping in the
+          // middle causes a persistent cross-traffic deadlock.
+          if(distance>.70){
+            const room=Math.max(0,distance-.70);
+            want=Math.min(want,Math.sqrt(2*.92*room));
+          }
         }
       }
       if (heldAtLight(m, .75)) want = 0;
@@ -584,7 +596,7 @@ const ToyTown = (() => {
       for(const line of LINES){
         const crossing=line+.5;
         const approach=(crossing-pos)*sign;
-        if(approach<=.43||approach>=1.75)continue;
+        if(approach<=-.15||approach>=1.75)continue;
         const occupied=movers.some(o=>{
           if(o===m||o.type!=='car'||o.path||(o.d<2)===(m.d<2))
             return false;
@@ -594,7 +606,10 @@ const ToyTown = (() => {
             Math.abs(otherAlong-fixed)<.65;
         });
         if(occupied){
-          const clearance=Math.max(0,approach-.54);
+          // Reserve the full vehicle footprint outside the conflict box,
+          // not just its center point. This leaves room for the occupant
+          // of the crossing to leave without side-by-side gridlock.
+          const clearance=Math.max(0,approach-.75);
           want=Math.min(want,Math.sqrt(2*.79*clearance));
         }
       }

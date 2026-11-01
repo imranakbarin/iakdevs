@@ -50,26 +50,35 @@ function parseRss(xml,feed,now=Date.now()){
   return items;
 }
 function chooseStories(all,limit=9){
-  const seen=new Set(),valid=[];
-  for(const item of all.sort((a,b)=>Date.parse(b.published_at)-Date.parse(a.published_at))){
+  // Dedupe across RSS sections while retaining a specialized category
+  // (technology, business, sport) when that title also appears in World.
+  const byTitle=new Map();
+  for(const item of [...all].sort((a,b)=>
+    Date.parse(b.published_at)-Date.parse(a.published_at))){
     const key=item.title.toLowerCase().replace(/[^a-z0-9]/g,'').slice(0,90);
-    if(seen.has(key))continue;
-    seen.add(key);valid.push(item);
+    const current=byTitle.get(key);
+    if(!current||(current.category==='World'&&item.category!=='World'))
+      byTitle.set(key,item);
   }
-  const chosen=[],categoryCount=new Map();
-  // Guarantee breadth: world, technology, business and sport, then fill by age.
-  for(const category of ['World','Technology','Business','Sport']){
-    const article=valid.find(x=>x.category===category&&!chosen.includes(x));
-    if(article){chosen.push(article);categoryCount.set(category,1);}
+  const valid=[...byTitle.values()].sort((a,b)=>
+    Date.parse(b.published_at)-Date.parse(a.published_at));
+  const picked=[],categories=['World','Technology','Business','Sport'];
+  const used=new Set();
+  // Breadth and source diversity beat a feed full of near-identical sports
+  // stories, but publication time determines order within each section.
+  for(let round=0;round<3&&picked.length<limit;round++){
+    for(const category of categories){
+      if(picked.length>=limit)break;
+      const pool=valid.filter(item=>item.category===category&&!picked.includes(item));
+      const article=pool.find(item=>!used.has(item.source))||pool[0];
+      if(article){picked.push(article);used.add(article.source);}
+    }
   }
   for(const article of valid){
-    if(chosen.length>=limit)break;
-    if(chosen.includes(article))continue;
-    const count=categoryCount.get(article.category)||0;
-    if(count>=3)continue;
-    chosen.push(article);categoryCount.set(article.category,count+1);
+    if(picked.length>=limit)break;
+    if(!picked.includes(article))picked.push(article);
   }
-  return chosen.slice(0,limit);
+  return picked.slice(0,limit);
 }
 function get(url,redirects=2){
   return new Promise((resolve,reject)=>{

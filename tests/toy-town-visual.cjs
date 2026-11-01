@@ -42,6 +42,27 @@ async function main(){
       const context=await browser.newContext({viewport:{width:job.w,height:job.h},deviceScaleFactor:1,
         isMobile:job.w<500,hasTouch:job.w<500});
       const page=await context.newPage();
+      // Exercise real headline UI with controlled current publisher data.
+      // The production hourly RSS job is tested separately.
+      const published=new Date().toISOString();
+      await page.route('**/toy-town-news.json*',route=>route.fulfill({
+        status:200,contentType:'application/json',
+        headers:{'access-control-allow-origin':'*'},
+        body:JSON.stringify({
+          version:1,generated_at:published,status:'ok',
+          stories:[
+            {title:'India wins international cricket championship final',
+              source:'BBC Sport',category:'Sport',
+              url:'https://www.bbc.co.uk/sport/example',published_at:published},
+            {title:'Robot engineers announce a new research breakthrough',
+              source:'BBC Technology',category:'Technology',
+              url:'https://www.bbc.co.uk/news/technology/example',published_at:published},
+            {title:'Museum celebrates a global art exhibition opening',
+              source:'DW',category:'World',
+              url:'https://www.dw.com/en/example',published_at:published}
+          ]
+        })
+      }));
       const errors=[];
       page.on('pageerror',err=>errors.push('pageerror:'+err.message));
       page.on('console',m=>{if(m.type()==='error')errors.push('console:'+m.text().slice(0,250));});
@@ -49,6 +70,13 @@ async function main(){
         {waitUntil:'domcontentloaded',timeout:45000});
       await page.waitForFunction(()=>typeof ToyTown!=='undefined'&&ToyTown.buildings().length>0,
         {timeout:50000});
+      await page.waitForFunction(()=>document.getElementById('news-status')?.textContent
+        .includes('HEADLINES ·'),{timeout:10000});
+      await page.locator('#news-toggle').click();
+      const verifiedLinks=await page.locator('#headlines a[href^="https://"]').count();
+      if(verifiedLinks!==3)throw Error('Factual headlines must include real publisher links: '+
+        verifiedLinks);
+      await page.locator('#news-toggle').click();
       if(!job.classic){
         try {
           await page.waitForFunction(()=>Boolean(window.ToyTown3D?.active),{timeout:50000});

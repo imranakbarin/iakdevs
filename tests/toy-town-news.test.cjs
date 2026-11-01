@@ -26,6 +26,11 @@ const same=[
 ];
 assert.equal(chooseStories([...same,...same]).length,4,'dedupe headlines');
 assert.equal(new Set(chooseStories(same).map(i=>i.category)).size,4,'news spans four topics');
+assert.equal(chooseStories([
+  {...same[1],category:'World',published_at:new Date(now-1000).toISOString()},
+  {...same[1],source:'BBC Technology',category:'Technology'}
+])[0].category,'Technology',
+'cross-posted headlines retain their more useful specialist topic');
 (async()=>{
   const mixed=await refresh({now,feeds:[feed,{source:'Broken Feed',category:'World',url:'https://example.com'}],
     fetcher:async url=>{if(url.includes('example'))throw Error('down');return xml;}});
