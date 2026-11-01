@@ -112,7 +112,16 @@ assert.match(moduleCode,/function groundingShadow\(/,'architecture and trees hav
 assert.match(moduleCode,/const studioMat=/,'model sits on a photographed gradient table');
 assert.match(moduleCode,/sun\.color\.set\(tint\(/,'sunset light transitions smoothly without snapping hues');
 assert.match(html,/#town-3d::after/,'lens finish has a restrained noninteractive vignette');
-assert.match(moduleCode,/g.userData.limbs=\{legs,arms,shins,eyelids,headPivot\}/,'figures now have articulated knees, eyelids and independently moving heads');
+assert.match(moduleCode,/g.userData.limbs=\\{legs,arms,shins,feet,eyelids,headPivot,upperBody\\}/,
+  'residents share a torso pivot and distinct planted ankle joints');
+assert.match(moduleCode,/state.speed=ease\\(/,
+  'walk-to-stop transitions use rate-limited pose blends');
+assert.match(moduleCode,/limbs.upperBody.rotation.x=/,
+  'a full body weight shift accompanies movement and social interaction');
+assert.match(moduleCode,/const gesture=state.chat\\*listener/,
+  'conversation gestures use different motions for listeners and speakers');
+assert.match(moduleCode,/k===0\\|\\|k===3\\?0:Math.PI/,
+  'four-legged animals trot with diagonal alternating paws');
 assert.match(moduleCode,/eye.scale.y=blink/,'eyelids blink without a separate animation thread');
 assert.match(html,/type="importmap"/);
 assert.match(html,/three@0\.187\.0\/build\/three\.module\.js/);
@@ -415,6 +424,10 @@ assert.ok(residentRig?.userData?.limbs?.headPivot,
   'each resident has a separate head and neck rig');
 assert.equal(residentRig.userData.limbs.shins.length,2,
   'both knees bend independently of the hip');
+assert.equal(residentRig.userData.limbs.feet.length,2,
+  'each foot has a dedicated contact rocker');
+assert.ok(residentRig.userData.limbs.upperBody,
+  'the head, arms and clothing move together on a torso joint');
 const motorcar=sceneWorld.children.find(o=>o.userData?.vehicleRig);
 assert.equal(motorcar.userData.vehicleRig.wheels.length,4,
   'each car has four individually articulated wheels');
@@ -441,6 +454,10 @@ assert.ok(animalRig?.userData.creatureRig.tail,
   'animals have connected animated tails instead of static toy blobs');
 assert.equal(animalRig.userData.creatureRig.legs.length,4,
   'a dog is a four-legged creature, not a human capsule');
+assert.equal(animalRig.userData.creatureRig.ears.length,2,
+  'ears react independently when the companion attends to someone');
+assert.ok(animalRig.userData.creatureRig.body,
+  'a connected torso lets the resting dog breathe naturally');
 assert.ok(animalRig.userData.creatureRig.head.rotation.y!==0,
   'the real 3D companion dog faces the person it is watching');
 assert.ok(animalRig.position.y<.13,
@@ -449,6 +466,34 @@ pedestrians.pop();callbacks.shift()();
 const peopleGroup=api.scene.children.find(g=>g.children&&g.children.some(x=>x.position.x===8.1 && x.position.z===8.7));
 const firstPerson=peopleGroup.children.find(x=>x.position.x===8.1 && x.position.z===8.7);
 assert.ok(Math.abs(firstPerson.rotation.y-Math.PI/2)<.0001,'face points into walking direction, not sideways');
+const actorPose=residentRig.userData.pose;
+pedestrians[0].v=.53;pedestrians[0].max=.58;pedestrians[0].travel=4.22;
+pedestrians[0].intent='walking';frameClock+=1/30;callbacks.shift()();
+const paceBeforeStop=actorPose.speed;
+assert.ok(paceBeforeStop>.05,
+  'a walking human smoothly engages articulated locomotion');
+const moveLeg=residentRig.userData.limbs.legs[0];
+const shoeRig=residentRig.userData.limbs.feet[0];
+assert.ok(Math.abs(moveLeg.rotation.x)>.01,
+  'walking turns hip joints instead of moving a rigid figurine');
+assert.ok(Math.abs(shoeRig.rotation.x)>.005,
+  'walking shoes rock at the ankle during the foot contact cycle');
+pedestrians[0].v=0;pedestrians[0].intent='chat';
+pedestrians[0].attention={x:8.1,y:9.4};
+frameClock+=1/30;callbacks.shift()();
+assert.ok(actorPose.speed<paceBeforeStop&&actorPose.speed>0,
+  'stopping eases the gait instead of snapping the pose');
+assert.ok(actorPose.chat>.09,
+  'a real meeting smoothly engages the conversational upper body');
+assert.ok(Math.abs(residentRig.userData.limbs.upperBody.rotation.x)>.001,
+  'a social pose visibly shifts the torso');
+const gestures=residentRig.userData.limbs.arms.map(a=>a.rotation.x);
+assert.notEqual(gestures[0],gestures[1],
+  'conversation uses asymmetrical listening and speaking gestures');
+pedestrians[0].intent='walking';
+frameClock+=1/30;callbacks.shift()();
+assert.ok(actorPose.chat<.25,
+  'exiting conversation blends back toward walking without a pose snap');
 const normalCameraHeight=api.camera.position.y;
 currentCamZoom=3.2; callbacks.shift()();
 assert.ok(api.camera.position.y < normalCameraHeight,'close zoom lowers viewing angle to show facades');
