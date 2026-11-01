@@ -240,8 +240,8 @@ assert.match(moduleCode,/const variation=\(row\*13\+col\*17\)%7/,
   'clay roof does not use an obvious large-color checkerboard');
 assert.match(moduleCode,/Miniature gabled porch roof/,
   'porch has a pitched profile rather than a flat canopy');
-assert.match(moduleCode,/Separate warm, irregular limestone pavers/,
-  'courtyard pavers replace the rigid grid');
+assert.match(moduleCode,/Hand-set pavers follow the curved perimeter/,
+  'courtyard pavers follow the new oval stone piazza instead of a rigid grid');
 assert.match(moduleCode,/function plaster\(color\)/,'walls use grainy plaster instead of plain plastic');
 assert.match(moduleCode,/function grassMaterial\(/,'garden uses a reusable painted grass texture');
 assert.match(moduleCode,/function roofCurve\(/,'story book roofs use a real curved profile');
