@@ -11,15 +11,19 @@ export function createLens(THREE, addons, renderer, scene, camera, opts = {}) {
   const {EffectComposer, RenderPass, ShaderPass, UnrealBloomPass, OutputPass, GTAOPass} = addons;
   const mobile = !!opts.mobile;
   const off = (typeof location !== 'undefined' && new URLSearchParams(location.search).get('lensoff') || '').split(',');   // debugging: ?lensoff=ao,bloom,tilt,grade
+  // A software rasteriser (SwiftShader/llvmpipe in CI, or a GPU-less machine)
+  // cannot afford contact shadows or multisampling: keep tilt-shift and grade only.
+  const software = (() => { try { const gl = renderer.getContext(), ext = gl.getExtension('WEBGL_debug_renderer_info');
+    return /swiftshader|llvmpipe|software/i.test(ext ? gl.getParameter(ext.UNMASKED_RENDERER_WEBGL) : ''); } catch (e) { return false; } })();
   const size = new THREE.Vector2(); renderer.getSize(size);
-  const target = new THREE.WebGLRenderTarget(size.x, size.y, {type: THREE.HalfFloatType, samples: mobile ? 0 : 4});
+  const target = new THREE.WebGLRenderTarget(size.x, size.y, {type: THREE.HalfFloatType, samples: mobile || software ? 0 : 4});
   const composer = new EffectComposer(renderer, target);
   composer.addPass(new RenderPass(scene, camera));
 
   // Contact shadows: corners, eaves, roots and feet. Desktop only, and dropped
   // automatically if the machine cannot hold the frame rate.
   let ao = null;
-  if (!mobile && GTAOPass && !off.includes('ao')) {
+  if (!mobile && !software && GTAOPass && !off.includes('ao')) {
     try {
       ao = new GTAOPass(scene, camera, size.x, size.y);
       ao.updateGtaoMaterial({radius: .55, distanceExponent: 1.4, thickness: 1.2, scale: 1.15, samples: 12});
@@ -115,7 +119,7 @@ export function createLens(THREE, addons, renderer, scene, camera, opts = {}) {
       // Drop the costliest pass on a struggling desktop GPU rather than stutter.
       if (ao && Number.isFinite(dtMs) && ++frames > 30) { slow = dtMs > 34 ? slow + 1 : Math.max(0, slow - 1); if (slow > 45) { ao.enabled = false; } }
     },
-    stats: () => ({ao: !!(ao && ao.enabled), bloom: bloom.enabled, tiltShift: true, grade: true, mobile})
+    stats: () => ({software, ao: !!(ao && ao.enabled), bloom: bloom.enabled, tiltShift: true, grade: true, mobile})
   };
   api.setSize(size.x, size.y); api.setDusk(0); api.setFocus(0);
   return api;

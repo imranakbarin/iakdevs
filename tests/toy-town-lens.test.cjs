@@ -40,5 +40,7 @@ assert.match(view, /catch\(error\)\{console\.warn\('Toy Town lens unavailable/, 
   lens.render(16); assert.equal(lens.composer.rendered, 1);
   passes.length = 0; createLens(THREE, addons, renderer, {}, {}, {mobile: true});
   assert.ok(!passes.some(p => p.kind === 'ao'), 'phones skip ambient occlusion');
-  console.log('Toy Town LENS PASS: render → AO → clean → bloom (dusk only) → output → tilt-shift → grade; focus band follows zoom; phones skip AO; plain-render fallback wired.');
+  passes.length = 0; const sw = createLens(THREE, addons, Object.assign({}, renderer, {getContext: () => ({getExtension: () => ({UNMASKED_RENDERER_WEBGL: 1}), getParameter: () => 'ANGLE (Google, SwiftShader Device)'})}), {}, {}, {mobile: false});
+  assert.ok(sw.stats().software && !passes.some(p => p.kind === 'ao'), 'a software rasteriser skips ambient occlusion too');
+  console.log('Toy Town LENS PASS: render → AO → clean → bloom (dusk only) → output → tilt-shift → grade; focus band follows zoom; phones and software GL skip AO; plain-render fallback wired.');
 })().catch(e => { console.error(e); process.exit(1); });

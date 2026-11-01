@@ -79,7 +79,7 @@ html.embedded #zoom-controls{display:none}
       // The photographed-miniature lens. Any failure here leaves plain 3D running.
       Promise.all(['EffectComposer','RenderPass','ShaderPass','UnrealBloomPass','OutputPass','GTAOPass']
         .map(n => import(`three/addons/postprocessing/${n}.js`).catch(() => ({}))))
-        .then(mods => import('./assets/toy-town-lens.js?v=1').then(lens => ({lens, addons: Object.assign({}, ...mods)})))
+        .then(mods => import('./assets/toy-town-lens.js?v=2').then(lens => ({lens, addons: Object.assign({}, ...mods)})))
         .catch(() => null)
     ]).then(([THREE, geometry, view, landmarks, lensKit]) => {
       const lensReady = lensKit && !new URLSearchParams(location.search).has('nolens') && lensKit.addons.EffectComposer && lensKit.addons.UnrealBloomPass;
