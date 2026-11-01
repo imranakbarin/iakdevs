@@ -2108,17 +2108,18 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
     const brakeMaterial=new THREE.MeshStandardMaterial({
       color:'#ab5c53',emissive:'#ed4938',emissiveIntensity:.07,roughness:.36
     });
-    const indicatorMaterial=new THREE.MeshStandardMaterial({
-      color:'#dfab6a',emissive:'#f5a34b',emissiveIntensity:.02,roughness:.42
-    });
     const indicators=[];
     for(const side of [-1,1]){
       ball(g,.032,mat('#fff4c7',.28,'#c6a882'),len*.505,.293,side*.125);
       box(g,.064,.043,.027,brakeMaterial,-len*.505,.289,side*.128);
-      indicators.push(box(g,.024,.025,.021,indicatorMaterial,
-        -len*.515,.302,side*.164));
+      const indicatorMaterial=new THREE.MeshStandardMaterial({
+        color:'#dfab6a',emissive:'#f5a34b',emissiveIntensity:.02,roughness:.42
+      });
+      const lamp=box(g,.024,.025,.021,indicatorMaterial,
+        -len*.515,.302,side*.164);
+      indicators.push({lamp,side});
     }
-    g.userData.vehicleRig={wheels,brakeMaterial,indicatorMaterial,indicators};
+    g.userData.vehicleRig={wheels,brakeMaterial,indicators};
     g.userData.vehicleClass=ref.kind||'car';
     return g;
   }
@@ -2145,7 +2146,6 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
     box(g,.115,.028,.070,'#5c6669',-.117,.361,0);
     box(g,.024,.019,.25,'#72858a',.129,.375,0);
     const crank=new THREE.Group();crank.position.set(.038,.172,0);g.add(crank);
-    rod(.038,.172,.038,.172,'#68767b',.009);
     for(const sx of [-1,1]){
       const pedal=box(crank,.065,.020,.042,'#59676c',0,sx*.068,sx*.051);
       pedal.castShadow=false;
@@ -2296,20 +2296,73 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
       if(limbs){
         const moving=!!ref.v&&ref.v>.035&&!ref.sit&&(!ref.stopUntil||town.debug().clock>=ref.stopUntil);
         const step=moving?Math.sin((ref.travel||0)*17+(ref.ph||0))*.44:0;
-        limbs.legs[0].rotation.x=ref.sit?-1.18:step;
-        limbs.legs[1].rotation.x=ref.sit?-1.18:-step;
+        limbs.legs[0].rotation.x=ref.sit?-1.16:step;
+        limbs.legs[1].rotation.x=ref.sit?-1.16:-step;
+        // Each knee bends on the recovery stroke, not as rigid leg pendulums.
+        for(let k=0;k<(limbs.shins?.length||0);k++){
+          const gait=k===0?step:-step;
+          limbs.shins[k].rotation.x=ref.sit?.75:Math.max(0,-gait)*1.12;
+        }
         limbs.arms[0].rotation.x=ref.sit?.22:-step*.85;
         limbs.arms[1].rotation.x=ref.sit?.22:step*.85;
-        if(ref.waveUntil&&town.debug().clock<ref.waveUntil)limbs.arms[1].rotation.z=-1.6;
+        if(ref.waveUntil&&town.debug().clock<ref.waveUntil)
+          limbs.arms[1].rotation.z=-1.6;
         else limbs.arms[1].rotation.z=0;
+        // Eye-line follows an actual chosen shop or destination; otherwise
+        // the resident looks forward, with a calm recovery after the stop.
+        const target=ref.attention;
+        let yaw=0;
+        if(target){
+          const dx=target.x-ref.x,dz=target.y-ref.y;
+          const angle=Math.atan2(dx,dz);
+          yaw=THREE.MathUtils.clamp(
+            Math.atan2(Math.sin(angle-g.rotation.y),Math.cos(angle-g.rotation.y)),
+            -.64,.64);
+        }
+        if(limbs.headPivot){
+          limbs.headPivot.rotation.y+=(yaw-limbs.headPivot.rotation.y)*.17;
+          limbs.headPivot.rotation.z=moving?Math.sin((ref.travel||0)*9)*.026:
+            Math.sin((sceneTime*.001+(ref.ph||0)))*.022;
+        }
         // Slight offset blinks make residents feel alive even when standing.
         // The head, eyes and clothes remain modeled in one coherent rig.
         const blink=(sceneTime*.0016+(ref.x||0)*.31+(ref.y||0)*.19)%6.8;
         for(const eye of limbs.eyelids||[])eye.scale.y=blink<.18?.16:1;
         g.position.y+=moving?Math.abs(Math.sin((ref.travel||0)*17))*.012:0;
       }
-      if(item.kind==='animal' && !reducedMotion) {
-        g.position.y+=Math.abs(Math.sin((ref.travel||0)*13))*Math.min(.016,(ref.v||0)*.035);
+      if(item.kind==='car'){
+        const rig=g.userData.vehicleRig;
+        if(rig){
+          for(const wheel of rig.wheels)wheel.rotation.z=-(ref.travel||0)*12;
+          rig.brakeMaterial.emissiveIntensity=ref.braking?.90:.075;
+          for(const {lamp,side} of rig.indicators){
+            const flashes=ref.turnSignal&&(ref.turnUntil||0)>town.debug().clock &&
+              Math.floor(town.debug().clock*3.4)%2===0;
+            const direction=ref.turnSignal==='left'?1:-1;
+            lamp.material.emissiveIntensity=flashes&&direction===side?1.9:.025;
+          }
+        }
+        const bike=g.userData.bicycleRig;
+        if(bike){
+          for(const wheel of bike.wheels)wheel.rotation.z=-(ref.travel||0)*9.0;
+          bike.crank.rotation.z=(ref.travel||0)*15;
+        }
+      }
+      if(item.kind==='animal' && !reducedMotion){
+        const rig=g.userData.creatureRig;
+        const phase=(ref.travel||0)*12+(ref.ph||0);
+        const motion=Math.min(1,(ref.v||0)*2.2);
+        if(rig){
+          for(let k=0;k<rig.legs.length;k++)
+            rig.legs[k].rotation.z=Math.sin(phase+(k%2?Math.PI:0))*motion*.27;
+          for(let k=0;k<rig.wings.length;k++)
+            rig.wings[k].rotation.x=(k%2?-1:1)*Math.sin(phase)*motion*.30;
+          if(rig.tail)rig.tail.rotation.y=Math.sin(
+            town.debug().clock*3.1+(ref.ph||0))*.25;
+          if(rig.head?.rotation)rig.head.rotation.z=
+            Math.sin(town.debug().clock*1.8+(ref.ph||0))*.06;
+        }
+        g.position.y+=Math.abs(Math.sin(phase))*Math.min(.013,(ref.v||0)*.025);
       }
     }
   }
@@ -2318,7 +2371,11 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
     for(const a of ambient){
       if(a.kind==='duck'){
         a.mesh.position.set(a.ref.x,.21+Math.sin(time*1.75+a.phase)*.025,a.ref.y);
-        a.mesh.rotation.y=Math.sin(time*.58+a.phase)*.22;
+        a.mesh.rotation.y=(a.ref.vx<0?Math.PI:0)+Math.sin(time*.58+a.phase)*.14;
+        for(let k=0;k<(a.mesh.userData.duckWings||[]).length;k++){
+          a.mesh.userData.duckWings[k].rotation.x=
+            (k===0?1:-1)*Math.sin(time*2.7+a.phase)*.22;
+        }
       } else if(a.kind==='water'){
         const pulse=.88+.16*Math.sin(time*1.1+a.phase);
         a.mesh.scale.set(pulse,pulse,pulse);
