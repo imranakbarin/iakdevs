@@ -804,6 +804,19 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
     if(b.hero)wallTrim(g,.10+height,style===1?'#ebd6c0':'#e3c6ad');
     const cap=.1+height;
     roof(g,b.roof||'#ba7355',cap);
+    // The secondary streets need varied rooflines too: selected cottages
+    // get a genuine intersecting lean-to wing, while remaining within their
+    // own lots and keeping the moving traffic clearance unchanged.
+    if(!b.hero && style===0 && (Math.round(b.x*7+b.y*13)%3)!==1){
+      const annex=new THREE.Group();
+      annex.position.set(-.245,0,-.14);
+      annex.scale.set(.42,.73,.56);
+      g.add(annex);
+      box(annex,.74,.91,.77,mat(tint(paint,'#f6e8cf',.12)),0,.51,0);
+      roof(annex,tint(b.roof||'#ba7355','#ca9376',.22),.99);
+      box(annex,.20,.35,.045,'#9fbec0',0,.43,.414);
+      box(annex,.27,.025,.070,'#f1dfc7',0,.242,.448);
+    }
     // Each hero house gets a distinct architectural silhouette rather than
     // three copies of the same rectangular cottage.
     if(b.hero&&style===0)sideCottageWing(g,paint,b.roof||'#ba7355');
@@ -1740,7 +1753,9 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
     const closeness=THREE.MathUtils.clamp((v.z-1.0)/2.7,0,1);
     // Bring the eye down as we approach: rooftops remain visible, but
     // shop glazing, porches and characters occupy more of the composition.
-    camera.position.set(v.x+18,23-closeness*10,v.y+18);
+    // More architectural eye-level at zoom: the previous high camera showed
+    // mostly roofs and hid the ornate shopfronts and modeled character faces.
+    camera.position.set(v.x+18,23-closeness*12.5,v.y+18);
     camera.lookAt(v.x,.30,v.y);
     camera.updateProjectionMatrix();
   }
