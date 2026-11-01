@@ -27,6 +27,10 @@ jobs:
         run: |
           npm install --no-save --no-package-lock playwright@1.58.2
           npx playwright install --with-deps chromium
+      - name: Verify town logic, camera controls and 3D environment
+        run: |
+          node tests/toy-town.test.cjs
+          node tests/toy-town-3d.test.cjs
       - name: Test real WebGL and capture close-up views
         run: node tests/toy-town-visual.cjs
       - name: Keep rendered screenshots
