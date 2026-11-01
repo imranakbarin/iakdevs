@@ -85,7 +85,7 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
   const world = new THREE.Group(); scene.add(world);
   const actors = new Map(), ambient = [], plazaLights = [], festoonBulbs = [];
   const windowMaterials=new Set();
-  let gardenElements = 0, woodlandShapes = 0, terrainContours = 0;
+  let gardenElements = 0, woodlandShapes = 0, terrainContours = 0, composedBuildings = 0;
   let worldSeed = null, worldBuildings = null, worldPropCount = 0, sceneTime = 0, landmarkCount = 0;
   let stopped = false, frozen = false, raf = 0, frames = 0, redrawCount = 0, lastSize = '', lastFrameAt = 0;
   const TAU = Math.PI * 2, LINES = [1,6,11,16];
@@ -925,6 +925,7 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
       // picket hedge on one side of the entry with no roof penetration
       for(let k=0;k<4;k++)ball(g,.10,'#7ba780',-.37,.20,-.24+k*.16);
     }
+    return g;
   }
   function shop(b){
     const g=new THREE.Group();g.position.set(b.x+.5,0,b.y+.5);world.add(g);
@@ -963,6 +964,29 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
       for(let i=0;i<4;i++)box(g,.048,.11,.035,['#d68d88','#79a3a6','#e6be81','#947ca6'][i],
         -.34+i*.09,.29,.464);
     }
+    return g;
+  }
+
+  // Art-directed 3D-only massing: stable, small shifts away from traffic
+  // create distinct street silhouettes while preserving all 2D coordinates.
+  function composeSecondaryBuilding(b,group){
+    if(!group || b.hero || !['house','shop'].includes(b.kind))return group;
+    const seed=(b.x*101+b.y*271+(b.h|0)*17)>>>0;
+    const nearestRoad=p=>LINES.reduce((best,n)=>
+      Math.abs(n+.5-p)<Math.abs(best-p)?n+.5:best,LINES[0]+.5);
+    const x=b.x+.5,z=b.y+.5;
+    const ox=Math.sign(x-nearestRoad(x))*(.035+.018*rng(seed,91));
+    const oz=Math.sign(z-nearestRoad(z))*(.035+.018*rng(seed,92));
+    const yaw=(rng(seed,93)-.5)*.19;
+    const width=.91+.08*rng(seed,98);
+    const height=.87+.19*rng(seed,94);
+    group.position.set(x+ox,0,z+oz);
+    group.rotation.y=yaw;
+    group.scale.set(width,height,width);
+    group.userData.composedSecondary=true;
+    group.userData.composition={offsetX:ox,offsetZ:oz,yaw,width,height,originalX:x,originalZ:z};
+    composedBuildings++;
+    return group;
   }
   function tower(b){
     const x=b.x+.5,z=b.y+.5,h=Math.min(2.65,Math.max(1.0,b.h/45));
@@ -1645,7 +1669,7 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
   function rebuild(){
     ambient.length = 0; plazaLights.length = 0; festoonBulbs.length = 0;
     windowMaterials.clear();
-    gardenElements = 0; woodlandShapes = 0; terrainContours = 0; landmarkCount = 0;
+    gardenElements = 0; woodlandShapes = 0; terrainContours = 0; composedBuildings = 0; landmarkCount = 0;
     while(world.children.length)world.remove(world.children[0]);
     for(const [ref,obj] of actors){obj.group.parent?.remove(obj.group);}
     actors.clear();
@@ -1672,8 +1696,8 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
           console.warn('Hero landmark model failed; using classic geometry',error);
         }
       }
-      if(b.kind==='house')home(b);
-      else if(b.kind==='shop')shop(b);
+      if(b.kind==='house')composeSecondaryBuilding(b,home(b));
+      else if(b.kind==='shop')composeSecondaryBuilding(b,shop(b));
       else if(b.kind==='tower')tower(b);
       else if(b.kind==='fire')fireStation(b);
       else if(b.kind==='site'){
@@ -1973,8 +1997,18 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
     // shop glazing, porches and characters occupy more of the composition.
     // More architectural eye-level at zoom: the previous high camera showed
     // mostly roofs and hid the ornate shopfronts and modeled character faces.
-    camera.position.set(v.x+12.5,23-closeness*11.5,v.y+22);
-    camera.lookAt(v.x,.30,v.y);
+    // At close zoom, frame the landmark shopfronts. Panning away removes
+    // the added focus automatically; user gestures still own the camera.
+    const focusWeight=THREE.MathUtils.clamp((v.z-.90)/.90,0,1)*
+      THREE.MathUtils.clamp(1-Math.hypot(v.x-9,v.y-9)/2.9,0,1);
+    const aimX=v.x-focusWeight*.09,aimZ=v.y-focusWeight*.42;
+    if(window.location?.search?.includes('legacycam=1')){
+      camera.position.set(v.x+12.5,23-closeness*11.5,v.y+22);
+      camera.lookAt(v.x,.30,v.y);
+    }else{
+      camera.position.set(aimX+7.4,20.4-closeness*9.4,aimZ+24.0);
+      camera.lookAt(aimX,.43,aimZ);
+    }
     camera.updateProjectionMatrix();
   }
   function frame(timestamp){
@@ -2015,7 +2049,7 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
   renderer.domElement.addEventListener('webglcontextrestored',restored,false);
   const api={
     active:false,renderer,scene,camera,
-    getStats:()=>({frames,redrawCount,actors:actors.size,ambient:ambient.length,plazaLights:plazaLights.length,festoonBulbs:festoonBulbs.length,gardenElements,woodlandShapes,terrainContours,landmarks:landmarkCount,windowMaterials:windowMaterials.size,photographicLens:false,buildings:town.buildings().length,webgl:true,frozen}),
+    getStats:()=>({frames,redrawCount,actors:actors.size,ambient:ambient.length,plazaLights:plazaLights.length,festoonBulbs:festoonBulbs.length,gardenElements,woodlandShapes,terrainContours,composedBuildings,landmarks:landmarkCount,windowMaterials:windowMaterials.size,photographicLens:false,buildings:town.buildings().length,webgl:true,frozen}),
     // A stable actual GPU-rendered frame for visual regression screenshots.
     // Unlike stop(), freeze does not switch to the Canvas fallback.
     freeze(){frozen=true;cancelAnimationFrame(raf);},
