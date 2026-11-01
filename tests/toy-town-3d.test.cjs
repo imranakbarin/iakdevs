@@ -130,12 +130,15 @@ assert.match(html,/toy-town-3d\.js\?v=30/);
 assert.match(html,/toy-town-landmarks\.js\?v=7/,'the independent models are requested alongside Three');
 assert.match(html,/buildLandmark:landmarks\.buildLandmark/,
   'loader injects the authored model builder into the 3D simulation');
-assert.match(html,/toy-town\.js\?v=18/);
+assert.match(html,/toy-town\.js\?v=19/);
 assert.ok(html.indexOf('toy-town.js?v=18')<html.indexOf("import('three')"), 'classic fallback starts first');
 assert.match(page,/toy-town\.html\?v=47&embed=1/);
 assert.match(fs.readFileSync(path.join(root,'assets/toy-town.js'),'utf8'),
   /targetX=clamp\(\.08,p\.x,17\.92\)/,
   'scripted paths are clamped at the endpoint rather than freezing outside town');
+assert.match(fs.readFileSync(path.join(root,'assets/toy-town.js'),'utf8'),
+  /Cross-traffic clearance:/,
+  'drivers yield to traffic still occupying an intersection');
 assert.match(moduleCode,/export function mountToyTown3D/);
 assert.match(moduleCode,/new THREE\.WebGLRenderer/);
 assert.match(moduleCode,/window\.ToyTown3D=api/);
