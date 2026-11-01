@@ -170,8 +170,11 @@ function makeKit(T,Round){
     ctx.lineTo(128,103);ctx.lineTo(128,156);ctx.closePath();ctx.fill();
     const tex=new T.CanvasTexture(c);tex.colorSpace=T.SRGBColorSpace;
     const m=new T.MeshStandardMaterial({map:tex,color:'#ffffff',
-      roughness:.22,metalness:.08,
-      emissive:warm?'#cc8249':'#547b77',emissiveIntensity:warm?.12:.035});
+      roughness:.19,metalness:.12,
+      // All windows pick up reflected sky by day, then acquire a softly
+      // amber lived-in glow. The town renderer drives intensity at dusk.
+      emissive:'#e6af79',emissiveIntensity:warm?.12:.04});
+    m.userData={miniatureWindow:true,warm};
     glassCache.set(key,m);return m;
   }
   function roundedFootprint(w=.80,d=.79,corner=.09){
