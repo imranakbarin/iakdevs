@@ -248,6 +248,8 @@ function makeKit(T,Round){
     }
     const roofMat=texture(pigment,'tile');
     for(let i=0;i<2;i++)mesh(g,geometries[i],roofMat,0,top,0);
+    raisedRoofTiles(g,width,depth,top,pigment,{arch,crest});
+    carvedRoofRidge(g,depth,top,crest,pigment);
     mesh(g,geometries[2],material('#e4c8aa'),0,top-.012,0);
     // Layered eaves: dark underside separates the clay roof volume from
     // the plaster walls, while the lighter front fascia catches sunlight.
@@ -506,6 +508,124 @@ function makeKit(T,Round){
     sphere(g,.019,'#735f50',x,y-.005,z+.066);
   }
 
+
+  // Sculptural details that work at the mobile camera scale. Every ceramic
+  // shingle is an instance of one cached beveled solid, NOT a new draw call.
+  // The tile field follows the actual curved roof equation at each station.
+  // Three test doubles and older devices can omit instancing safely.
+  const tileGeometry=geom('round',.072,.014,.108);
+  function raisedRoofTiles(g,width,depth,top,pigment,{arch=.10,crest=.34}={}){
+    if(!T.InstancedMesh||!T.Object3D||!T.Color)return;
+    const rows=8,cols=8,count=rows*cols*2;
+    const tileMat=material(pigment,.89,'ceramic');
+    const shells=new T.InstancedMesh(tileGeometry,tileMat,count);
+    const helper=new T.Object3D();
+    const base=new T.Color(pigment);
+    const shade=new T.Color('#725d52');
+    const highlight=new T.Color('#eacda8');
+    for(let side=0;side<2;side++){
+      const direction=side===0?-1:1;
+      for(let row=0;row<rows;row++){
+        // Each course overlaps the previous course along a curved roof face.
+        const t=.115+(row+.5)/rows*.79;
+        const span=width*.60;
+        const xx=direction*span*t;
+        const slope=(crest*(-.92*Math.pow(t,-.08))+
+          arch*Math.PI*Math.cos(Math.PI*t))/span;
+        const y=crest*(1-Math.pow(t,.92))+arch*Math.sin(Math.PI*t);
+        const angle=Math.atan(slope)*direction;
+        for(let col=0;col<cols;col++){
+          const n=(side*rows+row)*cols+col;
+          const shift=(row%2)*.039;
+          const zz=(col+.5+((row%2)?-.34:0))/cols*depth*1.03-depth*.515;
+          const wobble=(rng(n*19+cols)-.5)*.007;
+          helper.position.set(xx,y+top+.022+wobble,zz+shift*.12);
+          helper.rotation.set(0,0,angle);
+          helper.scale.set(1+(rng(n+12)-.5)*.085,1,
+            .94+(rng(n+41)-.5)*.07);
+          helper.updateMatrix();
+          shells.setMatrixAt(n,helper.matrix);
+          const tone=base.clone();
+          if(n%9===0)tone.lerp(shade,.10);
+          else if(n%7===0)tone.lerp(highlight,.10);
+          else tone.lerp(highlight,.018+(rng(n+7))*.035);
+          shells.setColorAt(n,tone);
+        }
+      }
+    }
+    shells.castShadow=false; shells.receiveShadow=true;
+    shells.frustumCulled=false;
+    shells.userData={ceramicRoofTiles:true,tiles:count};
+    g.add(shells);
+  }
+  function carvedRoofRidge(g,depth,top,crest,color){
+    const pigment=texture(color,'tile');
+    // Half-round ridge barrels catch specular light and articulate both ends.
+    const k=9;
+    for(let i=0;i<k;i++){
+      const z=(i+.5)/k*depth*1.1-depth*.55;
+      const tile=cyl(g,.048,.048,depth*1.12/k,pigment,0,
+        top+crest+.042,z,false);
+      tile.rotation.x=Math.PI/2;
+    }
+    for(const side of [-1,1]){
+      const terminal=sphere(g,.058,'#d4b496',0,top+crest+.046,
+        side*depth*.56,false);
+      terminal.scale.set(.92,.73,.68);
+    }
+  }
+  function woodenShutters(g,x,y,z,w=.23,h=.37,color='#82998e'){
+    // Two hinged, slightly open shutters leave the window itself visible.
+    for(const side of [-1,1]){
+      const group=new T.Group();group.position.set(
+        x+side*(w*.5+.018),y,z+.028);group.rotation.y=side*.24;g.add(group);
+      const panel=block(group,w*.33,h*.94,.027,
+        texture(color,'wood'),side*w*.17,0,0,false,false);
+      for(let k=0;k<5;k++)
+        block(group,w*.28,.016,.031,'#e9dfca',side*w*.17,
+          -h*.34+k*h*.17,.021,false,false);
+      for(const yoff of [-h*.42,h*.42])
+        block(group,w*.37,.016,.034,'#796954',side*w*.17,
+          yoff,.022,false,false);
+    }
+  }
+  function masonryCorners(g,w,d,from,to,stone='#e7d6bc'){
+    // The masonry is staggered into quoins: no large floating pilasters.
+    const materialStone=texture(stone,'stone');
+    for(const side of [-1,1]){
+      for(let k=0;k<7;k++){
+        const y=from+(k+.5)*(to-from)/7;
+        const wide=.105+(k%2)*.029;
+        block(g,wide,(to-from)/7-.014,.054,materialStone,
+          side*(w*.5-.020),y,d*.5+.026,false,false);
+      }
+    }
+  }
+  function copperGutters(g,w,d,top,accent='#88746b'){
+    // Downspout follows the actual exterior wall, with a narrow eave trough.
+    for(const side of [-1,1]){
+      const gutter=cyl(g,.026,.026,d*1.19,accent,
+        side*w*.59,top-.028,0,false);
+      gutter.rotation.x=Math.PI/2;
+      for(const z of [-d*.44,d*.44]){
+        const clasp=block(g,.07,.023,.042,'#b8a993',
+          side*w*.59,top-.016,z,false,false);
+      }
+    }
+    const x=-w*.46,z=d*.5+.055;
+    cyl(g,.017,.017,top-.36,accent,x,(top+.36)/2,z,false);
+    cyl(g,.026,.026,.045,'#d2b7a1',x,.39,z,false);
+  }
+  function shallowEntrySteps(g,x,z,width=.29){
+    // Physically grounded tapered limestone steps join doors to paths.
+    for(let i=0;i<3;i++){
+      const tread=block(g,width+i*.074,.036,.09+i*.03,
+        texture(i%2?'#d4c1a3':'#e9d5b7','stone'),
+        x,.218-i*.012,z+.04+i*.088,false,false);
+      tread.castShadow=false;
+    }
+  }
+
   function base(b){
     const g=new T.Group();
     g.position.set(b.x+.5,0,b.y+.5);
@@ -522,9 +642,12 @@ function makeKit(T,Round){
     crossGable(g,.15,.27,top,.44,'#a9564a','#efd2b6');
     chimney(g,-.29,top+.21,-.24,'#bc826b');
     masonryStripes(g,.84,.27,1.09,.418,'#efd8be');
+    masonryCorners(g,.85,.76,.24,1.10,'#e8cfb3');
+    copperGutters(g,.82,.83,top,'#96776a');
     // Front counter: deep vertical windows flanking an arched caramel door.
     glazing(g,-.255,.63,.419,.22,.54);
     glazing(g,.252,.63,.419,.23,.54);
+    woodenShutters(g,.252,.63,.453,.23,.49,'#b4a389');
     arch(g,.025,.454,.42,.22,.59,'#956344');
     // Bakery shopfront uses a curved glazed display room rather than a
     // rectangular cuboid stuck in front of a second wall window.
@@ -540,6 +663,7 @@ function makeKit(T,Round){
     block(g,.38,.034,.15,'#a77f5f',-.245,.37,.56);
     pot(g,-.395,.53,.88);pot(g,.378,.54,.91);
     lanternBracket(g,.36,.91,.50);
+    shallowEntrySteps(g,.025,.52,.31);
     for(let i=0;i<4;i++)block(g,.041,.18,.039,'#efdbbc',-.35+i*.23,.84,.443);
     return g;
   }
@@ -558,6 +682,8 @@ function makeKit(T,Round){
       .31,top+.66,-.20);
     chimney(g,-.31,top+.13,-.23,'#b5a895');
     masonryStripes(g,.81,.27,1.07,.419,'#f1e4ce');
+    masonryCorners(g,.81,.80,.23,1.06,'#dfdccd');
+    copperGutters(g,.81,.84,top,'#6b827a');
     // Curved book-bay to the right, handmade wooden entry to the left.
     arch(g,-.22,.45,.42,.23,.61,'#6c745c');
     glazing(g,.21,.61,.43,.30,.50);
@@ -572,6 +698,7 @@ function makeKit(T,Round){
     sign(g,'BOOK NOOK',0,1.218,.589,.74,'#e3eedf','#305c50');
     planter(g,.35,.54,'#6e9880');pot(g,-.40,.56,.80,'#729c89');
     lanternBracket(g,-.34,.89,.49);
+    shallowEntrySteps(g,-.22,.54,.28);
     // Thin, suspended store sign with a wrought-iron bracket.
     block(g,.18,.016,.02,'#687a71',-.38,1.01,.49);
     const oval=sphere(g,.105,'#f8ebd3',-.415,.88,.50);
@@ -598,6 +725,9 @@ function makeKit(T,Round){
     chimney(g,-.25,top+.16,-.24,'#b88d75');
     flowerBox(wing,-.01,.44,.51,.27);
     timberFront(g,{w:.72,z:.416,from:.31,to:1.04,wood:'#a77762',pattern:0});
+    copperGutters(g,.83,.85,top,'#987b6f');
+    masonryCorners(g,.79,.79,.23,.91,'#e8d0b9');
+    shallowEntrySteps(g,.19,.51,.33);
     block(g,.33,.046,.31,'#dec5a5',.20,.17,.54);
     pot(g,-.35,.53,.88,'#729a7a');pot(g,.37,.50,.95,'#7d9e77');
     return g;
@@ -611,6 +741,8 @@ function makeKit(T,Round){
     // asymmetrical landmark, not simply a taller version of a normal house.
     crossGable(g,-.20,.24,top,.39,'#577e9a','#c7dce3');
     masonryStripes(g,.76,.23,1.02,.413,'#e4e3d2');
+    masonryCorners(g,.78,.77,.28,1.20,'#e4e3d2');
+    copperGutters(g,.86,.84,top,'#81939a');
     // Tall seaside tower integrated into back corner, with its own pointed roof.
     cyl(g,.18,.225,1.40,'#b9d4da',.295,.84,.27);
     cyl(g,.22,.22,.045,'#f1dfc8',.295,1.55,.27);
@@ -618,6 +750,7 @@ function makeKit(T,Round){
     glazing(g,.292,.96,.504,.13,.26);
     arch(g,.18,.446,.43,.23,.57,'#628a96');
     glazing(g,-.24,.73,.413,.21,.36);
+    woodenShutters(g,-.24,.73,.436,.21,.36,'#7696a5');
     glazing(g,.422,.71,-.12,.20,.30,{side:true});
     // Delicate second-floor verandah balcony, structural rather than floating.
     block(g,.47,.059,.26,'#ead9bf',-.17,1.03,.52);
@@ -628,6 +761,7 @@ function makeKit(T,Round){
       block(g,.028,.67,.032,'#d7be9f',x,.68,.654,false,false);
     }
     lanternBracket(g,.35,.84,.48);
+    shallowEntrySteps(g,.18,.52,.30);
     pot(g,-.38,.52,.89,'#7a9f8f');
     return g;
   }
@@ -639,6 +773,8 @@ function makeKit(T,Round){
     volumeRoof(g,.84,.88,top,'#b58352',{arch:.14,crest:.45});
     crossGable(g,-.18,.25,top,.38,'#a5794f','#e9d3b2');
     timberFront(g,{w:.73,z:.421,from:.24,to:1.08,wood:'#b08a61',pattern:1});
+    copperGutters(g,.84,.88,top,'#98795e');
+    masonryCorners(g,.80,.81,.24,1.08,'#e9d9bd');
     cyl(g,.20,.24,1.26,'#edd9b9',.31,.76,.23);
     cyl(g,.25,.24,.045,'#f4e3c7',.31,1.41,.23);
     mesh(g,geom('cone',.28,.43),texture('#be9160','tile'),.31,1.65,.23);
@@ -658,6 +794,7 @@ function makeKit(T,Round){
       -.34+i*.16,.27,.70);
     flowerBox(g,.14,.47,.47);
     lanternBracket(g,-.37,.86,.48);
+    shallowEntrySteps(g,-.18,.51,.30);
     pot(g,-.40,.50,.83,'#7b9d81');
     return g;
   }
