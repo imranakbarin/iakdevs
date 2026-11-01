@@ -77,13 +77,13 @@ assert.match(moduleCode,/eye.scale.y=blink/,'eyelids blink without a separate an
 assert.match(html,/type="importmap"/);
 assert.match(html,/three@0\.187\.0\/build\/three\.module\.js/);
 assert.match(html,/three@0\.187\.0\/examples\/jsm\//);
-assert.match(html,/toy-town-3d\.js\?v=18/);
+assert.match(html,/toy-town-3d\.js\?v=19/);
 assert.match(html,/toy-town-landmarks\.js\?v=4/,'the independent models are requested alongside Three');
 assert.match(html,/buildLandmark:landmarks\.buildLandmark/,
   'loader injects the authored model builder into the 3D simulation');
 assert.match(html,/toy-town\.js\?v=15/);
 assert.ok(html.indexOf('toy-town.js?v=15')<html.indexOf("import('three')"), 'classic fallback starts first');
-assert.match(page,/toy-town\.html\?v=33&embed=1/);
+assert.match(page,/toy-town\.html\?v=34&embed=1/);
 assert.match(fs.readFileSync(path.join(root,'assets/toy-town.js'),'utf8'),
   /targetX=clamp\(\.08,p\.x,17\.92\)/,
   'scripted paths are clamped at the endpoint rather than freezing outside town');
@@ -203,10 +203,19 @@ assert.equal(host.style.display,'block');
 assert.equal(townCanvas.style.opacity,'0');
 assert.ok(stats.renders>=1);
 assert.ok(api.getStats().gardenElements>=140,'village has substantial coordinated landscaping and furniture');
+assert.ok(api.getStats().woodlandShapes>=1,
+  'simulation trees use the authored asymmetric crowns');
+assert.ok(api.getStats().terrainContours>=2,
+  'the open lots now contain landscaped organic terrain');
 assert.equal(api.getStats().festoonBulbs,14,'two suspended spans contain 14 miniature lamps');
 const initialGardenCount=api.getStats().gardenElements;
 const sceneWorld=api.scene.children.find(o=>o.children?.some(x=>x.userData?.uniqueAsset));
 assert.ok(sceneWorld,'scene has a populated world group');
+const contours=sceneWorld.children.filter(o=>o.userData?.landscapeContour);
+assert.ok(contours.length>=2,'real geometric lawn contours join several lots');
+assert.ok(contours.every(o=>o.position.x>2 && o.position.x<16 &&
+  o.position.z>2 && o.position.z<13),
+  'new landscaping stays on the grassy town slab, not the river');
 const groundedPads=sceneWorld.children.filter(o=>o.material?.transparent&&o.material?.map&&o.rotation.x===-Math.PI/2);
 assert.ok(groundedPads.length>=7,'soft contact shading integrates the slab, buildings and trees');
 assert.ok(groundedPads.some(p=>p.position.x===7.5&&p.position.z===7.5),
@@ -264,7 +273,14 @@ assert.match(moduleCode,/function turret\(/,'one hero cottage has its own curved
 assert.match(moduleCode,/function sideCottageWing\(/,'another hero cottage has a secondary roof and wing');
 assert.match(moduleCode,/function shopExtra\(/,'bookshop and bakery have distinctive facades');
 assert.match(moduleCode,/function ivy\(/,'climbing green vines integrate facades with the landscape');
-assert.match(moduleCode,/One continuous asymmetric crown/,'sculpted tree shapes remain active');
+assert.match(moduleCode,/Four authored silhouettes replace/,
+  'trees now have separate oak, cypress, willow and orchard crown models');
+assert.match(moduleCode,/function createLandscapeComposition\(/,
+  'clear lots gain individually sculpted raised terrain and living fringes');
+assert.match(moduleCode,/createLandscapeComposition\(\);/,
+  'terrain composition is constructed alongside the roads on rebuild');
+assert.match(moduleCode,/function contour\(/,
+  'free parcels have organically shaped 3D landscape contours');
 
 
 assert.equal(api.getStats().plazaLights,1,'modeled plaza lamps have physical warm light');
