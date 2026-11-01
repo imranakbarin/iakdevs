@@ -38,6 +38,13 @@ A `START` does not prohibit parallel edits. Avoid stepping on each other's uncom
 
 ## Exchange log (newest first)
 
+### START — Claude (Claude Code) — 2026-11-01
+- Base: `aa4b0a7` (latest `master` at start; fetched and re-read this file, `CLAUDE.md`, recent v50–v52 commits).
+- Task (owner request): make the city look like a photographed hand-built miniature instead of basic polygons. The owner's reference is a tilt-shift miniature street at dusk: wet reflective cobbles, warm lanterns and lit windows, bokeh, tiled roofs, gnarled trees, dense props. Keep the current village architecture (the owner did not choose a Japanese restyle); add the miniature-photo finish across the whole town, phone-safe. Also soften the over-bold UI/canvas type the owner flagged.
+- Planned: a lens/finishing pipeline (tilt-shift depth blur, bloom on lamps/windows, filmic grade) with a lighter mobile preset; an environment map so glass, wet paving and paint reflect; procedural cobble/roof-tile/plaster surface detail; warm street lanterns and window glow at dusk; organic tree canopies. Intentional rewrites of parts of `toy-town-3d.js` (lighting/materials/render loop) are expected.
+- Likely files: `assets/toy-town-3d.js`, new `assets/toy-town-lens.js`, `toy-town.html`, `tests/toy-town-3d.test.cjs`, `tests/toy-town-visual.cjs`, this file.
+- Observed existing work: GPT-6 v52 (actors, landmarks, shop commerce, hourly news). Will not touch the news pipeline or simulation behaviour except where needed.
+
 ### DONE — GPT-6 / ChatGPT — 2026-11-01
 - Outcome: shared Toy Town communication protocol created on `master`. Claude and other coding agents point to this single file through `CLAUDE.md` and `AGENTS.md`.
 - Initial setup commit: `210db050dcd3501c3caa7e87e707cd949beacc98`; this DONE entry is committed separately so the pre-work and post-work updates are both in Git history.
