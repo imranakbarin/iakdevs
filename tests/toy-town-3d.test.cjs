@@ -57,6 +57,12 @@ assert.match(moduleCode,/THREE\.WebGLRenderTarget&&THREE\.ShaderMaterial/,
   'filmic tilt-shift finish is optional when WebGL features are unsupported');
 assert.match(moduleCode,/film\.target\.setSize\(rw,rh\)/,
   'the photographic render target follows mobile and desktop resize');
+assert.match(moduleCode,/#include <tonemapping_fragment>/,
+  'offscreen image receives the same ACES tone mapping as normal WebGL');
+assert.match(moduleCode,/toneMapped:true/,
+  'photographic lens does not bypass display-space tone mapping');
+assert.doesNotMatch(moduleCode,/gl_FragColor=vec4\(clamp\(color,0\.,1\.\),1\.\)/,
+  'HDR highlights are not clipped before display tone mapping');
 assert.match(moduleCode,/renderer\.setRenderTarget\(null\)/,
   'the cinematic pass returns to the real device framebuffer');
 assert.match(moduleCode,/film=null;[\s\S]*?renderer\.render\(scene,camera\)/,
@@ -89,13 +95,13 @@ assert.match(moduleCode,/eye.scale.y=blink/,'eyelids blink without a separate an
 assert.match(html,/type="importmap"/);
 assert.match(html,/three@0\.187\.0\/build\/three\.module\.js/);
 assert.match(html,/three@0\.187\.0\/examples\/jsm\//);
-assert.match(html,/toy-town-3d\.js\?v=21/);
+assert.match(html,/toy-town-3d\.js\?v=22/);
 assert.match(html,/toy-town-landmarks\.js\?v=5/,'the independent models are requested alongside Three');
 assert.match(html,/buildLandmark:landmarks\.buildLandmark/,
   'loader injects the authored model builder into the 3D simulation');
 assert.match(html,/toy-town\.js\?v=15/);
 assert.ok(html.indexOf('toy-town.js?v=15')<html.indexOf("import('three')"), 'classic fallback starts first');
-assert.match(page,/toy-town\.html\?v=36&embed=1/);
+assert.match(page,/toy-town\.html\?v=37&embed=1/);
 assert.match(fs.readFileSync(path.join(root,'assets/toy-town.js'),'utf8'),
   /targetX=clamp\(\.08,p\.x,17\.92\)/,
   'scripted paths are clamped at the endpoint rather than freezing outside town');
