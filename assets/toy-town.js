@@ -29,6 +29,7 @@ const ToyTown = (() => {
   const PACE = .6, CARS = 7, BIKES = 4, PEOPLE = 14, LIGHT = 10;   // a calm town: few cars, a handful of cyclists, people taking their time   // the whole town runs at 60% speed: easier to follow, calmer to watch
   let clock = 0, playing = true, last = 0, nextEvent = 2, director = null, directorUntil = 0;
   let community = null, communityEncounters = 0, communityVisits = 0;
+  let streetTrade=null,streetTransactions=0,streetShopVisits=0,newsReactions=0;
   const STREETS = ['Maple St', 'Elm Ave', 'Pickle Lane', 'Gumdrop Rd', 'Button Way', 'Teapot St', 'Biscuit Ave', 'Puddle Lane'];
   const streetOf = (x, y) => STREETS[(isRoad(Math.floor(x)) ? LINES.indexOf(Math.floor(x)) : 4 + Math.max(0, LINES.indexOf(Math.floor(y)))) % STREETS.length];
 
@@ -130,6 +131,7 @@ const ToyTown = (() => {
     }));
     buildings = []; props = []; movers = []; events = []; parts = []; bubbles = [];
     community=null;communityEncounters=0;communityVisits=0;
+    streetTrade=null;streetTransactions=0;streetShopVisits=0;newsReactions=0;
     nextStreetMoment = 16; streetMoments = 0;
     const blocks = [];
     for (const [ya, yb] of [[2, 5], [7, 10], [12, 15]]) for (const [xa, xb] of [[2, 5], [7, 10], [12, 15]]) blocks.push({xa, xb, ya, yb, river: ya === 12});
@@ -149,6 +151,7 @@ const ToyTown = (() => {
     for (let k = 0; k < PEOPLE; k++) spawnPerson(r);
     spawnHeroResidents(hero, r);
     spawnNeighborhoodLife(hero, r);
+    spawnStreetTrade(hero, r);
     for (const b of buildings) if (b.kind === 'house' && r() < .75) props.push({kind: 'flowers', x: b.x + .5, y: b.y + .88, c: [PASTEL[r() * 8 | 0], PASTEL[r() * 8 | 0]]});
     for (let k = 0; k < 5; k++) props.push({kind: 'duck', x: 1 + r() * 16, y: 13.2 + r() * 1.6, vx: (r() - .5) * .3, ph: r() * 6});
     sprites.clear(); ground = null;
@@ -433,6 +436,141 @@ const ToyTown = (() => {
       dog.path=[{x:to.x,y:to.y,speed:.34}];
       dog.nextFollow=clock+.45;
     }
+  }
+  /* --------- living market: physical service, not a rotating tableau --------
+   * Two clerks remain at the shop frontage and serve actual arriving
+   * customers. Goods appear in a hand only AFTER reaching the counter.
+   * Shoppers walk to the bakery or bookshop, receive a purchase, then
+   * actually walk to a cafe/reading spot before returning for another visit.
+   * Every transition is driven by distance and timed dwell, not teleport.
+   */
+  function spawnStreetTrade(hero,r){
+    const x=hero.xa,y=hero.ya;
+    const places=[
+      {kind:'bakery',product:'bread',vendor:{x:x+1.07,y:y+1.42},
+        serve:{x:x+1.32,y:y+1.78},rest:{x:x+1.17,y:y+2.31}},
+      {kind:'bookshop',product:'book',vendor:{x:x+2.93,y:y+1.42},
+        serve:{x:x+2.68,y:y+1.78},rest:{x:x+2.78,y:y+2.34}}
+    ];
+    const stalls=places.map((place,i)=>{
+      const clerk=spawnPerson(r,{kind:'shopkeeper',shopRole:'vendor',
+        shopVenue:place.kind,x:place.vendor.x,y:place.vendor.y,
+        d:2,lane:0,max:0,v:0,col:i?'#508f8a':'#de8f69',
+        hat:i?'cap':null,bag:false,scarf:false,
+        stopUntil:1e8,shopAction:'offering',
+        attention:{...place.serve}});
+      return {...place,clerk,customer:null,serveUntil:0};
+    });
+    const startingPoints=[
+      [x+1.21,y+2.56],[x+2.83,y+2.52],[x+2.08,y+2.38]
+    ];
+    const customers=startingPoints.map(([px,py],i)=>{
+      const shopper=spawnPerson(r,{kind:'shopper',shopRole:'customer',
+        x:px,y:py,d:3,lane:0,max:.36+r()*.10,v:0,bag:false,
+        col:['#db7d99','#e2b46d','#7da6bd'][i],
+        shopAction:'looking',shopPhase:'ready',shopOrder:i,
+        nextShop:clock+i*.85,stopUntil:clock+i*.85});
+      shopper.shopHome=i%2;
+      return shopper;
+    });
+    streetTrade={stalls,customers,latestSale:null,newsMood:null,
+      reactionUntil:0};
+  }
+  function updateStreetTrade(){
+    const trade=streetTrade;
+    if(!trade)return;
+    for(const stall of trade.stalls){
+      const seller=stall.clerk;
+      if(!movers.includes(seller))continue;
+      // A seller never drifts away from the counter while distracted by
+      // a theme event, nor performs a stationary walk cycle.
+      seller.v=0;
+      seller.shopAction=stall.customer&&
+        clock<(stall.serveUntil||0)?'serving':'offering';
+      seller.attention=stall.customer?
+        {x:stall.customer.x,y:stall.customer.y}:{...stall.serve};
+    }
+    for(const shopper of trade.customers){
+      if(!movers.includes(shopper))continue;
+      if(shopper.shopPhase==='ready'&&clock>=(shopper.nextShop||0)){
+        const preferred=trade.stalls[shopper.shopOrder%2];
+        const available=[preferred,...trade.stalls].find(s=>!s.customer);
+        if(!available){shopper.nextShop=clock+.55;continue;}
+        available.customer=shopper;
+        shopper.shopAt=available.kind;
+        shopper.shopOrder++;
+        shopper.shopPhase='approaching';
+        shopper.shopAction='visiting';
+        shopper.attention={...available.vendor};
+        shopper.path=[{x:available.serve.x,y:available.serve.y,
+          speed:shopper.max,then:o=>{
+            o.shopPhase='ordering';o.shopAction='ordering';
+            o.stopUntil=clock+1.25;o.shopNext=clock+1.25;
+            o.attention={...available.vendor};
+            streetShopVisits++;
+          }}];
+      }else if(shopper.shopPhase==='ordering'&&clock>=(shopper.shopNext||0)){
+        const stall=trade.stalls.find(s=>s.customer===shopper);
+        if(!stall)continue;
+        // The hand-off can only occur after the customer physically reaches
+        // the service point and faces the right clerk.
+        const gap=Math.hypot(shopper.x-stall.serve.x,shopper.y-stall.serve.y);
+        if(gap>.13)continue;
+        shopper.carrying=stall.product;
+        shopper.shopPhase='receiving';shopper.shopAction='receiving';
+        shopper.stopUntil=clock+.95;shopper.shopNext=clock+.95;
+        stall.serveUntil=clock+.95;
+        stall.clerk.shopAction='serving';
+        shopper.attention={...stall.vendor};
+        streetTransactions++;
+        trade.latestSale={shop:stall.kind,product:stall.product,at:clock};
+      }else if(shopper.shopPhase==='receiving'&&clock>=(shopper.shopNext||0)){
+        const stall=trade.stalls.find(s=>s.customer===shopper);
+        if(!stall)continue;
+        stall.customer=null;
+        shopper.shopPhase='leaving';shopper.shopAction='carrying';
+        shopper.stopUntil=0;shopper.attention={...stall.rest};
+        shopper.path=[{x:stall.rest.x,y:stall.rest.y,speed:shopper.max,
+          then:o=>{
+            o.shopPhase='enjoying';
+            o.shopAction=o.carrying==='book'?'reading':'eating';
+            o.shopNext=clock+3.5+(o.shopHome*.6);
+            o.stopUntil=o.shopNext;
+            o.attention={x:stall.rest.x+.3,y:stall.rest.y+.24};
+          }}];
+      }else if(shopper.shopPhase==='enjoying'&&clock>=(shopper.shopNext||0)){
+        shopper.carrying=null;
+        shopper.shopAction='looking';shopper.shopPhase='ready';
+        shopper.nextShop=clock+1.2+(shopper.shopHome*.6);
+        shopper.stopUntil=shopper.nextShop;
+        shopper.attention=null;
+      }
+    }
+    if(trade.reactionUntil&&clock>=trade.reactionUntil){
+      trade.reactionUntil=0;
+      trade.newsMood=null;
+      for(const m of [...trade.customers,...trade.stalls.map(s=>s.clerk)])
+        m.newsMood=null;
+    }
+  }
+  function reactToNews(variant){
+    if(!streetTrade||!variant||!variant.story)return false;
+    const mood=variant.key==='sports'?'cheer':
+      variant.key==='festival'||variant.key==='awards'?'celebrate':
+      variant.key==='space'||variant.key==='science'||variant.key==='tech'?'curious':
+      variant.key==='market'?'trade':'observe';
+    streetTrade.newsMood=mood;
+    streetTrade.reactionUntil=clock+7;
+    for(const [i,m] of [...streetTrade.customers,...streetTrade.stalls.map(s=>s.clerk)].entries()){
+      m.newsMood=mood;
+      // The existing 3D gesture rig responds to an observable news
+      // pulse without disturbing current service or customer paths.
+      if(mood==='cheer'||mood==='celebrate')
+        m.waveUntil=clock+1.8+(i%3)*.35;
+      else if(mood==='curious')m.attention={x:9,y:8.8};
+    }
+    newsReactions++;
+    return true;
   }
   function spawnBike(r = Math.random) {
     const p = randomRoadPoint(r), m = {type: 'car', kind: 'bike', x: p.x, y: p.y, d: p.d, heading: directionAngle(p.d), v: 0, travel: 0, moved:0, max: .55 + r() * .15, col: PASTEL[r() * PASTEL.length | 0], skin: ['#f1c9a5', '#d8a77c', '#a8754f', '#7a4e33'][r() * 4 | 0], wait: 0, lane: .36, ph: r() * 6};
@@ -1758,6 +1896,7 @@ const ToyTown = (() => {
   function update(dt) {
     clock += dt;
     updateNeighborhoodLife(dt);
+    updateStreetTrade();
     for (const m of movers.slice()) { step(m, dt); easeHeading(m, dt); updateHeroResident(m); }
     for (const e of events.slice()) { e.t += dt; if (e.follow) { e.x = e.follow.x; e.y = e.follow.y; } if (e.update) e.update(e, dt); if (e.t > e.dur) { if (e.end) e.end.call(e); events.splice(events.indexOf(e), 1); } }
     for (const m of movers.slice()) if (m.home && !m.path) remove(m);
@@ -1796,7 +1935,16 @@ const ToyTown = (() => {
     for (const m of movers) if (m.type === 'person') m.umbrella = raining && !m.kind;
     if (raining) for (let k = 0; k < 6; k++) parts.push({x: Math.random() * 18, y: Math.random() * 18, z: 160, vx: 0, vy: 0, vz: -260, g: 0, life: .6, t: 0, col: 'rgba(120,170,220,.7)', r: 1, rain: true});
     // Chaos: keep a few things going at once.
-    if ((nextHeadline -= dt) <= 0) { const st = today_.filter(v => v.story); if (st.length) tick(`TODAY'S NEWS ${st[(headIx++) % st.length].emoji} ${headline(st[(headIx - 1) % st.length].story)}`); nextHeadline = 30; }
+    if ((nextHeadline -= dt) <= 0) {
+      // Real headlines stay in the attributed source panel. The ticker is
+      // exclusively fictional neighborhood life, never unsourced news.
+      const sale=streetTrade?.latestSale;
+      if(sale&&clock-sale.at<35)
+        tick(sale.product==='bread'?'Fresh bread just sold at the bakery!':
+          'A neighbor picked up a book and found a reading spot.');
+      else tick('The village is open: neighbors meet, shops trade and bicycles pass.');
+      nextHeadline=26;
+    }
     if ((nextEvent -= dt) <= 0) { if (events.length < 3) randomEvent(); nextEvent = 7 + Math.random() * 6; }
     if (clock >= nextStreetMoment) { streetMoment(); nextStreetMoment = clock + 20 + Math.random() * 8; }   // an unhurried rhythm
     // Traffic: keep the streets busy as cars leave and events come and go.
@@ -1896,6 +2044,7 @@ const ToyTown = (() => {
     ];
     build(random?(Math.random()*1e9)|0:daySeed,today_[0].key);
     decorate(today_);
+    if(linkedToNews)reactToNews(today_[0]);
     setCard(today_,linkedToNews);
     service?.paint(snapshot);
     clock=0;nextEvent=1.5;
@@ -1918,6 +2067,7 @@ const ToyTown = (() => {
           if(selected.length){
             if(selected[0].story!==today_[0].story){
               today_=selected;
+              reactToNews(today_[0]);
               setCard(today_,true);
               startEvent(today_[0].variant); // update activity, never teleport the town
             }else setCard(today_,true);
@@ -2097,5 +2247,8 @@ const ToyTown = (() => {
     addEventListener('hashchange', () => location.reload());
     start();
   }
-  return {layout, render, zoomAt, resetView, fitView, pinchTo, screenWorld, streetMoment, hero: () => town.blocks.find(b => b.hero), TALK, nameOf, headline, dateKey, CALM, lightPhase, themeFromNews, newsThemes, VARIANTS, VARIANT_EVENTS: () => Object.keys(VARIANT_EVENTS), decorate, setToday: l => { today_ = l; }, PACE, THEMES, GRIM, build, update, events: () => events, movers: () => movers, buildings: () => buildings, props: () => props, startEvent, randomEvent, setPlaying: v => { playing = v; }, debug: () => ({clock, theme, seed, night: nightLevel(), cam: {...cam}, fitZoom, streetMoments,communityEncounters,communityVisits,community:community?{meetingUntil:community.meetingUntil,nextMeeting:community.nextMeeting,meetingCount:community.meetingCount}:null})};
+  return {layout, render, zoomAt, resetView, fitView, pinchTo, screenWorld, streetMoment, reactToNews, hero: () => town.blocks.find(b => b.hero), TALK, nameOf, headline, dateKey, CALM, lightPhase, themeFromNews, newsThemes, VARIANTS, VARIANT_EVENTS: () => Object.keys(VARIANT_EVENTS), decorate, setToday: l => { today_ = l; }, PACE, THEMES, GRIM, build, update, events: () => events, movers: () => movers, buildings: () => buildings, props: () => props, startEvent, randomEvent, setPlaying: v => { playing = v; }, debug: () => ({clock, theme, seed, night: nightLevel(), cam: {...cam}, fitZoom, streetMoments,communityEncounters,communityVisits,streetTransactions,streetShopVisits,newsReactions,
+    trade:streetTrade?{mood:streetTrade.newsMood,staff:streetTrade.stalls.length,
+      customers:streetTrade.customers.length,latestSale:streetTrade.latestSale}:null,
+    community:community?{meetingUntil:community.meetingUntil,nextMeeting:community.nextMeeting,meetingCount:community.meetingCount}:null})};
 })();

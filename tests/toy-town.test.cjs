@@ -202,6 +202,46 @@ assert.ok(T.movers().every(m=>Number.isFinite(m.x+m.y)&&m.x>0&&m.y>0&&
   m.x<18&&m.y<18),'coordinated motion respects the town bounds');
 
 
+
+// The main plaza is now a working community economy: shoppers travel to
+// counters, physically receive items, then walk away to use their purchases.
+T.build(60624,'market');
+const stallWorkers=T.movers().filter(m=>m.shopRole==='vendor');
+const marketCustomers=T.movers().filter(m=>m.shopRole==='customer');
+assert.equal(stallWorkers.length,2,'a baker and bookseller staff the real storefronts');
+assert.equal(marketCustomers.length,3,'three independent shoppers form a small active market');
+assert.ok(stallWorkers.every(m=>m.max===0&&m.x>7&&m.x<11&&m.y>8&&m.y<9),
+  'shopkeepers remain grounded at their own storefront counters');
+const marketMetrics={peakHolding:0,peakService:0,furthestTravel:0};
+for(let i=0;i<60*80;i++){
+  T.update(1/60);
+  marketMetrics.peakHolding=Math.max(marketMetrics.peakHolding,
+    marketCustomers.filter(m=>m.carrying).length);
+  marketMetrics.peakService=Math.max(marketMetrics.peakService,
+    stallWorkers.filter(m=>m.shopAction==='serving').length);
+  marketMetrics.furthestTravel=Math.max(marketMetrics.furthestTravel,
+    ...marketCustomers.map(m=>m.travel||0));
+  for(const buyer of marketCustomers)if(buyer.shopPhase==='receiving'){
+    const worker=stallWorkers.find(w=>w.shopVenue===buyer.shopAt);
+    assert.ok(worker&&Math.hypot(buyer.x-worker.x,buyer.y-worker.y)<.65,
+      'a purchase occurs only face-to-face at the intended real storefront');
+  }
+}
+assert.ok(T.debug().streetShopVisits>=8,'residents genuinely revisit shops');
+assert.ok(T.debug().streetTransactions>=6,
+  'bread and books actually exchange hands repeatedly');
+assert.ok(marketMetrics.peakHolding>=1,'the purchaser physically holds the merchandise');
+assert.ok(marketMetrics.peakService>=1,'staff perform distinct serving actions');
+assert.ok(marketMetrics.furthestTravel>2,'visitors physically travel around the village');
+const mood=T.newsThemes(['A football championship victory celebrated by fans'])[0];
+assert.ok(T.reactToNews(mood),'a sourced matching headline triggers a town reaction');
+assert.equal(T.debug().trade.mood,'cheer','the public story produces a specific social mood');
+assert.ok(stallWorkers.some(m=>m.waveUntil>T.debug().clock),
+  'clerks visibly greet the moment instead of leaving a headline unconnected');
+assert.equal(T.debug().newsReactions,1,'news reactions are counted separately from fiction events');
+for(let i=0;i<60*9;i++)T.update(1/60);
+assert.equal(T.debug().trade.mood,null,'news reactions expire instead of looping indefinitely');
+
 // Canvas smoke: rich buildings, human poses and all event types must draw without errors.
 // The same camera frame reuses its static ground buffer until the world changes.
 const strokes = {groundDraws: 0, buffers: 0, screenBlits: 0, detailPaths: 0, gradients: 0};
