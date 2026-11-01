@@ -17,12 +17,12 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
   renderer.domElement.style.cssText = 'display:block;width:100%;height:100%;pointer-events:none';
   host.appendChild(renderer.domElement);
   const scene = new THREE.Scene();
-  scene.background = new THREE.Color('#dce9e1');
-  scene.fog = new THREE.Fog('#dce9e1', 24, 62);
+  scene.background = new THREE.Color('#cee9f5');
+  scene.fog = new THREE.Fog('#cee9f5', 24, 62);
   const camera = new THREE.OrthographicCamera(-15, 15, 15, -15, .1, 120);
   const hemisphere = new THREE.HemisphereLight('#fff5df', '#8b9f9c', 1.08);
   scene.add(hemisphere);
-  const sun = new THREE.DirectionalLight('#ffe3b9', 2.42);
+  const sun = new THREE.DirectionalLight('#ffe3b9', 2.24);
   // A single large, raking key connects roofs, trees, streets and residents.
   sun.position.set(-17, 22, 13);
   sun.castShadow = true;
@@ -37,7 +37,7 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
   scene.add(sun,sun.target);
   // One shadow-free cool fill catches window frames and sculpted character
   // shoulders; the warm key stays dominant (no extra shadow map cost).
-  const rim=new THREE.DirectionalLight('#c0dedb',.32);
+  const rim=new THREE.DirectionalLight('#c0dedb',.39);
   rim.position.set(19,13,-9);
   rim.castShadow=false;
   scene.add(rim);
@@ -73,7 +73,7 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
   const materialCache = new Map(), geometryCache = new Map(), paintedRoofCache = new Map(), stuccoCache = new Map();
   // Studio-grade warm pastel cohesion across the different news-generated
   // building colors. Keep the recognizable roof hue but avoid plastic neon.
-  const tint = (hex, toward='#fff0d9', ratio=.24) => {
+  const tint = (hex, toward='#fff0d9', ratio=.16) => {
     const norm=v=>/^#[0-9a-f]{6}$/i.test(v)?v:'#cba58b';
     const a=norm(hex),b=norm(toward);
     const channel=i=>Math.round(parseInt(a.slice(i,i+2),16)*(1-ratio)+parseInt(b.slice(i,i+2),16)*ratio);
@@ -1849,7 +1849,7 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
     }
     // The hero neighborhood is one continuous garden, not sixteen lawns
     // boxed into independent tiles with dark grid joints between them.
-    groundPiece(3.96,3.96,grassMaterial('#a6c49f'),9,9,.179);
+    groundPiece(3.96,3.96,grassMaterial('#94c5a4'),9,9,.179);
     // A continuous, softly scalloped village green replaces the boxy central
     // paving slab. The heart is a rounded stone piazza with irregular lawn
     // pockets; the same pedestrian routes remain visible and unobstructed.
@@ -2709,8 +2709,8 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
     // Daylight, shadow fill, haze and lanterns now belong to one exposure.
     const dusk=dark*dark*(3-2*dark);
     hemisphere.intensity=1.08-dark*.36;
-    sun.intensity=2.42-dark*1.72;
-    rim.intensity=.32+dark*.06;
+    sun.intensity=2.24-dark*1.54;
+    rim.intensity=.39+dark*.06;
     sun.color.set(tint('#ffe3b9','#efad8a',dusk));
     rim.color.set(tint('#c0dedb','#a8b6cb',dusk));
     for(const lantern of plazaLights)lantern.intensity=dark*7.2;
@@ -2719,9 +2719,9 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
       pane.emissiveIntensity=(pane.userData?.warm?.12:.04)+
         dark*(pane.userData?.warm?1.02:.66);
     }
-    scene.background.set(tint('#dce9e1','#a6b5c5',dusk));
+    scene.background.set(tint('#cee9f5','#91a9c5',dusk));
     scene.fog.color.copy(scene.background);
-    renderer.toneMappingExposure=1.02-dark*.11;
+    renderer.toneMappingExposure=.98-dark*.12;
     for(const p of materialCache.values()){
       if(p.emissive && p.emissive.r>.03) p.emissiveIntensity=.14+dark*1.25;
     }

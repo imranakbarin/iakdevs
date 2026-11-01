@@ -97,6 +97,8 @@ assert.match(moduleCode,/function vergeMaterial\(axis\)/,'street edges have shar
 assert.match(moduleCode,/function paintedVerge\(/,'street verges have physically placed decals');
 assert.match(moduleCode,/function createStorybookVillage\(/,
   'village scenery is built as one cohesive 3D environmental set');
+assert.match(moduleCode,/scene\.background\.set\(tint\('#cee9f5'/,
+  'the entire town shares a clearer, colorful daylight sky');
 assert.match(moduleCode,/kind:'umbrella'/,'visible animated café canopies add a lively street silhouette');
 assert.match(moduleCode,/kind:'bunting'/,'real suspended flags sway over the plaza');
 assert.match(moduleCode,/kind:'pinwheel'/,'living village pinwheels animate continuously');
@@ -134,7 +136,7 @@ assert.match(moduleCode,/eye.scale.y=blink/,'eyelids blink without a separate an
 assert.match(html,/type="importmap"/);
 assert.match(html,/three@0\.187\.0\/build\/three\.module\.js/);
 assert.match(html,/three@0\.187\.0\/examples\/jsm\//);
-assert.match(html,/toy-town-3d\.js\?v=33/);
+assert.match(html,/toy-town-3d\.js\?v=34/);
 assert.match(html,/toy-town-landmarks\.js\?v=7/,'the independent models are requested alongside Three');
 assert.match(html,/buildLandmark:landmarks\.buildLandmark/,
   'loader injects the authored model builder into the 3D simulation');
