@@ -50,6 +50,8 @@ assert.match(landmarkCode,/new T\.InstancedMesh\(tileGeometry,tileMat,count\)/,
   'ceramic courses are GPU-instanced rather than hundreds of individual draw calls');
 assert.match(landmarkCode,/function carvedRoofRidge\(/,
   'roof ridge tiles articulate the silhouette in three dimensions');
+assert.match(landmarkCode,/const terminal=sphere\(g,\.030,texture\(color,'tile'\)/,
+  'tiny ridge finials inherit roof pigment instead of appearing as bright floating beads');
 assert.match(landmarkCode,/function masonryCorners\(/,
   'shop and cottage walls include staggered structural quoins');
 assert.match(landmarkCode,/function woodenShutters\(/,
@@ -100,12 +102,12 @@ assert.match(html,/type="importmap"/);
 assert.match(html,/three@0\.187\.0\/build\/three\.module\.js/);
 assert.match(html,/three@0\.187\.0\/examples\/jsm\//);
 assert.match(html,/toy-town-3d\.js\?v=23/);
-assert.match(html,/toy-town-landmarks\.js\?v=6/,'the independent models are requested alongside Three');
+assert.match(html,/toy-town-landmarks\.js\?v=7/,'the independent models are requested alongside Three');
 assert.match(html,/buildLandmark:landmarks\.buildLandmark/,
   'loader injects the authored model builder into the 3D simulation');
 assert.match(html,/toy-town\.js\?v=15/);
 assert.ok(html.indexOf('toy-town.js?v=15')<html.indexOf("import('three')"), 'classic fallback starts first');
-assert.match(page,/toy-town\.html\?v=39&embed=1/);
+assert.match(page,/toy-town\.html\?v=40&embed=1/);
 assert.match(fs.readFileSync(path.join(root,'assets/toy-town.js'),'utf8'),
   /targetX=clamp\(\.08,p\.x,17\.92\)/,
   'scripted paths are clamped at the endpoint rather than freezing outside town');
