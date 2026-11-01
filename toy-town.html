@@ -55,7 +55,7 @@ html.embedded #zoom-controls{display:none}
     Promise.all([
       import('three'),
       import('three/addons/geometries/RoundedBoxGeometry.js'),
-      import('./assets/toy-town-3d.js?v=21'),
+      import('./assets/toy-town-3d.js?v=22'),
       import('./assets/toy-town-landmarks.js?v=5')
     ]).then(([THREE, geometry, view, landmarks]) => {
       try { view.mountToyTown3D(THREE, geometry.RoundedBoxGeometry, ToyTown,
