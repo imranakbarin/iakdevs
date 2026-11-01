@@ -2205,7 +2205,8 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
   }
   function creature(ref){
     const g=new THREE.Group(),kind=ref.kind;
-    const rig={kind,legs:[],wings:[],tail:null,head:null};
+    const rig={kind,legs:[],wings:[],ears:[],tail:null,head:null,
+      body:null,bodyScale:1,pace:0,lastClock:null};
     if(kind==='ghost'){
       const core=ball(g,.18,'#faf1e4',0,.25,0);core.scale.set(.82,1.4,.88);
       const cloak=ball(g,.17,'#f3e9df',0,.16,0);cloak.scale.set(.99,.47,1);
@@ -2270,6 +2271,7 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
     const llama=kind==='llama',fur=llama?'#e8dec9':'#ad8866';
     const body=ball(g,llama?.20:.175,fur,0,llama?.37:.265,0);
     body.scale.set(1.40,.79,.87);
+    rig.body=body;rig.bodyScale=.79;
     for(const x of [-.16,.16])for(const z of [-.095,.095]){
       const leg=new THREE.Group();leg.position.set(x,llama?.28:.21,z);g.add(leg);
       const size=llama?.27:.17;
@@ -2287,7 +2289,7 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
     muzzle.scale.set(1.15,.65,.85);
     for(const side of [-1,1]){
       const ear=ball(neck,.045,fur,.012,y+.105,side*.08);
-      ear.scale.set(.61,1.40,.60);
+      ear.scale.set(.61,1.40,.60);rig.ears.push(ear);
       ball(neck,.013,'#332f2c',.125,y+.006,side*.083);
     }
     const tail=new THREE.Group();tail.position.set(-.225,llama?.40:.32,0);g.add(tail);
@@ -2343,10 +2345,10 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
           (1-Math.exp(-rate*dt));
         const moving=ref.v>.032&&!ref.sit&&
           (!ref.stopUntil||worldTime>=ref.stopUntil);
-        state.speed=ease(state.speed,moving?
+        state.speed=ease(state.speed,moving&&!reducedMotion?
           THREE.MathUtils.clamp(ref.v/(ref.max||.55),0,1):0,8.5);
         state.sit=ease(state.sit,ref.sit?1:0,5.2);
-        state.chat=ease(state.chat,ref.intent==='chat'?1:0,4.4);
+        state.chat=ease(state.chat,ref.intent==='chat'&&!reducedMotion?1:0,4.4);
         const stridePhase=(ref.travel||0)*17+(ref.ph||0);
         const stride=Math.sin(stridePhase);
         // Strongest motion happens in swing; each foot rocks toward the
@@ -2379,7 +2381,7 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
           limbs.arms[k].rotation.z=(k===0?1:-1)*
             (.06+.19*state.chat);
         }
-        const greeting=!!ref.waveUntil&&worldTime<ref.waveUntil;
+        const greeting=!reducedMotion&&!!ref.waveUntil&&worldTime<ref.waveUntil;
         if(greeting){
           limbs.arms[1].rotation.x=-.52;
           limbs.arms[1].rotation.z=-1.15-
@@ -2440,12 +2442,32 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
       if(item.kind==='animal' && !reducedMotion){
         const rig=g.userData.creatureRig;
         const phase=(ref.travel||0)*12+(ref.ph||0);
-        const motion=Math.min(1,(ref.v||0)*2.2);
         if(rig){
-          for(let k=0;k<rig.legs.length;k++)
-            rig.legs[k].rotation.z=Math.sin(phase+(k%2?Math.PI:0))*motion*.27;
+          const t=town.debug().clock;
+          const dt=rig.lastClock===null?1/30:THREE.MathUtils.clamp(
+            t-rig.lastClock,1/120,.09);
+          rig.lastClock=t;
+          const goal=ref.sit?0:Math.min(1,(ref.v||0)*2.2);
+          rig.pace+=(goal-rig.pace)*(1-Math.exp(-7.4*dt));
+          const motion=reducedMotion?0:rig.pace;
+          for(let k=0;k<rig.legs.length;k++){
+            // Alternating *diagonal* pairs make a proper quadruped trot,
+            // while tiny stance pauses imply contact instead of paddling.
+            const offset=(rig.legs.length===4?
+              (k===0||k===3?0:Math.PI):(k%2?Math.PI:0));
+            const foot=Math.sin(phase+offset);
+            rig.legs[k].rotation.z=foot*motion*.29;
+          }
           for(let k=0;k<rig.wings.length;k++)
             rig.wings[k].rotation.x=(k%2?-1:1)*Math.sin(phase)*motion*.30;
+          if(rig.body)rig.body.scale.y=rig.bodyScale*(
+            1+.013*Math.sin(t*2.6+(ref.ph||0))+
+            .024*motion*Math.abs(Math.sin(phase*2)));
+          if(rig.ears.length){
+            for(let k=0;k<rig.ears.length;k++)
+              rig.ears[k].rotation.x=.05*Math.sin(t*1.7+(ref.ph||0)+k)+
+                (ref.watch==='owner'?.16:.03);
+          }
           if(rig.tail)rig.tail.rotation.y=Math.sin(
             town.debug().clock*(ref.watch==='owner'?5.1:3.1)+(ref.ph||0))*
             (ref.sit?.38:.25);
