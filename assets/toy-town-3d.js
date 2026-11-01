@@ -2031,35 +2031,130 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
     g.scale.setScalar(ref.heroResident?1.1:1);
     return g;
   }
+  // The vehicles are small designed machines rather than stacked colored
+  // cubes. Each axle has its own spinning rig, and taillights react to
+  // braking. No point lights or heavyweight physics are allocated per car.
   function car(ref){
-    const g=new THREE.Group(), col=ref.col||'#a0bfc7';
-    const bus=ref.kind==='bus';
-    const len=bus?.70:.47;
-    box(g,len,.18,.33,col,0,.22,0);
-    box(g,bus?.57:.27,bus?.22:.16,.31,mat('#a8d8df',.25,'#4b6975'),-.03,bus?.38:.36,0);
-    if(!bus)box(g,.25,.065,.33,col,-.035,.47,0);
-    for(const xx of [-len*.32,len*.32])for(const zz of [-.187,.187]){
-      const wheel=cylinder(g,.068,.068,.038,'#404950',xx,.16,zz);
-      wheel.rotation.x=Math.PI/2;
-      const hub=cylinder(g,.036,.036,.043,'#bec7c9',xx,.16,zz);
+    const g=new THREE.Group(),col=ref.col||'#a0bfc7';
+    const bus=ref.kind==='bus',taxi=ref.kind==='taxi';
+    const len=bus?.78:.53,bodyHeight=bus?.25:.17;
+    const chassis=box(g,len,.13,.345,'#515b62',0,.195,0);
+    const body=box(g,len,bodyHeight,.355,col,0,.268,0);
+    // A slightly tapered, separate bonnet and shallow rear luggage deck
+    // replace the previous squared windshield-on-top silhouette.
+    if(!bus){
+      box(g,.19,.09,.340,col,len*.30,.360,0);
+      const tail=box(g,.17,.071,.342,col,-len*.34,.357,0);
+      tail.rotation.z=-.035;
+    }
+    const cabin=box(g,bus?.58:.295,bus?.27:.18,.317,
+      mat('#8aafb1',.28),bus?-.015:-.055,bus?.418:.421,0);
+    cabin.scale.set(1,.92,.96);
+    box(g,bus?.59:.304,.033,.34,col,bus?-.015:-.052,bus?.558:.516,0);
+    // Individual windscreens, side panes and short A-pillars have depth.
+    const glass=mat('#91c6ca',.21,'#7b9b98');
+    box(g,.022,bus?.20:.128,.257,glass,bus?.29:.107,bus?.425:.426,0);
+    box(g,.022,bus?.18:.12,.267,glass,bus?-.304:-.207,bus?.424:.421,0);
+    for(const side of [-1,1]){
+      const zz=side*.164;
+      if(bus){
+        for(let k=0;k<4;k++)
+          box(g,.108,.145,.012,glass,-.205+k*.135,.439,zz);
+      }else{
+        box(g,.122,.113,.015,glass,-.098,.442,zz);
+        box(g,.093,.113,.015,glass,.037,.442,zz);
+      }
+      box(g,.016,bus?.17:.14,.023,'#f1dfca',.002,.427,zz);
+      // Real door seams, a miniature handle, and optional mirror housings.
+      box(g,.012,.21,.016,'#7c898a',-.058,.292,zz*1.085);
+      box(g,.065,.016,.023,'#f6e8d7',.022,.31,zz*1.09);
+      const mirror=box(g,.047,.042,.055,'#677f81',
+        bus?.27:.19,.405,side*.204);mirror.castShadow=false;
+    }
+    // Three readable classes rather than identical cars with new paint.
+    if(bus){
+      box(g,.095,.020,.22,'#f9e9cb',.12,.57,0);
+      for(let k=0;k<3;k++)box(g,.052,.019,.014,'#f6e9d8',
+        -.21+k*.19,.272,.184);
+    }else if(taxi){
+      const sign=box(g,.19,.060,.13,'#f4e3af',-.06,.552,0);
+      box(g,.15,.040,.012,'#68584a',-.06,.565,.072);
+    }else{
+      const grille=box(g,.024,.077,.235,'#707a7d',len*.505,.265,0);
+      for(const side of [-1,1])box(g,.039,.055,.042,'#c6cece',
+        len*.505,.264,side*.107);
+    }
+    for(const x of [-len*.48,len*.49]){
+      box(g,.030,.055,.36,'#e3d9cc',x,.209,0);
+    }
+    const wheels=[];
+    for(const xx of [-len*.32,len*.32])for(const zz of [-.192,.192]){
+      const axle=new THREE.Group();axle.position.set(xx,.145,zz);g.add(axle);
+      const tire=cylinder(axle,.074,.074,.043,'#40484c');
+      tire.rotation.x=Math.PI/2;
+      const hub=cylinder(axle,.038,.038,.047,'#c2cbca');
       hub.rotation.x=Math.PI/2;
+      const spoke=cylinder(axle,.018,.018,.05,'#777e80');
+      spoke.rotation.x=Math.PI/2;
+      wheels.push(axle);
     }
-    for(const z of [-.113,.113]){
-      ball(g,.025,mat('#fff6ca',.3,'#f8df9d'),len*.49,.27,z);
-      ball(g,.020,'#d76f68',-len*.49,.27,z);
+    const brakeMaterial=new THREE.MeshStandardMaterial({
+      color:'#ab5c53',emissive:'#ed4938',emissiveIntensity:.07,roughness:.36
+    });
+    const indicatorMaterial=new THREE.MeshStandardMaterial({
+      color:'#dfab6a',emissive:'#f5a34b',emissiveIntensity:.02,roughness:.42
+    });
+    const indicators=[];
+    for(const side of [-1,1]){
+      ball(g,.032,mat('#fff4c7',.28,'#c6a882'),len*.505,.293,side*.125);
+      box(g,.064,.043,.027,brakeMaterial,-len*.505,.289,side*.128);
+      indicators.push(box(g,.024,.025,.021,indicatorMaterial,
+        -len*.515,.302,side*.164));
     }
+    g.userData.vehicleRig={wheels,brakeMaterial,indicatorMaterial,indicators};
+    g.userData.vehicleClass=ref.kind||'car';
     return g;
   }
   function bicycle(ref){
-    const g=new THREE.Group();
-    for(const x of [-.16,.16]){
-      const tire=object(g,geo('torus',.105,.018),mat('#4e5d5c'),x,.15,0);
-      tire.rotation.y=Math.PI/2;
+    const g=new THREE.Group(),col=ref.col||'#7cb2ad';
+    const wheels=[];
+    for(const x of [-.19,.19]){
+      const spin=new THREE.Group();spin.position.set(x,.169,0);g.add(spin);
+      const tire=object(spin,geo('torus',.113,.015),mat('#465357'),0,0,0);
+      tire.rotation.y=Math.PI/2;wheels.push(spin);
+      const hub=ball(spin,.024,'#d2d8d0',0,0,0);hub.castShadow=false;
     }
-    const frame=box(g,.28,.028,.04,ref.col||'#7cb2ad',0,.23,0);
-    frame.rotation.z=.18;
-    const torso=ball(g,.078,ref.col||'#b88d86',-.018,.47,0);torso.scale.set(.75,1.3,.7);
-    ball(g,.063,ref.skin||'#d6ae87',-.04,.63,0);
+    // Triangle-frame tubes connecting realistic physical points.
+    const rod=(x1,y1,x2,y2,color=col,thickness=.014)=>{
+      const midX=(x1+x2)/2,midY=(y1+y2)/2;
+      const length=Math.hypot(x2-x1,y2-y1);
+      const tube=cylinder(g,thickness,thickness,length,color,midX,midY,0);
+      tube.rotation.z=-Math.atan2(x2-x1,y2-y1);tube.castShadow=false;
+    };
+    rod(-.19,.169,-.055,.302);rod(.19,.169,-.055,.302);
+    rod(-.055,.302,.04,.169);rod(-.19,.169,.04,.169);
+    rod(.04,.169,-.055,.302);rod(.19,.169,.128,.36,'#697f81');
+    rod(-.055,.302,-.11,.352,'#626a6a');
+    box(g,.115,.028,.070,'#5c6669',-.117,.361,0);
+    box(g,.024,.019,.25,'#72858a',.129,.375,0);
+    const crank=new THREE.Group();crank.position.set(.038,.172,0);g.add(crank);
+    rod(.038,.172,.038,.172,'#68767b',.009);
+    for(const sx of [-1,1]){
+      const pedal=box(crank,.065,.020,.042,'#59676c',0,sx*.068,sx*.051);
+      pedal.castShadow=false;
+    }
+    const torso=ball(g,.077,ref.col||'#b88d86',-.055,.481,0);
+    torso.scale.set(.8,1.23,.74);
+    ball(g,.067,ref.skin||'#d6ae87',-.047,.628,0);
+    const helmet=ball(g,.071,'#668b96',-.045,.684,0);
+    helmet.scale.set(1,.43,1);helmet.castShadow=false;
+    const legs=[];
+    for(const sx of [-1,1]){
+      const leg=new THREE.Group();leg.position.set(-.067,.402,sx*.040);g.add(leg);
+      rod(-.067,.402,.018,.281,'#526a72',.023);
+      legs.push(leg);
+    }
+    g.userData.bicycleRig={wheels,crank,legs};
     return g;
   }
   function creature(ref) {
