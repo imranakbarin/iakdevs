@@ -105,6 +105,16 @@ async function main(){
           beforeFrame,{timeout:45000,polling:100});
       }
       if(job.social){
+        // A previous camera frame can satisfy the generic render counter
+        // before the synchronous simulation reaches the conversation.
+        // Wait specifically for both residents' *rendered* pose blends.
+        await page.waitForFunction(()=>{
+          let talking=0;
+          window.ToyTown3D?.scene?.traverse(o=>{
+            if(o.userData?.pose?.chat>.015)talking++;
+          });
+          return talking>=2;
+        },null,{timeout:30000,polling:100});
         // Verify the new pose controller actually reaches the GPU scene,
         // not just the underlying simulation's chat intent.
         const animated=await page.evaluate(()=>{
