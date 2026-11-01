@@ -63,13 +63,13 @@ assert.match(moduleCode,/eye.scale.y=blink/,'eyelids blink without a separate an
 assert.match(html,/type="importmap"/);
 assert.match(html,/three@0\.187\.0\/build\/three\.module\.js/);
 assert.match(html,/three@0\.187\.0\/examples\/jsm\//);
-assert.match(html,/toy-town-3d\.js\?v=17/);
+assert.match(html,/toy-town-3d\.js\?v=18/);
 assert.match(html,/toy-town-landmarks\.js\?v=3/,'the independent models are requested alongside Three');
 assert.match(html,/buildLandmark:landmarks\.buildLandmark/,
   'loader injects the authored model builder into the 3D simulation');
 assert.match(html,/toy-town\.js\?v=14/);
 assert.ok(html.indexOf('toy-town.js?v=14')<html.indexOf("import('three')"), 'classic fallback starts first');
-assert.match(page,/toy-town\.html\?v=30&embed=1/);
+assert.match(page,/toy-town\.html\?v=31&embed=1/);
 assert.match(moduleCode,/export function mountToyTown3D/);
 assert.match(moduleCode,/new THREE\.WebGLRenderer/);
 assert.match(moduleCode,/window\.ToyTown3D=api/);
@@ -235,9 +235,13 @@ assert.match(moduleCode,/rounded suspended scallops/i,'shop awnings use dimensio
 assert.match(moduleCode,/roots taper out into the lawn/i,'tree trunks have naturally grounded roots');
 assert.match(moduleCode,/grassMaterial\('#b9cba7',10\)/,'land slab has layered grass instead of a flat green box');
 assert.match(moduleCode,/paver.rotation.y=/,'stone paths have irregular handmade placement');
-assert.match(moduleCode,/23-closeness\*12\.5/,'close zoom lowers the eye to show character faces');
+assert.match(moduleCode,/23-closeness\*11\.5/,'close zoom lowers the eye to show character faces');
 assert.match(moduleCode,/if\(!b.hero && style===0/,
   'ordinary houses have occasional attached side wings for skyline variety');
+assert.match(moduleCode,/camera\.position\.set\(v\.x\+12\.5,23-closeness\*11\.5,v\.y\+22\)/,
+  'front-oriented camera puts shop facades ahead of angled roof overlap');
+assert.match(moduleCode,/const anchors=\[\[7\.56,9\.60\]/,
+  'lower courtyard lights are positioned away from storefront signage');
 assert.match(moduleCode,/function archedInset\(/,'doors/windows have dimensional arches');
 assert.match(moduleCode,/function turret\(/,'one hero cottage has its own curved tower');
 assert.match(moduleCode,/function sideCottageWing\(/,'another hero cottage has a secondary roof and wing');
