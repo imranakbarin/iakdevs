@@ -283,6 +283,17 @@ assert.ok(verges.every(o=>o.rotation.x===-Math.PI/2),'landscape decals lie on th
 assert.ok(verges.every(o=>o.position.y<.18),'road verges cannot float above the curbs');
 const roadMesh=sceneWorld.children.find(o=>o.position.x===1.5&&o.position.z===9);
 assert.ok(roadMesh?.material?.map,'roads have painted surface materials');
+const cutaways=sceneWorld.children.filter(o=>o.userData?.terrainCutaway);
+assert.deepEqual(cutaways.map(o=>o.userData.terrainCutaway),
+  ['wood','meadow','soil'],'one sculpted board has wood, grass and soil layers');
+assert.ok(cutaways.every(o=>o.rotation.x===-Math.PI/2),
+  'all sculpted cutaway surfaces lie in the diorama plane');
+const organicRoads=sceneWorld.children.filter(o=>o.userData?.organicRoad);
+assert.equal(organicRoads.length,8,'four intersecting lanes have eight sculpted ribbons');
+assert.ok(organicRoads.every(o=>o.geometry&&o.receiveShadow),
+  'cobbled corridors remain fully modeled and physically lit');
+const shoulders=sceneWorld.children.filter(o=>o.userData?.stoneShoulder);
+assert.ok(shoulders.length>=40,'road banks use many bounded curved stone shoulders');
 assert.ok(stats.roofTextures>=2,'roof textures created for different colored gables');
 assert.ok(stats.paintOperations>=400,'small overlapping tiles produce detailed but subtle roof texture');
 assert.ok(stats.profileVertices>=75,
@@ -313,7 +324,7 @@ assert.match(moduleCode,/atelierShop\(g,b,h\)/,'only hero shops receive authored
 assert.match(moduleCode,/storybook-roof:/,'the sculpted roof is cached for repeated houses');
 assert.match(moduleCode,/rounded suspended scallops/i,'shop awnings use dimensional fabric rather than bars');
 assert.match(moduleCode,/roots taper out into the lawn/i,'tree trunks have naturally grounded roots');
-assert.match(moduleCode,/grassMaterial\('#b9cba7',10\)/,'land slab has layered grass instead of a flat green box');
+assert.match(moduleCode,/grassMaterial\('#b9cba7',10\)/,'cutaway meadow has textured, continuous grass');
 assert.match(moduleCode,/paver.rotation.y=/,'stone paths have irregular handmade placement');
 assert.match(moduleCode,/23-closeness\*11\.5/,'close zoom lowers the eye to show character faces');
 assert.match(moduleCode,/if\(!b.hero && style===0/,
@@ -348,6 +359,18 @@ assert.match(moduleCode,/const piazzaShape=new THREE.Shape\(\)/,
   'the center is an irregular rounded piazza, not a square concrete slab');
 assert.match(moduleCode,/Warm rubbed cobblestones replace/,
   'all roads use hand-weathered warm stone, not highway-gray asphalt');
+assert.match(moduleCode,/function organicBoardOutline\(/,
+  'the table has a curved, irregular cutaway silhouette');
+assert.match(moduleCode,/function terrainCutaway\(/,
+  'wood, soil and meadow are stacked organic extrusions');
+assert.match(moduleCode,/function organicRoad\(/,
+  'cobbled roads are continuous curved-edge ribbons');
+assert.match(moduleCode,/function stoneShoulder\(/,
+  'kerbs follow low irregular stone shoulders');
+assert.doesNotMatch(moduleCode,/box\(world,18\.6,1\.12,18\.6/,
+  'rigid wooden tabletop box is removed');
+assert.doesNotMatch(moduleCode,/groundPiece\(1\.01,16\.03,roadSurface/,
+  'old straight road rectangles are removed');
 assert.doesNotMatch(moduleCode,/for\(let t=2;t<16;t\+=1\.28\)/,
   'modern repeating highway dashed lines have been removed');
 
@@ -453,7 +476,7 @@ assert.equal(api.getStats().frozen,false,'visual audit can resume rendering');
 callbacks.shift()();
 assert.ok(stats.renders>rendersBeforeFreeze,'WebGL renders after resuming');
 assert.match(moduleCode,/const segments=\[\[2\.22,5\.78\]/,
-  'stone curbs stop at road junctions instead of floating through intersections');
+  'stone shoulders stop before junctions and river bridges');
 assert.match(moduleCode,/continuous plaster pilasters/i,
   'wall accents follow facades without disconnected bricks');
 const rendersBeforeFail=stats.renders;
