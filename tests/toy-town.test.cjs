@@ -10,7 +10,7 @@ assert.match(dioramaSource, /function tree\(/, 'new organic tree renderer exists
 assert.match(dioramaSource, /function gable\(/, 'real pitched roof renderer exists');
 assert.match(dioramaSource, /function glazing\(/, 'framed glazing renderer exists');
 assert.match(html, /<option value="town">Toy Town<\/option>/, 'Toy Town is in the menu');
-assert.match(html, /townFrame\.src='toy-town\.html\?v=42&embed=1'/, 'and opens its current embedded page');
+assert.match(html, /townFrame\.src='toy-town\.html\?v=43&embed=1'/, 'and opens its current embedded page');
 assert.match(fs.readFileSync(path.join(root, 'toy-town.html'), 'utf8'), /assets\/toy-town\.js\?v=\d+/);
 const box = vm.createContext({Math, Object, Array, JSON, Date, String, Number, RegExp, setTimeout: () => 0, document: {getElementById: () => ({textContent: ''})}});
 vm.runInContext((dioramaSource + '\n' + fs.readFileSync(path.join(root, 'assets/toy-town.js'), 'utf8')) + ';this.T = ToyTown;', box);
@@ -57,6 +57,16 @@ assert.ok(T.headline('In tennis, the Toy Open final is won in five sets, while t
 const layout = () => T.buildings().map(b => b.kind + b.x + ',' + b.y).join('|');
 T.build(12345, 'space'); const a = layout(); T.build(12345, 'space');
 assert.equal(layout(), a, 'the same seed builds the same town');
+T.build(2468,'weather');
+const condensedSkyline=T.buildings().filter(b=>b.kind==='tower');
+assert.ok(condensedSkyline.length>=3 && condensedSkyline.length<=6,
+  'the background skyline has three to six distinct spires, not a packed tower grid');
+const assembledLots=new Set(T.buildings().map(b=>b.x+','+b.y));
+assert.equal(assembledLots.size,T.buildings().length,
+  'clustered districts have no overlapping occupied lots');
+assert.ok(T.buildings().every(b=>b.x>=2 && b.x<=15 && b.y>=2 && b.y<=15),
+  'the composed town never puts permanent buildings on road or water lanes');
+
 for (const [key, kind] of Object.entries({space: 'launchpad', sports: 'stadium', election: 'stage', animals: 'zoo', market: 'market', science: 'lab'})) {
   T.build(777, key);
   assert.ok(T.props().some(p => p.kind === kind), `${key}: the town has its ${kind}`);
