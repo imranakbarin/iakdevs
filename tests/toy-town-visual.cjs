@@ -33,6 +33,7 @@ async function main(){
     const jobs=[
       {name:'mobile-3d-close',w:390,h:844,classic:false,zoom:1.7},
       {name:'desktop-3d-close',w:1280,h:820,classic:false,zoom:1.8},
+      {name:'desktop-social-life',w:1080,h:760,classic:false,zoom:2.05,social:true},
       {name:'desktop-3d-wide',w:1280,h:820,classic:false,zoom:.65},
       {name:'mobile-classic-reference',w:390,h:844,classic:true,zoom:1.7}
     ];
@@ -69,6 +70,25 @@ async function main(){
         ToyTown.setPlaying(false);
         ToyTown.zoomAt(f);
       },job.zoom);
+      if(job.social){
+        const social=await page.evaluate(()=>{
+          let chat=false;
+          for(let i=0;i<60*68;i++){
+            ToyTown.update(1/60);
+            if(ToyTown.debug().communityEncounters>0&&
+              ToyTown.movers().filter(m=>m.communityResident)
+                .every(m=>m.intent==='chat')){
+              chat=true;break;
+            }
+          }
+          return {chat,debug:ToyTown.debug(),residents:ToyTown.movers()
+            .filter(m=>m.communityResident||m.companionDog)
+            .map(m=>({x:m.x,y:m.y,intent:m.intent,kind:m.kind}))};
+        });
+        if(!social.chat||social.debug.communityVisits<1)
+          throw Error('Real browser never reached an actual plaza encounter: '+
+            JSON.stringify(social));
+      }
       const actualZoom=await page.evaluate(()=>{
         const {z,tz}=ToyTown.debug().cam;
         return {z,tz};
@@ -103,6 +123,8 @@ async function main(){
         console.log('TOY_CITY_JPEG_BEGIN '+image.toString('base64')+' TOY_CITY_JPEG_END');
       }else if(job.name==='desktop-3d-wide'){
         console.log('TOY_CITY_WIDE_JPEG_BEGIN '+image.toString('base64')+' TOY_CITY_WIDE_JPEG_END');
+      }else if(job.name==='desktop-social-life'){
+        console.log('TOY_CITY_SOCIAL_JPEG_BEGIN '+image.toString('base64')+' TOY_CITY_SOCIAL_JPEG_END');
       }
       await context.close();
     }
