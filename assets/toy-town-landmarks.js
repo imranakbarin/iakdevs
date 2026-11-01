@@ -44,7 +44,7 @@ function makeKit(T,Round){
     const m=new T.Mesh(geometry,typeof mat==='string'?material(mat):mat);
     m.position.set(x,y,z);
     m.castShadow=shadow;
-    m.receiveShadow=true;
+    m.receiveShadow=shadow;
     p.add(m);
     return m;
   };
@@ -308,11 +308,94 @@ function makeKit(T,Round){
     block(g,.125,.03,.125,'#7f7366',x,y+.237,z);
   }
   function roofDormer(g,x,y,z,color){
-    block(g,.22,.20,.20,'#f3ddc1',x,y,z);
-    const cap=block(g,.29,.047,.26,color,x,y+.13,z);
-    cap.rotation.z=-.10;
-    glazing(g,x,y,z+.116,.10,.12);
+    // A genuine projecting dormer gable, rather than a rectangular roof tile.
+    const dormer=new T.Group();dormer.position.set(x,y,z);g.add(dormer);
+    block(dormer,.225,.225,.245,'#f4dfc4',0,0,0);
+    volumeRoof(dormer,.292,.29,.105,color,{arch:.026,crest:.175});
+    glazing(dormer,0,.018,.148,.124,.145);
+    for(const dx of [-.115,.115]){
+      block(dormer,.023,.218,.040,'#e4c9a5',dx,-.006,.131,false,false);
+    }
   }
+
+  // Townscape architecture kit: these modules are actual attached volumes
+  // with plausible beams, recessed glazing, roofs and grounded thresholds.
+  // They share the main plaster, tile and wood material pools.
+  function crossGable(g,x,front,top,width=.43,color='#b96552',wall='#eedac5'){
+    const pavilion=new T.Group();
+    pavilion.position.set(x,0,front);
+    g.add(pavilion);
+    const height=.42,centre=top+.055;
+    const body=block(pavilion,width*.84,height,width*.78,texture(wall,'stucco'),
+      0,centre,0,true,false);
+    volumeRoof(pavilion,width,width*.92,top+.27,color,{arch:.064,crest:.255});
+    glazing(pavilion,0,top+.07,width*.40+.027,width*.34,.20);
+    // Projecting painted verge trims cast short coherent shadows but no
+    // dozens of shadow maps from separate tiny molding strips.
+    block(pavilion,width*.96,.034,width*.90,'#f4e5d1',0,top-.18,0,false,false);
+    for(const side of [-1,1]){
+      block(pavilion,.027,.37,.039,'#e5c9a7',side*width*.39,top+.04,
+        width*.40,false,false);
+    }
+    return pavilion;
+  }
+  function timberFront(g,{w=.74,z=.426,from=.29,to=1.15,wood='#91725a',pattern=0}={}){
+    // Real half-timber facades: a continuous beam frame following wall edges.
+    // Not random floating planks or busy strips stuck to the window glass.
+    for(const x of [-w*.46,w*.46])
+      block(g,.033,to-from,.048,wood,x,(from+to)/2,z,false,false);
+    for(const y of [from,to]){
+      block(g,w,.035,.053,wood,0,y,z,false,false);
+    }
+    if(pattern===0){
+      for(const dir of [-1,1]){
+        const brace=block(g,.032,.39,.052,wood,dir*w*.26,from+.28,z,false,false);
+        brace.rotation.z=dir*.48;
+      }
+    }else{
+      block(g,w*.88,.028,.054,wood,0,from+(to-from)*.55,z,false,false);
+      for(const x of [-w*.22,w*.22]){
+        const brace=block(g,.029,.29,.052,wood,x,from+.18,z,false,false);
+        brace.rotation.z=x>0?-.32:.32;
+      }
+    }
+  }
+  function shapedBay(g,x,y,z,color='#d4b89a'){
+    // Five real curved bay facets and slender inset windows; the visible
+    // projection is anchored to the frontage rather than hovering outside.
+    const bay=new T.Group();bay.position.set(x,y,z);g.add(bay);
+    block(bay,.39,.095,.245,'#dcc6aa',0,-.22,.035);
+    for(let i=0;i<5;i++){
+      const a=(i-2)*.23,px=(i-2)*.081;
+      const side=new T.Group();side.position.set(px,0,.09+(.09-Math.abs(i-2)*.026));
+      side.rotation.y=a;bay.add(side);
+      block(side,.086,.395,.039,'#e9d5b8',0,0,0,false,false);
+      block(side,.064,.342,.014,material('#7eadae',.24),0,0,.030,false,false);
+      block(side,.012,.356,.025,'#fff2df',-.031,0,.049,false,false);
+      block(side,.072,.015,.026,'#fff2df',0,-.024,.052,false,false);
+    }
+    block(bay,.43,.062,.255,color,0,.231,.045);
+    const canopy=block(bay,.48,.056,.29,'#f4dfc4',0,.268,.033);
+    canopy.rotation.x=-.07;
+    return bay;
+  }
+  function masonryStripes(g,w,from,to,z=.415,accent='#e9d7bb'){
+    // Broad, gently worn cornices tie the tall floor volumes to the plinth.
+    for(const y of [from,(from+to)*.5,to]){
+      block(g,w,.034,.077,accent,0,y,z,false,false);
+    }
+    for(const x of [-w*.45,w*.45]){
+      block(g,.042,to-from,.059,accent,x,(from+to)*.5,z,false,false);
+    }
+  }
+  function lanternBracket(g,x,y,z){
+    block(g,.13,.021,.025,'#866b59',x,y+.10,z,false,false);
+    cyl(g,.012,.015,.13,'#816957',x,y+.012,z+.065,false);
+    const light=sphere(g,.06,material('#fae7bf',.31,'lit'),x,y-.077,z+.065);
+    light.scale.set(.74,1.18,.76);
+    sphere(g,.019,'#735f50',x,y-.005,z+.066);
+  }
+
   function base(b){
     const g=new T.Group();
     g.position.set(b.x+.5,0,b.y+.5);
@@ -323,17 +406,19 @@ function makeKit(T,Round){
     const g=base(b),roof='#b96552';
     ground(g,'#d5bea3');
     const top=walls(g,.85,1.29,.76,'#f1d8bc',.12);
-    // Signature barn-like scalloped terracotta roof and chimney.
-    volumeRoof(g,.82,.83,top,roof,{arch:.09,crest:.44});
-    chimney(g,-.25,top+.17,-.18);
+    // Tall bakery silhouette: bakery's original curved clay roof plus a
+    // true front cross-gable and an offset brick chimney.
+    volumeRoof(g,.82,.83,top,roof,{arch:.125,crest:.49});
+    crossGable(g,.15,.27,top,.44,'#a9564a','#efd2b6');
+    chimney(g,-.29,top+.21,-.24,'#bc826b');
+    masonryStripes(g,.84,.27,1.09,.418,'#efd8be');
     // Front counter: deep vertical windows flanking an arched caramel door.
     glazing(g,-.255,.63,.419,.22,.54);
     glazing(g,.252,.63,.419,.23,.54);
     arch(g,.025,.454,.42,.22,.59,'#956344');
-    // Elegant projecting bakery window and cream striped valance.
-    const display=block(g,.45,.46,.20,'#ead5b5',-.248,.58,.507);
-    display.castShadow=false;
-    glazing(g,-.248,.62,.627,.37,.33);
+    // Bakery shopfront uses a curved glazed display room rather than a
+    // rectangular cuboid stuck in front of a second wall window.
+    shapedBay(g,-.248,.61,.493,'#bc836e');
     awning(g,-.234,1.015,.57,.53,'#c87967');
     block(g,.84,.063,.20,'#e4c5a6',0,1.118,.455);
     sign(g,'BAKERY',0,1.215,.584,.73,'#f8e8cd','#593c34');
@@ -344,6 +429,7 @@ function makeKit(T,Round){
     }
     block(g,.38,.034,.15,'#a77f5f',-.245,.37,.56);
     pot(g,-.395,.53,.88);pot(g,.378,.54,.91);
+    lanternBracket(g,.36,.91,.50);
     for(let i=0;i<4;i++)block(g,.041,.18,.039,'#efdbbc',-.35+i*.23,.84,.443);
     return g;
   }
@@ -351,16 +437,21 @@ function makeKit(T,Round){
     const g=base(b);
     ground(g,'#c4c1a7');
     const top=walls(g,.81,1.24,.80,'#c4dcd1',.10);
-    // Old-world slate mansard: lower lip and raised upper attic.
-    volumeRoof(g,.81,.84,top,'#467a73',{arch:.06,crest:.42});
-    block(g,.33,.35,.33,'#d8e6d9',.16,top+.20,-.10);
-    roofDormer(g,.16,top+.28,.28,'#427971');
-    chimney(g,-.23,top+.15,-.22,'#b5a895');
+    // Asymmetric bookshop skyline: steep slate roof, attached double-attic
+    // gable and a real tower with a narrow pointed copper cap.
+    volumeRoof(g,.81,.84,top,'#467a73',{arch:.047,crest:.46});
+    crossGable(g,-.20,.23,top,.39,'#426c65','#cfe0d1');
+    roofDormer(g,-.17,top+.275,.32,'#467971');
+    cyl(g,.16,.185,.48,'#b1d0c2',.31,top+.16,-.20);
+    cyl(g,.205,.205,.042,'#eee1c9',.31,top+.43,-.20);
+    mesh(g,geom('cone',.24,.40),texture('#64877a','tile'),
+      .31,top+.66,-.20);
+    chimney(g,-.31,top+.13,-.23,'#b5a895');
+    masonryStripes(g,.81,.27,1.07,.419,'#f1e4ce');
     // Curved book-bay to the right, handmade wooden entry to the left.
     arch(g,-.22,.45,.42,.23,.61,'#6c745c');
     glazing(g,.21,.61,.43,.30,.50);
-    block(g,.40,.45,.20,'#d1e1cd',.20,.57,.52);
-    glazing(g,.20,.62,.640,.28,.34);
+    shapedBay(g,.20,.60,.508,'#7c9b88');
     awning(g,.205,1.015,.58,.48,'#537e78');
     // Shelf of pastel spines within the bay.
     for(let i=0;i<6;i++){
@@ -370,6 +461,7 @@ function makeKit(T,Round){
     block(g,.87,.068,.18,'#f2dfc4',0,1.09,.47);
     sign(g,'BOOK NOOK',0,1.218,.589,.74,'#e3eedf','#305c50');
     planter(g,.35,.54,'#6e9880');pot(g,-.40,.56,.80,'#729c89');
+    lanternBracket(g,-.34,.89,.49);
     // Thin, suspended store sign with a wrought-iron bracket.
     block(g,.18,.016,.02,'#687a71',-.38,1.01,.49);
     const oval=sphere(g,.105,'#f8ebd3',-.415,.88,.50);
@@ -380,17 +472,22 @@ function makeKit(T,Round){
     const g=base(b);
     ground(g,'#e0c5aa');
     const top=walls(g,.79,1.10,.79,'#e5c1a8',.14);
-    // Asymmetric little cottage with a genuine attached second volume.
-    volumeRoof(g,.83,.85,top,'#a85f50',{arch:.11,crest:.39});
-    const wing=new T.Group();wing.position.set(-.27,0,-.22);wing.scale.set(.56,.79,.60);g.add(wing);
-    walls(wing,.68,.94,.68,'#efcfb5',.10);
-    volumeRoof(wing,.72,.75,1.07,'#b47a61',{arch:.09,crest:.34});
+    // Rose cottage has two readable building volumes, not a secondary
+    // house hidden behind its main roof. A cross-gabled garden room projects
+    // toward the public square while keeping the front doorway open.
+    volumeRoof(g,.83,.85,top,'#a85f50',{arch:.11,crest:.43});
+    const wing=new T.Group();
+    wing.position.set(-.39,0,.17);wing.scale.set(.70,.91,.78);g.add(wing);
+    walls(wing,.68,1.00,.68,'#efcfb5',.10);
+    volumeRoof(wing,.72,.75,1.13,'#b47a61',{arch:.09,crest:.37});
+    glazing(wing,-.01,.68,.380,.23,.31);
+    timberFront(wing,{w:.62,z:.386,from:.27,to:.93,wood:'#ad8266',pattern:1});
     arch(g,.19,.446,.38,.26,.55,'#91674b');
-    glazing(g,-.23,.70,.415,.23,.31);
     glazing(g,.425,.66,-.10,.22,.34,{side:true});
     roofDormer(g,-.10,top+.23,.34,'#ad6d59');
     chimney(g,-.25,top+.16,-.24,'#b88d75');
-    flowerBox(g,-.23,.489,.51);
+    flowerBox(wing,-.01,.44,.51,.27);
+    timberFront(g,{w:.72,z:.416,from:.31,to:1.04,wood:'#a77762',pattern:0});
     block(g,.33,.046,.31,'#dec5a5',.20,.17,.54);
     pot(g,-.35,.53,.88,'#729a7a');pot(g,.37,.50,.95,'#7d9e77');
     return g;
@@ -399,7 +496,11 @@ function makeKit(T,Round){
     const g=base(b);
     ground(g,'#c7c8bb');
     const top=walls(g,.78,1.34,.77,'#c7dce3',.13);
-    volumeRoof(g,.86,.84,top,'#658ba7',{arch:.075,crest:.38});
+    volumeRoof(g,.86,.84,top,'#658ba7',{arch:.075,crest:.39});
+    // A street-facing attic wing and chimney make the blue cottage an
+    // asymmetrical landmark, not simply a taller version of a normal house.
+    crossGable(g,-.20,.24,top,.39,'#577e9a','#c7dce3');
+    masonryStripes(g,.76,.23,1.02,.413,'#e4e3d2');
     // Tall seaside tower integrated into back corner, with its own pointed roof.
     cyl(g,.18,.225,1.40,'#b9d4da',.295,.84,.27);
     cyl(g,.22,.22,.045,'#f1dfc8',.295,1.55,.27);
@@ -412,6 +513,11 @@ function makeKit(T,Round){
     block(g,.47,.059,.26,'#ead9bf',-.17,1.03,.52);
     for(let k=0;k<6;k++)block(g,.018,.22,.028,'#fff0da',-.375+k*.08,1.16,.64);
     block(g,.51,.028,.035,'#dfc4a6',-.17,1.28,.64);
+    // Deep columns run down to the balcony slab and read as a real verandah.
+    for(const x of [-.37,.01]){
+      block(g,.028,.67,.032,'#d7be9f',x,.68,.654,false,false);
+    }
+    lanternBracket(g,.35,.84,.48);
     pot(g,-.38,.52,.89,'#7a9f8f');
     return g;
   }
@@ -420,7 +526,9 @@ function makeKit(T,Round){
     ground(g,'#dfcbac');
     const top=walls(g,.80,1.18,.81,'#e7d3b3',.12);
     // Warm buttercup cottage with a curved gingerbread roof & turret.
-    volumeRoof(g,.84,.88,top,'#b58352',{arch:.14,crest:.43});
+    volumeRoof(g,.84,.88,top,'#b58352',{arch:.14,crest:.45});
+    crossGable(g,-.18,.25,top,.38,'#a5794f','#e9d3b2');
+    timberFront(g,{w:.73,z:.421,from:.24,to:1.08,wood:'#b08a61',pattern:1});
     cyl(g,.20,.24,1.26,'#edd9b9',.31,.76,.23);
     cyl(g,.25,.24,.045,'#f4e3c7',.31,1.41,.23);
     mesh(g,geom('cone',.28,.43),texture('#be9160','tile'),.31,1.65,.23);
@@ -433,10 +541,13 @@ function makeKit(T,Round){
     for(const x of [-.38,.18]){
       cyl(g,.027,.036,.53,'#e9d4b9',x,.49,.70);
     }
-    block(g,.59,.043,.37,'#b38d67',-.10,.77,.56);
+    // Curved tiled porch canopy connects to both support posts.
+    const porch=new T.Group();porch.position.set(-.10,0,.56);g.add(porch);
+    volumeRoof(porch,.60,.40,.77,'#b58352',{arch:.04,crest:.15});
     for(let i=0;i<4;i++)sphere(g,.082,i%2?'#7ba282':'#94b38a',
       -.34+i*.16,.27,.70);
     flowerBox(g,.14,.47,.47);
+    lanternBracket(g,-.37,.86,.48);
     pot(g,-.40,.50,.83,'#7b9d81');
     return g;
   }
