@@ -1983,7 +1983,7 @@ const ToyTown = (() => {
       // One scheduled live performance roughly every two miniature minutes,
       // only when there is room in the event budget. This is visible civic
       // life, not a burst of extra permanent residents.
-      if(events.length<3&&!events.some(e=>e.streetConcert)){
+      if(events.length<5&&!events.some(e=>e.streetConcert)){
         const concert=startEvent('busker');
         if(concert)streetPerformances++;
       }
