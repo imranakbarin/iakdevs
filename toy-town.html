@@ -9,7 +9,7 @@ html,body{margin:0;height:100%;overflow:hidden;background:#bfe6f7;font-family:sy
 #town{display:block;width:100%;height:100%;cursor:grab;touch-action:none;-webkit-user-select:none;user-select:none;overscroll-behavior:none}
 #town-3d{display:none;position:fixed;inset:0;pointer-events:none;z-index:1;overflow:hidden}
 /* Lens finishing stays behind the UI and never intercepts phone gestures. */
-#town-3d::after{content:"";position:absolute;inset:0;pointer-events:none;z-index:2;background:radial-gradient(ellipse at 46% 34%,rgba(255,239,211,.075),transparent 66%),radial-gradient(ellipse at 50% 48%,transparent 43%,rgba(40,54,59,.13) 100%);}
+#town-3d::after{content:"";position:absolute;inset:0;pointer-events:none;z-index:2;background:radial-gradient(ellipse at 46% 34%,rgba(255,239,211,.04),transparent 66%),radial-gradient(ellipse at 50% 48%,transparent 43%,rgba(40,54,59,.075) 100%);}
 
 #card,#ticker,#hint,#zoom-controls{z-index:3}
 html.embedded #zoom-controls{display:none}
@@ -55,8 +55,8 @@ html.embedded #zoom-controls{display:none}
     Promise.all([
       import('three'),
       import('three/addons/geometries/RoundedBoxGeometry.js'),
-      import('./assets/toy-town-3d.js?v=20'),
-      import('./assets/toy-town-landmarks.js?v=4')
+      import('./assets/toy-town-3d.js?v=21'),
+      import('./assets/toy-town-landmarks.js?v=5')
     ]).then(([THREE, geometry, view, landmarks]) => {
       try { view.mountToyTown3D(THREE, geometry.RoundedBoxGeometry, ToyTown,
         document.getElementById('town-3d'),{buildLandmark:landmarks.buildLandmark}); }
