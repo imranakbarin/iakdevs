@@ -1,7 +1,78 @@
 {
   "version": 1,
-  "generated_at": null,
-  "status": "unavailable",
-  "successful_sources": [],
-  "stories": []
+  "generated_at": "2026-11-01T19:06:40.708Z",
+  "status": "ok",
+  "successful_sources": [
+    "BBC News",
+    "BBC Technology",
+    "BBC Business",
+    "BBC Sport",
+    "DW",
+    "Ars Technica"
+  ],
+  "stories": [
+    {
+      "title": "Peaceful protests in Germany spiral into violence and looting",
+      "url": "https://www.bbc.co.uk/news/videos/cqgm0der7zkmo?at_medium=RSS&at_campaign=rss",
+      "source": "BBC News",
+      "category": "World",
+      "published_at": "2026-11-01T18:51:56.000Z"
+    },
+    {
+      "title": "Thousands of jobs at Virgin Media O2 to be cut",
+      "url": "https://www.bbc.co.uk/news/articles/c6rry8x9d9qko?at_medium=RSS&at_campaign=rss",
+      "source": "BBC Business",
+      "category": "Business",
+      "published_at": "2026-11-01T16:57:14.000Z"
+    },
+    {
+      "title": "Rice rewarded, Wirtz must do more - Liverpool and Arsenal player ratings",
+      "url": "https://www.bbc.co.uk/sport/football/articles/cqj9kgyww478o?at_medium=RSS&at_campaign=rss",
+      "source": "BBC Sport",
+      "category": "Sport",
+      "published_at": "2026-11-01T18:38:45.000Z"
+    },
+    {
+      "title": "Bellingham & Mbappe score as Real Madrid earn statement win",
+      "url": "https://www.bbc.co.uk/sport/football/videos/cv0ldye7k4g3o?at_medium=RSS&at_campaign=rss",
+      "source": "BBC Sport",
+      "category": "Sport",
+      "published_at": "2026-11-01T18:37:48.000Z"
+    },
+    {
+      "title": "Democrat endorses Republican candidate in key Michigan Senate race as party spat escalates",
+      "url": "https://www.bbc.co.uk/news/articles/c95ynzv88n68o?at_medium=RSS&at_campaign=rss",
+      "source": "BBC News",
+      "category": "World",
+      "published_at": "2026-11-01T18:24:08.000Z"
+    },
+    {
+      "title": "Almgren wins in New York on marathon debut",
+      "url": "https://www.bbc.co.uk/sport/athletics/articles/c6ly0871547eo?at_medium=RSS&at_campaign=rss",
+      "source": "BBC Sport",
+      "category": "Sport",
+      "published_at": "2026-11-01T18:10:11.000Z"
+    },
+    {
+      "title": "Armed police start patrols in Sydney after Bondi Beach attack",
+      "url": "https://www.bbc.co.uk/news/articles/c9kgj7k7ry0ro?at_medium=RSS&at_campaign=rss",
+      "source": "BBC News",
+      "category": "World",
+      "published_at": "2026-11-01T17:56:47.000Z"
+    },
+    {
+      "title": "Energy bills help 'doesn't go far enough'",
+      "url": "https://www.bbc.co.uk/news/articles/cqgkvpnj7l7yo?at_medium=RSS&at_campaign=rss",
+      "source": "BBC Business",
+      "category": "Business",
+      "published_at": "2026-11-01T07:15:06.000Z"
+    },
+    {
+      "title": "Diwali hampers to bring hope to families in need",
+      "url": "https://www.bbc.co.uk/news/articles/cm20wyg8j121o?at_medium=RSS&at_campaign=rss",
+      "source": "BBC Business",
+      "category": "Business",
+      "published_at": "2026-11-01T07:11:33.000Z"
+    }
+  ]
 }
