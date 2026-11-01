@@ -112,8 +112,12 @@ assert.match(moduleCode,/function groundingShadow\(/,'architecture and trees hav
 assert.match(moduleCode,/const studioMat=/,'model sits on a photographed gradient table');
 assert.match(moduleCode,/sun\.color\.set\(tint\(/,'sunset light transitions smoothly without snapping hues');
 assert.match(html,/#town-3d::after/,'lens finish has a restrained noninteractive vignette');
-assert.match(moduleCode,/g.userData.limbs=\{legs,arms,shins,feet,eyelids,headPivot,upperBody\}/,
-  'residents share a torso pivot and distinct planted ankle joints');
+assert.match(moduleCode,/g.userData.limbs=\{legs,arms,elbows,wrists,hands,shins,feet/,
+  'residents have independent shoulder, elbow and wrist joints');
+assert.match(moduleCode,/bag.userData.carriedProp='handbag'/,
+  'handbags attach to the carrying hand instead of hovering at the hip');
+assert.match(moduleCode,/const turnToFocus=focus&&toward/,
+  'neighbors turn their whole body to their conversation partner');
 assert.match(moduleCode,/state.speed=ease\(/,
   'walk-to-stop transitions use rate-limited pose blends');
 assert.match(moduleCode,/limbs.upperBody.rotation.x=/,
@@ -126,7 +130,7 @@ assert.match(moduleCode,/eye.scale.y=blink/,'eyelids blink without a separate an
 assert.match(html,/type="importmap"/);
 assert.match(html,/three@0\.187\.0\/build\/three\.module\.js/);
 assert.match(html,/three@0\.187\.0\/examples\/jsm\//);
-assert.match(html,/toy-town-3d\.js\?v=30/);
+assert.match(html,/toy-town-3d\.js\?v=31/);
 assert.match(html,/toy-town-landmarks\.js\?v=7/,'the independent models are requested alongside Three');
 assert.match(html,/buildLandmark:landmarks\.buildLandmark/,
   'loader injects the authored model builder into the 3D simulation');
@@ -434,6 +438,12 @@ assert.equal(residentRig.userData.limbs.feet.length,2,
   'each foot has a dedicated contact rocker');
 assert.ok(residentRig.userData.limbs.upperBody,
   'the head, arms and clothing move together on a torso joint');
+assert.equal(residentRig.userData.limbs.elbows.length,2,
+  'people bend two forearms rather than swinging stiff arms');
+assert.equal(residentRig.userData.limbs.wrists.length,2,
+  'each hand has a separate orientation pivot');
+assert.equal(residentRig.userData.limbs.brows.length,2,
+  'facial expression is articulated, not a motionless texture');
 const motorcar=sceneWorld.children.find(o=>o.userData?.vehicleRig);
 assert.equal(motorcar.userData.vehicleRig.wheels.length,4,
   'each car has four individually articulated wheels');
@@ -496,6 +506,12 @@ assert.ok(Math.abs(residentRig.userData.limbs.upperBody.rotation.x)>.001,
 const gestures=residentRig.userData.limbs.arms.map(a=>a.rotation.x);
 assert.notEqual(gestures[0],gestures[1],
   'conversation uses asymmetrical listening and speaking gestures');
+assert.ok(Math.abs(firstPerson.rotation.y-Math.PI/2)>.02,
+  'a stopped resident begins turning bodily toward their companion');
+assert.ok(Math.abs(residentRig.userData.limbs.elbows[1].rotation.x)>.005,
+  'conversation bends the speaking elbow as well as the shoulder');
+assert.ok(residentRig.userData.limbs.smile.scale.y>.4,
+  'the speaking face becomes expressive during the encounter');
 pedestrians[0].intent='walking';
 frameClock+=1/30;callbacks.shift()();
 assert.ok(actorPose.chat<.25,

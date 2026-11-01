@@ -1945,10 +1945,13 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
     const skin=ref.skin||'#dbab86',coat=ref.col||'#d6a3a0';
     // Rounded head and tapered torso read as a small character at close zoom.
     const torso=ball(g,.088,coat,0,.26,0);
-    torso.scale.set(.92,1.2,.74);
-    // Sculpted layered clothing: the coat reads as a garment, not a capsule.
+    torso.scale.set(1.08,1.22,.79);
+    // A distinct tapered waist and curved jacket hem stop the upper body
+    // reading as one featureless capsule in close-up photography.
+    const waist=ball(g,.068,coat,0,.229,0);
+    waist.scale.set(.96,.68,.76);
     const hem=ball(g,.075,coat,0,.207,0);
-    hem.scale.set(1.16,.48,.87);
+    hem.scale.set(1.08,.47,.91);
     for(const sx of [-1,1]){
       const shoulder=ball(g,.049,coat,sx*.082,.323,0);
       shoulder.scale.set(.90,.84,.86);
@@ -1996,17 +1999,23 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
     ball(face,.017,skin,0,.425,.100);
     const smile=object(face,geo('torus',.024,.004),mat('#925f5c'),0,.404,.094);
     smile.scale.set(1,.40,.26);
+    const brows=[];
+    for(const side of [-1,1]){
+      const brow=box(face,.033,.007,.009,hairTone,side*.034,.493,.091);
+      brow.rotation.z=side*-.12;
+      brows.push(brow);
+    }
     // Layers of clothing create a tiny character instead of a colored capsule.
     box(face,.072,.075,.040,'#fff1da',0,.324,.071);
     box(face,.023,.038,.031,'#d3a082',0,.304,.091);
     for(const sx of [-1,1]){
       box(face,.014,.029,.022,'#f7e0c4',sx*.034,.305,.087);
     }
-    const legs=[],arms=[],shins=[],feet=[];
+    const legs=[],arms=[],elbows=[],wrists=[],hands=[],shins=[],feet=[];
     for(const side of [-1,1]){
       const leg=new THREE.Group();leg.position.set(side*.041,.178,0);
       cylinder(leg,.026,.028,.086,'#60717b',0,-.043,0);
-      const knee=ball(leg,.027,'#627887',0,-.095,0);
+      ball(leg,.027,'#627887',0,-.095,0);
       const shin=new THREE.Group();shin.position.set(0,-.096,0);
       cylinder(shin,.022,.025,.081,'#60717b',0,-.039,0);
       const ankle=new THREE.Group();ankle.position.set(0,-.102,.028);
@@ -2014,17 +2023,37 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
       shin.add(ankle);
       leg.add(shin);g.add(leg);legs.push(leg);shins.push(shin);
       feet.push(ankle);
-      const arm=new THREE.Group();arm.position.set(side*.097,.327,0);
-      cylinder(arm,.024,.026,.132,coat,0,-.076,0);
-      ball(arm,.025,'#f3e1ce',0,-.123,0);
-      ball(arm,.027,skin,0,-.154,0);g.add(arm);arms.push(arm);
+      // Shoulder → elbow → wrist is one physical chain. Fingers and props
+      // are parented to the hand, so nothing floats when a person waves.
+      const arm=new THREE.Group();arm.position.set(side*.098,.328,0);
+      cylinder(arm,.024,.027,.084,coat,0,-.041,0);
+      const elbow=new THREE.Group();elbow.position.y=-.084;
+      ball(elbow,.023,coat,0,0,0);
+      cylinder(elbow,.019,.022,.077,coat,0,-.038,0);
+      const wrist=new THREE.Group();wrist.position.y=-.079;
+      const palm=ball(wrist,.023,skin,0,-.012,.003);
+      palm.scale.set(.81,1.13,.66);
+      for(const spread of [-1,0,1]){
+        const finger=cylinder(wrist,.005,.006,.023,skin,spread*.013,-.034,.007);
+        finger.rotation.z=spread*.16;
+      }
+      ball(wrist,.012,skin,side*.021,-.014,.012);
+      elbow.add(wrist);arm.add(elbow);g.add(arm);
+      arms.push(arm);elbows.push(elbow);wrists.push(wrist);hands.push(wrist);
+    }
+    if(ref.bag&&ref.kind!=='farmer'&&ref.kind!=='keeper'){
+      // This handbag is actually gripped and follows the left wrist.
+      const bag=new THREE.Group();bag.position.set(-.003,-.072,-.023);
+      hands[0].add(bag);bag.userData.carriedProp='handbag';
+      box(bag,.105,.105,.063,'#ae8966',0,0,0);
+      const handle=object(bag,geo('torus',.032,.007),mat('#806548'),0,.052,0);
+      handle.scale.set(1,1,.42);
     }
     if(ref.hat){
       const cap=ball(g,.099,ref.hat==='beanie'?'#b18cbd':'#588f9e',0,.534,0);
       cap.scale.set(1,.57,1);
       if(ref.hat==='cap')box(g,.095,.017,.063,'#588f9e',0,.487,.089);
     }
-    if(ref.bag)box(g,.06,.15,.12,'#ae8966',-.106,.24,-.038);
     // Specific silhouettes communicate a role before the visitor even moves.
     // No billboard labels: their tools and clothing are physical geometry.
     if(ref.kind==='chef'){
@@ -2032,15 +2061,20 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
       const puff=ball(g,.096,'#fff9f1',0,.620,0);puff.scale.set(1,.56,1);
       box(g,.13,.13,.026,'#fff2e4',0,.269,.078);
     }else if(ref.kind==='sweeper'){
-      const shaft=cylinder(g,.012,.014,.49,'#947455',.134,.26,.094);
-      shaft.rotation.z=-.25;
-      box(g,.14,.064,.055,'#b5a182',.19,.042,.094);
+      // The broom stays gripped as the arm arcs, not nailed to world space.
+      const shaft=cylinder(hands[1],.010,.012,.29,'#947455',0,-.160,.018);
+      shaft.rotation.z=-.09;
+      box(hands[1],.135,.055,.048,'#b5a182',.018,-.304,.018);
       box(g,.17,.021,.04,'#5e786d',0,.23,.078);
     }else if(ref.kind==='farmer'||ref.kind==='keeper'){
       const brim=cylinder(g,.115,.115,.025,'#c7b38b',0,.555,0);
       cylinder(g,.080,.085,.095,'#ab906d',0,.600,0);
-      const basket=box(g,.13,.105,.11,'#b6956b',-.15,.190,.055);
+      const basket=box(hands[0],.13,.095,.11,'#b6956b',0,-.068,.011);
       basket.castShadow=false;
+      basket.userData.carriedProp='basket';
+      const handle=object(hands[0],geo('torus',.052,.008),
+        mat('#a17d4d'),0,-.024,.011);
+      handle.scale.z=.58;
     }else if(ref.kind==='robot'){
       const visor=box(face,.166,.058,.024,'#7faeb5',0,.456,.109);
       box(g,.135,.021,.034,'#627c87',0,.305,.090);
@@ -2059,22 +2093,29 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
       g.remove(part);upperBody.add(part);
     }
     g.add(upperBody);
-    g.userData.limbs={legs,arms,shins,feet,eyelids,headPivot,upperBody};
-    g.userData.pose={speed:0,sit:0,chat:0,look:0,
-      stride:0,breathe:0,lastClock:null};
+    g.userData.limbs={legs,arms,elbows,wrists,hands,shins,feet,
+      eyelids,headPivot,upperBody,smile,brows};
+    g.userData.pose={speed:0,sit:0,chat:0,speak:0,greet:0,observe:0,
+      lastClock:null,turned:false};
     // Lightweight deterministic silhouette variation: coat, satchel or vest,
     // plus narrow waist and different hats already supplied by simulation.
     if(ref.bag){
-      const strap=box(g,.018,.21,.018,'#81684f',-.055,.29,.083);
+      const strap=box(upperBody,.018,.21,.018,'#81684f',-.055,.29,.083);
       strap.rotation.z=-.28;
     }
     if(ref.scarf){
-      const scarf=object(g,geo('torus',.062,.014),mat('#e8bd9e'),0,.37,0,false);
+      const scarf=object(upperBody,geo('torus',.062,.014),mat('#e8bd9e'),0,.37,0,false);
       scarf.rotation.x=Math.PI/2;
-      box(g,.036,.12,.018,'#e8bd9e',-.041,.310,.081);
+      box(upperBody,.036,.12,.018,'#e8bd9e',-.041,.310,.081);
     }
     g.userData.characterSilhouette=true;
-    g.scale.setScalar(ref.heroResident?1.1:1);
+    // Deterministic build and height variation, never a random change
+    // between frames. Hero residents remain slightly larger at close zoom.
+    const scale=ref.heroResident?1.10:1;
+    const characterPhase=ref.ph||0;
+    g.scale.set(scale*(.97+.045*Math.sin(characterPhase*1.3)),
+      scale*(.98+.055*Math.cos(characterPhase*.9)),
+      scale*(.95+.045*Math.sin(characterPhase+1)));
     return g;
   }
   // The vehicles are small designed machines rather than stacked colored
@@ -2332,7 +2373,8 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
       const a=Number.isFinite(ref.heading)?-ref.heading:[0,Math.PI,-Math.PI/2,Math.PI/2][d];
       // Cars, bicycles and quadrupeds point along local +X; only sculpted
       // residents have local +Z faces. Keep both aligned with actual travel.
-      g.rotation.y=a+(item.kind==='person'?Math.PI/2:0);
+      const travelFacing=a+(item.kind==='person'?Math.PI/2:0);
+      if(item.kind!=='person')g.rotation.y=travelFacing;
       const limbs=g.userData.limbs;
       if(limbs){
         // Distance owns the footstep clock. Time only smooths transitions and
@@ -2343,12 +2385,33 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
         state.lastClock=worldTime;
         const ease=(value,target,rate)=>value+(target-value)*
           (1-Math.exp(-rate*dt));
+        // When a person actually stops to speak, rotate their whole stance
+        // toward their companion. Continuous angular motion avoids snap turns
+        // and leaves independent head tracking free for small eye movements.
+        const focus=ref.attention;
+        const toward=focus?Math.hypot(focus.x-ref.x,focus.y-ref.y):0;
+        const social=(ref.intent==='chat'||ref.intent==='greeting'||
+          ref.intent==='browse'||ref.intent==='visiting');
+        const turnToFocus=focus&&toward>.11&&social&&(ref.v||0)<.055;
+        const desiredFacing=turnToFocus?
+          Math.atan2(focus.x-ref.x,focus.y-ref.y):travelFacing;
+        if(!state.turned){g.rotation.y=travelFacing;state.turned=true;}
+        const facingError=Math.atan2(Math.sin(desiredFacing-g.rotation.y),
+          Math.cos(desiredFacing-g.rotation.y));
+        g.rotation.y+=THREE.MathUtils.clamp(facingError,-3.8*dt,3.8*dt);
         const moving=ref.v>.032&&!ref.sit&&
           (!ref.stopUntil||worldTime>=ref.stopUntil);
         state.speed=ease(state.speed,moving&&!reducedMotion?
           THREE.MathUtils.clamp(ref.v/(ref.max||.55),0,1):0,8.5);
         state.sit=ease(state.sit,ref.sit?1:0,5.2);
         state.chat=ease(state.chat,ref.intent==='chat'&&!reducedMotion?1:0,4.4);
+        const speaking=Math.max(0,Math.sin(worldTime*1.35+(ref.ph||0)));
+        state.speak=ease(state.speak,state.chat*speaking,3.8);
+        state.greet=ease(state.greet,!reducedMotion&&ref.waveUntil&&
+          worldTime<ref.waveUntil?1:0,6);
+        state.observe=ease(state.observe,!reducedMotion&&
+          (ref.intent==='browse'||ref.intent==='visiting')&&
+          toward>.11&&(ref.v||0)<.05?1:0,3);
         const stridePhase=(ref.travel||0)*17+(ref.ph||0);
         const stride=Math.sin(stridePhase);
         // Strongest motion happens in swing; each foot rocks toward the
@@ -2368,24 +2431,31 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
           limbs.legs[k].position.y=.178+
             Math.max(0,-phase)*state.speed*.017;
         }
-        const talk=Math.sin(worldTime*2.15+(ref.ph||0));
-        // Conversational gestures are grounded in interaction intent and
-        // asymmetrical, rather than both arms waving in lockstep.
+        // Conversation has separate listening and speaking arm postures:
+        // wrists turn outward, elbows flex, and a greeting unfolds smoothly.
+        // The bag and basket remain physically attached to the left palm.
         for(let k=0;k<2;k++){
           const swing=k===0?stride:-stride;
-          const listener=k===0?.35:1;
-          const gesture=state.chat*listener*(.34+.24*
-            (k===0?Math.max(0,-talk):Math.max(0,talk)));
+          const dominant=k===1;
+          const speech=dominant?state.speak:state.chat*.17;
+          const inspect=dominant?state.observe:0;
+          const wave=dominant?state.greet:0;
+          const carrying=k===0&&(ref.bag||ref.kind==='farmer'||
+            ref.kind==='keeper');
           limbs.arms[k].rotation.x=state.sit*.20-
-            swing*state.speed*.34-gesture;
+            swing*state.speed*(carrying?.14:.34)-
+            state.chat*(dominant?.25:.07)-speech*.30-inspect*.22-wave*.52;
           limbs.arms[k].rotation.z=(k===0?1:-1)*
-            (.06+.19*state.chat);
-        }
-        const greeting=!reducedMotion&&!!ref.waveUntil&&worldTime<ref.waveUntil;
-        if(greeting){
-          limbs.arms[1].rotation.x=-.52;
-          limbs.arms[1].rotation.z=-1.15-
-            .12*Math.sin(worldTime*6+(ref.ph||0));
+            (.07+.10*state.chat+.06*state.observe)-
+            wave*.89;
+          limbs.elbows[k].rotation.x=
+            -.56*speech-.46*inspect-.84*wave+
+            (carrying?.20:0)+state.sit*.15;
+          limbs.wrists[k].rotation.x=
+            -.14*speech-.30*inspect-.25*wave;
+          limbs.wrists[k].rotation.z=(dominant?-1:1)*
+            (.08*state.chat+.11*state.observe)+
+            wave*.24*Math.sin(worldTime*5.4+(ref.ph||0));
         }
         // The whole torso shifts weight, leans into greetings and settles
         // naturally after walking. Small limits preserve miniature balance.
@@ -2413,6 +2483,12 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
           Math.sin(worldTime*2.0+(ref.ph||0));
         limbs.headPivot.rotation.z=(1-state.chat)*.021*
           Math.sin(worldTime*.95+(ref.ph||0));
+        // A mouth and eyebrows that answer the conversation, instead of
+        // faces that stay frozen while the arms perform gestures.
+        limbs.smile.scale.y=.40+.30*state.chat+.22*state.speak;
+        for(let k=0;k<2;k++)
+          limbs.brows[k].rotation.z=(k===0?1:-1)*
+            (.12+.15*state.speak+.10*state.observe);
         const blink=(worldTime*.96+(ref.ph||0)*.53)%6.8;
         for(const eye of limbs.eyelids||[])
           eye.scale.y=blink<.12?.16:1;
