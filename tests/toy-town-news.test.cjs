@@ -5,7 +5,7 @@ const fs=require('node:fs');
 const path=require('node:path');
 const {parseRss,chooseStories,refresh,safeUrl}=require('../scripts/refresh-toy-town-news.cjs');
 const now=Date.parse('2026-11-01T18:00:00Z');
-const feed={source:'BBC Sport',category:'Sport'};
+const feed={source:'BBC Sport',category:'Sport',url:'https://feeds.bbci.co.uk/sport/rss.xml'};
 const xml='<?xml version="1.0"?><rss version="2.0"><channel>'+
   '<item><title>India &amp; England final preview</title>'+
   '<link>https://www.bbc.co.uk/sport/example</link>'+
