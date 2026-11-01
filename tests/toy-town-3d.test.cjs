@@ -619,7 +619,7 @@ currentCamZoom=3.2; callbacks.shift()();
 assert.ok(api.camera.position.y < normalCameraHeight,'close zoom lowers viewing angle to show facades');
 currentCamZoom=1.52;callbacks.shift()();
 assert.ok(Math.abs(api.camera.position.y-normalCameraHeight)<.0001,'camera returns to regular viewing angle');
-assert.equal(api.getStats().actors,3,'pedestrians and vehicles follow the existing simulation');
+assert.equal(api.getStats().actors,4,'pedestrians, vehicles and a neighborhood worker follow the simulation');
 assert.equal(api.getStats().buildings,8);
 assert.equal(api.getStats().landmarks,5,'five independently modeled buildings replace generic hero meshes');
 assert.equal(api.getStats().composedBuildings,2,
@@ -664,7 +664,7 @@ assert.ok(modeledArchitecture,'hero architectural assembly is part of the world'
 const oldCount=stats.renders;
 pedestrians.pop();frameClock+=1;
 callbacks.shift()();
-assert.equal(api.getStats().actors,2,'departing vehicles are removed');
+assert.equal(api.getStats().actors,3,'departing residents are removed');
 assert.ok(stats.renders>oldCount);
 seed++;buildings=buildings.slice();callbacks.shift()();
 assert.equal(api.getStats().redrawCount,2,'new daily town triggers a full rebuild');
