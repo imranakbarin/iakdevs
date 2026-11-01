@@ -970,7 +970,7 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
   // Art-directed 3D-only massing: stable, small shifts away from traffic
   // create distinct street silhouettes while preserving all 2D coordinates.
   function composeSecondaryBuilding(b,group){
-    if(!group || b.hero || !['house','shop'].includes(b.kind))return group;
+    if(!group || b.hero || !['house','shop','tower'].includes(b.kind))return group;
     const seed=(b.x*101+b.y*271+(b.h|0)*17)>>>0;
     const nearestRoad=p=>LINES.reduce((best,n)=>
       Math.abs(n+.5-p)<Math.abs(best-p)?n+.5:best,LINES[0]+.5);
@@ -988,17 +988,72 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
     composedBuildings++;
     return group;
   }
+  // The surrounding skyline belongs to the same handmade village as the
+  // five landmarks, not a row of anonymous modern office cuboids.
+  // Towers remain on the identical simulator parcel, with distinctive
+  // rooftops, believable windows and a warm limestone base.
   function tower(b){
-    const x=b.x+.5,z=b.y+.5,h=Math.min(2.65,Math.max(1.0,b.h/45));
-    box(world,.77,h,.76,b.wall||'#bbcad7',x,h/2,z);
-    box(world,.84,.10,.83,'#dbe3e0',x,h+.04,z);
-    for(let row=0;row<Math.max(2,Math.floor(h/.33));row++)
-      for(const i of [-.22,0,.22]) {
-        const pane=box(world,.105,.18,.032,mat('#b5d7e6',.25,'#617e85'),
-          x+i,.3+row*.33,z+.39);
-        pane.userData.windowGlass=true;
+    const g=new THREE.Group();
+    g.position.set(b.x+.5,0,b.y+.5);
+    world.add(g);
+    const variant=Math.abs(b.x*19+b.y*7)%3;
+    const h=Math.min(2.38,Math.max(1.34,b.h/57));
+    const paint=tint(b.wall||'#c6d7d0','#f1dfca',.30);
+    const slate=['#67877f','#ad7960','#7796a0'][variant];
+    box(g,.84,.13,.83,'#d2bda1',0,.105,0);
+    box(g,.77,h,.75,plaster(paint),0,.185+h/2,0);
+    for(const y of [.26,h*.48+.18,h+.14])
+      box(g,.80,.052,.795,'#f1dfc6',0,y,0);
+    for(const x of [-.345,.345]){
+      box(g,.037,h*.83,.050,'#e4cfb3',x,h*.54+.15,.399);
+      box(g,.065,.08,.075,'#f8ecd8',x,h+.17,.415);
+    }
+    const floors=Math.min(5,Math.max(2,Math.floor(h/.34)));
+    for(let row=0;row<floors;row++){
+      const y=.43+row*(h-.26)/floors;
+      for(const x of [-.205,.205]){
+        archedInset(g,x,y,.413,.21,.25,'#799d9b',true);
+        box(g,.245,.024,.09,'#edd9b9',x,y-.149,.46);
+        // Sun-lit shutters, tiny but physically proud of the stone wall.
+        for(const side of [-1,1])box(g,.041,.26,.028,
+          variant===1?'#a67e70':'#8ca39d',x+side*.135,y,.443);
       }
-    box(world,.27,.22,.30,'#cbd2d4',x+.2,h+.20,z-.17);
+    }
+    // A gable-front attic with non-repeating roof tile surfaces.
+    roof(g,slate,h+.185);
+    const dormer=box(g,.22,.18,.20,'#f2dfc6',-.17,h+.42,.345);
+    dormer.castShadow=false;
+    box(g,.13,.12,.028,'#90b4b1',-.17,h+.44,.462);
+    const dormerCap=box(g,.30,.046,.26,roofMaterial(slate),-.17,h+.55,.355);
+    dormerCap.rotation.z=-.12;
+    // Only a few blocks grow a chapel-like bell tower or a clock cupola.
+    // They are designed parts of the roof, not extra identical houses.
+    if(variant===0){
+      const turret=new THREE.Group();turret.position.set(.26,0,-.18);g.add(turret);
+      cylinder(turret,.135,.15,.54,'#e3d6bf',0,h+.47,0);
+      cylinder(turret,.177,.177,.047,'#f1e7d3',0,h+.75,0);
+      const spire=object(turret,new THREE.ConeGeometry(.21,.39,10),
+        roofMaterial('#769588'),0,h+.96,0);
+      spire.castShadow=false;
+    }else if(variant===1){
+      const dial=cylinder(g,.12,.12,.025,'#f2e8d1',.18,h+.40,.455);
+      dial.rotation.x=Math.PI/2;dial.castShadow=false;
+      box(g,.015,.10,.016,'#745b4a',.18,h+.41,.477);
+      const hand=box(g,.078,.015,.015,'#745b4a',.205,h+.43,.478);
+      hand.rotation.z=.30;
+    }else{
+      for(const x of [-.27,.27]){
+        cylinder(g,.037,.044,.39,'#f2e0cb',x,h+.36,.35);
+        ball(g,.064,'#e7c4ac',x,h+.58,.35);
+      }
+    }
+    const door=box(g,.22,.39,.072,'#97755e',0,.40,.421);
+    door.castShadow=false;
+    box(g,.29,.046,.16,'#e9d2b5',0,.225,.493);
+    // Secondary buildings use exactly the same safe parcel-staggering rules.
+    composeSecondaryBuilding(b,g);
+    g.userData.storybookTower=true;
+    return g;
   }
   function fireStation(b){
     const x=b.x+.5,z=b.y+.5,h=.88;
