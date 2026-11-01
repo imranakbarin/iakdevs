@@ -9,6 +9,8 @@ on:
       - 'assets/toy-town.js'
       - 'toy-town.html'
       - 'tests/toy-town-visual.cjs'
+      - 'tests/toy-town-3d.test.cjs'
+      - 'tests/toy-town.test.cjs'
       - '.github/workflows/toy-town-visual.yml'
 
 permissions:
