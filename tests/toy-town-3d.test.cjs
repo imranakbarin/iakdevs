@@ -88,6 +88,10 @@ assert.match(moduleCode,/limbs\.headPivot\.rotation\.y\+=/,
   'residents look toward genuinely noticed destinations');
 assert.match(moduleCode,/bike\.crank\.rotation\.z=/,
   'bicycle drivetrain moves with traveled distance');
+assert.match(moduleCode,/ref\.watch==='owner'\?5\.1:3\.1/,
+  'companion dogs wag faster when attending to their owners');
+assert.match(moduleCode,/if\(ref\.sit&&rig\.kind==='dog'\)/,
+  'dogs visibly sit when their owner pauses to socialize');
 assert.match(moduleCode,/const landscapeAtlas=/,'town has a continuous non-repeating terrain paint layer');
 assert.match(moduleCode,/function vergeMaterial\(axis\)/,'street edges have shared soft painted vegetation');
 assert.match(moduleCode,/function paintedVerge\(/,'street verges have physically placed decals');
@@ -430,12 +434,17 @@ assert.ok(Math.abs(cycle.userData.bicycleRig.crank.rotation.z)>1,
   'pedals and bicycle wheels rotate with physical distance');
 const testDog={type:'person',kind:'dog',x:9.1,y:8.3,d:0,
   v:.5,travel:3,ph:1};
+testDog.watch='owner';testDog.sit=true;testDog.attention={x:9.55,y:8.3};
 pedestrians.push(testDog);callbacks.shift()();
 const animalRig=sceneWorld.children.find(o=>o.userData?.creatureRig);
 assert.ok(animalRig?.userData.creatureRig.tail,
   'animals have connected animated tails instead of static toy blobs');
 assert.equal(animalRig.userData.creatureRig.legs.length,4,
   'a dog is a four-legged creature, not a human capsule');
+assert.ok(animalRig.userData.creatureRig.head.rotation.y!==0,
+  'the real 3D companion dog faces the person it is watching');
+assert.ok(animalRig.position.y<.13,
+  'a resting companion lowers into a sitting pose without floating');
 pedestrians.pop();callbacks.shift()();
 const peopleGroup=api.scene.children.find(g=>g.children&&g.children.some(x=>x.position.x===8.1 && x.position.z===8.7));
 const firstPerson=peopleGroup.children.find(x=>x.position.x===8.1 && x.position.z===8.7);
