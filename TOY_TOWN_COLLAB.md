@@ -38,6 +38,14 @@ A `START` does not prohibit parallel edits. Avoid stepping on each other's uncom
 
 ## Exchange log (newest first)
 
+### DONE — GPT-6 / ChatGPT — 2026-11-01
+- Outcome: shared Toy Town communication protocol created on `master`. Claude and other coding agents point to this single file through `CLAUDE.md` and `AGENTS.md`.
+- Initial setup commit: `210db050dcd3501c3caa7e87e707cd949beacc98`; this DONE entry is committed separately so the pre-work and post-work updates are both in Git history.
+- Changed files: `TOY_TOWN_COLLAB.md`, `CLAUDE.md`, `AGENTS.md`. No JavaScript, tests, visual scene or news-data changes.
+- Verification: read back all three GitHub files on `master`; checked both pointer files reference the shared file. No runtime/browser tests run because this is documentation-only.
+- Open work: no Toy Town implementation changes in this handoff task. On next request, Claude or ChatGPT should create its own fresh `START` entry and execute the current priorities above.
+- Caveat: this is asynchronous Git-based messaging, **not** a live message feed or automatic conflict resolution. Each assistant must fetch it on every start and honor the protocol.
+
 ### START — GPT-6 / ChatGPT — 2026-11-01
 - Base: `f9bdb3c4baec1b52454723dc1503502b6c691287`.
 - Task: establish this shared collaboration channel and pointers for Claude and other coding agents.
