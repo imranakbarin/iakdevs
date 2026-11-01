@@ -509,6 +509,28 @@ const ToyTown = (() => {
         }
       }
       if (heldAtLight(m, .75)) want = 0;
+      // Cross-traffic clearance: a green signal does not authorize entering
+      // a junction still occupied by vehicles from the previous phase.
+      // Brake *before* the central conflict area and resume once it clears.
+      // No car is teleported or repositioned and event routes stay intact.
+      const fixed=axis==='x'?m.y:m.x;
+      for(const line of LINES){
+        const crossing=line+.5;
+        const approach=(crossing-pos)*sign;
+        if(approach<=.43||approach>=1.75)continue;
+        const occupied=movers.some(o=>{
+          if(o===m||o.type!=='car'||o.path||(o.d<2)===(m.d<2))
+            return false;
+          const otherFixed=axis==='x'?o.x:o.y;
+          const otherAlong=axis==='x'?o.y:o.x;
+          return Math.abs(otherFixed-crossing)<.18&&
+            Math.abs(otherAlong-fixed)<.65;
+        });
+        if(occupied){
+          const clearance=Math.max(0,approach-.54);
+          want=Math.min(want,Math.sqrt(2*.79*clearance));
+        }
+      }
       const hb = town.blocks.find(b => b.hero);
       if (hb && m.d < 2 && Math.abs(m.y - (hb.yb + 1.5)) < .27 &&
         movers.some(w => w.heroResident && w.crossing &&
