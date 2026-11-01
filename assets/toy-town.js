@@ -379,7 +379,11 @@ const ToyTown = (() => {
       // Both arrive at a socially credible meeting point on the walkway.
       if(clock>=life.nextMeeting&&!life.meetingUntil){
         const close=Math.hypot(a.x-b.x,a.y-b.y)<.86;
-        if(close&&!a.path&&!b.path){
+        if(close){
+          // A real neighbor recognizes their friend along the approach.
+          // Stop at the place they actually meet, instead of robotically
+          // finishing two exact waypoints before acknowledging each other.
+          for(const m of life.residents)m.path=null;
           life.meetingUntil=clock+3.3;
           life.nextMeeting=clock+25;
           life.meetingCount++;communityEncounters++;
