@@ -28,6 +28,7 @@ const ToyTown = (() => {
   let zoomAnchor = null, nextStreetMoment = 16, streetMoments = 0, fitZoom = 1;
   const PACE = .6, CARS = 7, BIKES = 4, PEOPLE = 14, LIGHT = 10;   // a calm town: few cars, a handful of cyclists, people taking their time   // the whole town runs at 60% speed: easier to follow, calmer to watch
   let clock = 0, playing = true, last = 0, nextEvent = 2, director = null, directorUntil = 0;
+  let community = null, communityEncounters = 0, communityVisits = 0;
   const STREETS = ['Maple St', 'Elm Ave', 'Pickle Lane', 'Gumdrop Rd', 'Button Way', 'Teapot St', 'Biscuit Ave', 'Puddle Lane'];
   const streetOf = (x, y) => STREETS[(isRoad(Math.floor(x)) ? LINES.indexOf(Math.floor(x)) : 4 + Math.max(0, LINES.indexOf(Math.floor(y)))) % STREETS.length];
 
@@ -138,6 +139,7 @@ const ToyTown = (() => {
       return {kind: road ? (water ? 'bridge' : 'road') : water ? 'water' : (x === 0 || y === 0 || x === N - 1 || y === N - 1) ? 'edge' : 'lot', block: null};
     }));
     buildings = []; props = []; movers = []; events = []; parts = []; bubbles = [];
+    community=null;communityEncounters=0;communityVisits=0;
     nextStreetMoment = 16; streetMoments = 0;
     const blocks = [];
     for (const [ya, yb] of [[2, 5], [7, 10], [12, 15]]) for (const [xa, xb] of [[2, 5], [7, 10], [12, 15]]) blocks.push({xa, xb, ya, yb, river: ya === 12});
@@ -156,6 +158,7 @@ const ToyTown = (() => {
     for (let k = 0; k < BIKES; k++) spawnBike(r);
     for (let k = 0; k < PEOPLE; k++) spawnPerson(r);
     spawnHeroResidents(hero, r);
+    spawnNeighborhoodLife(hero, r);
     for (const b of buildings) if (b.kind === 'house' && r() < .75) props.push({kind: 'flowers', x: b.x + .5, y: b.y + .88, c: [PASTEL[r() * 8 | 0], PASTEL[r() * 8 | 0]]});
     for (let k = 0; k < 5; k++) props.push({kind: 'duck', x: 1 + r() * 16, y: 13.2 + r() * 1.6, vx: (r() - .5) * .3, ph: r() * 6});
     sprites.clear(); ground = null;
@@ -318,6 +321,124 @@ const ToyTown = (() => {
       if (dest.wave) walker.waveUntil = clock + Math.min(dest.dwell, 1.4);
     }}];
   }
+
+  // Small, persistent social ecology in the real central square. Not another
+  // timed chaos event: this routine carries on while news themes change.
+  // It uses the free 2x2 plaza, avoiding storefront walls and the busy roads.
+  function spawnNeighborhoodLife(hero,r){
+    const x=hero.xa,y=hero.ya;
+    const residents=[
+      spawnPerson(r,{x:x+1.70,y:y+2.12,d:3,lane:0,max:.28,
+        communityResident:true,ph:r()*6,stopUntil:clock+2.4}),
+      spawnPerson(r,{x:x+2.35,y:y+2.10,d:3,lane:0,max:.31,
+        communityResident:true,ph:r()*6,stopUntil:clock+5.8})
+    ];
+    for(const m of residents){m.intent='strolling';m.busy=false;}
+    const dog=spawnPerson(r,{kind:'dog',x:x+2.11,y:y+2.36,d:3,
+      lane:0,max:.39,ph:r()*6,companionDog:true});
+    dog.attention={x:residents[1].x,y:residents[1].y};
+    community={
+      residents,dog,nextMeeting:clock+12+r()*4,
+      meetingUntil:0,meetingCount:0,
+      destinations:[
+        {name:'bakery',x:x+1.49,y:y+1.66},
+        {name:'books',x:x+2.49,y:y+1.67},
+        {name:'garden',x:x+1.82,y:y+2.16},
+        {name:'terrace',x:x+2.24,y:y+2.17}
+      ]
+    };
+    residents.forEach((m,i)=>{
+      m.communityDestination=i===0?'bakery':'terrace';
+      m.communityNext=clock+4+i*3;
+    });
+  }
+  function nearbyCompanionPoint(owner,dog){
+    // Follow the back quarter of the owner's walking vector, not an arbitrary
+    // global waypoint that would send the dog through a shopfront.
+    const vx=owner.x-dog.x,vy=owner.y-dog.y;
+    const dist=Math.hypot(vx,vy)||1;
+    return {x:owner.x-vx/dist*.20,y:owner.y-vy/dist*.20};
+  }
+  function updateNeighborhoodLife(dt){
+    const life=community;if(!life)return;
+    const [a,b]=life.residents;
+    if(!movers.includes(a)||!movers.includes(b))return;
+    if(life.meetingUntil>clock){
+      for(const m of life.residents){
+        m.v=0;m.stopUntil=Math.max(m.stopUntil||0,life.meetingUntil);
+        m.intent='chat';m.attention={x:m===a?b.x:a.x,y:m===a?b.y:a.y};
+      }
+    }else{
+      if(life.meetingUntil){
+        for(const m of life.residents){
+          m.stopUntil=0;m.intent='strolling';m.attention=null;
+          m.communityNext=clock+2+(m===b?1.5:0);
+        }
+        life.meetingUntil=0;
+      }
+      // Both arrive at a socially credible meeting point on the walkway.
+      if(clock>=life.nextMeeting&&!life.meetingUntil){
+        const close=Math.hypot(a.x-b.x,a.y-b.y)<.86;
+        if(close&&!a.path&&!b.path){
+          life.meetingUntil=clock+3.3;
+          life.nextMeeting=clock+25;
+          life.meetingCount++;communityEncounters++;
+          for(const m of life.residents){
+            m.stopUntil=life.meetingUntil;m.v=0;
+            m.waveUntil=clock+.9;m.intent='chat';
+            m.attention={x:m===a?b.x:a.x,y:m===a?b.y:a.y};
+          }
+        }else if(!a.path&&!b.path){
+          // A shared safe plaza rendezvous. No intersection crossing and no
+          // snapping positions; the two neighbors converge normally.
+          for(const [i,m] of life.residents.entries()){
+            m.communityNext=clock+8;
+            m.path=[{x:life.destinations[i+2].x,
+              y:life.destinations[i+2].y,speed:m.max}];
+            m.intent='meeting';m.attention={
+              x:life.destinations[i+2].x,y:life.destinations[i+2].y};
+          }
+        }
+      }
+      if(clock<life.nextMeeting-3){
+        for(const [i,m] of life.residents.entries()){
+          if(m.path||clock<(m.stopUntil||0)||clock<(m.communityNext||0))continue;
+          const candidates=life.destinations.filter(p=>
+            p.name!==(m.communityDestination||'') &&
+            life.residents.every(other=>other===m||
+              Math.hypot(p.x-other.x,p.y-other.y)>.37));
+          if(!candidates.length)continue;
+          // Choose a real place with low current occupancy, not the next
+          // element in a synchronized loop. Phase makes visits staggered.
+          const chosen=candidates[(life.meetingCount+i+
+            Math.floor(clock/13))%candidates.length];
+          m.communityDestination=chosen.name;
+          m.intent='visiting';m.attention={x:chosen.x,y:chosen.y};
+          m.path=[{x:chosen.x,y:chosen.y,speed:m.max,then:walker=>{
+            walker.v=0;walker.intent='visiting';
+            walker.stopUntil=clock+2.3+(i*.7);
+            walker.communityNext=walker.stopUntil+1.8;
+            communityVisits++;
+          }}];
+        }
+      }
+    }
+    const dog=life.dog,owner=b;
+    if(!movers.includes(dog))return;
+    const gap=Math.hypot(owner.x-dog.x,owner.y-dog.y);
+    const ownerStill=(owner.v||0)<.05&&!owner.path;
+    dog.intent=ownerStill?'rest':'following';
+    dog.attention={x:owner.x,y:owner.y};
+    dog.watch=ownerStill?'owner':'walk';
+    dog.sit=ownerStill&&gap<.43;
+    if(ownerStill&&gap<.43){
+      dog.v=0;dog.path=null;dog.stopUntil=clock+.13;
+    }else if(gap>.34&&clock>=(dog.nextFollow||0)){
+      const to=nearbyCompanionPoint(owner,dog);
+      dog.path=[{x:to.x,y:to.y,speed:.34}];
+      dog.nextFollow=clock+.45;
+    }
+  }
   function spawnBike(r = Math.random) {
     const p = randomRoadPoint(r), m = {type: 'car', kind: 'bike', x: p.x, y: p.y, d: p.d, heading: directionAngle(p.d), v: 0, travel: 0, max: .55 + r() * .15, col: PASTEL[r() * PASTEL.length | 0], skin: ['#f1c9a5', '#d8a77c', '#a8754f', '#7a4e33'][r() * 4 | 0], wait: 0, lane: .36, ph: r() * 6};
     movers.push(m); return m;
@@ -336,6 +457,9 @@ const ToyTown = (() => {
   function step(m, dt) {
     if (m.stopUntil && clock < m.stopUntil) { m.v = 0; return; }
     if (m.path) return stepPath(m, dt);
+    if(m.communityResident&&m.intent==='chat'&&clock<(m.stopUntil||0)){
+      m.v=0;return;
+    }
     // Free pedestrians have local awareness, not a global scripted parade.
     // They notice nearby storefronts, pause briefly, then resume their route.
     // They never teleport or step into the shop/road center to do so.
@@ -361,7 +485,28 @@ const ToyTown = (() => {
     if (m.type === 'car') {   // keep a gap to whatever is ahead in the lane, and stop for red lights
       for (const o of movers) if (o !== m && o.type === 'car' && o.d === m.d) {
         const ahead = (o.x - m.x) * dx + (o.y - m.y) * dy, side = Math.abs((o.x - m.x) * dy) + Math.abs((o.y - m.y) * dx);
-        if (ahead > 0 && ahead < 1 && side < .3) want = Math.min(want, o.v * .9, ahead < .6 ? 0 : want);
+        if (ahead > 0 && ahead < 1.55 && side < .30){
+          // Begin braking before reaching the vehicle ahead, scaled by
+          // the space available. Avoid the abrupt 0.6m emergency stop.
+          const safe=Math.max(0,ahead-.42);
+          const approach=Math.sqrt(2*.9*safe);
+          want=Math.min(want,Math.max(0,Math.min(m.max,o.v+approach)));
+          if(ahead<.50)want=Math.min(want,o.v*.55);
+        }
+      }
+      // Speed planning for the next intersection. Anticipate the red/amber
+      // phase from up to 2.3m, but never assume an upcoming green is safe.
+      const axis=m.d<2?'x':'y';
+      const pos=axis==='x'?m.x:m.y,sign=m.d===0||m.d===2?1:-1;
+      const phase=lightPhase();
+      if(phase.green!==axis||phase.amber){
+        const crossings=LINES.map(l=>(l+.5-pos)*sign)
+          .filter(d=>d>0&&d<2.35);
+        if(crossings.length){
+          const distance=Math.min(...crossings);
+          const room=Math.max(0,distance-.70);
+          want=Math.min(want,Math.sqrt(2*.92*room));
+        }
       }
       if (heldAtLight(m, .75)) want = 0;
       const hb = town.blocks.find(b => b.hero);
@@ -1479,6 +1624,7 @@ const ToyTown = (() => {
   function nightLevel() { return clamp(0, -Math.cos(clock / (300 * PACE) * TAU) * 2 - 1, 1); }
   function update(dt) {
     clock += dt;
+    updateNeighborhoodLife(dt);
     for (const m of movers.slice()) { step(m, dt); easeHeading(m, dt); updateHeroResident(m); }
     for (const e of events.slice()) { e.t += dt; if (e.follow) { e.x = e.follow.x; e.y = e.follow.y; } if (e.update) e.update(e, dt); if (e.t > e.dur) { if (e.end) e.end.call(e); events.splice(events.indexOf(e), 1); } }
     for (const m of movers.slice()) if (m.home && !m.path) remove(m);
@@ -1764,5 +1910,5 @@ const ToyTown = (() => {
     addEventListener('hashchange', () => location.reload());
     start();
   }
-  return {layout, render, zoomAt, resetView, fitView, pinchTo, screenWorld, streetMoment, hero: () => town.blocks.find(b => b.hero), TALK, nameOf, headline, dateKey, CALM, lightPhase, themeFromNews, newsThemes, VARIANTS, VARIANT_EVENTS: () => Object.keys(VARIANT_EVENTS), decorate, setToday: l => { today_ = l; }, PACE, THEMES, GRIM, build, update, events: () => events, movers: () => movers, buildings: () => buildings, props: () => props, startEvent, randomEvent, setPlaying: v => { playing = v; }, debug: () => ({clock, theme, seed, night: nightLevel(), cam: {...cam}, fitZoom, streetMoments})};
+  return {layout, render, zoomAt, resetView, fitView, pinchTo, screenWorld, streetMoment, hero: () => town.blocks.find(b => b.hero), TALK, nameOf, headline, dateKey, CALM, lightPhase, themeFromNews, newsThemes, VARIANTS, VARIANT_EVENTS: () => Object.keys(VARIANT_EVENTS), decorate, setToday: l => { today_ = l; }, PACE, THEMES, GRIM, build, update, events: () => events, movers: () => movers, buildings: () => buildings, props: () => props, startEvent, randomEvent, setPlaying: v => { playing = v; }, debug: () => ({clock, theme, seed, night: nightLevel(), cam: {...cam}, fitZoom, streetMoments,communityEncounters,communityVisits,community:community?{meetingUntil:community.meetingUntil,nextMeeting:community.nextMeeting,meetingCount:community.meetingCount}:null})};
 })();
