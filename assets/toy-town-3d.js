@@ -41,6 +41,91 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
   rim.position.set(19,13,-9);
   rim.castShadow=false;
   scene.add(rim);
+
+  // A painted studio reflection card gives glazed surfaces and roof pigments
+  // one shared environment. This is generated locally: no remote textures,
+  // high-memory HDR files or additional requests on the user's phone.
+  if(THREE.EquirectangularReflectionMapping!==undefined){
+    const c=document.createElement('canvas');c.width=512;c.height=256;
+    const p=c.getContext('2d');
+    const sky=p.createLinearGradient(0,0,0,256);
+    sky.addColorStop(0,'#d8e5e4');
+    sky.addColorStop(.38,'#eaf1e9');
+    sky.addColorStop(.56,'#f3e5c8');
+    sky.addColorStop(1,'#acb8a1');
+    p.fillStyle=sky;p.fillRect(0,0,512,256);
+    const softboxes=[
+      [44,28,152,58,'rgba(255,252,230,.69)'],
+      [335,35,115,75,'rgba(255,251,225,.54)'],
+      [251,100,29,80,'rgba(255,243,216,.24)']
+    ];
+    for(const [x,y,w,h,col] of softboxes){
+      p.fillStyle=col;p.fillRect(x,y,w,h);
+    }
+    const reflection=new THREE.CanvasTexture(c);
+    reflection.colorSpace=THREE.SRGBColorSpace;
+    reflection.mapping=THREE.EquirectangularReflectionMapping;
+    scene.environment=reflection;
+    scene.environmentIntensity=.62;
+  }
+  // Photographed-miniature finish: the center stays optically sharp for signs
+  // and people, with only the distant upper and near lower frame softened.
+  // The entire pass is optional; unrecognized WebGL drivers render directly.
+  let film=null;
+  if(THREE.WebGLRenderTarget&&THREE.ShaderMaterial&&THREE.Vector2){
+    try{
+      const target=new THREE.WebGLRenderTarget(1,1,{
+        depthBuffer:false,stencilBuffer:false,
+        minFilter:THREE.LinearFilter,magFilter:THREE.LinearFilter
+      });
+      target.texture.colorSpace=THREE.SRGBColorSpace;
+      const uniforms={
+        tScene:{value:target.texture},
+        uTexel:{value:new THREE.Vector2(1,1)},
+        uFocus:{value:.54},
+        uStrength:{value:desktop()?1.18:.90}
+      };
+      const shader=new THREE.ShaderMaterial({
+        uniforms,depthTest:false,depthWrite:false,
+        vertexShader:`varying vec2 vUv;
+          void main(){vUv=uv;gl_Position=vec4(position.xy,0.0,1.0);}`,
+        fragmentShader:`varying vec2 vUv;
+          uniform sampler2D tScene;
+          uniform vec2 uTexel;
+          uniform float uFocus;
+          uniform float uStrength;
+          void main(){
+            vec3 core=texture2D(tScene,vUv).rgb;
+            float distanceFromFocus=abs(vUv.y-uFocus);
+            float fade=smoothstep(.16,.53,distanceFromFocus)*uStrength;
+            vec2 tap=uTexel*(1.0+fade*2.6);
+            vec3 softened=core*.40;
+            softened+=texture2D(tScene,vUv+tap*vec2(1.,1.)).rgb*.15;
+            softened+=texture2D(tScene,vUv+tap*vec2(-1.,1.)).rgb*.15;
+            softened+=texture2D(tScene,vUv+tap*vec2(1.,-1.)).rgb*.15;
+            softened+=texture2D(tScene,vUv+tap*vec2(-1.,-1.)).rgb*.15;
+            vec3 color=mix(core,softened,clamp(fade*.62,0.,.8));
+            // Low-amplitude cinematic print contrast, warm sun and cool shade.
+            color=(color-.5)*1.035+.5;
+            color*=vec3(1.016,1.006,.985);
+            float vignette=1.-.085*smoothstep(.28,.76,
+              length((vUv-.5)*vec2(1.08,1.0)));
+            color*=vignette;
+            gl_FragColor=vec4(clamp(color,0.,1.),1.);
+            #include <colorspace_fragment>
+          }`,
+        toneMapped:false
+      });
+      const screen=new THREE.Scene();
+      screen.add(new THREE.Mesh(new THREE.PlaneGeometry(2,2),shader));
+      const lensCamera=new THREE.OrthographicCamera(-1,1,1,-1,0,1);
+      film={target,uniforms,screen,camera:lensCamera,shader};
+    }catch(error){
+      console.warn('Miniature lens unavailable; using direct WebGL',error);
+      film?.target?.dispose?.();film=null;
+    }
+  }
+
   const materialCache = new Map(), geometryCache = new Map(), paintedRoofCache = new Map(), stuccoCache = new Map();
   // Studio-grade warm pastel cohesion across the different news-generated
   // building colors. Keep the recognizable roof hue but avoid plastic neon.
@@ -55,6 +140,7 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
   });
   const world = new THREE.Group(); scene.add(world);
   const actors = new Map(), ambient = [], plazaLights = [], festoonBulbs = [];
+  const windowMaterials=new Set();
   let gardenElements = 0, woodlandShapes = 0, terrainContours = 0;
   let worldSeed = null, worldBuildings = null, worldPropCount = 0, sceneTime = 0, landmarkCount = 0;
   let stopped = false, frozen = false, raf = 0, frames = 0, redrawCount = 0, lastSize = '', lastFrameAt = 0;
@@ -1614,6 +1700,7 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
   }
   function rebuild(){
     ambient.length = 0; plazaLights.length = 0; festoonBulbs.length = 0;
+    windowMaterials.clear();
     gardenElements = 0; woodlandShapes = 0; terrainContours = 0; landmarkCount = 0;
     while(world.children.length)world.remove(world.children[0]);
     for(const [ref,obj] of actors){obj.group.parent?.remove(obj.group);}
@@ -1653,6 +1740,14 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
     const ps=town.props();
     for(let i=0;i<ps.length;i++)smallProps(ps[i],i);
     createStorybookVillage();
+    // Landmark panes are pooled across the five models. Update material
+    // intensity only, not every individual window mesh, on each frame.
+    const visit=node=>{
+      if(node.material?.userData?.miniatureWindow)
+        windowMaterials.add(node.material);
+      for(const child of node.children||[])visit(child);
+    };
+    visit(world);
     worldSeed=town.debug().seed;worldBuildings=town.buildings();
     worldPropCount=ps.length;
     redrawCount++;
@@ -1898,6 +1993,10 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
     rim.color.set(tint('#c0dedb','#a8b6cb',dusk));
     for(const lantern of plazaLights)lantern.intensity=dark*7.2;
     for(const bulb of festoonBulbs)bulb.material.emissiveIntensity=.32+dark*1.65;
+    for(const pane of windowMaterials){
+      pane.emissiveIntensity=(pane.userData?.warm?.12:.04)+
+        dark*(pane.userData?.warm?1.02:.66);
+    }
     scene.background.set(tint('#dce9e1','#a6b5c5',dusk));
     scene.fog.color.copy(scene.background);
     renderer.toneMappingExposure=1.02-dark*.11;
@@ -1911,6 +2010,12 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
     const sz=w+'x'+h;
     if(sz===lastSize)return;
     lastSize=sz;renderer.setSize(w,h,false);
+    if(film){
+      const rw=Math.max(1,renderer.domElement.width||w);
+      const rh=Math.max(1,renderer.domElement.height||h);
+      film.target.setSize(rw,rh);
+      film.uniforms.uTexel.value.set(1/rw,1/rh);
+    }
     const a=w/h;
     camera.left=-14*a;camera.right=14*a;
     camera.top=14;camera.bottom=-14;
@@ -1951,7 +2056,21 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
       if(worldBuildings!==town.buildings()||worldSeed!==state.seed)rebuild();
       syncActors();syncCamera();light(state.night||0);
       animateAmbient(state.clock||0);
-      renderer.render(scene,camera); frames++;
+      if(film){
+        try{
+          renderer.setRenderTarget(film.target);
+          renderer.render(scene,camera);
+          renderer.setRenderTarget(null);
+          renderer.render(film.screen,film.camera);
+        }catch(error){
+          // Never sacrifice the working world or mobile zoom for a lens.
+          renderer.setRenderTarget(null);
+          film?.target?.dispose?.();
+          film=null;
+          renderer.render(scene,camera);
+        }
+      }else renderer.render(scene,camera);
+      frames++;
       if(!api.active) {
         api.active=true;window.ToyTown3D.active=true;
         host.style.display='block';document.getElementById('town').style.opacity='0';
@@ -1971,14 +2090,15 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
   renderer.domElement.addEventListener('webglcontextrestored',restored,false);
   const api={
     active:false,renderer,scene,camera,
-    getStats:()=>({frames,redrawCount,actors:actors.size,ambient:ambient.length,plazaLights:plazaLights.length,festoonBulbs:festoonBulbs.length,gardenElements,woodlandShapes,terrainContours,landmarks:landmarkCount,buildings:town.buildings().length,webgl:true,frozen}),
+    getStats:()=>({frames,redrawCount,actors:actors.size,ambient:ambient.length,plazaLights:plazaLights.length,festoonBulbs:festoonBulbs.length,gardenElements,woodlandShapes,terrainContours,landmarks:landmarkCount,windowMaterials:windowMaterials.size,photographicLens:!!film,buildings:town.buildings().length,webgl:true,frozen}),
     // A stable actual GPU-rendered frame for visual regression screenshots.
     // Unlike stop(), freeze does not switch to the Canvas fallback.
     freeze(){frozen=true;cancelAnimationFrame(raf);},
     unfreeze(){if(!stopped&&frozen){frozen=false;raf=requestAnimationFrame(frame);}},
     stop(){stopped=true;cancelAnimationFrame(raf);this.active=false;window.ToyTown3D.active=false;
       host.style.display='none';document.getElementById('town').style.opacity='1';},
-    dispose(){this.stop();renderer.dispose();}
+    dispose(){this.stop();film?.target?.dispose?.();film?.shader?.dispose?.();
+      scene.environment?.dispose?.();renderer.dispose();}
   };
   window.ToyTown3D=api;
   renderer.domElement.addEventListener('dblclick',()=>{},false);
