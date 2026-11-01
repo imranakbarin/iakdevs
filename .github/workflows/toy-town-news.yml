@@ -1,0 +1,34 @@
+name: Toy Town sourced news refresh
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '17 * * * *'
+  push:
+    paths:
+      - 'scripts/refresh-toy-town-news.cjs'
+      - 'tests/toy-town-news.test.cjs'
+      - '.github/workflows/toy-town-news.yml'
+permissions:
+  contents: write
+jobs:
+  fetch-attributed-headlines:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Validate parsing and freshness controls
+        run: node tests/toy-town-news.test.cjs
+      - name: Pull publisher RSS feeds and preserve timestamps
+        run: node scripts/refresh-toy-town-news.cjs
+      - name: Publish current news data
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add assets/toy-town-news.json
+          if ! git diff --cached --quiet; then
+            git commit -m "data: refresh attributed Toy Town headlines"
+            git push
+          fi
