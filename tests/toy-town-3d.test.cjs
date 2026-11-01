@@ -197,7 +197,7 @@ let buildings=[
   {kind:'house',x:10,y:10,h:36,hero:true,wall:'#eadfc5',roof:'#be8165'},
   {kind:'shop',x:8,y:7,h:40,hero:true,wall:'#decdbd',awning:'#b56e5e',name:'BAKERY'},
   {kind:'shop',x:9,y:7,h:38,hero:true,wall:'#bcd7d1',awning:'#547c79',name:'BOOKS'},
-  {kind:'tower',x:3,y:3,h:85,wall:'#a3b6ca'},
+  {kind:'house',x:3,y:3,h:33,wall:'#d6d7c0',roof:'#b4785a'},
   {kind:'fire',x:12,y:12,h:26,wall:'#d56a59'}];
 const props=[
   {kind:'tree',x:7.5,y:9.5,s:1,c:'#7a9973'},
@@ -311,8 +311,12 @@ assert.match(moduleCode,/paver.rotation.y=/,'stone paths have irregular handmade
 assert.match(moduleCode,/23-closeness\*11\.5/,'close zoom lowers the eye to show character faces');
 assert.match(moduleCode,/if\(!b.hero && style===0/,
   'ordinary houses have occasional attached side wings for skyline variety');
-assert.match(moduleCode,/camera\.position\.set\(v\.x\+12\.5,23-closeness\*11\.5,v\.y\+22\)/,
-  'front-oriented camera puts shop facades ahead of angled roof overlap');
+assert.match(moduleCode,/camera\.position\.set\(aimX\+7\.4,20\.4-closeness\*9\.4,aimZ\+24\.0\)/,
+  'close-up angle is more frontal and less overhead, keeping shopfronts legible');
+assert.match(moduleCode,/const focusWeight=THREE\.MathUtils\.clamp/,
+  'compositional framing is removed smoothly as the user pans away');
+assert.match(moduleCode,/function composeSecondaryBuilding\(/,
+  'secondary houses receive bounded, deterministic street variation');
 assert.match(moduleCode,/const anchors=\[\[7\.56,9\.60\]/,
   'lower courtyard lights are positioned away from storefront signage');
 assert.match(moduleCode,/function archedInset\(/,'doors/windows have dimensional arches');
@@ -366,6 +370,16 @@ assert.ok(Math.abs(api.camera.position.y-normalCameraHeight)<.0001,'camera retur
 assert.equal(api.getStats().actors,3,'pedestrians and vehicles follow the existing simulation');
 assert.equal(api.getStats().buildings,7);
 assert.equal(api.getStats().landmarks,5,'five independently modeled buildings replace generic hero meshes');
+assert.equal(api.getStats().composedBuildings,1,
+  'the secondary house has staggered visual-only architecture');
+const secondary=api.scene.children.flatMap(o=>o.children||[])
+  .find(o=>o.userData?.composedSecondary);
+assert.ok(secondary,'a non-hero house has a composed group');
+assert.ok(Math.abs(secondary.userData.composition.offsetX)<.06 &&
+  Math.abs(secondary.userData.composition.offsetZ)<.06,
+  'street-facing house offsets never move into the traffic lane');
+assert.ok(Math.abs(secondary.rotation.y)<.10,
+  'varied houses stay realistically oriented to the village');
 const heroAssets=api.scene.children.flatMap(x=>x.children||[]).filter(x=>x.userData?.uniqueAsset);
 assert.equal(heroAssets.length,5,'five custom asset groups are mounted in the 3D scene');
 const roofTiles=[];
