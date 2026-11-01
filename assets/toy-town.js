@@ -1635,7 +1635,22 @@ const ToyTown = (() => {
       if (!Number.isFinite(m.x) || !Number.isFinite(m.y)) { remove(m); continue; }
       m.x=clamp(.08,m.x,17.92);m.y=clamp(.08,m.y,17.92);
     }
-    for (const p of props) if (p.kind === 'duck') { p.x += p.vx * dt; if (p.x < .3 || p.x > 17.5) p.vx *= -1; }
+    for(const p of props)if(p.kind==='duck'){
+      // Water birds notice activity near the bank and swim away gradually.
+      // They stay on their existing water line, never across the paving.
+      const near=movers.find(m=>m.type==='person'&&
+        Math.hypot(m.x-p.x,m.y-p.y)<1.12);
+      if(near){
+        const away=Math.sign(p.x-near.x)||1;
+        p.vx=away*Math.min(.18,Math.max(.065,Math.abs(p.vx||0)));
+        p.alertUntil=clock+1.5;
+      }else if(clock>(p.alertUntil||0)){
+        p.vx+=(Math.sign(p.vx||1)*.065-p.vx)*Math.min(1,dt*.5);
+      }
+      p.x+=p.vx*dt;
+      if(p.x<.3||p.x>17.5)p.vx*=-1;
+      p.x=clamp(.3,p.x,17.5);
+    }
     for (const p of props) if (p.kind === 'rover') { if (clock > p.t) { p.tx = p.x + (Math.random() - .5) * 2; p.ty = p.y + (Math.random() - .5) * 2; p.t = clock + 4; } p.x += (p.tx - p.x) * dt * .15; p.y += (p.ty - p.y) * dt * .15; }
     for (const p of props) if (p.kind === 'animal' && !p.out) { if (!p.t || clock > p.t) { const z = props.find(q => q.kind === 'zoo'); if (z) { p.tx = z.x + (Math.random() - .5) * 2.8; p.ty = z.y + (Math.random() - .5) * 2.8; } p.t = clock + 3 + Math.random() * 4; } p.x += (p.tx - p.x) * dt * .3; p.y += (p.ty - p.y) * dt * .3; }
     for (const q of parts) { q.t += dt; q.x += q.vx * dt; q.y += q.vy * dt; q.z += q.vz * dt; q.vz -= q.g * dt; if (q.z < 0) { q.z = 0; q.vz *= -.3; } }
