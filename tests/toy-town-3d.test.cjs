@@ -101,13 +101,13 @@ assert.match(moduleCode,/eye.scale.y=blink/,'eyelids blink without a separate an
 assert.match(html,/type="importmap"/);
 assert.match(html,/three@0\.187\.0\/build\/three\.module\.js/);
 assert.match(html,/three@0\.187\.0\/examples\/jsm\//);
-assert.match(html,/toy-town-3d\.js\?v=25/);
+assert.match(html,/toy-town-3d\.js\?v=26/);
 assert.match(html,/toy-town-landmarks\.js\?v=7/,'the independent models are requested alongside Three');
 assert.match(html,/buildLandmark:landmarks\.buildLandmark/,
   'loader injects the authored model builder into the 3D simulation');
-assert.match(html,/toy-town\.js\?v=15/);
+assert.match(html,/toy-town\.js\?v=16/);
 assert.ok(html.indexOf('toy-town.js?v=15')<html.indexOf("import('three')"), 'classic fallback starts first');
-assert.match(page,/toy-town\.html\?v=42&embed=1/);
+assert.match(page,/toy-town\.html\?v=43&embed=1/);
 assert.match(fs.readFileSync(path.join(root,'assets/toy-town.js'),'utf8'),
   /targetX=clamp\(\.08,p\.x,17\.92\)/,
   'scripted paths are clamped at the endpoint rather than freezing outside town');
@@ -241,6 +241,12 @@ assert.ok(api.getStats().woodlandShapes>=1,
   'simulation trees use the authored asymmetric crowns');
 assert.ok(api.getStats().terrainContours>=2,
   'the open lots now contain landscaped organic terrain');
+assert.ok(api.getStats().districtGardenRooms>=1,
+  'empty outer lots receive at least one low landscaped courtyard');
+const gardenRooms=api.scene.children.flatMap(node=>node.children||[])
+  .filter(node=>node.userData?.districtGarden);
+assert.equal(gardenRooms.length,api.getStats().districtGardenRooms,
+  'all planted courts are real grounded scene geometry');
 assert.equal(api.getStats().festoonBulbs,14,'two suspended spans contain 14 miniature lamps');
 assert.ok(api.getStats().windowMaterials>=2,
   'daylight and interior window materials are registered for unified dusk lighting');
@@ -329,6 +335,11 @@ assert.match(moduleCode,/Four authored silhouettes replace/,
   'trees now have separate oak, cypress, willow and orchard crown models');
 assert.match(moduleCode,/function createLandscapeComposition\(/,
   'clear lots gain individually sculpted raised terrain and living fringes');
+assert.match(moduleCode,/districtGardenRooms\+\+/,
+  'collision-tested neighborhood gardens surround the hero plaza');
+assert.match(moduleCode,/const riverForeground=z>=10\.85/,
+  'riverbank foliage is visually reduced in front of village signage');
+
 assert.match(moduleCode,/createLandscapeComposition\(\);/,
   'terrain composition is constructed alongside the roads on rebuild');
 assert.match(moduleCode,/function contour\(/,
