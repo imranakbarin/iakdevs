@@ -55,37 +55,124 @@ function makeKit(T,Round){
   const cyl=(p,top,bottom,h,c,x,y,z,cast=true)=>
     mesh(p,geom('cyl',top,bottom,h),c,x,y,z,cast);
   const rng=n=>{let x=Math.imul(n^0x9e3779b9,0x85ebca6b);x=Math.imul(x^x>>>13,0xc2b2ae35);return(x>>>0)/4294967296;};
+  // Hand-painted but physically lit miniature materials. Each finish is a
+  // deterministic canvas atlas: mineral plaster, fired tiles, dressed stone,
+  // and wood grain. Reuse maps by pigment to keep iPhone GPU memory bounded.
   function texture(base,type){
     const key='paint:'+base+':'+type;
     if(pigments.has(key))return pigments.get(key);
-    const c=document.createElement('canvas');c.width=256;c.height=256;
-    const ctx=c.getContext('2d');ctx.fillStyle=base;ctx.fillRect(0,0,256,256);
+    const c=document.createElement('canvas');c.width=384;c.height=384;
+    const ctx=c.getContext('2d');
+    const seed=Array.from(base).reduce((v,ch)=>v*31+ch.charCodeAt(0)|0,29);
+    const R=(n,salt=0)=>rng((n*7919+salt*65537+seed)|0);
+    const W=c.width,H=c.height;
+    const wash=ctx.createLinearGradient(0,0,W,H);
+    wash.addColorStop(0,base);
+    wash.addColorStop(.55,base);
+    wash.addColorStop(1,base);
+    ctx.fillStyle=wash;ctx.fillRect(0,0,W,H);
     if(type==='stucco'){
-      // Hand-trowelled warm plaster: several broad, low-contrast sweeps
-      // beneath fine mineral grain. No high-contrast noisy TV-static walls.
-      for(let n=0;n<24;n++){
-        const x=rng(n*19+32)*256,y=rng(n*37+64)*256;
-        ctx.fillStyle=n%2?'rgba(255,245,219,.08)':'rgba(108,79,58,.045)';
-        ctx.beginPath();ctx.ellipse(x,y,16+rng(n,7)*22,4+rng(n,3)*8,
-          -.12+rng(n,5)*.24,0,Math.PI*2);ctx.fill();
+      // Broad plaster washes beneath tiny trowel and sandy mineral flecks.
+      // Low contrast over a large area avoids the noisy, pixelated appearance
+      // of one-pixel random static, even on high-DPI phone screens.
+      for(let i=0;i<90;i++){
+        const x=R(i,1)*W,y=R(i,2)*H,r=12+R(i,3)*54;
+        ctx.fillStyle=i%4===0?'rgba(124,87,67,.047)':
+          i%3===0?'rgba(248,237,213,.15)':'rgba(111,94,70,.025)';
+        ctx.beginPath();ctx.ellipse(x,y,r,r*(.20+R(i,4)*.36),
+          R(i,5)*.6-.3,0,Math.PI*2);ctx.fill();
       }
-      for(let i=0;i<1750;i++){
-        const x=rng(i*13+2)*256,y=rng(i*31+3)*256;
-        ctx.fillStyle=i%5?'rgba(99,72,55,.055)':'rgba(255,255,241,.23)';
-        ctx.fillRect(x,y,.4+rng(i+19)*1.7,.4+rng(i+22)*1.1);
+      for(let i=0;i<2600;i++){
+        const x=R(i,6)*W,y=R(i,7)*H;
+        const r=.25+R(i,8)*1.3;
+        ctx.fillStyle=i%3===0?'rgba(253,246,229,.31)':'rgba(86,73,58,.067)';
+        ctx.fillRect(x,y,r,r*(.42+R(i,9)*.75));
       }
-    } else {
-      for(let row=0;row<18;row++)for(let col=-1;col<18;col++){
-        const x=col*16+(row%2)*8,y=row*15;
-        ctx.fillStyle=(row+col)%7===0?'rgba(255,229,201,.13)':'rgba(86,48,41,.04)';
-        ctx.beginPath();ctx.roundRect(x+1,y+1,15.5,14.4,[2,2,5,5]);ctx.fill();
-        ctx.strokeStyle='rgba(70,51,45,.16)';ctx.lineWidth=.8;ctx.stroke();
-        ctx.fillStyle='rgba(255,248,222,.09)';ctx.fillRect(x+3,y+2,9,1);
+      // A barely visible foundation patina makes walls sit in the scene.
+      const baseShade=ctx.createLinearGradient(0,0,0,H);
+      baseShade.addColorStop(0,'rgba(255,253,239,.015)');
+      baseShade.addColorStop(.72,'rgba(101,82,65,.012)');
+      baseShade.addColorStop(1,'rgba(90,75,60,.085)');
+      ctx.fillStyle=baseShade;ctx.fillRect(0,0,W,H);
+    }else if(type==='tile'){
+      // Shifted rows, curved-bottom ceramic tiles, fine grout and glaze;
+      // different roofs are aged independently by the pigment seed.
+      for(let row=0;row<22;row++)for(let col=-1;col<23;col++){
+        const x=col*19+(row%2)*9.5,y=row*18;
+        const n=row*31+col+51,shade=R(n,14);
+        ctx.fillStyle=shade<.13?'rgba(93,60,48,.135)':
+          shade>.86?'rgba(255,241,209,.19)':'rgba(249,220,187,.045)';
+        ctx.beginPath();ctx.roundRect(x+.7,y+.9,18.3,18.1,[1.5,1.5,5,5]);ctx.fill();
+        ctx.strokeStyle='rgba(82,56,46,.21)';ctx.lineWidth=.95;ctx.stroke();
+        ctx.fillStyle='rgba(255,244,212,.16)';
+        ctx.fillRect(x+3,y+2,13,1.3);
+        ctx.fillStyle='rgba(93,62,52,.09)';
+        ctx.fillRect(x+2,y+16,15,1.0);
+        if(R(n,18)>.73){
+          ctx.fillStyle='rgba(70,91,70,.11)';
+          ctx.fillRect(x+3+R(n,19)*7,y+11,4.4,2.1);
+        }
+      }
+    }else if(type==='stone'){
+      // Long, imperfect ashlar pieces with warm mortar joins.
+      for(let row=0;row<24;row++)for(let col=-1;col<7;col++){
+        const x=col*70+(row%2)*35,y=row*16,shade=R(row*13+col,30);
+        ctx.fillStyle=shade<.3?'rgba(93,80,64,.08)':
+          'rgba(255,248,220,.12)';
+        ctx.beginPath();ctx.roundRect(x+1,y+1,68,14,2);ctx.fill();
+        ctx.strokeStyle='rgba(95,76,61,.18)';ctx.lineWidth=1;ctx.stroke();
+        ctx.fillStyle='rgba(255,247,216,.13)';ctx.fillRect(x+4,y+3,60,1);
+      }
+    }else if(type==='wood'){
+      // Fine directional, non-repeating hand-planed timber grain.
+      for(let i=0;i<140;i++){
+        const y=R(i,31)*H;
+        ctx.strokeStyle=i%5===0?'rgba(68,51,42,.18)':
+          'rgba(252,231,191,.10)';
+        ctx.lineWidth=.35+R(i,32)*1.2;
+        ctx.beginPath();ctx.moveTo(0,y);
+        ctx.bezierCurveTo(W*.34,y+(R(i,33)-.5)*8,
+          W*.62,y+(R(i,34)-.5)*8,W,y+(R(i,35)-.5)*5);
+        ctx.stroke();
+      }
+      for(let k=0;k<9;k++){
+        const x=R(k,36)*W,y=R(k,37)*H;
+        ctx.strokeStyle='rgba(76,53,37,.09)';
+        ctx.beginPath();ctx.ellipse(x,y,9,2.2,0,0,Math.PI*2);ctx.stroke();
       }
     }
     const tex=new T.CanvasTexture(c);tex.colorSpace=T.SRGBColorSpace;
-    const m=new T.MeshStandardMaterial({map:tex,color:'#ffffff',roughness:.93,metalness:0});
+    const roughness=type==='tile'?.82:type==='wood'?.88:.96;
+    const m=new T.MeshStandardMaterial({
+      map:tex,color:'#ffffff',roughness,metalness:type==='tile'?.018:0
+    });
     pigments.set(key,m);return m;
+  }
+  const glassCache=new Map();
+  function photographicGlass(warm=false){
+    const key=warm?'warm':'cool';
+    if(glassCache.has(key))return glassCache.get(key);
+    // An interior amber gradient under reflected sky and diagonal highlights
+    // reads as miniature glazing instead of a flat opaque cyan rectangle.
+    const c=document.createElement('canvas');c.width=128;c.height=256;
+    const ctx=c.getContext('2d');
+    const background=ctx.createLinearGradient(0,0,128,256);
+    background.addColorStop(0,warm?'#8fa7a2':'#87b1b3');
+    background.addColorStop(.46,warm?'#bed5b9':'#a7c5bc');
+    background.addColorStop(.72,warm?'#e9bf89':'#a3b7a8');
+    background.addColorStop(1,warm?'#c18d6d':'#7c938b');
+    ctx.fillStyle=background;ctx.fillRect(0,0,128,256);
+    ctx.fillStyle='rgba(249,252,242,.24)';
+    ctx.beginPath();ctx.moveTo(0,0);ctx.lineTo(42,0);
+    ctx.lineTo(108,256);ctx.lineTo(76,256);ctx.closePath();ctx.fill();
+    ctx.fillStyle='rgba(255,251,232,.12)';
+    ctx.beginPath();ctx.moveTo(78,0);ctx.lineTo(95,0);
+    ctx.lineTo(128,103);ctx.lineTo(128,156);ctx.closePath();ctx.fill();
+    const tex=new T.CanvasTexture(c);tex.colorSpace=T.SRGBColorSpace;
+    const m=new T.MeshStandardMaterial({map:tex,color:'#ffffff',
+      roughness:.22,metalness:.08,
+      emissive:warm?'#cc8249':'#547b77',emissiveIntensity:warm?.12:.035});
+    glassCache.set(key,m);return m;
   }
   function roundedFootprint(w=.80,d=.79,corner=.09){
     const k='foot:'+w+':'+d+':'+corner;
@@ -110,8 +197,8 @@ function makeKit(T,Round){
       cache.set(key,geometry);
     }
     mesh(g,geometry,texture(pigment,'stucco'),0,.13,0);
-    block(g,w+.07,.095,d+.07,'#d8c3a6',0,.12,0);
-    block(g,w+.025,.09,d+.025,'#c8b095',0,.205,0);
+    block(g,w+.07,.095,d+.07,texture('#d3bea4','stone'),0,.12,0);
+    block(g,w+.025,.09,d+.025,texture('#bfa990','stone'),0,.205,0);
     return h+.13;
   }
   function volumeRoof(g,width,depth,top,pigment,{arch=.10,hip=false,crest=.34}={}){
@@ -159,10 +246,22 @@ function makeKit(T,Round){
     const roofMat=texture(pigment,'tile');
     for(let i=0;i<2;i++)mesh(g,geometries[i],roofMat,0,top,0);
     mesh(g,geometries[2],material('#e4c8aa'),0,top-.012,0);
-    block(g,.07,.075,depth*1.20,'#eedac4',0,top+crest+.006,0);
-    for(const side of [-1,1])
-      block(g,.055,.047,depth*1.24,'#ead5b8',
-        side*width*.598,top+.02,0);
+    // Layered eaves: dark underside separates the clay roof volume from
+    // the plaster walls, while the lighter front fascia catches sunlight.
+    block(g,.075,.062,depth*1.21,texture('#a7866b','wood'),
+      0,top+crest+.005,0,false,false);
+    for(const side of [-1,1]){
+      block(g,.087,.025,depth*1.25,'#755c4d',
+        side*width*.59,top-.038,0,false,false);
+      block(g,.054,.038,depth*1.25,texture('#e6cda9','wood'),
+        side*width*.598,top+.016,0,false,false);
+    }
+    // Thin transverse battens sit beneath the ridge, adding real scale
+    // without piling hundreds of tiny shadow-casting roof tiles onto mobile.
+    for(const z of [-depth*.42,depth*.42]){
+      block(g,width*1.08,.025,.030,'#a27b62',
+        0,top+.037,z,false,false);
+    }
   }
   function sill(g,x,y,z,w=.23){
     block(g,w+.10,.036,.115,'#f3e0c3',x,y-.16,z+.034);
@@ -170,12 +269,19 @@ function makeKit(T,Round){
   }
   function glazing(g,x,y,z,w=.24,h=.32,{curve=0,side=false}={}){
     const f=new T.Group();f.position.set(x,y,z);if(side)f.rotation.y=Math.PI/2;g.add(f);
-    block(f,w+.07,h+.095,.06,'#e9d6bb');
-    block(f,w,h,.045,material('#a8d2c9',.25),0,0,.038,false,false);
-    block(f,w*.86,h*.92,.009,material('#b9d9cc',.2),0,0,.064,false,false);
-    block(f,.016,h+.015,.076,'#fff3de',0,0,.068,false,false);
-    block(f,w+.015,.016,.076,'#fff3de',0,0,.071,false,false);
-    block(f,.027,h*.57,.010,'#e1f0e4',-w*.22,0,.083,false,false);
+    // Recessed stone reveal then deep glazing, individual lead mullions and
+    // a tiny warm room behind the reflected-sky upper panes.
+    block(f,w+.083,h+.11,.075,texture('#e8d7bf','stone'));
+    block(f,w+.030,h+.047,.042,'#655e51',0,0,.042,false,false);
+    block(f,w,h,.014,photographicGlass(false),0,0,.071,false,false);
+    block(f,w*.89,h*.32,.007,photographicGlass(true),
+      0,-h*.30,.082,false,false);
+    for(const sx of [-w*.46,w*.46])
+      block(f,.018,h+.04,.091,'#f5ebd6',sx,0,.080,false,false);
+    block(f,.014,h+.015,.090,'#f6efdc',0,0,.082,false,false);
+    block(f,w+.02,.015,.09,'#f6efdc',0,0,.085,false,false);
+    block(f,w+.02,.012,.09,'#f6efdc',0,h*.17,.085,false,false);
+    block(f,.023,h*.59,.011,'#e0e8da',-w*.26,0,.098,false,false);
     sill(f,0,-h*.36,.035,w);
   }
   function flowerBox(g,x,z,y=.54,w=.28) {
@@ -303,9 +409,9 @@ function makeKit(T,Round){
     }
   }
   function chimney(g,x,y,z,color='#bf8670'){
-    block(g,.14,.37,.14,color,x,y,z);
+    block(g,.14,.37,.14,texture(color,'stone'),x,y,z);
     block(g,.19,.06,.19,'#f0ddc6',x,y+.20,z);
-    block(g,.125,.03,.125,'#7f7366',x,y+.237,z);
+    block(g,.125,.03,.125,'#665d50',x,y+.237,z);
   }
   function roofDormer(g,x,y,z,color){
     // A genuine projecting dormer gable, rather than a rectangular roof tile.
@@ -343,19 +449,19 @@ function makeKit(T,Round){
     // Real half-timber facades: a continuous beam frame following wall edges.
     // Not random floating planks or busy strips stuck to the window glass.
     for(const x of [-w*.46,w*.46])
-      block(g,.033,to-from,.048,wood,x,(from+to)/2,z,false,false);
+      block(g,.033,to-from,.048,texture(wood,'wood'),x,(from+to)/2,z,false,false);
     for(const y of [from,to]){
-      block(g,w,.035,.053,wood,0,y,z,false,false);
+      block(g,w,.035,.053,texture(wood,'wood'),0,y,z,false,false);
     }
     if(pattern===0){
       for(const dir of [-1,1]){
-        const brace=block(g,.032,.39,.052,wood,dir*w*.26,from+.28,z,false,false);
+        const brace=block(g,.032,.39,.052,texture(wood,'wood'),dir*w*.26,from+.28,z,false,false);
         brace.rotation.z=dir*.48;
       }
     }else{
-      block(g,w*.88,.028,.054,wood,0,from+(to-from)*.55,z,false,false);
+      block(g,w*.88,.028,.054,texture(wood,'wood'),0,from+(to-from)*.55,z,false,false);
       for(const x of [-w*.22,w*.22]){
-        const brace=block(g,.029,.29,.052,wood,x,from+.18,z,false,false);
+        const brace=block(g,.029,.29,.052,texture(wood,'wood'),x,from+.18,z,false,false);
         brace.rotation.z=x>0?-.32:.32;
       }
     }
@@ -370,9 +476,10 @@ function makeKit(T,Round){
       const side=new T.Group();side.position.set(px,0,.09+(.09-Math.abs(i-2)*.026));
       side.rotation.y=a;bay.add(side);
       block(side,.086,.395,.039,'#e9d5b8',0,0,0,false,false);
-      block(side,.064,.342,.014,material('#7eadae',.24),0,0,.030,false,false);
+      block(side,.064,.342,.014,photographicGlass(false),0,0,.030,false,false);
       block(side,.012,.356,.025,'#fff2df',-.031,0,.049,false,false);
       block(side,.072,.015,.026,'#fff2df',0,-.024,.052,false,false);
+      block(side,.071,.012,.022,'#f0e7d5',0,.079,.054,false,false);
     }
     block(bay,.43,.062,.255,color,0,.231,.045);
     const canopy=block(bay,.48,.056,.29,'#f4dfc4',0,.268,.033);
