@@ -1257,9 +1257,9 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
 
     // Physically suspended festoons between four slim timber poles.
     // Warm individual bulbs brighten at sunset without extra point lights.
-    const anchors=[[7.94,9.05],[10.08,9.05],[7.95,10.38],[10.05,10.38]];
+    const anchors=[[7.56,9.60],[10.42,9.60],[7.58,10.58],[10.39,10.58]];
     for(const [x,z] of anchors){
-      const pole=cylinder(world,.024,.037,1.57,'#947b62',x,.99,z);
+      const pole=cylinder(world,.024,.037,1.27,'#947b62',x,.83,z);
       const foot=cylinder(world,.074,.084,.082,'#d5c2a5',x,.24,z);
       pole.castShadow=false;foot.castShadow=false;
     }
@@ -1274,7 +1274,7 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
       for(let j=0;j<=12;j++){
         const t=j/12;
         points.push(new THREE.Vector3(x0+(x1-x0)*t,
-          1.70-.20*Math.sin(t*Math.PI),z0+(z1-z0)*t));
+          1.43-.14*Math.sin(t*Math.PI),z0+(z1-z0)*t));
       }
       const curve=new THREE.CatmullRomCurve3(points);
       const wire=object(world,new THREE.TubeGeometry(curve,20,.008,3,false),
@@ -1283,7 +1283,7 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
       for(let i=1;i<8;i++){
         const t=i/8;
         const x=x0+(x1-x0)*t,z=z0+(z1-z0)*t;
-        const y=1.70-.20*Math.sin(t*Math.PI);
+        const y=1.43-.14*Math.sin(t*Math.PI);
         const bulb=ball(world,.033,candle,x,y-.042,z);
         bulb.castShadow=false;
         festoonBulbs.push(bulb);
@@ -1755,7 +1755,7 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
     // shop glazing, porches and characters occupy more of the composition.
     // More architectural eye-level at zoom: the previous high camera showed
     // mostly roofs and hid the ornate shopfronts and modeled character faces.
-    camera.position.set(v.x+18,23-closeness*12.5,v.y+18);
+    camera.position.set(v.x+12.5,23-closeness*11.5,v.y+22);
     camera.lookAt(v.x,.30,v.y);
     camera.updateProjectionMatrix();
   }
