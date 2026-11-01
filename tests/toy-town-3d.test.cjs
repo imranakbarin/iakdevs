@@ -149,7 +149,7 @@ const THREE={
 };
 const win={WebGL2RenderingContext:function(){},innerWidth:390,innerHeight:844,
   devicePixelRatio:3,matchMedia:()=>({matches:false})};
-const canvas2d={fillText(){},clearRect(){},beginPath(){},roundRect(){},ellipse(){},arc(){},fill(){stats.paintOperations++;},stroke(){},fillRect(){stats.paintOperations++;},moveTo(){},lineTo(){},createLinearGradient:()=>({addColorStop(){}}),createRadialGradient:()=>({addColorStop(){}})};
+const canvas2d={fillText(){},clearRect(){},beginPath(){},roundRect(){},ellipse(){},arc(){},fill(){stats.paintOperations++;},stroke(){},fillRect(){stats.paintOperations++;},moveTo(){},lineTo(){},closePath(){},bezierCurveTo(){},createLinearGradient:()=>({addColorStop(){}}),createRadialGradient:()=>({addColorStop(){}})};
 const townCanvas={style:{opacity:'1'}};
 const host={style:{display:'none'},clientWidth:390,clientHeight:844,
   appendChild(o){this.child=o;}};
