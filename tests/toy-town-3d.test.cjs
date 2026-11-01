@@ -21,18 +21,23 @@ assert.match(landmarkCode,/createRadialGradient/,'grounding uses a soft, feather
 assert.match(landmarkCode,/toneMapped:false/,'sign lettering is legible without harsh tone mapping');
 assert.match(landmarkCode,/BOOK NOOK/,'bookshop sign is compact enough for mobile');
 assert.match(moduleCode,/const rim=new THREE.DirectionalLight/,'sculpted character surfaces have shadow-free fill');
+assert.match(moduleCode,/function roadSurface\(axis\)/,'roads share tactile matte wear instead of flat plastic');
+assert.match(moduleCode,/function groundingShadow\(/,'architecture and trees have soft contact occlusion');
+assert.match(moduleCode,/const studioMat=/,'model sits on a photographed gradient table');
+assert.match(moduleCode,/sun\.color\.set\(tint\(/,'sunset light transitions smoothly without snapping hues');
+assert.match(html,/#town-3d::after/,'lens finish has a restrained noninteractive vignette');
 assert.match(moduleCode,/g.userData.limbs=\{legs,arms,eyelids\}/,'figures animate eyelids');
 assert.match(moduleCode,/eye.scale.y=blink/,'eyelids blink without a separate animation thread');
 assert.match(html,/type="importmap"/);
 assert.match(html,/three@0\.187\.0\/build\/three\.module\.js/);
 assert.match(html,/three@0\.187\.0\/examples\/jsm\//);
-assert.match(html,/toy-town-3d\.js\?v=12/);
+assert.match(html,/toy-town-3d\.js\?v=13/);
 assert.match(html,/toy-town-landmarks\.js\?v=2/,'the independent models are requested alongside Three');
 assert.match(html,/buildLandmark:landmarks\.buildLandmark/,
   'loader injects the authored model builder into the 3D simulation');
 assert.match(html,/toy-town\.js\?v=14/);
 assert.ok(html.indexOf('toy-town.js?v=14')<html.indexOf("import('three')"), 'classic fallback starts first');
-assert.match(page,/toy-town\.html\?v=25&embed=1/);
+assert.match(page,/toy-town\.html\?v=26&embed=1/);
 assert.match(moduleCode,/export function mountToyTown3D/);
 assert.match(moduleCode,/new THREE\.WebGLRenderer/);
 assert.match(moduleCode,/window\.ToyTown3D=api/);
@@ -148,6 +153,14 @@ assert.equal(api.active,true,'3D begins only after successful render');
 assert.equal(host.style.display,'block');
 assert.equal(townCanvas.style.opacity,'0');
 assert.ok(stats.renders>=1);
+const sceneWorld=api.scene.children.find(o=>o.children?.some(x=>x.userData?.uniqueAsset));
+assert.ok(sceneWorld,'scene has a populated world group');
+const groundedPads=sceneWorld.children.filter(o=>o.material?.transparent&&o.material?.map&&o.rotation.x===-Math.PI/2);
+assert.ok(groundedPads.length>=7,'soft contact shading integrates the slab, buildings and trees');
+assert.ok(groundedPads.some(p=>p.position.x===7.5&&p.position.z===7.5),
+  'the landmark's ground shadow is physically centered beneath its foundation');
+const roadMesh=sceneWorld.children.find(o=>o.position.x===1.5&&o.position.z===9);
+assert.ok(roadMesh?.material?.map,'roads have painted surface materials');
 assert.ok(stats.roofTextures>=2,'roof textures created for different colored gables');
 assert.ok(stats.paintOperations>=400,'small overlapping tiles produce detailed but subtle roof texture');
 assert.ok(stats.profileVertices>=75,
@@ -192,7 +205,12 @@ assert.match(moduleCode,/One continuous asymmetric crown/,'sculpted tree shapes 
 assert.equal(api.getStats().plazaLights,1,'modeled plaza lamps have physical warm light');
 const lantern=api.scene.children.find(o=>o.children?.some(x=>x.isPointLight))?.children.find(x=>x.isPointLight);
 assert.ok(lantern && lantern.intensity>0, 'dusk physically illuminates the courtyard');
-const lampAtDusk=lantern.intensity;nightValue=.85;callbacks.shift()();
+const lampAtDusk=lantern.intensity;
+const goldenHourSky=api.scene.background.hex;
+const goldenHourExposure=api.renderer.toneMappingExposure;
+nightValue=.85;callbacks.shift()();
+assert.notEqual(api.scene.background.hex,goldenHourSky,'haze and lighting shift together into dusk');
+assert.ok(api.renderer.toneMappingExposure<goldenHourExposure,'exposure gently lowers as dusk settles');
 assert.ok(lantern.intensity>lampAtDusk*2.5,'neighborhood lights strengthen after sunset');
 nightValue=.25;callbacks.shift()();
 assert.ok(api.renderer.toneMappingExposure <= 1.1,'balanced lighting avoids blowing out pastel facades');
