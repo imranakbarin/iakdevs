@@ -33,6 +33,7 @@ async function main(){
     const jobs=[
       {name:'mobile-3d-close',w:390,h:844,classic:false,zoom:1.7},
       {name:'desktop-3d-close',w:1280,h:820,classic:false,zoom:1.8},
+      {name:'desktop-3d-wide',w:1280,h:820,classic:false,zoom:.65},
       {name:'mobile-classic-reference',w:390,h:844,classic:true,zoom:1.7}
     ];
     const records=[];
@@ -100,6 +101,8 @@ async function main(){
       if(job.name==='mobile-3d-close'){
         // Image can be recovered without binary artifact download permissions.
         console.log('TOY_CITY_JPEG_BEGIN '+image.toString('base64')+' TOY_CITY_JPEG_END');
+      }else if(job.name==='desktop-3d-wide'){
+        console.log('TOY_CITY_WIDE_JPEG_BEGIN '+image.toString('base64')+' TOY_CITY_WIDE_JPEG_END');
       }
       await context.close();
     }
