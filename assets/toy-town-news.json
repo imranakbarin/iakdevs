@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generated_at": "2026-11-02T02:34:54.627Z",
+  "generated_at": "2026-11-02T11:21:40.239Z",
   "status": "ok",
   "successful_sources": [
     "BBC News",
@@ -12,67 +12,67 @@
   ],
   "stories": [
     {
-      "title": "Democrat endorses Republican candidate in key Michigan Senate race as party spat erupts",
-      "url": "https://www.bbc.co.uk/news/articles/c95ynzv88n68o?at_medium=RSS&at_campaign=rss",
+      "title": "Nine killed as small jet crashes on Florida street",
+      "url": "https://www.bbc.co.uk/news/articles/cm369yy7lw73o?at_medium=RSS&at_campaign=rss",
       "source": "BBC News",
       "category": "World",
-      "published_at": "2026-11-02T01:45:42.000Z"
+      "published_at": "2026-11-02T09:10:19.000Z"
     },
     {
-      "title": "Binance users withdraw $3.6bn after record crypto hack",
+      "title": "Binance users withdraw $3.6bn after largest-ever crypto hack",
       "url": "https://www.bbc.co.uk/news/articles/cwj34gdmnly4o?at_medium=RSS&at_campaign=rss",
       "source": "BBC Technology",
       "category": "Technology",
-      "published_at": "2026-11-02T01:15:25.000Z"
+      "published_at": "2026-11-02T07:42:33.000Z"
     },
     {
-      "title": "Don't get caught out by new Buy Now Pay Later rules",
-      "url": "https://www.bbc.co.uk/news/articles/crpdgp4y017go?at_medium=RSS&at_campaign=rss",
+      "title": "Ryanair says it may freeze workers' pay and raise airfares",
+      "url": "https://www.bbc.co.uk/news/articles/cr0qkve1x224o?at_medium=RSS&at_campaign=rss",
       "source": "BBC Business",
       "category": "Business",
-      "published_at": "2026-11-01T23:34:49.000Z"
+      "published_at": "2026-11-02T11:10:52.000Z"
     },
     {
-      "title": "How Antonelli 'blew everyone away' to make Formula 1 history",
-      "url": "https://www.bbc.co.uk/sport/formula1/articles/c6m2dj7ze9v2o?at_medium=RSS&at_campaign=rss",
+      "title": "Australia omit star pace trio for England series",
+      "url": "https://www.bbc.co.uk/sport/cricket/articles/cr5ynwddqpd6o?at_medium=RSS&at_campaign=rss",
       "source": "BBC Sport",
       "category": "Sport",
-      "published_at": "2026-11-02T01:47:30.000Z"
+      "published_at": "2026-11-02T10:59:01.000Z"
     },
     {
-      "title": "Russia's giant new radar in Kaliningrad raises alarm in NATO",
-      "url": "https://www.dw.com/en/russia-s-giant-new-radar-in-kaliningrad-raises-alarm-in-nato/a-79797815?maca=en-rss-en-world-4025-xml-mrss",
+      "title": "For US Democrats, climate policy is now about energy bills",
+      "url": "https://www.dw.com/en/for-us-democrats-climate-policy-is-now-about-energy-bills/a-79808783?maca=en-rss-en-world-4025-xml-mrss",
       "source": "DW",
       "category": "World",
-      "published_at": "2026-11-01T20:34:00.000Z"
+      "published_at": "2026-11-02T08:59:00.000Z"
     },
     {
-      "title": "These firms you've never heard of are feeding fears the AI bubble could burst",
-      "url": "https://www.bbc.co.uk/news/articles/cje36degrgv5o?at_medium=RSS&at_campaign=rss",
-      "source": "BBC Technology",
-      "category": "Technology",
-      "published_at": "2026-11-01T01:37:26.000Z"
-    },
-    {
-      "title": "'I've had people eating cat food': Rising cost of living top of mind for US voters",
-      "url": "https://www.bbc.co.uk/news/videos/cwly0eev3m44o?at_medium=RSS&at_campaign=rss",
+      "title": "Christmas donations gift demand up, charities say",
+      "url": "https://www.bbc.co.uk/news/articles/cm5ynrp0lg2yo?at_medium=RSS&at_campaign=rss",
       "source": "BBC Business",
       "category": "Business",
-      "published_at": "2026-11-01T22:25:51.000Z"
+      "published_at": "2026-11-02T06:22:48.000Z"
     },
     {
-      "title": "'We've got big problems' - Hamilton says Ferrari need 'serious talks'",
-      "url": "https://www.bbc.co.uk/sport/formula1/articles/cmwy7dl879gzo?at_medium=RSS&at_campaign=rss",
+      "title": "'Utter chaos at Ferrari right now'",
+      "url": "https://www.bbc.co.uk/sport/videos/c6kgl9mgdvl2o?at_medium=RSS&at_campaign=rss",
       "source": "BBC Sport",
       "category": "Sport",
-      "published_at": "2026-11-02T00:28:28.000Z"
+      "published_at": "2026-11-02T10:39:57.000Z"
     },
     {
-      "title": "Ukraine air raid app apparently hacked as users receive false radiation threat, Air Force says",
-      "url": "https://www.bbc.co.uk/news/articles/c51kdy1ew7zvo?at_medium=RSS&at_campaign=rss",
+      "title": "Uganda begins withdrawing troops from Somalia after 20 years",
+      "url": "https://www.bbc.co.uk/news/articles/c8zxlqxwed4do?at_medium=RSS&at_campaign=rss",
       "source": "BBC News",
       "category": "World",
-      "published_at": "2026-11-02T01:18:27.000Z"
+      "published_at": "2026-11-02T08:55:27.000Z"
+    },
+    {
+      "title": "Christmas shoebox appeal launches to help children",
+      "url": "https://www.bbc.co.uk/news/articles/cv98zr5wxp21o?at_medium=RSS&at_campaign=rss",
+      "source": "BBC Business",
+      "category": "Business",
+      "published_at": "2026-11-02T06:21:09.000Z"
     }
   ]
 }
