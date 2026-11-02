@@ -2022,6 +2022,11 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
   // T-split branches to +X; the corner joins +X and +Z.
   function kitRoads(){
     const lane=v=>LINES.includes(v),first=LINES[0],last=LINES[LINES.length-1];
+    // Pavements: raised pale slabs with a kerb down both sides of every street,
+    // wrapping the closed sides and corners of junctions. The carriageway is
+    // narrowed to fit; walkers' lanes (0.40–0.47 off centre) fall on them.
+    const P=.13,slabs=[],kerbs=[];
+    const strip=(x,z,w,d,kx,kz,kw,kd)=>{slabs.push([x,z,w,d]);kerbs.push([kx,kz,kw,kd]);};
     for(let y=1;y<=16;y++)for(let x=1;x<=16;x++){
       const v=lane(x),h=lane(y);if(!v&&!h)continue;
       if(v&&!h&&(y===13||y===14))continue;                     // the river: bridges here
@@ -2034,7 +2039,26 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
       }else if(x===8&&y===11){name='road_straight_crossing';rot=Math.PI/2;}
       const t=kitPlace(world,name,x+.5,.135,y+.5,{scale:.5,rotY:rot});
       if(t)t.traverse(o=>{if(o.isMesh)o.castShadow=false;});
+      const cx=x+.5,cz=y+.5,e=.5-P/2;
+      if(v&&h){
+        const W=x>first,E=x<last,N=y>first,S=y<last;
+        for(const sx of [-1,1])for(const sz of [-1,1])slabs.push([cx+sx*e,cz+sz*e,P,P]);   // the four corners
+        if(!W)strip(cx-e,cz,P,1,cx-.5+P,cz,.02,1);if(!E)strip(cx+e,cz,P,1,cx+.5-P,cz,.02,1);
+        if(!N)strip(cx,cz-e,1,P,cx,cz-.5+P,1,.02);if(!S)strip(cx,cz+e,1,P,cx,cz+.5-P,1,.02);
+      }else{
+        if(t)t.scale.x=1-2*P;   // the asphalt is the carriageway only (tiles run along their local Z)
+        if(v)for(const sd of [-1,1])strip(cx+sd*e,cz,P,1,cx+sd*(.5-P),cz,.02,1);
+        else for(const sd of [-1,1])strip(cx,cz+sd*e,1,P,cx,cz+sd*(.5-P),1,.02);
+      }
     }
+    const instanced=(list,h,y,color)=>{
+      if(!list.length||!THREE.InstancedMesh||!THREE.Object3D)return;
+      const mesh=new THREE.InstancedMesh(geo('box',1,1,1),mat(color,.9),list.length),dummy=new THREE.Object3D();
+      list.forEach(([x,z,w,d],i)=>{dummy.position.set(x,y,z);dummy.scale.set(w,h,d);dummy.updateMatrix();mesh.setMatrixAt(i,dummy.matrix);});
+      mesh.instanceMatrix.needsUpdate=true;mesh.receiveShadow=true;mesh.userData.pavements=list.length;world.add(mesh);
+    };
+    instanced(slabs,.05,.2,'#d9d3c6');
+    instanced(kerbs,.065,.2,'#b7b0a1');
   }
   function createGround(){
     // A generous matte studio table under the actual miniature slab.
