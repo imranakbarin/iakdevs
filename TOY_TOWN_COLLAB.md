@@ -38,6 +38,39 @@ A `START` does not prohibit parallel edits. Avoid stepping on each other's uncom
 
 ## Exchange log (newest first)
 
+### DONE — Claude (Claude Code) — 2026-11-02 (evening)
+- Outcome: no blur anywhere, a faster renderer, sharp phones, livelier residents and real 3D taps. Code commits `cb51918`, `76d97d6`, `dda8bb1` (squash-merged with this entry).
+- **Lens** (`assets/toy-town-lens.js` v4): tilt-shift and GTAO removed (the owner's call; this reverses Claude's #134).
+  - By day: `renderer.render` straight to the canvas, with a CSS grade `saturate(1.3) contrast(1.08)`.
+  - After dusk only: a composer (render → clean → bloom → output) runs.
+  - The GTAOPass module is no longer downloaded.
+- **Sharpness** (`toy-town-3d.js`):
+  - pixel ratio min(dpr, 2) on every device; the old phone cap of 1.4 upscaled a 3x iPhone and looked blurred;
+  - `adaptSharpness()` steps 2 → 1.6 → 1.3 → 1 after sustained slow draws (>14 ms desktop, >22 ms phone) and never raises it back mid-visit;
+  - fog far edge raised to `max(90, distance*3.2)`.
+- **Residents** (`toy-town.js`):
+  - PACE .6 → .82;
+  - `spawnPerson` gaits: 20% brisk (.64–.78), 10% skip (.72), the rest stroll (.4–.62);
+  - `passingGreetings()`: walkers passing within .55 glance at each other (`glanceAt`/`glanceUntil`) and 45% wave; gestural only, nobody is stopped or rerouted; `debug().greetings` counts them.
+  - 3D rig: fuller leg and arm swing (brisk the most), bounce .018 (skip .045), and head targets fall back from `attention` to passing neighbour to tapped `lookAt` to an occasional idle look-about. `cheerUntil` drives the celebrate pose, and `hopUntil` drives a whole-body hop (people and vehicles).
+- **Taps** (`ToyTown3D.tap`, called first by `poke()`), hit-tested against the scene:
+  - resident: wave, hop, a line;
+  - car: honk and bounce; bike: "Ring ring!";
+  - building: `buildingHello()` uses one pre-made porch light (never added at tap time, so no shader-recompile hitch) and a bubble;
+  - open ground: a ray onto the street plane, then balloons, birds or confetti at that exact spot; nearby residents look and cheer;
+  - effects run on the town clock and are capped at 6.
+- **Tests:**
+  - lens test rewritten (no blur or AO; direct by day; composer only at dusk);
+  - extras test covers taps, gaits and greetings;
+  - all `tests/*.test.cjs` pass locally (including pip-run).
+- **Browser checks:**
+  - real pointer clicks in Chromium hit all four tap kinds (person "Mind the ducks!", bike "Ring ring!", house "Hello down there!", ground);
+  - a screenshot shows balloons, confetti and a cheering resident;
+  - a 3x phone emulation renders at ratio 2 (780×1688 canvas) and looks crisp.
+  - CI visual runs green for `76d97d6` (41483743716); `dda8bb1` is being checked as this is written.
+- **Not verified:** the real-GPU and iPhone frame-rate gain (CI and local are software GL).
+- **Next** (owner asked "go ahead"): a frame-rate readout and an adaptive-detail check on a real phone; "a day in the life" clock-driven routines (school run, commuters, lunch, evening lights on as people get home).
+
 ### START — Claude (Claude Code) — 2026-11-02 (evening)
 - Base: `7325f07` (latest `master`; no newer GPT-6 work).
 - Owner feedback: "I don't want that blur effect… it's slower… not interactive… make this city lively rather than people walking like zombies."
