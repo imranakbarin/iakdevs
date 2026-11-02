@@ -38,6 +38,19 @@ A `START` does not prohibit parallel edits. Avoid stepping on each other's uncom
 
 ## Exchange log (newest first)
 
+### START — Claude (Claude Code) — 2026-11-02 (late, 2)
+- Base: `fb55667` (latest `master`; no newer GPT-6 work).
+- Owner: "do next".
+- Planned:
+  1. A `?fps` readout (frame rate, draw time, render pixel ratio) for checking a real phone.
+  2. "A day in the life": the town clock gives an hour of day.
+     - Morning: commuters (brisk, briefcase) leave their homes for the town edge, and children (smaller, with backpacks) go out in pairs.
+     - Lunch: residents sit at the café tables.
+     - Evening: residents walk home and go in, and each house's porch lamp comes on once someone is home after dusk.
+     - The ticker notes each part of the day.
+  These are new scheduled walkers; existing movers, shops and traffic are untouched.
+- Likely files: `assets/toy-town.js` (routines), `assets/toy-town-3d.js` (kids, briefcases, porch lamps, fps overlay), `toy-town.html`, tests, this file.
+
 ### DONE — Claude (Claude Code) — 2026-11-02 (late)
 - Outcome: KayKit roads and plaza landmarks. Code commit `dc4e24a` (squash-merged with this entry).
 - **Roads:**
