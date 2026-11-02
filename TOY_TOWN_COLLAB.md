@@ -38,6 +38,34 @@ A `START` does not prohibit parallel edits. Avoid stepping on each other's uncom
 
 ## Exchange log (newest first)
 
+### DONE — Claude (Claude Code) — 2026-11-02 (late, 4)
+- Outcome: Moments and real local weather, plus fixes for two things the owner reported (vehicles and people stuck at junctions forever; repetitive walking). Code commit `09bc479` (squash-merged with this entry).
+- **Gridlock** (pre-existing: about 24 movers froze for whole 10-minute runs on every layout tested, before any Claude change too). In `toy-town.js`:
+  - `unstick()`: a mover with no progress over ~3 s (judged per second) while its own light is green is unstuck in three steps: (1) `patienceUntil` for 2.5 s, during which it ignores following gaps, cross-traffic occupancy and personal space; `safeVehicleTravel` then lets it edge past *perpendicular* traffic but never into its own lane; (2) it turns round; (3) it leaves town, and the spawner replaces it.
+  - Only the front of a queue counts as stuck.
+  - Two vehicles on the same spot tie-break by mover order.
+  - Result: over 3 layouts × 5 runs, the longest wait is 15–23 s (a red light plus a short queue).
+- **Whims** (`updateWhims`): free walkers go to a bench and sit, visit the fountain (maybe a coin and a wish), wander the park and look about, stop for a chat in pairs, or jog. `endWhim` walks them back to the street. `gather(x,y)`: a ground tap in 3D draws the nearest four over.
+- **Moments** (`toy-town-3d.js`):
+  - transitions offer one chip at a time: shopper off to the bakery or bookshop, concert start, school run, walking home, the time visitor, the paper round, town events;
+  - 9 s visibility and a 20 s cooldown; never automatic;
+  - Watch is `follow(ref,3)` with the narrating card, or `viewTo` a spot at 2.9 zoom; it ends on completion or timeout and restores the view; a drag hands control back.
+  - Sim API: `viewTo`, `view`, and `follow(m, zoom)`.
+- **Weather** (new `assets/toy-town-weather.js`):
+  - Open-Meteo `current` with a time-zone→city table (no geolocation); WMO codes map to clear, cloud, fog, rain, snow and storm, plus windy;
+  - `?weather=` override; the card's `#weather` span shows it.
+  - In 3D: rain line streaks and person umbrellas; snow points and a white dusting; fog closes in; storm flashes plus a `rumble` cue; overcast sky; sun dimmed by kind; clouds drift faster in wind.
+- **Tests:**
+  - the extras test covers no long stuck movers (≤30 s on 3 layouts), varied whims, Moments wiring, weather code mapping, no geolocation, umbrellas;
+  - all `tests/*.test.cjs` pass, including pip-run;
+  - CI visual run 41514959943 green.
+- **Chromium checks:**
+  - `?weather=rain`: 27 umbrellas, streaks, 🌧️ on the card;
+  - snow: flakes and dusting, ❄️; storm: ⛈️;
+  - a real click on Watch followed Ada at zoom 3, with the card "Ada · shopper / on the way to the bakery".
+  - Open-Meteo itself is not reachable from the sandbox.
+- **Next** (owner just reported): walkers' routes run down road centre lines and there are no pavements; `?weather=` does not reach the embedded town on the main page.
+
 ### START — Claude (Claude Code) — 2026-11-02 (late, 4)
 - Base: `ab1ae25` (latest `master`). Read GPT-6's v53–v55 entries: the perspective camera, the storefront frontage, and the knock → order → receive → leave choreography. GPT-6's own conclusion was that this is real but too subtle at phone zoom.
 - Owner approved: **Moments** and **real local weather**.
