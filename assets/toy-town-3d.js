@@ -3166,6 +3166,12 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
       targetY+dy/length*distance,
       aimZ+dz/length*distance);
     camera.lookAt(aimX,targetY,aimZ);
+    // Fog in the old orthographic shot assumed an eye always ~30 units
+    // away. A real perspective dolly ranges from ~9 to ~50 units. Fixed
+    // fog distances washed the entire overview into pale gray. Keep the
+    // diorama clear at its focus depth, allowing haze only beyond it.
+    scene.fog.near=Math.max(18,distance*.86);
+    scene.fog.far=Math.max(70,distance*2.45);
     camera.updateProjectionMatrix();
   }
   function frame(timestamp){

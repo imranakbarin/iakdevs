@@ -402,6 +402,8 @@ assert.match(moduleCode,/paver.rotation.y=/,'stone paths have irregular handmade
 assert.match(moduleCode,/23-closeness\*11\.5/,'close zoom lowers the eye to show character faces');
 assert.match(moduleCode,/new THREE\.PerspectiveCamera\(35/,
   'the photographic city camera has real depth and vanishing lines');
+assert.match(moduleCode,/scene\.fog\.near=Math\.max\(18,distance\*\.86\)/,
+  'atmospheric fade follows the dolly instead of washing out wide-angle city shots');
 assert.match(moduleCode,/if\(!b.hero && style===0/,
   'ordinary houses have occasional attached side wings for skyline variety');
 assert.match(moduleCode,/const dx=legacy\?12\.5:7\.4,dy=legacy\?23-closeness\*11\.5:/,
