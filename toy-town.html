@@ -98,7 +98,7 @@ html.embedded #zoom-controls{display:none}
     Promise.all([
       import('three'),
       import('three/addons/geometries/RoundedBoxGeometry.js'),
-      import('./assets/toy-town-3d.js?v=47'),
+      import('./assets/toy-town-3d.js?v=48'),
       import('./assets/toy-town-landmarks.js?v=7'),
       // The photographed-miniature lens. Any failure here leaves plain 3D running.
       Promise.all(['EffectComposer','RenderPass','ShaderPass','UnrealBloomPass','OutputPass']
@@ -109,7 +109,7 @@ html.embedded #zoom-controls{display:none}
       // Without them the town falls back to its hand-built geometry.
       new URLSearchParams(location.search).has('nokit') ? null :
       import('three/addons/loaders/GLTFLoader.js').then(({GLTFLoader}) => new Promise(resolve =>
-        new GLTFLoader().load('assets/kaykit/kaykit-town.glb?v=1', gltf => resolve(gltf.scene), undefined, () => resolve(null))))
+        new GLTFLoader().load('assets/kaykit/kaykit-town.glb?v=2', gltf => resolve(gltf.scene), undefined, () => resolve(null))))
         .catch(() => null)
     ]).then(([THREE, geometry, view, landmarks, lensKit, kitScene]) => {
       const lensReady = lensKit && !new URLSearchParams(location.search).has('nolens') && lensKit.addons.EffectComposer && lensKit.addons.UnrealBloomPass;

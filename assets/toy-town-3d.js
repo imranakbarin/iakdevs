@@ -2009,6 +2009,33 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
     mesh.userData.stoneShoulder=axis;
   }
 
+  // River bridges have pale stone shoulders, anchored to the same lanes.
+  function bridgeAt(n){
+    groundPiece(1.12,2.05,'#a99f8c',n+.5,14,.17);
+    groundPiece(.92,2.06,'#78868a',n+.5,14,.22);
+    for(const side of [-.52,.52])box(world,.052,.22,2.08,'#d8d1bf',n+.5+side,.29,14);
+  }
+  // KayKit road tiles on the street grid: straights, a zebra crossing by the
+  // plaza, T-splits on the outer edges, corners at the four outer corners and
+  // full junctions inside. Tiles are 2x2 in the kit, scaled to the 1x1 lane.
+  // Base orientations (measured): straight and crossing run along Z; the
+  // T-split branches to +X; the corner joins +X and +Z.
+  function kitRoads(){
+    const lane=v=>LINES.includes(v),first=LINES[0],last=LINES[LINES.length-1];
+    for(let y=1;y<=16;y++)for(let x=1;x<=16;x++){
+      const v=lane(x),h=lane(y);if(!v&&!h)continue;
+      if(v&&!h&&(y===13||y===14))continue;                     // the river: bridges here
+      let name='road_straight',rot=v?0:Math.PI/2;
+      if(v&&h){
+        const W=x>first,E=x<last,N=y>first,S=y<last,open=[W,E,N,S].filter(Boolean).length;
+        if(open===4)name='road_junction',rot=0;
+        else if(open===3){name='road_tsplit';rot=!W?0:!E?Math.PI:!N?-Math.PI/2:Math.PI/2;}
+        else{name='road_corner';rot=E&&S?0:W&&S?-Math.PI/2:E&&N?Math.PI/2:Math.PI;}
+      }else if(x===8&&y===11){name='road_straight_crossing';rot=Math.PI/2;}
+      const t=kitPlace(world,name,x+.5,.135,y+.5,{scale:.5,rotY:rot});
+      if(t)t.traverse(o=>{if(o.isMesh)o.castShadow=false;});
+    }
+  }
   function createGround(){
     // A generous matte studio table under the actual miniature slab.
     // Soft ambient contrast makes the scene read like a photographed model.
@@ -2026,7 +2053,10 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
     // Water sits below streets; bridges cross at the existing four lanes.
     groundPiece(18.02,1.97,'#8dbfc0',9,14,.105);
     const isRoad = v=>LINES.includes(v);
+    if(kit&&kit.get('road_straight'))kitRoads();
     for(const n of LINES){
+      // The bridges stay hand-built either way; with the kit, its road tiles replace the rest.
+      if(kit&&kit.get('road_straight')){bridgeAt(n);continue;}
       organicRoad(n,'north-south');
       organicRoad(n,'east-west');
       // No repeated bright highway centre dashes. Cobble seams and garden
@@ -2054,12 +2084,7 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
           stoneShoulder(n,a,b,'east-west',side);
         }
       }
-      // River bridges have pale stone shoulders, anchored to the same lanes.
-      groundPiece(1.12,2.05,'#a99f8c',n+.5,14,.17);
-      groundPiece(.92,2.06,'#78868a',n+.5,14,.22);
-      for(const side of [-.52,.52]){
-        box(world,.052,.22,2.08,'#d8d1bf',n+.5+side,.29,14);
-      }
+      bridgeAt(n);
     }
     // The hero neighborhood is one continuous garden, not sixteen lawns
     // boxed into independent tiles with dark grid joints between them.
@@ -2131,7 +2156,7 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
       }
     }
     // Four grounded zebra stripes on the actual southern road.
-    for(let i=0;i<4;i++)groundPiece(.088,.71,'#f8eedb',8.20+i*.17,11.5,.240);
+    if(!(kit&&kit.get('road_straight')))for(let i=0;i<4;i++)groundPiece(.088,.71,'#f8eedb',8.20+i*.17,11.5,.240);
     // Translucent moving ripples: actual water-height meshes tied to the river.
     for(let i=0;i<15;i++) {
       const x=1.5+i*1.01, z=13.45+(i%3)*.35;
@@ -2665,6 +2690,18 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
     const half=(bubble.offsetWidth||120)/2+8;   // keep the whole bubble on screen
     bubble.style.left=THREE.MathUtils.clamp((v.x+1)/2*r.width,half,r.width-half)+'px';bubble.style.top=Math.max((bubble.offsetHeight||28)+8,(1-v.y)/2*r.height)+'px';
   }
+  // The five plaza buildings in KayKit style. Plain-fronted models sit behind
+  // the bakery and bookshop counters (their striped awnings, cabinets, bells
+  // and hinged serving windows are separate shop-front pieces and unchanged).
+  function kitLandmark(b){
+    if(!kit||!['shop','house'].includes(b.kind))return false;
+    const shop=b.kind==='shop',name=shop?(b.name==='BAKERY'?'building_D':'building_B'):['building_C','building_F','building_A'][Math.abs(b.x*3+b.y)%3];
+    const placed=kitPlace(world,name,b.x+.5,.17,b.y+.5,{fit:.98});
+    if(!placed)return false;
+    placed.userData.landmark=true;placed.userData.uniqueAsset=true;
+    if(shop){const z=placed.userData.size.z/2+.012;sign(placed,b.name==='BAKERY'?'BAKERY':'BOOK NOOK',0,.98,z,.62,'#4a3f37','#fff3dc');}
+    return true;
+  }
   function kitBuilding(b){
     if(!kit||!['house','shop','tower'].includes(b.kind))return false;
     const pickFrom={house:['building_A','building_C','building_B'],shop:['building_B','building_D','building_F'],tower:['building_H','building_G','building_E']}[b.kind];
@@ -2693,6 +2730,7 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
       // The five central landmarks are *entire independent models*.
       // Avoid drawing the generic body, roof, porch or old atelier overlays
       // behind them; an authored asset replaces that complete building.
+      if(b.hero&&kitLandmark(b)){landmarkCount++;continue;}
       if(b.hero && typeof options.buildLandmark==='function') {
         try {
           const unique=options.buildLandmark(THREE,RoundedBoxGeometry,b);
