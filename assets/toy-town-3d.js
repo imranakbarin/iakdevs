@@ -2246,10 +2246,34 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
       lantern.castShadow=false;
       const smallSign=sign(shop,place.kind==='bakery'?'FRESH':'OPEN',
         0,.247,.148,.27,'#574a42','#f8eed8');
+      // Two true hinged glazed serving leaves. Both pivot from the
+      // outer jamb so the counter stays physically unobstructed when open.
+      // This is a street-service window, NOT an imaginary doorway through
+      // the back wall or a prop that rotates without a customer.
+      const shutters=[];
+      const glazing=new THREE.MeshStandardMaterial({
+        color:'#c4ded6',transparent:true,opacity:.42,depthWrite:false,
+        roughness:.16,metalness:.06,side:THREE.DoubleSide
+      });
+      for(const side of [-1,1]){
+        const hinge=new THREE.Group();
+        hinge.position.set(side*.255,.65,-.079);shop.add(hinge);
+        const sx=-side*.128;
+        const pane=box(hinge,.247,.302,.018,glazing,sx,0,0);
+        pane.castShadow=false;
+        for(const yy of [-.158,.158])
+          box(hinge,.266,.022,.036,'#d6ae86',sx,yy,.008);
+        box(hinge,.022,.333,.039,'#b48a69',sx+side*.113,0,.012);
+        box(hinge,.022,.330,.039,'#b48a69',sx-side*.113,0,.012);
+        box(hinge,.024,.267,.038,'#e2c6a2',sx,0,.015);
+        ball(hinge,.018,'#f0d5a4',sx-side*.075,-.047,.040)
+          .castShadow=false;
+        shutters.push({hinge,side});
+      }
       shop.userData.streetFront={
-        bell,lantern,lampMaterial,ringUntil:0,
-        previousHandoff:false,serviceCount:0,hasCustomers:false,
-        merchandise:place.kind==='bakery'?'pastries':'books'
+        bell,lantern,lampMaterial,shutters,openAmount:0,openTarget:0,
+        ringUntil:0,previousHandoff:false,serviceCount:0,hasCustomers:false,
+        lastTime:null,merchandise:place.kind==='bakery'?'pastries':'books'
       };
       // Visible from street side; miniature sign shares stall's coordinate
       // system and never floats independently of the desk.
@@ -2573,6 +2597,7 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
       eyelids,headPivot,upperBody,smile,brows};
     g.userData.shopProps=shopProps;
     g.userData.pose={speed:0,sit:0,chat:0,speak:0,greet:0,observe:0,
+      knock:0,order:0,depart:0,
       serve:0,enjoy:0,receive:0,celebrate:0,play:0,dance:0,work:0,
       lastClock:null,turned:false};
     // Lightweight deterministic silhouette variation: coat, satchel or vest,
@@ -2916,6 +2941,12 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
           (ref.shopAction==='offering'||ref.shopAction==='serving')?1:0,6.0);
         state.receive=ease(state.receive,!reducedMotion&&
           (ref.shopAction==='receiving'||ref.shopAction==='handoff')?1:0,7.0);
+        state.knock=ease(state.knock,!reducedMotion&&
+          ref.shopRole==='customer'&&ref.shopAction==='knocking'?1:0,12);
+        state.order=ease(state.order,!reducedMotion&&
+          ref.shopRole==='customer'&&ref.shopAction==='ordering'?1:0,8);
+        state.depart=ease(state.depart,!reducedMotion&&
+          ref.shopRole==='customer'&&ref.shopAction==='carrying'?1:0,5);
         state.enjoy=ease(state.enjoy,!reducedMotion&&
           (ref.shopAction==='reading'||ref.shopAction==='eating')?1:0,5.5);
         state.work=ease(state.work,!reducedMotion&&ref.districtWorker&&
@@ -2972,6 +3003,8 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
             swing*state.speed*(carrying?.14:.34)-
             state.chat*(dominant?.25:.07)-speech*.30-inspect*.22-wave*.52-
             trading*.72-receiving*.56-using*1.18-
+            (dominant?state.knock*1.28+state.order*.92:state.order*.13)-
+            (dominant?state.depart*.53:0)-
             state.celebrate*(dominant?1.85:1.35)-
             state.dance*.66-
             (dominant?state.work*.66:state.work*.14)-
@@ -2982,6 +3015,8 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
           limbs.elbows[k].rotation.x=
             -.56*speech-.46*inspect-.84*wave-
             trading*.50-receiving*.80-using*.70-
+            (dominant?state.knock*.76+state.order*.58:state.order*.1)-
+            (dominant?state.depart*.28:0)-
             state.celebrate*.47-state.dance*.58-state.play*.65-
             (dominant?state.work*.55:0)+
             (carrying?.20:0)+state.sit*.15;
@@ -2990,7 +3025,8 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
           limbs.wrists[k].rotation.z=(dominant?-1:1)*
             (.08*state.chat+.11*state.observe)+
             wave*.24*Math.sin(worldTime*5.4+(ref.ph||0))+
-            (dominant?state.work*.25*Math.sin(worldTime*3.1+(ref.ph||0)):0);
+            (dominant?state.work*.25*Math.sin(worldTime*3.1+(ref.ph||0)):0)+
+            (dominant?state.knock*.23*Math.sin(worldTime*14.5):0);
         }
         // The whole torso shifts weight, leans into greetings and settles
         // naturally after walking. Small limits preserve miniature balance.
@@ -2998,7 +3034,7 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
         const beat=Math.sin(stridePhase*2);
         limbs.upperBody.rotation.x=lean+
           state.serve*.080+state.receive*.12+state.enjoy*.045+
-          state.work*.060+
+          state.work*.060+state.knock*.065+state.order*.046+
           state.chat*.036*Math.sin(worldTime*1.5+(ref.ph||0));
         limbs.upperBody.rotation.z=.020*state.speed*stride+
           .032*state.chat*(ref.ph%2?1:-1)+
@@ -3154,6 +3190,9 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
         const kind=a.mesh.userData.workingShop;
         const seller=town.movers().find(m=>m.shopRole==='vendor'&&m.shopVenue===kind);
         const handing=seller?.shopAction==='handoff';
+        const waiting=town.movers().some(m=>m.shopRole==='customer'&&
+          m.shopAt===kind&&
+          ['knocking','approachingCounter','ordering','receiving'].includes(m.shopPhase));
         const shoppers=town.movers().some(m=>m.shopRole==='customer'&&
           m.shopAt===kind&&
           ['ordering','receiving'].includes(m.shopPhase));
@@ -3162,6 +3201,16 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
         }
         shop.previousHandoff=!!handing;
         shop.hasCustomers=shoppers;
+        shop.openTarget=waiting?1:0;
+        // Animate against simulation clock, not render frame count; no
+        // sudden door jump on fast phones and no idle perpetual motion.
+        const dt=shop.lastTime===null?1/30:
+          THREE.MathUtils.clamp(time-shop.lastTime,1/120,.12);
+        shop.lastTime=time;
+        shop.openAmount+=(shop.openTarget-shop.openAmount)*
+          (1-Math.exp(-8*dt));
+        for(const {hinge,side} of shop.shutters)
+          hinge.rotation.y=side*shop.openAmount*1.02;
         // The glass-fronted cabinet is illuminated when occupied;
         // the bell rings exactly when the simulation completes service.
         shop.lampMaterial.emissiveIntensity+=

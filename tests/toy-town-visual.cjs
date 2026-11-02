@@ -124,11 +124,13 @@ async function main(){
         // simulation in Chromium until trading and the street concert
         // are active, then inspect the 3D actor rig in that same scene.
         const market=await page.evaluate(()=>{
-          let held=false,served=false;
+          let held=false,served=false,knocked=false;
           for(let i=0;i<60*22;i++){
             ToyTown.update(1/60);
             const actors=ToyTown.movers();
             if(actors.some(m=>m.shopRole==='customer'&&m.carrying))held=true;
+            if(actors.some(m=>m.shopRole==='customer'&&
+              m.shopPhase==='knocking'))knocked=true;
             if(actors.some(m=>m.shopRole==='vendor'&&
               (m.shopAction==='serving'||m.shopAction==='handoff')))served=true;
           }
@@ -136,11 +138,12 @@ async function main(){
           const stats=ToyTown.debug();
           return {sales:stats.streetTransactions,visits:stats.streetShopVisits,
             concerts:stats.streetPerformances,reactions:stats.newsReactions,
-            held,served,performer:movers.some(m=>m.kind==='busker'&&m.guitar),
+            held,served,knocked,performer:movers.some(m=>m.kind==='busker'&&m.guitar),
             people:movers.filter(m=>m.shopRole).length};
         });
         if(market.sales<2||market.visits<2||market.concerts<1||
-          !market.held||!market.served||!market.performer||market.people!==5)
+          !market.held||!market.served||!market.knocked||
+          !market.performer||market.people!==5)
           throw Error('The miniature market does not really trade and perform: '+
             JSON.stringify(market));
         console.log('LIVING_MARKET '+JSON.stringify(market));

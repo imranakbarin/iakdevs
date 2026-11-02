@@ -66,7 +66,7 @@ html.embedded #zoom-controls{display:none}
 <script>if(new URLSearchParams(location.search).has('embed'))document.documentElement.classList.add('embedded');</script>
 <script src="assets/toy-town-diorama.js?v=1"></script>
 <script src="assets/toy-town-news.js?v=1"></script>
-<script src="assets/toy-town.js?v=26"></script>
+<script src="assets/toy-town.js?v=27"></script>
 <script type="module">
   // Opt out with ?classic=1 for the original Canvas experience.
   // Loading errors are deliberately isolated from the existing town engine.
@@ -74,7 +74,7 @@ html.embedded #zoom-controls{display:none}
     Promise.all([
       import('three'),
       import('three/addons/geometries/RoundedBoxGeometry.js'),
-      import('./assets/toy-town-3d.js?v=41'),
+      import('./assets/toy-town-3d.js?v=42'),
       import('./assets/toy-town-landmarks.js?v=7'),
       // The photographed-miniature lens. Any failure here leaves plain 3D running.
       Promise.all(['EffectComposer','RenderPass','ShaderPass','UnrealBloomPass','OutputPass','GTAOPass']

@@ -507,11 +507,26 @@ const ToyTown = (() => {
         shopper.shopPhase='approaching';
         shopper.shopAction='visiting';
         shopper.attention={...available.vendor};
-        shopper.path=[{x:available.serve.x,y:available.serve.y,
-          speed:shopper.max,then:o=>{
+        // Approach a real frontage threshold before reaching over the
+        // counter: this makes a visible arrival, knock and handoff sequence.
+        // Both stops remain on the existing paved shop-customer route.
+        const threshold={x:available.serve.x,y:available.serve.y+.38};
+        shopper.path=[{...threshold,speed:shopper.max,then:o=>{
+          o.shopPhase='knocking';o.shopAction='knocking';
+          o.stopUntil=clock+.72;o.shopNext=clock+.72;
+          o.v=0;o.moved=0;o.attention={...available.vendor};
+        }}];
+      }else if(shopper.shopPhase==='knocking'&&clock>=(shopper.shopNext||0)){
+        const stall=trade.stalls.find(s=>s.customer===shopper);
+        if(!stall)continue;
+        shopper.shopPhase='approachingCounter';
+        shopper.shopAction='visiting';
+        shopper.stopUntil=0;
+        shopper.path=[{x:stall.serve.x,y:stall.serve.y,speed:shopper.max,
+          then:o=>{
             o.shopPhase='ordering';o.shopAction='ordering';
             o.stopUntil=clock+1.25;o.shopNext=clock+1.25;
-            o.attention={...available.vendor};
+            o.v=0;o.attention={...stall.vendor};
             streetShopVisits++;
           }}];
       }else if(shopper.shopPhase==='ordering'&&clock>=(shopper.shopNext||0)){

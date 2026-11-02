@@ -99,6 +99,10 @@ assert.match(moduleCode,/function createStorybookVillage\(/,
   'village scenery is built as one cohesive 3D environmental set');
 assert.match(moduleCode,/shop\.userData\.streetFront=/,
   'storefronts have physical tracked service details');
+assert.match(moduleCode,/shop\.openTarget=waiting\?1:0/,
+  'the windows open for a real customer, not a generic animation loop');
+assert.match(moduleCode,/state\.knock=ease/,
+  'a customer has an independent arrival and knock pose');
 assert.match(moduleCode,/shop\.ringUntil=time\+\.9/,
   'service bell reacts to an actual vendor handoff');
 assert.doesNotMatch(moduleCode,/a\.mesh\.rotation\.y=\.003\*Math\.sin\(time\*1\.2\+a\.phase\)/,
@@ -152,11 +156,11 @@ assert.match(moduleCode,/eye.scale.y=blink/,'eyelids blink without a separate an
 assert.match(html,/type="importmap"/);
 assert.match(html,/three@0\.187\.0\/build\/three\.module\.js/);
 assert.match(html,/three@0\.187\.0\/examples\/jsm\//);
-assert.match(html,/toy-town-3d\.js\?v=41/);
+assert.match(html,/toy-town-3d\.js\?v=42/);
 assert.match(html,/toy-town-landmarks\.js\?v=7/,'the independent models are requested alongside Three');
 assert.match(html,/buildLandmark:landmarks\.buildLandmark/,
   'loader injects the authored model builder into the 3D simulation');
-assert.match(html,/toy-town\.js\?v=26/);
+assert.match(html,/toy-town\.js\?v=27/);
 const classicScript=html.match(/src="assets\/toy-town\.js\?v=\d+"/);
 assert.ok(classicScript&&
   html.indexOf(classicScript[0])<html.indexOf("import('three')"),
@@ -308,6 +312,8 @@ const workingDesks=api.scene.children.flatMap(n=>n.children||[])
 assert.equal(workingDesks.length,2,'two decorated real merchandise counters occupy shop frontage');
 assert.ok(workingDesks.every(s=>s.userData.streetFront?.bell),
   'both trading counters have actual architectural fronts and handoff bells');
+assert.ok(workingDesks.every(s=>s.userData.streetFront.shutters.length===2),
+  'each shop has two real hinged service-window doors');
 assert.deepEqual(workingDesks.map(s=>s.userData.streetFront.merchandise),
   ['pastries','books'],
   'two shops have distinct window merchandise rather than identical filler');
@@ -553,6 +559,19 @@ assert.ok(bakeryFront.lampMaterial.emissiveIntensity>.20,
   'shop cabinet starts glowing only after a shopper enters service');
 assert.equal(bakeryFront.serviceCount,0,
   'opening a shop never rings a fictitious completed sale');
+buyerRef.shopPhase='knocking';buyerRef.shopAction='knocking';
+frameClock+=.18;callbacks.shift()();
+assert.ok(buyerModel.userData.pose.knock>.05,
+  'customer actually raises an arm and knocks after arriving');
+assert.ok(bakeryFront.openAmount>.04,
+  'the service window physically swings outward for a real shopper');
+assert.ok(bakeryFront.shutters[0].hinge.rotation.y<0&&
+  bakeryFront.shutters[1].hinge.rotation.y>0,
+  'the two window leaves swing outward from opposite hinges');
+buyerRef.shopPhase='ordering';buyerRef.shopAction='ordering';
+frameClock+=.18;callbacks.shift()();
+assert.ok(buyerModel.userData.pose.order>.05,
+  'customer changes from a knock into a clear order gesture');
 shopkeeperRef.shopAction='handoff';
 buyerRef.shopAction='receiving';buyerRef.carrying='bread';
 frameClock+=1/30;callbacks.shift()();

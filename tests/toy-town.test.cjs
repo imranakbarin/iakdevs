@@ -233,6 +233,31 @@ assert.ok(T.movers().every(m=>Number.isFinite(m.x+m.y)&&m.x>0&&m.y>0&&
 
 
 
+// The new service threshold is an actual stationary knock, followed by a
+// connected counter approach—not a teleport or a decorative hand wave.
+T.build(60624,'market');
+const knockCustomers=T.movers().filter(m=>m.shopRole==='customer');
+let knockSamples=0,knockSlides=0,counterApproaches=0,
+  counterArrivals=0,goodsDepartures=0;
+for(let i=0;i<60*42;i++){
+  T.update(1/60);
+  for(const m of knockCustomers){
+    if(m.shopPhase==='knocking'){
+      knockSamples++;
+      if(m.moved>.00015)knockSlides++;
+      assert.ok(m.attention,'knocking occurs facing a real shopkeeper');
+    }
+    if(m.shopPhase==='approachingCounter')counterApproaches++;
+    if(m.shopPhase==='ordering')counterArrivals++;
+    if(m.shopPhase==='leaving'&&m.carrying)goodsDepartures++;
+  }
+}
+assert.ok(knockSamples>40,'shoppers really pause at the shop threshold');
+assert.equal(knockSlides,0,'a paused customer never walks on the spot');
+assert.ok(counterApproaches>20&&counterArrivals>20,
+  'shoppers approach a separate counter after knocking');
+assert.ok(goodsDepartures>20,'goods leave in customer hands after service');
+
 // The main plaza is now a working community economy: shoppers travel to
 // counters, physically receive items, then walk away to use their purchases.
 T.build(60624,'market');
