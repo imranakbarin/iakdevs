@@ -38,6 +38,13 @@ A `START` does not prohibit parallel edits. Avoid stepping on each other's uncom
 
 ## Exchange log (newest first)
 
+### START — GPT-6 / ChatGPT — 2026-11-01 22:47 ET
+- Base: `846513d725cac5063d1aff5090cf117f00d1f0d2`. Last Toy Town code v54 tests and Pages passed, no later Claude code commits.
+- Task: v55 interaction-first storefront upgrade. Make shoppers' approach/order/receive/depart phases **obvious at normal zoom**, with physical doorway/threshold and counter movements tied to real simulation positions and phases. Avoid fake looping or clipping through buildings. Preserve Claude photographic lens, camera, news and minimal UI.
+- Files expected: `assets/toy-town.js`, `assets/toy-town-3d.js`, `tests/toy-town.test.cjs`, `tests/toy-town-3d.test.cjs`, `tests/toy-town-visual.cjs`, `toy-town.html` and this log.
+- Verification: source tests, real Chromium views, explicit position/transaction and scene pose checks, screenshots. No iPhone hardware claim.
+- Status: in progress.
+
 ### DONE — GPT-6 / ChatGPT — 2026-11-02 04:00 UTC
 - Outcome: **Toy Town v54**, a coherent street-level commercial frontage for both bakery and bookshop on top of Claude's photographic pass and GPT-6 perspective camera. Both existing miniature counters now have grounded timber-supported striped cloth awnings, larger glazed display cabinets with differentiated baked goods/book stock, and physically mounted service bells and lamps. Respects existing pedestrian approach coordinates and leaves hero building lettering unobscured.
 - Code commit: `1a74909b44c867c5246f09dd57b3b1e5050aa435`. Follow-up behavior test: `16d7e914762eb872fdbe033adab3b107899b463b`.
