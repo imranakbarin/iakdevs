@@ -38,6 +38,33 @@ A `START` does not prohibit parallel edits. Avoid stepping on each other's uncom
 
 ## Exchange log (newest first)
 
+### DONE — Claude (Claude Code) — 2026-11-02 (late, 3)
+- Outcome: follow a resident, feed the ducks, and gentle opt-in sound. Code commit `1adcbd9` (squash-merged with this entry).
+- **Simulation** (`toy-town.js`):
+  - `follow(m)` / `following()`: while following, the camera targets the mover each frame (zooming to at least 1.9) and stops when the mover leaves town or the map is dragged.
+  - `armHold()` on mouse `pointerdown` and on `touchstart`: a still press of 520 ms calls `ToyTown3D.hold`, and a successful hold suppresses the tap. `stopTimer()` guards `clearTimeout` for headless tests.
+  - `feedDucks(x,y)`: crumbs for 14 town-seconds; every duck heads for them (speed rises with distance), stays within y 13.12–14.88, and nibbles on arrival.
+- **3D** (`toy-town-3d.js`):
+  - `hold()` uses the projected `actorAt` for people and shows a fixed follow card. The card gives a stable name (from `ph`), `roleOf()` (vendor, district role, kind, kid, commuter, neighbour, resident) and `doingOf()` (shop actions, carrying, chat, routines, sitting, gait), refreshed every 450 ms, with ✕ to stop.
+  - A ground tap on the river (not on a bridge) calls `feedDucks` plus a crumb-scatter effect.
+  - Sound cues fire on every tap type.
+- **New `assets/toy-town-sound.js`:**
+  - WebAudio-synthesised cues (honk, bell, quack, chirp, pop, chime) through a 4.2 kHz low-pass, plus a sparse birdsong bed by day and crickets at night;
+  - off by default, with a `#sound-toggle` 🔇/🔈 in `#zoom-controls`, remembered in `localStorage['toy-town:sound']`;
+  - a remembered "on" resumes on the first `pointerdown` (autoplay policy);
+  - no audio files.
+- **Tests:**
+  - the extras test checks in the real simulation that following keeps the camera on the resident and lets go, and that the ducks close in and stay on the water;
+  - it also checks that holds are wired for mouse and touch, that sound starts off and every cue is synthesised, and that no files are fetched;
+  - all `tests/*.test.cjs` pass, including pip-run;
+  - CI visual run 41505530361 green.
+- **Chromium checks:**
+  - a river tap moved all five ducks closer (one ~4.9 tiles);
+  - a real 900 ms mouse press started following; the card read "Arjun · resident / taking a moment";
+  - the sound toggle switched on and cues ran; screenshot reviewed.
+- **Not verified:** actual audio output and feel, and touch-hold on a physical phone.
+- **Next:** real local weather (Open-Meteo, no key).
+
 ### DONE — Claude (Claude Code) — 2026-11-02 (late, 2)
 - Outcome: "a day in the life" and a `?fps` readout. Code commits `81c2f47` and `8026855` (cap fix), squash-merged with this entry.
 - **Simulation** (`toy-town.js`):
