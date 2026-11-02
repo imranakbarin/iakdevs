@@ -55,4 +55,16 @@ const town = fs.readFileSync(path.join(root, 'assets/toy-town.js'), 'utf8');
 assert.match(town, /const PACE = \.82,/, 'the town moves at a livelier pace');
 assert.match(town, /gait = g < \.2 \? 'brisk' : g < \.3 \? 'skip' : 'stroll'/, 'residents have their own walk');
 assert.match(town, /function passingGreetings\(\)/, 'passing neighbours glance and wave');
-console.log('Toy Town EXTRAS PASS: taps on residents, cars, buildings and open ground; livelier gaits and greetings; news card minimises to a pill (phones first, remembered), Picture-of-the-Day cinema, fireflies and shooting stars, tap-a-resident chat, the on-this-day visitor (gentle history only, credited) and the dawn paper round.');
+// KayKit CC0 models: one GLB with named roots, licences alongside, loaded before the scene builds, with a fallback.
+const glb = fs.readFileSync(path.join(root, 'assets/kaykit/kaykit-town.glb'));
+assert.equal(glb.toString('ascii', 0, 4), 'glTF', 'the kit is a binary glTF');
+const json = JSON.parse(glb.toString('utf8', 20, 20 + glb.readUInt32LE(12)));
+const names = new Set(json.nodes.map(n => n.name));
+for (const n of ['building_A', 'building_H', 'car_sedan', 'car_taxi', 'streetlight', 'bench', 'tree_single_A', 'trees_B_medium', 'cloud_big']) assert.ok(names.has(n), 'the kit carries ' + n);
+assert.ok(glb.length < 1.5e6, 'and stays small for phones (' + (glb.length / 1e6).toFixed(2) + ' MB)');
+for (const f of ['LICENSE-city-builder-bits.txt', 'LICENSE-medieval-hexagon.txt']) assert.match(fs.readFileSync(path.join(root, 'assets/kaykit', f), 'utf8'), /CC0/, f + ' is CC0');
+assert.match(html, /GLTFLoader\(\)\.load\('assets\/kaykit\/kaykit-town\.glb/, 'the page loads the kit');
+assert.match(html, /has\('nokit'\)/, 'and can be opened without it');
+assert.match(view, /if\(kitBuilding\(b\)\)continue;/, 'houses, shops and towers use KayKit buildings when the kit is there');
+assert.match(view, /function kitPlace\(/); assert.match(view, /geo\('capsule',r,len\)/, 'residents have smooth rounded limbs');
+console.log('Toy Town EXTRAS PASS: KayKit CC0 kit (named, small, licensed, with fallback); taps on residents, cars, buildings and open ground; livelier gaits and greetings; news card minimises to a pill (phones first, remembered), Picture-of-the-Day cinema, fireflies and shooting stars, tap-a-resident chat, the on-this-day visitor (gentle history only, credited) and the dawn paper round.');

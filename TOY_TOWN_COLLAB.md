@@ -38,6 +38,45 @@ A `START` does not prohibit parallel edits. Avoid stepping on each other's uncom
 
 ## Exchange log (newest first)
 
+### DONE — Claude (Claude Code) — 2026-11-02 (night)
+- Outcome: the town now uses professionally modelled **CC0 KayKit** assets, and the residents are rebuilt smooth to match. Code commits `f4e8881`, `f9fd021` (squash-merged with this entry).
+- **Kit** (`assets/kaykit/kaykit-town.glb`, 0.93 MB):
+  - glTF-Transform merge, dedup, weld and prune of the used models from *City Builder Bits 1.0* and *Medieval Hexagon Pack 1.0* by Kay Lousberg;
+  - each model sits under a root named after it;
+  - CC0 licences and a README sit alongside.
+  - `toy-town.html` loads it with GLTFLoader in parallel with the other modules and passes `options.kitScene`; `?nokit` (or any load failure) keeps the hand-built geometry.
+- **`toy-town-3d.js`:**
+  - `kit`/`kitPlace()` clone a model to a footprint or height, keeping either the bounds centre or the model's own pivot;
+  - `kitBuilding()`: houses → building A/C/B, shops → B/D/F, towers → H/G/E;
+  - **hero landmarks stay hand-built** (their counters, serving windows and shopper choreography depend on them);
+  - trees → `tree_single_A/B`, with every ninth a cluster;
+  - `car()` builds car, taxi and police from KayKit models, keeping a `vehicleRig` (brake lamps; no wheel spin);
+  - benches → `bench`; street lanterns → KayKit `streetlight` (pivot at the pole, arm over the road) with a glowing head and a warm pool;
+  - `skyClouds()` gives four drifting clouds.
+- **Residents** (`person()`):
+  - capsule body and limbs, a big smooth head (24×18), dot eyes, rosy cheeks;
+  - a hair-cap shell with bob, bun or fringe; smooth hats;
+  - the fiddly collar and button boxes are gone;
+  - the joint chain and the `userData.limbs` contract are unchanged, so all poses, shop actions, waves and taps still work.
+- **Also:**
+  - rose-arbour foliage uses `clump` leaves; bunting is triangular pennants, fewer and higher;
+  - default spheres 16×12 (were 12×9), cylinders 14 sides (were 10);
+  - 3D cache v47; the workflow also watches `assets/kaykit/**`.
+- **Tests:**
+  - the extras test parses the GLB (named roots present, under 1.5 MB, licences CC0, loader and fallback wired);
+  - all `tests/*.test.cjs` pass locally, including pip-run;
+  - CI visual runs green: 41494503124 and 41494774552.
+- **Visual review** (local Chromium):
+  - wide view: KayKit apartment blocks, pines, cars, streetlights and clouds over the town;
+  - 3× phone close-up: smooth residents with hair and faces, pennant bunting, leafy arbour.
+- **Not verified:**
+  - iPhone and real-GPU frame rate with the added geometry (the adaptive pixel ratio should absorb it);
+  - KayKit building fronts face +Z, judged visually only.
+- **Known gaps and next:**
+  - the plaza's hero shops are now the odd style out; restyle them to match KayKit, or rebuild them from kit pieces while keeping their service windows;
+  - the ground and roads are still hand-made;
+  - animated CC0 townsfolk if the owner supplies a pack.
+
 ### START — Claude (Claude Code) — 2026-11-02 (night)
 - Base: `b1c147f` (latest `master`; no newer GPT-6 work).
 - Owner decision: "clean stylised toy town (KayKit + matched people)". The owner found the code-built primitives crude ("fully polygons and not well shaped").

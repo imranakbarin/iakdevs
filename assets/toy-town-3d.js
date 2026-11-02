@@ -141,12 +141,15 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
       let shape;
       if (kind === 'round') shape = new RoundedBoxGeometry(dims[0],dims[1],dims[2],2,Math.min(dims[0],dims[1],dims[2])*.14);
       else if (kind === 'box') shape = new THREE.BoxGeometry(...dims);
-      else if (kind === 'sphere') shape = new THREE.SphereGeometry(dims[0],12,9);
+      else if (kind === 'sphere') shape = new THREE.SphereGeometry(dims[0],16,12);
       else if (kind === 'ball') shape = new THREE.IcosahedronGeometry(dims[0],1);
-      else if (kind === 'cylinder') shape = new THREE.CylinderGeometry(...dims,10);
+      else if (kind === 'cylinder') shape = new THREE.CylinderGeometry(...dims,14);
       else if (kind === 'torus') shape = new THREE.TorusGeometry(...dims,7,12);
       else if (kind === 'plane') shape = new THREE.PlaneGeometry(...dims);
       else if (kind === 'clump') shape = clumpGeometry(dims[0], dims[1]);
+      else if (kind === 'smooth') shape = new THREE.SphereGeometry(dims[0],24,18);
+      else if (kind === 'capsule') shape = new THREE.CapsuleGeometry(dims[0],dims[1],6,16);
+      else if (kind === 'hairshell') shape = new THREE.SphereGeometry(dims[0],24,14,0,Math.PI*2,0,Math.PI*.56);
       geometryCache.set(key,shape);
     }
     return geometryCache.get(key);
@@ -183,6 +186,30 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
     if (!leafCache.has(hex)) leafCache.set(hex, new THREE.MeshStandardMaterial({color: hex, vertexColors: true, roughness: .9, metalness: 0, bumpMap: leafGrain, bumpScale: 1.6}));
     return leafCache.get(hex);
   };
+  /* ---- KayKit (CC0, Kay Lousberg): professionally modelled buildings, cars,
+     trees and street props from assets/kaykit/kaykit-town.glb. Every model is a
+     root named after it; clones share geometry and the single atlas texture. */
+  const kit=(()=>{
+    const root=options.kitScene;if(!root||!THREE.Box3)return null;
+    const models=new Map();
+    for(const node of root.children){
+      const box3=new THREE.Box3().setFromObject(node),size=new THREE.Vector3(),centre=new THREE.Vector3();
+      box3.getSize(size);box3.getCenter(centre);
+      node.traverse(o=>{if(o.isMesh){o.castShadow=true;o.receiveShadow=true;}});
+      models.set(node.name,{node,size,min:box3.min.clone(),centre});
+    }
+    return models.size?models:null;
+  })();
+  // Place a clone so its footprint fits `fit` (world units) and its base sits at `y`.
+  function kitPlace(parent,name,x,y,z,{fit=null,scale=null,rotY=0,height=null,pivot=false}={}){
+    const m=kit&&kit.get(name);if(!m)return null;
+    const s=scale??(height?height/m.size.y:fit/Math.max(m.size.x,m.size.z));
+    const holder=new THREE.Group(),clone=m.node.clone(true);
+    clone.position.set(pivot?0:-m.centre.x*s,-m.min.y*s,pivot?0:-m.centre.z*s);clone.scale.setScalar(s);   // pivot: keep the model's own origin (a lamp post's foot)
+    holder.add(clone);holder.position.set(x,y,z);holder.rotation.y=rotY;parent.add(holder);
+    holder.userData.kit=name;holder.userData.size={x:m.size.x*s,y:m.size.y*s,z:m.size.z*s};
+    return holder;
+  }
   const object = (parent, geometry, material, x=0,y=0,z=0, cast=true) => {
     const o = new THREE.Mesh(geometry,material);
     o.position.set(x,y,z);
@@ -1130,6 +1157,11 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
   // branching and planted, shadowed root flares; no leaf particle systems.
   function tree(p,i){
     if(Math.hypot(p.x-CINEMA.x,p.y-CINEMA.z)<1.7)return;   // the open-air cinema has this corner
+    if(kit){
+      const cluster=i%9===4,name=cluster?(i%2?'trees_A_medium':'trees_B_medium'):(i%3?'tree_single_A':'tree_single_B');
+      groundingShadow(p.x,p.y,cluster?1.4:1.0,cluster?1.3:.95,.166);
+      if(kitPlace(world,name,p.x,.16,p.y,{height:(cluster?.95:1.05)*(p.s||1),rotY:rng(i,61)*TAU})){woodlandShapes++;return;}
+    }
     const x=p.x,z=p.y;
     // Keep the foreground riverbank open so the miniature village can be
     // read through the trees. The side orchards still frame the lens.
@@ -1226,6 +1258,7 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
     }
   }
   function bench(p){
+    if(kit&&kitPlace(world,'bench',p.x,.17,p.y,{fit:.46}))return;
     const x=p.x,z=p.y;
     for(let k of [-.17,.17]){
       box(world,.045,.17,.055,'#6b786e',x+k,.10,z-.10);
@@ -1513,9 +1546,9 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
       box(arch,.11,.10,.13,'#f0dec5',dx,1.405,0);
       for(let k=0;k<4;k++){
         const a=k*1.7+dx,yy=.73+k*.15;
-        const foliage=ball(arch,.083,k%2?'#7da481':'#628e78',
-          dx+(dx<0?.03:-.03)+Math.sin(a)*.045,yy,.035);
-        foliage.scale.set(1.05,.60,.69);foliage.castShadow=false;
+        const foliage=object(arch,geo('clump',.1,k%4),leafMat(k%2?'#7da481':'#628e78'),
+          dx+(dx<0?.03:-.03)+Math.sin(a)*.045,yy,.035,false);
+        foliage.scale.set(1,.85,.85);
         if(k%2===0){
           const rose=ball(arch,.037,k%4?'#e9b4bb':'#f2d4b7',
             dx+(dx<0?.04:-.04),yy+.06,.098);
@@ -1534,9 +1567,9 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
     for(let k=1;k<15;k++){
       const a=Math.PI-k*Math.PI/16;
       if(k%2)continue;
-      const leaf=ball(arch,.09,k%4?'#7fa989':'#90b38e',
-        Math.cos(a)*.42,1.2+Math.sin(a)*.39,.01);
-      leaf.scale.set(.9,.7,.8);leaf.castShadow=false;
+      const leaf=object(arch,geo('clump',.11,k%4),leafMat(k%4?'#7fa989':'#90b38e'),
+        Math.cos(a)*.42,1.2+Math.sin(a)*.39,.01,false);
+      leaf.scale.set(.95,.85,.85);
       if(k%4===0)ball(arch,.038,'#e9b2ba',
         Math.cos(a)*.42,1.25+Math.sin(a)*.39,.087);
     }
@@ -1598,11 +1631,13 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
     // Colorful bunting is tied to the actual festoon supports; it does
     // not hang across a vehicle lane or move independently of its anchor.
     const buntingColors=['#ed816d','#f3bf62','#5ca59a','#b78eb8','#f2dfb8'];
-    for(const z of [9.60,10.58])for(let i=0;i<15;i++){
-      const x=7.67+i*.19;
-      const flag=new THREE.Group();flag.position.set(x,1.38-.12*
-        Math.sin((i+.5)/15*Math.PI),z);world.add(flag);
-      const fabric=box(flag,.087,.13,.012,buntingColors[(i+Math.round(z*10))%5],0,-.068,0);
+    const pennant=(()=>{const sh=new THREE.Shape();sh.moveTo(-.05,0);sh.lineTo(.05,0);sh.lineTo(0,-.11);sh.closePath();
+      return new THREE.ExtrudeGeometry(sh,{depth:.006,bevelEnabled:false});})();
+    for(const z of [9.60,10.58])for(let i=0;i<11;i++){
+      const x=7.72+i*.26;
+      const flag=new THREE.Group();flag.position.set(x,1.4-.13*
+        Math.sin((i+.5)/11*Math.PI),z);world.add(flag);
+      const fabric=object(flag,pennant,mat(buntingColors[(i+Math.round(z*10))%5],.85),0,0,0,false);
       fabric.rotation.z=.05*(i%3-1);
       ambient.push({kind:'bunting',mesh:flag,phase:i*.36+z});
     }
@@ -2302,6 +2337,14 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
     for(const l of LINES)for(const mid of [3.5,9.5,13.5])for(const along of [true,false]){
       if(!along&&mid===13.5)continue;                      // north-south streets cross the river here
       const side=(n++%2?1:-1)*.47,x=along?mid:l+.5+side,z=along?l+.5+side:mid;
+      if(kit&&kit.get('streetlight')){
+        // The arm reaches over the road; a glowing lamp sits under its tip.
+        const dx=along?0:-Math.sign(side),dz=along?-Math.sign(side):0,light=kitPlace(world,'streetlight',x,.17,z,{height:1.02,pivot:true,rotY:Math.atan2(dz,-dx)});   // its arm points along local -X
+        const tip=light.userData.size.x*.85,head=box(light,.07,.03,.07,lanternGlass,-tip,.95,0,false);head.castShadow=false;
+        const pool=new THREE.Mesh(geo('plane',2,2),new THREE.MeshBasicMaterial({map:poolTexture,transparent:true,opacity:0,depthWrite:false,blending:THREE.AdditiveBlending}));
+        pool.rotation.x=-Math.PI/2;pool.position.set(x+dx*tip,.205,z+dz*tip);world.add(pool);lanternPools.push(pool);
+        continue;
+      }
       const g=new THREE.Group();g.position.set(x,.17,z);world.add(g);
       cylinder(g,.022,.034,.82,iron,0,.41,0);
       cylinder(g,.05,.05,.04,iron,0,.04,0);
@@ -2375,7 +2418,14 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
   }
   /* ---- After dusk: fireflies over the lawns and an occasional shooting star. */
   let fireflies=null,fireflySeeds=[],shootingStar=null,nextShoot=0;
+  let clouds=[];
+  function skyClouds(){
+    clouds=[];if(!kit)return;
+    [[2,7.5,3,1.1,'cloud_big'],[11,8.3,-1,.8,'cloud_small'],[16,7.2,5,1,'cloud_big'],[6,8.8,-4,.7,'cloud_small']].forEach(([x,y,z,s,name],i)=>{
+      const c=kitPlace(world,name,x,y,z,{scale:s*.9});if(c){c.traverse(o=>{if(o.isMesh)o.castShadow=false;});clouds.push({c,x,speed:.05+i*.012});}});
+  }
   function nightSky(){
+    skyClouds();
     fireflies=null;shootingStar=null;fireflySeeds=[];
     if(!THREE.Points||!THREE.BufferGeometry||!THREE.BufferAttribute)return;
     const spots=[];for(let k=0;k<44;k++)spots.push([1+rng(k,301)*16,1+rng(k,407)*16]);
@@ -2389,6 +2439,7 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
     shootingStar.scale.set(2.4,.035,1);world.add(shootingStar);
   }
   function nightLife(dark,time){
+    for(const k of clouds)k.c.position.x=((k.x+time*k.speed+6)%30)-6;   // a slow drift, wrapping round
     if(cinemaBeam){cinemaBeam.material.opacity=Math.max(0,dark-.2)*.16;for(const v of cinemaViewers)v.visible=dark>.3;
       if(cinemaScreen)cinemaScreen.material.color.set(dark>.3?'#ffffff':'#d8d8d8');}
     if(fireflies){
@@ -2614,6 +2665,16 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
     const half=(bubble.offsetWidth||120)/2+8;   // keep the whole bubble on screen
     bubble.style.left=THREE.MathUtils.clamp((v.x+1)/2*r.width,half,r.width-half)+'px';bubble.style.top=Math.max((bubble.offsetHeight||28)+8,(1-v.y)/2*r.height)+'px';
   }
+  function kitBuilding(b){
+    if(!kit||!['house','shop','tower'].includes(b.kind))return false;
+    const pickFrom={house:['building_A','building_C','building_B'],shop:['building_B','building_D','building_F'],tower:['building_H','building_G','building_E']}[b.kind];
+    const name=pickFrom[Math.abs(Math.round(b.x*7+b.y*13+(worldSeed||0)))%pickFrom.length];
+    // Fronts face the street that runs past the block (south, toward the camera, like the town's own houses).
+    const placed=kitPlace(world,name,b.x+.5,.17,b.y+.5,{fit:b.kind==='tower'?1.02:.98,rotY:0});
+    if(!placed)return false;
+    placed.userData.buildingKind=b.kind;composedBuildings++;
+    return true;
+  }
   function rebuild(){
     timeVisit=null;round=null;papers=[];effects=[];
     ambient.length = 0; plazaLights.length = 0; festoonBulbs.length = 0;
@@ -2645,6 +2706,7 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
           console.warn('Hero landmark model failed; using classic geometry',error);
         }
       }
+      if(kitBuilding(b))continue;
       if(b.kind==='house')composeSecondaryBuilding(b,home(b));
       else if(b.kind==='shop')composeSecondaryBuilding(b,shop(b));
       else if(b.kind==='tower')tower(b);
@@ -2674,104 +2736,68 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
     worldPropCount=ps.length;
     redrawCount++;
   }
+  // Smooth, chunky residents in the KayKit spirit: a rounded body, a big soft
+  // head with dot eyes and rosy cheeks, a proper hair cap, rounded limbs and
+  // shoes. The joint chain (legs → shins → ankles, arms → elbows → wrists,
+  // headPivot, upperBody) is unchanged, so every walk, wave and shop action
+  // still drives it.
+  const smoothBall=(p,r,col,x=0,y=0,z=0)=>object(p,geo('smooth',r),typeof col==='string'?mat(col,.7):col,x,y,z);
+  const limb=(p,r,len,col,x=0,y=0,z=0)=>THREE.CapsuleGeometry?
+    object(p,geo('capsule',r,len),typeof col==='string'?mat(col,.72):col,x,y,z):cylinder(p,r,r,len+r*2,col,x,y,z);
   function person(ref){
     const g=new THREE.Group();
-    const skin=ref.skin||'#dbab86',coat=ref.col||'#d6a3a0';
-    // Rounded head and tapered torso read as a small character at close zoom.
-    const torso=ball(g,.088,coat,0,.26,0);
-    torso.scale.set(1.08,1.22,.79);
-    // A distinct tapered waist and curved jacket hem stop the upper body
-    // reading as one featureless capsule in close-up photography.
-    const waist=ball(g,.068,coat,0,.229,0);
-    waist.scale.set(.96,.68,.76);
-    const hem=ball(g,.075,coat,0,.207,0);
-    hem.scale.set(1.08,.47,.91);
-    for(const sx of [-1,1]){
-      const shoulder=ball(g,.049,coat,sx*.082,.323,0);
-      shoulder.scale.set(.90,.84,.86);
-      box(g,.014,.125,.017,'#f8e7d5',sx*.034,.253,.079);
-    }
-    box(g,.032,.099,.023,'#f6e5ce',0,.319,.080);
-    const neck=cylinder(g,.031,.032,.055,skin,0,.374,0);
-    // Every resident has a real neck pivot. Attention is driven by the
-    // simulation's observed shop or destination, not an idle head-twitch.
+    const skin=ref.skin||'#dbab86',coat=ref.col||'#d6a3a0',trousers=ref.trousers||'#5e6f7c',shoes='#4f4741';
+    // One rounded body, slightly pear-shaped, with a soft collar.
+    const torso=limb(g,.082,.085,coat,0,.262,0);torso.scale.set(1.06,1,.82);
+    const collar=smoothBall(g,.05,tint(coat,'#ffffff',.35),0,.335,.02);collar.scale.set(1.5,.42,1.05);
+    const neck=cylinder(g,.03,.032,.04,skin,0,.37,0);
     const headPivot=new THREE.Group();headPivot.position.y=.405;g.add(headPivot);
     const face=new THREE.Group();face.position.y=-.405;headPivot.add(face);
-    const head=ball(face,.095,skin,0,.457,0);
-    head.scale.set(1,1.045,.95);
+    const head=smoothBall(face,.1,skin,0,.462,0);head.scale.set(1,.98,.96);
     const hairTone=ref.hair||'#5b4639';
-    const hair=ball(face,.099,hairTone,0,.515,-.014);
-    hair.scale.set(1,.46,1);
-    // Distinct asymmetric hair silhouettes. No detached floating hair tufts.
+    // A hair cap that wraps the crown and the back of the head; three styles.
     const hairStyle=(Math.round((ref.x||0)*11+(ref.y||0)*7))%3;
     if(!ref.hat){
-      if(hairStyle===0){
-        for(const side of [-1,1]){
-          const lock=ball(face,.043,hairTone,side*.073,.465,-.029);
-          lock.scale.set(.64,1.22,.83);
-        }
-      } else if(hairStyle===1) {
-        const fringe=ball(face,.056,hairTone,-.023,.501,.059);
-        fringe.scale.set(1.32,.35,.69);
-      } else {
-        for(let k=0;k<3;k++){
-          const curl=ball(face,.031,hairTone,(k-1)*.055,.535,.016);
-          curl.scale.set(.98,.72,.96);
-        }
-      }
+      const capHair=object(face,geo('hairshell',.106),mat(hairTone,.8),0,.468,-.01);
+      capHair.rotation.x=-.32;
+      if(hairStyle===0){const bob=smoothBall(face,.075,hairTone,0,.43,-.055);bob.scale.set(1.45,1.05,.9);}       // a bob
+      else if(hairStyle===1){const bun=smoothBall(face,.042,hairTone,0,.575,-.045);}                               // a bun
+      else{const fringe=smoothBall(face,.06,hairTone,.02,.525,.055);fringe.scale.set(1.35,.42,.7);}               // a side fringe
     }
-    // Eyes and a soft nose sit on the forward (+Z) face of the head,
-    // not on a screen-aligned sprite; rotation follows actual walking.
+    // Dot eyes, rosy cheeks, a small nose and a gentle smile on the +Z face.
     const eyelids=[];
     for(const sx of [-1,1]){
-      const eye=ball(face,.019,'#fff8ef',sx*.032,.455,.086);
-      ball(face,.009,'#354449',sx*.032,.457,.102);
+      const eye=smoothBall(face,.0135,'#2f3a40',sx*.036,.468,.093);eye.scale.set(.85,1.15,.6);
       eyelids.push(eye);
-      ball(face,.015,'#df978b',sx*.069,.417,.074);
-      ball(face,.024,skin,sx*.097,.439,.005);
+      const cheek=smoothBall(face,.018,'#f0a29a',sx*.062,.436,.077);cheek.scale.set(1,.6,.4);
     }
-    ball(face,.017,skin,0,.425,.100);
-    const smile=object(face,geo('torus',.024,.004),mat('#925f5c'),0,.404,.094);
-    smile.scale.set(1,.40,.26);
+    smoothBall(face,.014,tint(skin,'#c98d6f',.25),0,.45,.1);
+    const smile=object(face,geo('torus',.022,.004),mat('#8f5a56'),0,.418,.093);
+    smile.scale.set(1,.42,.3);
     const brows=[];
     for(const side of [-1,1]){
-      const brow=box(face,.033,.007,.009,hairTone,side*.034,.493,.091);
+      const brow=box(face,.03,.006,.008,hairTone,side*.036,.5,.094);
       brow.rotation.z=side*-.12;
       brows.push(brow);
     }
-    // Layers of clothing create a tiny character instead of a colored capsule.
-    box(face,.072,.075,.040,'#fff1da',0,.324,.071);
-    box(face,.023,.038,.031,'#d3a082',0,.304,.091);
-    for(const sx of [-1,1]){
-      box(face,.014,.029,.022,'#f7e0c4',sx*.034,.305,.087);
-    }
     const legs=[],arms=[],elbows=[],wrists=[],hands=[],shins=[],feet=[];
     for(const side of [-1,1]){
-      const leg=new THREE.Group();leg.position.set(side*.041,.178,0);
-      cylinder(leg,.026,.028,.086,'#60717b',0,-.043,0);
-      ball(leg,.027,'#627887',0,-.095,0);
+      const leg=new THREE.Group();leg.position.set(side*.04,.178,0);
+      limb(leg,.029,.045,trousers,0,-.045,0);
       const shin=new THREE.Group();shin.position.set(0,-.096,0);
-      cylinder(shin,.022,.025,.081,'#60717b',0,-.039,0);
-      const ankle=new THREE.Group();ankle.position.set(0,-.102,.028);
-      box(ankle,.065,.035,.108,'#5a524b',0,0,.007);
+      limb(shin,.025,.04,trousers,0,-.038,0);
+      const ankle=new THREE.Group();ankle.position.set(0,-.1,.024);
+      const shoe=smoothBall(ankle,.036,shoes,0,0,.01);shoe.scale.set(.95,.62,1.45);
       shin.add(ankle);
       leg.add(shin);g.add(leg);legs.push(leg);shins.push(shin);
       feet.push(ankle);
-      // Shoulder → elbow → wrist is one physical chain. Fingers and props
-      // are parented to the hand, so nothing floats when a person waves.
-      const arm=new THREE.Group();arm.position.set(side*.098,.328,0);
-      cylinder(arm,.024,.027,.084,coat,0,-.041,0);
+      const arm=new THREE.Group();arm.position.set(side*.096,.322,0);
+      limb(arm,.025,.04,coat,0,-.041,0);
       const elbow=new THREE.Group();elbow.position.y=-.084;
-      ball(elbow,.023,coat,0,0,0);
-      cylinder(elbow,.019,.022,.077,coat,0,-.038,0);
+      limb(elbow,.022,.036,coat,0,-.038,0);
       const wrist=new THREE.Group();wrist.position.y=-.079;
-      const palm=ball(wrist,.023,skin,0,-.012,.003);
-      palm.scale.set(.81,1.13,.66);
-      for(const spread of [-1,0,1]){
-        const finger=cylinder(wrist,.005,.006,.023,skin,spread*.013,-.034,.007);
-        finger.rotation.z=spread*.16;
-      }
-      ball(wrist,.012,skin,side*.021,-.014,.012);
+      const palm=smoothBall(wrist,.025,skin,0,-.012,.003);
+      palm.scale.set(.9,1.05,.8);
       elbow.add(wrist);arm.add(elbow);g.add(arm);
       arms.push(arm);elbows.push(elbow);wrists.push(wrist);hands.push(wrist);
     }
@@ -2784,9 +2810,9 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
       handle.scale.set(1,1,.42);
     }
     if(ref.hat){
-      const cap=ball(g,.099,ref.hat==='beanie'?'#b18cbd':'#588f9e',0,.534,0);
-      cap.scale.set(1,.57,1);
-      if(ref.hat==='cap')box(g,.095,.017,.063,'#588f9e',0,.487,.089);
+      const cap=object(g,geo('hairshell',.108),mat(ref.hat==='beanie'?'#b18cbd':'#588f9e',.8),0,.48,0);
+      if(ref.hat==='beanie')smoothBall(g,.028,'#efe6f4',0,.585,0);
+      else{const brim=object(g,geo('cylinder',.075,.075,.012),mat('#588f9e',.8),0,.5,.075);brim.scale.z=.7;}
     }
     // Specific silhouettes communicate a role before the visitor even moves.
     // No billboard labels: their tools and clothing are physical geometry.
@@ -2939,6 +2965,19 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
   // cubes. Each axle has its own spinning rig, and taillights react to
   // braking. No point lights or heavyweight physics are allocated per car.
   function car(ref){
+    if(kit&&(ref.kind==='car'||ref.kind==='taxi'||ref.kind==='police')){
+      const g=new THREE.Group(),models=['car_sedan','car_hatchback','car_stationwagon'];
+      const name=ref.kind==='taxi'?'car_taxi':ref.kind==='police'?'car_police':models[Math.abs(Math.round((ref.ph||0)*97))%models.length];
+      // KayKit cars point along +Z; the town's vehicles drive along local +X.
+      const body=kitPlace(g,name,0,.071,0,{height:.36,rotY:Math.PI/2});
+      if(body){
+        const brakeMaterial=new THREE.MeshStandardMaterial({color:'#ab5c53',emissive:'#ed4938',emissiveIntensity:.07,roughness:.36});
+        const len=body.userData.size.z;
+        for(const zz of [-.08,.08])box(g,.012,.03,.045,brakeMaterial,-len/2-.004,.2,zz,false);
+        g.userData.vehicleRig={wheels:[],brakeMaterial,indicators:[]};
+        return g;
+      }
+    }
     const g=new THREE.Group(),col=ref.col||'#a0bfc7';
     const bus=ref.kind==='bus',taxi=ref.kind==='taxi';
     const len=bus?.78:.53,bodyHeight=bus?.25:.17;
@@ -3680,7 +3719,7 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
   renderer.domElement.addEventListener('webglcontextrestored',restored,false);
   const api={
     active:false,renderer,scene,camera,
-    getStats:()=>({frames,redrawCount,actors:actors.size,ambient:ambient.length,plazaLights:plazaLights.length,festoonBulbs:festoonBulbs.length,gardenElements,woodlandShapes,terrainContours,composedBuildings,districtGardenRooms,landmarks:landmarkCount,windowMaterials:windowMaterials.size,photographicLens:!!lens,pixelRatio,cameraProjection:'perspective',lens:lens?.stats?.()||null,buildings:town.buildings().length,webgl:true,frozen}),
+    getStats:()=>({frames,redrawCount,actors:actors.size,ambient:ambient.length,plazaLights:plazaLights.length,festoonBulbs:festoonBulbs.length,gardenElements,woodlandShapes,terrainContours,composedBuildings,districtGardenRooms,landmarks:landmarkCount,windowMaterials:windowMaterials.size,photographicLens:!!lens,pixelRatio,kitModels:kit?kit.size:0,cameraProjection:'perspective',lens:lens?.stats?.()||null,buildings:town.buildings().length,webgl:true,frozen}),
     // A stable actual GPU-rendered frame for visual regression screenshots.
     // Unlike stop(), freeze does not switch to the Canvas fallback.
     tap,tapResident,tapStats:()=>({...taps,effects:effects.length}),

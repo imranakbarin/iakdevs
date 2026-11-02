@@ -98,17 +98,23 @@ html.embedded #zoom-controls{display:none}
     Promise.all([
       import('three'),
       import('three/addons/geometries/RoundedBoxGeometry.js'),
-      import('./assets/toy-town-3d.js?v=46'),
+      import('./assets/toy-town-3d.js?v=47'),
       import('./assets/toy-town-landmarks.js?v=7'),
       // The photographed-miniature lens. Any failure here leaves plain 3D running.
       Promise.all(['EffectComposer','RenderPass','ShaderPass','UnrealBloomPass','OutputPass']
         .map(n => import(`three/addons/postprocessing/${n}.js`).catch(() => ({}))))
         .then(mods => import('./assets/toy-town-lens.js?v=4').then(lens => ({lens, addons: Object.assign({}, ...mods)})))
+        .catch(() => null),
+      // KayKit CC0 models (buildings, cars, trees, street props) in one file.
+      // Without them the town falls back to its hand-built geometry.
+      new URLSearchParams(location.search).has('nokit') ? null :
+      import('three/addons/loaders/GLTFLoader.js').then(({GLTFLoader}) => new Promise(resolve =>
+        new GLTFLoader().load('assets/kaykit/kaykit-town.glb?v=1', gltf => resolve(gltf.scene), undefined, () => resolve(null))))
         .catch(() => null)
-    ]).then(([THREE, geometry, view, landmarks, lensKit]) => {
+    ]).then(([THREE, geometry, view, landmarks, lensKit, kitScene]) => {
       const lensReady = lensKit && !new URLSearchParams(location.search).has('nolens') && lensKit.addons.EffectComposer && lensKit.addons.UnrealBloomPass;
       try { view.mountToyTown3D(THREE, geometry.RoundedBoxGeometry, ToyTown,
-        document.getElementById('town-3d'),{buildLandmark:landmarks.buildLandmark,
+        document.getElementById('town-3d'),{buildLandmark:landmarks.buildLandmark,kitScene,
           createLens: lensReady ? (r, sc, cam, o) => lensKit.lens.createLens(THREE, lensKit.addons, r, sc, cam, o) : null}); }
       catch (error) { console.warn('3D is unavailable; classic Toy Town remains active',error); }
     }).catch(error => console.warn('3D resources unavailable; using the 2D town',error));
