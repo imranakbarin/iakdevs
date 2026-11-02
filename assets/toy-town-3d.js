@@ -2464,7 +2464,7 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
     shootingStar.scale.set(2.4,.035,1);world.add(shootingStar);
   }
   function nightLife(dark,time){
-    for(const k of clouds)k.c.position.x=((k.x+time*k.speed+6)%30)-6;   // a slow drift, wrapping round
+    for(const k of clouds)k.c.position.x=((k.x+time*k.speed*(k.speedScale||1)+6)%30)-6;   // a slow drift, wrapping round (faster in wind)
     if(cinemaBeam){cinemaBeam.material.opacity=Math.max(0,dark-.2)*.16;for(const v of cinemaViewers)v.visible=dark>.3;
       if(cinemaScreen)cinemaScreen.material.color.set(dark>.3?'#ffffff':'#d8d8d8');}
     if(fireflies){
@@ -2547,14 +2547,17 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
   function roleOf(ref){
     if(ref.shopRole==='vendor')return ref.shopVenue==='bakery'?'baker':'bookseller';
     if(ref.districtWorker)return {garden:'gardener',post:'postie',art:'painter'}[ref.districtRole]||'greengrocer';
-    const kinds={chef:'chef',sweeper:'street sweeper',busker:'musician',newsie:'newspaper seller',farmer:'farmer',keeper:'zookeeper',robot:'robot'};
+    const kinds={chef:'chef',sweeper:'street sweeper',busker:'musician',newsie:'newspaper seller',farmer:'farmer',keeper:'zookeeper',robot:'robot',shopper:'shopper',neighbor:'neighbour'};
     if(kinds[ref.kind])return kinds[ref.kind];
     if(ref.kid)return 'schoolchild';if(ref.routine==='work'||ref.briefcase)return 'commuter';
     return ref.heroResident?'neighbour':'resident';
   }
   function doingOf(ref){
     const a={knocking:'knocking at the counter',ordering:'ordering',receiving:'being served',handoff:'being served',eating:'having lunch',reading:'reading',performing:'playing the guitar',serving:'serving a customer',offering:'serving a customer'}[ref.shopAction];
-    if(a)return a;if(ref.carrying)return 'heading off with '+({bread:'fresh bread',book:'a new book'}[ref.carrying]||ref.carrying);
+    if(a)return a;if(ref.shopAction==='visiting'&&ref.shopAt)return `on the way to the ${ref.shopAt==='bakery'?'bakery':'bookshop'}`;
+    if(ref.whim)return {bench:'resting on a bench',fountain:'at the fountain',park:'wandering in the park',chat:'having a chat',gather:'watching something'}[ref.whim]||'out and about';
+    if(ref.jogUntil)return 'out for a jog';
+    if(ref.carrying)return 'heading off with '+({bread:'fresh bread',book:'a new book'}[ref.carrying]||ref.carrying);
     if(ref.intent==='chat'||ref.intent==='greeting')return 'chatting';
     const r={home:'walking home',work:'off to work',school:'off to school',lunch:'going for lunch'}[ref.routine];if(r)return r;
     if(ref.sit)return 'sitting down';if(ref.dance)return 'dancing';
@@ -2564,6 +2567,9 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
   function hold(clientX,clientY){
     const person=actorAt(clientX,clientY,['person'],46);if(!person||!town.follow)return false;
     town.follow(person.ref);sound('chime');taps.follows=(taps.follows||0)+1;
+    ensureFollowCard();followNext=0;return true;
+  }
+  function ensureFollowCard(){
     if(typeof document!=='undefined'&&!followCard){
       followCard=document.createElement('div');followCard.className='follow-card';
       followCard.style.cssText='position:fixed;left:14px;bottom:calc(52px + env(safe-area-inset-bottom,0px));z-index:4;display:flex;gap:10px;align-items:center;max-width:min(320px,calc(100vw - 28px));padding:9px 10px 9px 14px;border-radius:14px;background:rgba(255,253,245,.95);box-shadow:0 6px 20px rgba(30,50,70,.18);font:500 13px/1.35 Nunito,system-ui,sans-serif;color:#2d3440';
@@ -2573,7 +2579,136 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
       stop.onclick=()=>town.follow(null);
       followCard.append(text,stop);document.body.appendChild(followCard);
     }
-    followNext=0;return true;
+  }
+  /* ---- Moments: when something worth watching starts, one chip offers to
+     show it. Nothing moves until "Watch" is tapped (the owner dislikes camera
+     moves they did not ask for). Watching glides close and follows to the end
+     — the follow card narrates — then returns to where the view was. */
+  let momentChip=null,offered=null,watching=null,momentCooldown=0,lastSeen=new WeakMap(),seenEvents=new WeakSet(),momentScan=0;
+  const momentStats={offered:0,watched:0};
+  const EVENT_MOMENTS={band:['🎺','The marching band is out'],busker:['🎸','A street musician is playing'],kite:['🪁','Kite flying in the park'],balloon:['🎈','A balloon is drifting away'],
+    picnic:['🧺','A picnic in the park'],painter:['🎨','A painter has set up an easel'],hotair:['🎈','A hot air balloon is going over'],icecream:['🍦','The ice cream van is here'],duck:['🦆','The giant rubber duck!']};
+  function offerMoment(m){
+    const now=clockMs();
+    if(offered||watching||(town.following&&town.following())||now<momentCooldown||typeof document==='undefined')return;
+    offered=Object.assign(m,{offeredAt:now});momentStats.offered++;
+    if(!momentChip){
+      momentChip=document.createElement('div');momentChip.className='moment-chip';momentChip.setAttribute('role','status');
+      momentChip.style.cssText='position:fixed;left:50%;transform:translateX(-50%);bottom:calc(52px + env(safe-area-inset-bottom,0px));z-index:4;display:flex;gap:10px;align-items:center;max-width:calc(100vw - 28px);padding:7px 7px 7px 14px;border-radius:999px;background:rgba(255,253,245,.96);box-shadow:0 6px 20px rgba(30,50,70,.2);font:500 13px/1.3 Nunito,system-ui,sans-serif;color:#2d3440;transition:opacity .4s';
+      const text=document.createElement('span');text.className='moment-text';
+      const go=document.createElement('button');go.type='button';go.textContent='Watch';
+      go.style.cssText='border:0;border-radius:999px;padding:6px 13px;background:#235d61;color:#fff;font:600 12.5px Nunito,system-ui;cursor:pointer';
+      go.onclick=()=>{if(offered)watchMoment(offered);};
+      momentChip.append(text,go);document.body.appendChild(momentChip);
+    }
+    momentChip.firstChild.textContent=`${m.emoji} ${m.text}`;momentChip.style.display='flex';momentChip.style.opacity='1';
+  }
+  function hideChip(){if(momentChip){momentChip.style.opacity='0';setTimeout(()=>{if(!offered&&momentChip)momentChip.style.display='none';},400);}offered=null;momentCooldown=clockMs()+20000;}
+  function watchMoment(m){
+    hideChip();momentStats.watched++;
+    watching=Object.assign(m,{started:clockMs(),home:town.view?town.view():null});
+    if(m.ref&&town.follow){town.follow(m.ref,3);ensureFollowCard();followNext=0;}
+    else if(town.viewTo){const p=m.at();town.viewTo(p.x,p.z,2.9);watching.lastSet=town.view();}
+    sound('chime');
+  }
+  function endWatch(restore){
+    const w=watching;watching=null;if(!w)return;
+    if(town.follow)town.follow(null);
+    if(restore&&w.home&&town.viewTo)town.viewTo(w.home.x,w.home.y,w.home.z);
+  }
+  function updateMoments(){
+    const now=clockMs();
+    if(offered&&now-offered.offeredAt>9000)hideChip();
+    if(watching){
+      const w=watching,elapsed=(now-w.started)/1000;
+      if(w.ref){
+        const gone=!town.movers().includes(w.ref);
+        if(gone||w.done?.(w,elapsed)||elapsed>w.max){endWatch(true);return;}
+        if(!town.following())  {watching=null;return;}                 // the viewer dragged away: they are in charge now
+      }else{
+        const v=town.view();if(w.lastSet&&Math.hypot(v.x-w.lastSet.x,v.y-w.lastSet.y)>.05){watching=null;return;}
+        if(elapsed>w.max||w.done?.(w,elapsed)){endWatch(true);return;}
+        const p=w.at();watching.lastSet=town.viewTo(p.x,p.z);
+      }
+      return;
+    }
+    if(now<momentScan)return;momentScan=now+400;
+    for(const ref of town.movers()){
+      const prev=lastSeen.get(ref);
+      const key=`${ref.shopAction}|${ref.routine}|${ref.guitar?'g':''}`;
+      if(prev!==undefined&&prev!==key){
+        if(ref.shopRole==='customer'&&ref.shopAction==='visiting')
+          offerMoment({emoji:ref.shopAt==='bakery'?'🥖':'📚',text:`${nameOf(ref)} is off to buy ${ref.shopAt==='bakery'?'bread':'a book'}`,ref,max:45,
+            done:(w,t)=>{if(ref.shopAction==='carrying'){w.carryAt=w.carryAt||t;return t-w.carryAt>5;}return false;}});
+        else if(ref.shopAction==='performing'&&!/performing/.test(prev))offerMoment({emoji:'🎸',text:'A street concert is starting',ref,max:20,done:()=>ref.shopAction!=='performing'});
+      }
+      if(prev===undefined&&ref.routine==='school')offerMoment({emoji:'🎒',text:`${nameOf(ref)} is off to school`,ref,max:40});
+      if(prev===undefined&&ref.routine==='home')offerMoment({emoji:'🏠',text:`${nameOf(ref)} is walking home`,ref,max:45});
+      lastSeen.set(ref,key);
+    }
+    for(const e of town.events?.()||[]){
+      if(seenEvents.has(e))continue;seenEvents.add(e);
+      const look=EVENT_MOMENTS[e.name];if(!look)continue;
+      const who=e.follow&&town.movers().includes(e.follow)?e.follow:null;
+      offerMoment(who?{emoji:look[0],text:look[1],ref:who,max:Math.min(30,e.dur||20)}:{emoji:look[0],text:look[1],at:()=>({x:e.x,z:e.y}),max:Math.min(24,e.dur||16),done:()=>!town.events().includes(e)});
+    }
+  }
+  /* ---- Weather from ToyTownWeather (Open-Meteo near you, or ?weather=):
+     rain streaks and umbrellas, drifting snow with a white dusting, fog,
+     storm flashes, and the sun dimmed under cloud. */
+  let weatherKind='clear',precip=null,dusting=null,flashUntil=0,nextFlash=0;
+  const weatherState=()=>(typeof window!=='undefined'&&window.ToyTownWeather?.state)||{kind:'clear'};
+  const SUN_UNDER={clear:1,cloud:.72,fog:.7,rain:.55,snow:.8,storm:.42};
+  function setupPrecip(kind){
+    if(precip){precip.parent?.remove(precip);precip=null;}
+    if(dusting){dusting.parent?.remove(dusting);dusting=null;}
+    if(!THREE.BufferGeometry||!THREE.BufferAttribute)return;
+    if(kind==='rain'||kind==='storm'){
+      const n=700,pos=new Float32Array(n*6);
+      for(let i=0;i<n;i++){const x=Math.random()*20-1,y=Math.random()*7,z=Math.random()*20-1;pos.set([x,y,z,x-.03,y-.32,z],i*6);}
+      const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.BufferAttribute(pos,3));
+      precip=new THREE.LineSegments(g,new THREE.LineBasicMaterial({color:'#cfe0ee',transparent:true,opacity:.42}));
+      precip.userData.kind='rain';world.add(precip);
+    }else if(kind==='snow'){
+      const n=650,pos=new Float32Array(n*3);
+      for(let i=0;i<n;i++)pos.set([Math.random()*20-1,Math.random()*7,Math.random()*20-1],i*3);
+      const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.BufferAttribute(pos,3));
+      precip=new THREE.Points(g,new THREE.PointsMaterial({color:'#ffffff',size:.11,transparent:true,opacity:.92}));
+      precip.userData.kind='snow';world.add(precip);
+      dusting=new THREE.Mesh(geo('plane',18.4,18.4),new THREE.MeshBasicMaterial({color:'#ffffff',transparent:true,opacity:.22,depthWrite:false}));
+      dusting.rotation.x=-Math.PI/2;dusting.position.set(9,.2,9);world.add(dusting);
+    }
+  }
+  function umbrellaFor(group,ref){
+    const limbs=group.userData.limbs;if(!limbs)return null;
+    const u=new THREE.Group();u.position.set(.06,.62,0);limbs.upperBody.add(u);
+    cylinder(u,.006,.006,.3,'#4a4f5a',0,-.08,0);
+    const canopy=object(u,geo('hairshell',.155),mat(['#e2463a','#3f78c9','#ffb020','#5aa469','#c97fc0'][Math.abs(Math.round((ref.ph||0)*10))%5],.7),0,.07,0,false);
+    canopy.scale.y=.55;group.userData.umbrella=u;return u;
+  }
+  function updateWeather(dt){
+    const w=weatherState(),kind=w.kind||'clear';
+    if(kind!==weatherKind||(!precip&&(kind==='rain'||kind==='storm'||kind==='snow'))){weatherKind=kind;setupPrecip(kind);}
+    const wet=kind==='rain'||kind==='storm';
+    for(const [ref,item] of actors){
+      if(item.kind!=='person')continue;
+      let u=item.group.userData.umbrella;
+      if(wet&&!u&&!ref.shopRole&&!ref.guitar)u=umbrellaFor(item.group,ref);
+      if(u)u.visible=wet;
+    }
+    if(precip){
+      const pos=precip.geometry.attributes.position,a=pos.array,fall=precip.userData.kind==='rain'?7.5*dt:.55*dt,drift=(w.windy?.5:.12)*dt;
+      const step=precip.userData.kind==='rain'?6:3;
+      for(let i=0;i<a.length;i+=step){
+        a[i+1]-=fall;a[i]+=drift;
+        if(step===6){a[i+4]-=fall;a[i+3]+=drift;}
+        else a[i]+=Math.sin(sceneClock*.8+i)*.004;
+        if(a[i+1]<.18){const x=Math.random()*20-1,z=Math.random()*20-1;a[i]=x;a[i+1]=7;a[i+2]=z;if(step===6){a[i+3]=x-.03;a[i+4]=6.68;a[i+5]=z;}}
+      }
+      pos.needsUpdate=true;
+    }
+    if(kind==='storm'){const now=clockMs();if(now>nextFlash){flashUntil=now+120;nextFlash=now+6000+Math.random()*9000;sound('rumble');}}
+    for(const k of clouds)k.speedScale=w.windy?3:1;
   }
   function updateFollowCard(){
     if(!followCard)return;
@@ -2603,6 +2738,7 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
     // Everyone close by turns to look, and the nearest few cheer.
     const near=[...actors].filter(([ref,item])=>item.kind==='person'&&Math.hypot(ref.x-x,ref.y-z)<2.4).sort((a,b)=>Math.hypot(a[0].x-x,a[0].y-z)-Math.hypot(b[0].x-x,b[0].y-z));
     near.forEach(([ref],i)=>{ref.lookAt={x,y:z};ref.lookUntil=now+3.2;if(i<4){ref.cheerUntil=now+2.4;}});
+    town.gather?.(x,z);   // and the nearest walkers come over to see
     const kind=['balloons','birds','confetti'][Math.floor(Math.random()*3)],parts=[];
     sound(kind==='birds'?'chirp':'pop');
     if(kind==='balloons'){
@@ -2685,6 +2821,7 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
     const [x,z]=clear[Math.floor(Math.random()*clear.length)],pod=timePod(),who=visitor(o.year);
     pod.position.set(x,6,z);who.position.set(x+.32,.17,z+.22);who.visible=false;world.add(pod,who);
     timeVisit={o,pod,who,t:0,x,z,said:0};
+    offerMoment({emoji:'⏳',text:`A visitor from ${o.year} is landing`,at:()=>({x,z}),max:26,done:()=>!timeVisit});
   }
   function updateVisit(dt){
     if(!timeVisit){if(onThisDay.length&&sceneClock>nextVisit){startVisit();nextVisit=sceneClock+150+Math.random()*90;}return;}
@@ -2722,6 +2859,7 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
     const doors=facing(line).map(b=>({x:b.x+.5,z:b.y+.98,done:false}));
     const g=rider();g.position.set(1.4,.17,line+.5+.28);world.add(g);
     round={g,line,doors,flying:[],x:1.4};
+    offerMoment({emoji:'📰',text:'The paper round has started',at:()=>({x:round?round.x:9,z:line+.8}),max:30,done:()=>!round});
   }
   function updateRound(dt,dark){
     if(dark>.5)wasNight=true;
@@ -2779,7 +2917,7 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
     porchLamps.push({b,glass});
   }
   function rebuild(){
-    timeVisit=null;round=null;papers=[];effects=[];porchLamps.length=0;
+    timeVisit=null;round=null;papers=[];effects=[];porchLamps.length=0;precip=null;dusting=null;weatherKind='';
     ambient.length = 0; plazaLights.length = 0; festoonBulbs.length = 0;
     windowMaterials.clear();
     gardenElements = 0; woodlandShapes = 0; terrainContours = 0; composedBuildings = 0; districtGardenRooms = 0; landmarkCount = 0;
@@ -3705,6 +3843,8 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
     sun.color.set(tint('#ffd7a4','#ee9c70',dusk));
     rim.color.set(tint('#c0dedb','#a8b6cb',dusk));
     for(const lantern of plazaLights)lantern.intensity=dark*7.2;
+    {const under=SUN_UNDER[weatherKind]??1;sun.intensity*=under;hemisphere.intensity*=.82+under*.18;
+     if(clockMs()<flashUntil){hemisphere.intensity+=2.6;}}
     for(const p of porchLamps)p.glass.emissiveIntensity=p.b.home&&dark>.25?2.4:.05;   // lights on once someone is home
     for(const pool of lanternPools)pool.material.opacity=Math.min(1,Math.max(0,dark-.12)*1.3);
     lanternGlass.emissiveIntensity=.1+dark*4.2;
@@ -3713,7 +3853,8 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
       pane.emissiveIntensity=(pane.userData?.warm?.12:.04)+
         dark*(pane.userData?.warm?1.02:.66);
     }
-    scene.background.set(tint('#cee9f5','#91a9c5',dusk));
+    {const sky=tint('#cee9f5','#91a9c5',dusk),grey=(SUN_UNDER[weatherKind]??1)<.9;   // an overcast sky under rain, storm, fog or snow
+     scene.background.set(grey?tint(sky,weatherKind==='snow'?'#dfe4ea':'#9aa3ab',weatherKind==='storm'?.6:.42):sky);}
     scene.fog.color.copy(scene.background);
     renderer.toneMappingExposure=.98-dark*.12;
     lens?.setDusk(dark);
@@ -3772,6 +3913,8 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
     // diorama clear at its focus depth, allowing haze only beyond it.
     scene.fog.near=Math.max(18,distance*.86);
     scene.fog.far=Math.max(90,distance*3.2);   // only the farthest edge softens; no haze over the town
+    if(weatherKind==='fog'){scene.fog.near=distance*.55;scene.fog.far=distance*1.6;}
+    else if(weatherKind==='rain'||weatherKind==='storm'){scene.fog.far=Math.max(60,distance*2.3);}
     camera.updateProjectionMatrix();
   }
   // Keep the frame rate: if drawing a frame takes too long for a while, lower the
@@ -3808,7 +3951,7 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
       resize();
       const state=town.debug();
       if(worldBuildings!==town.buildings()||worldSeed!==state.seed)rebuild();
-      syncActors();syncCamera();light(state.night||0);nightLife(state.night||0,state.clock||0);updateFollowCard();
+      syncActors();syncCamera();light(state.night||0);nightLife(state.night||0,state.clock||0);updateFollowCard();updateMoments();updateWeather(1/45);
       // Driven by the town's own clock, so they pause with the town.
       {const now=state.clock||0;const dt=lastClockAt===null?0:THREE.MathUtils.clamp(now-lastClockAt,0,.1);lastClockAt=now;sceneClock+=dt;
        updateVisit(dt);updateRound(dt,state.night||0);updateEffects(dt);}
@@ -3840,6 +3983,8 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
     getStats:()=>({frames,redrawCount,actors:actors.size,ambient:ambient.length,plazaLights:plazaLights.length,festoonBulbs:festoonBulbs.length,gardenElements,woodlandShapes,terrainContours,composedBuildings,districtGardenRooms,landmarks:landmarkCount,windowMaterials:windowMaterials.size,photographicLens:!!lens,pixelRatio,kitModels:kit?kit.size:0,cameraProjection:'perspective',lens:lens?.stats?.()||null,buildings:town.buildings().length,webgl:true,frozen}),
     // A stable actual GPU-rendered frame for visual regression screenshots.
     // Unlike stop(), freeze does not switch to the Canvas fallback.
+    weather:()=>({kind:weatherKind,precip:precip?precip.userData.kind:null,umbrellas:[...actors.values()].filter(i=>i.group.userData.umbrella?.visible).length}),
+    momentStats:()=>({...momentStats,offered:momentStats.offered,showing:!!offered,watching:!!watching}),watchOffered:()=>{if(offered){watchMoment(offered);return true;}return false;},
     tap,hold,tapResident,tapStats:()=>({...taps,effects:effects.length}),
     surpriseAt:(x,z,seconds=0)=>{surprise(x,z);for(let t=0;t<seconds;t+=.05)updateEffects(.05);return effects.length;},
     // Test hooks: start the visitor or the paper round now.

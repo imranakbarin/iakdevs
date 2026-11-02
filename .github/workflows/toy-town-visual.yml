@@ -8,6 +8,7 @@ on:
       - 'assets/toy-town-landmarks.js'
       - 'assets/toy-town-lens.js'
       - 'assets/toy-town-sound.js'
+      - 'assets/toy-town-weather.js'
       - 'assets/kaykit/**'
       - 'tests/toy-town-lens.test.cjs'
       - 'tests/toy-town-extras.test.cjs'

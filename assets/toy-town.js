@@ -819,11 +819,19 @@ const ToyTown = (() => {
     if(request<=0)return 0;
     const here=vehiclePoint(m);
     let allowed=request;
+    // Two cars that end up nose to flank in a junction each see the other "in
+    // front" and would wait forever. One that has run out of patience may edge
+    // out past crossing traffic; it never closes on traffic going its own way.
+    const pushing=clock<(m.patienceUntil||0);
     for(const o of movers){
       if(o===m||o.type!=='car')continue;
+      if(pushing&&(o.d<2)!==(m.d<2))continue;
       const other=vehiclePoint(o);
       const rx=other.x-here.x,ry=other.y-here.y;
       const front=rx*ux+ry*uy,side=Math.abs(rx*uy-ry*ux);
+      // Two vehicles on the very same spot (after a U-turn or a spawn) would
+      // each see the other "in front" forever: the earlier one goes first.
+      if(Math.abs(front)<.06&&side<.12&&movers.indexOf(o)>movers.indexOf(m))continue;
       const gap=vehicleClearance(m,o,ux,uy);
       if(front>-.02&&side<gap.side&&front<request+gap.front+.20){
         allowed=Math.min(allowed,Math.max(0,front-gap.front));
@@ -892,8 +900,9 @@ const ToyTown = (() => {
     }
     const [dx, dy] = DIRS[m.d];
     let want = m.max;
+    const patient = clock < (m.patienceUntil || 0);   // out of patience: stop yielding (never stop avoiding a collision)
     if (m.type === 'car') {   // keep a gap to whatever is ahead in the lane, and stop for red lights
-      for (const o of movers) if (o !== m && o.type === 'car' && o.d === m.d) {
+      for (const o of movers) if (!patient && o !== m && o.type === 'car' && o.d === m.d) {
         const p=vehiclePoint(m),q=vehiclePoint(o);
         const ahead=(q.x-p.x)*dx+(q.y-p.y)*dy;
         const side=Math.abs((q.x-p.x)*dy-(q.y-p.y)*dx);
@@ -935,7 +944,7 @@ const ToyTown = (() => {
         const crossing=line+.5;
         const approach=(crossing-pos)*sign;
         if(approach<=-.15||approach>=1.75)continue;
-        const occupied=movers.some(o=>{
+        const occupied=!patient&&movers.some(o=>{
           if(o===m||o.type!=='car'||o.path||(o.d<2)===(m.d<2))
             return false;
           const otherFixed=axis==='x'?o.x:o.y;
@@ -966,7 +975,7 @@ const ToyTown = (() => {
     }
     if(m.type==='person'&&!m.path&&m.max>.05){
       // Personal space: a pedestrian naturally eases behind another walker.
-      for(const o of movers)if(o!==m&&o.type==='person'&&!o.path){
+      for(const o of movers)if(!patient&&o!==m&&o.type==='person'&&!o.path){
         const ahead=(o.x-m.x)*dx+(o.y-m.y)*dy;
         const lateral=Math.abs((o.x-m.x)*dy-(o.y-m.y)*dx);
         if(ahead>.03&&ahead<.40&&lateral<.16)
@@ -2138,13 +2147,88 @@ const ToyTown = (() => {
     }
   }
   let greetings = 0;
+  /* Whims: now and then a free walker does something of their own instead of
+     just walking the pavement: sits on a bench, visits the fountain (and may
+     toss a coin), wanders into the park to look around, stops for a chat with a
+     passer-by, or breaks into a jog. Afterwards they walk back to the street. */
+  let whims = {bench: 0, fountain: 0, park: 0, chat: 0, jog: 0, gather: 0};
+  const freeWalker = m => m.type === 'person' && !m.kind && !m.heroResident && !m.shopRole && !m.routine && !m.path && !m.busy && !m.sit && !(m.stopUntil && clock < m.stopUntil);
+  const nearestRoad = (x, y) => { const lx = LINES.reduce((a, l) => Math.abs(l + .5 - x) < Math.abs(a - x) ? l + .5 : a, LINES[0] + .5), ly = LINES.reduce((a, l) => Math.abs(l + .5 - y) < Math.abs(a - y) ? l + .5 : a, LINES[0] + .5);
+    return Math.abs(lx - x) < Math.abs(ly - y) ? {x: lx, y: clamp(1.6, y, 16.4), d: Math.random() < .5 ? 2 : 3} : {x: clamp(1.6, x, 16.4), y: ly, d: Math.random() < .5 ? 0 : 1}; };
+  function whimTo(m, x, y, dwell, onArrive, kind) {
+    m.busy = true; m.whim = kind; whims[kind]++;
+    m.path = route(m.x, m.y, x, y, m.max).concat([{x, y, speed: Math.min(.45, m.max), then: q => { q.stopUntil = clock + dwell; q.whimUntil = clock + dwell; if (onArrive) onArrive(q); }}]);
+  }
+  function endWhim(m) {
+    m.sit = false; m.attention = null; m.intent = 'walking'; m.whimUntil = 0; m.whim = null;
+    const r = nearestRoad(m.x, m.y);
+    m.path = [{x: r.x, y: r.y, speed: .4, then: q => { q.busy = false; q.d = r.d; }}];
+  }
+  function updateWhims() {
+    for (const m of movers) if (m.whimUntil && clock > m.whimUntil && !m.path) endWhim(m);
+    for (const m of movers) if (m.jogUntil && clock > m.jogUntil) { m.max = m.walkMax || m.max; m.gait = m.walkGait || m.gait; m.jogUntil = 0; }
+    if (clock < (updateWhims.next || 0)) return;
+    updateWhims.next = clock + 1.5 + Math.random() * 2.5;
+    const free = movers.filter(freeWalker); if (!free.length || movers.filter(m => m.whim).length >= 5) return;
+    const m = free[Math.random() * free.length | 0], roll = Math.random();
+    const benches = props.filter(p => p.kind === 'bench' || p.kind === 'hero-bench').filter(p => Math.hypot(p.x - m.x, p.y - m.y) < 5);
+    const fountain = props.find(p => p.kind === 'fountain' && Math.hypot(p.x - m.x, p.y - m.y) < 6);
+    if (roll < .22 && benches.length) { const b = benches[Math.random() * benches.length | 0]; whimTo(m, b.x, b.y + .05, 7 + Math.random() * 8, q => { q.sit = true; }, 'bench'); }
+    else if (roll < .38 && fountain) { const a = Math.random() * TAU; whimTo(m, fountain.x + Math.cos(a) * .7, fountain.y + Math.sin(a) * .7, 5 + Math.random() * 3, q => { q.attention = {x: fountain.x, y: fountain.y}; if (Math.random() < .4) { q.cheerUntil = clock + 1; say(q, 'Make a wish!', 2); } }, 'fountain'); }
+    else if (roll < .55) { const spots = []; for (let y = 2; y < 16; y++) for (let x = 2; x < 16; x++) if (tile(x, y) && tile(x, y).kind === 'park' && !tile(x, y).used) spots.push([x + .3 + Math.random() * .4, y + .3 + Math.random() * .4]);
+      const near = spots.filter(([x, y]) => Math.hypot(x - m.x, y - m.y) < 5); if (near.length) { const [x, y] = near[Math.random() * near.length | 0]; whimTo(m, x, y, 3 + Math.random() * 4, q => { q.lookAt = {x: x + Math.random() * 2 - 1, y: y + Math.random() * 2 - 1}; q.lookUntil = clock + 4; }, 'park'); } }
+    else if (roll < .78) { const o = free.find(o => o !== m && Math.hypot(o.x - m.x, o.y - m.y) < 1.4);
+      if (o) { const dur = 6 + Math.random() * 4; for (const [a, b] of [[m, o], [o, m]]) { a.stopUntil = clock + dur; a.whimUntil = clock + dur; a.whim = 'chat'; a.busy = true; a.intent = 'chat'; a.attention = {x: b.x, y: b.y}; }
+        m.waveUntil = clock + 1.2; whims.chat++; } }
+    else if (!m.jogUntil) { m.walkMax = m.max; m.walkGait = m.gait; m.max = .95; m.gait = 'brisk'; m.jogUntil = clock + 10 + Math.random() * 8; whims.jog++; }
+  }
+  // A tap on open ground in 3D: the nearest few walkers come over to see.
+  function gather(x, y) {
+    const near = movers.filter(freeWalker).map(m => [m, Math.hypot(m.x - x, m.y - y)]).filter(([, d]) => d < 3.6).sort((a, b) => a[1] - b[1]).slice(0, 4);
+    near.forEach(([m], i) => { const a = i * TAU / 4 + .6; whimTo(m, x + Math.cos(a) * .55, y + Math.sin(a) * .55, 4.5, q => { q.attention = {x, y}; q.cheerUntil = clock + 1.4; }, 'gather'); });
+    return near.length;
+  }
+  /* Nobody stays stuck. A mover that has not moved for a while although its
+     own light is green (or there is no light to wait for) first runs out of
+     patience and stops yielding for a moment; if that does not free it, it
+     turns round; and if it is still stuck it leaves town, and a fresh car or
+     walker arrives in its place. Deliberate stops never count. */
+  let unstuck = {patience: 0, turned: 0, left: 0};
+  function unstick(dt) {
+    const phase = lightPhase();
+    for (const m of movers.slice()) {
+      if (m.path || m.max === 0 || m.sit || m.shopRole || m.heroResident || (m.stopUntil && clock < m.stopUntil) || clock < (m.observeUntil || 0)) { m.stuckT = 0; continue; }
+      if (m.type !== 'car' && m.type !== 'person') continue;
+      const axis = m.d < 2 ? 'x' : 'y', red = phase.green !== axis || phase.amber;
+      const nearLight = LINES.some(l => { const d = ((l + .5) - (m.d < 2 ? m.x : m.y)) * (m.d === 0 || m.d === 2 ? 1 : -1); return d > 0 && d < 1; });
+      // Only the front of a queue counts: the ones behind simply wait their turn.
+      const [qx, qy] = DIRS[m.d], reach = m.type === 'car' ? 1.0 : .45;
+      const queued = movers.some(o => o !== m && o.type === m.type && o.d === m.d && !o.path && (() => { const a = (o.x - m.x) * qx + (o.y - m.y) * qy, side = Math.abs((o.x - m.x) * qy - (o.y - m.y) * qx); return a > 0 && a < reach && side < .3; })());
+      if (queued) { m.stuckT = 0; m.anchorT = undefined; continue; }
+      // Progress is judged over a whole second, so a crawl of a few millimetres still counts as stuck.
+      if (m.anchorT === undefined || clock - m.anchorT > 1) {
+        const moved = m.anchorT === undefined ? 1 : Math.hypot(m.x - m.ax, m.y - m.ay);
+        m.ax = m.x; m.ay = m.y; m.anchorT = clock;
+        if (moved > .05 || (red && nearLight)) m.stuckT = 0; else m.stuckT = (m.stuckT || 0) + 1;
+      }
+      if (m.stuckT < 3) continue;
+      m.stuckT = 0; m.unstickCount = (m.unstickCount || 0) + 1;
+      if (clock - (m.lastUnstick || 0) > 30) m.unstickCount = 1;
+      m.lastUnstick = clock;
+      if (m.unstickCount === 1) { m.patienceUntil = clock + 2.5; unstuck.patience++; }
+      else if (m.unstickCount === 2) { m.d ^= 1; m.v = 0; m.patienceUntil = clock + 2.5; unstuck.turned++; }
+      else { remove(m); unstuck.left++; }
+    }
+  }
   // Crumbs tossed on the river (a tap on the water in 3D).
   let crumbs = null;
   function feedDucks(x, y) { crumbs = {x: clamp(.5, x, 17.5), y: clamp(13.15, y, 14.85), until: clock + 14}; tick('Someone is feeding the ducks. They are very pleased about it.'); return crumbs; }
   // Following a resident: the camera keeps them centred until they leave town
   // or the map is dragged.
   let followRef = null;
-  function follow(m) { followRef = m && movers.includes(m) ? m : null; if (followRef && cam.tz < 1.7) cam.tz = clamp(MIN_ZOOM, 1.9, MAX_ZOOM); return followRef; }
+  // Glide the camera to a spot and zoom (used by Moments to watch, then to return).
+  function viewTo(x, y, z) { followRef = null; cam.tx = clamp(1.1, x, N - 1.1); cam.ty = clamp(1.1, y, N - 1.1); if (z) cam.tz = clamp(MIN_ZOOM, z, MAX_ZOOM); return {x: cam.tx, y: cam.ty, z: cam.tz}; }
+  function follow(m, zoom = 2.6) { followRef = m && movers.includes(m) ? m : null; if (followRef && cam.tz < zoom) cam.tz = clamp(MIN_ZOOM, zoom, MAX_ZOOM); return followRef; }   // ~3 frames a person close up in 3D
   /* ---------------- a day in the life ----------------
      The town clock gives an hour of day (noon when it is brightest, midnight
      at the darkest). Morning: commuters with briefcases leave their homes for
@@ -2214,6 +2298,8 @@ const ToyTown = (() => {
     updateDistrictLife();
     for (const m of movers.slice()) { step(m, dt); easeHeading(m, dt); updateHeroResident(m); }
     passingGreetings();
+    updateWhims();
+    unstick(dt);
     updateRoutines(); finishRoutines();
     for (const e of events.slice()) { e.t += dt; if (e.follow) { e.x = e.follow.x; e.y = e.follow.y; } if (e.update) e.update(e, dt); if (e.t > e.dur) { if (e.end) e.end.call(e); events.splice(events.indexOf(e), 1); } }
     for (const m of movers.slice()) if (m.home && !m.path) remove(m);
@@ -2595,7 +2681,7 @@ const ToyTown = (() => {
     addEventListener('hashchange', () => location.reload());
     start();
   }
-  return {follow, following: () => followRef, feedDucks, layout, render, zoomAt, resetView, fitView, pinchTo, screenWorld, streetMoment, reactToNews, hero: () => town.blocks.find(b => b.hero), TALK, nameOf, headline, dateKey, CALM, lightPhase, themeFromNews, newsThemes, VARIANTS, VARIANT_EVENTS: () => Object.keys(VARIANT_EVENTS), decorate, setToday: l => { today_ = l; }, PACE, THEMES, GRIM, build, update, events: () => events, movers: () => movers, buildings: () => buildings, props: () => props, startEvent, randomEvent, setPlaying: v => { playing = v; }, debug: () => ({clock, theme, seed, greetings, hour: hourOfDay(), daypart, routines: {...routine}, night: nightLevel(), cam: {...cam}, fitZoom, streetMoments,communityEncounters,communityVisits,streetTransactions,streetShopVisits,newsReactions,streetPerformances,
+  return {gather, viewTo, view: () => ({x: cam.tx, y: cam.ty, z: cam.tz}), follow, following: () => followRef, feedDucks, layout, render, zoomAt, resetView, fitView, pinchTo, screenWorld, streetMoment, reactToNews, hero: () => town.blocks.find(b => b.hero), TALK, nameOf, headline, dateKey, CALM, lightPhase, themeFromNews, newsThemes, VARIANTS, VARIANT_EVENTS: () => Object.keys(VARIANT_EVENTS), decorate, setToday: l => { today_ = l; }, PACE, THEMES, GRIM, build, update, events: () => events, movers: () => movers, buildings: () => buildings, props: () => props, startEvent, randomEvent, setPlaying: v => { playing = v; }, debug: () => ({clock, theme, seed, greetings, whims: {...whims}, unstuck: {...unstuck}, hour: hourOfDay(), daypart, routines: {...routine}, night: nightLevel(), cam: {...cam}, fitZoom, streetMoments,communityEncounters,communityVisits,streetTransactions,streetShopVisits,newsReactions,streetPerformances,
     districts:{count:districts.length,visits:districtVisits,
       meetings:districtMeetings,tasks:districtTasks,
       areas:districts.map(a=>({role:a.role,block:a.block,
