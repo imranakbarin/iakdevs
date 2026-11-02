@@ -156,16 +156,16 @@ assert.match(moduleCode,/eye.scale.y=blink/,'eyelids blink without a separate an
 assert.match(html,/type="importmap"/);
 assert.match(html,/three@0\.187\.0\/build\/three\.module\.js/);
 assert.match(html,/three@0\.187\.0\/examples\/jsm\//);
-assert.match(html,/toy-town-3d\.js\?v=53/);
+assert.match(html,/toy-town-3d\.js\?v=54/);
 assert.match(html,/toy-town-landmarks\.js\?v=7/,'the independent models are requested alongside Three');
 assert.match(html,/buildLandmark:landmarks\.buildLandmark/,
   'loader injects the authored model builder into the 3D simulation');
-assert.match(html,/toy-town\.js\?v=35/);
+assert.match(html,/toy-town\.js\?v=36/);
 const classicScript=html.match(/src="assets\/toy-town\.js\?v=\d+"/);
 assert.ok(classicScript&&
   html.indexOf(classicScript[0])<html.indexOf("import('three')"),
   'the actual versioned classic script always loads before WebGL');
-assert.match(page,/toy-town\.html\?v=63&embed=1/);
+assert.match(page,/toy-town\.html\?v=64&embed=1/);
 assert.match(fs.readFileSync(path.join(root,'assets/toy-town.js'),'utf8'),
   /targetX=clamp\(\.08,p\.x,17\.92\)/,
   'scripted paths are clamped at the endpoint rather than freezing outside town');
@@ -210,7 +210,7 @@ class Geometry {constructor(){stats.geometry++;}translate(){return this;}rotateX
 class Material {constructor(o){Object.assign(this,o);this.emissive=new C(o.emissive||'#000');}}
 class Mesh extends O {constructor(g,m){super();this.geometry=g;this.material=m;}}
 class InstancedMesh extends Mesh {
-  constructor(g,m,count){super(g,m);this.count=count;this.matrices=[];this.colors=[];
+  constructor(g,m,count){super(g,m);this.count=count;this.matrices=[];this.colors=[];this.instanceMatrix={needsUpdate:false};
     stats.instances+=count;stats.instancedGroups++;}
   setMatrixAt(i,m){this.matrices[i]=m;}
   setColorAt(i,c){this.colors[i]=c;}
@@ -225,7 +225,7 @@ class Renderer {
   render(){stats.renders++;if(this.throwOnRender)throw Error('GPU render failed');}
   dispose(){stats.dispose++;}
 }
-class Shape {constructor(){this.holes=[];}moveTo(){}lineTo(){stats.profileVertices++;}quadraticCurveTo(){stats.profileVertices++;}closePath(){}}
+class Shape {constructor(){this.holes=[];}moveTo(){}absarc(){stats.profileVertices++;}absellipse(){stats.profileVertices++;}lineTo(){stats.profileVertices++;}quadraticCurveTo(){stats.profileVertices++;}closePath(){}}
 class Path extends Shape {}
 class Vector2 extends V {}
 class Vector3 extends V {}
@@ -239,7 +239,7 @@ const THREE={
  PointLight:class extends O {constructor(){super();this.isPointLight=true;this.intensity=0;}},
  MeshStandardMaterial:Material,MeshBasicMaterial:Material,
  Mesh,BoxGeometry:Geometry,SphereGeometry:Geometry,IcosahedronGeometry:Geometry,
- CylinderGeometry:Geometry,ConeGeometry:Geometry,TorusGeometry:Geometry,PlaneGeometry:Geometry,ExtrudeGeometry:Geometry,
+ CylinderGeometry:Geometry,ConeGeometry:Geometry,ShapeGeometry:Geometry,CapsuleGeometry:Geometry,TorusGeometry:Geometry,PlaneGeometry:Geometry,ExtrudeGeometry:Geometry,
  LatheGeometry:Geometry,TubeGeometry:Geometry,
  Shape,Path,Vector2,Vector3,CatmullRomCurve3:Curve,CanvasTexture:Texture,DoubleSide:2,
  SRGBColorSpace:'srgb',ACESFilmicToneMapping:2,PCFSoftShadowMap:3,
@@ -251,8 +251,8 @@ const canvas2d={fillText(){},clearRect(){},beginPath(){},roundRect(){},ellipse()
 const townCanvas={style:{opacity:'1'}};
 const host={style:{display:'none'},clientWidth:390,clientHeight:844,
   appendChild(o){this.child=o;}};
-const document={createElement:()=>({width:0,height:0,getContext:()=>canvas2d}),
-  getElementById:id=>id==='town'?townCanvas:null};
+const document={createElement:()=>({width:0,height:0,getContext:()=>canvas2d,setAttribute(){},addEventListener(){},appendChild(){},append(){},remove(){},firstChild:{},classList:{add(){},remove(){},toggle(){}},style:{}}),
+  body:{appendChild(){}},getElementById:id=>id==='town'?townCanvas:null};
 let buildings=[
   {kind:'house',x:7,y:7,h:34,hero:true,wall:'#eddfc3',roof:'#a46d50'},
   {kind:'house',x:10,y:8,h:34,hero:true,wall:'#cbdcdb',roof:'#678d9c'},
@@ -335,6 +335,22 @@ const gardenRooms=api.scene.children.flatMap(node=>node.children||[])
 assert.equal(gardenRooms.length,api.getStats().districtGardenRooms,
   'all planted courts are real grounded scene geometry');
 assert.equal(api.getStats().festoonBulbs,14,'two suspended spans contain 14 miniature lamps');
+// The ring railway: a station, a round-faced steam train with three carriages, a tunnel, passengers who board and get off.
+{
+  const r0=api.railStats();
+  assert.equal(r0.units,4,'one locomotive and three carriages');
+  assert.ok(r0.len>70&&r0.len<80,'the loop runs round the board ('+r0.len.toFixed(1)+')');
+  api.stepTrain(75,0);
+  const r1=api.railStats();
+  assert.ok(r1.stops>=1,'the train has pulled into the station');
+  const seen=new Set();let boarded=false,alighted=false,dwelt=false,moved=false,prev=api.railStats().s;
+  for(let k=0;k<2400;k++){api.stepTrain(.05,0);const r=api.railStats();r.pax.forEach(x=>seen.add(x));if(r.state==='dwell')dwelt=true;if(r.s>prev+.001)moved=true;prev=r.s;}
+  assert.ok(dwelt&&moved,'it stops at the platform and sets off again');
+  for(const k of ['wait','board','aboard','alight','inside','out'])assert.ok(seen.has(k),'passengers pass through "'+k+'"');
+  assert.ok(api.railStats().toots>=1,'the whistle blows when it leaves');
+  assert.equal(api.farmStats().sheep,4,'four sheep in the pasture');
+  const before=api.farmStats().spin;api.stepTrain(5,0);assert.ok(api.farmStats().spin>before,'the windmill sails turn');
+}
 assert.ok(api.getStats().windowMaterials>=2,
   'daylight and interior window materials are registered for unified dusk lighting');
 const allWindowMaterials=[];

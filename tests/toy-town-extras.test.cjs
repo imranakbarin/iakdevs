@@ -112,16 +112,26 @@ assert.doesNotMatch(soundSrc, /\.(mp3|ogg|wav)/, 'no sound files to download');
 for (const seed of [20261102, 7, 42]) {
   const box = vm.createContext({Math, Object, Array, JSON, Date, String, Number, RegExp, Set, Map, setTimeout: () => 0, document: {getElementById: () => ({textContent: '', style: {}})}});
   vm.runInContext(town + ';this.T=ToyTown;', box); const T = box.T; T.build(seed, 'market');
-  const last = new Map(), still = new Map(); let worst = 0;
+  const last = new Map(), still = new Map(); let worst = 0, overlaps = 0, overlapSample = '', merged = new Map();
+  // The 3D toy vehicles' real footprints (half length x half width, see car() in toy-town-3d.js): stopped cars must never merge.
+  const HALF = {car: [.22, .125], taxi: [.22, .125], police: [.22, .125], racer: [.23, .125], bus: [.35, .135], fire: [.30, .125], icecream: [.22, .125]};
+  const spot = m => { const l = m.lane || 0, o = m.path ? [0, 0] : m.d < 2 ? [0, (m.d === 0 ? 1 : -1) * l] : [(m.d === 2 ? -1 : 1) * l, 0]; return [m.x + o[0], m.y + o[1]]; };
   for (let i = 0; i < 20 * 360; i++) { T.update(1 / 20); if (i % 20) continue; const clock = T.debug().clock;
+    const cars = T.movers().filter(m => m.type === 'car' && HALF[m.kind]), live = new Set();
+    for (let a = 0; a < cars.length; a++) for (let b = a + 1; b < cars.length; b++) { const A = cars[a], B = cars[b], pa = spot(A), pb = spot(B), ha = HALF[A.kind], hb = HALF[B.kind];
+      const ax = A.d < 2 ? [ha[0], ha[1]] : [ha[1], ha[0]], bx = B.d < 2 ? [hb[0], hb[1]] : [hb[1], hb[0]];
+      if (Math.abs(pa[0] - pb[0]) < ax[0] + bx[0] && Math.abs(pa[1] - pb[1]) < ax[1] + bx[1]) { const key = a + '/' + b; live.add(key); const n = (merged.get(key) || 0) + 1; merged.set(key, n); overlaps = Math.max(overlaps, n);
+        overlapSample ||= `${A.kind}/${B.kind} at ${pa.map(v => v.toFixed(2))} v ${pb.map(v => v.toFixed(2))} clock ${clock | 0}`; } }
+    for (const k of [...merged.keys()]) if (!live.has(k)) merged.delete(k);
     for (const m of T.movers()) { const p = last.get(m), meant = (m.stopUntil && clock < m.stopUntil) || m.sit || m.max === 0 || m.shopRole || m.path;
       const n = p && !meant && Math.hypot(m.x - p.x, m.y - p.y) < .01 ? (still.get(m) || 0) + 1 : 0; still.set(m, n); worst = Math.max(worst, n); last.set(m, {x: m.x, y: m.y}); } }
+  assert.ok(overlaps <= 15, `layout ${seed}: no two vehicles stay merged (the longest overlap lasted ${overlaps} s; first: ${overlapSample})`);
   assert.ok(worst <= 30, `layout ${seed}: no car, bike or walker is stuck for long (longest ${worst} s; a red light plus a short queue is fine, the old deadlocks lasted the whole run)`);
   const w = T.debug().whims, kinds = Object.entries(w).filter(([k, v]) => v > 0).length;
   assert.ok(kinds >= 4, `layout ${seed}: walkers follow varied whims (${JSON.stringify(w)})`);
   const g = T.gather(9, 9.5); assert.ok(g >= 0);
 }
-assert.match(sim, /if\(pushing&&\(o\.d<2\)!==\(m\.d<2\)\)continue;/, 'a car out of patience can edge past crossing traffic, never into its own lane');
+assert.match(sim, /if\(pushing&&\(o\.d<2\)!==\(m\.d<2\)\)continue;/, 'a car out of patience can edge past crossing traffic (and separateCars eases touching stopped cars apart afterwards)');
 // Moments: offered, never automatic; Watch follows and narrates.
 assert.match(view, /function offerMoment\(m\)/); assert.match(view, /go\.onclick=\(\)=>\{if\(offered\)watchMoment\(offered\);\}/, 'the camera moves only when Watch is tapped');
 assert.match(view, /town\.follow\(m\.ref,3\);ensureFollowCard\(\)/, 'watching follows close with the narrating card');
@@ -150,4 +160,14 @@ assert.match(sim, /function walk\(x, y, tx, ty, speed\)/); assert.match(sim, /m\
 }
 const index = fs.readFileSync(path.join(root, 'index.html'), 'utf8');
 assert.match(index, /keep=\['weather','fps'\]/, 'the main page passes ?weather= and ?fps into the embedded town');
-console.log('Toy Town EXTRAS PASS: pavements and walkers on them; nobody stays stuck (3 layouts); varied whims; Moments on request; local weather; follow a resident, feed the ducks, gentle opt-in sound; a day in the life (commuters, children, lunch, home at dusk); KayKit CC0 kit (named, small, licensed, with fallback; roads and plaza too); taps on residents, cars, buildings and open ground; livelier gaits and greetings; news card minimises to a pill (phones first, remembered), Picture-of-the-Day cinema, fireflies and shooting stars, tap-a-resident chat, the on-this-day visitor (gentle history only, credited) and the dawn paper round.');
+// The ring railway, the cuter vehicles and the softer city (code-level checks; the behaviour is exercised in toy-town-3d.test.cjs).
+assert.match(view, /function createRailway\(\)/); assert.match(view, /'TOY TOWN',cx,/, 'the station carries its name');
+assert.match(view, /function updatePassengers\(dt,dark\)/); assert.match(view, /if\(trainHit\(clientX,clientY\)\)/, 'tapping the train toots');
+assert.match(soundSrc, /toot: \(\) =>/, 'the whistle is synthesised too');
+assert.match(view, /function createFarm\(\)/, 'a windmill and a pasture of sheep out by the railway');
+assert.match(view, /geo\('soft',/, 'vehicles are built from soft rounded boxes, not KayKit blocks');
+assert.doesNotMatch(view.slice(view.indexOf('  function car(ref){'), view.indexOf('  function car(ref){') + 600), /car_sedan/, 'the old boxy car models are gone');
+assert.match(view, /m\.roughness=1;m\.metalness=0/, 'kit buildings are matt and lifted toward cream');
+assert.match(sim, /PAN = \.6/, 'the view can be dragged out to the railway and station');
+assert.match(sim, /function separateCars\(dt\)/, 'stopped cars whose bodies touch ease apart');
+console.log('Toy Town EXTRAS PASS: a ring railway with a station and a little steam train; small soft pastel vehicles that never stay merged; a softer city; pavements and walkers on them; nobody stays stuck (3 layouts); varied whims; Moments on request; local weather; follow a resident, feed the ducks, gentle opt-in sound; a day in the life (commuters, children, lunch, home at dusk); KayKit CC0 kit (named, small, licensed, with fallback; roads and plaza too); taps on residents, cars, buildings and open ground; livelier gaits and greetings; news card minimises to a pill (phones first, remembered), Picture-of-the-Day cinema, fireflies and shooting stars, tap-a-resident chat, the on-this-day visitor (gentle history only, credited) and the dawn paper round.');

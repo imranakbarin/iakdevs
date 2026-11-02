@@ -24,9 +24,10 @@ const ToyTown = (() => {
   let rnd = Math.random, seed = 0, day = '', theme = null, newsLine = '', today_ = [], nextHeadline = 12, headIx = 0;
   let W = 0, H = 0, dpr = 1, S = 1, cam = {x: N / 2, y: N / 2, z: 1, tx: N / 2, ty: N / 2, tz: 1}, base = 1;
   let grid = [], buildings = [], props = [], movers = [], events = [], parts = [], bubbles = [], ground = null, sprites = new Map();
-  const MIN_ZOOM = .42, MAX_ZOOM = 3.25;
+  const MIN_ZOOM = .42, MAX_ZOOM = 3.25, PAN = .6;   // how near the board edge the view may be dragged (the station and railway sit out there)
   let zoomAnchor = null, nextStreetMoment = 16, streetMoments = 0, fitZoom = 1;
   const PACE = .82, CARS = 7, BIKES = 4, PEOPLE = 14, LIGHT = 10;   // a calm town: few cars, a handful of cyclists, people taking their time   // the whole town runs at 60% speed: easier to follow, calmer to watch
+  let separated = 0;
   let clock = 0, playing = true, last = 0, nextEvent = 2, director = null, directorUntil = 0;
   let community = null, communityEncounters = 0, communityVisits = 0;
   let streetTrade=null,streetTransactions=0,streetShopVisits=0,newsReactions=0;
@@ -813,6 +814,12 @@ const ToyTown = (() => {
     const a=bodyExtent(m,ux,uy),b=bodyExtent(o,ux,uy);
     return {front:a.front+b.front+.027,side:a.side+b.side+.018};
   }
+  // The drawn size of each vehicle (half length, half width): what must never overlap on screen.
+  const BODY_HALF = {bus: [.35, .135], fire: [.30, .125], bike: [.12, .06]};
+  function tightExtent(m,ux,uy){
+    const h=BODY_HALF[m.kind]||[.22,.125],d=DIRS[m.d],along=Math.abs(d[0]*ux+d[1]*uy),across=Math.abs(d[0]*uy-d[1]*ux);
+    return {front:h[0]*along+h[1]*across,side:h[0]*across+h[1]*along};
+  }
   // Swept forward clearance is imposed *before* moving each car. A red
   // light alone is not collision detection, especially after scripted paths.
   function safeVehicleTravel(m,ux,uy,request){
@@ -857,13 +864,23 @@ const ToyTown = (() => {
     }
   }
   function atNode(m) { return LINES.some(l => Math.abs((m.d < 2 ? m.x : m.y) - (l + .5)) < .02); }
+  // Would car m, pointing along direction nd from where it is now, sit clear of every other car?
+  function laneFree(m,nd){
+    const me={...m,d:nd},p=vehiclePoint(me),a=bodyExtent(me,1,0),c=bodyExtent(me,0,1);
+    return movers.every(o=>{
+      if(o===m||o.type!=='car'||o.kind==='bike')return true;
+      const q=vehiclePoint(o),b=bodyExtent(o,1,0),d=bodyExtent(o,0,1);
+      return Math.abs(p.x-q.x)>a.front+b.front+.03||Math.abs(p.y-q.y)>c.front+d.front+.03;
+    });
+  }
   function step(m, dt) {
     // Never dead-end inside the last junction: turn at the road-end apron
     // before another lane can trap the vehicle against the tabletop edge.
     if(m.type==='car'&&!m.path&&(
       (m.d===0&&m.x>=16.02)||(m.d===1&&m.x<=1.98)||
       (m.d===2&&m.y>=16.02)||(m.d===3&&m.y<=1.98))){
-      m.d^=1;m.v=0;
+      // Turning round puts the car in the opposite lane: only when that lane is clear, so it never lands on another car.
+      if(laneFree(m,m.d^1)){m.d^=1;m.v=0;}else{m.v=0;m.braking=true;return;}
     }
     // Explicit displacement, not requested speed, powers character gaits.
     m.moved=0;
@@ -1003,15 +1020,7 @@ const ToyTown = (() => {
       if ((before - c) * (now - c) <= 0 && before !== now) {
         const opts = DIRS.map((_, i) => i).filter(i => i !== (m.d ^ 1)).filter(i => { const nx = Math.round((m.d < 2 ? c : m.x) - .5 + DIRS[i][0]), ny = Math.round((m.d < 2 ? m.y : c) - .5 + DIRS[i][1]); const t = tile(nx, ny); return t && (t.kind === 'road' || t.kind === 'bridge'); });
         if (opts.length && (Math.random() < .45 || !opts.includes(m.d))) { const nd = opts[Math.random() * opts.length | 0]; if (nd !== m.d &&
-          (m.type!=='car'||movers.every(o=>{
-            if(o===m||o.type!=='car')return true;
-            const p=vehiclePoint({...m,d:nd});
-            const q=vehiclePoint(o);
-            const a=bodyExtent({...m,d:nd},1,0),b=bodyExtent(o,1,0);
-            const c=bodyExtent({...m,d:nd},0,1),d=bodyExtent(o,0,1);
-            return Math.abs(p.x-q.x)>a.front+b.front+.03||
-              Math.abs(p.y-q.y)>c.front+d.front+.03;
-          }))) {
+          (m.type!=='car'||laneFree(m,nd))) {
           const cross=DIRS[m.d][0]*DIRS[nd][1]-DIRS[m.d][1]*DIRS[nd][0];
           if(m.type==='car'){m.turnSignal=cross>0?'left':'right';m.turnUntil=clock+1.1;}
           if (m.d < 2) m.x = c; else m.y = c; m.d = nd;
@@ -2244,7 +2253,7 @@ const ToyTown = (() => {
   // or the map is dragged.
   let followRef = null;
   // Glide the camera to a spot and zoom (used by Moments to watch, then to return).
-  function viewTo(x, y, z) { followRef = null; cam.tx = clamp(1.1, x, N - 1.1); cam.ty = clamp(1.1, y, N - 1.1); if (z) cam.tz = clamp(MIN_ZOOM, z, MAX_ZOOM); return {x: cam.tx, y: cam.ty, z: cam.tz}; }
+  function viewTo(x, y, z) { followRef = null; cam.tx = clamp(PAN, x, N - PAN); cam.ty = clamp(PAN, y, N - PAN); if (z) cam.tz = clamp(MIN_ZOOM, z, MAX_ZOOM); return {x: cam.tx, y: cam.ty, z: cam.tz}; }
   function follow(m, zoom = 2.6) { followRef = m && movers.includes(m) ? m : null; if (followRef && cam.tz < zoom) cam.tz = clamp(MIN_ZOOM, zoom, MAX_ZOOM); return followRef; }   // ~3 frames a person close up in 3D
   /* ---------------- a day in the life ----------------
      The town clock gives an hour of day (noon when it is brightest, midnight
@@ -2308,6 +2317,28 @@ const ToyTown = (() => {
       else if (m.routine === 'lunch' && m.lunchUntil && clock > m.lunchUntil) { m.shopAction = null; m.attention = null; m.lunchUntil = 0; const out = edgeOf(Math.random()); m.path = walk(m.x, m.y, out.x, out.y, .5).concat([{x: out.x, y: out.y, speed: .5, then: q => { q.home = true; }}]); }
     }
   }
+  // Two stopped cars whose drawn bodies overlap (they came to rest nose to flank in a junction, or one
+  // was dropped beside another) ease apart: the later one rolls gently back along its own lane.
+  function tightOverlap(A,B){
+    const p=vehiclePoint(A),q=vehiclePoint(B),ax=tightExtent(A,1,0),bx=tightExtent(B,1,0),ay=tightExtent(A,0,1),by=tightExtent(B,0,1);
+    return Math.abs(p.x-q.x)<ax.front+bx.front&&Math.abs(p.y-q.y)<ay.front+by.front;
+  }
+  function separateCars(dt){
+    const cars=movers.filter(o=>o.type==='car'&&!o.path&&!o.stopUntil);
+    let rolled=0;
+    for(let i=0;i<cars.length;i++)for(let j=i+1;j<cars.length;j++){
+      const A=cars[i],B=cars[j];
+      if(A.v>.3||B.v>.3||!tightOverlap(A,B))continue;
+      for(const [Y,other] of [[B,A],[A,B]]){
+        const [dx,dy]=DIRS[Y.d],px=Y.x,py=Y.y,s=.35*dt,nx=px-dx*s,ny=py-dy*s;
+        if(nx<1.45||nx>16.55||ny<1.45||ny>16.55)continue;
+        Y.x=nx;Y.y=ny;
+        if(cars.some(o=>o!==Y&&o!==other&&tightOverlap(Y,o))){Y.x=px;Y.y=py;continue;}   // never back into a third car
+        Y.v=0;Y.braking=true;rolled++;break;
+      }
+    }
+    separated+=rolled?dt:0;
+  }
   function update(dt) {
     clock += dt;
     updateNeighborhoodLife(dt);
@@ -2317,6 +2348,7 @@ const ToyTown = (() => {
     passingGreetings();
     updateWhims();
     unstick(dt);
+    separateCars(dt);
     updateRoutines(); finishRoutines();
     for (const e of events.slice()) { e.t += dt; if (e.follow) { e.x = e.follow.x; e.y = e.follow.y; } if (e.update) e.update(e, dt); if (e.t > e.dur) { if (e.end) e.end.call(e); events.splice(events.indexOf(e), 1); } }
     for (const m of movers.slice()) if (m.home && !m.path) remove(m);
@@ -2396,7 +2428,7 @@ const ToyTown = (() => {
       focusCamera(zoomAnchor.world, zoomAnchor.sx, zoomAnchor.sy);
       zoomAnchor = null;
     }
-    if (followRef) { if (!movers.includes(followRef)) followRef = null; else { cam.tx = clamp(1.1, followRef.x, N - 1.1); cam.ty = clamp(1.1, followRef.y, N - 1.1); } }
+    if (followRef) { if (!movers.includes(followRef)) followRef = null; else { cam.tx = clamp(PAN, followRef.x, N - PAN); cam.ty = clamp(PAN, followRef.y, N - PAN); } }
     if (!zoomAnchor) {
       const k = Math.min(1, dt * 4);
       cam.x += (cam.tx - cam.x) * k; cam.y += (cam.ty - cam.y) * k;
@@ -2527,8 +2559,8 @@ const ToyTown = (() => {
   function focusCamera(world, sx, sy) {
     const scale = base * cam.z || 1;
     const u = (sx - W / 2) / (TW * scale), v = (sy - H / 2) / (TH * scale);
-    cam.x = cam.tx = clamp(1.1, world.x - (u + v) / 2, N - 1.1);
-    cam.y = cam.ty = clamp(1.1, world.y - (v - u) / 2, N - 1.1);
+    cam.x = cam.tx = clamp(PAN, world.x - (u + v) / 2, N - PAN);
+    cam.y = cam.ty = clamp(PAN, world.y - (v - u) / 2, N - PAN);
   }
   function zoomAt(factor, cx = innerWidth / 2, cy = innerHeight / 2) {
     const sx = cx * dpr, sy = cy * dpr;
@@ -2599,8 +2631,8 @@ const ToyTown = (() => {
         const dx = (e.clientX - down.x) * dpr / (TW * base * cam.z);
         const dy = (e.clientY - down.y) * dpr / (TH * base * cam.z);
         if (Math.hypot(e.clientX - down.x, e.clientY - down.y) > 8) { down.moved = true; followRef = null; }
-        if (down.moved) { cam.tx = cam.x = clamp(1.1, down.cx - (dx + dy) / 2, N - 1.1);
-          cam.ty = cam.y = clamp(1.1, down.cy - (dy - dx) / 2, N - 1.1);
+        if (down.moved) { cam.tx = cam.x = clamp(PAN, down.cx - (dx + dy) / 2, N - PAN);
+          cam.ty = cam.y = clamp(PAN, down.cy - (dy - dx) / 2, N - PAN);
           if (!playing) render(); }
       }
     });
@@ -2656,8 +2688,8 @@ const ToyTown = (() => {
         if (Math.hypot(ts[0].clientX - touchStart.x, ts[0].clientY - touchStart.y) > 7)
           { touchStart.moved = true; followRef = null; }
         if (touchStart.moved) {
-          cam.tx = cam.x = clamp(1.1, touchStart.cx - (dx + dy) / 2, N - 1.1);
-          cam.ty = cam.y = clamp(1.1, touchStart.cy - (dy - dx) / 2, N - 1.1);
+          cam.tx = cam.x = clamp(PAN, touchStart.cx - (dx + dy) / 2, N - PAN);
+          cam.ty = cam.y = clamp(PAN, touchStart.cy - (dy - dx) / 2, N - PAN);
           if (!playing) render();
         }
       }
@@ -2698,7 +2730,7 @@ const ToyTown = (() => {
     addEventListener('hashchange', () => location.reload());
     start();
   }
-  return {gather, viewTo, view: () => ({x: cam.tx, y: cam.ty, z: cam.tz}), follow, following: () => followRef, feedDucks, layout, render, zoomAt, resetView, fitView, pinchTo, screenWorld, streetMoment, reactToNews, hero: () => town.blocks.find(b => b.hero), TALK, nameOf, headline, dateKey, CALM, lightPhase, themeFromNews, newsThemes, VARIANTS, VARIANT_EVENTS: () => Object.keys(VARIANT_EVENTS), decorate, setToday: l => { today_ = l; }, PACE, THEMES, GRIM, build, update, events: () => events, movers: () => movers, buildings: () => buildings, props: () => props, startEvent, randomEvent, setPlaying: v => { playing = v; }, debug: () => ({clock, theme, seed, greetings, whims: {...whims}, unstuck: {...unstuck}, hour: hourOfDay(), daypart, routines: {...routine}, night: nightLevel(), cam: {...cam}, fitZoom, streetMoments,communityEncounters,communityVisits,streetTransactions,streetShopVisits,newsReactions,streetPerformances,
+  return {gather, viewTo, view: () => ({x: cam.tx, y: cam.ty, z: cam.tz}), follow, following: () => followRef, feedDucks, layout, render, zoomAt, resetView, fitView, pinchTo, screenWorld, streetMoment, reactToNews, hero: () => town.blocks.find(b => b.hero), TALK, nameOf, headline, dateKey, CALM, lightPhase, themeFromNews, newsThemes, VARIANTS, VARIANT_EVENTS: () => Object.keys(VARIANT_EVENTS), decorate, setToday: l => { today_ = l; }, PACE, THEMES, GRIM, build, update, events: () => events, movers: () => movers, buildings: () => buildings, props: () => props, startEvent, randomEvent, setPlaying: v => { playing = v; }, debug: () => ({separated, clock, theme, seed, greetings, whims: {...whims}, unstuck: {...unstuck}, hour: hourOfDay(), daypart, routines: {...routine}, night: nightLevel(), cam: {...cam}, fitZoom, streetMoments,communityEncounters,communityVisits,streetTransactions,streetShopVisits,newsReactions,streetPerformances,
     districts:{count:districts.length,visits:districtVisits,
       meetings:districtMeetings,tasks:districtTasks,
       areas:districts.map(a=>({role:a.role,block:a.block,
