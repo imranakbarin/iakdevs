@@ -38,6 +38,7 @@ html.embedded #zoom-controls{display:none}
 #zoom-controls button{border:0;border-radius:13px;min-width:39px;height:38px;background:rgba(255,255,255,.11);color:#fffdf6;font:600 21px/1 Nunito,system-ui;cursor:pointer;touch-action:manipulation}
 #zoom-controls button:active{background:rgba(255,255,255,.32)}
 #zoom-controls button:focus-visible{outline:2px solid #fff;outline-offset:2px}
+#zoom-controls #sound-toggle{font-size:16px;min-width:38px}
 #zoom-controls #zoom-reset{font-size:12px;letter-spacing:.01em;min-width:43px}
 #card-min{position:absolute;top:7px;right:7px;width:28px;height:28px;border:0;border-radius:9px;background:rgba(45,52,64,.08);color:#2d3440;font:600 18px/1 Nunito,system-ui;cursor:pointer;touch-action:manipulation}
 #card-min:hover{background:rgba(45,52,64,.15)}
@@ -69,6 +70,7 @@ html.embedded #zoom-controls{display:none}
 <div id="ticker" role="log" aria-live="polite"><b>AROUND TOWN · FICTION</b><span id="tick">Good morning, Toy Town!</span></div>
 <div id="hint">Drag to explore · pinch or scroll to zoom · tap for a surprise</div>
 <div id="zoom-controls" role="group" aria-label="City zoom">
+  <button id="sound-toggle" type="button" aria-pressed="false" aria-label="Turn sound on" title="Sound on">🔇</button>
   <button id="zoom-out" type="button" aria-label="Zoom out" title="Zoom out">−</button>
   <button id="zoom-reset" type="button" aria-label="Reset city view" title="Fit city">Fit</button>
   <button id="zoom-in" type="button" aria-label="Zoom in" title="Zoom in">+</button>
@@ -90,7 +92,8 @@ html.embedded #zoom-controls{display:none}
 </script>
 <script src="assets/toy-town-diorama.js?v=1"></script>
 <script src="assets/toy-town-news.js?v=1"></script>
-<script src="assets/toy-town.js?v=30"></script>
+<script src="assets/toy-town-sound.js?v=1"></script>
+<script src="assets/toy-town.js?v=31"></script>
 <script type="module">
   // Opt out with ?classic=1 for the original Canvas experience.
   // Loading errors are deliberately isolated from the existing town engine.
@@ -98,7 +101,7 @@ html.embedded #zoom-controls{display:none}
     Promise.all([
       import('three'),
       import('three/addons/geometries/RoundedBoxGeometry.js'),
-      import('./assets/toy-town-3d.js?v=49'),
+      import('./assets/toy-town-3d.js?v=50'),
       import('./assets/toy-town-landmarks.js?v=7'),
       // The photographed-miniature lens. Any failure here leaves plain 3D running.
       Promise.all(['EffectComposer','RenderPass','ShaderPass','UnrealBloomPass','OutputPass']

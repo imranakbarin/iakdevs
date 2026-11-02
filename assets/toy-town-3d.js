@@ -2521,15 +2521,70 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
     const now=town.debug().clock||0,pick=list=>list[Math.floor(Math.random()*list.length)];
     const person=actorAt(clientX,clientY,['person'],46);
     if(person){const ref=person.ref;ref.stopUntil=now+3.2;ref.hopUntil=now+.9;ref.waveUntil=now+2.4;ref.cheerUntil=now+1.1;
-      showBubble(person.item.group,chatLine(),4200);taps.people++;return true;}
+      showBubble(person.item.group,chatLine(),4200);sound('chime');taps.people++;return true;}
     const car=actorAt(clientX,clientY,['car','bike'],40);
-    if(car){car.ref.hopUntil=now+.7;showBubble(car.item.group,car.item.kind==='bike'?'Ring ring!':pick(HONKS),2200);taps.vehicles++;return true;}
+    if(car){car.ref.hopUntil=now+.7;showBubble(car.item.group,car.item.kind==='bike'?'Ring ring!':pick(HONKS),2200);sound(car.item.kind==='bike'?'bell':'honk');taps.vehicles++;return true;}
     const spot=groundAt(clientX,clientY);if(!spot)return false;
+    // The river (but not a bridge): crumbs, and the ducks paddle over.
+    if(spot.z>12.95&&spot.z<15.05&&!LINES.some(l=>Math.abs(spot.x-(l+.5))<.62)&&town.feedDucks){
+      town.feedDucks(spot.x,spot.z);crumbsAt(spot.x,spot.z);sound('quack');taps.ducks=(taps.ducks||0)+1;return true;}
     const b=town.buildings().find(b=>Math.abs(b.x+.5-spot.x)<.62&&Math.abs(b.y+.5-spot.z)<.62);
-    if(b){buildingHello(b,pick(HELLOS[b.kind]||HELLOS.other));taps.buildings++;return true;}
+    if(b){buildingHello(b,pick(HELLOS[b.kind]||HELLOS.other));sound('chime');taps.buildings++;return true;}
     surprise(spot.x,spot.z);taps.ground++;return true;
   }
   const taps={people:0,vehicles:0,buildings:0,ground:0};
+  const sound=name=>{try{window.ToyTownSound?.cue(name);}catch(e){}};
+  // Crumbs tossed on the water: a little scatter that sinks in.
+  function crumbsAt(x,z){
+    const parts=[];
+    for(let k=0;k<14;k++){const c=box(world,.025,.012,.02,'#e7c38b',x,.45,z,false);c.castShadow=false;c.userData.v=[(Math.random()-.5)*.9,.6+Math.random()*.6,(Math.random()-.5)*.9];parts.push(c);}
+    effects.push({t:0,life:5,parts,tick(e,dt){for(const c of parts){const v=c.userData.v;if(c.position.y>.17){v[1]-=dt*3;c.position.x+=v[0]*dt;c.position.y=Math.max(.17,c.position.y+v[1]*dt);c.position.z+=v[2]*dt;}else c.position.y=.17-Math.min(.05,(e.t-1.5)*.02);}}});
+  }
+  /* ---- Press and hold a resident to follow them: the camera keeps them in view
+     and a small card says who they are and what they are up to. */
+  const NAMES=['Maya','Leo','Ada','Omar','Priya','Sam','Iris','Kenji','Lena','Ravi','Zoe','Tomas','Nia','Felix','Aisha','Hugo','Mei','Arjun','Rosa','Theo'];
+  const nameOf=ref=>NAMES[Math.abs(Math.round((ref.ph||0)*1000))%NAMES.length];
+  function roleOf(ref){
+    if(ref.shopRole==='vendor')return ref.shopVenue==='bakery'?'baker':'bookseller';
+    if(ref.districtWorker)return {garden:'gardener',post:'postie',art:'painter'}[ref.districtRole]||'greengrocer';
+    const kinds={chef:'chef',sweeper:'street sweeper',busker:'musician',newsie:'newspaper seller',farmer:'farmer',keeper:'zookeeper',robot:'robot'};
+    if(kinds[ref.kind])return kinds[ref.kind];
+    if(ref.kid)return 'schoolchild';if(ref.routine==='work'||ref.briefcase)return 'commuter';
+    return ref.heroResident?'neighbour':'resident';
+  }
+  function doingOf(ref){
+    const a={knocking:'knocking at the counter',ordering:'ordering',receiving:'being served',handoff:'being served',eating:'having lunch',reading:'reading',performing:'playing the guitar',serving:'serving a customer',offering:'serving a customer'}[ref.shopAction];
+    if(a)return a;if(ref.carrying)return 'heading off with '+({bread:'fresh bread',book:'a new book'}[ref.carrying]||ref.carrying);
+    if(ref.intent==='chat'||ref.intent==='greeting')return 'chatting';
+    const r={home:'walking home',work:'off to work',school:'off to school',lunch:'going for lunch'}[ref.routine];if(r)return r;
+    if(ref.sit)return 'sitting down';if(ref.dance)return 'dancing';
+    return (ref.v||0)>.05?(ref.gait==='brisk'?'striding along':ref.gait==='skip'?'skipping along':'strolling'):'taking a moment';
+  }
+  let followCard=null,followNext=0;
+  function hold(clientX,clientY){
+    const person=actorAt(clientX,clientY,['person'],46);if(!person||!town.follow)return false;
+    town.follow(person.ref);sound('chime');taps.follows=(taps.follows||0)+1;
+    if(typeof document!=='undefined'&&!followCard){
+      followCard=document.createElement('div');followCard.className='follow-card';
+      followCard.style.cssText='position:fixed;left:14px;bottom:calc(52px + env(safe-area-inset-bottom,0px));z-index:4;display:flex;gap:10px;align-items:center;max-width:min(320px,calc(100vw - 28px));padding:9px 10px 9px 14px;border-radius:14px;background:rgba(255,253,245,.95);box-shadow:0 6px 20px rgba(30,50,70,.18);font:500 13px/1.35 Nunito,system-ui,sans-serif;color:#2d3440';
+      const text=document.createElement('div');text.className='follow-text';
+      const stop=document.createElement('button');stop.type='button';stop.textContent='✕';stop.setAttribute('aria-label','Stop following');
+      stop.style.cssText='border:0;border-radius:9px;width:28px;height:28px;background:rgba(45,52,64,.08);color:#2d3440;font:600 14px Nunito,system-ui;cursor:pointer';
+      stop.onclick=()=>town.follow(null);
+      followCard.append(text,stop);document.body.appendChild(followCard);
+    }
+    followNext=0;return true;
+  }
+  function updateFollowCard(){
+    if(!followCard)return;
+    const ref=town.following&&town.following();
+    if(!ref){followCard.style.display='none';return;}
+    followCard.style.display='flex';
+    const now=clockMs();if(now<followNext)return;followNext=now+450;
+    followCard.firstChild.innerHTML='';
+    const b=document.createElement('b');b.textContent=nameOf(ref);
+    followCard.firstChild.append(b,document.createTextNode(` · ${roleOf(ref)}`),document.createElement('br'),document.createTextNode(doingOf(ref)));
+  }
   function tapResident(clientX,clientY){return tap(clientX,clientY);}   // older name, kept for callers
   /* ---- Tap effects: short-lived scene pieces driven by the town clock. */
   let effects=[];
@@ -2549,6 +2604,7 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
     const near=[...actors].filter(([ref,item])=>item.kind==='person'&&Math.hypot(ref.x-x,ref.y-z)<2.4).sort((a,b)=>Math.hypot(a[0].x-x,a[0].y-z)-Math.hypot(b[0].x-x,b[0].y-z));
     near.forEach(([ref],i)=>{ref.lookAt={x,y:z};ref.lookUntil=now+3.2;if(i<4){ref.cheerUntil=now+2.4;}});
     const kind=['balloons','birds','confetti'][Math.floor(Math.random()*3)],parts=[];
+    sound(kind==='birds'?'chirp':'pop');
     if(kind==='balloons'){
       for(let k=0;k<5;k++){const g=new THREE.Group();g.position.set(x+(Math.random()-.5)*.4,.3,z+(Math.random()-.5)*.4);
         const ballMesh=ball(g,.085,['#e2463a','#ffd23f','#3f8fd6','#ff8fd0','#5aa469'][k],0,.22,0);ballMesh.scale.y=1.18;
@@ -3752,7 +3808,7 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
       resize();
       const state=town.debug();
       if(worldBuildings!==town.buildings()||worldSeed!==state.seed)rebuild();
-      syncActors();syncCamera();light(state.night||0);nightLife(state.night||0,state.clock||0);
+      syncActors();syncCamera();light(state.night||0);nightLife(state.night||0,state.clock||0);updateFollowCard();
       // Driven by the town's own clock, so they pause with the town.
       {const now=state.clock||0;const dt=lastClockAt===null?0:THREE.MathUtils.clamp(now-lastClockAt,0,.1);lastClockAt=now;sceneClock+=dt;
        updateVisit(dt);updateRound(dt,state.night||0);updateEffects(dt);}
@@ -3784,7 +3840,7 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
     getStats:()=>({frames,redrawCount,actors:actors.size,ambient:ambient.length,plazaLights:plazaLights.length,festoonBulbs:festoonBulbs.length,gardenElements,woodlandShapes,terrainContours,composedBuildings,districtGardenRooms,landmarks:landmarkCount,windowMaterials:windowMaterials.size,photographicLens:!!lens,pixelRatio,kitModels:kit?kit.size:0,cameraProjection:'perspective',lens:lens?.stats?.()||null,buildings:town.buildings().length,webgl:true,frozen}),
     // A stable actual GPU-rendered frame for visual regression screenshots.
     // Unlike stop(), freeze does not switch to the Canvas fallback.
-    tap,tapResident,tapStats:()=>({...taps,effects:effects.length}),
+    tap,hold,tapResident,tapStats:()=>({...taps,effects:effects.length}),
     surpriseAt:(x,z,seconds=0)=>{surprise(x,z);for(let t=0;t<seconds;t+=.05)updateEffects(.05);return effects.length;},
     // Test hooks: start the visitor or the paper round now.
     startVisit:()=>{if(!onThisDay.length)onThisDay=[{year:1969,text:'Apollo 11 lands on the Moon'}];startVisit();return timeVisit;},startRound:()=>{startRound();return round;},
