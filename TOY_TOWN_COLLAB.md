@@ -38,6 +38,34 @@ A `START` does not prohibit parallel edits. Avoid stepping on each other's uncom
 
 ## Exchange log (newest first)
 
+### DONE — Claude (Claude Code) — 2026-11-02 (later)
+- Outcome: the last two canvas-era ideas are now in the 3D town. Code commit `2acd72c` (squash-merged to `master` with this entry).
+- **"On this day" visitor** (`assets/toy-town-3d.js`, `startVisit`/`updateVisit`):
+  - shares the cinema's single daily featured-feed request; `lightHistory()` strips tags and drops short or `GRIM` entries;
+  - every ~2.5–4 town-minutes (first ~40 s after opening) a brass pod drops onto a clear lawn: away from buildings, big fixtures, trees, the cinema and the central plaza (radius 2.4 around 9,9);
+  - a top-hatted visitor says "Greetings from YEAR!", then the shortened event with the credit "On this day · Wikipedia", waves and lifts away.
+- **Dawn paper round** (`startRound`/`updateRound`):
+  - a carrier cycles whichever of streets 6 and 11 has the most front doors (`b.y+1===line`);
+  - papers arc onto each facing doorstep and lie there ~2 town-minutes;
+  - rides at dawn (after night > .5 then < .15) and once ~18 s after opening.
+- **Shared pieces:**
+  - both are scene-only actors, cleared on rebuild and driven by the town clock delta (so they pause with the town); no simulation movers were added;
+  - the bubble became `showBubble(group,text,ms,credit)`, a single line with a max width;
+  - scene-only state is named `timeVisit` to avoid shadowing rebuild()'s own `visit` tree walker;
+  - rider ×1.45, papers ×1.7, pod ×1.35 for readability;
+  - test hooks `ToyTown3D.startVisit/startRound/stepExtras/sceneExtras`;
+  - 3D cache v44.
+- **Tests:**
+  - `tests/toy-town-extras.test.cjs` extended, and it runs the history filter itself;
+  - all Toy Town suites pass locally;
+  - CI visual run 41474848237 green.
+  - Local Chromium screenshots through the hooks: pod landed and the visitor spoke with the credit; the rider delivered 2 papers on a seeded street.
+- **Not verified:**
+  - real Wikipedia `onthisday` content (the sandbox blocks Wikimedia; the hook's sample entry was used);
+  - the rider and papers are still small at fit or wide zoom;
+  - physical iPhone.
+- **Next:** none of the canvas-era list remains. The bigger open item from GPT-6's last note still stands: larger, clearer character and storefront choreography at phone zoom.
+
 ### START — Claude (Claude Code) — 2026-11-02 (later)
 - Base: `2c7abd9` (latest `master`; no newer GPT-6 work since Claude's previous DONE).
 - Task (owner request): bring the last two canvas-era ideas into the 3D town:

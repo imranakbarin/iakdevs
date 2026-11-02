@@ -2331,6 +2331,7 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
     if(potdRequested===key||typeof fetch!=='function'||!THREE.TextureLoader)return;potdRequested=key;
     const [y,m,d]=[day.getUTCFullYear(),String(day.getUTCMonth()+1).padStart(2,'0'),String(day.getUTCDate()).padStart(2,'0')];
     fetch(`https://api.wikimedia.org/feed/v1/wikipedia/en/featured/${y}/${m}/${d}`).then(r=>r.json()).then(data=>{
+      onThisDay=lightHistory(data?.onthisday);
       const src=data?.image?.thumbnail?.source;if(!src)return;
       const loader=new THREE.TextureLoader();loader.setCrossOrigin?.('anonymous');
       loader.load(src,tx=>{tx.colorSpace=THREE.SRGBColorSpace;potdTexture=tx;applyPicture();});
@@ -2420,12 +2421,116 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
     }
     if(!best)return false;
     best.ref.stopUntil=(town.debug().clock||0)+4;
-    if(!bubble){bubble=document.createElement('div');bubble.className='resident-bubble';
-      bubble.style.cssText='position:absolute;transform:translate(-50%,-100%);padding:6px 11px;border-radius:999px;background:#fffdf7;color:#3d4552;font:500 13px/1.2 Nunito,system-ui,sans-serif;box-shadow:0 4px 14px rgba(30,50,70,.2);white-space:nowrap;pointer-events:none;transition:opacity .3s;z-index:3';
-      host.appendChild(bubble);}
-    bubble.textContent=chatLine();bubble.userData={item:best.item,until:performance.now()+4200};bubble.style.opacity='1';
+    showBubble(best.item.group,chatLine(),4200);
     return true;
   }
+  function showBubble(group,text,ms,credit){
+    if(typeof document==='undefined')return;
+    if(!bubble){bubble=document.createElement('div');bubble.className='resident-bubble';
+      bubble.style.cssText='position:absolute;transform:translate(-50%,-100%);width:max-content;max-width:min(300px,80vw);padding:6px 12px;border-radius:16px;background:#fffdf7;color:#3d4552;font:500 13px/1.3 Nunito,system-ui,sans-serif;box-shadow:0 4px 14px rgba(30,50,70,.2);text-align:center;pointer-events:none;transition:opacity .3s;z-index:3';
+      host.appendChild(bubble);}
+    bubble.textContent=text;
+    if(credit){const c=document.createElement('div');c.textContent=credit;c.style.cssText='font:500 10px/1.2 Nunito,system-ui;color:#8a8f99;margin-top:2px';bubble.appendChild(c);}
+    bubble.userData={item:{group},until:performance.now()+ms};bubble.style.opacity='1';
+  }
+  /* ---- A visitor from "on this day": a brass time pod drops into a lawn, someone
+     in period clothes steps out, says the year and what happened (a gentle
+     Wikipedia "on this day" entry; grim ones are filtered with the town's own
+     GRIM list), waves, and the pod lifts away. Real history, credited. */
+  let onThisDay=[],timeVisit=null,nextVisit=40;
+  const grim=text=>(town.GRIM||[]).some(w=>w.endsWith('*')?new RegExp('\\b'+w.slice(0,-1),'i').test(text):new RegExp('\\b'+w+'\\b','i').test(text));
+  function lightHistory(list){
+    return (list||[]).map(o=>({year:o.year,text:String(o.text||'').replace(/<[^>]*>/g,'').replace(/\s+/g,' ').trim()}))
+      .filter(o=>o.year&&o.text.length>12&&!grim(o.text)).slice(0,8);
+  }
+  function shortHistory(text){
+    const first=text.split(/[;:(]/)[0].replace(/\.$/,'');
+    return first.length>96?first.slice(0,94).replace(/\s\S*$/,'')+'…':first;
+  }
+  function timePod(){
+    const g=new THREE.Group();
+    const brass=new THREE.MeshStandardMaterial({color:'#d9a54a',roughness:.35,metalness:.6});
+    const body=object(g,geo('sphere',.26),brass,0,.34,0);body.scale.set(1,1.08,1);
+    const glow=new THREE.MeshStandardMaterial({color:'#fff1c8',emissive:'#ffcf7a',emissiveIntensity:.2,roughness:.3});
+    const port=object(g,geo('sphere',.11),glow,0,.36,.2,false);port.scale.set(1,1,.35);
+    for(let k=0;k<3;k++){const a=k*TAU/3,leg=cylinder(g,.012,.016,.2,'#7a5530',Math.cos(a)*.17,.08,Math.sin(a)*.17);leg.rotation.z=Math.cos(a)*.35;leg.rotation.x=-Math.sin(a)*.35;}
+    ball(g,.035,'#ffd23f',0,.64,0);
+    g.scale.setScalar(1.35);g.userData.glow=glow;return g;
+  }
+  function visitor(era){
+    const g=new THREE.Group(),coat=era<1900?'#6b4a2b':era<1970?'#6f6a8f':'#d9603e';
+    box(g,.13,.2,.09,coat,0,.2,0);
+    for(const x of [-.035,.035])cylinder(g,.018,.02,.11,'#3b3f4a',x,.055,0);
+    ball(g,.065,'#f1c9a5',0,.36,0);
+    cylinder(g,.09,.09,.012,'#2d3440',0,.42,0);cylinder(g,.05,.055,.1,'#2d3440',0,.48,0);   // top hat
+    const arm=box(g,.03,.13,.03,coat,.085,.25,0,false);g.userData.arm=arm;
+    g.scale.setScalar(1.3);return g;
+  }
+  function startVisit(){
+    const o=onThisDay[Math.floor(Math.random()*onThisDay.length)];
+    // A clear patch of lawn: away from every building, the big plaza fixtures and the cinema.
+    const big=new Set(['stage','lab','market','zoo','stadium','launchpad','fountain','kiosk','times','tree']);
+    const lawns=[];for(const bx of [2.5,3.5,4.5,7.5,8.5,9.5,12.5,13.5,14.5])for(const bz of [2.5,3.5,4.5,7.5,8.5,9.5])lawns.push([bx,bz]);
+    let clear=lawns.filter(([x,z])=>Math.hypot(x-CINEMA.x,z-CINEMA.z)>2&&Math.hypot(x-9,z-9)>2.4&&   // never the busy central plaza
+
+      !town.buildings().some(b=>Math.abs(b.x+.5-x)<1.05&&Math.abs(b.y+.5-z)<1.05)&&
+      !town.props().some(p=>big.has(p.kind)&&Math.hypot(p.x-x,p.y-z)<(p.kind==='tree'?.7:1.8)));
+    if(!clear.length)clear=[[8.5,12.2]];
+    const [x,z]=clear[Math.floor(Math.random()*clear.length)],pod=timePod(),who=visitor(o.year);
+    pod.position.set(x,6,z);who.position.set(x+.32,.17,z+.22);who.visible=false;world.add(pod,who);
+    timeVisit={o,pod,who,t:0,x,z,said:0};
+  }
+  function updateVisit(dt){
+    if(!timeVisit){if(onThisDay.length&&sceneClock>nextVisit){startVisit();nextVisit=sceneClock+150+Math.random()*90;}return;}
+    const v=timeVisit;v.t+=dt;
+    if(v.t<2.2)v.pod.position.y=.17+Math.max(0,6*(1-v.t/2.2)**2);                          // drops in
+    v.pod.userData.glow.emissiveIntensity=v.t<2.4?.2+v.t*.6:Math.max(.2,1.6-(v.t-2.4)*.1);
+    if(v.t>3)v.who.visible=v.t<22;
+    if(v.t>4&&v.said===0){v.said=1;showBubble(v.who,`Greetings from ${v.o.year}!`,3600);}
+    if(v.t>8&&v.said===1){v.said=2;showBubble(v.who,`On this day in ${v.o.year}: ${shortHistory(v.o.text)}.`,9000,'On this day · Wikipedia');}
+    if(v.t>18&&v.said===2){v.said=3;showBubble(v.who,'Lovely town. Must dash!',3200);}
+    if(v.who.userData.arm)v.who.userData.arm.rotation.z=v.t>17&&v.t<21?-2.4+Math.sin(v.t*9)*.4:0;   // waves goodbye
+    if(v.t>23)v.pod.position.y+=dt*(v.t-23)*4;                                                       // lifts away
+    if(v.t>27){world.remove(v.pod,v.who);timeVisit=null;}
+  }
+  /* ---- The morning paper round: at dawn (and once soon after opening) a paper
+     carrier cycles an east-west street and tosses a rolled paper onto each
+     doorstep that faces it; the papers lie there until mid-morning. */
+  let round=null,papers=[],nextRound=18,wasNight=false;
+  function rider(){
+    const g=new THREE.Group(),wheel=geo('torus',.07,.012);
+    for(const x of [-.11,.11]){const w=object(g,wheel,mat('#2d3440'),x,.08,0,false);g.userData.wheels=(g.userData.wheels||[]).concat(w);}
+    const bar=box(g,.24,.02,.02,'#d0543a',0,.13,0,false);bar.rotation.z=.1;
+    box(g,.1,.16,.08,'#5aa469',-.02,.28,0);ball(g,.055,'#d8a77c',-.01,.41,0);
+    const cap=ball(g,.058,'#3f78c9',-.01,.43,0);cap.scale.y=.5;
+    box(g,.08,.07,.1,'#c79a5a',-.1,.24,.06,false);                                                    // the satchel
+    g.scale.setScalar(1.45);return g;   // a touch larger than life so the round reads at normal zoom
+  }
+  function paperRoll(){const g=new THREE.Group();const r=cylinder(g,.022,.022,.13,'#f4efe2',0,0,0);r.rotation.z=Math.PI/2;
+    cylinder(g,.024,.024,.02,'#d0543a',0,0,0).rotation.z=Math.PI/2;g.scale.setScalar(1.7);return g;}
+  function startRound(){
+    nextRound=Infinity;wasNight=false;
+    // The street with the most front doors on it gets the round.
+    const facing=l=>town.buildings().filter(b=>(b.kind==='house'||b.kind==='shop')&&b.y+1===l);
+    const line=LINES.slice(1,3).sort((a,b)=>facing(b).length-facing(a).length||Math.random()-.5)[0];
+    const doors=facing(line).map(b=>({x:b.x+.5,z:b.y+.98,done:false}));
+    const g=rider();g.position.set(1.4,.17,line+.5+.28);world.add(g);
+    round={g,line,doors,flying:[],x:1.4};
+  }
+  function updateRound(dt,dark){
+    if(dark>.5)wasNight=true;
+    if(!round&&((wasNight&&dark<.15)||sceneClock>nextRound))startRound();
+    for(let i=papers.length-1;i>=0;i--)if(sceneClock>papers[i].until){world.remove(papers[i].g);papers.splice(i,1);}
+    if(!round)return;
+    const r=round;r.x+=dt*.55;r.g.position.x=r.x;r.g.position.y=.17+Math.abs(Math.sin(r.x*9))*.006;
+    for(const w of r.g.userData.wheels||[])w.rotation.z-=dt*8;
+    for(const d of r.doors)if(!d.done&&Math.abs(d.x-r.x)<.25){d.done=true;const p=paperRoll();p.position.copy(r.g.position);world.add(p);r.flying.push({p,from:r.g.position.clone(),to:d,t:0});}
+    for(let i=r.flying.length-1;i>=0;i--){const f=r.flying[i];f.t=Math.min(1,f.t+dt*1.6);
+      f.p.position.set(f.from.x+(f.to.x-f.from.x)*f.t,.3+Math.sin(f.t*Math.PI)*.45,f.from.z+(f.to.z-f.from.z)*f.t);f.p.rotation.y+=dt*9;
+      if(f.t>=1){f.p.position.y=.2;f.p.rotation.y=.4;papers.push({g:f.p,until:sceneClock+120});r.flying.splice(i,1);}}
+    if(r.x>16.6&&!r.flying.length){world.remove(r.g);round=null;}
+  }
+  let sceneClock=0,lastClockAt=null;
   function placeBubble(){
     if(!bubble||!bubble.userData)return;
     const {item,until}=bubble.userData;
@@ -2436,6 +2541,7 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
     bubble.style.left=THREE.MathUtils.clamp((v.x+1)/2*r.width,half,r.width-half)+'px';bubble.style.top=Math.max((bubble.offsetHeight||28)+8,(1-v.y)/2*r.height)+'px';
   }
   function rebuild(){
+    timeVisit=null;round=null;papers=[];
     ambient.length = 0; plazaLights.length = 0; festoonBulbs.length = 0;
     windowMaterials.clear();
     gardenElements = 0; woodlandShapes = 0; terrainContours = 0; composedBuildings = 0; districtGardenRooms = 0; landmarkCount = 0;
@@ -3458,7 +3564,11 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
       resize();
       const state=town.debug();
       if(worldBuildings!==town.buildings()||worldSeed!==state.seed)rebuild();
-      syncActors();syncCamera();light(state.night||0);nightLife(state.night||0,state.clock||0);placeBubble();
+      syncActors();syncCamera();light(state.night||0);nightLife(state.night||0,state.clock||0);
+      // Driven by the town's own clock, so they pause with the town.
+      {const now=state.clock||0;const dt=lastClockAt===null?0:THREE.MathUtils.clamp(now-lastClockAt,0,.1);lastClockAt=now;sceneClock+=dt;
+       updateVisit(dt);updateRound(dt,state.night||0);}
+      placeBubble();
       animateAmbient(state.clock||0);
       if(lens)lens.render(timestamp-(api.lastAt||timestamp));else renderer.render(scene,camera);
       api.lastAt=timestamp;frames++;
@@ -3485,6 +3595,10 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
     // A stable actual GPU-rendered frame for visual regression screenshots.
     // Unlike stop(), freeze does not switch to the Canvas fallback.
     tapResident,
+    // Test hooks: start the visitor or the paper round now.
+    startVisit:()=>{if(!onThisDay.length)onThisDay=[{year:1969,text:'Apollo 11 lands on the Moon'}];startVisit();return timeVisit;},startRound:()=>{startRound();return round;},
+    stepExtras:(seconds,dark=0)=>{for(let t=0;t<seconds;t+=.05){sceneClock+=.05;updateVisit(.05);updateRound(.05,dark);}},
+    sceneExtras:()=>({visiting:!!timeVisit,riding:!!round,papers:papers.length,history:onThisDay.length}),
     freeze(){frozen=true;cancelAnimationFrame(raf);},
     unfreeze(){if(!stopped&&frozen){frozen=false;raf=requestAnimationFrame(frame);}},
     stop(){stopped=true;cancelAnimationFrame(raf);this.active=false;window.ToyTown3D.active=false;

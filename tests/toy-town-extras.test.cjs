@@ -31,4 +31,16 @@ assert.match(view, /if\(Math\.hypot\(p\.x-CINEMA\.x,p\.y-CINEMA\.z\)<1\.7\)retur
 assert.match(view, /function nightLife\(dark,time\)/); assert.match(view, /new THREE\.Points\(/, 'fireflies');
 assert.match(view, /Fiction only, in the town's own voice/, 'resident chat never quotes the sourced headlines');
 assert.match(sim, /window\.ToyTown3D\.tapResident\?\.\(e\.clientX, e\.clientY\)\) return;/, 'a tap on a resident chats instead of starting a surprise');
-console.log('Toy Town EXTRAS PASS: news card minimises to a pill (phones first, remembered), Picture-of-the-Day cinema, fireflies and shooting stars, tap-a-resident chat.');
+// The "on this day" visitor and the morning paper round.
+assert.match(view, /onThisDay=lightHistory\(data\?\.onthisday\)/, 'the visitor reads the same daily Wikipedia feed as the cinema');
+assert.match(view, /!grim\(o\.text\)/, 'grim history is filtered with the town GRIM list');
+assert.match(view, /'On this day · Wikipedia'/, 'and the history is credited');
+assert.match(view, /Math\.hypot\(x-9,z-9\)>2\.4/, 'the pod never lands in the busy central plaza');
+assert.match(view, /b\.y\+1===l/, 'papers go only to doors that face the street being ridden');
+assert.match(view, /wasNight&&dark<\.15/, 'the round rides at dawn');
+// The history filter itself, extracted and run.
+const grimSrc = view.match(/const grim=text=>[^\n]*\n/)[0], lightSrc = view.match(/function lightHistory\(list\)\{[\s\S]*?\n  \}/)[0];
+const ctx = {town: {GRIM: ['kill*', 'war', 'bomb*']}}; vm.runInNewContext(grimSrc.replace('const grim', 'this.grim') + lightSrc + ';this.lightHistory=lightHistory;', ctx);
+const kept = ctx.lightHistory([{year: 1969, text: '<b>Apollo 11</b> lands on the Moon.'}, {year: 1945, text: 'A bomb is dropped on a city.'}, {year: 1914, text: 'The war begins in earnest.'}, {year: 2001, text: 'short'}]);
+assert.equal(JSON.stringify(kept), JSON.stringify([{year: 1969, text: 'Apollo 11 lands on the Moon.'}]), 'only gentle, real-length history is kept, tags stripped');
+console.log('Toy Town EXTRAS PASS: news card minimises to a pill (phones first, remembered), Picture-of-the-Day cinema, fireflies and shooting stars, tap-a-resident chat, the on-this-day visitor (gentle history only, credited) and the dawn paper round.');
