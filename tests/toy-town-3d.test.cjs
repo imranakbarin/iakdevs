@@ -113,7 +113,7 @@ assert.match(moduleCode,/districtSceneRole=p\.role/,
   'workplace roles survive into the 3D scene');
 assert.match(moduleCode,/districtTool=tool/,
   'real job-specific tools attach to resident wrists');
-assert.match(moduleCode,/scene\.background\.set\(tint\('#cee9f5'/,
+assert.match(moduleCode,/const sky=tint\('#cee9f5'/,
   'the entire town shares a clearer, colorful daylight sky');
 assert.match(moduleCode,/kind:'umbrella'/,'visible animated café canopies add a lively street silhouette');
 assert.match(moduleCode,/kind:'bunting'/,'real suspended flags sway over the plaza');
@@ -156,16 +156,16 @@ assert.match(moduleCode,/eye.scale.y=blink/,'eyelids blink without a separate an
 assert.match(html,/type="importmap"/);
 assert.match(html,/three@0\.187\.0\/build\/three\.module\.js/);
 assert.match(html,/three@0\.187\.0\/examples\/jsm\//);
-assert.match(html,/toy-town-3d\.js\?v=50/);
+assert.match(html,/toy-town-3d\.js\?v=52/);
 assert.match(html,/toy-town-landmarks\.js\?v=7/,'the independent models are requested alongside Three');
 assert.match(html,/buildLandmark:landmarks\.buildLandmark/,
   'loader injects the authored model builder into the 3D simulation');
-assert.match(html,/toy-town\.js\?v=31/);
+assert.match(html,/toy-town\.js\?v=33/);
 const classicScript=html.match(/src="assets\/toy-town\.js\?v=\d+"/);
 assert.ok(classicScript&&
   html.indexOf(classicScript[0])<html.indexOf("import('three')"),
   'the actual versioned classic script always loads before WebGL');
-assert.match(page,/toy-town\.html\?v=60&embed=1/);
+assert.match(page,/toy-town\.html\?v=62&embed=1/);
 assert.match(fs.readFileSync(path.join(root,'assets/toy-town.js'),'utf8'),
   /targetX=clamp\(\.08,p\.x,17\.92\)/,
   'scripted paths are clamped at the endpoint rather than freezing outside town');

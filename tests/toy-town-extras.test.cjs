@@ -108,4 +108,30 @@ assert.match(html, /id="sound-toggle"/); assert.match(html, /toy-town-sound\.js\
 assert.match(soundSrc, /set\(false, false\);/, 'sound starts off');
 for (const c of ['honk', 'bell', 'quack', 'chirp', 'pop', 'chime']) assert.match(soundSrc, new RegExp(c + ': \\(\\) =>'), c + ' is synthesised');
 assert.doesNotMatch(soundSrc, /\.(mp3|ogg|wav)/, 'no sound files to download');
-console.log('Toy Town EXTRAS PASS: follow a resident, feed the ducks, gentle opt-in sound; a day in the life (commuters, children, lunch, home at dusk); KayKit CC0 kit (named, small, licensed, with fallback; roads and plaza too); taps on residents, cars, buildings and open ground; livelier gaits and greetings; news card minimises to a pill (phones first, remembered), Picture-of-the-Day cinema, fireflies and shooting stars, tap-a-resident chat, the on-this-day visitor (gentle history only, credited) and the dawn paper round.');
+// Nobody stays stuck, and walkers do things of their own: several layouts, six town-minutes each.
+for (const seed of [20261102, 7, 42]) {
+  const box = vm.createContext({Math, Object, Array, JSON, Date, String, Number, RegExp, Set, Map, setTimeout: () => 0, document: {getElementById: () => ({textContent: '', style: {}})}});
+  vm.runInContext(town + ';this.T=ToyTown;', box); const T = box.T; T.build(seed, 'market');
+  const last = new Map(), still = new Map(); let worst = 0;
+  for (let i = 0; i < 20 * 360; i++) { T.update(1 / 20); if (i % 20) continue; const clock = T.debug().clock;
+    for (const m of T.movers()) { const p = last.get(m), meant = (m.stopUntil && clock < m.stopUntil) || m.sit || m.max === 0 || m.shopRole || m.path;
+      const n = p && !meant && Math.hypot(m.x - p.x, m.y - p.y) < .01 ? (still.get(m) || 0) + 1 : 0; still.set(m, n); worst = Math.max(worst, n); last.set(m, {x: m.x, y: m.y}); } }
+  assert.ok(worst <= 30, `layout ${seed}: no car, bike or walker is stuck for long (longest ${worst} s; a red light plus a short queue is fine, the old deadlocks lasted the whole run)`);
+  const w = T.debug().whims, kinds = Object.entries(w).filter(([k, v]) => v > 0).length;
+  assert.ok(kinds >= 4, `layout ${seed}: walkers follow varied whims (${JSON.stringify(w)})`);
+  const g = T.gather(9, 9.5); assert.ok(g >= 0);
+}
+assert.match(sim, /if\(pushing&&\(o\.d<2\)!==\(m\.d<2\)\)continue;/, 'a car out of patience can edge past crossing traffic, never into its own lane');
+// Moments: offered, never automatic; Watch follows and narrates.
+assert.match(view, /function offerMoment\(m\)/); assert.match(view, /go\.onclick=\(\)=>\{if\(offered\)watchMoment\(offered\);\}/, 'the camera moves only when Watch is tapped');
+assert.match(view, /town\.follow\(m\.ref,3\);ensureFollowCard\(\)/, 'watching follows close with the narrating card');
+// Weather: WMO codes map to the town's kinds; only a coarse time-zone city is used.
+const wsrc = fs.readFileSync(path.join(root, 'assets/toy-town-weather.js'), 'utf8');
+const wbox = vm.createContext({Math, Object, JSON, Promise, setTimeout: () => 0, clearTimeout: () => 0, location: {search: '?weather=snow'}, URLSearchParams, Intl, document: {getElementById: () => null}});
+vm.runInContext(wsrc + ';this.W=ToyTownWeather;', wbox);
+const d = wbox.W.describe;
+assert.equal(d(0).kind, 'clear'); assert.equal(d(3).kind, 'cloud'); assert.equal(d(45).kind, 'fog'); assert.equal(d(63).kind, 'rain'); assert.equal(d(81).kind, 'rain'); assert.equal(d(73).kind, 'snow'); assert.equal(d(95).kind, 'storm'); assert.ok(d(2, 50).windy);
+assert.doesNotMatch(wsrc, /geolocation/, 'no location prompt: only the time-zone city');
+assert.match(wsrc, /api\.open-meteo\.com/); assert.match(html, /<span id="weather"><\/span>/);
+assert.match(view, /function updateWeather\(dt\)/); assert.match(view, /function umbrellaFor\(group,ref\)/, 'rain brings out umbrellas');
+console.log('Toy Town EXTRAS PASS: nobody stays stuck (3 layouts); varied whims; Moments on request; local weather; follow a resident, feed the ducks, gentle opt-in sound; a day in the life (commuters, children, lunch, home at dusk); KayKit CC0 kit (named, small, licensed, with fallback; roads and plaza too); taps on residents, cars, buildings and open ground; livelier gaits and greetings; news card minimises to a pill (phones first, remembered), Picture-of-the-Day cinema, fireflies and shooting stars, tap-a-resident chat, the on-this-day visitor (gentle history only, credited) and the dawn paper round.');

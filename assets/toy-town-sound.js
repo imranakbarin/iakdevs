@@ -38,7 +38,8 @@
     quack: () => { tone('sawtooth', 560, 330, .11, .16); tone('sawtooth', 520, 300, .12, .14, .16); },
     chirp: () => { for (let k = 0; k < 3; k++) tone('sine', 2600 + Math.random() * 900, 3500 + Math.random() * 600, .07, .14, k * .1); },
     pop: () => { noise(.06, .9, 1800); tone('sine', 520, 160, .08, .2); },
-    chime: () => { tone('sine', 880, 880, .35, .18); tone('sine', 1318.5, 1318.5, .4, .14, .09); }
+    chime: () => { tone('sine', 880, 880, .35, .18); tone('sine', 1318.5, 1318.5, .4, .14, .09); },
+    rumble: () => { noise(1.6, .5, 90); tone('sine', 55, 40, 1.4, .25); }
   };
   // A sparse birdsong bed by day; the odd soft cricket at night.
   function bed() {
