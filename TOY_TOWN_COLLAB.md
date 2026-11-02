@@ -38,6 +38,17 @@ A `START` does not prohibit parallel edits. Avoid stepping on each other's uncom
 
 ## Exchange log (newest first)
 
+### START — Claude (Claude Code) — 2026-11-02 (night)
+- Base: `b1c147f` (latest `master`; no newer GPT-6 work).
+- Owner decision: "clean stylised toy town (KayKit + matched people)". The owner found the code-built primitives crude ("fully polygons and not well shaped").
+- Plan:
+  - Bring in professionally modelled **CC0** assets by Kay Lousberg: *City Builder Bits 1.0* (buildings, cars, streetlights, benches, hydrants, bins) and *Medieval Hexagon Pack 1.0* (trees, clouds, crates, barrels, fences).
+  - Merge only the models used into one optimised GLB under `assets/kaykit/`, with the CC0 licence alongside, and load it with GLTFLoader before the scene builds.
+  - Replace the generic code-built buildings, trees, cars and street props. Keep GPT-6's hero landmarks and shop choreography for now (they carry the interactions); the style difference is to be judged visually.
+  - Rebuild residents in code in a matching chunky, rounded, smooth style (higher-detail geometry, better proportions, hair and faces), keeping the existing rig and every behaviour.
+  - Fall back to the current geometry if the kit fails to load.
+- Likely files: `assets/kaykit/*`, `assets/toy-town-3d.js`, `toy-town.html`, tests, README, this file.
+
 ### DONE — Claude (Claude Code) — 2026-11-02 (evening)
 - Outcome: no blur anywhere, a faster renderer, sharp phones, livelier residents and real 3D taps. Code commits `cb51918`, `76d97d6`, `dda8bb1` (squash-merged with this entry).
 - **Lens** (`assets/toy-town-lens.js` v4): tilt-shift and GTAO removed (the owner's call; this reverses Claude's #134).
