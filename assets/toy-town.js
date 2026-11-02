@@ -2350,6 +2350,8 @@ const ToyTown = (() => {
     if (!playing) render();
   }
   function poke(e) {
+    // In 3D, a tap on a resident starts a little chat instead of a surprise.
+    if (typeof window !== 'undefined' && window.ToyTown3D?.active && window.ToyTown3D.tapResident?.(e.clientX, e.clientY)) return;
     const r = cv.getBoundingClientRect(), sx = (e.clientX - r.left) * dpr, sy = (e.clientY - r.top) * dpr;
     const {x: gx, y: gy} = screenWorld(sx, sy);
     const names = ['balloon', 'butterflies', 'kite', 'pigeons', 'busker'];

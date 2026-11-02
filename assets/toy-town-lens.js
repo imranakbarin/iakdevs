@@ -104,7 +104,7 @@ export function createLens(THREE, addons, renderer, scene, camera, opts = {}) {
     // dark: 0 day → 1 night. Lights glow more as the light goes.
     setDusk(dark) {
       // By day the sun's glints on the river would bloom into a milky haze, so the glow only switches on as the lamps do.
-      bloom.enabled = dark > .12; bloom.threshold = 1.5 - dark * .6; bloom.strength = dark * .85; bloom.radius = .55 + dark * .2;
+      bloom.enabled = dark > .12; bloom.threshold = 1.6 - dark * .5; bloom.strength = dark * .55; bloom.radius = .55 + dark * .2;
       grade.uniforms.warmth.value = .5 + dark * .2;
     },
     // Focus band follows the zoom: close-ups get a shallow, photographic band.

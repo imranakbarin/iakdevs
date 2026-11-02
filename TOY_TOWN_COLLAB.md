@@ -38,6 +38,28 @@ A `START` does not prohibit parallel edits. Avoid stepping on each other's uncom
 
 ## Exchange log (newest first)
 
+### DONE — Claude (Claude Code) — 2026-11-02
+- Outcome: news card minimise, open-air Picture-of-the-Day cinema, night life and tap-a-resident chat. Code commit `4033f5f` (squash-merged to `master` with this entry).
+- Files changed:
+  - `toy-town.html`: `#card-min` button and the `.min` pill style; an inline script folds the card on phones the first time and remembers the choice in `localStorage['toy-town:card-min']`; cache keys sim v28, 3D v43, lens v3.
+  - `assets/toy-town-3d.js`:
+    - `openAirCinema()` at the back-left corner (`CINEMA` {x .62, z .7}, rotated toward the camera; trees within 1.7 are skipped). It fetches `api.wikimedia.org/feed/v1/wikipedia/en/featured/Y/M/D` → `image.thumbnail.source` via `TextureLoader` (anonymous CORS), cover-fits it, and credits it on the caption plate. A painted test card shows if it cannot load. Deckchair viewers and a projector beam appear after dusk.
+    - `nightSky()`/`nightLife()`: fireflies (`THREE.Points`, additive) and an occasional shooting star when dark > .6.
+    - `tapResident()`/`placeBubble()`: a DOM bubble above the tapped resident (who pauses via `stopUntil`), kept on screen. Lines are fictional only (TALK for the day's theme + town chatter); it never quotes the sourced headlines.
+  - `assets/toy-town.js`: `poke()` defers to `ToyTown3D.tapResident` first.
+  - `assets/toy-town-lens.js`: softer dusk bloom (strength 0.55·dark, threshold 1.6−0.5·dark), because the plaza glared at night.
+  - `index.html`: embed v56.
+  - tests: new `tests/toy-town-extras.test.cjs`; version bumps in the 3D, town and lens tests; workflow runs the extras test.
+- Tests and checks:
+  - all `tests/*.test.cjs` pass locally (including pip-run).
+  - CI visual run 41457523696 green.
+  - local Chromium screenshots reviewed: desktop wide at night (cinema visible, back-left, only sky behind), desktop close at night with a scripted tap (bubble shows), phone at night (card folded to a pill; bubble).
+- Not verified:
+  - the real Picture-of-the-Day image: the sandbox blocks Wikimedia, so only the fallback card was seen. Check live.
+  - fireflies are subtle at normal zoom.
+  - physical iPhone behaviour.
+- Next: an "on this day" visitor and the morning paper round (canvas-era ideas not yet in 3D); the night centre is still bright on phones.
+
 ### START — Claude (Claude Code) — 2026-11-02
 - Base: `f635a27` (latest `master`; read GPT-6 v54/v55 DONE entries, perspective camera and storefront work).
 - Task (owner request): (1) a minimise control for the news card, which covers most of a phone screen: collapsed to a small pill, remembered per device; (2) port Claude's earlier canvas-era ideas into the 3D town, starting with the ones that read at normal zoom: an open-air cinema showing Wikipedia's Picture of the Day, fireflies and an occasional shooting star after dusk (they bloom through the lens), and tap-a-resident chat bubbles that talk about real headlines.

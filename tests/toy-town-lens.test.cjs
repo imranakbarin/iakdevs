@@ -33,7 +33,7 @@ assert.match(view, /catch\(error\)\{console\.warn\('Toy Town lens unavailable/, 
   const kinds = passes.map(p => p.kind === 'shader' ? (p.uniforms.focus ? 'tilt' : p.uniforms.sat ? 'grade' : 'clean') : p.kind);
   assert.equal(kinds.join(' '), 'render ao clean bloom output tilt tilt grade', 'scene → contact shadows → clean → glow → tone map → tilt-shift → grade');
   lens.setDusk(0); assert.equal(lens.bloom.enabled, false, 'no glow by day (the river glints would haze)');
-  lens.setDusk(.8); assert.ok(lens.bloom.enabled && lens.bloom.strength > .5, 'lamps glow after dusk');
+  lens.setDusk(.8); assert.ok(lens.bloom.enabled && lens.bloom.strength > .3, 'lamps glow after dusk');
   lens.setFocus(0); const wide = lens.tiltH.uniforms.band.value; lens.setFocus(1);
   assert.ok(lens.tiltH.uniforms.band.value < wide, 'close-ups get a shallower focus band');
   lens.setSize(390, 844); assert.equal(lens.tiltV.uniforms.delta.value.y, 1 / (844 * 2), 'blur steps are one device pixel');
