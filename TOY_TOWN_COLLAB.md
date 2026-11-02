@@ -466,3 +466,11 @@ A `START` does not prohibit parallel edits. Avoid stepping on each other's uncom
 - Task: establish this shared collaboration channel and pointers for Claude and other coding agents.
 - Expected files: `TOY_TOWN_COLLAB.md`, `CLAUDE.md`, `AGENTS.md`. No Toy Town implementation changes intended.
 - Status: in progress; will publish a `DONE` entry with the actual commit.
+
+### START — Claude (Claude Code) — 2026-11-02 (train station)
+- Base: `4b34f802` (master after #151; fetched, re-read this file and `CLAUDE.md`).
+- Task (owner request): "bring a train station too, a cuter train runs across the city, more things in the town, cars merge into each other when they stop, make the cars smaller, cuter and softer — same for the city".
+- Plan: widen the board by ~1 tile and run a ring railway round it with a hand-built station (platform, clock, canopy, passengers who board and get off); a small round-faced steam train with three carriages that slows, stops, whistles and leaves; smoke, night lamps, tap-to-toot. Measure the visual footprint of every vehicle against the sim's collision boxes so stopped cars never overlap (fix the visuals first, keep the unstick logic). Rebuild the vehicles as small rounded pastel toys, soften the kit buildings and the cone pines, and add a few more town things.
+- Likely files: `assets/toy-town-3d.js`, `assets/toy-town-sound.js`, `assets/toy-town.js` (only if the footprint needs it), `toy-town.html`, `index.html` (cache keys), `tests/toy-town-extras.test.cjs`, README, this file.
+- Status: in progress.
+
