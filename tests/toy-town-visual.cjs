@@ -98,6 +98,18 @@ async function main(){
           throw Error('Real 3D never activated '+JSON.stringify(diagnostics)+'; '+errors.join(' | '));
         }
       }
+      if(!job.classic){
+        const projection=await page.evaluate(()=>({
+          projection:window.ToyTown3D?.getStats?.().cameraProjection,
+          perspective:!!window.ToyTown3D?.camera?.isPerspectiveCamera,
+          fov:window.ToyTown3D?.camera?.fov
+        }));
+        if(projection.projection!=='perspective'||!projection.perspective||
+          projection.fov<20||projection.fov>45)
+          throw Error('Photographic street lens is not a real perspective camera: '+
+            JSON.stringify(projection));
+        console.log('PERSPECTIVE_CAMERA '+JSON.stringify(projection));
+      }
       // A snapshot must show exactly the *target* close-up, not whichever
       // fraction of the easing animation a slow software GPU happened to reach.
       // Pause the world before requesting zoom: ToyTown.zoomAt then snaps its
@@ -112,11 +124,13 @@ async function main(){
         // simulation in Chromium until trading and the street concert
         // are active, then inspect the 3D actor rig in that same scene.
         const market=await page.evaluate(()=>{
-          let held=false,served=false;
+          let held=false,served=false,knocked=false;
           for(let i=0;i<60*22;i++){
             ToyTown.update(1/60);
             const actors=ToyTown.movers();
             if(actors.some(m=>m.shopRole==='customer'&&m.carrying))held=true;
+            if(actors.some(m=>m.shopRole==='customer'&&
+              m.shopPhase==='knocking'))knocked=true;
             if(actors.some(m=>m.shopRole==='vendor'&&
               (m.shopAction==='serving'||m.shopAction==='handoff')))served=true;
           }
@@ -124,14 +138,31 @@ async function main(){
           const stats=ToyTown.debug();
           return {sales:stats.streetTransactions,visits:stats.streetShopVisits,
             concerts:stats.streetPerformances,reactions:stats.newsReactions,
-            held,served,performer:movers.some(m=>m.kind==='busker'&&m.guitar),
+            held,served,knocked,performer:movers.some(m=>m.kind==='busker'&&m.guitar),
             people:movers.filter(m=>m.shopRole).length};
         });
         if(market.sales<2||market.visits<2||market.concerts<1||
-          !market.held||!market.served||!market.performer||market.people!==5)
+          !market.held||!market.served||!market.knocked||
+          !market.performer||market.people!==5)
           throw Error('The miniature market does not really trade and perform: '+
             JSON.stringify(market));
         console.log('LIVING_MARKET '+JSON.stringify(market));
+        // Finish on a real knock at the threshold, rather than a random
+        // static frame after all the accelerated simulated shop visits.
+        const staged=await page.evaluate(()=>{
+          for(let i=0;i<60*14;i++){
+            ToyTown.update(1/60);
+            const who=ToyTown.movers().find(m=>m.shopRole==='customer'&&
+              m.shopPhase==='knocking');
+            if(who)return {shop:who.shopAt,x:who.x,y:who.y,
+              action:who.shopAction,moved:who.moved};
+          }
+          return null;
+        });
+        if(!staged||staged.action!=='knocking'||staged.moved>.00015)
+          throw Error('Could not stage a physically stationary door knock: '+
+            JSON.stringify(staged));
+        console.log('SHOP_THRESHOLD_KNOCK '+JSON.stringify(staged));
         beforeFrame=await page.evaluate(()=>
           window.ToyTown3D?.getStats?.().frames||0);
       }
@@ -199,6 +230,15 @@ async function main(){
       }
       if(job.name==='mobile-3d-close'){
         await page.waitForFunction(()=>{
+          let windowOpened=false,knockPosed=false;
+          window.ToyTown3D?.scene?.traverse(o=>{
+            if(o.userData?.streetFront?.openAmount>.025)windowOpened=true;
+            if(o.userData?.pose?.knock>.025)knockPosed=true;
+          });
+          return windowOpened&&knockPosed;
+        },null,{timeout:30000,polling:100});
+        console.log('SHOP_KNOCK_GPU PASS: physically open serving hatch and posed visitor');
+        await page.waitForFunction(()=>{
           let playing=false,stocked=false;
           window.ToyTown3D?.scene?.traverse(o=>{
             if(o.userData?.buskerGuitar&&o.userData.pose?.play>.01)playing=true;
@@ -207,6 +247,21 @@ async function main(){
           });
           return playing&&stocked;
         },null,{timeout:30000,polling:100});
+        const shopFronts=await page.evaluate(()=>{
+          let fronts=0,details=0,transactions=0;
+          window.ToyTown3D?.scene?.traverse(o=>{
+            if(o.userData?.workingShop){
+              fronts++;
+              if(o.userData?.streetFront?.bell&&o.children.length>30)details++;
+              transactions+=o.userData?.streetFront?.serviceCount||0;
+            }
+          });
+          return {fronts,details,transactions};
+        });
+        if(shopFronts.fronts!==2||shopFronts.details!==2)
+          throw Error('Integrated, physical shopfronts missing: '+
+            JSON.stringify(shopFronts));
+        console.log('SHOP_FRONT_GPU '+JSON.stringify(shopFronts));
         console.log('LIVING_MARKET_GPU PASS: performer plays modeled guitar and real goods attach to hands');
       }
       if(job.social){

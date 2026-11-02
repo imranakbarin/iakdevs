@@ -97,6 +97,16 @@ assert.match(moduleCode,/function vergeMaterial\(axis\)/,'street edges have shar
 assert.match(moduleCode,/function paintedVerge\(/,'street verges have physically placed decals');
 assert.match(moduleCode,/function createStorybookVillage\(/,
   'village scenery is built as one cohesive 3D environmental set');
+assert.match(moduleCode,/shop\.userData\.streetFront=/,
+  'storefronts have physical tracked service details');
+assert.match(moduleCode,/shop\.openTarget=waiting\?1:0/,
+  'the windows open for a real customer, not a generic animation loop');
+assert.match(moduleCode,/state\.knock=ease/,
+  'a customer has an independent arrival and knock pose');
+assert.match(moduleCode,/shop\.ringUntil=time\+\.9/,
+  'service bell reacts to an actual vendor handoff');
+assert.doesNotMatch(moduleCode,/a\.mesh\.rotation\.y=\.003\*Math\.sin\(time\*1\.2\+a\.phase\)/,
+  'store counters no longer drift or wobble when nobody is interacting');
 assert.match(moduleCode,/function districtFixture\(p\)/,
   'outer neighborhoods have separately modeled working places');
 assert.match(moduleCode,/districtSceneRole=p\.role/,
@@ -146,16 +156,16 @@ assert.match(moduleCode,/eye.scale.y=blink/,'eyelids blink without a separate an
 assert.match(html,/type="importmap"/);
 assert.match(html,/three@0\.187\.0\/build\/three\.module\.js/);
 assert.match(html,/three@0\.187\.0\/examples\/jsm\//);
-assert.match(html,/toy-town-3d\.js\?v=39/);
+assert.match(html,/toy-town-3d\.js\?v=42/);
 assert.match(html,/toy-town-landmarks\.js\?v=7/,'the independent models are requested alongside Three');
 assert.match(html,/buildLandmark:landmarks\.buildLandmark/,
   'loader injects the authored model builder into the 3D simulation');
-assert.match(html,/toy-town\.js\?v=26/);
+assert.match(html,/toy-town\.js\?v=27/);
 const classicScript=html.match(/src="assets\/toy-town\.js\?v=\d+"/);
 assert.ok(classicScript&&
   html.indexOf(classicScript[0])<html.indexOf("import('three')"),
   'the actual versioned classic script always loads before WebGL');
-assert.match(page,/toy-town\.html\?v=52&embed=1/);
+assert.match(page,/toy-town\.html\?v=55&embed=1/);
 assert.match(fs.readFileSync(path.join(root,'assets/toy-town.js'),'utf8'),
   /targetX=clamp\(\.08,p\.x,17\.92\)/,
   'scripted paths are clamped at the endpoint rather than freezing outside town');
@@ -224,6 +234,7 @@ class Texture {constructor(){this.colorSpace='';stats.roofTextures++;}}
 const THREE={
  WebGLRenderer:Renderer, Scene:O, Group:O, Object3D:O, InstancedMesh,
  Color:C,Fog:class{constructor(col){this.color=new C(col);}},
+ PerspectiveCamera:class extends O {constructor(fov,aspect,near,far){super();this.fov=fov;this.aspect=aspect;this.near=near;this.far=far;this.zoom=1;}},
  OrthographicCamera:O,HemisphereLight:O,DirectionalLight:Directional,
  PointLight:class extends O {constructor(){super();this.isPointLight=true;this.intensity=0;}},
  MeshStandardMaterial:Material,MeshBasicMaterial:Material,
@@ -299,6 +310,18 @@ assert.ok(api.getStats().gardenElements>=140,'village has substantial coordinate
 const workingDesks=api.scene.children.flatMap(n=>n.children||[])
   .filter(n=>n.userData?.workingShop);
 assert.equal(workingDesks.length,2,'two decorated real merchandise counters occupy shop frontage');
+assert.ok(workingDesks.every(s=>s.userData.streetFront?.bell),
+  'both trading counters have actual architectural fronts and handoff bells');
+assert.ok(workingDesks.every(s=>s.userData.streetFront.shutters.length===2),
+  'each shop has two real hinged service-window doors');
+assert.ok(workingDesks.every(s=>s.userData.streetFront.shutters
+  .every(x=>x.hinge.position.z>.15)),
+  'service leaves hinge in front of the counter where customers can reach');
+assert.deepEqual(workingDesks.map(s=>s.userData.streetFront.merchandise),
+  ['pastries','books'],
+  'two shops have distinct window merchandise rather than identical filler');
+assert.ok(workingDesks.every(s=>s.children.length>30),
+  'supported awnings and dimensional merchandise actually exist in the 3D scene');
 assert.ok(workingDesks.every(s=>s.position.x>7&&s.position.x<11&&
   s.position.z>8&&s.position.z<9),'shop counters are on the living village frontage');
 assert.ok(api.getStats().woodlandShapes>=1,
@@ -399,10 +422,16 @@ assert.match(moduleCode,/roots taper out into the lawn/i,'tree trunks have natur
 assert.match(moduleCode,/grassMaterial\('#b9cba7',10\)/,'cutaway meadow has textured, continuous grass');
 assert.match(moduleCode,/paver.rotation.y=/,'stone paths have irregular handmade placement');
 assert.match(moduleCode,/23-closeness\*11\.5/,'close zoom lowers the eye to show character faces');
+assert.match(moduleCode,/new THREE\.PerspectiveCamera\(35/,
+  'the photographic city camera has real depth and vanishing lines');
+assert.match(moduleCode,/scene\.fog\.near=Math\.max\(18,distance\*\.86\)/,
+  'atmospheric fade follows the dolly instead of washing out wide-angle city shots');
 assert.match(moduleCode,/if\(!b.hero && style===0/,
   'ordinary houses have occasional attached side wings for skyline variety');
-assert.match(moduleCode,/camera\.position\.set\(aimX\+7\.4,20\.4-closeness\*9\.4,aimZ\+24\.0\)/,
-  'close-up angle is more frontal and less overhead, keeping shopfronts legible');
+assert.match(moduleCode,/const dx=legacy\?12\.5:7\.4,dy=legacy\?23-closeness\*11\.5:/,
+  'street photo direction and eye height interpolate to a lower facade view');
+assert.match(moduleCode,/camera\.position\.set\(aimX\+dx\/length\*distance/,
+  'the camera dolly moves along the physical photographic viewing direction');
 assert.match(moduleCode,/const focusWeight=THREE\.MathUtils\.clamp/,
   'compositional framing is removed smoothly as the user pans away');
 assert.match(moduleCode,/function composeSecondaryBuilding\(/,
@@ -510,6 +539,7 @@ const shopkeeperRef={type:'person',kind:'shopkeeper',shopRole:'vendor',
   shopVenue:'bakery',shopAction:'offering',x:8.07,y:8.42,d:2,
   max:0,v:0,travel:0,ph:2,col:'#de8f69',skin:'#d8ac8e'};
 const buyerRef={type:'person',kind:'shopper',shopRole:'customer',
+  shopAt:'bakery',shopPhase:'ordering',
   shopAction:'ordering',x:8.32,y:8.78,d:3,max:.4,
   v:0,travel:0,ph:1.5,col:'#a28bce',skin:'#d4b295'};
 pedestrians.push(shopkeeperRef,buyerRef);
@@ -525,6 +555,26 @@ assert.equal(buyerModel.userData.shopProps.bread.visible,false,
   'buyer cannot display a purchase before the handoff');
 const rightArm=sellerModel.userData.limbs.arms[1];
 assert.ok(Math.abs(rightArm.rotation.x)>.02,'vendor extends a serving arm');
+const bakeryFront=workingDesks.find(o=>o.userData.workingShop==='bakery')
+  .userData.streetFront;
+assert.ok(bakeryFront.hasCustomers,'display detects an actual customer ordering');
+assert.ok(bakeryFront.lampMaterial.emissiveIntensity>.20,
+  'shop cabinet starts glowing only after a shopper enters service');
+assert.equal(bakeryFront.serviceCount,0,
+  'opening a shop never rings a fictitious completed sale');
+buyerRef.shopPhase='knocking';buyerRef.shopAction='knocking';
+frameClock+=.18;callbacks.shift()();
+assert.ok(buyerModel.userData.pose.knock>.05,
+  'customer actually raises an arm and knocks after arriving');
+assert.ok(bakeryFront.openAmount>.04,
+  'the service window physically swings outward for a real shopper');
+assert.ok(bakeryFront.shutters[0].hinge.rotation.y<0&&
+  bakeryFront.shutters[1].hinge.rotation.y>0,
+  'the two window leaves swing outward from opposite hinges');
+buyerRef.shopPhase='ordering';buyerRef.shopAction='ordering';
+frameClock+=.18;callbacks.shift()();
+assert.ok(buyerModel.userData.pose.order>.05,
+  'customer changes from a knock into a clear order gesture');
 shopkeeperRef.shopAction='handoff';
 buyerRef.shopAction='receiving';buyerRef.carrying='bread';
 frameClock+=1/30;callbacks.shift()();
@@ -532,6 +582,17 @@ assert.equal(sellerModel.userData.shopProps.bread.visible,false,
   'the vendor releases the bread after the transaction');
 assert.equal(buyerModel.userData.shopProps.bread.visible,true,
   'the same product appears in the buyer hand');
+assert.equal(bakeryFront.serviceCount,1,
+  'a genuine shop handoff rings the miniature service bell exactly once');
+assert.ok(bakeryFront.ringUntil>frameClock,
+  'the service bell physically swings for a bounded interval');
+frameClock+=1/30;callbacks.shift()();
+assert.equal(bakeryFront.serviceCount,1,
+  'a long handoff state does not trigger duplicate bell rings');
+shopkeeperRef.shopAction='offering';frameClock+=1/30;callbacks.shift()();
+shopkeeperRef.shopAction='handoff';frameClock+=1/30;callbacks.shift()();
+assert.equal(bakeryFront.serviceCount,2,
+  'a later independent handoff starts a new bell motion');
 buyerRef.shopAction='eating';frameClock+=1/30;callbacks.shift()();
 assert.ok(buyerModel.userData.pose.enjoy>.05,
   'the customer has a distinct using-the-purchase animation');
@@ -594,6 +655,9 @@ assert.ok(Math.abs(shoeRig.rotation.x)>.005,
   'walking shoes rock at the ankle during the foot contact cycle');
 pedestrians[0].v=0;pedestrians[0].intent='chat';
 pedestrians[0].attention={x:8.1,y:9.4};
+// Speech is intentionally intermittent; select an audible speaking phase
+// so this assertion tests elbow articulation, not a silent listening beat.
+pedestrians[0].ph=Math.PI/2-(frameClock+1/30)*1.35;
 frameClock+=1/30;callbacks.shift()();
 assert.ok(actorPose.speed<paceBeforeStop&&actorPose.speed>0,
   'stopping eases the gait instead of snapping the pose');
@@ -615,7 +679,13 @@ frameClock+=1/30;callbacks.shift()();
 assert.ok(actorPose.chat<.25,
   'exiting conversation blends back toward walking without a pose snap');
 const normalCameraHeight=api.camera.position.y;
+const standardDistance=Math.hypot(api.camera.position.x-9,
+  api.camera.position.y-.43,api.camera.position.z-9);
 currentCamZoom=3.2; callbacks.shift()();
+const closeDistance=Math.hypot(api.camera.position.x-9,
+  api.camera.position.y-.43,api.camera.position.z-9);
+assert.ok(closeDistance<standardDistance*.7,
+  'real dolly brings the perspective camera noticeably closer at street zoom');
 assert.ok(api.camera.position.y < normalCameraHeight,'close zoom lowers viewing angle to show facades');
 currentCamZoom=1.52;callbacks.shift()();
 assert.ok(Math.abs(api.camera.position.y-normalCameraHeight)<.0001,'camera returns to regular viewing angle');
@@ -677,7 +747,9 @@ host.clientWidth=844; host.clientHeight=390; win.innerWidth=844; win.innerHeight
 callbacks.shift()();
 assert.equal(api.renderer.domElement.width,844,'landscape resize updates renderer');
 assert.equal(api.renderer.domElement.height,390,'landscape resize updates renderer height');
-assert.ok(api.camera.right>api.camera.top,'landscape retains the full 3D field of view');
+assert.ok(api.camera.aspect>1,'landscape perspective updates its aspect ratio');
+assert.ok(api.camera.fov>20&&api.camera.fov<45,
+  'street-level photo camera uses a natural rather than extreme wide-angle lens');
 host.clientWidth=390; host.clientHeight=844; win.innerWidth=390; win.innerHeight=844;
 callbacks.shift()();
 assert.equal(api.renderer.domElement.width,390,'portrait resize restores mobile projection');

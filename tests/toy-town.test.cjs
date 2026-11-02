@@ -10,7 +10,7 @@ assert.match(dioramaSource, /function tree\(/, 'new organic tree renderer exists
 assert.match(dioramaSource, /function gable\(/, 'real pitched roof renderer exists');
 assert.match(dioramaSource, /function glazing\(/, 'framed glazing renderer exists');
 assert.match(html, /<option value="town">Toy Town<\/option>/, 'Toy Town is in the menu');
-assert.match(html, /townFrame\.src='toy-town\.html\?v=52&embed=1'/, 'and opens its current embedded page');
+assert.match(html, /townFrame\.src='toy-town\.html\?v=55&embed=1'/, 'and opens its current embedded page');
 assert.match(fs.readFileSync(path.join(root, 'toy-town.html'), 'utf8'), /assets\/toy-town\.js\?v=\d+/);
 const box = vm.createContext({Math, Object, Array, JSON, Date, String, Number, RegExp, setTimeout: () => 0, document: {getElementById: () => ({textContent: ''})}});
 vm.runInContext((dioramaSource + '\n' + fs.readFileSync(path.join(root, 'assets/toy-town.js'), 'utf8')) + ';this.T = ToyTown;', box);
@@ -233,6 +233,31 @@ assert.ok(T.movers().every(m=>Number.isFinite(m.x+m.y)&&m.x>0&&m.y>0&&
 
 
 
+// The new service threshold is an actual stationary knock, followed by a
+// connected counter approach—not a teleport or a decorative hand wave.
+T.build(60624,'market');
+const knockCustomers=T.movers().filter(m=>m.shopRole==='customer');
+let knockSamples=0,knockSlides=0,counterApproaches=0,
+  counterArrivals=0,goodsDepartures=0;
+for(let i=0;i<60*42;i++){
+  T.update(1/60);
+  for(const m of knockCustomers){
+    if(m.shopPhase==='knocking'){
+      knockSamples++;
+      if(m.moved>.00015)knockSlides++;
+      assert.ok(m.attention,'knocking occurs facing a real shopkeeper');
+    }
+    if(m.shopPhase==='approachingCounter')counterApproaches++;
+    if(m.shopPhase==='ordering')counterArrivals++;
+    if(m.shopPhase==='leaving'&&m.carrying)goodsDepartures++;
+  }
+}
+assert.ok(knockSamples>40,'shoppers really pause at the shop threshold');
+assert.equal(knockSlides,0,'a paused customer never walks on the spot');
+assert.ok(counterApproaches>20&&counterArrivals>20,
+  'shoppers approach a separate counter after knocking');
+assert.ok(goodsDepartures>20,'goods leave in customer hands after service');
+
 // The main plaza is now a working community economy: shoppers travel to
 // counters, physically receive items, then walk away to use their purchases.
 T.build(60624,'market');
@@ -452,7 +477,7 @@ const townPage = fs.readFileSync(path.join(root, 'toy-town.html'), 'utf8');
 for (const id of ['zoom-in', 'zoom-out', 'zoom-reset']) {
   assert.match(townPage, new RegExp('id="' + id + '"[^>]*aria-label="[^"]+"'), id + ' is accessible');
 }
-assert.match(townPage, /toy-town\.js\?v=26/, 'diorama engine is loaded');
+assert.match(townPage, /toy-town\.js\?v=27/, 'diorama engine is loaded');
 assert.match(townPage, /toy-town-news\.js\?v=1/, 'sourced news loads before the simulation');
 assert.match(townPage, /HEADLINES/, 'real reporting has a dedicated source panel');
 assert.match(townPage, /AROUND TOWN · FICTION/, 'fiction and real news are explicitly separated');
