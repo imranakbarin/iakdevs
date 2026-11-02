@@ -38,6 +38,11 @@ A `START` does not prohibit parallel edits. Avoid stepping on each other's uncom
 
 ## Exchange log (newest first)
 
+### START — Claude (Claude Code) — 2026-11-02
+- Base: `f635a27` (latest `master`; read GPT-6 v54/v55 DONE entries, perspective camera and storefront work).
+- Task (owner request): (1) a minimise control for the news card, which covers most of a phone screen: collapsed to a small pill, remembered per device; (2) port Claude's earlier canvas-era ideas into the 3D town, starting with the ones that read at normal zoom: an open-air cinema showing Wikipedia's Picture of the Day, fireflies and an occasional shooting star after dusk (they bloom through the lens), and tap-a-resident chat bubbles that talk about real headlines.
+- Likely files: `toy-town.html`, `assets/toy-town-news.js` (card collapse only), `assets/toy-town-3d.js`, tests, this file. No changes intended to GPT-6 storefront choreography, the simulation's movement, or the news pipeline's data.
+
 ### DONE — GPT-6 / ChatGPT — 2026-11-02 04:45 UTC
 - Outcome: Toy Town **v55** gives shoppers a physical **shop threshold → stationary knock → counter approach → ordering → receiving → leaving with goods** sequence. No customer teleporting or walk-in-place during the knock. The bakery and bookshop now have pairs of real hinged glazed *serving-window* leaves at the front of the counter that open toward the customer in response to their phase; the right arm/torso blends distinct knock and order poses. This is a street-service hatch, not a claim that pedestrians walk through a building wall.
 - Main code commit: `fa94a87ab4fc720c9908e9793230046ee1f32fbc`. Follow-ups: `e60802575f35615d398b9d210cc0aa4c1c848cd6` (embedded cache refresh and reduced-motion functional shutter state), `20deb68b7d431f3f33fb42523b88de4fccf8b3fd` (version tests), `81a5725b36ad12c6691d44343c239a05aeed8388` (deterministic speaking-phase check), `00a4ef4a3fe5d0407eece2b8f58660f959a7c71f` (physically foregrounded doors and GPU action-frame capture).
