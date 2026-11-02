@@ -134,4 +134,20 @@ assert.equal(d(0).kind, 'clear'); assert.equal(d(3).kind, 'cloud'); assert.equal
 assert.doesNotMatch(wsrc, /geolocation/, 'no location prompt: only the time-zone city');
 assert.match(wsrc, /api\.open-meteo\.com/); assert.match(html, /<span id="weather"><\/span>/);
 assert.match(view, /function updateWeather\(dt\)/); assert.match(view, /function umbrellaFor\(group,ref\)/, 'rain brings out umbrellas');
-console.log('Toy Town EXTRAS PASS: nobody stays stuck (3 layouts); varied whims; Moments on request; local weather; follow a resident, feed the ducks, gentle opt-in sound; a day in the life (commuters, children, lunch, home at dusk); KayKit CC0 kit (named, small, licensed, with fallback; roads and plaza too); taps on residents, cars, buildings and open ground; livelier gaits and greetings; news card minimises to a pill (phones first, remembered), Picture-of-the-Day cinema, fireflies and shooting stars, tap-a-resident chat, the on-this-day visitor (gentle history only, credited) and the dawn paper round.');
+// Pavements, and walkers keep to them.
+assert.match(view, /instanced\(slabs,\.05,\.2,'#d9d3c6'\)/, 'raised pavements line every street');
+assert.match(view, /if\(t\)t\.scale\.x=1-2\*P;/, 'the asphalt is narrowed to the carriageway');
+assert.match(sim, /function walk\(x, y, tx, ty, speed\)/); assert.match(sim, /m\.path = walkFrom\(m, x, y, \.45\)/, 'routes for people follow the pavements');
+{
+  const box = vm.createContext({Math, Object, Array, JSON, Date, String, Number, RegExp, Set, Map, setTimeout: () => 0, document: {getElementById: () => ({textContent: '', style: {}})}});
+  vm.runInContext(town + ';this.T=ToyTown;', box); const T = box.T; T.build(42, 'market');
+  let centre = 0, samples = 0; const L = [1, 6, 11, 16];
+  for (let i = 0; i < 20 * 240; i++) { T.update(1 / 20); if (i % 40) continue;
+    for (const m of T.movers()) { if (m.type !== 'person' || !m.path || m.shopRole || m.heroResident || m.communityResident || m.kind) continue; samples++;
+      // Walking *along* a centre line (crossing a street at a junction is fine).
+      const alongV = (m.d === 2 || m.d === 3) && L.some(l => Math.abs(m.x - l - .5) < .2), alongH = m.d < 2 && L.some(l => Math.abs(m.y - l - .5) < .2); if (alongV || alongH) centre++; } }
+  assert.ok(samples > 50 && centre / samples < .05, `walkers on a route keep off the centre line (${centre}/${samples})`);
+}
+const index = fs.readFileSync(path.join(root, 'index.html'), 'utf8');
+assert.match(index, /keep=\['weather','fps'\]/, 'the main page passes ?weather= and ?fps into the embedded town');
+console.log('Toy Town EXTRAS PASS: pavements and walkers on them; nobody stays stuck (3 layouts); varied whims; Moments on request; local weather; follow a resident, feed the ducks, gentle opt-in sound; a day in the life (commuters, children, lunch, home at dusk); KayKit CC0 kit (named, small, licensed, with fallback; roads and plaza too); taps on residents, cars, buildings and open ground; livelier gaits and greetings; news card minimises to a pill (phones first, remembered), Picture-of-the-Day cinema, fireflies and shooting stars, tap-a-resident chat, the on-this-day visitor (gentle history only, credited) and the dawn paper round.');

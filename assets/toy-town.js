@@ -1055,6 +1055,21 @@ const ToyTown = (() => {
       m.x+=ux*advance;m.y+=uy*advance;
     }
   }
+  // A walking route that keeps to the pavements: along the near pavement to the
+  // first corner, along the street (crossing side roads at their junctions),
+  // round the corner onto the destination street's pavement, then the last step.
+  const PAVE = .43;
+  function walk(x, y, tx, ty, speed) {
+    const near = v => LINES.reduce((a, l) => Math.abs(l + .5 - v) < Math.abs(a - v) ? l + .5 : a, LINES[0] + .5);
+    const lx = near(x), ly = near(y), gx = near(tx), gy = near(ty);
+    const sx = x >= lx ? PAVE : -PAVE, sy = y >= ly ? PAVE : -PAVE, ex = tx >= gx ? PAVE : -PAVE, ey = ty >= gy ? PAVE : -PAVE;
+    return [{x: lx + sx, y: ly + sy, speed}, {x: gx + ex, y: ly + sy, speed}, {x: gx + ex, y: gy + ey, speed}, {x: tx, y: ty, speed}];
+  }
+  // A walker already on the street starts from where they are drawn (their pavement), so nothing jumps.
+  function walkFrom(m, tx, ty, speed) {
+    if (!m.path) { const [ox, oy] = laneOffset(m); m.x += ox; m.y += oy; }
+    return walk(m.x, m.y, tx, ty, speed);
+  }
   // A route along the streets from (x,y) to (tx,ty): along the current line, then the other axis.
   function route(x, y, tx, ty, speed) {
     const near = v => LINES.reduce((a, l) => Math.abs(l + .5 - v) < Math.abs(a - v) ? l + .5 : a, LINES[0] + .5);
@@ -1079,7 +1094,7 @@ const ToyTown = (() => {
       const a = randomRoadPoint(Math.random), b = randomRoadPoint(Math.random);
       const cart = spawnPerson(Math.random, {kind: 'cart', max: 1.6, lane: .1}), chaser = spawnPerson(Math.random, {max: 1.25});
       cart.x = x ?? a.x; cart.y = y ?? a.y; chaser.x = cart.x - .9; chaser.y = cart.y;
-      cart.path = route(cart.x, cart.y, b.x, b.y, 1.6); chaser.path = route(chaser.x, chaser.y, b.x, b.y, 1.25);
+      cart.path = walk(cart.x, cart.y, b.x, b.y, 1.6); chaser.path = walk(chaser.x, chaser.y, b.x, b.y, 1.25);
       say(chaser, 'COME BACK!', 3); tick(`Runaway shopping cart speeding down ${streetOf(cart.x, cart.y)}!`);
       return {x: cart.x, y: cart.y, dur: 12, follow: cart, end() { remove(cart); chaser.path = null; say(chaser, 'Phew…'); }};
     },
@@ -1087,7 +1102,7 @@ const ToyTown = (() => {
       const a = randomRoadPoint(Math.random), b = randomRoadPoint(Math.random);
       const dog = spawnPerson(Math.random, {kind: 'dog', max: 1.4, lane: .3}), chef = spawnPerson(Math.random, {kind: 'chef', max: 1.1, col: '#ffffff'});
       dog.x = x ?? a.x; dog.y = y ?? a.y; chef.x = dog.x - 1; chef.y = dog.y;
-      dog.path = route(dog.x, dog.y, b.x, b.y, 1.4); chef.path = route(chef.x, chef.y, b.x, b.y, 1.05);
+      dog.path = walk(dog.x, dog.y, b.x, b.y, 1.4); chef.path = walk(chef.x, chef.y, b.x, b.y, 1.05);
       say(chef, 'MY SAUSAGES!', 3); say(dog, 'woof!', 1.5); tick('A dog has stolen the butcher\'s sausages. The chase is on!');
       return {x: dog.x, y: dog.y, dur: 12, follow: dog, end() { remove(dog); chef.path = null; say(chef, 'Next time…'); }};
     },
@@ -1174,7 +1189,7 @@ const ToyTown = (() => {
     awards() {
       const stage = props.find(p => p.kind === 'stage') || {x: 9, y: 9};
       tick('Red carpet tonight: a famous llama is expected at the premiere.');
-      const star = spawnPerson(Math.random, {kind: 'llama', max: .5}); star.path = route(star.x, star.y, stage.x, stage.y + 1.5, .7);
+      const star = spawnPerson(Math.random, {kind: 'llama', max: .5}); star.path = walk(star.x, star.y, stage.x, stage.y + 1.5, .7);
       return {x: stage.x, y: stage.y, dur: 14, follow: star, update(e, dt) { if (Math.random() < dt * 4) burst(stage.x + (Math.random() - .5) * 2, stage.y + 1.5, 12, 1, '#ffffff', {up: 10, life: .3, r: 2.5, g: 0}); if (e.t > 6 && !e.s) { e.s = 1; say(star, '*poses*', 2.5); } }, end() { remove(star); }};
     },
     tech() {
@@ -1188,7 +1203,7 @@ const ToyTown = (() => {
       const a = props.find(p => p.kind === 'animal' && !p.out) || props.find(p => p.kind === 'animal');
       a.out = true; const b = randomRoadPoint(Math.random); a.tx = b.x; a.ty = b.y;
       tick(`An ${a.a === 'elephant' ? 'elephant' : a.a} has left the zoo to see the town.`);
-      const keeper = spawnPerson(Math.random, {kind: 'keeper', col: '#c9a25a', max: .8}); keeper.x = zoo.x; keeper.y = zoo.y + 2; keeper.path = route(keeper.x, keeper.y, b.x, b.y, .8);
+      const keeper = spawnPerson(Math.random, {kind: 'keeper', col: '#c9a25a', max: .8}); keeper.x = zoo.x; keeper.y = zoo.y + 2; keeper.path = walk(keeper.x, keeper.y, b.x, b.y, .8);
       say(keeper, 'Not again!', 2.5);
       return {x: a.x, y: a.y, dur: 15, animal: a, update(e, dt) { a.x += (a.tx - a.x) * dt * .25; a.y += (a.ty - a.y) * dt * .25; e.x = a.x; e.y = a.y; }, end() { a.out = false; a.tx = zoo.x; a.ty = zoo.y; a.x = zoo.x + (Math.random() - .5) * 2; a.y = zoo.y + (Math.random() - .5) * 2; }};
     },
@@ -1308,7 +1323,7 @@ const ToyTown = (() => {
   /* ---------------- gentle moments ---------------- */
   const parkSpot = () => { const t = []; for (let y = 2; y < 16; y++) for (let x = 2; x < 16; x++) if (tile(x, y).kind === 'park' || tile(x, y).kind === 'plaza') t.push([x + .5, y + .5]); return t[Math.random() * t.length | 0] || [9, 9]; };
   const walker = () => movers.find(o => o.type === 'person' && !o.kind && !o.path && !o.busy) || spawnPerson();
-  function sendTo(m, x, y, then) { m.busy = true; m.path = route(m.x, m.y, x, y, .45).concat([{x, y, speed: .4, then}]); }
+  function sendTo(m, x, y, then) { m.busy = true; m.path = walkFrom(m, x, y, .45).concat([{x, y, speed: .4, then}]); }
   Object.assign(EVENTS, {
     kite() {
       const [x, y] = parkSpot(), kid = walker(); sendTo(kid, x, y, q => { q.stopUntil = clock + 30; });
@@ -1406,7 +1421,7 @@ const ToyTown = (() => {
       tick('SIX! The ball has left the stadium. A dog is on the case.');
       say({x: from.x, y: from.y, z: 40}, 'SIIIX!', 2);
       const ball = {x: from.x, y: from.y, z: 10, t: 0};
-      return {x: from.x, y: from.y, dur: 12, ball, update(e, dt) { ball.t = Math.min(1, ball.t + dt / 3); ball.x = lerp(from.x, b.x, ball.t); ball.y = lerp(from.y, b.y, ball.t); ball.z = 10 + Math.sin(ball.t * Math.PI) * 120; e.x = ball.x; e.y = ball.y; if (ball.t >= 1 && !e.dog) { e.dog = spawnPerson(Math.random, {kind: 'dog', max: 1}); e.dog.path = route(e.dog.x, e.dog.y, b.x, b.y, 1); say(e.dog, 'woof!', 1.5); } }, end() { if (this.dog) remove(this.dog); }};
+      return {x: from.x, y: from.y, dur: 12, ball, update(e, dt) { ball.t = Math.min(1, ball.t + dt / 3); ball.x = lerp(from.x, b.x, ball.t); ball.y = lerp(from.y, b.y, ball.t); ball.z = 10 + Math.sin(ball.t * Math.PI) * 120; e.x = ball.x; e.y = ball.y; if (ball.t >= 1 && !e.dog) { e.dog = spawnPerson(Math.random, {kind: 'dog', max: 1}); e.dog.path = walk(e.dog.x, e.dog.y, b.x, b.y, 1); say(e.dog, 'woof!', 1.5); } }, end() { if (this.dog) remove(this.dog); }};
     },
     football() { return THEME_EVENTS.sports() || EVENTS.band(); },
     match() { return THEME_EVENTS.sports() || EVENTS.band(); },
@@ -2157,12 +2172,14 @@ const ToyTown = (() => {
     return Math.abs(lx - x) < Math.abs(ly - y) ? {x: lx, y: clamp(1.6, y, 16.4), d: Math.random() < .5 ? 2 : 3} : {x: clamp(1.6, x, 16.4), y: ly, d: Math.random() < .5 ? 0 : 1}; };
   function whimTo(m, x, y, dwell, onArrive, kind) {
     m.busy = true; m.whim = kind; whims[kind]++;
-    m.path = route(m.x, m.y, x, y, m.max).concat([{x, y, speed: Math.min(.45, m.max), then: q => { q.stopUntil = clock + dwell; q.whimUntil = clock + dwell; if (onArrive) onArrive(q); }}]);
+    m.path = walkFrom(m, x, y, m.max).concat([{x, y, speed: Math.min(.45, m.max), then: q => { q.stopUntil = clock + dwell; q.whimUntil = clock + dwell; if (onArrive) onArrive(q); }}]);
   }
   function endWhim(m) {
     m.sit = false; m.attention = null; m.intent = 'walking'; m.whimUntil = 0; m.whim = null;
-    const r = nearestRoad(m.x, m.y);
-    m.path = [{x: r.x, y: r.y, speed: .4, then: q => { q.busy = false; q.d = r.d; }}];
+    const r = nearestRoad(m.x, m.y), vertical = r.d >= 2, side = vertical ? (m.x >= r.x ? 1 : -1) : (m.y >= r.y ? 1 : -1);
+    const px = vertical ? r.x + side * PAVE : r.x, py = vertical ? r.y : r.y + side * PAVE;
+    // Arrive on the pavement, then continue as an ordinary walker on that side (drawn at centre + lane).
+    m.path = [{x: px, y: py, speed: .4, then: q => { q.busy = false; q.d = r.d; q.x = r.x; q.y = r.y; q.lane = vertical ? -side * PAVE : side * PAVE; }}];
   }
   function updateWhims() {
     for (const m of movers) if (m.whimUntil && clock > m.whimUntil && !m.path) endWhim(m);
@@ -2240,7 +2257,7 @@ const ToyTown = (() => {
   const DAYPART = h => h >= 6 && h < 9.5 ? 'morning' : h >= 11.5 && h < 14 ? 'lunch' : h >= 17 && h < 21 ? 'evening' : null;
   const homes = () => buildings.filter(b => b.kind === 'house');
   const doorOf = b => ({x: b.x + .5, y: b.y + 1.08});
-  const edgeOf = r => [{x: 1.5, y: LINES[1 + (r * 2 | 0)] + .5}, {x: 16.5, y: LINES[1 + (r * 2 | 0)] + .5}, {x: LINES[1 + (r * 2 | 0)] + .5, y: 1.5}][r * 3 | 0];
+  const edgeOf = r => [{x: 1.07, y: LINES[1 + (r * 2 | 0)] + .5 + .43}, {x: 16.93, y: LINES[1 + (r * 2 | 0)] + .5 + .43}, {x: LINES[1 + (r * 2 | 0)] + .5 + .43, y: 1.07}][r * 3 | 0];   // the outer pavement where a street leaves town
   const CAFE = [{x: 7.74, y: 8.75}, {x: 10.25, y: 9.95}];
   let daypart = null, routineNext = 0, routine = {morning: 0, lunch: 0, evening: 0};
   function routineWalker(opts, from) {
@@ -2262,9 +2279,9 @@ const ToyTown = (() => {
       if (!house) return;
       const door = doorOf(house), out = edgeOf(Math.random());
       if (active <= 6 && Math.random() < .4) {   // two children set off together (room for both under the cap)
-        for (let k = 0; k < 2; k++) { const kid = routineWalker({routine: 'school', kid: true, backpack: PASTEL[Math.random() * 8 | 0], gait: 'skip', max: .66}, {x: door.x + k * .2, y: door.y}); kid.path = route(kid.x, kid.y, out.x, out.y, .62).concat([{x: out.x, y: out.y, speed: .6, then: q => { q.home = true; }}]); }
+        for (let k = 0; k < 2; k++) { const kid = routineWalker({routine: 'school', kid: true, backpack: PASTEL[Math.random() * 8 | 0], gait: 'skip', max: .66}, {x: door.x + k * .2, y: door.y}); kid.path = walk(kid.x, kid.y, out.x, out.y, .62).concat([{x: out.x, y: out.y, speed: .6, then: q => { q.home = true; }}]); }
       } else {
-        const c = routineWalker({routine: 'work', briefcase: true, gait: 'brisk', max: .74}, door); c.path = route(c.x, c.y, out.x, out.y, .7).concat([{x: out.x, y: out.y, speed: .68, then: q => { q.home = true; }}]);
+        const c = routineWalker({routine: 'work', briefcase: true, gait: 'brisk', max: .74}, door); c.path = walk(c.x, c.y, out.x, out.y, .7).concat([{x: out.x, y: out.y, speed: .68, then: q => { q.home = true; }}]);
       }
       house.home = false; routine.morning++;
     } else if (part === 'lunch') {
@@ -2272,14 +2289,14 @@ const ToyTown = (() => {
       if (k >= 4) return;
       const a = (k % 4) * Math.PI / 2 + .4, sx = spot.x + Math.cos(a) * .42, sy = spot.y + Math.sin(a) * .42, from = edgeOf(Math.random());
       const d = routineWalker({routine: 'lunch'}, from);
-      d.path = route(d.x, d.y, sx, sy, .5).concat([{x: sx, y: sy, speed: .35, then: q => { q.stopUntil = clock + 14; q.attention = {x: spot.x, y: spot.y}; q.shopAction = 'eating'; q.lunchUntil = clock + 14; }}]);
+      d.path = walk(d.x, d.y, sx, sy, .5).concat([{x: sx, y: sy, speed: .35, then: q => { q.stopUntil = clock + 14; q.attention = {x: spot.x, y: spot.y}; q.shopAction = 'eating'; q.lunchUntil = clock + 14; }}]);
       routine.lunch++;
     } else if (part === 'evening') {
       const house = homes().filter(b => !b.home)[0] || homes()[Math.random() * homes().length | 0];
       if (!house) return;
       const door = doorOf(house), from = edgeOf(Math.random());
       const w = routineWalker({routine: 'home', briefcase: Math.random() < .5}, from);
-      w.path = route(w.x, w.y, door.x, door.y, .55).concat([{x: door.x, y: door.y, speed: .4, then: q => { q.home = true; house.home = true; house.homeAt = clock; }}]);
+      w.path = walk(w.x, w.y, door.x, door.y, .55).concat([{x: door.x, y: door.y, speed: .4, then: q => { q.home = true; house.home = true; house.homeAt = clock; }}]);
       routine.evening++;
     }
   }
@@ -2288,7 +2305,7 @@ const ToyTown = (() => {
     // diners finish their lunch and drift off.
     for (const m of movers.slice()) {
       if (m.routine && m.home && !m.path) remove(m);
-      else if (m.routine === 'lunch' && m.lunchUntil && clock > m.lunchUntil) { m.shopAction = null; m.attention = null; m.lunchUntil = 0; const out = edgeOf(Math.random()); m.path = route(m.x, m.y, out.x, out.y, .5).concat([{x: out.x, y: out.y, speed: .5, then: q => { q.home = true; }}]); }
+      else if (m.routine === 'lunch' && m.lunchUntil && clock > m.lunchUntil) { m.shopAction = null; m.attention = null; m.lunchUntil = 0; const out = edgeOf(Math.random()); m.path = walk(m.x, m.y, out.x, out.y, .5).concat([{x: out.x, y: out.y, speed: .5, then: q => { q.home = true; }}]); }
     }
   }
   function update(dt) {
