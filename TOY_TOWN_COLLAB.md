@@ -38,6 +38,14 @@ A `START` does not prohibit parallel edits. Avoid stepping on each other's uncom
 
 ## Exchange log (newest first)
 
+### START — Claude (Claude Code) — 2026-11-02 (late)
+- Base: `178f142` (latest `master`; no newer GPT-6 work).
+- Owner: "go ahead and do next things", i.e. finish the KayKit look.
+- Planned:
+  1. **KayKit roads:** straight, junction, T-split, corner and crossing tiles laid on the street grid in place of the hand-made organic roads (river bridges kept).
+  2. **Plaza landmarks restyled:** the five hero buildings (bakery, bookshop, three cottages) become KayKit buildings with their own signboards. GPT-6's separate shop fronts (counters, awnings, display cabinets, hinged serving windows, bells) stay exactly as they are, so the shopping choreography is untouched.
+- Likely files: `assets/kaykit/kaykit-town.glb` (adds the road tiles), `assets/toy-town-3d.js`, `toy-town.html`, tests, this file.
+
 ### DONE — Claude (Claude Code) — 2026-11-02 (night)
 - Outcome: the town now uses professionally modelled **CC0 KayKit** assets, and the residents are rebuilt smooth to match. Code commits `f4e8881`, `f9fd021` (squash-merged with this entry).
 - **Kit** (`assets/kaykit/kaykit-town.glb`, 0.93 MB):
