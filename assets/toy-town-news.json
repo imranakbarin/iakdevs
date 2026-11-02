@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generated_at": "2026-11-01T23:06:10.174Z",
+  "generated_at": "2026-11-02T02:34:54.627Z",
   "status": "ok",
   "successful_sources": [
     "BBC News",
@@ -12,11 +12,39 @@
   ],
   "stories": [
     {
-      "title": "Russian strikes cut power to thousands in Ukraine as Kherson ceasefire ends",
-      "url": "https://www.bbc.co.uk/news/articles/c64g1y90p71eo?at_medium=RSS&at_campaign=rss",
+      "title": "Democrat endorses Republican candidate in key Michigan Senate race as party spat erupts",
+      "url": "https://www.bbc.co.uk/news/articles/c95ynzv88n68o?at_medium=RSS&at_campaign=rss",
       "source": "BBC News",
       "category": "World",
-      "published_at": "2026-11-01T21:55:01.000Z"
+      "published_at": "2026-11-02T01:45:42.000Z"
+    },
+    {
+      "title": "Binance users withdraw $3.6bn after record crypto hack",
+      "url": "https://www.bbc.co.uk/news/articles/cwj34gdmnly4o?at_medium=RSS&at_campaign=rss",
+      "source": "BBC Technology",
+      "category": "Technology",
+      "published_at": "2026-11-02T01:15:25.000Z"
+    },
+    {
+      "title": "Don't get caught out by new Buy Now Pay Later rules",
+      "url": "https://www.bbc.co.uk/news/articles/crpdgp4y017go?at_medium=RSS&at_campaign=rss",
+      "source": "BBC Business",
+      "category": "Business",
+      "published_at": "2026-11-01T23:34:49.000Z"
+    },
+    {
+      "title": "How Antonelli 'blew everyone away' to make Formula 1 history",
+      "url": "https://www.bbc.co.uk/sport/formula1/articles/c6m2dj7ze9v2o?at_medium=RSS&at_campaign=rss",
+      "source": "BBC Sport",
+      "category": "Sport",
+      "published_at": "2026-11-02T01:47:30.000Z"
+    },
+    {
+      "title": "Russia's giant new radar in Kaliningrad raises alarm in NATO",
+      "url": "https://www.dw.com/en/russia-s-giant-new-radar-in-kaliningrad-raises-alarm-in-nato/a-79797815?maca=en-rss-en-world-4025-xml-mrss",
+      "source": "DW",
+      "category": "World",
+      "published_at": "2026-11-01T20:34:00.000Z"
     },
     {
       "title": "These firms you've never heard of are feeding fears the AI bubble could burst",
@@ -33,46 +61,18 @@
       "published_at": "2026-11-01T22:25:51.000Z"
     },
     {
-      "title": "Watch: Match of the Day",
-      "url": "https://www.bbc.co.uk/iplayer/live/bbcone?at_medium=RSS&at_campaign=rss",
-      "source": "BBC Sport",
-      "category": "Sport",
-      "published_at": "2026-11-01T23:12:25.000Z"
-    },
-    {
-      "title": "Russia's giant new radar in Kaliningrad raises alarm in NATO",
-      "url": "https://www.dw.com/en/russia-s-giant-new-radar-in-kaliningrad-raises-alarm-in-nato/a-79797815?maca=en-rss-en-world-4025-xml-mrss",
-      "source": "DW",
-      "category": "World",
-      "published_at": "2026-11-01T20:34:00.000Z"
-    },
-    {
-      "title": "Thousands of jobs at Virgin Media O2 to be cut",
-      "url": "https://www.bbc.co.uk/news/articles/c6rry8x9d9qko?at_medium=RSS&at_campaign=rss",
-      "source": "BBC Business",
-      "category": "Business",
-      "published_at": "2026-11-01T16:57:14.000Z"
-    },
-    {
       "title": "'We've got big problems' - Hamilton says Ferrari need 'serious talks'",
       "url": "https://www.bbc.co.uk/sport/formula1/articles/cmwy7dl879gzo?at_medium=RSS&at_campaign=rss",
       "source": "BBC Sport",
       "category": "Sport",
-      "published_at": "2026-11-01T23:05:42.000Z"
+      "published_at": "2026-11-02T00:28:28.000Z"
     },
     {
-      "title": "Democrat endorses Republican candidate in key Michigan Senate race as party spat erupts",
-      "url": "https://www.bbc.co.uk/news/articles/c95ynzv88n68o?at_medium=RSS&at_campaign=rss",
+      "title": "Ukraine air raid app apparently hacked as users receive false radiation threat, Air Force says",
+      "url": "https://www.bbc.co.uk/news/articles/c51kdy1ew7zvo?at_medium=RSS&at_campaign=rss",
       "source": "BBC News",
       "category": "World",
-      "published_at": "2026-11-01T21:16:45.000Z"
-    },
-    {
-      "title": "Crypto firm Binance covers 90% of losses after $6.3bn hack",
-      "url": "https://www.bbc.co.uk/news/articles/ckpdg3ql4169o?at_medium=RSS&at_campaign=rss",
-      "source": "BBC Business",
-      "category": "Business",
-      "published_at": "2026-11-01T13:11:37.000Z"
+      "published_at": "2026-11-02T01:18:27.000Z"
     }
   ]
 }
