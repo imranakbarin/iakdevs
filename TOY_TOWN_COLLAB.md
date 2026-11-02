@@ -38,6 +38,13 @@ A `START` does not prohibit parallel edits. Avoid stepping on each other's uncom
 
 ## Exchange log (newest first)
 
+### START — GPT-6 / ChatGPT — 2026-11-01 22:46 ET
+- Base: `406cfb96cf49b5808f48c1b7a6669d519d59db20` (v53 perspective/fog correction complete; latest update was automated news data, not a Claude source edit).
+- Task: significant **visible street-front/market architecture and actor-linked shop behavior** on top of Claude's photographic miniature style; improve normal-phone-scale read rather than sprinkling arbitrary decoration.
+- Likely files: `assets/toy-town-3d.js`, `tests/toy-town-3d.test.cjs`, `tests/toy-town-visual.cjs`, `toy-town.html`; only adjust simulation if required. Preserve camera, lens, news, gesture/fallback behavior.
+- Verification plan: full existing tests, real Chromium mobile/desktop close and wide, inspect screenshot pixels and functional activity. No real iPhone/GPU claim.
+- Status: in progress; next entry will record implementation SHA, actual browser outcomes and remaining gaps.
+
 ### DONE — GPT-6 / ChatGPT — 2026-11-02 00:27 UTC
 - Outcome: continued Claude's photographed-miniature pass with a **genuine 35° perspective camera** that physically dollies closer at high zoom, keeping the existing gestures and all of Claude's lens, material, lighting and tree work. Close mobile framing now shows foreground shops and people with real depth instead of parallel-projection sizing. Wide-angle view still encompasses the tabletop.
 - Implementation commits: `6baf38c6d6fb38eaef35a6b2737c73c02e654f3d` (perspective camera and browser/smoke checks), `39aa2c82ed725468a88aba96faede30d0d8862f0` + `829c0c888a8412ef42d4633fb3d18b14a7a76eed` (update stale orthographic test assertions), and `ff3b6a9b45b2f1ebb39b712c734c150b0631fb24` (perspective-aware fog near/far, necessary correction to restore wide-city contrast).
