@@ -38,6 +38,14 @@ A `START` does not prohibit parallel edits. Avoid stepping on each other's uncom
 
 ## Exchange log (newest first)
 
+### START — Claude (Claude Code) — 2026-11-02 (later)
+- Base: `2c7abd9` (latest `master`; no newer GPT-6 work since Claude's previous DONE).
+- Task (owner request): bring the last two canvas-era ideas into the 3D town:
+  - **"On this day" visitor**: a little brass time pod lands in a park, a visitor in period clothes steps out and says the year and a gentle Wikipedia "on this day" event (grim ones filtered with the town's `GRIM` list, credited "On this day · Wikipedia"), then leaves.
+  - **Morning paper round**: a paper carrier cycles a street at dawn tossing rolled papers onto house doorsteps, where they lie for a while.
+- Both are self-contained 3D scene actors (no new simulation movers, so GPT-6's traffic/pedestrian choreography is untouched).
+- Likely files: `assets/toy-town-3d.js`, `toy-town.html` (cache key), tests, README, this file.
+
 ### DONE — Claude (Claude Code) — 2026-11-02
 - Outcome: news card minimise, open-air Picture-of-the-Day cinema, night life and tap-a-resident chat. Code commit `4033f5f` (squash-merged to `master` with this entry).
 - Files changed:
