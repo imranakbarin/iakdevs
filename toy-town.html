@@ -11,7 +11,7 @@ html,body{margin:0;height:100%;overflow:hidden;background:#bfe6f7;font-family:Nu
 #town{display:block;width:100%;height:100%;cursor:grab;touch-action:none;-webkit-user-select:none;user-select:none;overscroll-behavior:none}
 #town-3d{display:none;position:fixed;inset:0;pointer-events:none;z-index:1;overflow:hidden}
 #town-3d canvas{filter:saturate(1.42) contrast(1.11)}
-#town-3d.lens canvas{filter:none}
+#town-3d.lens canvas{filter:saturate(1.3) contrast(1.08)}
 #town-3d.lens::after{display:none}
 /* Lens finishing stays behind the UI and never intercepts phone gestures. */
 #town-3d::after{content:"";position:absolute;inset:0;pointer-events:none;z-index:2;background:radial-gradient(ellipse at 46% 34%,rgba(255,239,211,.04),transparent 66%),radial-gradient(ellipse at 50% 48%,transparent 43%,rgba(40,54,59,.075) 100%);}
@@ -90,7 +90,7 @@ html.embedded #zoom-controls{display:none}
 </script>
 <script src="assets/toy-town-diorama.js?v=1"></script>
 <script src="assets/toy-town-news.js?v=1"></script>
-<script src="assets/toy-town.js?v=28"></script>
+<script src="assets/toy-town.js?v=29"></script>
 <script type="module">
   // Opt out with ?classic=1 for the original Canvas experience.
   // Loading errors are deliberately isolated from the existing town engine.
@@ -98,12 +98,12 @@ html.embedded #zoom-controls{display:none}
     Promise.all([
       import('three'),
       import('three/addons/geometries/RoundedBoxGeometry.js'),
-      import('./assets/toy-town-3d.js?v=44'),
+      import('./assets/toy-town-3d.js?v=46'),
       import('./assets/toy-town-landmarks.js?v=7'),
       // The photographed-miniature lens. Any failure here leaves plain 3D running.
-      Promise.all(['EffectComposer','RenderPass','ShaderPass','UnrealBloomPass','OutputPass','GTAOPass']
+      Promise.all(['EffectComposer','RenderPass','ShaderPass','UnrealBloomPass','OutputPass']
         .map(n => import(`three/addons/postprocessing/${n}.js`).catch(() => ({}))))
-        .then(mods => import('./assets/toy-town-lens.js?v=3').then(lens => ({lens, addons: Object.assign({}, ...mods)})))
+        .then(mods => import('./assets/toy-town-lens.js?v=4').then(lens => ({lens, addons: Object.assign({}, ...mods)})))
         .catch(() => null)
     ]).then(([THREE, geometry, view, landmarks, lensKit]) => {
       const lensReady = lensKit && !new URLSearchParams(location.search).has('nolens') && lensKit.addons.EffectComposer && lensKit.addons.UnrealBloomPass;

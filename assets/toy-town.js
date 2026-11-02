@@ -26,7 +26,7 @@ const ToyTown = (() => {
   let grid = [], buildings = [], props = [], movers = [], events = [], parts = [], bubbles = [], ground = null, sprites = new Map();
   const MIN_ZOOM = .42, MAX_ZOOM = 3.25;
   let zoomAnchor = null, nextStreetMoment = 16, streetMoments = 0, fitZoom = 1;
-  const PACE = .6, CARS = 7, BIKES = 4, PEOPLE = 14, LIGHT = 10;   // a calm town: few cars, a handful of cyclists, people taking their time   // the whole town runs at 60% speed: easier to follow, calmer to watch
+  const PACE = .82, CARS = 7, BIKES = 4, PEOPLE = 14, LIGHT = 10;   // a calm town: few cars, a handful of cyclists, people taking their time   // the whole town runs at 60% speed: easier to follow, calmer to watch
   let clock = 0, playing = true, last = 0, nextEvent = 2, director = null, directorUntil = 0;
   let community = null, communityEncounters = 0, communityVisits = 0;
   let streetTrade=null,streetTransactions=0,streetShopVisits=0,newsReactions=0;
@@ -266,7 +266,9 @@ const ToyTown = (() => {
   }
   function spawnPerson(r = Math.random, opts = {}) {
     const p = randomRoadPoint(r);
-    const m = Object.assign({type: 'person', x: p.x, y: p.y, d: p.d, v: 0, travel: 0, max: .35 + r() * .25, col: PASTEL[r() * PASTEL.length | 0], skin: ['#f1c9a5', '#d8a77c', '#a8754f', '#7a4e33'][r() * 4 | 0],
+    // Everyone has their own walk: most stroll, some stride briskly, a few skip along.
+    const g = r(), gait = g < .2 ? 'brisk' : g < .3 ? 'skip' : 'stroll';
+    const m = Object.assign({type: 'person', x: p.x, y: p.y, d: p.d, v: 0, travel: 0, gait, max: gait === 'brisk' ? .64 + r() * .14 : gait === 'skip' ? .72 : .4 + r() * .22, col: PASTEL[r() * PASTEL.length | 0], skin: ['#f1c9a5', '#d8a77c', '#a8754f', '#7a4e33'][r() * 4 | 0],
       hat: r() < .23 ? (r() < .5 ? 'cap' : 'beanie') : null,
       bag: r() < .25, scarf: r() < .24, hair: r() < .5 ? '#49362d' : '#333947',
       lane: (r() < .5 ? 1 : -1) * (.4 + r() * .07), ph: r() * 6, wait: 0,
@@ -2120,12 +2122,29 @@ const ToyTown = (() => {
   }
   // A five-minute day in real time, though moving things run at 60% speed.
   function nightLevel() { return clamp(0, -Math.cos(clock / (300 * PACE) * TAU) * 2 - 1, 1); }
+  // Neighbours notice each other: when two walkers pass close by, they glance
+  // over, and now and then one of them waves. Purely gestural — no one is
+  // stopped or rerouted, so traffic and errands are unaffected.
+  function passingGreetings() {
+    const walkers = movers.filter(m => m.type === 'person' && (!m.kind || m.kind === 'neighbor') && !m.shopRole && (m.v || 0) > .05);
+    for (let i = 0; i < walkers.length; i++) for (let j = i + 1; j < walkers.length; j++) {
+      const a = walkers[i], b = walkers[j];
+      if (Math.abs(a.x - b.x) > .6 || Math.abs(a.y - b.y) > .6 || Math.hypot(a.x - b.x, a.y - b.y) > .55) continue;
+      if (clock < (a.greetNext || 0) || clock < (b.greetNext || 0)) continue;
+      a.greetNext = b.greetNext = clock + 9 + Math.random() * 8;
+      a.glanceAt = {x: b.x, y: b.y}; b.glanceAt = {x: a.x, y: a.y}; a.glanceUntil = b.glanceUntil = clock + 1.6;
+      if (Math.random() < .45) (Math.random() < .5 ? a : b).waveUntil = clock + 1.3;
+      greetings++;
+    }
+  }
+  let greetings = 0;
   function update(dt) {
     clock += dt;
     updateNeighborhoodLife(dt);
     updateStreetTrade();
     updateDistrictLife();
     for (const m of movers.slice()) { step(m, dt); easeHeading(m, dt); updateHeroResident(m); }
+    passingGreetings();
     for (const e of events.slice()) { e.t += dt; if (e.follow) { e.x = e.follow.x; e.y = e.follow.y; } if (e.update) e.update(e, dt); if (e.t > e.dur) { if (e.end) e.end.call(e); events.splice(events.indexOf(e), 1); } }
     for (const m of movers.slice()) if (m.home && !m.path) remove(m);
     // Event callbacks can reposition actors independently of the ordinary
@@ -2350,8 +2369,8 @@ const ToyTown = (() => {
     if (!playing) render();
   }
   function poke(e) {
-    // In 3D, a tap on a resident starts a little chat instead of a surprise.
-    if (typeof window !== 'undefined' && window.ToyTown3D?.active && window.ToyTown3D.tapResident?.(e.clientX, e.clientY)) return;
+    // In 3D the tap is hit-tested against the real scene: a resident, a car, a building or the ground.
+    if (typeof window !== 'undefined' && window.ToyTown3D?.active && window.ToyTown3D.tap?.(e.clientX, e.clientY)) return;
     const r = cv.getBoundingClientRect(), sx = (e.clientX - r.left) * dpr, sy = (e.clientY - r.top) * dpr;
     const {x: gx, y: gy} = screenWorld(sx, sy);
     const names = ['balloon', 'butterflies', 'kite', 'pigeons', 'busker'];
@@ -2486,7 +2505,7 @@ const ToyTown = (() => {
     addEventListener('hashchange', () => location.reload());
     start();
   }
-  return {layout, render, zoomAt, resetView, fitView, pinchTo, screenWorld, streetMoment, reactToNews, hero: () => town.blocks.find(b => b.hero), TALK, nameOf, headline, dateKey, CALM, lightPhase, themeFromNews, newsThemes, VARIANTS, VARIANT_EVENTS: () => Object.keys(VARIANT_EVENTS), decorate, setToday: l => { today_ = l; }, PACE, THEMES, GRIM, build, update, events: () => events, movers: () => movers, buildings: () => buildings, props: () => props, startEvent, randomEvent, setPlaying: v => { playing = v; }, debug: () => ({clock, theme, seed, night: nightLevel(), cam: {...cam}, fitZoom, streetMoments,communityEncounters,communityVisits,streetTransactions,streetShopVisits,newsReactions,streetPerformances,
+  return {layout, render, zoomAt, resetView, fitView, pinchTo, screenWorld, streetMoment, reactToNews, hero: () => town.blocks.find(b => b.hero), TALK, nameOf, headline, dateKey, CALM, lightPhase, themeFromNews, newsThemes, VARIANTS, VARIANT_EVENTS: () => Object.keys(VARIANT_EVENTS), decorate, setToday: l => { today_ = l; }, PACE, THEMES, GRIM, build, update, events: () => events, movers: () => movers, buildings: () => buildings, props: () => props, startEvent, randomEvent, setPlaying: v => { playing = v; }, debug: () => ({clock, theme, seed, greetings, night: nightLevel(), cam: {...cam}, fitZoom, streetMoments,communityEncounters,communityVisits,streetTransactions,streetShopVisits,newsReactions,streetPerformances,
     districts:{count:districts.length,visits:districtVisits,
       meetings:districtMeetings,tasks:districtTasks,
       areas:districts.map(a=>({role:a.role,block:a.block,
