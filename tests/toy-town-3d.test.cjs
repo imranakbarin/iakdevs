@@ -404,8 +404,10 @@ assert.match(moduleCode,/new THREE\.PerspectiveCamera\(35/,
   'the photographic city camera has real depth and vanishing lines');
 assert.match(moduleCode,/if\(!b.hero && style===0/,
   'ordinary houses have occasional attached side wings for skyline variety');
-assert.match(moduleCode,/camera\.position\.set\(aimX\+7\.4,20\.4-closeness\*9\.4,aimZ\+24\.0\)/,
-  'close-up angle is more frontal and less overhead, keeping shopfronts legible');
+assert.match(moduleCode,/const dx=legacy\?12\.5:7\.4,dy=legacy\?23-closeness\*11\.5:/,
+  'street photo direction and eye height interpolate to a lower facade view');
+assert.match(moduleCode,/camera\.position\.set\(aimX\+dx\/length\*distance/,
+  'the camera dolly moves along the physical photographic viewing direction');
 assert.match(moduleCode,/const focusWeight=THREE\.MathUtils\.clamp/,
   'compositional framing is removed smoothly as the user pans away');
 assert.match(moduleCode,/function composeSecondaryBuilding\(/,
