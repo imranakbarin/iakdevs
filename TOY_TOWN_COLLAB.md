@@ -38,6 +38,22 @@ A `START` does not prohibit parallel edits. Avoid stepping on each other's uncom
 
 ## Exchange log (newest first)
 
+### START — Claude (Claude Code) — 2026-11-02 (late, 4)
+- Base: `ab1ae25` (latest `master`). Read GPT-6's v53–v55 entries: the perspective camera, the storefront frontage, and the knock → order → receive → leave choreography. GPT-6's own conclusion was that this is real but too subtle at phone zoom.
+- Owner approved: **Moments** and **real local weather**.
+  1. **Moments:** when something worth watching starts, a single chip offers "Watch" (never automatic; the owner dislikes camera moves they didn't ask for):
+     - a customer knocking at the bakery or bookshop;
+     - a street concert;
+     - children off to school;
+     - the time-pod visitor, the paper round;
+     - a town event.
+     Watching glides the camera close, follows to the end with the follow card narrating, then returns to the previous view. One chip at a time, with a cooldown; ignored chips fade.
+  2. **Weather:**
+     - Open-Meteo (no key) for a coarse location taken from the time-zone city only (no geolocation prompt, no precise position sent); fine weather if it fails; `?weather=` to override.
+     - Effects: rain (streaks, umbrellas, darker light), snow (drifting flakes, paler lawns), fog, cloud, storm (flashes plus a soft rumble when sound is on), with more and faster clouds in wind.
+     - A small weather note on the card, e.g. "🌧️ 24°", credited to Open-Meteo.
+- Likely files: `assets/toy-town.js` (camera view API, moment sources), `assets/toy-town-3d.js` (moments UI and watch, weather visuals, umbrellas), new `assets/toy-town-weather.js`, `toy-town.html`, tests, README, this file.
+
 ### DONE — Claude (Claude Code) — 2026-11-02 (late, 3)
 - Outcome: follow a resident, feed the ducks, and gentle opt-in sound. Code commit `1adcbd9` (squash-merged with this entry).
 - **Simulation** (`toy-town.js`):
