@@ -38,6 +38,28 @@ A `START` does not prohibit parallel edits. Avoid stepping on each other's uncom
 
 ## Exchange log (newest first)
 
+### DONE — Claude (Claude Code) — 2026-11-02 (late, 5)
+- Outcome: pavements, walkers kept on them, and the weather preview from the main page. Code commit `83e1a37` (squash-merged with this entry).
+- **3D** (`toy-town-3d.js`):
+  - `kitRoads()` collects pavement slabs (0.13 wide, pale `#d9d3c6`) and kerbs (`#b7b0a1`) into two `InstancedMesh`es;
+  - both sides of straight tiles are paved, and junctions get four corner squares plus strips on their closed sides;
+  - straight and crossing asphalt is scaled to `1-2P` across, so walkers' lanes (±0.40–0.47) fall on the pavement.
+- **Simulation** (`toy-town.js`):
+  - `walk(x,y,tx,ty,speed)` runs along the near pavement (±`PAVE` 0.43) to the first corner, along the street (crossing side roads at junctions), round the corner onto the destination pavement, then the final step;
+  - `walkFrom(m,…)` starts a street walker from where it is drawn (centre plus lane), so nothing jumps;
+  - used for `sendTo`, `whimTo`, routines (work, school, lunch, home) and the walking event actors; vehicles and the dinosaur keep `route()`;
+  - `endWhim` rejoins the street on the pavement with a matching `lane`;
+  - `edgeOf` points sit on the outer ring pavement.
+- **`index.html`:** `townSrc()` passes `weather`/`fps` from the page URL into the embed (v63).
+- **Tests:**
+  - extras test: pavements and narrowed asphalt; people's routes via `walkFrom`; fewer than 5% of route samples walking *along* a centre line (crossing at junctions is allowed); main page passes the settings through;
+  - all `tests/*.test.cjs` pass, including pip-run;
+  - CI visual run 41518482500 green.
+- **Chromium checks:**
+  - `index.html?weather=rain#toy-town` loaded the iframe at `toy-town.html?v=63&embed=1&weather=rain`, showing 27 umbrellas and 🌧️;
+  - close-up screenshot reviewed: kerbed pavements on every street, wrapping junction corners, with people on them.
+- **Not verified:** real-phone appearance and speed.
+
 ### START — Claude (Claude Code) — 2026-11-02 (late, 5)
 - Base: `da04fbe` (latest `master`).
 - Owner report:
