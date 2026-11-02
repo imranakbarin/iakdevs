@@ -147,6 +147,22 @@ async function main(){
           throw Error('The miniature market does not really trade and perform: '+
             JSON.stringify(market));
         console.log('LIVING_MARKET '+JSON.stringify(market));
+        // Finish on a real knock at the threshold, rather than a random
+        // static frame after all the accelerated simulated shop visits.
+        const staged=await page.evaluate(()=>{
+          for(let i=0;i<60*14;i++){
+            ToyTown.update(1/60);
+            const who=ToyTown.movers().find(m=>m.shopRole==='customer'&&
+              m.shopPhase==='knocking');
+            if(who)return {shop:who.shopAt,x:who.x,y:who.y,
+              action:who.shopAction,moved:who.moved};
+          }
+          return null;
+        });
+        if(!staged||staged.action!=='knocking'||staged.moved>.00015)
+          throw Error('Could not stage a physically stationary door knock: '+
+            JSON.stringify(staged));
+        console.log('SHOP_THRESHOLD_KNOCK '+JSON.stringify(staged));
         beforeFrame=await page.evaluate(()=>
           window.ToyTown3D?.getStats?.().frames||0);
       }
@@ -213,6 +229,15 @@ async function main(){
         console.log('OUTER_CITY_GPU PASS: modeled workplaces and job tools are in the live 3D scene');
       }
       if(job.name==='mobile-3d-close'){
+        await page.waitForFunction(()=>{
+          let windowOpened=false,knockPosed=false;
+          window.ToyTown3D?.scene?.traverse(o=>{
+            if(o.userData?.streetFront?.openAmount>.025)windowOpened=true;
+            if(o.userData?.pose?.knock>.025)knockPosed=true;
+          });
+          return windowOpened&&knockPosed;
+        },null,{timeout:30000,polling:100});
+        console.log('SHOP_KNOCK_GPU PASS: physically open serving hatch and posed visitor');
         await page.waitForFunction(()=>{
           let playing=false,stocked=false;
           window.ToyTown3D?.scene?.traverse(o=>{

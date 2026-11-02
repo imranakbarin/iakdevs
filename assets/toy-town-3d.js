@@ -2252,12 +2252,14 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
       // the back wall or a prop that rotates without a customer.
       const shutters=[];
       const glazing=new THREE.MeshStandardMaterial({
-        color:'#c4ded6',transparent:true,opacity:.42,depthWrite:false,
+        color:'#b8d9ce',transparent:true,opacity:.52,depthWrite:false,
         roughness:.16,metalness:.06,side:THREE.DoubleSide
       });
       for(const side of [-1,1]){
         const hinge=new THREE.Group();
-        hinge.position.set(side*.255,.65,-.079);shop.add(hinge);
+        // Pivot at the actual front edge of the serving hatch. From the
+        // regular phone camera this now visibly clears the customer access.
+        hinge.position.set(side*.255,.65,.169);shop.add(hinge);
         const sx=-side*.128;
         const pane=box(hinge,.247,.302,.018,glazing,sx,0,0);
         pane.castShadow=false;

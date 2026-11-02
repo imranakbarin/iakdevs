@@ -314,6 +314,9 @@ assert.ok(workingDesks.every(s=>s.userData.streetFront?.bell),
   'both trading counters have actual architectural fronts and handoff bells');
 assert.ok(workingDesks.every(s=>s.userData.streetFront.shutters.length===2),
   'each shop has two real hinged service-window doors');
+assert.ok(workingDesks.every(s=>s.userData.streetFront.shutters
+  .every(x=>x.hinge.position.z>.15)),
+  'service leaves hinge in front of the counter where customers can reach');
 assert.deepEqual(workingDesks.map(s=>s.userData.streetFront.merchandise),
   ['pastries','books'],
   'two shops have distinct window merchandise rather than identical filler');
