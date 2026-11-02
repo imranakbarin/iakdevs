@@ -39,6 +39,16 @@ html.embedded #zoom-controls{display:none}
 #zoom-controls button:active{background:rgba(255,255,255,.32)}
 #zoom-controls button:focus-visible{outline:2px solid #fff;outline-offset:2px}
 #zoom-controls #zoom-reset{font-size:12px;letter-spacing:.01em;min-width:43px}
+#card-min{position:absolute;top:7px;right:7px;width:28px;height:28px;border:0;border-radius:9px;background:rgba(45,52,64,.08);color:#2d3440;font:600 18px/1 Nunito,system-ui;cursor:pointer;touch-action:manipulation}
+#card-min:hover{background:rgba(45,52,64,.15)}
+#card-min:focus-visible{outline:2px solid #f6b554;outline-offset:2px}
+#card .k,#card .t{padding-right:30px}
+/* Minimised: a small pill with the day's title; tap it (or +) to open again. */
+#card.min{width:auto;max-width:min(260px,calc(100vw - 28px));padding:7px 40px 7px 12px;border-radius:999px;cursor:pointer}
+#card.min>:not(.k):not(.t):not(#card-min){display:none}
+#card.min .t{font-size:13px;margin:2px 0 0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding-right:0}
+#card.min .k{font-size:9px;padding-right:0}
+#card.min #card-min{top:50%;transform:translateY(-50%)}
 @media (max-width:600px){#card{top:calc(64px + env(safe-area-inset-top,0px));padding:8px 12px}#card .t{font-size:16px}}
 </style>
 <script type="importmap">
@@ -51,7 +61,7 @@ html.embedded #zoom-controls{display:none}
 <body>
 <canvas id="town" aria-label="Toy Town: a busy little isometric town"></canvas>
 <div id="town-3d" aria-hidden="true"></div>
-<div id="card"><div class="k">Toy Town · <span id="date"></span></div><div class="t" id="theme">Opening the town…</div><div class="n" id="news"></div>
+<div id="card"><button id="card-min" type="button" aria-controls="card" aria-expanded="true" aria-label="Minimise news" title="Minimise news">−</button><div class="k">Toy Town · <span id="date"></span></div><div class="t" id="theme">Opening the town…</div><div class="n" id="news"></div>
   <button id="news-toggle" type="button" aria-controls="news-panel" aria-expanded="false"><span id="news-status">CHECKING HEADLINES</span><span aria-hidden="true">↗</span></button>
   <div id="news-headline" role="status">Checking publisher updates…</div>
   <section id="news-panel" aria-label="Publisher headlines" hidden><div id="headlines"></div></section>
@@ -64,9 +74,23 @@ html.embedded #zoom-controls{display:none}
   <button id="zoom-in" type="button" aria-label="Zoom in" title="Zoom in">+</button>
 </div>
 <script>if(new URLSearchParams(location.search).has('embed'))document.documentElement.classList.add('embedded');</script>
+<script>
+// The news card can be minimised to a small pill. The choice is remembered on
+// this device; phones start minimised the first time, since the card would cover most of the town.
+(function(){
+  const card=document.getElementById('card'),btn=document.getElementById('card-min'),KEY='toy-town:card-min';
+  let saved=null;try{saved=localStorage.getItem(KEY);}catch(e){}
+  const set=(min,store)=>{card.classList.toggle('min',min);btn.textContent=min?'+':'−';
+    btn.setAttribute('aria-expanded',String(!min));btn.setAttribute('aria-label',min?'Show news':'Minimise news');btn.title=min?'Show news':'Minimise news';
+    if(store)try{localStorage.setItem(KEY,min?'1':'0');}catch(e){}};
+  set(saved===null?innerWidth<600:saved==='1',false);
+  btn.addEventListener('click',e=>{e.stopPropagation();set(!card.classList.contains('min'),true);});
+  card.addEventListener('click',()=>{if(card.classList.contains('min'))set(false,true);});
+})();
+</script>
 <script src="assets/toy-town-diorama.js?v=1"></script>
 <script src="assets/toy-town-news.js?v=1"></script>
-<script src="assets/toy-town.js?v=27"></script>
+<script src="assets/toy-town.js?v=28"></script>
 <script type="module">
   // Opt out with ?classic=1 for the original Canvas experience.
   // Loading errors are deliberately isolated from the existing town engine.
@@ -74,12 +98,12 @@ html.embedded #zoom-controls{display:none}
     Promise.all([
       import('three'),
       import('three/addons/geometries/RoundedBoxGeometry.js'),
-      import('./assets/toy-town-3d.js?v=42'),
+      import('./assets/toy-town-3d.js?v=43'),
       import('./assets/toy-town-landmarks.js?v=7'),
       // The photographed-miniature lens. Any failure here leaves plain 3D running.
       Promise.all(['EffectComposer','RenderPass','ShaderPass','UnrealBloomPass','OutputPass','GTAOPass']
         .map(n => import(`three/addons/postprocessing/${n}.js`).catch(() => ({}))))
-        .then(mods => import('./assets/toy-town-lens.js?v=2').then(lens => ({lens, addons: Object.assign({}, ...mods)})))
+        .then(mods => import('./assets/toy-town-lens.js?v=3').then(lens => ({lens, addons: Object.assign({}, ...mods)})))
         .catch(() => null)
     ]).then(([THREE, geometry, view, landmarks, lensKit]) => {
       const lensReady = lensKit && !new URLSearchParams(location.search).has('nolens') && lensKit.addons.EffectComposer && lensKit.addons.UnrealBloomPass;

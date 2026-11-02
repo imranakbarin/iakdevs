@@ -1125,6 +1125,7 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
   // The geometry stays inexpensive: wide, interlocking ellipsoids with exposed
   // branching and planted, shadowed root flares; no leaf particle systems.
   function tree(p,i){
+    if(Math.hypot(p.x-CINEMA.x,p.y-CINEMA.z)<1.7)return;   // the open-air cinema has this corner
     const x=p.x,z=p.y;
     // Keep the foreground riverbank open so the miniature village can be
     // read through the trees. The side orchards still frame the lens.
@@ -2307,6 +2308,133 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
       pool.rotation.x=-Math.PI/2;pool.position.set(x,.205,z);world.add(pool);lanternPools.push(pool);
     }
   }
+  /* ---- The open-air cinema: Wikipedia's Picture of the Day on a screen in the
+     back-left corner (only sky behind it), deckchairs in front, a projector
+     beam after dusk. The picture is fetched once a day; without it the screen
+     shows a painted test card. Credited on the screen's own caption plate. */
+  const CINEMA={x:.62,z:.7};
+  let cinemaScreen=null,cinemaBeam=null,cinemaViewers=[],potdTexture=null,potdRequested='';
+  function captionTexture(text){
+    const c=document.createElement('canvas');c.width=512;c.height=64;const p=c.getContext('2d');
+    p.fillStyle='#2f3742';p.fillRect(0,0,512,64);p.fillStyle='#fff6e4';p.textAlign='center';p.textBaseline='middle';
+    p.font='600 26px Nunito, system-ui, sans-serif';p.fillText(text,256,33);
+    const t=new THREE.CanvasTexture(c);t.colorSpace=THREE.SRGBColorSpace;return t;
+  }
+  function testCard(){
+    const c=document.createElement('canvas');c.width=256;c.height=150;const p=c.getContext('2d');
+    const g=p.createLinearGradient(0,0,256,150);g.addColorStop(0,'#8fd3c9');g.addColorStop(1,'#c9a6e8');p.fillStyle=g;p.fillRect(0,0,256,150);
+    p.fillStyle='rgba(255,250,240,.9)';p.font='600 20px Nunito, system-ui';p.textAlign='center';p.fillText('Tonight: cartoons',128,82);
+    const t=new THREE.CanvasTexture(c);t.colorSpace=THREE.SRGBColorSpace;return t;
+  }
+  function loadPictureOfTheDay(){
+    const day=new Date(),key=day.toISOString().slice(0,10);
+    if(potdRequested===key||typeof fetch!=='function'||!THREE.TextureLoader)return;potdRequested=key;
+    const [y,m,d]=[day.getUTCFullYear(),String(day.getUTCMonth()+1).padStart(2,'0'),String(day.getUTCDate()).padStart(2,'0')];
+    fetch(`https://api.wikimedia.org/feed/v1/wikipedia/en/featured/${y}/${m}/${d}`).then(r=>r.json()).then(data=>{
+      const src=data?.image?.thumbnail?.source;if(!src)return;
+      const loader=new THREE.TextureLoader();loader.setCrossOrigin?.('anonymous');
+      loader.load(src,tx=>{tx.colorSpace=THREE.SRGBColorSpace;potdTexture=tx;applyPicture();});
+    }).catch(()=>{});
+  }
+  function applyPicture(){
+    if(!cinemaScreen||!potdTexture)return;
+    const img=potdTexture.image,aspect=img&&img.width?img.width/img.height:1.6,screen=2.1/1.25;
+    // Cover-fit the picture to the screen's shape.
+    potdTexture.repeat?.set(aspect>screen?screen/aspect:1,aspect>screen?1:aspect/screen);
+    potdTexture.offset?.set(aspect>screen?(1-screen/aspect)/2:0,aspect>screen?0:(1-aspect/screen)/2);
+    cinemaScreen.material.map=potdTexture;cinemaScreen.material.needsUpdate=true;
+  }
+  function openAirCinema(){
+    const g=new THREE.Group();g.position.set(CINEMA.x,.17,CINEMA.z);g.rotation.y=.42;g.userData.cinema=true;world.add(g);
+    const iron='#39424b';
+    for(const x of [-1.12,1.12])cylinder(g,.035,.045,1.95,iron,x,.97,0);
+    box(g,2.34,1.42,.07,'#2c333c',0,1.27,-.02,false);
+    cinemaScreen=object(g,geo('plane',2.1,1.25),new THREE.MeshBasicMaterial({map:testCard(),color:new THREE.Color('#e8e8e8')}),0,1.27,.02,false);
+    const plate=object(g,geo('plane',1.3,.16),new THREE.MeshBasicMaterial({map:captionTexture('Picture of the Day · Wikimedia Commons')}),0,.47,.03,false);plate.castShadow=false;
+    cinemaViewers=[];
+    [[-.55,1.05],[.05,1.2],[.62,1.02]].forEach(([x,z],i)=>{
+      const chair=new THREE.Group();chair.position.set(x,0,z);g.add(chair);
+      box(chair,.3,.03,.26,['#e2463a','#3f78c9','#ffb020'][i],0,.16,0,false);
+      box(chair,.3,.26,.03,['#e2463a','#3f78c9','#ffb020'][i],0,.3,.13,false).rotation.x=-.25;
+      for(const k of [-.13,.13])cylinder(chair,.012,.012,.16,'#7a5235',k,.08,0);
+      const viewer=new THREE.Group();viewer.position.set(0,.18,.03);chair.add(viewer);
+      box(viewer,.17,.22,.13,['#9cc7ef','#f4b6d2','#a8d8a0'][i],0,.12,0);
+      ball(viewer,.075,'#6b4a2b',0,.3,0);
+      viewer.visible=false;cinemaViewers.push(viewer);
+    });
+    cinemaBeam=new THREE.Mesh(geo('plane',1,1),new THREE.MeshBasicMaterial({color:'#fff4d6',transparent:true,opacity:0,depthWrite:false,blending:THREE.AdditiveBlending,side:THREE.DoubleSide}));
+    cinemaBeam.scale.set(2.1,2.4,1);cinemaBeam.rotation.x=-Math.PI/2+.42;cinemaBeam.position.set(0,1.05,1.2);g.add(cinemaBeam);
+    box(g,.18,.14,.22,'#3b3f4a',0,.62,2.3,false);   // the projector on its stand
+    cylinder(g,.02,.02,.55,iron,0,.28,2.3);
+    loadPictureOfTheDay();applyPicture();
+  }
+  /* ---- After dusk: fireflies over the lawns and an occasional shooting star. */
+  let fireflies=null,fireflySeeds=[],shootingStar=null,nextShoot=0;
+  function nightSky(){
+    fireflies=null;shootingStar=null;fireflySeeds=[];
+    if(!THREE.Points||!THREE.BufferGeometry||!THREE.BufferAttribute)return;
+    const spots=[];for(let k=0;k<44;k++)spots.push([1+rng(k,301)*16,1+rng(k,407)*16]);
+    fireflySeeds=spots.filter(([x,z])=>!LINES.some(l=>Math.abs(x-l-.5)<.7||Math.abs(z-l-.5)<.7)&&!(z>12.9&&z<15.1));
+    const geometry=new THREE.BufferGeometry();geometry.setAttribute('position',new THREE.BufferAttribute(new Float32Array(fireflySeeds.length*3),3));
+    const dot=(()=>{const c=document.createElement('canvas');c.width=c.height=32;const p=c.getContext('2d');const g=p.createRadialGradient(16,16,0,16,16,16);
+      g.addColorStop(0,'rgba(255,255,220,1)');g.addColorStop(.35,'rgba(220,255,140,.7)');g.addColorStop(1,'rgba(200,255,120,0)');p.fillStyle=g;p.fillRect(0,0,32,32);return new THREE.CanvasTexture(c);})();
+    fireflies=new THREE.Points(geometry,new THREE.PointsMaterial({map:dot,size:.26,transparent:true,opacity:0,depthWrite:false,blending:THREE.AdditiveBlending,color:'#f4ffb0'}));
+    world.add(fireflies);
+    shootingStar=new THREE.Mesh(geo('plane',1,1),new THREE.MeshBasicMaterial({color:'#fffbe8',transparent:true,opacity:0,depthWrite:false,blending:THREE.AdditiveBlending,side:THREE.DoubleSide}));
+    shootingStar.scale.set(2.4,.035,1);world.add(shootingStar);
+  }
+  function nightLife(dark,time){
+    if(cinemaBeam){cinemaBeam.material.opacity=Math.max(0,dark-.2)*.16;for(const v of cinemaViewers)v.visible=dark>.3;
+      if(cinemaScreen)cinemaScreen.material.color.set(dark>.3?'#ffffff':'#d8d8d8');}
+    if(fireflies){
+      fireflies.material.opacity=Math.max(0,dark-.35)*1.4;
+      const pos=fireflies.geometry.attributes.position;
+      for(let i=0;i<fireflySeeds.length;i++){const [x,z]=fireflySeeds[i],t=time*.35+i*1.7;
+        pos.setXYZ(i,x+Math.sin(t)*.35,.45+Math.sin(t*2.1)*.18+(Math.sin(time*1.6+i*2.3)>0?0:-5),z+Math.cos(t*1.3)*.35);}
+      pos.needsUpdate=true;
+    }
+    if(shootingStar){
+      if(dark>.6&&time>nextShoot){shootingStar.userData={t:0,x:2+rng(Math.floor(time),71)*10,z:-3};nextShoot=time+22+rng(Math.floor(time),73)*20;}
+      const u=shootingStar.userData;
+      if(u&&u.t!==undefined&&u.t<1.4){u.t+=1/40;shootingStar.position.set(u.x+u.t*7,9-u.t*2.2,u.z+u.t*1.5);shootingStar.rotation.set(0,-.2,-.3);shootingStar.material.opacity=Math.sin(Math.min(1,u.t/1.4)*Math.PI);}
+      else shootingStar.material.opacity=0;
+    }
+  }
+  /* ---- Tap a resident: they stop for a moment and say something about the day.
+     Fiction only, in the town's own voice: real reporting stays in the sourced headline panel. */
+  let bubble=null;
+  const CHATTER=['Lovely evening for it.','Have you seen the picture at the cinema?','Just popping to the bakery.','Mind the ducks!','The lanterns look lovely tonight.','Is it Tuesday already?','I love this little town.','Off to the book shop!'];
+  function chatLine(){
+    const state=town.debug(),lines=(town.TALK&&town.TALK[state.theme])||[];
+    const pool=lines.map(l=>l.replace(/\{N\}/g,'everyone')).concat(CHATTER);
+    return pool[Math.floor(Math.random()*pool.length)];
+  }
+  function tapResident(clientX,clientY){
+    if(!THREE.Vector3||!camera.isPerspectiveCamera&&!camera.isOrthographicCamera)return false;
+    const r=renderer.domElement.getBoundingClientRect(),v=new THREE.Vector3();let best=null,bestD=48;
+    for(const [ref,item] of actors){
+      if(item.kind!=='person'||ref.kind)continue;
+      v.copy(item.group.position);v.y+=.45;v.project(camera);if(v.z>1)continue;
+      const x=r.left+(v.x+1)/2*r.width,y=r.top+(1-v.y)/2*r.height,d=Math.hypot(x-clientX,y-clientY);
+      if(d<bestD){best={ref,item};bestD=d;}
+    }
+    if(!best)return false;
+    best.ref.stopUntil=(town.debug().clock||0)+4;
+    if(!bubble){bubble=document.createElement('div');bubble.className='resident-bubble';
+      bubble.style.cssText='position:absolute;transform:translate(-50%,-100%);padding:6px 11px;border-radius:999px;background:#fffdf7;color:#3d4552;font:500 13px/1.2 Nunito,system-ui,sans-serif;box-shadow:0 4px 14px rgba(30,50,70,.2);white-space:nowrap;pointer-events:none;transition:opacity .3s;z-index:3';
+      host.appendChild(bubble);}
+    bubble.textContent=chatLine();bubble.userData={item:best.item,until:performance.now()+4200};bubble.style.opacity='1';
+    return true;
+  }
+  function placeBubble(){
+    if(!bubble||!bubble.userData)return;
+    const {item,until}=bubble.userData;
+    if(performance.now()>until||!item.group.parent){bubble.style.opacity='0';return;}
+    const v=new THREE.Vector3().copy(item.group.position);v.y+=.62;v.project(camera);
+    const r=renderer.domElement.getBoundingClientRect();
+    const half=(bubble.offsetWidth||120)/2+8;   // keep the whole bubble on screen
+    bubble.style.left=THREE.MathUtils.clamp((v.x+1)/2*r.width,half,r.width-half)+'px';bubble.style.top=Math.max((bubble.offsetHeight||28)+8,(1-v.y)/2*r.height)+'px';
+  }
   function rebuild(){
     ambient.length = 0; plazaLights.length = 0; festoonBulbs.length = 0;
     windowMaterials.clear();
@@ -2349,6 +2477,8 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
     const ps=town.props();
     for(let i=0;i<ps.length;i++)smallProps(ps[i],i);
     streetLanterns();
+    openAirCinema();
+    nightSky();
     createStorybookVillage();
     paintVillageLife();
     createWorkingShops();
@@ -3328,7 +3458,7 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
       resize();
       const state=town.debug();
       if(worldBuildings!==town.buildings()||worldSeed!==state.seed)rebuild();
-      syncActors();syncCamera();light(state.night||0);
+      syncActors();syncCamera();light(state.night||0);nightLife(state.night||0,state.clock||0);placeBubble();
       animateAmbient(state.clock||0);
       if(lens)lens.render(timestamp-(api.lastAt||timestamp));else renderer.render(scene,camera);
       api.lastAt=timestamp;frames++;
@@ -3354,6 +3484,7 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
     getStats:()=>({frames,redrawCount,actors:actors.size,ambient:ambient.length,plazaLights:plazaLights.length,festoonBulbs:festoonBulbs.length,gardenElements,woodlandShapes,terrainContours,composedBuildings,districtGardenRooms,landmarks:landmarkCount,windowMaterials:windowMaterials.size,photographicLens:!!lens,cameraProjection:'perspective',lens:lens?.stats?.()||null,buildings:town.buildings().length,webgl:true,frozen}),
     // A stable actual GPU-rendered frame for visual regression screenshots.
     // Unlike stop(), freeze does not switch to the Canvas fallback.
+    tapResident,
     freeze(){frozen=true;cancelAnimationFrame(raf);},
     unfreeze(){if(!stopped&&frozen){frozen=false;raf=requestAnimationFrame(frame);}},
     stop(){stopped=true;cancelAnimationFrame(raf);this.active=false;window.ToyTown3D.active=false;
