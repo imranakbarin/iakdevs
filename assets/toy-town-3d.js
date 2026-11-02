@@ -19,7 +19,10 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
   const scene = new THREE.Scene();
   scene.background = new THREE.Color('#cee9f5');
   scene.fog = new THREE.Fog('#cee9f5', 24, 62);
-  const camera = new THREE.OrthographicCamera(-15, 15, 15, -15, .1, 120);
+  // A physical perspective lens instead of an orthographic drawing camera.
+  // FOV is fixed; dolly distance preserves the existing 2D zoom scale,
+  // while the foreground genuinely grows relative to the distant roofs.
+  const camera = new THREE.PerspectiveCamera(35, 1, .08, 240);
   const hemisphere = new THREE.HemisphereLight('#fff1dc', '#6f8580', .86);
   scene.add(hemisphere);
   const sun = new THREE.DirectionalLight('#ffd7a4', 2.6);
@@ -3124,9 +3127,7 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
     const sz=w+'x'+h;
     if(sz===lastSize)return;
     lastSize=sz;renderer.setSize(w,h,false);lens?.setSize(w,h);
-    const a=w/h;
-    camera.left=-14*a;camera.right=14*a;
-    camera.top=14;camera.bottom=-14;
+    camera.aspect=w/h;
     camera.updateProjectionMatrix();
   }
   function syncCamera(){
@@ -3135,7 +3136,8 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
     const fit=Math.min(1,Math.max(.30,aspect*28/27));
     const t=THREE.MathUtils.clamp((v.z-(town.fitView?.()||.475))/.52,0,1);
     const scaled=v.z*(desktop()?1.5:1.58);
-    camera.zoom=THREE.MathUtils.lerp(fit,scaled,t);
+    const equivalentOrthoZoom=THREE.MathUtils.lerp(fit,scaled,t);
+    camera.zoom=1; // actual field-of-view is held constant during the dolly
     // At close-up, lower the virtual eye to show windows, porch geometry and
     // faces; a gentle interpolation preserves the calm overview perspective.
     const closeness=THREE.MathUtils.clamp((v.z-1.0)/2.7,0,1);
@@ -3149,13 +3151,21 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
     const focusWeight=THREE.MathUtils.clamp((v.z-.90)/.90,0,1)*
       THREE.MathUtils.clamp(1-Math.hypot(v.x-9,v.y-9)/2.9,0,1);
     const aimX=v.x-focusWeight*.09,aimZ=v.y-focusWeight*.42;
-    if(window.location?.search?.includes('legacycam=1')){
-      camera.position.set(v.x+12.5,23-closeness*11.5,v.y+22);
-      camera.lookAt(v.x,.30,v.y);
-    }else{
-      camera.position.set(aimX+7.4,20.4-closeness*9.4,aimZ+24.0);
-      camera.lookAt(aimX,.43,aimZ);
-    }
+    const legacy=window.location?.search?.includes('legacycam=1');
+    const dx=legacy?12.5:7.4,dy=legacy?23-closeness*11.5:
+      20.4-closeness*9.4,dz=legacy?22:24;
+    const length=Math.hypot(dx,dy,dz);
+    // Match the old orthographic camera's visible height *at the center*
+    // and preserve the entire tabletop at Fit. Moving the optical center
+    // closer creates genuine foreground/background size separation.
+    // A long dolly for Fit minimizes wide-angle edge distortion.
+    const verticalSpan=28/Math.max(.08,equivalentOrthoZoom);
+    const distance=verticalSpan/(2*Math.tan(camera.fov*Math.PI/360));
+    const targetY=legacy?.30:.43;
+    camera.position.set(aimX+dx/length*distance,
+      targetY+dy/length*distance,
+      aimZ+dz/length*distance);
+    camera.lookAt(aimX,targetY,aimZ);
     camera.updateProjectionMatrix();
   }
   function frame(timestamp){
@@ -3196,7 +3206,7 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
   renderer.domElement.addEventListener('webglcontextrestored',restored,false);
   const api={
     active:false,renderer,scene,camera,
-    getStats:()=>({frames,redrawCount,actors:actors.size,ambient:ambient.length,plazaLights:plazaLights.length,festoonBulbs:festoonBulbs.length,gardenElements,woodlandShapes,terrainContours,composedBuildings,districtGardenRooms,landmarks:landmarkCount,windowMaterials:windowMaterials.size,photographicLens:!!lens,lens:lens?.stats?.()||null,buildings:town.buildings().length,webgl:true,frozen}),
+    getStats:()=>({frames,redrawCount,actors:actors.size,ambient:ambient.length,plazaLights:plazaLights.length,festoonBulbs:festoonBulbs.length,gardenElements,woodlandShapes,terrainContours,composedBuildings,districtGardenRooms,landmarks:landmarkCount,windowMaterials:windowMaterials.size,photographicLens:!!lens,cameraProjection:'perspective',lens:lens?.stats?.()||null,buildings:town.buildings().length,webgl:true,frozen}),
     // A stable actual GPU-rendered frame for visual regression screenshots.
     // Unlike stop(), freeze does not switch to the Canvas fallback.
     freeze(){frozen=true;cancelAnimationFrame(raf);},

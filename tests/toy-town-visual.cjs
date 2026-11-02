@@ -98,6 +98,18 @@ async function main(){
           throw Error('Real 3D never activated '+JSON.stringify(diagnostics)+'; '+errors.join(' | '));
         }
       }
+      if(!job.classic){
+        const projection=await page.evaluate(()=>({
+          projection:window.ToyTown3D?.getStats?.().cameraProjection,
+          perspective:!!window.ToyTown3D?.camera?.isPerspectiveCamera,
+          fov:window.ToyTown3D?.camera?.fov
+        }));
+        if(projection.projection!=='perspective'||!projection.perspective||
+          projection.fov<20||projection.fov>45)
+          throw Error('Photographic street lens is not a real perspective camera: '+
+            JSON.stringify(projection));
+        console.log('PERSPECTIVE_CAMERA '+JSON.stringify(projection));
+      }
       // A snapshot must show exactly the *target* close-up, not whichever
       // fraction of the easing animation a slow software GPU happened to reach.
       // Pause the world before requesting zoom: ToyTown.zoomAt then snaps its

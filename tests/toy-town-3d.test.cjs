@@ -224,6 +224,7 @@ class Texture {constructor(){this.colorSpace='';stats.roofTextures++;}}
 const THREE={
  WebGLRenderer:Renderer, Scene:O, Group:O, Object3D:O, InstancedMesh,
  Color:C,Fog:class{constructor(col){this.color=new C(col);}},
+ PerspectiveCamera:class extends O {constructor(fov,aspect,near,far){super();this.fov=fov;this.aspect=aspect;this.near=near;this.far=far;this.zoom=1;}},
  OrthographicCamera:O,HemisphereLight:O,DirectionalLight:Directional,
  PointLight:class extends O {constructor(){super();this.isPointLight=true;this.intensity=0;}},
  MeshStandardMaterial:Material,MeshBasicMaterial:Material,
@@ -399,6 +400,8 @@ assert.match(moduleCode,/roots taper out into the lawn/i,'tree trunks have natur
 assert.match(moduleCode,/grassMaterial\('#b9cba7',10\)/,'cutaway meadow has textured, continuous grass');
 assert.match(moduleCode,/paver.rotation.y=/,'stone paths have irregular handmade placement');
 assert.match(moduleCode,/23-closeness\*11\.5/,'close zoom lowers the eye to show character faces');
+assert.match(moduleCode,/new THREE\.PerspectiveCamera\(35/,
+  'the photographic city camera has real depth and vanishing lines');
 assert.match(moduleCode,/if\(!b.hero && style===0/,
   'ordinary houses have occasional attached side wings for skyline variety');
 assert.match(moduleCode,/camera\.position\.set\(aimX\+7\.4,20\.4-closeness\*9\.4,aimZ\+24\.0\)/,
@@ -615,7 +618,13 @@ frameClock+=1/30;callbacks.shift()();
 assert.ok(actorPose.chat<.25,
   'exiting conversation blends back toward walking without a pose snap');
 const normalCameraHeight=api.camera.position.y;
+const standardDistance=Math.hypot(api.camera.position.x-9,
+  api.camera.position.y-.43,api.camera.position.z-9);
 currentCamZoom=3.2; callbacks.shift()();
+const closeDistance=Math.hypot(api.camera.position.x-9,
+  api.camera.position.y-.43,api.camera.position.z-9);
+assert.ok(closeDistance<standardDistance*.7,
+  'real dolly brings the perspective camera noticeably closer at street zoom');
 assert.ok(api.camera.position.y < normalCameraHeight,'close zoom lowers viewing angle to show facades');
 currentCamZoom=1.52;callbacks.shift()();
 assert.ok(Math.abs(api.camera.position.y-normalCameraHeight)<.0001,'camera returns to regular viewing angle');
@@ -677,7 +686,9 @@ host.clientWidth=844; host.clientHeight=390; win.innerWidth=844; win.innerHeight
 callbacks.shift()();
 assert.equal(api.renderer.domElement.width,844,'landscape resize updates renderer');
 assert.equal(api.renderer.domElement.height,390,'landscape resize updates renderer height');
-assert.ok(api.camera.right>api.camera.top,'landscape retains the full 3D field of view');
+assert.ok(api.camera.aspect>1,'landscape perspective updates its aspect ratio');
+assert.ok(api.camera.fov>20&&api.camera.fov<45,
+  'street-level photo camera uses a natural rather than extreme wide-angle lens');
 host.clientWidth=390; host.clientHeight=844; win.innerWidth=390; win.innerHeight=844;
 callbacks.shift()();
 assert.equal(api.renderer.domElement.width,390,'portrait resize restores mobile projection');
