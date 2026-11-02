@@ -38,6 +38,15 @@ A `START` does not prohibit parallel edits. Avoid stepping on each other's uncom
 
 ## Exchange log (newest first)
 
+### START — Claude (Claude Code) — 2026-11-02 (late, 3)
+- Base: `42ce452` plus the unmerged day-in-the-life branch (no newer GPT-6 work).
+- Owner: "what's next" / "do next".
+- Planned:
+  1. **Follow a resident:** press and hold one in 3D and the camera follows them. A small card shows a stable first name, their role (baker, bookseller, commuter, off to school, gardener…) and what they are doing; dragging the map or ✕ stops it.
+  2. **Feed the ducks:** a tap on the river scatters crumbs, and the ducks paddle to the spot.
+  3. **Gentle sound:** WebAudio synth only (no files), off by default behind a 🔈 toggle that is remembered. Soft honk, bike bell, quack, chirps, balloon pop, hello chime on taps, plus a quiet birdsong bed by day.
+- Likely files: `assets/toy-town.js` (follow camera, duck feeding, hold gesture), `assets/toy-town-3d.js` (hold hit-test, follow card, sound cues), new `assets/toy-town-sound.js`, `toy-town.html`, tests, this file.
+
 ### START — Claude (Claude Code) — 2026-11-02 (late, 2)
 - Base: `fb55667` (latest `master`; no newer GPT-6 work).
 - Owner: "do next".
