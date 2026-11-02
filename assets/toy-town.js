@@ -2138,6 +2138,68 @@ const ToyTown = (() => {
     }
   }
   let greetings = 0;
+  /* ---------------- a day in the life ----------------
+     The town clock gives an hour of day (noon when it is brightest, midnight
+     at the darkest). Morning: commuters with briefcases leave their homes for
+     the edge of town and children set off in pairs with their backpacks.
+     Lunch: people stand at the café tables with something to eat. Evening:
+     residents walk home and go in, and their house counts as lit after dusk.
+     Each routine sends new walkers; nobody already busy is taken. */
+  const hourOfDay = () => (12 + (clock / (300 * PACE)) % 1 * 24) % 24;
+  const DAYPART = h => h >= 6 && h < 9.5 ? 'morning' : h >= 11.5 && h < 14 ? 'lunch' : h >= 17 && h < 21 ? 'evening' : null;
+  const homes = () => buildings.filter(b => b.kind === 'house');
+  const doorOf = b => ({x: b.x + .5, y: b.y + 1.08});
+  const edgeOf = r => [{x: 1.5, y: LINES[1 + (r * 2 | 0)] + .5}, {x: 16.5, y: LINES[1 + (r * 2 | 0)] + .5}, {x: LINES[1 + (r * 2 | 0)] + .5, y: 1.5}][r * 3 | 0];
+  const CAFE = [{x: 7.74, y: 8.75}, {x: 10.25, y: 9.95}];
+  let daypart = null, routineNext = 0, routine = {morning: 0, lunch: 0, evening: 0};
+  function routineWalker(opts, from) {
+    const m = spawnPerson(Math.random, opts); m.x = from.x; m.y = from.y; m.busy = true; m.routine = opts.routine; return m;
+  }
+  function updateRoutines() {
+    const h = hourOfDay(), part = DAYPART(h);
+    if (part !== daypart) {
+      daypart = part; routineNext = clock + 1;
+      if (part) tick({morning: 'Good morning! Toy Town is off to work and school.', lunch: 'Lunchtime: the café tables are filling up.', evening: 'Evening: everyone is heading home, and the lights are coming on.'}[part]);
+      if (part === 'morning') for (const b of homes()) b.home = true;   // everyone slept at home
+    }
+    if (!part || clock < routineNext) return;
+    routineNext = clock + 2.2 + Math.random() * 2.5;
+    const active = movers.filter(m => m.routine).length;
+    if (active >= 8) return;                                                      // a lively street, never a crowd
+    if (part === 'morning') {
+      const house = homes().filter(b => b.home !== false)[Math.random() * homes().length | 0];
+      if (!house) return;
+      const door = doorOf(house), out = edgeOf(Math.random());
+      if (active <= 6 && Math.random() < .4) {   // two children set off together (room for both under the cap)
+        for (let k = 0; k < 2; k++) { const kid = routineWalker({routine: 'school', kid: true, backpack: PASTEL[Math.random() * 8 | 0], gait: 'skip', max: .66}, {x: door.x + k * .2, y: door.y}); kid.path = route(kid.x, kid.y, out.x, out.y, .62).concat([{x: out.x, y: out.y, speed: .6, then: q => { q.home = true; }}]); }
+      } else {
+        const c = routineWalker({routine: 'work', briefcase: true, gait: 'brisk', max: .74}, door); c.path = route(c.x, c.y, out.x, out.y, .7).concat([{x: out.x, y: out.y, speed: .68, then: q => { q.home = true; }}]);
+      }
+      house.home = false; routine.morning++;
+    } else if (part === 'lunch') {
+      const spot = CAFE[Math.random() * 2 | 0], k = movers.filter(m => m.routine === 'lunch').length;
+      if (k >= 4) return;
+      const a = (k % 4) * Math.PI / 2 + .4, sx = spot.x + Math.cos(a) * .42, sy = spot.y + Math.sin(a) * .42, from = edgeOf(Math.random());
+      const d = routineWalker({routine: 'lunch'}, from);
+      d.path = route(d.x, d.y, sx, sy, .5).concat([{x: sx, y: sy, speed: .35, then: q => { q.stopUntil = clock + 14; q.attention = {x: spot.x, y: spot.y}; q.shopAction = 'eating'; q.lunchUntil = clock + 14; }}]);
+      routine.lunch++;
+    } else if (part === 'evening') {
+      const house = homes().filter(b => !b.home)[0] || homes()[Math.random() * homes().length | 0];
+      if (!house) return;
+      const door = doorOf(house), from = edgeOf(Math.random());
+      const w = routineWalker({routine: 'home', briefcase: Math.random() < .5}, from);
+      w.path = route(w.x, w.y, door.x, door.y, .55).concat([{x: door.x, y: door.y, speed: .4, then: q => { q.home = true; house.home = true; house.homeAt = clock; }}]);
+      routine.evening++;
+    }
+  }
+  function finishRoutines() {
+    // Walkers who reached the edge of town or their front door go inside / out of sight;
+    // diners finish their lunch and drift off.
+    for (const m of movers.slice()) {
+      if (m.routine && m.home && !m.path) remove(m);
+      else if (m.routine === 'lunch' && m.lunchUntil && clock > m.lunchUntil) { m.shopAction = null; m.attention = null; m.lunchUntil = 0; const out = edgeOf(Math.random()); m.path = route(m.x, m.y, out.x, out.y, .5).concat([{x: out.x, y: out.y, speed: .5, then: q => { q.home = true; }}]); }
+    }
+  }
   function update(dt) {
     clock += dt;
     updateNeighborhoodLife(dt);
@@ -2145,6 +2207,7 @@ const ToyTown = (() => {
     updateDistrictLife();
     for (const m of movers.slice()) { step(m, dt); easeHeading(m, dt); updateHeroResident(m); }
     passingGreetings();
+    updateRoutines(); finishRoutines();
     for (const e of events.slice()) { e.t += dt; if (e.follow) { e.x = e.follow.x; e.y = e.follow.y; } if (e.update) e.update(e, dt); if (e.t > e.dur) { if (e.end) e.end.call(e); events.splice(events.indexOf(e), 1); } }
     for (const m of movers.slice()) if (m.home && !m.path) remove(m);
     // Event callbacks can reposition actors independently of the ordinary
@@ -2505,7 +2568,7 @@ const ToyTown = (() => {
     addEventListener('hashchange', () => location.reload());
     start();
   }
-  return {layout, render, zoomAt, resetView, fitView, pinchTo, screenWorld, streetMoment, reactToNews, hero: () => town.blocks.find(b => b.hero), TALK, nameOf, headline, dateKey, CALM, lightPhase, themeFromNews, newsThemes, VARIANTS, VARIANT_EVENTS: () => Object.keys(VARIANT_EVENTS), decorate, setToday: l => { today_ = l; }, PACE, THEMES, GRIM, build, update, events: () => events, movers: () => movers, buildings: () => buildings, props: () => props, startEvent, randomEvent, setPlaying: v => { playing = v; }, debug: () => ({clock, theme, seed, greetings, night: nightLevel(), cam: {...cam}, fitZoom, streetMoments,communityEncounters,communityVisits,streetTransactions,streetShopVisits,newsReactions,streetPerformances,
+  return {layout, render, zoomAt, resetView, fitView, pinchTo, screenWorld, streetMoment, reactToNews, hero: () => town.blocks.find(b => b.hero), TALK, nameOf, headline, dateKey, CALM, lightPhase, themeFromNews, newsThemes, VARIANTS, VARIANT_EVENTS: () => Object.keys(VARIANT_EVENTS), decorate, setToday: l => { today_ = l; }, PACE, THEMES, GRIM, build, update, events: () => events, movers: () => movers, buildings: () => buildings, props: () => props, startEvent, randomEvent, setPlaying: v => { playing = v; }, debug: () => ({clock, theme, seed, greetings, hour: hourOfDay(), daypart, routines: {...routine}, night: nightLevel(), cam: {...cam}, fitZoom, streetMoments,communityEncounters,communityVisits,streetTransactions,streetShopVisits,newsReactions,streetPerformances,
     districts:{count:districts.length,visits:districtVisits,
       meetings:districtMeetings,tasks:districtTasks,
       areas:districts.map(a=>({role:a.role,block:a.block,

@@ -2699,6 +2699,7 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
     const placed=kitPlace(world,name,b.x+.5,.17,b.y+.5,{fit:.98});
     if(!placed)return false;
     placed.userData.landmark=true;placed.userData.uniqueAsset=true;
+    if(!shop)porchLamp(placed,b);
     if(shop){const z=placed.userData.size.z/2+.012;sign(placed,b.name==='BAKERY'?'BAKERY':'BOOK NOOK',0,.98,z,.62,'#4a3f37','#fff3dc');}
     return true;
   }
@@ -2710,10 +2711,19 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
     const placed=kitPlace(world,name,b.x+.5,.17,b.y+.5,{fit:b.kind==='tower'?1.02:.98,rotY:0});
     if(!placed)return false;
     placed.userData.buildingKind=b.kind;composedBuildings++;
+    if(b.kind==='house')porchLamp(placed,b);
     return true;
   }
+  const porchLamps=[];
+  function porchLamp(placed,b){
+    const glass=new THREE.MeshStandardMaterial({color:'#fff0d0',emissive:'#ffc46e',emissiveIntensity:.05,roughness:.3});
+    const z=placed.userData.size.z/2+.02;
+    box(placed,.05,.02,.04,'#3b3f4a',0,.42,z-.01,false);
+    const lamp=box(placed,.04,.05,.04,glass,0,.385,z,false);lamp.castShadow=false;
+    porchLamps.push({b,glass});
+  }
   function rebuild(){
-    timeVisit=null;round=null;papers=[];effects=[];
+    timeVisit=null;round=null;papers=[];effects=[];porchLamps.length=0;
     ambient.length = 0; plazaLights.length = 0; festoonBulbs.length = 0;
     windowMaterials.clear();
     gardenElements = 0; woodlandShapes = 0; terrainContours = 0; composedBuildings = 0; districtGardenRooms = 0; landmarkCount = 0;
@@ -2839,6 +2849,9 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
       elbow.add(wrist);arm.add(elbow);g.add(arm);
       arms.push(arm);elbows.push(elbow);wrists.push(wrist);hands.push(wrist);
     }
+    if(ref.backpack){const pack=box(g,.13,.15,.07,ref.backpack,0,.27,-.085);pack.castShadow=false;box(g,.1,.04,.02,tint(ref.backpack,'#ffffff',.3),0,.23,-.122,false);}
+    if(ref.briefcase){const brief=new THREE.Group();brief.position.set(0,-.08,0);hands[0].add(brief);box(brief,.13,.095,.04,'#5b4636',0,-.03,0);
+      const handle=object(brief,geo('torus',.022,.006),mat('#3d2f25'),0,.025,0);handle.scale.set(1,.8,.5);}
     if(ref.bag&&ref.kind!=='farmer'&&ref.kind!=='keeper'){
       // This handbag is actually gripped and follows the left wrist.
       const bag=new THREE.Group();bag.position.set(-.003,-.072,-.023);
@@ -2971,6 +2984,7 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
     g.add(upperBody);
     g.userData.limbs={legs,arms,elbows,wrists,hands,shins,feet,
       eyelids,headPivot,upperBody,smile,brows};
+    if(ref.kid)g.scale.setScalar(.76);   // children are smaller
     g.userData.shopProps=shopProps;
     g.userData.pose={speed:0,sit:0,chat:0,speak:0,greet:0,observe:0,
       knock:0,order:0,depart:0,
@@ -3635,6 +3649,7 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
     sun.color.set(tint('#ffd7a4','#ee9c70',dusk));
     rim.color.set(tint('#c0dedb','#a8b6cb',dusk));
     for(const lantern of plazaLights)lantern.intensity=dark*7.2;
+    for(const p of porchLamps)p.glass.emissiveIntensity=p.b.home&&dark>.25?2.4:.05;   // lights on once someone is home
     for(const pool of lanternPools)pool.material.opacity=Math.min(1,Math.max(0,dark-.12)*1.3);
     lanternGlass.emissiveIntensity=.1+dark*4.2;
     for(const bulb of festoonBulbs)bulb.material.emissiveIntensity=.32+dark*1.65;
@@ -3713,6 +3728,15 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
     if(slowFrames>40){pixelRatio=pixelRatio>1.7?1.6:pixelRatio>1.4?1.3:1;slowFrames=0;sharpSamples=0;
       renderer.setPixelRatio(pixelRatio);lastSize='';}
   }
+  // ?fps shows a small readout: frames per second, draw time and render resolution.
+  const fpsOn=typeof location!=='undefined'&&/[?&]fps\b/.test(location.search);
+  let fpsEl=null,fpsFrames=0,fpsDraw=0,fpsSince=0;
+  function fpsMeter(ms){
+    if(!fpsOn||typeof document==='undefined')return;
+    if(!fpsEl){fpsEl=document.createElement('div');fpsEl.style.cssText='position:fixed;right:10px;top:calc(10px + env(safe-area-inset-top,0px));z-index:9;padding:5px 9px;border-radius:9px;background:rgba(30,36,44,.78);color:#e9f5e9;font:600 12px/1.3 ui-monospace,Menlo,monospace;pointer-events:none';document.body.appendChild(fpsEl);}
+    const now=clockMs();fpsFrames++;fpsDraw+=ms;if(!fpsSince)fpsSince=now;
+    if(now-fpsSince>=1000){fpsEl.textContent=`${Math.round(fpsFrames*1000/(now-fpsSince))} fps · ${(fpsDraw/fpsFrames).toFixed(1)} ms · ${pixelRatio}x`;fpsFrames=0;fpsDraw=0;fpsSince=now;}
+  }
   function frame(timestamp){
     if(stopped || frozen)return;
     raf=requestAnimationFrame(frame);
@@ -3736,7 +3760,7 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
       animateAmbient(state.clock||0);
       const drawStart=clockMs();
       if(lens)lens.render(timestamp-(api.lastAt||timestamp));else renderer.render(scene,camera);
-      adaptSharpness(clockMs()-drawStart);
+      const drawn=clockMs()-drawStart;adaptSharpness(drawn);fpsMeter(drawn);
       api.lastAt=timestamp;frames++;
       if(!api.active) {
         api.active=true;window.ToyTown3D.active=true;

@@ -71,4 +71,18 @@ for (const n of ['road_straight', 'road_junction', 'road_tsplit', 'road_corner',
 assert.match(view, /function kitRoads\(\)/); assert.match(view, /if\(v&&!h&&\(y===13\|\|y===14\)\)continue;/, 'road tiles leave the river to the bridges');
 assert.match(view, /if\(b\.hero&&kitLandmark\(b\)\)/, 'the plaza buildings use KayKit models too');
 assert.match(view, /'BOOK NOOK'/, 'and keep their signs');
-console.log('Toy Town EXTRAS PASS: KayKit CC0 kit (named, small, licensed, with fallback; roads and plaza too); taps on residents, cars, buildings and open ground; livelier gaits and greetings; news card minimises to a pill (phones first, remembered), Picture-of-the-Day cinema, fireflies and shooting stars, tap-a-resident chat, the on-this-day visitor (gentle history only, credited) and the dawn paper round.');
+// A day in the life: run the real simulation through a whole day.
+{
+  const box = vm.createContext({Math, Object, Array, JSON, Date, String, Number, RegExp, Set, Map, setTimeout: () => 0, document: {getElementById: () => ({textContent: '', style: {}})}});
+  vm.runInContext(town + ';this.T=ToyTown;', box); const T = box.T; T.build(20261102, 'market');
+  const seen = new Set(); let most = 0, lit = 0;
+  for (let i = 0; i < 20 * 300 * 1.1; i++) { T.update(1 / 20); const d = T.debug(); if (d.daypart) seen.add(d.daypart);
+    const ms = T.movers(); most = Math.max(most, ms.filter(m => m.routine).length);
+    if (ms.some(m => m.kid && m.backpack)) seen.add('children'); if (ms.some(m => m.briefcase)) seen.add('commuters'); if (ms.some(m => m.routine === 'lunch' && m.shopAction === 'eating')) seen.add('eating');
+    if (d.daypart === 'evening') lit = Math.max(lit, T.buildings().filter(b => b.kind === 'house' && b.home && b.homeAt).length); }
+  for (const k of ['morning', 'lunch', 'evening', 'children', 'commuters', 'eating']) assert.ok(seen.has(k), 'a day has ' + k);
+  assert.ok(lit >= 2, `people get home in the evening (${lit} houses)`); assert.ok(most <= 8, 'a lively street, never a crowd');
+}
+assert.match(view, /p\.glass\.emissiveIntensity=p\.b\.home&&dark>\.25/, 'porch lamps light once someone is home after dusk');
+assert.match(view, /\[\?&\]fps\\b/, '?fps shows a frame-rate readout');
+console.log('Toy Town EXTRAS PASS: a day in the life (commuters, children, lunch, home at dusk); KayKit CC0 kit (named, small, licensed, with fallback; roads and plaza too); taps on residents, cars, buildings and open ground; livelier gaits and greetings; news card minimises to a pill (phones first, remembered), Picture-of-the-Day cinema, fireflies and shooting stars, tap-a-resident chat, the on-this-day visitor (gentle history only, credited) and the dawn paper round.');
