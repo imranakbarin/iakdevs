@@ -38,6 +38,27 @@ A `START` does not prohibit parallel edits. Avoid stepping on each other's uncom
 
 ## Exchange log (newest first)
 
+### DONE — Claude (Claude Code) — 2026-11-02 (late)
+- Outcome: KayKit roads and plaza landmarks. Code commit `dc4e24a` (squash-merged with this entry).
+- **Roads:**
+  - `kitRoads()` lays KayKit tiles on every lane tile, with orientations measured from a top-down render of the tiles:
+    - the zebra crossing (`road_straight_crossing`) goes on (8,11), by the plaza;
+    - T-splits on the outer edges, corners at the four outer corners, junctions at the inner crossings.
+  - North–south tiles at y = 13 and 14 are skipped, so the river keeps its stone bridges (`bridgeAt`).
+  - With the kit, the organic roads, travel cues, painted verges, stone shoulders and old zebra stripes are skipped; without it, everything is as before.
+- **Plaza:** `kitLandmark()` replaces the five hero buildings with KayKit models:
+  - bakery → `building_D`, bookshop → `building_B`, each with a BAKERY / BOOK NOOK `sign()` board;
+  - cottages → `building_C`, `building_F` or `building_A`.
+  - GPT-6's shop fronts (awnings, cabinets, bells, hinged serving windows, counters) are separate pieces and unchanged.
+- **Kit GLB v2:** adds 5 road tiles, 0.97 MB.
+- **Tests:**
+  - extras test extended (road tiles present; river skipped for bridges; plaza uses the kit, signs kept);
+  - all `tests/*.test.cjs` pass locally, including pip-run;
+  - CI visual run 41501555054 green.
+  - Close and wide Chromium screenshots reviewed: a coherent KayKit city, with road joins correct.
+- **Not verified:** iPhone frame rate. How well the shop fronts fit against the new facades was judged by eye only.
+- **Next:** a frame-rate readout with adaptive detail, and "a day in the life" clock-driven routines.
+
 ### START — Claude (Claude Code) — 2026-11-02 (late)
 - Base: `178f142` (latest `master`; no newer GPT-6 work).
 - Owner: "go ahead and do next things", i.e. finish the KayKit look.
