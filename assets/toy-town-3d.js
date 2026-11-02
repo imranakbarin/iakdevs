@@ -2463,6 +2463,7 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
     effects.push({t:0,life:3.4,parts:[anchor],tick(e){tapLight.intensity=e.t<1.2?Math.sin(e.t/1.2*Math.PI)*3.5:0;}});
   }
   function surprise(x,z){
+    while(effects.length>=6){const old=effects.shift();for(const p of old.parts)p.parent?.remove(p);}   // a flurry of taps never piles up
     const now=town.debug().clock||0;
     // Everyone close by turns to look, and the nearest few cheer.
     const near=[...actors].filter(([ref,item])=>item.kind==='person'&&Math.hypot(ref.x-x,ref.y-z)<2.4).sort((a,b)=>Math.hypot(a[0].x-x,a[0].y-z)-Math.hypot(b[0].x-x,b[0].y-z));
@@ -3670,7 +3671,7 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
     surpriseAt:(x,z,seconds=0)=>{surprise(x,z);for(let t=0;t<seconds;t+=.05)updateEffects(.05);return effects.length;},
     // Test hooks: start the visitor or the paper round now.
     startVisit:()=>{if(!onThisDay.length)onThisDay=[{year:1969,text:'Apollo 11 lands on the Moon'}];startVisit();return timeVisit;},startRound:()=>{startRound();return round;},
-    stepExtras:(seconds,dark=0)=>{for(let t=0;t<seconds;t+=.05){sceneClock+=.05;updateVisit(.05);updateRound(.05,dark);}},
+    stepExtras:(seconds,dark=0)=>{for(let t=0;t<seconds;t+=.05){sceneClock+=.05;updateVisit(.05);updateRound(.05,dark);updateEffects(.05);}},
     sceneExtras:()=>({visiting:!!timeVisit,riding:!!round,papers:papers.length,history:onThisDay.length}),
     freeze(){frozen=true;cancelAnimationFrame(raf);},
     unfreeze(){if(!stopped&&frozen){frozen=false;raf=requestAnimationFrame(frame);}},
