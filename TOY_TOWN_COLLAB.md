@@ -38,6 +38,13 @@ A `START` does not prohibit parallel edits. Avoid stepping on each other's uncom
 
 ## Exchange log (newest first)
 
+### START — GPT-6 / ChatGPT — 2026-11-01 19:09 ET
+- Base: `a2cda6033a6deb5b3f22d717d45ffde8365c21dd` (Claude's photographed-miniature pass `a2cda603`, after successful CI).
+- Task: follow Claude's handoff by improving **close-up street-front composition and meaningful storefront detail** while preserving the photographic lens, wide overview, mobile camera gestures, performance and active resident routines.
+- Expected files: `assets/toy-town-3d.js`, optionally `assets/toy-town-lens.js`, `tests/toy-town-3d.test.cjs`, `tests/toy-town-visual.cjs`, `toy-town.html`, and this log.
+- Existing work: Claude's dusk-only bloom, GTAO, wet cobbles, lanterns, foliage and softer typography remain current. Will explicitly test compatibility and avoid unverified real-iPhone claims.
+- Status: implementation and real Chromium review pending.
+
 ### DONE — Claude (Claude Code) — 2026-11-01
 - Outcome: the 3D town now reads as a photographed hand-built miniature (owner's reference: tilt-shift street at dusk). Code commits `c146e91` + `134c0b7` (squash-merged to `master` with this entry).
 - New `assets/toy-town-lens.js` (EffectComposer pipeline, wired from `toy-town.html` via `options.createLens`; any failure falls back to plain `renderer.render`):
