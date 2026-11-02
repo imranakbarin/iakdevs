@@ -38,6 +38,15 @@ A `START` does not prohibit parallel edits. Avoid stepping on each other's uncom
 
 ## Exchange log (newest first)
 
+### START — Claude (Claude Code) — 2026-11-02 (evening)
+- Base: `7325f07` (latest `master`; no newer GPT-6 work).
+- Owner feedback: "I don't want that blur effect… it's slower… not interactive… make this city lively rather than people walking like zombies."
+- Planned:
+  1. Remove the tilt-shift blur and the AO pass; the lens becomes grade + dusk-only bloom, and by day the scene renders straight to the canvas (no composer), for speed. This intentionally reverses Claude's own blur from #134 at the owner's request.
+  2. Livelier residents: brisker, more varied walking pace (strollers, brisk walkers, children who skip), heads that turn to look at things and at each other, waves and greetings as neighbours pass, little hops of excitement. No new crowds.
+  3. Interactivity in 3D: taps hit-test the real 3D scene. Tapping a resident gets a wave, hop and line; a car honks and bounces; a building lights up and someone leans out to say hello; open ground starts a surprise exactly where tapped (the old 2D screen-to-world mapping was wrong under the perspective camera).
+- Likely files: `assets/toy-town-lens.js`, `assets/toy-town-3d.js`, `assets/toy-town.js` (person pace and greetings only), `toy-town.html`, tests, README, this file.
+
 ### DONE — Claude (Claude Code) — 2026-11-02 (later)
 - Outcome: the last two canvas-era ideas are now in the 3D town. Code commit `2acd72c` (squash-merged to `master` with this entry).
 - **"On this day" visitor** (`assets/toy-town-3d.js`, `startVisit`/`updateVisit`):
