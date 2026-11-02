@@ -530,6 +530,7 @@ const shopkeeperRef={type:'person',kind:'shopkeeper',shopRole:'vendor',
   shopVenue:'bakery',shopAction:'offering',x:8.07,y:8.42,d:2,
   max:0,v:0,travel:0,ph:2,col:'#de8f69',skin:'#d8ac8e'};
 const buyerRef={type:'person',kind:'shopper',shopRole:'customer',
+  shopAt:'bakery',shopPhase:'ordering',
   shopAction:'ordering',x:8.32,y:8.78,d:3,max:.4,
   v:0,travel:0,ph:1.5,col:'#a28bce',skin:'#d4b295'};
 pedestrians.push(shopkeeperRef,buyerRef);
@@ -545,6 +546,13 @@ assert.equal(buyerModel.userData.shopProps.bread.visible,false,
   'buyer cannot display a purchase before the handoff');
 const rightArm=sellerModel.userData.limbs.arms[1];
 assert.ok(Math.abs(rightArm.rotation.x)>.02,'vendor extends a serving arm');
+const bakeryFront=workingDesks.find(o=>o.userData.workingShop==='bakery')
+  .userData.streetFront;
+assert.ok(bakeryFront.hasCustomers,'display detects an actual customer ordering');
+assert.ok(bakeryFront.lampMaterial.emissiveIntensity>.20,
+  'shop cabinet starts glowing only after a shopper enters service');
+assert.equal(bakeryFront.serviceCount,0,
+  'opening a shop never rings a fictitious completed sale');
 shopkeeperRef.shopAction='handoff';
 buyerRef.shopAction='receiving';buyerRef.carrying='bread';
 frameClock+=1/30;callbacks.shift()();
@@ -552,6 +560,17 @@ assert.equal(sellerModel.userData.shopProps.bread.visible,false,
   'the vendor releases the bread after the transaction');
 assert.equal(buyerModel.userData.shopProps.bread.visible,true,
   'the same product appears in the buyer hand');
+assert.equal(bakeryFront.serviceCount,1,
+  'a genuine shop handoff rings the miniature service bell exactly once');
+assert.ok(bakeryFront.ringUntil>frameClock,
+  'the service bell physically swings for a bounded interval');
+frameClock+=1/30;callbacks.shift()();
+assert.equal(bakeryFront.serviceCount,1,
+  'a long handoff state does not trigger duplicate bell rings');
+shopkeeperRef.shopAction='offering';frameClock+=1/30;callbacks.shift()();
+shopkeeperRef.shopAction='handoff';frameClock+=1/30;callbacks.shift()();
+assert.equal(bakeryFront.serviceCount,2,
+  'a later independent handoff starts a new bell motion');
 buyerRef.shopAction='eating';frameClock+=1/30;callbacks.shift()();
 assert.ok(buyerModel.userData.pose.enjoy>.05,
   'the customer has a distinct using-the-purchase animation');
