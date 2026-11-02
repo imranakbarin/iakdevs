@@ -652,6 +652,9 @@ assert.ok(Math.abs(shoeRig.rotation.x)>.005,
   'walking shoes rock at the ankle during the foot contact cycle');
 pedestrians[0].v=0;pedestrians[0].intent='chat';
 pedestrians[0].attention={x:8.1,y:9.4};
+// Speech is intentionally intermittent; select an audible speaking phase
+// so this assertion tests elbow articulation, not a silent listening beat.
+pedestrians[0].ph=Math.PI/2-(frameClock+1/30)*1.35;
 frameClock+=1/30;callbacks.shift()();
 assert.ok(actorPose.speed<paceBeforeStop&&actorPose.speed>0,
   'stopping eases the gait instead of snapping the pose');
