@@ -147,6 +147,7 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
       else if (kind === 'torus') shape = new THREE.TorusGeometry(...dims,7,12);
       else if (kind === 'plane') shape = new THREE.PlaneGeometry(...dims);
       else if (kind === 'clump') shape = clumpGeometry(dims[0], dims[1]);
+      else if (kind === 'soft') shape = new RoundedBoxGeometry(dims[0],dims[1],dims[2],4,dims[3]);
       else if (kind === 'smooth') shape = new THREE.SphereGeometry(dims[0],24,18);
       else if (kind === 'capsule') shape = new THREE.CapsuleGeometry(dims[0],dims[1],6,16);
       else if (kind === 'hairshell') shape = new THREE.SphereGeometry(dims[0],24,14,0,Math.PI*2,0,Math.PI*.56);
@@ -161,9 +162,10 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
     const g = new THREE.IcosahedronGeometry(radius, 3), pos = g.attributes?.position, n = new THREE.Vector3();
     if (!pos) return g;   // headless test doubles carry no vertex data
     const lumps = Array.from({length: 11}, (_, k) => new THREE.Vector3(Math.sin(k * 2.4 + variant) * Math.cos(k * 1.3), Math.cos(k * 1.7 + variant * .7), Math.sin(k * 1.3) * Math.sin(k * 2.4 + variant)).normalize());
-    const colors = new Float32Array(pos.count * 3);
+    const colors = new Float32Array(pos.count * 3), soft = new Float32Array(pos.count * 3);
     for (let i = 0; i < pos.count; i++) {
       n.fromBufferAttribute(pos, i).normalize();
+      soft[i * 3] = n.x; soft[i * 3 + 1] = n.y * 1.08; soft[i * 3 + 2] = n.z;
       let bump = 0; for (const l of lumps) bump = Math.max(bump, Math.pow(Math.max(0, n.dot(l)), 7));
       const fine = Math.sin(n.x * 23 + variant) * Math.sin(n.y * 19) * Math.sin(n.z * 21 + variant * 2) * .5 + .5;
       const d = .78 + bump * .26 + fine * .07;
@@ -173,6 +175,9 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
     }
     g.setAttribute('color', new THREE.BufferAttribute(colors, 3));
     g.computeVertexNormals();
+    // Shade it like a soft ball (normals follow the sphere, not the lumpy facets): rounded, never faceted.
+    const nrm = g.attributes.normal; for (let i = 0; i < pos.count; i++) nrm.setXYZ(i, (nrm.getX(i) * .25 + soft[i * 3] * .75), (nrm.getY(i) * .25 + soft[i * 3 + 1] * .75), (nrm.getZ(i) * .25 + soft[i * 3 + 2] * .75));
+    nrm.needsUpdate = true;
     return g;
   }
   const leafGrain = (() => {
@@ -195,7 +200,10 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
     for(const node of root.children){
       const box3=new THREE.Box3().setFromObject(node),size=new THREE.Vector3(),centre=new THREE.Vector3();
       box3.getSize(size);box3.getCenter(centre);
-      node.traverse(o=>{if(o.isMesh){o.castShadow=true;o.receiveShadow=true;}});
+      node.traverse(o=>{if(o.isMesh){o.castShadow=true;o.receiveShadow=true;
+        // Softer, friendlier: matt, and lifted toward a warm cream so nothing reads as harsh saturated plastic.
+        const ms=Array.isArray(o.material)?o.material:[o.material];
+        for(const m of ms){if(m&&!m.userData.softened){m.userData.softened=true;m.roughness=1;m.metalness=0;if(m.emissive){m.emissive.set('#ffe9d6');m.emissiveIntensity=.17;}}}}});
       models.set(node.name,{node,size,min:box3.min.clone(),centre});
     }
     return models.size?models:null;
@@ -1157,7 +1165,10 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
   // branching and planted, shadowed root flares; no leaf particle systems.
   function tree(p,i){
     if(Math.hypot(p.x-CINEMA.x,p.y-CINEMA.z)<1.7)return;   // the open-air cinema has this corner
-    if(kit){
+    if(p.y>17&&Math.abs(p.x-RAIL.stationX)<2.7)return;          // the railway station
+    if(p.x>17&&Math.abs(p.y-9.55)<1.3)return;                   // the windmill
+    if(p.x<1.2&&p.y>2&&p.y<6.1)return;                        // the sheep pasture
+    if(kit&&(i%9===4||i%4===0)){   // most trees are round and soft; a few tall pines stay for variety
       const cluster=i%9===4,name=cluster?(i%2?'trees_A_medium':'trees_B_medium'):(i%3?'tree_single_A':'tree_single_B');
       groundingShadow(p.x,p.y,cluster?1.4:1.0,cluster?1.3:.95,.166);
       if(kitPlace(world,name,p.x,.16,p.y,{height:(cluster?.95:1.05)*(p.s||1),rotY:rng(i,61)*TAU})){woodlandShapes++;return;}
@@ -1904,7 +1915,7 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
   // navigation continue to use the original perfectly straight road centers.
   // Only the physical visible outer shoulders are irregular.
   function organicBoardOutline(inset=0){
-    const half=9.25-inset,corner=1.72+inset*.12;
+    const half=10.4-inset,corner=1.72+inset*.12;
     const shape=new THREE.Shape();
     const corners=[
       [half-corner,half-corner,0],
@@ -2546,6 +2557,7 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
     const person=actorAt(clientX,clientY,['person'],46);
     if(person){const ref=person.ref;ref.stopUntil=now+3.2;ref.hopUntil=now+.9;ref.waveUntil=now+2.4;ref.cheerUntil=now+1.1;
       showBubble(person.item.group,chatLine(),4200);sound('chime');taps.people++;return true;}
+    if(trainHit(clientX,clientY)){taps.vehicles++;return true;}
     const car=actorAt(clientX,clientY,['car','bike'],40);
     if(car){car.ref.hopUntil=now+.7;showBubble(car.item.group,car.item.kind==='bike'?'Ring ring!':pick(HONKS),2200);sound(car.item.kind==='bike'?'bell':'honk');taps.vehicles++;return true;}
     const spot=groundAt(clientX,clientY);if(!spot)return false;
@@ -2990,6 +3002,7 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
     createStorybookVillage();
     paintVillageLife();
     createWorkingShops();
+    rail.train=null;createRailway();createFarm();
     // Landmark panes are pooled across the five models. Update material
     // intensity only, not every individual window mesh, on each frame.
     const visit=node=>{
@@ -3231,102 +3244,381 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
       scale*(.95+.045*Math.sin(characterPhase+1)));
     return g;
   }
+  /* ---- The ring railway. A little round-faced steam train loops the town on a
+     track just inside the board's edge, stops at the station on the front edge
+     (platform, clock tower, benches, passengers who board and get off), and
+     dives through a grassy hill with a tunnel at the back. ---- */
+  const RAIL={x0:.27,x1:17.73,y0:-.62,y1:18.62,ra:.89,gauge:.2,top:.17,stationX:9,hillX:9};
+  const rail={t:0,pts:[],cum:[],len:0,built:false,s:null,v:0,state:'run',dwell:0,away:0,train:null,puffs:[],puffAt:0,pax:[],signal:null,clock:null,doors:0,toots:0,stops:0,laps:0,lastS:0,paxNext:0};
+  function railPath(){
+    if(rail.built)return;
+    const {x0,x1,y0,y1,ra}=RAIL,pts=[];
+    const arc=(cx,cy,a0,a1)=>{for(let k=0;k<=10;k++){const a=a0+(a1-a0)*k/10;pts.push([cx+ra*Math.cos(a),cy+ra*Math.sin(a)]);}};
+    arc(x1,y0+ra,-Math.PI/2,0);arc(x1,y1-ra,0,Math.PI/2);arc(x0,y1-ra,Math.PI/2,Math.PI);arc(x0,y0+ra,Math.PI,Math.PI*1.5);
+    rail.pts=pts;rail.cum=[0];
+    for(let i=1;i<=pts.length;i++){const a=pts[i-1],b=pts[i%pts.length];rail.cum.push(rail.cum[i-1]+Math.hypot(b[0]-a[0],b[1]-a[1]));}
+    rail.len=rail.cum[pts.length];
+    // Arc length of the station stop on the south run (heading west).
+    rail.stationS=rail.cum[22]-(RAIL.stationX-x0);
+    rail.built=true;
+  }
+  function railAt(s){
+    const {pts,cum,len}=rail;s=((s%len)+len)%len;
+    let i=0;while(i<pts.length-1&&cum[i+1]<=s)i++;
+    const a=pts[i],b=pts[(i+1)%pts.length],seg=cum[i+1]-cum[i]||1,t=(s-cum[i])/seg;
+    const dx=(b[0]-a[0])/seg,dz=(b[1]-a[1])/seg;
+    return {x:a[0]+(b[0]-a[0])*t,z:a[1]+(b[1]-a[1])*t,dx,dz};
+  }
+  const flatShape=(w,h,r)=>{const s=new THREE.Shape();s.moveTo(-w,0);s.lineTo(-w,h);s.absarc(0,h,w,Math.PI,0,true);s.lineTo(w,0);s.closePath();return s;};
+  function createRailway(){
+    railPath();
+    const g=new THREE.Group();world.add(g);
+    const top=RAIL.top,N=rail.pts.length;
+    // Ballast, sleepers and two rails, instanced along the loop.
+    const segs=[];for(let i=0;i<N;i++){const a=rail.pts[i],b=rail.pts[(i+1)%N];segs.push({x:(a[0]+b[0])/2,z:(a[1]+b[1])/2,len:Math.hypot(b[0]-a[0],b[1]-a[1]),ang:-Math.atan2(b[1]-a[1],b[0]-a[0])});}
+    const inst=(geom,material,list)=>{const m=new THREE.InstancedMesh(geom,material,list.length),o=new THREE.Object3D();
+      list.forEach((e,k)=>{o.position.set(e.x,e.y,e.z);o.rotation.set(0,e.ang,0);o.scale.set(e.sx||1,1,e.sz||1);o.updateMatrix();m.setMatrixAt(k,o.matrix);});
+      m.instanceMatrix.needsUpdate=true;m.receiveShadow=true;g.add(m);return m;};
+    inst(new THREE.BoxGeometry(1,.035,.34),mat('#d9cdbb',.95),segs.map(e=>({x:e.x,y:top+.004,z:e.z,ang:e.ang,sx:e.len+.03})));
+    const sleepers=[];for(let s=0;s<rail.len;s+=.13){const p=railAt(s);sleepers.push({x:p.x,y:top+.024,z:p.z,ang:-Math.atan2(p.dz,p.dx)});}
+    inst(new THREE.BoxGeometry(.04,.02,.3),mat('#a98366',.9),sleepers);
+    for(const side of [-1,1])inst(new THREE.BoxGeometry(1,.026,.016),mat('#9aa3ab',.45),segs.map(e=>({x:e.x+Math.sin(e.ang)*side*RAIL.gauge/2,y:top+.045,z:e.z+Math.cos(e.ang)*side*RAIL.gauge/2,ang:e.ang,sx:e.len+.02})));
+    // The grassy hill with a tunnel on the back run.
+    const hillW=.62,hillH=.86,hillL=2.6;
+    const hs=new THREE.Shape();hs.moveTo(-hillW,0);hs.absellipse(0,0,hillW,hillH,Math.PI,0,true);hs.closePath();
+    const hill=object(g,new THREE.ExtrudeGeometry(hs,{depth:hillL,bevelEnabled:false,curveSegments:20}),mat('#a9cf92',1),RAIL.hillX-hillL/2,top-.01,RAIL.y0,true);hill.rotation.y=Math.PI/2;hill.userData.railHill=true;
+    for(const [dx,s] of [[-.4,.9],[.35,1.1],[.75,.7]]){const t=ball(g,.2*s,mat('#7fb27c',.9),RAIL.hillX+dx,top+hillH*.82+.04,RAIL.y0+(dx>0?.08:-.1));t.scale.set(1,.9,1);}
+    for(const sd of [-1,1]){
+      const frame=new THREE.Mesh(new THREE.ShapeGeometry(flatShape(.29,.45)),new THREE.MeshStandardMaterial({color:'#d4c8b4',roughness:.9}));
+      const hole=new THREE.Mesh(new THREE.ShapeGeometry(flatShape(.21,.43)),new THREE.MeshBasicMaterial({color:'#2d2a35'}));
+      for(const [m,off,dy] of [[frame,.006,top-.005],[hole,.011,top-.005]]){m.position.set(RAIL.hillX+sd*(hillL/2+off),dy,RAIL.y0);m.rotation.y=sd*Math.PI/2;g.add(m);}
+    }
+    // Station: platform, hall, clock tower, canopy, lamps, benches.
+    const cx=RAIL.stationX,py=top,platTop=py+.08;
+    box(g,3.9,.08,.46,'#efe3cd',cx,py+.04,18.19).castShadow=false;
+    box(g,3.9,.012,.035,'#f6d56a',cx,platTop+.003,18.40).castShadow=false;
+    for(const sd of [-1,1])box(g,.38,.05,.46,'#e5d8c0',cx+sd*2.12,py+.025,18.19);      // gentle steps down at each end
+    const hallZ=17.58;
+    box(g,1.9,.52,.56,'#f7e8d0',cx,py+.26,hallZ);
+    const rs=new THREE.Shape();rs.moveTo(-.4,0);rs.lineTo(.4,0);rs.lineTo(0,.28);rs.closePath();
+    const roof=object(g,new THREE.ExtrudeGeometry(rs,{depth:2.08,bevelEnabled:false}),mat('#e4897b',.85),cx-1.04,py+.52,hallZ);roof.rotation.y=Math.PI/2;
+    box(g,.44,1.02,.44,'#fbf0dc',cx,py+.51,hallZ);
+    const cone=object(g,new THREE.ConeGeometry(.36,.36,4),mat('#e4897b',.85),cx,py+1.2,hallZ);cone.rotation.y=Math.PI/4;
+    ball(g,.035,mat('#e8c15a',.4),cx,py+1.42,hallZ);
+    // Clock face on the south side, hands tied to the town's own hour.
+    const face=object(g,geo('cylinder',.14,.14,.02),mat('#fffdf6',.5),cx,py+.86,hallZ+.23,false);face.rotation.x=Math.PI/2;
+    const rim=object(g,geo('torus',.14,.015),mat('#d7a24a',.5),cx,py+.86,hallZ+.232,false);
+    const hPivot=new THREE.Group(),mPivot=new THREE.Group();hPivot.position.set(cx,py+.86,hallZ+.245);mPivot.position.set(cx,py+.86,hallZ+.249);g.add(hPivot,mPivot);
+    box(hPivot,.016,.08,.008,'#4a4540',0,.04,0,false);box(mPivot,.01,.115,.008,'#4a4540',0,.057,0,false);rail.clock={hPivot,mPivot};
+    // Hall door and glowing windows facing the platform.
+    const mkPane=()=>{const m=new THREE.MeshStandardMaterial({color:'#a9d3d8',roughness:.22,emissive:'#ffd48a',emissiveIntensity:.1});m.userData={miniatureWindow:true,warm:true};windowMaterials.add(m);return m;};
+    const pane=mkPane();
+    box(g,.22,.3,.02,'#a97b5c',cx,py+.15,hallZ+.29);ball(g,.11,mat('#a97b5c',.8),cx,py+.3,hallZ+.285).scale.set(1,.9,.2);
+    for(const sd of [-1,1])for(const k of [-.35,.35]){
+      box(g,.2,.24,.02,pane,cx+k*1.1*sd+(k>0?0:0),py+.3,hallZ+.292);
+    }
+    // Sign and canopy over the platform.
+    for(const px of [-1,0,1])cylinder(g,.015,.015,.7,'#f6efe2',cx+px,platTop+.35,18.24);
+    box(g,2.3,.04,.36,'#86c9bd',cx,platTop+.71,18.08);
+    for(let k=0;k<9;k++)ball(g,.05,mat(k%2?'#ffffff':'#86c9bd',.8),cx-1.08+k*.27,platTop+.68,18.27).scale.set(1,.75,.6);
+    sign(g,'TOY TOWN',cx,platTop+.93,18.2,.8).rotation.x=-.2;
+    // Platform furniture.
+    for(const bx of [-.9,.9]){
+      box(g,.34,.03,.1,'#c68c63',cx+bx,platTop+.14,18.1);box(g,.34,.1,.025,'#c68c63',cx+bx,platTop+.22,18.04);
+      for(const lx of [-.14,.14])box(g,.02,.13,.08,'#7a8187',cx+bx+lx,platTop+.065,18.1);
+    }
+    box(g,.2,.1,.14,'#c9a078',cx+1.3,platTop+.05,18.12);box(g,.14,.08,.12,'#9bc2a2',cx+1.42,platTop+.04,18.2);
+    box(g,.12,.14,.12,'#8aa7c9',cx-1.3,platTop+.07,18.08);
+    for(const lx of [-1.86,1.86]){
+      cylinder(g,.014,.016,.58,'#5c646b',cx+lx,platTop+.29,18.34);
+      object(g,geo('sphere',.045),lanternGlass,cx+lx,platTop+.62,18.34,false);
+    }
+    // Signal: red while the train stands in the station, green otherwise.
+    const sx=RAIL.stationX+3.1;
+    cylinder(g,.012,.012,.5,'#5c646b',sx,top+.25,18.38);
+    const red=new THREE.MeshStandardMaterial({color:'#ff6b5e',emissive:'#ff3b2e',emissiveIntensity:.1,roughness:.4}),grn=new THREE.MeshStandardMaterial({color:'#7fe39a',emissive:'#33d36b',emissiveIntensity:.9,roughness:.4});
+    box(g,.07,.15,.05,'#454d55',sx,top+.52,18.38);ball(g,.022,red,sx,top+.56,18.41);ball(g,.022,grn,sx,top+.49,18.41);
+    rail.signal={red,grn};
+    // Waiting passengers (they board and get off for real).
+    rail.pax=[];rail.doorMeshes=[];
+    const cols=['#e58f8f','#7fb3d9','#f2c36b','#9ccf9a','#c39be0','#f0a574'],skins=['#f1c9a5','#d8a77c','#a8754f','#7a4e33'];
+    for(let i=0;i<6;i++){
+      const p=person({col:cols[i],skin:skins[i%4],hair:i%2?'#49362d':'#333947',ph:i*1.7+.4,x:i,y:i*2,hat:i===3?'cap':null,bag:i%2===0});
+      p.scale.setScalar(.93);g.add(p);
+      const spot={x:cx-1.5+i*.6+(i%2)*.1,z:18.3+(i%3)*.03};
+      rail.pax.push({g:p,spot,state:i<4?'wait':'inside',x:i<4?spot.x:cx,z:i<4?spot.z:17.9,until:i<4?0:3+i*5,door:0,tx:0,tz:0,ph:i});
+      p.position.set(rail.pax[i].x,platTop,rail.pax[i].z);p.visible=i<4;
+    }
+    // The train: a red locomotive with a face and three pastel carriages.
+    const train=new THREE.Group();g.add(train);
+    const units=[],gap=.05,lengths=[.62,.5,.5,.5];let off=0;
+    const carCols=['#8ec9ef','#f7d56a','#f2a99b'];
+    const wheelRig=[];
+    const wheel=(parent,x,r,z)=>{const a=new THREE.Group();a.position.set(x,r,z);parent.add(a);const t=cylinder(a,r,r,.035,'#4a4f58');t.rotation.x=Math.PI/2;const h=cylinder(a,r*.5,r*.5,.04,'#f3d37a');h.rotation.x=Math.PI/2;box(a,r*1.1,.014,.045,'#f3d37a',0,0,0,false);wheelRig.push({a,r});};
+    for(let u=0;u<lengths.length;u++){
+      const L=lengths[u],ug=new THREE.Group(),front=u===0;off+=L/2;
+      const lg=new THREE.Group();ug.add(lg);
+      object(lg,geo('soft',L,.05,.26,.02),mat('#4f5560',.7),0,top+.06,0);
+      if(front){
+        // boiler, cab, chimney, face
+        const boiler=object(lg,geo('cylinder',.115,.115,.4),mat('#e8645a',.55),.08,top+.2,0);boiler.rotation.z=Math.PI/2;
+        const band=object(lg,geo('cylinder',.118,.118,.05),mat('#fbe8b6',.6),.0,top+.2,0,false);band.rotation.z=Math.PI/2;
+        const plate=object(lg,geo('cylinder',.12,.12,.02),mat('#fbe8b6',.5),.285,top+.2,0,false);plate.rotation.z=Math.PI/2;
+        box(lg,.2,.27,.27,'#fbe8b6',-.19,top+.255,0);
+        box(lg,.25,.03,.31,'#e8645a',-.19,top+.41,0);
+        const cab=mkPane();
+        for(const sd of [-1,1])box(lg,.09,.1,.012,cab,-.19,top+.27,sd*.137);
+        const stack=object(lg,geo('cylinder',.045,.03,.14),mat('#3d444e',.6),.2,top+.4,0);
+        object(lg,geo('cylinder',.06,.045,.04),mat('#3d444e',.6),.2,top+.485,0);
+        ball(lg,.045,mat('#e8c15a',.35),.06,top+.32,0).scale.set(1,.8,1);
+        // face on the smokebox
+        for(const sd of [-1,1]){ball(lg,.033,mat('#ffffff',.3),.30,top+.235,sd*.045);ball(lg,.017,mat('#2d3640',.4),.318,top+.235,sd*.045);}
+        const smile=object(lg,new THREE.TorusGeometry(.04,.008,6,14,Math.PI),mat('#a8453d',.5),.3,top+.17,0,false);smile.rotation.y=Math.PI/2;smile.rotation.z=Math.PI;
+        for(const sd of [-1,1])ball(lg,.018,mat('#ff9a8f',.5),.29,top+.2,sd*.085).scale.set(.3,.7,1);
+        rail.lamp=new THREE.MeshStandardMaterial({color:'#fff6d6',emissive:'#ffd98a',emissiveIntensity:.15,roughness:.3});
+        object(lg,geo('sphere',.03),rail.lamp,.31,top+.29,0,false);
+        // cow-catcher
+        const cc=box(lg,.07,.07,.26,'#f2a99b',.34,top+.07,0);
+        for(const x of [-.19,.02,.19])for(const z of [-1,1])wheel(lg,x,x===-.19?.085:.06,z*.13);
+      }else{
+        const col=carCols[(u-1)%3];
+        box(lg,L-.02,.27,.3,col,0,top+.21,0);
+        box(lg,L+.02,.04,.33,'#fff7e6',0,top+.36,0);
+        const roof2=object(lg,geo('capsule',.1,L-.2),mat(tint(col,'#ffffff',.35),.6),0,top+.42,0,true);roof2.rotation.z=Math.PI/2;roof2.scale.set(1,1.1,1.45);
+        const win=mkPane();
+        for(const sd of [-1,1]){
+          for(let k=0;k<3;k++)box(lg,.1,.11,.012,win,-.15+k*.15,top+.25,sd*.153);
+          const door=box(lg,.08,.2,.012,tint(col,'#ffffff',.5),0,top+.19,sd*.156);rail.doorMeshes.push(door);
+        }
+        for(const x of [-.17,.17])for(const z of [-1,1])wheel(lg,x,.045,z*.13);
+        for(const x of [-L/2-.0])box(lg,.05,.025,.03,'#3d444e',x,top+.1,0,false);
+      }
+      units.push({g:ug,len:L,off:off,front});off+=L/2+gap;
+      train.add(ug);
+    }
+    rail.train={g:train,units,total:off-gap,wheels:wheelRig};
+    // Smoke puffs.
+    rail.puffs=[];for(let i=0;i<9;i++){const m=new THREE.Mesh(geo('sphere',.04),new THREE.MeshBasicMaterial({color:'#ffffff',transparent:true,opacity:0,depthWrite:false}));m.visible=false;g.add(m);rail.puffs.push({m,t:9,life:1});}
+    // Restore the train to where it was (or just before the station on a fresh start).
+    if(rail.s===null)rail.s=rail.stationS+rail.train.total/2-14;
+    placeTrain();
+  }
+  function placeTrain(){
+    const tr=rail.train;if(!tr)return;
+    const top=RAIL.top;
+    for(const u of tr.units){
+      const p=railAt(rail.s-u.off);
+      u.g.position.set(p.x,0,p.z);u.g.rotation.y=-Math.atan2(p.dz,p.dx);
+    }
+  }
+  const TRAIN={cruise:1.25,accel:.5,brake:.55,dwell:10};
+  function updateTrain(dt,dark){
+    const tr=rail.train;if(!tr||dt<=0)return;
+    rail.t+=dt;
+    const target=rail.stationS+tr.total/2;
+    // Where is the stop line ahead of the front of the train?
+    const dist=(((target-rail.s)%rail.len)+rail.len)%rail.len;
+    if(rail.state==='run'){
+      let want=TRAIN.cruise;
+      if(rail.away<=0||dist<rail.len-6)want=Math.min(want,Math.sqrt(2*TRAIN.brake*Math.max(0,dist-.01))+.04);
+      if(rail.away>0)want=TRAIN.cruise;
+      rail.v+=Math.sign(want-rail.v)*Math.min(Math.abs(want-rail.v),(want>rail.v?TRAIN.accel:TRAIN.brake*1.4)*dt);
+      const step=rail.v*dt;rail.s+=step;
+      if(rail.away>0)rail.away-=step;
+      else if(dist<.02&&rail.v<.12){rail.state='dwell';rail.v=0;rail.dwell=TRAIN.dwell;rail.stops++;rail.doorsAt=1.2;rail.s=target-0.0;sound('bell');}
+    }else{
+      rail.dwell-=dt;
+      if(rail.dwell<=0){rail.state='run';rail.away=rail.len*.6;rail.toots++;sound('toot');tootPuffs();}
+    }
+    placeTrain();
+    // Spin the wheels with the distance travelled.
+    const moved=rail.s-rail.lastS;rail.lastS=rail.s;
+    for(const w of tr.wheels)w.a.rotation.z=(w.a.rotation.z-moved/w.r)%TAU;
+    // Doors open while the train stands.
+    const open=rail.state==='dwell'&&rail.dwell<TRAIN.dwell-.6&&rail.dwell>1.2?1:0;
+    rail.doors+=(open-rail.doors)*Math.min(1,dt*4);
+    for(const d of rail.doorMeshes)d.position.x=rail.doors*.1;
+    // Signal, headlamp, clock hands.
+    const stopped=rail.state==='dwell';
+    rail.signal.red.emissiveIntensity=stopped||dist<2.2&&rail.away<=0?1.6:.1;rail.signal.grn.emissiveIntensity=stopped||dist<2.2&&rail.away<=0?.1:1;
+    rail.lamp.emissiveIntensity=.15+dark*3.2;
+    const hour=town.debug().hour||0;
+    rail.clock.hPivot.rotation.z=-(hour%12)/12*TAU;rail.clock.mPivot.rotation.z=-(hour%1)*TAU;
+    // Smoke.
+    rail.puffAt-=dt;
+    if(rail.puffAt<=0){rail.puffAt=rail.state==='dwell'?.7:Math.max(.2,.42-rail.v*.1);emitPuff(1);}
+    for(const p of rail.puffs){
+      if(p.t>=p.life){p.m.visible=false;continue;}
+      p.t+=dt;const k=p.t/p.life;p.m.position.y+=dt*(.16+.1*(1-k));p.m.position.x+=dt*p.vx;p.m.position.z+=dt*p.vz;
+      p.m.scale.setScalar(.7+k*2.1);p.m.material.opacity=.85*(1-k)*(1-k);
+    }
+    updatePassengers(dt,dark);
+  }
+  function emitPuff(n){
+    const loco=rail.train.units[0].g,th=loco.rotation.y,v={x:loco.position.x+.2*Math.cos(th),y:RAIL.top+.52,z:loco.position.z-.2*Math.sin(th)};
+    for(let k=0;k<n;k++){const p=rail.puffs.find(q=>q.t>=q.life);if(!p)return;
+      p.t=0;p.life=1.7+Math.random()*.7;p.vx=-.04+(Math.random()-.5)*.04;p.vz=(Math.random()-.5)*.05;p.m.position.set(v.x,v.y,v.z);p.m.visible=true;}
+  }
+  function tootPuffs(){for(let i=0;i<4;i++)emitPuff(1);}
+  // Passengers: wait on the platform, step on when the doors open, step off at the next stop.
+  function updatePassengers(dt,dark){
+    const tr=rail.train,platTop=RAIL.top+.08,open=rail.doors>.6,cx=RAIL.stationX;
+    const doorX=i=>tr.units[1+(i%3)].g.position.x+(i%2?.12:-.12);
+    if(open&&rail.paxStop!==rail.stops){
+      rail.paxStop=rail.stops;
+      const waiting=rail.pax.filter(p=>p.state==='wait'),riding=rail.pax.filter(p=>p.state==='aboard');
+      waiting.slice(0,2).forEach((p,k)=>{p.boardAt=rail.t+.8+k*1.3;});
+      riding.forEach((p,k)=>{p.alightAt=rail.t+.4+k*1.1;});
+    }
+    for(let i=0;i<rail.pax.length;i++){
+      const p=rail.pax[i],g=p.g;p.ph+=dt*6;let moving=false;
+      const walkTo=(tx,tz,speed=.3)=>{const dx=tx-p.x,dz=tz-p.z,d=Math.hypot(dx,dz);if(d<.02)return true;const s=Math.min(d,speed*dt);p.x+=dx/d*s;p.z+=dz/d*s;g.rotation.y=Math.atan2(dx,dz);moving=true;return false;};
+      if(p.state==='wait'){
+        if(walkTo(p.spot.x,p.spot.z)){moving=false;g.rotation.y=Math.PI+Math.sin(rail.t*.4+i)*.6;}
+        if(p.boardAt&&rail.t>p.boardAt&&open){p.boardAt=0;p.state='board';}
+      }else if(p.state==='board'){
+        if(walkTo(doorX(i),18.47,.4)){p.state='aboard';g.visible=false;}
+      }else if(p.state==='aboard'){
+        if(p.alightAt&&rail.t>p.alightAt&&open){p.alightAt=0;p.x=doorX(i);p.z=18.47;g.visible=true;p.state='alight';}
+      }else if(p.state==='alight'){
+        if(walkTo(cx+(i-3)*.35,17.98,.3)){p.state='inside';g.visible=false;p.until=rail.t+9+Math.random()*14;}
+      }else if(p.state==='inside'){
+        if(rail.t>p.until){p.x=cx+(i-3)*.35;p.z=17.98;g.visible=true;p.state='out';}
+      }else if(p.state==='out'){
+        if(walkTo(p.spot.x,p.spot.z,.28))p.state='wait';
+      }
+      if(g.visible){
+        const L=g.userData.limbs,a=moving?Math.sin(p.ph*1.5)*.55:0;
+        if(L){L.legs?.forEach((l,k)=>{l.rotation.x=(k?1:-1)*a;});L.arms?.forEach((l,k)=>{l.rotation.x=(k?-1:1)*a*.7;});}
+        g.position.set(p.x,platTop+(moving?Math.abs(Math.sin(p.ph*1.5))*.012:0),p.z);
+      }
+    }
+  }
+  // Tap the train (or its smoke): toot, a puff, everyone waves.
+  function trainHit(clientX,clientY){
+    const tr=rail.train;if(!tr)return false;
+    const r=renderer.domElement.getBoundingClientRect(),v=new THREE.Vector3();
+    for(const u of tr.units){
+      v.copy(u.g.position);v.y=RAIL.top+.25;v.project(camera);if(v.z>1)continue;
+      if(Math.hypot(r.left+(v.x+1)/2*r.width-clientX,r.top+(1-v.y)/2*r.height-clientY)<44){
+        rail.toots++;sound('toot');tootPuffs();
+        showBubble(u.g,['Choo choo!','Toot toot!','All aboard!'][rail.toots%3],2200);return true;}
+    }
+    return false;
+  }
+
+  /* ---- Out by the railway: a windmill on the east edge and a small pasture of sheep on the west. ---- */
+  const farm={sails:null,sheep:[],pen:{x0:.25,x1:.85,z0:2.2,z1:5.8}};
+  function createFarm(){
+    const g=new THREE.Group();world.add(g);
+    const wx=17.62,wz=9.55,base=.17;g.scale.setScalar(1);
+    const body=object(g,geo('cylinder',.17,.25,.78),mat('#f6ecd9',.9),wx,base+.39,wz);
+    object(g,geo('cylinder',.19,.19,.04),mat('#d98b6b',.8),wx,base+.79,wz);
+    const cap=object(g,new THREE.ConeGeometry(.2,.26,16),mat('#d98b6b',.8),wx,base+.93,wz);
+    box(g,.1,.17,.02,'#a97b5c',wx-.2,base+.1,wz);
+    for(const k of [-1,1])box(g,.02,.08,.07,'#a9d3d8',wx-.17,base+.5,wz+k*.0+(k*0));
+    const hub=new THREE.Group();hub.position.set(wx-.2,base+.7,wz);g.add(hub);
+    ball(hub,.04,mat('#7c5b45',.7),0,0,0);
+    for(let k=0;k<4;k++){const arm=new THREE.Group();arm.rotation.x=k*Math.PI/2;hub.add(arm);
+      box(arm,.012,.36,.02,'#8b6a52',0,.2,0,false);box(arm,.01,.26,.12,'#fff7e6',0,.25,.075*(k%2?1:1),false);}
+    farm.sails=hub;
+    for(const [bx,bz] of [[17.55,8.55],[17.5,10.6]]){const bale=object(g,geo('cylinder',.08,.08,.14),mat('#e6c978',.95),bx,base+.08,bz);bale.rotation.x=Math.PI/2;}
+    // Pasture on the west edge: low fence, a trough, a few woolly sheep.
+    const {x0,x1,z0,z1}=farm.pen;
+    for(let z=z0;z<=z1+.01;z+=.26)for(const x of [x0-.02,x1+.02])cylinder(g,.012,.012,.14,'#b98f66',x,base+.07,z).castShadow=false;
+    for(let x=x0;x<=x1;x+=.26)for(const z of [z0,z1])cylinder(g,.012,.012,.14,'#b98f66',x,base+.07,z).castShadow=false;
+    box(g,.02,.03,x1-x0,'#b98f66',x0-.02,base+.1,(z0+z1)/2).rotation.y=Math.PI/2;
+    box(g,.02,.03,x1-x0,'#b98f66',x1+.02,base+.1,(z0+z1)/2).rotation.y=Math.PI/2;
+    box(g,.18,.05,.08,'#9a7b5e',(x0+x1)/2,base+.03,z1-.18);
+    farm.sheep=[];
+    for(let i=0;i<4;i++){
+      const sg=new THREE.Group();g.add(sg);
+      const wool=mat('#fffaf0',.95);
+      ball(sg,.07,wool,0,.12,0).scale.set(1.25,.95,1);ball(sg,.05,wool,.06,.15,.02);ball(sg,.05,wool,-.06,.15,-.02);
+      const head=new THREE.Group();head.position.set(.11,.13,0);sg.add(head);
+      ball(head,.036,mat('#4a4650',.7),.02,0,0).scale.set(1.2,1,.9);
+      ball(head,.014,mat('#4a4650',.7),-.005,.03,.035);ball(head,.014,mat('#4a4650',.7),-.005,.03,-.035);
+      for(const [lx,lz] of [[.05,.03],[.05,-.03],[-.05,.03],[-.05,-.03]])cylinder(sg,.008,.008,.07,'#4a4650',lx,.04,lz).castShadow=false;
+      const sheep={g:sg,head,x:x0+.12+(x1-x0-.24)*((i*.37)%1),z:z0+.3+(z1-z0-.6)*((i*.61)%1),tx:0,tz:0,wait:i*1.3,ph:i};
+      sheep.tx=sheep.x;sheep.tz=sheep.z;sg.position.set(sheep.x,base,sheep.z);farm.sheep.push(sheep);
+    }
+  }
+  function updateFarm(dt){
+    if(farm.sails)farm.sails.rotation.x+=dt*(.35+(weatherKind==='storm'?1.2:weatherKind==='rain'?.5:0));
+    const {x0,x1,z0,z1}=farm.pen;
+    for(const s of farm.sheep){
+      s.ph+=dt;s.wait-=dt;
+      const dx=s.tx-s.x,dz=s.tz-s.z,d=Math.hypot(dx,dz);
+      if(d>.02){const v=Math.min(d,.09*dt);s.x+=dx/d*v;s.z+=dz/d*v;s.g.rotation.y=-Math.atan2(dz,dx);s.head.rotation.z=0;s.g.position.set(s.x,.17+Math.abs(Math.sin(s.ph*7))*.006,s.z);}
+      else{s.head.rotation.z=s.wait>0&&Math.sin(s.ph*.7)>-.2?-.55:0;   // grazing
+        if(s.wait<=0){s.tx=x0+.1+Math.random()*(x1-x0-.2);s.tz=z0+.2+Math.random()*(z1-z0-.4);s.wait=3+Math.random()*6;}}
+    }
+  }
+
   // The vehicles are small designed machines rather than stacked colored
   // cubes. Each axle has its own spinning rig, and taillights react to
   // braking. No point lights or heavyweight physics are allocated per car.
   function car(ref){
-    if(kit&&(ref.kind==='car'||ref.kind==='taxi'||ref.kind==='police')){
-      const g=new THREE.Group(),models=['car_sedan','car_hatchback','car_stationwagon'];
-      const name=ref.kind==='taxi'?'car_taxi':ref.kind==='police'?'car_police':models[Math.abs(Math.round((ref.ph||0)*97))%models.length];
-      // KayKit cars point along +Z; the town's vehicles drive along local +X.
-      const body=kitPlace(g,name,0,.071,0,{height:.36,rotY:Math.PI/2});
-      if(body){
-        const brakeMaterial=new THREE.MeshStandardMaterial({color:'#ab5c53',emissive:'#ed4938',emissiveIntensity:.07,roughness:.36});
-        const len=body.userData.size.z;
-        for(const zz of [-.08,.08])box(g,.012,.03,.045,brakeMaterial,-len/2-.004,.2,zz,false);
-        g.userData.vehicleRig={wheels:[],brakeMaterial,indicators:[]};
-        return g;
-      }
-    }
-    const g=new THREE.Group(),col=ref.col||'#a0bfc7';
-    const bus=ref.kind==='bus',taxi=ref.kind==='taxi';
-    const len=bus?.78:.53,bodyHeight=bus?.25:.17;
-    const chassis=box(g,len,.13,.345,'#515b62',0,.195,0);
-    const body=box(g,len,bodyHeight,.355,col,0,.268,0);
-    // A slightly tapered, separate bonnet and shallow rear luggage deck
-    // replace the previous squared windshield-on-top silhouette.
-    if(!bus){
-      box(g,.19,.09,.340,col,len*.30,.360,0);
-      const tail=box(g,.17,.071,.342,col,-len*.34,.357,0);
-      tail.rotation.z=-.035;
-    }
-    const cabin=box(g,bus?.58:.295,bus?.27:.18,.317,
-      mat('#8aafb1',.28),bus?-.015:-.055,bus?.418:.421,0);
-    cabin.scale.set(1,.92,.96);
-    box(g,bus?.59:.304,.033,.34,col,bus?-.015:-.052,bus?.558:.516,0);
-    // Individual windscreens, side panes and short A-pillars have depth.
-    const glass=mat('#91c6ca',.21,'#7b9b98');
-    box(g,.022,bus?.20:.128,.257,glass,bus?.29:.107,bus?.425:.426,0);
-    box(g,.022,bus?.18:.12,.267,glass,bus?-.304:-.207,bus?.424:.421,0);
-    for(const side of [-1,1]){
-      const zz=side*.164;
-      if(bus){
-        for(let k=0;k<4;k++)
-          box(g,.108,.145,.012,glass,-.205+k*.135,.439,zz);
-      }else{
-        box(g,.122,.113,.015,glass,-.098,.442,zz);
-        box(g,.093,.113,.015,glass,.037,.442,zz);
-      }
-      box(g,.016,bus?.17:.14,.023,'#f1dfca',.002,.427,zz);
-      // Real door seams, a miniature handle, and optional mirror housings.
-      box(g,.012,.21,.016,'#7c898a',-.058,.292,zz*1.085);
-      box(g,.065,.016,.023,'#f6e8d7',.022,.31,zz*1.09);
-      const mirror=box(g,.047,.042,.055,'#677f81',
-        bus?.27:.19,.405,side*.204);mirror.castShadow=false;
-    }
-    // Three readable classes rather than identical cars with new paint.
-    if(bus){
-      box(g,.095,.020,.22,'#f9e9cb',.12,.57,0);
-      for(let k=0;k<3;k++)box(g,.052,.019,.014,'#f6e9d8',
-        -.21+k*.19,.272,.184);
-    }else if(taxi){
-      const sign=box(g,.19,.060,.13,'#f4e3af',-.06,.552,0);
-      box(g,.15,.040,.012,'#68584a',-.06,.565,.072);
-    }else{
-      const grille=box(g,.024,.077,.235,'#707a7d',len*.505,.265,0);
-      for(const side of [-1,1])box(g,.039,.055,.042,'#c6cece',
-        len*.505,.264,side*.107);
-    }
-    for(const x of [-len*.48,len*.49]){
-      box(g,.030,.055,.36,'#e3d9cc',x,.209,0);
-    }
-    const wheels=[];
-    for(const xx of [-len*.32,len*.32])for(const zz of [-.192,.192]){
-      const axle=new THREE.Group();axle.position.set(xx,.145,zz);g.add(axle);
-      const tire=cylinder(axle,.074,.074,.043,'#40484c');
-      tire.rotation.x=Math.PI/2;
-      const hub=cylinder(axle,.038,.038,.047,'#c2cbca');
-      hub.rotation.x=Math.PI/2;
-      const spoke=cylinder(axle,.018,.018,.05,'#777e80');
-      spoke.rotation.x=Math.PI/2;
+    // Small, round and friendly: every vehicle is a soft pastel toy with big
+    // headlight eyes, not a boxy model. Footprints stay inside the simulation's
+    // collision boxes (car .57 long, bus .81), so stopped cars never overlap.
+    const g=new THREE.Group(),kind=ref.kind||'car';
+    const bus=kind==='bus',fire=kind==='fire',cream=kind==='icecream',police=kind==='police',taxi=kind==='taxi',racer=kind==='racer';
+    const L=bus?.70:fire?.60:racer?.46:.44,Wd=bus?.27:.25,H=bus?.15:.12;
+    const base=taxi?'#f6d56a':police?'#8fb2e8':fire?'#ea6f62':cream?'#ffd3e6':bus?'#7fb8e6':(ref.col||'#a0bfc7');
+    const body=tint(base,'#ffffff',.14),soft=(w,h,d,r,col,x,y,z)=>object(g,geo('soft',w,h,d,r),typeof col==='string'?mat(col,.7):col,x,y,z);
+    soft(L,H,Wd,.055,body,0,.04+H/2,0);
+    // Glass cabin, rounded roof cap, pillars implied by a lighter frame.
+    const glass=mat('#cfe7ee',.22,'#7b9b98');
+    const cabL=bus?L*.84:L*.50,cabH=bus?.13:.105,cabY=.04+H+cabH/2-.012;
+    soft(cabL,cabH,Wd*.88,.045,glass,bus?0:-L*.07,cabY,0);
+    soft(cabL+.01,.03,Wd*.9,.02,body,bus?0:-L*.07,cabY+cabH/2+.006,0);
+    if(bus)for(const zz of [-1,1])for(let k=0;k<4;k++)soft(.012,.13,.012,.005,body,-L*.31+k*L*.21,cabY,zz*Wd*.45);
+    else for(const zz of [-1,1])soft(.012,cabH*.95,.012,.005,body,-L*.07+cabL*.1,cabY,zz*Wd*.44);
+    // Wheels: four spinning axles.
+    const wheels=[],r=bus?.058:.052;
+    for(const xx of [-L*.30,L*.32])for(const zz of [-1,1]){
+      const axle=new THREE.Group();axle.position.set(xx,r,zz*(Wd/2-.003));g.add(axle);
+      const tire=cylinder(axle,r,r,.04,'#4f5560');tire.rotation.x=Math.PI/2;
+      const hub=cylinder(axle,r*.5,r*.5,.044,'#f4ecdc');hub.rotation.x=Math.PI/2;
       wheels.push(axle);
     }
-    const brakeMaterial=new THREE.MeshStandardMaterial({
-      color:'#ab5c53',emissive:'#ed4938',emissiveIntensity:.07,roughness:.36
-    });
+    // Headlight "eyes".
+    for(const zz of [-1,1]){
+      ball(g,.032,mat('#fffaf0',.3),L/2-.012,.04+H*.62,zz*Wd*.28);
+      ball(g,.016,mat('#34404a',.4),L/2+.012,.04+H*.62,zz*Wd*.28);
+    }
+    const brakeMaterial=new THREE.MeshStandardMaterial({color:'#e8837a',emissive:'#ed4938',emissiveIntensity:.075,roughness:.4});
     const indicators=[];
     for(const side of [-1,1]){
-      ball(g,.032,mat('#fff4c7',.28,'#c6a882'),len*.505,.293,side*.125);
-      box(g,.064,.043,.027,brakeMaterial,-len*.505,.289,side*.128);
-      const indicatorMaterial=new THREE.MeshStandardMaterial({
-        color:'#dfab6a',emissive:'#f5a34b',emissiveIntensity:.02,roughness:.42
-      });
-      const lamp=box(g,.024,.025,.021,indicatorMaterial,
-        -len*.515,.302,side*.164);
+      soft(.02,.036,.05,.01,brakeMaterial,-L/2+.002,.04+H*.55,side*Wd*.28);
+      const m=new THREE.MeshStandardMaterial({color:'#f2c27c',emissive:'#f5a34b',emissiveIntensity:.025,roughness:.45});
+      const lamp=soft(.018,.022,.03,.008,m,-L/2+.002,.04+H*.86,side*Wd*.38);
       indicators.push({lamp,side});
     }
+    // Pastel bumpers give the front a smile.
+    soft(.022,.028,Wd*.62,.012,'#fdf4e3',L/2-.004,.04+H*.16,0);
+    soft(.022,.028,Wd*.62,.012,'#fdf4e3',-L/2+.004,.04+H*.16,0);
+    const roofY=cabY+cabH/2+.02;
+    if(taxi){soft(.12,.04,.07,.016,'#fffaf0',-L*.07,roofY+.014,0);soft(.06,.014,.07,.006,'#3b3b3b',-L*.07,roofY+.016,0);}
+    else if(police){
+      soft(.02,.03,Wd*.84,.01,'#ffffff',-L*.02,.04+H*.5,0);
+      soft(.03,.034,.05,.012,'#ff6b6b',-L*.07,roofY+.014,-.05);soft(.03,.034,.05,.012,'#6b9bff',-L*.07,roofY+.014,.05);
+    }else if(fire){
+      soft(.34,.014,.05,.006,'#fff3d8',-.06,roofY+.02,-.04);soft(.34,.014,.05,.006,'#fff3d8',-.06,roofY+.02,.04);
+      for(let k=0;k<5;k++)soft(.012,.016,.11,.004,'#fff3d8',-.2+k*.07,roofY+.02,0);
+      soft(.04,.03,.06,.012,'#ff5b4d',L*.28,roofY+.014,0);
+    }else if(cream){
+      const cone=cylinder(g,.002,.045,.1,'#f2c987',-L*.07,roofY+.07,0);
+      ball(g,.052,mat('#fff6fb',.6),-L*.07,roofY+.135,0);
+      ball(g,.03,mat('#ff6f91',.5),-L*.07,roofY+.19,0);
+    }else if(bus){
+      soft(.1,.022,.2,.01,'#fff3d8',L*.18,roofY+.01,0);
+    }else if(racer){
+      soft(.02,.003,Wd*.84,.002,'#fffaf0',0,.04+H+.002,0);
+    }
     g.userData.vehicleRig={wheels,brakeMaterial,indicators};
-    g.userData.vehicleClass=ref.kind||'car';
+    g.userData.vehicleClass=kind;
     return g;
   }
   function bicycle(ref){
@@ -3978,7 +4270,7 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
       syncActors();syncCamera();light(state.night||0);nightLife(state.night||0,state.clock||0);updateFollowCard();updateMoments();updateWeather(1/45);
       // Driven by the town's own clock, so they pause with the town.
       {const now=state.clock||0;const dt=lastClockAt===null?0:THREE.MathUtils.clamp(now-lastClockAt,0,.1);lastClockAt=now;sceneClock+=dt;
-       updateVisit(dt);updateRound(dt,state.night||0);updateEffects(dt);}
+       updateVisit(dt);updateRound(dt,state.night||0);updateEffects(dt);updateTrain(dt,state.night||0);updateFarm(dt);}
       placeBubble();
       animateAmbient(state.clock||0);
       const drawStart=clockMs();
@@ -4014,6 +4306,12 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
     // Test hooks: start the visitor or the paper round now.
     startVisit:()=>{if(!onThisDay.length)onThisDay=[{year:1969,text:'Apollo 11 lands on the Moon'}];startVisit();return timeVisit;},startRound:()=>{startRound();return round;},
     stepExtras:(seconds,dark=0)=>{for(let t=0;t<seconds;t+=.05){sceneClock+=.05;updateVisit(.05);updateRound(.05,dark);updateEffects(.05);}},
+    stepTrain:(seconds,dark=0)=>{for(let t=0;t<seconds;t+=.05){updateTrain(.05,dark);updateFarm(.05);}},
+    farmStats:()=>({sheep:farm.sheep.length,sails:!!farm.sails,spin:farm.sails?.rotation.x||0,at:farm.sheep.map(x=>[+x.x.toFixed(2),+x.z.toFixed(2)])}),
+    railStats:()=>({len:rail.len,s:rail.s,v:rail.v,state:rail.state,stops:rail.stops,toots:rail.toots,units:rail.train?.units.length||0,pax:rail.pax.map(p=>p.state),stationS:rail.stationS,doors:rail.doors}),
+    railTap:(x,y)=>trainHit(x,y),
+    railSet:v=>{rail.s=v;rail.state='run';rail.away=1e3;rail.v=1;rail.lastS=v;placeTrain();return v;},railLen:()=>rail.len,
+    railGo:ahead=>{rail.s=rail.stationS+rail.train.total/2-ahead;rail.state='run';rail.away=0;rail.v=Math.min(.9,Math.sqrt(2*TRAIN.brake*Math.max(0,ahead))+.04);rail.lastS=rail.s;placeTrain();return rail.s;},
     sceneExtras:()=>({visiting:!!timeVisit,riding:!!round,papers:papers.length,history:onThisDay.length}),
     freeze(){frozen=true;cancelAnimationFrame(raf);},
     unfreeze(){if(!stopped&&frozen){frozen=false;raf=requestAnimationFrame(frame);}},

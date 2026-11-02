@@ -39,6 +39,7 @@
     chirp: () => { for (let k = 0; k < 3; k++) tone('sine', 2600 + Math.random() * 900, 3500 + Math.random() * 600, .07, .14, k * .1); },
     pop: () => { noise(.06, .9, 1800); tone('sine', 520, 160, .08, .2); },
     chime: () => { tone('sine', 880, 880, .35, .18); tone('sine', 1318.5, 1318.5, .4, .14, .09); },
+    toot: () => { tone('triangle', 392, 392, .32, .3); tone('triangle', 494, 494, .32, .26); tone('triangle', 392, 392, .45, .3, .38); tone('triangle', 494, 494, .45, .26, .38); },
     rumble: () => { noise(1.6, .5, 90); tone('sine', 55, 40, 1.4, .25); }
   };
   // A sparse birdsong bed by day; the odd soft cricket at night.
