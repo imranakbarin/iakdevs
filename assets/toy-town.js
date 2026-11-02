@@ -2138,6 +2138,13 @@ const ToyTown = (() => {
     }
   }
   let greetings = 0;
+  // Crumbs tossed on the river (a tap on the water in 3D).
+  let crumbs = null;
+  function feedDucks(x, y) { crumbs = {x: clamp(.5, x, 17.5), y: clamp(13.15, y, 14.85), until: clock + 14}; tick('Someone is feeding the ducks. They are very pleased about it.'); return crumbs; }
+  // Following a resident: the camera keeps them centred until they leave town
+  // or the map is dragged.
+  let followRef = null;
+  function follow(m) { followRef = m && movers.includes(m) ? m : null; if (followRef && cam.tz < 1.7) cam.tz = clamp(MIN_ZOOM, 1.9, MAX_ZOOM); return followRef; }
   /* ---------------- a day in the life ----------------
      The town clock gives an hour of day (noon when it is brightest, midnight
      at the darkest). Morning: commuters with briefcases leave their homes for
@@ -2217,6 +2224,13 @@ const ToyTown = (() => {
       if (!Number.isFinite(m.x) || !Number.isFinite(m.y)) { remove(m); continue; }
       m.x=clamp(.08,m.x,17.92);m.y=clamp(.08,m.y,17.92);
     }
+    for(const p of props)if(p.kind==='duck'&&crumbs&&clock<crumbs.until){
+      // Crumbs on the water: every duck paddles over, quickest first, and nibbles.
+      const dx=crumbs.x-p.x,dy=crumbs.y-p.y,d=Math.hypot(dx,dy);
+      if(d>.22){const sp=Math.min(.42,.16+d*.12);p.vx=dx/d*sp;p.x+=dx/d*sp*dt;p.y=clamp(13.12,p.y+dy/d*sp*dt,14.88);}
+      else{p.vx=(Math.sign(p.vx)||1)*.001;p.nibble=clock;}
+      continue;
+    }
     for(const p of props)if(p.kind==='duck'){
       // Water birds notice activity near the bank and swim away gradually.
       // They stay on their existing water line, never across the paving.
@@ -2279,6 +2293,7 @@ const ToyTown = (() => {
       focusCamera(zoomAnchor.world, zoomAnchor.sx, zoomAnchor.sy);
       zoomAnchor = null;
     }
+    if (followRef) { if (!movers.includes(followRef)) followRef = null; else { cam.tx = clamp(1.1, followRef.x, N - 1.1); cam.ty = clamp(1.1, followRef.y, N - 1.1); } }
     if (!zoomAnchor) {
       const k = Math.min(1, dt * 4);
       cam.x += (cam.tx - cam.x) * k; cam.y += (cam.ty - cam.y) * k;
@@ -2439,6 +2454,14 @@ const ToyTown = (() => {
     const names = ['balloon', 'butterflies', 'kite', 'pigeons', 'busker'];
     startEvent(names[Math.random() * names.length | 0], clamp(1.5, gx, 16.5), clamp(1.5, gy, 16.5));
   }
+  // A still press of about half a second is a hold, not a tap.
+  const stopTimer = t => { if (typeof clearTimeout === 'function') clearTimeout(t); };   // headless test pages have no clearTimeout
+  function armHold(state, x, y) {
+    state.holdTimer = setTimeout(() => {
+      if (state.moved || !window.ToyTown3D?.active) return;
+      if (window.ToyTown3D.hold?.(x, y)) state.held = true;
+    }, 520);
+  }
   if (typeof window !== 'undefined' && cv) {
     addEventListener('resize', layout);
     // Single pointer: drag or poke. Two pointers: pinch and pan with a stable anchor.
@@ -2457,7 +2480,8 @@ const ToyTown = (() => {
       fingers.set(e.pointerId, {x: e.clientX, y: e.clientY});
       cv.setPointerCapture(e.pointerId);
       if (fingers.size === 1) { pinch = null; zoomAnchor = null; cam.tz = cam.z;
-        down = {x: e.clientX, y: e.clientY, cx: cam.x, cy: cam.y, moved: false}; }
+        down = {x: e.clientX, y: e.clientY, cx: cam.x, cy: cam.y, moved: false};
+        armHold(down, e.clientX, e.clientY); }
       else beginPinch();
     });
     cv.addEventListener('pointermove', e => {
@@ -2471,7 +2495,7 @@ const ToyTown = (() => {
       } else if (down) {
         const dx = (e.clientX - down.x) * dpr / (TW * base * cam.z);
         const dy = (e.clientY - down.y) * dpr / (TH * base * cam.z);
-        if (Math.hypot(e.clientX - down.x, e.clientY - down.y) > 8) down.moved = true;
+        if (Math.hypot(e.clientX - down.x, e.clientY - down.y) > 8) { down.moved = true; followRef = null; }
         if (down.moved) { cam.tx = cam.x = clamp(1.1, down.cx - (dx + dy) / 2, N - 1.1);
           cam.ty = cam.y = clamp(1.1, down.cy - (dy - dx) / 2, N - 1.1);
           if (!playing) render(); }
@@ -2481,7 +2505,8 @@ const ToyTown = (() => {
       if (!fingers.has(e.pointerId)) return;
       const wasPinch = !!pinch || fingers.size > 1;
       fingers.delete(e.pointerId);
-      if (!cancelled && !wasPinch && down && !down.moved) poke(e);
+      if (!cancelled && !wasPinch && down && !down.moved && !down.held) poke(e);
+      if (down) stopTimer(down.holdTimer);
       down = null;
       if (fingers.size === 1) {
         const remaining = [...fingers.values()][0];
@@ -2510,6 +2535,7 @@ const ToyTown = (() => {
         cam.tz = cam.z; zoomAnchor = null;
         touchStart = {x: t.clientX, y: t.clientY, cx: cam.x, cy: cam.y,
           left: rect.left, top: rect.top, moved: false};
+        armHold(touchStart, t.clientX, t.clientY);
       }
     }, {passive: false});
     cv.addEventListener('touchmove', e => {
@@ -2525,7 +2551,7 @@ const ToyTown = (() => {
         const dx = (ts[0].clientX - touchStart.x) * dpr / (TW * base * cam.z);
         const dy = (ts[0].clientY - touchStart.y) * dpr / (TH * base * cam.z);
         if (Math.hypot(ts[0].clientX - touchStart.x, ts[0].clientY - touchStart.y) > 7)
-          touchStart.moved = true;
+          { touchStart.moved = true; followRef = null; }
         if (touchStart.moved) {
           cam.tx = cam.x = clamp(1.1, touchStart.cx - (dx + dy) / 2, N - 1.1);
           cam.ty = cam.y = clamp(1.1, touchStart.cy - (dy - dx) / 2, N - 1.1);
@@ -2536,8 +2562,9 @@ const ToyTown = (() => {
     cv.addEventListener('touchend', e => {
       e.preventDefault();
       if (!e.touches.length) {
-        if (!hadPinch && touchStart && !touchStart.moved && e.changedTouches[0])
+        if (!hadPinch && touchStart && !touchStart.moved && !touchStart.held && e.changedTouches[0])
           poke(e.changedTouches[0]);
+        if (touchStart) stopTimer(touchStart.holdTimer);
         touchStart = null; touchPinch = null; hadPinch = false;
       } else if (hadPinch) { touchStart = null; touchPinch = null; }
     }, {passive: false});
@@ -2568,7 +2595,7 @@ const ToyTown = (() => {
     addEventListener('hashchange', () => location.reload());
     start();
   }
-  return {layout, render, zoomAt, resetView, fitView, pinchTo, screenWorld, streetMoment, reactToNews, hero: () => town.blocks.find(b => b.hero), TALK, nameOf, headline, dateKey, CALM, lightPhase, themeFromNews, newsThemes, VARIANTS, VARIANT_EVENTS: () => Object.keys(VARIANT_EVENTS), decorate, setToday: l => { today_ = l; }, PACE, THEMES, GRIM, build, update, events: () => events, movers: () => movers, buildings: () => buildings, props: () => props, startEvent, randomEvent, setPlaying: v => { playing = v; }, debug: () => ({clock, theme, seed, greetings, hour: hourOfDay(), daypart, routines: {...routine}, night: nightLevel(), cam: {...cam}, fitZoom, streetMoments,communityEncounters,communityVisits,streetTransactions,streetShopVisits,newsReactions,streetPerformances,
+  return {follow, following: () => followRef, feedDucks, layout, render, zoomAt, resetView, fitView, pinchTo, screenWorld, streetMoment, reactToNews, hero: () => town.blocks.find(b => b.hero), TALK, nameOf, headline, dateKey, CALM, lightPhase, themeFromNews, newsThemes, VARIANTS, VARIANT_EVENTS: () => Object.keys(VARIANT_EVENTS), decorate, setToday: l => { today_ = l; }, PACE, THEMES, GRIM, build, update, events: () => events, movers: () => movers, buildings: () => buildings, props: () => props, startEvent, randomEvent, setPlaying: v => { playing = v; }, debug: () => ({clock, theme, seed, greetings, hour: hourOfDay(), daypart, routines: {...routine}, night: nightLevel(), cam: {...cam}, fitZoom, streetMoments,communityEncounters,communityVisits,streetTransactions,streetShopVisits,newsReactions,streetPerformances,
     districts:{count:districts.length,visits:districtVisits,
       meetings:districtMeetings,tasks:districtTasks,
       areas:districts.map(a=>({role:a.role,block:a.block,

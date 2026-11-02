@@ -85,4 +85,27 @@ assert.match(view, /'BOOK NOOK'/, 'and keep their signs');
 }
 assert.match(view, /p\.glass\.emissiveIntensity=p\.b\.home&&dark>\.25/, 'porch lamps light once someone is home after dusk');
 assert.match(view, /\[\?&\]fps\\b/, '?fps shows a frame-rate readout');
-console.log('Toy Town EXTRAS PASS: a day in the life (commuters, children, lunch, home at dusk); KayKit CC0 kit (named, small, licensed, with fallback; roads and plaza too); taps on residents, cars, buildings and open ground; livelier gaits and greetings; news card minimises to a pill (phones first, remembered), Picture-of-the-Day cinema, fireflies and shooting stars, tap-a-resident chat, the on-this-day visitor (gentle history only, credited) and the dawn paper round.');
+// Following a resident and feeding the ducks, in the real simulation.
+{
+  const box = vm.createContext({Math, Object, Array, JSON, Date, String, Number, RegExp, Set, Map, setTimeout: () => 0, document: {getElementById: () => ({textContent: '', style: {}})}});
+  vm.runInContext(town + ';this.T=ToyTown;', box); const T = box.T; T.build(20261102, 'market');
+  const who = T.movers().find(m => m.type === 'person' && !m.kind);
+  assert.equal(T.follow(who), who, 'a resident can be followed');
+  for (let i = 0; i < 40; i++) T.update(1 / 20);
+  const cam = T.debug().cam; assert.ok(Math.hypot(cam.x - who.x, cam.y - who.y) < 1.2, 'the camera keeps them in view');
+  T.follow(null); assert.equal(T.following(), null, 'and lets go');
+  const ducks = T.props().filter(p => p.kind === 'duck'), before = ducks.map(d => Math.hypot(d.x - 9, d.y - 14));
+  T.feedDucks(9, 14); for (let i = 0; i < 160; i++) T.update(1 / 20);
+  const after = ducks.map(d => Math.hypot(d.x - 9, d.y - 14));
+  assert.ok(after.every((d, i) => d <= before[i] + .01) && after.some((d, i) => d < before[i] - .5), 'crumbs on the river draw the ducks over');
+  assert.ok(ducks.every(d => d.y >= 13.1 && d.y <= 14.9), 'and the ducks stay on the water');
+}
+assert.match(view, /function hold\(clientX,clientY\)/, 'press and hold follows a resident');
+assert.match(view, /function roleOf\(ref\)/); assert.match(view, /function doingOf\(ref\)/, 'the follow card says who they are and what they are doing');
+assert.match(sim, /armHold\(down, e\.clientX, e\.clientY\)/); assert.match(sim, /armHold\(touchStart, t\.clientX, t\.clientY\)/, 'holds work with mouse and touch');
+const soundSrc = fs.readFileSync(path.join(root, 'assets/toy-town-sound.js'), 'utf8');
+assert.match(html, /id="sound-toggle"/); assert.match(html, /toy-town-sound\.js\?v=\d+/, 'a sound toggle sits with the zoom controls');
+assert.match(soundSrc, /set\(false, false\);/, 'sound starts off');
+for (const c of ['honk', 'bell', 'quack', 'chirp', 'pop', 'chime']) assert.match(soundSrc, new RegExp(c + ': \\(\\) =>'), c + ' is synthesised');
+assert.doesNotMatch(soundSrc, /\.(mp3|ogg|wav)/, 'no sound files to download');
+console.log('Toy Town EXTRAS PASS: follow a resident, feed the ducks, gentle opt-in sound; a day in the life (commuters, children, lunch, home at dusk); KayKit CC0 kit (named, small, licensed, with fallback; roads and plaza too); taps on residents, cars, buildings and open ground; livelier gaits and greetings; news card minimises to a pill (phones first, remembered), Picture-of-the-Day cinema, fireflies and shooting stars, tap-a-resident chat, the on-this-day visitor (gentle history only, credited) and the dawn paper round.');
