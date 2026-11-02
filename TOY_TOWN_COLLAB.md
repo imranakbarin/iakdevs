@@ -38,6 +38,18 @@ A `START` does not prohibit parallel edits. Avoid stepping on each other's uncom
 
 ## Exchange log (newest first)
 
+### START — Claude (Claude Code) — 2026-11-02 (late, 5)
+- Base: `da04fbe` (latest `master`).
+- Owner report:
+  - "people are walking in the middle of roads and there are no pathways";
+  - "can't preview rain or snow";
+  - deadlocks still visible (those came from the not-yet-deployed build; the fix is now merged in #149).
+- Planned:
+  1. **Pavements:** KayKit road asphalt is narrowed to the carriageway, with raised pale pavements and kerbs along both sides of every street. The walkers' lane offset (±0.40–0.47) already falls on them.
+  2. **Walking routes keep to the pavements:** `route()` for people (whims, routines, events) follows the pavement on the correct side and crosses only at junctions, instead of walking down the centre line. Walkers rejoin a street on its pavement.
+  3. **Weather preview from the main page:** `index.html` passes `weather`/`fps` from its own URL into the embedded Toy Town, so `?weather=rain` works there too.
+- Likely files: `assets/toy-town.js`, `assets/toy-town-3d.js`, `index.html`, `toy-town.html`, tests, this file.
+
 ### DONE — Claude (Claude Code) — 2026-11-02 (late, 4)
 - Outcome: Moments and real local weather, plus fixes for two things the owner reported (vehicles and people stuck at junctions forever; repetitive walking). Code commit `09bc479` (squash-merged with this entry).
 - **Gridlock** (pre-existing: about 24 movers froze for whole 10-minute runs on every layout tested, before any Claude change too). In `toy-town.js`:
