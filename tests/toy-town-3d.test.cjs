@@ -97,6 +97,12 @@ assert.match(moduleCode,/function vergeMaterial\(axis\)/,'street edges have shar
 assert.match(moduleCode,/function paintedVerge\(/,'street verges have physically placed decals');
 assert.match(moduleCode,/function createStorybookVillage\(/,
   'village scenery is built as one cohesive 3D environmental set');
+assert.match(moduleCode,/shop\.userData\.streetFront=/,
+  'storefronts have physical tracked service details');
+assert.match(moduleCode,/shop\.ringUntil=time\+\.9/,
+  'service bell reacts to an actual vendor handoff');
+assert.doesNotMatch(moduleCode,/a\.mesh\.rotation\.y=\.003\*Math\.sin\(time\*1\.2\+a\.phase\)/,
+  'store counters no longer drift or wobble when nobody is interacting');
 assert.match(moduleCode,/function districtFixture\(p\)/,
   'outer neighborhoods have separately modeled working places');
 assert.match(moduleCode,/districtSceneRole=p\.role/,
@@ -146,7 +152,7 @@ assert.match(moduleCode,/eye.scale.y=blink/,'eyelids blink without a separate an
 assert.match(html,/type="importmap"/);
 assert.match(html,/three@0\.187\.0\/build\/three\.module\.js/);
 assert.match(html,/three@0\.187\.0\/examples\/jsm\//);
-assert.match(html,/toy-town-3d\.js\?v=40/);
+assert.match(html,/toy-town-3d\.js\?v=41/);
 assert.match(html,/toy-town-landmarks\.js\?v=7/,'the independent models are requested alongside Three');
 assert.match(html,/buildLandmark:landmarks\.buildLandmark/,
   'loader injects the authored model builder into the 3D simulation');
@@ -300,6 +306,13 @@ assert.ok(api.getStats().gardenElements>=140,'village has substantial coordinate
 const workingDesks=api.scene.children.flatMap(n=>n.children||[])
   .filter(n=>n.userData?.workingShop);
 assert.equal(workingDesks.length,2,'two decorated real merchandise counters occupy shop frontage');
+assert.ok(workingDesks.every(s=>s.userData.streetFront?.bell),
+  'both trading counters have actual architectural fronts and handoff bells');
+assert.deepEqual(workingDesks.map(s=>s.userData.streetFront.merchandise),
+  ['pastries','books'],
+  'two shops have distinct window merchandise rather than identical filler');
+assert.ok(workingDesks.every(s=>s.children.length>30),
+  'supported awnings and dimensional merchandise actually exist in the 3D scene');
 assert.ok(workingDesks.every(s=>s.position.x>7&&s.position.x<11&&
   s.position.z>8&&s.position.z<9),'shop counters are on the living village frontage');
 assert.ok(api.getStats().woodlandShapes>=1,

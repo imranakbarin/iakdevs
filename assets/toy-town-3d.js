@@ -2182,8 +2182,75 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
         box(shop,.15,.027,.11,'#edcd91',.137,.405,.067);
         box(shop,.14,.020,.11,'#ad897b',.132,.430,.067);
       }
+      // This is a joined architectural frontage, not a second stand
+      // scattered on the paving. A real column-supported cloth roof
+      // frames the person-to-person handoff without entering the aisle.
+      const awningColor=place.kind==='bakery'?'#bf6f5c':'#4e9088';
+      for(const side of [-1,1]){
+        const post=cylinder(shop,.022,.029,.64,'#927459',
+          side*.315,.57,-.125);
+        post.castShadow=false;
+        box(shop,.083,.069,.10,'#d8bc92',side*.315,.257,-.125);
+        const timber=box(shop,.040,.035,.40,'#f0d4af',
+          side*.315,.885,-.038);
+        timber.castShadow=false;
+      }
+      fabric(shop,0,.914,-.043,awningColor,.77,.43);
+      box(shop,.87,.031,.036,'#875f4b',0,.912,-.265);
+      // Glazed display cabinetry behind the counter, with layered
+      // merchandise that remains readable under the photographic lens.
+      box(shop,.58,.39,.142,'#886b59',0,.626,-.205);
+      const displayGlass=box(shop,.523,.337,.029,
+        new THREE.MeshStandardMaterial({
+          color:'#c6e4dc',transparent:true,opacity:.38,depthWrite:false,
+          roughness:.15,metalness:.06
+        }),0,.63,-.122);
+      displayGlass.castShadow=false;
+      box(shop,.59,.035,.18,'#f3dcbb',0,.82,-.204);
+      box(shop,.59,.027,.18,'#c9aa83',0,.51,-.204);
+      box(shop,.59,.024,.18,'#c9aa83',0,.64,-.204);
+      if(place.kind==='bakery'){
+        for(let row=0;row<2;row++)for(let k=0;k<4;k++){
+          const x=(k-1.5)*.11,y=.57+row*.133;
+          const loaf=ball(shop,.068,
+            k%2?'#d38b52':'#e5b071',x,y,-.129);
+          loaf.scale.set(.70,.44,.44);
+          loaf.castShadow=false;
+        }
+        const oven=box(shop,.19,.16,.027,'#745b50',.162,.78,-.113);
+        oven.castShadow=false;
+        box(shop,.142,.088,.029,'#eab77c',.162,.78,-.092);
+      }else{
+        const covers=['#c87873','#e5be75','#609f93','#9d8cba','#dba78f'];
+        for(let row=0;row<2;row++)for(let k=0;k<5;k++){
+          const x=(k-2)*.096,y=.573+row*.132;
+          const book=box(shop,.075,.104,.031,covers[(k+row*2)%5],
+            x,y,-.113);
+          book.rotation.z=(k%2?.045:-.035);
+          book.castShadow=false;
+          box(shop,.056,.009,.034,'#f7e9d5',x,y+.032,-.088);
+        }
+      }
+      // A cast-metal service bell stays still until a genuine handoff.
+      // No perpetual wobble to fake activity when the shop is empty.
+      const bell=new THREE.Group();
+      bell.position.set(place.kind==='bakery'?-.22:.22,.402,.082);
+      shop.add(bell);
+      cylinder(bell,.044,.054,.032,'#c7a66a',0,.017,0);
+      ball(bell,.018,'#f3d894',0,.046,0).castShadow=false;
+      const lampMaterial=new THREE.MeshStandardMaterial({
+        color:'#fff1d4',emissive:'#f6bc79',emissiveIntensity:.20,
+        roughness:.42
+      });
+      const lantern=ball(shop,.041,lampMaterial,-.296,.863,.123);
+      lantern.castShadow=false;
       const smallSign=sign(shop,place.kind==='bakery'?'FRESH':'OPEN',
         0,.247,.148,.27,'#574a42','#f8eed8');
+      shop.userData.streetFront={
+        bell,lantern,lampMaterial,ringUntil:0,
+        previousHandoff:false,serviceCount:0,hasCustomers:false,
+        merchandise:place.kind==='bakery'?'pastries':'books'
+      };
       // Visible from street side; miniature sign shares stall's coordinate
       // system and never floats independently of the desk.
       ambient.push({kind:'marketCounter',mesh:shop,phase:place.kind==='bakery'?0:1.3});
@@ -3083,7 +3150,25 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
         a.mesh.rotation.z=.065*Math.sin(time*.95+a.phase);
         a.mesh.rotation.x=.065*Math.cos(time*.72+a.phase);
       } else if(a.kind==='marketCounter'){
-        a.mesh.rotation.y=.003*Math.sin(time*1.2+a.phase);
+        const shop=a.mesh.userData.streetFront;
+        const kind=a.mesh.userData.workingShop;
+        const seller=town.movers().find(m=>m.shopRole==='vendor'&&m.shopVenue===kind);
+        const handing=seller?.shopAction==='handoff';
+        const shoppers=town.movers().some(m=>m.shopRole==='customer'&&
+          m.shopAt===kind&&
+          ['ordering','receiving'].includes(m.shopPhase));
+        if(handing&&!shop.previousHandoff){
+          shop.ringUntil=time+.9;shop.serviceCount++;
+        }
+        shop.previousHandoff=!!handing;
+        shop.hasCustomers=shoppers;
+        // The glass-fronted cabinet is illuminated when occupied;
+        // the bell rings exactly when the simulation completes service.
+        shop.lampMaterial.emissiveIntensity+=
+          ((shoppers?.75:.19)-shop.lampMaterial.emissiveIntensity)*.15;
+        shop.bell.rotation.z=time<shop.ringUntil?
+          .34*Math.sin((shop.ringUntil-time)*26)*
+          Math.min(1,(shop.ringUntil-time)*2.3):0;
       } else if(a.kind==='butterfly'){
         a.mesh.position.set(a.x+.13*Math.cos(time*.65+a.phase),
           .72+.085*Math.sin(time*1.1+a.phase),

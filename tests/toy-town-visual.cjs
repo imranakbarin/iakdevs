@@ -219,6 +219,21 @@ async function main(){
           });
           return playing&&stocked;
         },null,{timeout:30000,polling:100});
+        const shopFronts=await page.evaluate(()=>{
+          let fronts=0,details=0,transactions=0;
+          window.ToyTown3D?.scene?.traverse(o=>{
+            if(o.userData?.workingShop){
+              fronts++;
+              if(o.userData?.streetFront?.bell&&o.children.length>30)details++;
+              transactions+=o.userData?.streetFront?.serviceCount||0;
+            }
+          });
+          return {fronts,details,transactions};
+        });
+        if(shopFronts.fronts!==2||shopFronts.details!==2)
+          throw Error('Integrated, physical shopfronts missing: '+
+            JSON.stringify(shopFronts));
+        console.log('SHOP_FRONT_GPU '+JSON.stringify(shopFronts));
         console.log('LIVING_MARKET_GPU PASS: performer plays modeled guitar and real goods attach to hands');
       }
       if(job.social){
