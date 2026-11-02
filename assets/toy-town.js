@@ -2164,12 +2164,13 @@ const ToyTown = (() => {
     }
     if (!part || clock < routineNext) return;
     routineNext = clock + 2.2 + Math.random() * 2.5;
-    if (movers.filter(m => m.routine).length >= 8) return;                    // a lively street, never a crowd
+    const active = movers.filter(m => m.routine).length;
+    if (active >= 8) return;                                                      // a lively street, never a crowd
     if (part === 'morning') {
       const house = homes().filter(b => b.home !== false)[Math.random() * homes().length | 0];
       if (!house) return;
       const door = doorOf(house), out = edgeOf(Math.random());
-      if (Math.random() < .4) {   // two children set off together
+      if (active <= 6 && Math.random() < .4) {   // two children set off together (room for both under the cap)
         for (let k = 0; k < 2; k++) { const kid = routineWalker({routine: 'school', kid: true, backpack: PASTEL[Math.random() * 8 | 0], gait: 'skip', max: .66}, {x: door.x + k * .2, y: door.y}); kid.path = route(kid.x, kid.y, out.x, out.y, .62).concat([{x: out.x, y: out.y, speed: .6, then: q => { q.home = true; }}]); }
       } else {
         const c = routineWalker({routine: 'work', briefcase: true, gait: 'brisk', max: .74}, door); c.path = route(c.x, c.y, out.x, out.y, .7).concat([{x: out.x, y: out.y, speed: .68, then: q => { q.home = true; }}]);
