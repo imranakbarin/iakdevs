@@ -2410,19 +2410,88 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
     const pool=lines.map(l=>l.replace(/\{N\}/g,'everyone')).concat(CHATTER);
     return pool[Math.floor(Math.random()*pool.length)];
   }
-  function tapResident(clientX,clientY){
-    if(!THREE.Vector3||!camera.isPerspectiveCamera&&!camera.isOrthographicCamera)return false;
-    const r=renderer.domElement.getBoundingClientRect(),v=new THREE.Vector3();let best=null,bestD=48;
+  // The nearest resident or vehicle under a tap, by its projected position on screen.
+  function actorAt(clientX,clientY,kinds,reach){
+    const r=renderer.domElement.getBoundingClientRect(),v=new THREE.Vector3();let best=null,bestD=reach;
     for(const [ref,item] of actors){
-      if(item.kind!=='person'||ref.kind)continue;
-      v.copy(item.group.position);v.y+=.45;v.project(camera);if(v.z>1)continue;
-      const x=r.left+(v.x+1)/2*r.width,y=r.top+(1-v.y)/2*r.height,d=Math.hypot(x-clientX,y-clientY);
+      if(!kinds.includes(item.kind)||(item.kind==='person'&&ref.kind&&ref.kind!=='neighbor'))continue;
+      v.copy(item.group.position);v.y+=item.kind==='person'?.45:.2;v.project(camera);if(v.z>1)continue;
+      const d=Math.hypot(r.left+(v.x+1)/2*r.width-clientX,r.top+(1-v.y)/2*r.height-clientY);
       if(d<bestD){best={ref,item};bestD=d;}
     }
-    if(!best)return false;
-    best.ref.stopUntil=(town.debug().clock||0)+4;
-    showBubble(best.item.group,chatLine(),4200);
-    return true;
+    return best;
+  }
+  // Where a tap meets the ground (y = street level), in town coordinates.
+  function groundAt(clientX,clientY){
+    if(!THREE.Raycaster||!THREE.Plane)return null;
+    const r=renderer.domElement.getBoundingClientRect(),ray=new THREE.Raycaster(),hit=new THREE.Vector3();
+    ray.setFromCamera(new THREE.Vector2((clientX-r.left)/r.width*2-1,-((clientY-r.top)/r.height*2-1)),camera);
+    return ray.ray.intersectPlane(new THREE.Plane(new THREE.Vector3(0,1,0),-.17),hit)?{x:hit.x,z:hit.z}:null;
+  }
+  const HONKS=['Beep beep!','Toot toot!','Parp!','Morning!'];
+  const HELLOS={house:['Hello down there!','Lovely day, isn\'t it?','Tea\'s on!','Just watering the plants.'],
+    shop:['We\'re open, come in!','Fresh today!','Two for one!'],fire:['All quiet at the station.','Ready when you are!'],
+    tower:['What a view from up here!','I can see the river!'],other:['Hello!','Who\'s there?']};
+  // A tap always does something you can see in 3D: a resident waves and hops and
+  // says hello; a car honks and bounces; a building lights up and someone calls
+  // out; open ground gets a little surprise right where you tapped, and the
+  // people nearby turn to look and cheer.
+  function tap(clientX,clientY){
+    if(!THREE.Vector3)return false;
+    const now=town.debug().clock||0,pick=list=>list[Math.floor(Math.random()*list.length)];
+    const person=actorAt(clientX,clientY,['person'],46);
+    if(person){const ref=person.ref;ref.stopUntil=now+3.2;ref.hopUntil=now+.9;ref.waveUntil=now+2.4;ref.cheerUntil=now+1.1;
+      showBubble(person.item.group,chatLine(),4200);taps.people++;return true;}
+    const car=actorAt(clientX,clientY,['car','bike'],40);
+    if(car){car.ref.hopUntil=now+.7;showBubble(car.item.group,car.item.kind==='bike'?'Ring ring!':pick(HONKS),2200);taps.vehicles++;return true;}
+    const spot=groundAt(clientX,clientY);if(!spot)return false;
+    const b=town.buildings().find(b=>Math.abs(b.x+.5-spot.x)<.62&&Math.abs(b.y+.5-spot.z)<.62);
+    if(b){buildingHello(b,pick(HELLOS[b.kind]||HELLOS.other));taps.buildings++;return true;}
+    surprise(spot.x,spot.z);taps.ground++;return true;
+  }
+  const taps={people:0,vehicles:0,buildings:0,ground:0};
+  function tapResident(clientX,clientY){return tap(clientX,clientY);}   // older name, kept for callers
+  /* ---- Tap effects: short-lived scene pieces driven by the town clock. */
+  let effects=[];
+  const tapLight=new THREE.PointLight('#ffd59a',0,2.6,2);tapLight.castShadow=false;scene.add(tapLight);
+  function buildingHello(b,text){
+    const anchor=new THREE.Object3D();anchor.position.set(b.x+.5,1.35,b.y+.5);world.add(anchor);
+    // One porch light, created with the scene, is moved to the tapped house: adding a
+    // new light at tap time would make every material recompile and the town hitch.
+    tapLight.position.set(b.x+.5,.62,b.y+1.08);
+    showBubble(anchor,text,3400);
+    effects.push({t:0,life:3.4,parts:[anchor],tick(e){tapLight.intensity=e.t<1.2?Math.sin(e.t/1.2*Math.PI)*3.5:0;}});
+  }
+  function surprise(x,z){
+    const now=town.debug().clock||0;
+    // Everyone close by turns to look, and the nearest few cheer.
+    const near=[...actors].filter(([ref,item])=>item.kind==='person'&&Math.hypot(ref.x-x,ref.y-z)<2.4).sort((a,b)=>Math.hypot(a[0].x-x,a[0].y-z)-Math.hypot(b[0].x-x,b[0].y-z));
+    near.forEach(([ref],i)=>{ref.lookAt={x,y:z};ref.lookUntil=now+3.2;if(i<4){ref.cheerUntil=now+2.4;}});
+    const kind=['balloons','birds','confetti'][Math.floor(Math.random()*3)],parts=[];
+    if(kind==='balloons'){
+      for(let k=0;k<5;k++){const g=new THREE.Group();g.position.set(x+(Math.random()-.5)*.4,.3,z+(Math.random()-.5)*.4);
+        const ballMesh=ball(g,.085,['#e2463a','#ffd23f','#3f8fd6','#ff8fd0','#5aa469'][k],0,.22,0);ballMesh.scale.y=1.18;
+        cylinder(g,.003,.003,.2,'#5b5b5b',0,.08,0);world.add(g);parts.push(g);g.userData.v=[(Math.random()-.5)*.12,.45+Math.random()*.25,(Math.random()-.5)*.12];}
+      effects.push({t:0,life:9,parts,tick(e,dt){for(const g of parts){g.position.x+=g.userData.v[0]*dt;g.position.y+=g.userData.v[1]*dt;g.position.z+=g.userData.v[2]*dt;g.rotation.z=Math.sin(e.t*2+g.position.x)*.15;}}});
+    }else if(kind==='birds'){
+      for(let k=0;k<7;k++){const g=new THREE.Group();g.position.set(x+(Math.random()-.5)*.6,.2,z+(Math.random()-.5)*.6);
+        const body=ball(g,.04,'#8b8f9a',0,0,0);body.scale.set(1.5,.8,.8);
+        const wings=[box(g,.012,.01,.1,'#9aa0aa',0,.02,.06,false),box(g,.012,.01,.1,'#9aa0aa',0,.02,-.06,false)];
+        g.userData={wings,a:Math.random()*TAU,ph:Math.random()*6};world.add(g);parts.push(g);}
+      effects.push({t:0,life:6,parts,tick(e,dt){for(const g of parts){const u=g.userData;g.position.x+=Math.cos(u.a)*dt*.9;g.position.z+=Math.sin(u.a)*dt*.9;g.position.y+=dt*(.5+e.t*.25);g.rotation.y=-u.a;
+        const f=Math.sin(e.t*22+u.ph)*.9;u.wings[0].rotation.x=f;u.wings[1].rotation.x=-f;}}});
+    }else{
+      const cols=['#e2463a','#ffd23f','#3f8fd6','#ff8fd0','#5aa469','#ffffff'];
+      for(let k=0;k<26;k++){const m=box(world,.045,.006,.03,cols[k%cols.length],x,.3,z,false);m.castShadow=false;
+        m.userData.v=[(Math.random()-.5)*1.4,1.4+Math.random()*1.2,(Math.random()-.5)*1.4];m.userData.spin=Math.random()*8;parts.push(m);}
+      effects.push({t:0,life:4,parts,tick(e,dt){for(const m of parts){const v=m.userData.v;v[1]-=dt*2.6;m.position.x+=v[0]*dt;m.position.z+=v[2]*dt;
+        m.position.y=Math.max(.19,m.position.y+v[1]*dt);if(m.position.y<=.19){v[0]*=.9;v[2]*=.9;}m.rotation.x+=m.userData.spin*dt;m.rotation.z+=m.userData.spin*.7*dt;}}});
+    }
+    if(Math.random()<.6&&near[0])showBubble(actors.get(near[0][0]).group,['Ooh, look!','Wow!','How lovely!','Did you see that?'][Math.floor(Math.random()*4)],2600);
+  }
+  function updateEffects(dt){
+    for(let i=effects.length-1;i>=0;i--){const e=effects[i];e.t+=dt;e.tick(e,dt);
+      if(e.t>e.life){for(const p of e.parts)p.parent?.remove(p);effects.splice(i,1);}}
   }
   function showBubble(group,text,ms,credit){
     if(typeof document==='undefined')return;
@@ -2541,7 +2610,7 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
     bubble.style.left=THREE.MathUtils.clamp((v.x+1)/2*r.width,half,r.width-half)+'px';bubble.style.top=Math.max((bubble.offsetHeight||28)+8,(1-v.y)/2*r.height)+'px';
   }
   function rebuild(){
-    timeVisit=null;round=null;papers=[];
+    timeVisit=null;round=null;papers=[];effects=[];
     ambient.length = 0; plazaLights.length = 0; festoonBulbs.length = 0;
     windowMaterials.clear();
     gardenElements = 0; woodlandShapes = 0; terrainContours = 0; composedBuildings = 0; districtGardenRooms = 0; landmarkCount = 0;
@@ -3132,6 +3201,7 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
       const baseY=item.kind==='car'?.078:item.kind==='bike'?.11:
         item.kind==='animal'?.13:ref.sit?.10:.16;
       g.position.set(desiredX,baseY,desiredZ);
+      {const now=town.debug().clock||0;if(ref.hopUntil&&now<ref.hopUntil)g.position.y+=Math.abs(Math.sin((ref.hopUntil-now)*(item.kind==='car'?16:11)))*(item.kind==='car'?.045:.11);}
       const a=Number.isFinite(ref.heading)?-ref.heading:[0,Math.PI,-Math.PI/2,Math.PI/2][d];
       // Cars, bicycles and quadrupeds point along local +X; only sculpted
       // residents have local +Z faces. Keep both aligned with actual travel.
@@ -3189,7 +3259,7 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
           (ref.shopAction==='reading'||ref.shopAction==='eating')?1:0,5.5);
         state.work=ease(state.work,!reducedMotion&&ref.districtWorker&&
           ref.districtAction==='working'?1:0,5);
-        const celebration=ref.newsMood==='cheer'||ref.newsMood==='celebrate';
+        const celebration=ref.newsMood==='cheer'||ref.newsMood==='celebrate'||(ref.cheerUntil&&worldTime<ref.cheerUntil);
         state.celebrate=ease(state.celebrate,!reducedMotion&&celebration?1:0,5);
         const playing=ref.guitar&&ref.shopAction==='performing';
         state.play=ease(state.play,!reducedMotion&&playing?1:0,6);
@@ -3212,7 +3282,7 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
           const swing=phase*state.speed;
           const recover=Math.max(0,-phase)*state.speed;
           limbs.legs[k].rotation.x=-1.16*state.sit+
-            (1-state.sit)*swing*.62+
+            (1-state.sit)*swing*(ref.gait==='brisk'?.8:.74)+
             state.dance*.19*Math.sin(worldTime*4.2+k*Math.PI);
           limbs.shins[k].rotation.x=state.sit*.75+
             (1-state.sit)*recover*.94;
@@ -3238,7 +3308,7 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
           const receiving=dominant?state.receive:state.receive*.12;
           const using=dominant?state.enjoy:state.enjoy*.48;
           limbs.arms[k].rotation.x=state.sit*.20-
-            swing*state.speed*(carrying?.14:.34)-
+            swing*state.speed*(carrying?.18:ref.gait==='brisk'?.62:.52)-
             state.chat*(dominant?.25:.07)-speech*.30-inspect*.22-wave*.52-
             trading*.72-receiving*.56-using*1.18-
             (dominant?state.knock*1.28+state.order*.92:state.order*.13)-
@@ -3279,12 +3349,13 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
           state.play*.065*Math.sin(worldTime*7)+
           state.dance*.12*Math.sin(worldTime*4.2+(ref.ph||0));
         limbs.upperBody.position.y=.006*Math.sin(worldTime*2.0+(ref.ph||0))+
-          Math.abs(beat)*state.speed*.009+
+          Math.abs(beat)*state.speed*(ref.gait==='skip'?.045:.018)+
           state.celebrate*.038*Math.abs(Math.sin(worldTime*5.4+(ref.ph||0)))+
           state.dance*.017*Math.abs(Math.sin(worldTime*4.2+(ref.ph||0)));
         // A head turn follows an actual attention target; a chat creates
         // a subtle listening nod rather than repetitive random swivels.
-        const target=ref.attention;
+        const glancing=ref.glanceUntil&&worldTime<ref.glanceUntil;
+        const target=ref.attention||(glancing?ref.glanceAt:null)||(ref.lookUntil&&worldTime<ref.lookUntil?ref.lookAt:null);
         let yaw=0;
         if(target){
           const dx=target.x-ref.x,dz=target.y-ref.y;
@@ -3292,6 +3363,7 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
           yaw=THREE.MathUtils.clamp(Math.atan2(
             Math.sin(angle-g.rotation.y),Math.cos(angle-g.rotation.y)),-.64,.64);
         }
+        if(!target&&!reducedMotion){const idle=Math.sin(worldTime*.37+(ref.ph||0)*2.3);if(Math.abs(idle)>.82)yaw=Math.sign(idle)*.42;}   // a look about now and then
         limbs.headPivot.rotation.y+=(yaw-limbs.headPivot.rotation.y)*
           (1-Math.exp(-6.5*dt));
         limbs.headPivot.rotation.x=.045*state.chat*
@@ -3567,7 +3639,7 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
       syncActors();syncCamera();light(state.night||0);nightLife(state.night||0,state.clock||0);
       // Driven by the town's own clock, so they pause with the town.
       {const now=state.clock||0;const dt=lastClockAt===null?0:THREE.MathUtils.clamp(now-lastClockAt,0,.1);lastClockAt=now;sceneClock+=dt;
-       updateVisit(dt);updateRound(dt,state.night||0);}
+       updateVisit(dt);updateRound(dt,state.night||0);updateEffects(dt);}
       placeBubble();
       animateAmbient(state.clock||0);
       if(lens)lens.render(timestamp-(api.lastAt||timestamp));else renderer.render(scene,camera);
@@ -3594,7 +3666,8 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
     getStats:()=>({frames,redrawCount,actors:actors.size,ambient:ambient.length,plazaLights:plazaLights.length,festoonBulbs:festoonBulbs.length,gardenElements,woodlandShapes,terrainContours,composedBuildings,districtGardenRooms,landmarks:landmarkCount,windowMaterials:windowMaterials.size,photographicLens:!!lens,cameraProjection:'perspective',lens:lens?.stats?.()||null,buildings:town.buildings().length,webgl:true,frozen}),
     // A stable actual GPU-rendered frame for visual regression screenshots.
     // Unlike stop(), freeze does not switch to the Canvas fallback.
-    tapResident,
+    tap,tapResident,tapStats:()=>({...taps,effects:effects.length}),
+    surpriseAt:(x,z,seconds=0)=>{surprise(x,z);for(let t=0;t<seconds;t+=.05)updateEffects(.05);return effects.length;},
     // Test hooks: start the visitor or the paper round now.
     startVisit:()=>{if(!onThisDay.length)onThisDay=[{year:1969,text:'Apollo 11 lands on the Moon'}];startVisit();return timeVisit;},startRound:()=>{startRound();return round;},
     stepExtras:(seconds,dark=0)=>{for(let t=0;t<seconds;t+=.05){sceneClock+=.05;updateVisit(.05);updateRound(.05,dark);}},

@@ -30,7 +30,7 @@ assert.match(view, /Picture of the Day · Wikimedia Commons/, 'and credits it on
 assert.match(view, /if\(Math\.hypot\(p\.x-CINEMA\.x,p\.y-CINEMA\.z\)<1\.7\)return;/, 'no tree grows through the screen');
 assert.match(view, /function nightLife\(dark,time\)/); assert.match(view, /new THREE\.Points\(/, 'fireflies');
 assert.match(view, /Fiction only, in the town's own voice/, 'resident chat never quotes the sourced headlines');
-assert.match(sim, /window\.ToyTown3D\.tapResident\?\.\(e\.clientX, e\.clientY\)\) return;/, 'a tap on a resident chats instead of starting a surprise');
+assert.match(sim, /window\.ToyTown3D\.tap\?\.\(e\.clientX, e\.clientY\)\) return;/, 'a tap on a resident chats instead of starting a surprise');
 // The "on this day" visitor and the morning paper round.
 assert.match(view, /onThisDay=lightHistory\(data\?\.onthisday\)/, 'the visitor reads the same daily Wikipedia feed as the cinema');
 assert.match(view, /!grim\(o\.text\)/, 'grim history is filtered with the town GRIM list');
