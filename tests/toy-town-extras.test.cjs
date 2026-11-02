@@ -67,4 +67,8 @@ assert.match(html, /GLTFLoader\(\)\.load\('assets\/kaykit\/kaykit-town\.glb/, 't
 assert.match(html, /has\('nokit'\)/, 'and can be opened without it');
 assert.match(view, /if\(kitBuilding\(b\)\)continue;/, 'houses, shops and towers use KayKit buildings when the kit is there');
 assert.match(view, /function kitPlace\(/); assert.match(view, /geo\('capsule',r,len\)/, 'residents have smooth rounded limbs');
-console.log('Toy Town EXTRAS PASS: KayKit CC0 kit (named, small, licensed, with fallback); taps on residents, cars, buildings and open ground; livelier gaits and greetings; news card minimises to a pill (phones first, remembered), Picture-of-the-Day cinema, fireflies and shooting stars, tap-a-resident chat, the on-this-day visitor (gentle history only, credited) and the dawn paper round.');
+for (const n of ['road_straight', 'road_junction', 'road_tsplit', 'road_corner', 'road_straight_crossing']) assert.ok(names.has(n), 'the kit carries ' + n);
+assert.match(view, /function kitRoads\(\)/); assert.match(view, /if\(v&&!h&&\(y===13\|\|y===14\)\)continue;/, 'road tiles leave the river to the bridges');
+assert.match(view, /if\(b\.hero&&kitLandmark\(b\)\)/, 'the plaza buildings use KayKit models too');
+assert.match(view, /'BOOK NOOK'/, 'and keep their signs');
+console.log('Toy Town EXTRAS PASS: KayKit CC0 kit (named, small, licensed, with fallback; roads and plaza too); taps on residents, cars, buildings and open ground; livelier gaits and greetings; news card minimises to a pill (phones first, remembered), Picture-of-the-Day cinema, fireflies and shooting stars, tap-a-resident chat, the on-this-day visitor (gentle history only, credited) and the dawn paper round.');
