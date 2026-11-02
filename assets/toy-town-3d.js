@@ -7,7 +7,11 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
   const desktop = () => window.innerWidth >= 700;
   const reducedMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches || false;
   const renderer = new THREE.WebGLRenderer({antialias: true, alpha: false, powerPreference: 'high-performance'});
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, desktop() ? 1.8 : 1.4));
+  // Sharp on every screen: render at up to 2x the CSS pixels (a 3x iPhone at
+  // 1.4x was upscaled and looked blurred). If a device cannot hold the frame
+  // rate, the ratio steps down a notch at a time (see adaptSharpness).
+  let pixelRatio=Math.min(window.devicePixelRatio || 1, 2);
+  renderer.setPixelRatio(pixelRatio);
   renderer.outputColorSpace = THREE.SRGBColorSpace;
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
   renderer.toneMappingExposure = 1.02;
@@ -3619,8 +3623,18 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
     // fog distances washed the entire overview into pale gray. Keep the
     // diorama clear at its focus depth, allowing haze only beyond it.
     scene.fog.near=Math.max(18,distance*.86);
-    scene.fog.far=Math.max(70,distance*2.45);
+    scene.fog.far=Math.max(90,distance*3.2);   // only the farthest edge softens; no haze over the town
     camera.updateProjectionMatrix();
+  }
+  // Keep the frame rate: if drawing a frame takes too long for a while, lower the
+  // render resolution one step (2 → 1.6 → 1.3 → 1); never raise it back mid-visit.
+  let slowFrames=0,sharpSamples=0;
+  const clockMs=()=>globalThis.performance?.now?.()??Date.now();
+  function adaptSharpness(ms){
+    if(++sharpSamples<45||pixelRatio<=1)return;
+    slowFrames=ms>(desktop()?14:22)?slowFrames+1:Math.max(0,slowFrames-1);
+    if(slowFrames>40){pixelRatio=pixelRatio>1.7?1.6:pixelRatio>1.4?1.3:1;slowFrames=0;sharpSamples=0;
+      renderer.setPixelRatio(pixelRatio);lastSize='';}
   }
   function frame(timestamp){
     if(stopped || frozen)return;
@@ -3643,7 +3657,9 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
        updateVisit(dt);updateRound(dt,state.night||0);updateEffects(dt);}
       placeBubble();
       animateAmbient(state.clock||0);
+      const drawStart=clockMs();
       if(lens)lens.render(timestamp-(api.lastAt||timestamp));else renderer.render(scene,camera);
+      adaptSharpness(clockMs()-drawStart);
       api.lastAt=timestamp;frames++;
       if(!api.active) {
         api.active=true;window.ToyTown3D.active=true;
@@ -3664,7 +3680,7 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
   renderer.domElement.addEventListener('webglcontextrestored',restored,false);
   const api={
     active:false,renderer,scene,camera,
-    getStats:()=>({frames,redrawCount,actors:actors.size,ambient:ambient.length,plazaLights:plazaLights.length,festoonBulbs:festoonBulbs.length,gardenElements,woodlandShapes,terrainContours,composedBuildings,districtGardenRooms,landmarks:landmarkCount,windowMaterials:windowMaterials.size,photographicLens:!!lens,cameraProjection:'perspective',lens:lens?.stats?.()||null,buildings:town.buildings().length,webgl:true,frozen}),
+    getStats:()=>({frames,redrawCount,actors:actors.size,ambient:ambient.length,plazaLights:plazaLights.length,festoonBulbs:festoonBulbs.length,gardenElements,woodlandShapes,terrainContours,composedBuildings,districtGardenRooms,landmarks:landmarkCount,windowMaterials:windowMaterials.size,photographicLens:!!lens,pixelRatio,cameraProjection:'perspective',lens:lens?.stats?.()||null,buildings:town.buildings().length,webgl:true,frozen}),
     // A stable actual GPU-rendered frame for visual regression screenshots.
     // Unlike stop(), freeze does not switch to the Canvas fallback.
     tap,tapResident,tapStats:()=>({...taps,effects:effects.length}),
