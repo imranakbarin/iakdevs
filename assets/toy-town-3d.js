@@ -3163,8 +3163,10 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
     }
   }
   function animateAmbient(time){
-    if(reducedMotion)return;
     for(const a of ambient){
+      // Reduced motion still updates meaningful shop-window state;
+      // only decorative motion is skipped.
+      if(reducedMotion&&a.kind!=='marketCounter')continue;
       if(a.kind==='duck'){
         a.mesh.position.set(a.ref.x,.21+Math.sin(time*1.75+a.phase)*.025,a.ref.y);
         a.mesh.rotation.y=(a.ref.vx<0?Math.PI:0)+Math.sin(time*.58+a.phase)*.14;
@@ -3207,7 +3209,8 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
         const dt=shop.lastTime===null?1/30:
           THREE.MathUtils.clamp(time-shop.lastTime,1/120,.12);
         shop.lastTime=time;
-        shop.openAmount+=(shop.openTarget-shop.openAmount)*
+        shop.openAmount=reducedMotion?shop.openTarget:
+          shop.openAmount+(shop.openTarget-shop.openAmount)*
           (1-Math.exp(-8*dt));
         for(const {hinge,side} of shop.shutters)
           hinge.rotation.y=side*shop.openAmount*1.02;
