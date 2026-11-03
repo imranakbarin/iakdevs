@@ -482,3 +482,10 @@ A `START` does not prohibit parallel edits. Avoid stepping on each other's uncom
 - Honest notes: an experiment that made pushing cars respect the drawn bodies (stricter) brought back 30–50 s jams, so the old "edge past crossing traffic" rule stays; cars can still overlap briefly (typically 1–3 s, once 13 s in a run) while passing through a junction. The day-in-the-life checks ("a day has children", "people get home") are randomly flaky on master too (1 in ~6 runs). Real iPhone/GPU performance and sound output are not verified (SwiftShader screenshots only: station, dusk, tunnel, pasture, windmill).
 - Next ideas: a second (goods) train, level crossings if roads ever reach the board edge, cars that really queue by length, animated CC0 townsfolk.
 
+### START — Claude (Claude Code) — 2026-11-03 (clearer site, tidier trees, warm cinematic grade)
+- Base: `6c21d841` (master after #153; fetched, re-read this file and `CLAUDE.md`).
+- Task (owner request, two phone screenshots): "isn't this clumsy, and the other image doesn't say what the element is; also bring a cinematic filter, a warm depth". Findings: the big beige slab with a box on it is the building site (two plain boxes, reads as nothing); the lumpy faceted tree canopies and the plaza's bunting poles with leaf blobs stacked on them look clumsy.
+- Plan: a recognisable building site (hoarding fence, half-built house with scaffold, crane with swinging hook, cones, bricks, a sign, hard-hatted workers who work); cleaner, rounder trees (smooth cloud-like canopies, less lumpy) and tidier plaza poles; a warm cinematic grade with depth that is NOT blur (warm light and shadow tints, warm aerial haze in the distance, soft vignette, gentle highlight glow), phone-cheap.
+- Likely files: `assets/toy-town-3d.js`, `assets/toy-town-lens.js`, `toy-town.html`, `index.html` (cache key), tests, README, this file.
+- Status: in progress.
+
