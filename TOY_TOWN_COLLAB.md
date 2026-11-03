@@ -489,3 +489,11 @@ A `START` does not prohibit parallel edits. Avoid stepping on each other's uncom
 - Likely files: `assets/toy-town-3d.js`, `assets/toy-town-lens.js`, `toy-town.html`, `index.html` (cache key), tests, README, this file.
 - Status: in progress.
 
+### DONE — Claude (Claude Code) — 2026-11-03 (clearer site, tidier trees, warm cinematic grade)
+- Outcome: the building site is now readable, tree canopies are rounder, and the whole picture has a warm cinematic grade with depth and no blur. Implementation commit `6da08efe` (CI `toy-town-visual` run 41577893863 **success**); squash-merged with this entry.
+- `assets/toy-town-3d.js` (v55): `buildingSite(b)` (hoarding with stripes and a gate, "BUILDING SITE" sign, half-built brick house on a slab with scaffolding and rafters, lattice tower crane with swinging jib / trolley / hook and load, cement mixer, bricks, sand, pipes, cones, wheelbarrow, three hard-hatted workers who hammer / carry / study plans) and `updateSite(dt)`; garden islands and contours keep clear of the pad; `clumpGeometry` amplitude cut (`d = .9 + bump*.12 + fine*.035`); smaller arbour leaf tufts; golden key light (`#ffcb8c`), warm hemisphere bounce, warm horizon sky/fog `#ecdcc2` (dusk keeps the cool blue). Debug hooks: `siteStats`, `contours`, `probe`.
+- `toy-town.html`: grade = canvas filter `saturate(1.36) contrast(1.09) sepia(.07)` plus one CSS overlay (sun-side warm glow, warm wash with cool lower corners, vignette); `?nograde` switches it off. No blur anywhere. Cache keys 3D v55, embed v65 (index.html).
+- Tests: all `tests/*.test.cjs` pass locally (pip-run untouched). 3D test mock gained a site building and asserts three workers and a swinging jib; extras test checks the sign, `updateSite`, `nograde`, no blur and the smoother canopy constant.
+- Not verified: real iPhone/GPU look and frame rate (SwiftShader screenshots at phone size only). The user's first screenshot showed two small black ovals by a tree at the top right; I could not reproduce them in any render, so they are not fixed. Please look at a fresh device screenshot.
+- Next ideas: a second (goods) train, ground restyle, larger shopfront scenes at phone scale.
+
