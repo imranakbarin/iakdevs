@@ -158,16 +158,16 @@ assert.match(moduleCode,/eye.scale.y=blink/,'eyelids blink without a separate an
 assert.match(html,/type="importmap"/);
 assert.match(html,/three@0\.187\.0\/build\/three\.module\.js/);
 assert.match(html,/three@0\.187\.0\/examples\/jsm\//);
-assert.match(html,/toy-town-3d\.js\?v=62/);
+assert.match(html,/toy-town-3d\.js\?v=63/);
 assert.match(html,/toy-town-landmarks\.js\?v=7/,'the independent models are requested alongside Three');
 assert.match(html,/buildLandmark:landmarks\.buildLandmark/,
   'loader injects the authored model builder into the 3D simulation');
-assert.match(html,/toy-town\.js\?v=39/);
+assert.match(html,/toy-town\.js\?v=40/);
 const classicScript=html.match(/src="assets\/toy-town\.js\?v=\d+"/);
 assert.ok(classicScript&&
   html.indexOf(classicScript[0])<html.indexOf("import('three')"),
   'the actual versioned classic script always loads before WebGL');
-assert.match(page,/toy-town\.html\?v=72&embed=1/);
+assert.match(page,/toy-town\.html\?v=73&embed=1/);
 assert.match(fs.readFileSync(path.join(root,'assets/toy-town.js'),'utf8'),
   /targetX=clamp\(\.08,p\.x,17\.92\)/,
   'scripted paths are clamped at the endpoint rather than freezing outside town');
@@ -287,7 +287,7 @@ const pedestrians=[{type:'person',x:8.1,y:8.7,d:0,v:.26,travel:4,col:'#d5a6a0',s
     attention:{x:3.5,y:4.5}}];
 let seed=20261031,frameClock=6,currentCamZoom=1.52,nightValue=.25,currentYaw=0;
 const town={
- buildings:()=>buildings,props:()=>props,movers:()=>pedestrians,
+ buildings:()=>buildings,props:()=>props,movers:()=>pedestrians,BUS_STOPS:[{id:0,x:4.6,y:6.5,d:0},{id:1,x:4.6,y:6.5,d:1}],
  fitView:()=>.475,debug:()=>({seed,night:nightValue,clock:frameClock,
   cam:{x:9,y:9,z:currentCamZoom,tx:9,ty:9,tz:currentCamZoom,yaw:currentYaw,tyaw:currentYaw}})
 };
@@ -379,6 +379,15 @@ assert.equal(api.getStats().festoonBulbs,14,'two suspended spans contain 14 mini
     api.stepTrain(.5,.9);s2=api.stage2Stats();assert.ok(s2.watchman&&s2.cats>=1,'at night a watchman strolls with his lantern and cats come out');assert.ok(s2.boards.every(b=>b==='closed'),'and the shop boards read CLOSED');
     api.stepTrain(.5,0);s2=api.stage2Stats();assert.ok(!s2.watchman&&s2.cats===0&&s2.boards.every(b=>b==='open'),'by day the shops are OPEN again');
     assert.ok(api.touch2(195,422),'a tap on one of the town\'s things is handled');assert.ok(Object.keys(api.stage2Stats().hits).length>=1);
+  }
+  {
+    // Stage 3: a bus pulls up at a stop and people board and alight; the shopfronts and the ground are dressed.
+    const q0=api.stage3Stats();assert.equal(q0.stops,2,'a shelter for each bus stop');assert.ok(q0.waiting>=4,'people wait in them');
+    assert.ok(q0.tufts>100&&q0.flowers>=5&&q0.patches>=3,'the lawns have grass tufts, flower clusters and soft patches ('+q0.tufts+'/'+q0.flowers+'/'+q0.patches+')');
+    assert.ok(q0.boards>=1,'the shops put out chalkboards');
+    const bus={type:'car',kind:'bus',x:4.6,y:6.5,d:0,lane:.2,v:0,atStop:0,stops:1,stopUntil:1e9};pedestrians.push(bus);
+    api.stepTrain(.2,0);api.stepTrain(10,0);const q1=api.stage3Stats();assert.ok(q1.boarded>=1,'a passenger steps on the bus');
+    pedestrians.splice(pedestrians.indexOf(bus),1);
   }
   const st=api.siteStats();assert.ok(st.built&&st.workers===3,'a building site with three workers on it');
   const jib0=st.jib;api.stepTrain(20,0);assert.notEqual(api.siteStats().jib,jib0,'the crane jib swings');
