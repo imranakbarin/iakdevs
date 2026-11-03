@@ -22,7 +22,7 @@ const ToyTown = (() => {
   };
   const today = () => dateKey(), narrow = () => typeof innerWidth === 'number' && innerWidth < 700;
   let rnd = Math.random, seed = 0, day = '', theme = null, newsLine = '', today_ = [], nextHeadline = 12, headIx = 0;
-  let W = 0, H = 0, dpr = 1, S = 1, cam = {x: N / 2, y: N / 2, z: 1, tx: N / 2, ty: N / 2, tz: 1}, base = 1;
+  let W = 0, H = 0, dpr = 1, S = 1, cam = {x: N / 2, y: N / 2, z: 1, tx: N / 2, ty: N / 2, tz: 1, yaw: 0, tyaw: 0}, base = 1;
   let grid = [], buildings = [], props = [], movers = [], events = [], parts = [], bubbles = [], ground = null, sprites = new Map();
   const MIN_ZOOM = .42, MAX_ZOOM = 3.25, PAN = .6;   // how near the board edge the view may be dragged (the station and railway sit out there)
   let zoomAnchor = null, nextStreetMoment = 16, streetMoments = 0, fitZoom = 1;
@@ -2466,6 +2466,7 @@ const ToyTown = (() => {
       const k = Math.min(1, dt * 4);
       cam.x += (cam.tx - cam.x) * k; cam.y += (cam.ty - cam.y) * k;
     }
+    cam.yaw = wrapAngle(cam.yaw + wrapAngle(cam.tyaw - cam.yaw) * Math.min(1, dt * 6));
   }
   function render() {
     // Keep the original 2D simulation alive for all gestures, news and traffic,
@@ -2584,16 +2585,25 @@ const ToyTown = (() => {
   }
   // A tap pokes the town: something happens right there.
   // Inverse isometric projection used by both pokes and gestures.
+  // The view can be turned all the way round (cam.yaw). Every screen-to-world step goes through rotBy, so panning,
+  // pinch-zoom anchoring and taps stay right at any heading.
+  const wrapAngle = a => Math.atan2(Math.sin(a), Math.cos(a));
+  // The 3D camera looks along (7.4, 24) rather than the 45 degrees of the old isometric drawing: about 28 degrees of
+  // azimuth (measured) that panning and taps must account for, or a drag would slide the town off-line with the finger.
+  const BASE_AZ = .49;
+  const rotBy = (a, b) => { const c = Math.cos(cam.yaw + BASE_AZ), s = Math.sin(cam.yaw + BASE_AZ); return [a * c - b * s, a * s + b * c]; };
+  function rotateBy(rad) { cam.tyaw = wrapAngle(cam.tyaw + rad); return cam.tyaw; }
+  function rotateTo(rad) { cam.tyaw = wrapAngle(rad); return cam.tyaw; }
   function screenWorld(sx, sy) {
     const scale = base * cam.z || S || 1;
-    const u = (sx - W / 2) / (TW * scale), v = (sy - H / 2) / (TH * scale);
-    return {x: cam.x + (u + v) / 2, y: cam.y + (v - u) / 2};
+    const u = (sx - W / 2) / (TW * scale), v = (sy - H / 2) / (TH * scale), [a, b] = rotBy((u + v) / 2, (v - u) / 2);
+    return {x: cam.x + a, y: cam.y + b};
   }
   function focusCamera(world, sx, sy) {
     const scale = base * cam.z || 1;
-    const u = (sx - W / 2) / (TW * scale), v = (sy - H / 2) / (TH * scale);
-    cam.x = cam.tx = clamp(PAN, world.x - (u + v) / 2, N - PAN);
-    cam.y = cam.ty = clamp(PAN, world.y - (v - u) / 2, N - PAN);
+    const u = (sx - W / 2) / (TW * scale), v = (sy - H / 2) / (TH * scale), [a, b] = rotBy((u + v) / 2, (v - u) / 2);
+    cam.x = cam.tx = clamp(PAN, world.x - a, N - PAN);
+    cam.y = cam.ty = clamp(PAN, world.y - b, N - PAN);
   }
   function zoomAt(factor, cx = innerWidth / 2, cy = innerHeight / 2) {
     const sx = cx * dpr, sy = cy * dpr;
@@ -2604,8 +2614,8 @@ const ToyTown = (() => {
   }
   function resetView() {
     zoomAnchor = {world: {x: N / 2, y: N / 2}, sx: W / 2, sy: H / 2};
-    cam.tz = fitZoom;
-    if (!playing) { cam.z = fitZoom; focusCamera(zoomAnchor.world, W / 2, H / 2); zoomAnchor = null; render(); }
+    cam.tz = fitZoom; cam.tyaw = 0;
+    if (!playing) { cam.z = fitZoom; cam.yaw = 0; focusCamera(zoomAnchor.world, W / 2, H / 2); zoomAnchor = null; render(); }
   }
   function fitView() { return fitZoom; }
   function pinchTo(scale, centerX, centerY, anchorWorld) {
@@ -2648,8 +2658,8 @@ const ToyTown = (() => {
       fingers.set(e.pointerId, {x: e.clientX, y: e.clientY});
       cv.setPointerCapture(e.pointerId);
       if (fingers.size === 1) { pinch = null; zoomAnchor = null; cam.tz = cam.z;
-        down = {x: e.clientX, y: e.clientY, cx: cam.x, cy: cam.y, moved: false};
-        armHold(down, e.clientX, e.clientY); }
+        down = {x: e.clientX, y: e.clientY, cx: cam.x, cy: cam.y, moved: false, turn: e.button === 2 || e.shiftKey || e.altKey, yaw0: cam.yaw};
+        if (down.turn) { down.moved = true; followRef = null; } else armHold(down, e.clientX, e.clientY); }
       else beginPinch();
     });
     cv.addEventListener('pointermove', e => {
@@ -2664,8 +2674,10 @@ const ToyTown = (() => {
         const dx = (e.clientX - down.x) * dpr / (TW * base * cam.z);
         const dy = (e.clientY - down.y) * dpr / (TH * base * cam.z);
         if (Math.hypot(e.clientX - down.x, e.clientY - down.y) > 8) { down.moved = true; followRef = null; }
-        if (down.moved) { cam.tx = cam.x = clamp(PAN, down.cx - (dx + dy) / 2, N - PAN);
-          cam.ty = cam.y = clamp(PAN, down.cy - (dy - dx) / 2, N - PAN);
+        if (down.turn) { cam.tyaw = cam.yaw = wrapAngle(down.yaw0 + (e.clientX - down.x) * .008); if (!playing) render(); }
+        else if (down.moved) { const [pa, pb] = rotBy((dx + dy) / 2, (dy - dx) / 2);
+          cam.tx = cam.x = clamp(PAN, down.cx - pa, N - PAN);
+          cam.ty = cam.y = clamp(PAN, down.cy - pb, N - PAN);
           if (!playing) render(); }
       }
     });
@@ -2691,7 +2703,8 @@ const ToyTown = (() => {
       const {x, y} = centerOf(ts[0], ts[1]);
       const rect = cv.getBoundingClientRect();
       touchPinch = {distance: Math.max(1, Math.hypot(ts[0].clientX - ts[1].clientX, ts[0].clientY - ts[1].clientY)),
-        scale: cam.z, world: screenWorld((x - rect.left) * dpr, (y - rect.top) * dpr)};
+        scale: cam.z, world: screenWorld((x - rect.left) * dpr, (y - rect.top) * dpr),
+        angle: Math.atan2(ts[1].clientY - ts[0].clientY, ts[1].clientX - ts[0].clientX), yaw0: cam.yaw};
       touchStart = null; hadPinch = true; cam.tz = cam.z; zoomAnchor = null;
     };
     cv.addEventListener('touchstart', e => {
@@ -2713,6 +2726,9 @@ const ToyTown = (() => {
         if (!touchPinch) startPinch(ts);
         const c = centerOf(ts[0], ts[1]), rect = cv.getBoundingClientRect();
         const dist = Math.hypot(ts[0].clientX - ts[1].clientX, ts[0].clientY - ts[1].clientY);
+        // Twisting two fingers turns the view (with a small dead zone so a plain pinch never rotates it).
+        const twist = wrapAngle(Math.atan2(ts[1].clientY - ts[0].clientY, ts[1].clientX - ts[0].clientX) - touchPinch.angle);
+        if (touchPinch.turning || Math.abs(twist) > .14) { touchPinch.turning = true; cam.tyaw = cam.yaw = wrapAngle(touchPinch.yaw0 - twist); }
         pinchTo(touchPinch.scale * dist / touchPinch.distance,
           c.x - rect.left, c.y - rect.top, touchPinch.world);
       } else if (ts.length === 1 && touchStart && !hadPinch) {
@@ -2721,8 +2737,9 @@ const ToyTown = (() => {
         if (Math.hypot(ts[0].clientX - touchStart.x, ts[0].clientY - touchStart.y) > 7)
           { touchStart.moved = true; followRef = null; }
         if (touchStart.moved) {
-          cam.tx = cam.x = clamp(PAN, touchStart.cx - (dx + dy) / 2, N - PAN);
-          cam.ty = cam.y = clamp(PAN, touchStart.cy - (dy - dx) / 2, N - PAN);
+          const [pa, pb] = rotBy((dx + dy) / 2, (dy - dx) / 2);
+          cam.tx = cam.x = clamp(PAN, touchStart.cx - pa, N - PAN);
+          cam.ty = cam.y = clamp(PAN, touchStart.cy - pb, N - PAN);
           if (!playing) render();
         }
       }
@@ -2739,6 +2756,7 @@ const ToyTown = (() => {
     cv.addEventListener('touchcancel', e => {
       e.preventDefault(); touchStart = null; touchPinch = null; hadPinch = false;
     }, {passive: false});
+    cv.addEventListener('contextmenu', e => e.preventDefault());
     cv.addEventListener('wheel', e => {
       e.preventDefault();
       const rect = cv.getBoundingClientRect();
@@ -2749,6 +2767,15 @@ const ToyTown = (() => {
       const button = document.getElementById(id);
       if (button) button.addEventListener('click', () => zoomAt(factor));
     }
+    for (const [id, delta] of [['rotate-left', -Math.PI / 6], ['rotate-right', Math.PI / 6]]) {
+      const button = document.getElementById(id);
+      if (button) button.addEventListener('click', () => rotateBy(delta));
+    }
+    addEventListener('keydown', e => {
+      if (e.ctrlKey || e.metaKey || /^(INPUT|TEXTAREA|SELECT)$/.test((e.target && e.target.tagName) || '')) return;
+      if (e.key === 'q' || e.key === 'Q' || e.key === '[') rotateBy(-Math.PI / 12);
+      else if (e.key === 'e' || e.key === 'E' || e.key === ']') rotateBy(Math.PI / 12);
+    });
     const resetButton = document.getElementById('zoom-reset');
     if (resetButton) resetButton.addEventListener('click', resetView);
     // The parent page has its own zoom buttons so iOS users can adjust the
@@ -2758,12 +2785,13 @@ const ToyTown = (() => {
       if (e.data.type === 'town:zoom' && Number.isFinite(e.data.factor) && e.data.factor > 0)
         zoomAt(clamp(.5, e.data.factor, 2));
       else if (e.data.type === 'town:fit') resetView();
+      else if (e.data.type === 'town:rotate' && Number.isFinite(e.data.delta)) rotateBy(clamp(-Math.PI, e.data.delta, Math.PI));
     });
     addEventListener('message', e => { if (e.origin === location.origin && e.data && e.data.type === 'town:motion') playing = !!e.data.playing; });
     addEventListener('hashchange', () => location.reload());
     start();
   }
-  return {gather, viewTo, view: () => ({x: cam.tx, y: cam.ty, z: cam.tz}), follow, following: () => followRef, feedDucks, layout, render, zoomAt, resetView, fitView, pinchTo, screenWorld, streetMoment, reactToNews, hero: () => town.blocks.find(b => b.hero), TALK, nameOf, headline, dateKey, CALM, lightPhase, themeFromNews, newsThemes, VARIANTS, VARIANT_EVENTS: () => Object.keys(VARIANT_EVENTS), decorate, setToday: l => { today_ = l; }, PACE, THEMES, GRIM, build, update, events: () => events, movers: () => movers, buildings: () => buildings, props: () => props, startEvent, randomEvent, setPlaying: v => { playing = v; }, debug: () => ({separated, clock, theme, seed, greetings, whims: {...whims}, unstuck: {...unstuck}, hour: hourOfDay(), daypart, routines: {...routine}, night: nightLevel(), cam: {...cam}, fitZoom, streetMoments,communityEncounters,communityVisits,streetTransactions,streetShopVisits,newsReactions,streetPerformances,
+  return {gather, rotateBy, rotateTo, yaw: () => cam.yaw, viewTo, view: () => ({x: cam.tx, y: cam.ty, z: cam.tz, yaw: cam.tyaw}), follow, following: () => followRef, feedDucks, layout, render, zoomAt, resetView, fitView, pinchTo, screenWorld, streetMoment, reactToNews, hero: () => town.blocks.find(b => b.hero), TALK, nameOf, headline, dateKey, CALM, lightPhase, themeFromNews, newsThemes, VARIANTS, VARIANT_EVENTS: () => Object.keys(VARIANT_EVENTS), decorate, setToday: l => { today_ = l; }, PACE, THEMES, GRIM, build, update, events: () => events, movers: () => movers, buildings: () => buildings, props: () => props, startEvent, randomEvent, setPlaying: v => { playing = v; }, debug: () => ({separated, clock, theme, seed, greetings, whims: {...whims}, unstuck: {...unstuck}, hour: hourOfDay(), daypart, routines: {...routine}, night: nightLevel(), cam: {...cam}, fitZoom, streetMoments,communityEncounters,communityVisits,streetTransactions,streetShopVisits,newsReactions,streetPerformances,
     districts:{count:districts.length,visits:districtVisits,
       meetings:districtMeetings,tasks:districtTasks,
       areas:districts.map(a=>({role:a.role,block:a.block,
