@@ -178,7 +178,7 @@ assert.doesNotMatch(html, /sepia\(|nograde/, 'the cinematic filter is gone');
 assert.doesNotMatch(html, /#town-3d[^{]*\{[^}]*blur\(/, 'and nothing blurs');
 assert.match(view, /const d = \.9 \+ bump \* \.12/, 'tree canopies are smooth and round, not lumpy');
 assert.match(view, /const BIKE_SCALE=\.52;/, 'bicycles are scaled well below the toy cars');
-assert.match(view, /const CUTE=\.8,HEAD_BIG=1\.22;/, 'residents are smaller with a big round head');
+assert.match(view, /const CUTE=\.66,HEAD_BIG=1\.12;/, 'residents are small and soft with a gently big head');
 assert.match(view, /function createLife\(\)/); assert.match(view, /function scatterBirds\(x,z,r\)/, 'pigeons peck and scatter');
 assert.match(view, /if\(scatterBirds\(spot\.x,spot\.z,1\.1\)\)/, 'a tap on open ground can startle them');
 assert.match(view, /const ANIMAL_SCALE=\{dog:\.5/, 'animals are scaled to match the small residents (the dog was huge)');

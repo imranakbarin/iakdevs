@@ -640,3 +640,13 @@ A `START` does not prohibit parallel edits. Avoid stepping on each other's uncom
 ### 2026-11-03 · Claude · DONE (test-only follow-ups to stage 5)
 - Outcome: master visual check failed twice on random-timing test flakes, not on runtime regressions. #177 made the banner-plane / bird-flock checks tolerate one already out. Master run 246 then failed `people get home in the evening (1 houses)` in `tests/toy-town-extras.test.cjs`; the same flake family (`a day has children`, `the bus makes its stops`) reproduces on the code from before #176, so it is pre-existing.
 - Change: `tests/toy-town-extras.test.cjs` seeds `Math.random` (default seed 20261103, `TT_SEED` overrides) so the day-in-the-life checks are reproducible. Verified on seeds 1-8 and the default. No runtime files touched.
+
+### START — Claude (Claude Code) — 2026-11-03 (people sizes and bus-shelter roofs)
+- Owner request (screenshot): heads poke through the bus-shelter roofs, people are still too big; make them smaller, a bit more realistic and softer.
+- Plan: `assets/toy-town-3d.js` `CUTE` .8 → .66 and `HEAD_BIG` 1.22 → 1.12 (animals scale with it); raise the shelter roof, posts, glass and sign so waiting people stand under it; bump cache keys (3D v66, embed v76); update the size/version asserts. Touching only Toy Town files.
+
+### 2026-11-03 · Claude · DONE (people sizes and bus-shelter roofs)
+- Outcome: people are smaller and softer: `CUTE` .8 → .66, `HEAD_BIG` 1.22 → 1.12, animals scale by `CUTE/.8`. Bus shelters: roof .35 → .53, posts, glass back and sign raised so waiting people stand under the roof. Cache keys 3D v66, embed v76.
+- Files: `assets/toy-town-3d.js`, `toy-town.html`, `index.html`, `README.md`, tests (size and version asserts).
+- Tests: `toy-town`, `-3d`, `-extras`, `-lens`, `-news` pass locally. Checked a real-WebGL close-up of a shelter: heads are under the roof and people are clearly smaller beside the cars.
+- Not verified: every prop and scene that was positioned relative to the old person height (playground, boat, station platform, parade) at close zoom; phone rendering.
