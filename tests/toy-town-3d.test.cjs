@@ -158,7 +158,7 @@ assert.match(moduleCode,/eye.scale.y=blink/,'eyelids blink without a separate an
 assert.match(html,/type="importmap"/);
 assert.match(html,/three@0\.187\.0\/build\/three\.module\.js/);
 assert.match(html,/three@0\.187\.0\/examples\/jsm\//);
-assert.match(html,/toy-town-3d\.js\?v=61/);
+assert.match(html,/toy-town-3d\.js\?v=62/);
 assert.match(html,/toy-town-landmarks\.js\?v=7/,'the independent models are requested alongside Three');
 assert.match(html,/buildLandmark:landmarks\.buildLandmark/,
   'loader injects the authored model builder into the 3D simulation');
@@ -167,7 +167,7 @@ const classicScript=html.match(/src="assets\/toy-town\.js\?v=\d+"/);
 assert.ok(classicScript&&
   html.indexOf(classicScript[0])<html.indexOf("import('three')"),
   'the actual versioned classic script always loads before WebGL');
-assert.match(page,/toy-town\.html\?v=71&embed=1/);
+assert.match(page,/toy-town\.html\?v=72&embed=1/);
 assert.match(fs.readFileSync(path.join(root,'assets/toy-town.js'),'utf8'),
   /targetX=clamp\(\.08,p\.x,17\.92\)/,
   'scripted paths are clamped at the endpoint rather than freezing outside town');
@@ -367,6 +367,18 @@ assert.equal(api.getStats().festoonBulbs,14,'two suspended spans contain 14 mini
     assert.ok(api.startParade(),'a parade sets off on request');assert.ok(api.moreStats().parade);api.stepTrain(60,0);assert.ok(!api.moreStats().parade&&api.moreStats().paradesRun>=1,'and marches off the far end');
     assert.equal(api.moreStats().gulls.length,4,'four seagulls over the river');
     assert.ok(api.burstFirework(9,2,9)&&api.moreStats().sparks>=1,'fireworks burst');api.stepTrain(3,0);assert.equal(api.moreStats().sparks,0,'and fade out');
+  }
+  {
+    // Stage 2: life follows the weather and the clock, and there is more to touch.
+    api.setWeatherForTest('rain');api.stepTrain(.5,0);let s2=api.stage2Stats();
+    assert.ok(s2.built&&s2.puddles>=5,'puddles appear in the rain');assert.ok(!s2.kiteVisible&&!s2.playVisible&&!s2.fisherVisible,'the kite flyer, the children and the fisher go indoors');
+    api.stepTrain(120,0);assert.ok(api.moreStats().gulls.every(x=>x==='perch'),'the seagulls sit it out on the bridges');
+    api.setWeatherForTest('storm');api.stepTrain(.5,0);assert.ok(!api.stage2Stats().boatVisible,'no rowing in a storm');
+    api.setWeatherForTest('snow');api.stepTrain(25,0);s2=api.stage2Stats();assert.ok(s2.snowVisible&&s2.snow>.5,'a snowman appears in the snow');
+    api.setWeatherForTest('clear');api.stepTrain(150,0);s2=api.stage2Stats();assert.ok(!s2.snowVisible,'and melts when it clears');assert.equal(s2.puddles,0,'the puddles dry');
+    api.stepTrain(.5,.9);s2=api.stage2Stats();assert.ok(s2.watchman&&s2.cats>=1,'at night a watchman strolls with his lantern and cats come out');assert.ok(s2.boards.every(b=>b==='closed'),'and the shop boards read CLOSED');
+    api.stepTrain(.5,0);s2=api.stage2Stats();assert.ok(!s2.watchman&&s2.cats===0&&s2.boards.every(b=>b==='open'),'by day the shops are OPEN again');
+    assert.ok(api.touch2(195,422),'a tap on one of the town\'s things is handled');assert.ok(Object.keys(api.stage2Stats().hits).length>=1);
   }
   const st=api.siteStats();assert.ok(st.built&&st.workers===3,'a building site with three workers on it');
   const jib0=st.jib;api.stepTrain(20,0);assert.notEqual(api.siteStats().jib,jib0,'the crane jib swings');
