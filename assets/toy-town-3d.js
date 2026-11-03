@@ -21,15 +21,15 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
   renderer.domElement.style.cssText = 'display:block;width:100%;height:100%;pointer-events:none';
   host.appendChild(renderer.domElement);
   const scene = new THREE.Scene();
-  scene.background = new THREE.Color('#cee9f5');
-  scene.fog = new THREE.Fog('#cee9f5', 24, 62);
+  scene.background = new THREE.Color('#ecdcc2');
+  scene.fog = new THREE.Fog('#ecdcc2', 22, 58);
   // A physical perspective lens instead of an orthographic drawing camera.
   // FOV is fixed; dolly distance preserves the existing 2D zoom scale,
   // while the foreground genuinely grows relative to the distant roofs.
   const camera = new THREE.PerspectiveCamera(35, 1, .08, 240);
-  const hemisphere = new THREE.HemisphereLight('#fff1dc', '#6f8580', .86);
+  const hemisphere = new THREE.HemisphereLight('#fff0d8', '#8a7a68', .86);
   scene.add(hemisphere);
-  const sun = new THREE.DirectionalLight('#ffd7a4', 2.6);
+  const sun = new THREE.DirectionalLight('#ffcb8c', 2.6);
   // A single large, raking key connects roofs, trees, streets and residents.
   sun.position.set(-18, 16, 12);   // late afternoon: longer, warmer shadows
   sun.castShadow = true;
@@ -168,7 +168,7 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
       soft[i * 3] = n.x; soft[i * 3 + 1] = n.y * 1.08; soft[i * 3 + 2] = n.z;
       let bump = 0; for (const l of lumps) bump = Math.max(bump, Math.pow(Math.max(0, n.dot(l)), 7));
       const fine = Math.sin(n.x * 23 + variant) * Math.sin(n.y * 19) * Math.sin(n.z * 21 + variant * 2) * .5 + .5;
-      const d = .78 + bump * .26 + fine * .07;
+      const d = .9 + bump * .12 + fine * .035;
       pos.setXYZ(i, n.x * radius * d, n.y * radius * d * .92, n.z * radius * d);
       const shade = THREE.MathUtils.clamp(.62 + n.y * .2 + bump * .22 + fine * .1, .42, 1.12);
       colors[i * 3] = shade * .97; colors[i * 3 + 1] = shade; colors[i * 3 + 2] = shade * .9;
@@ -1499,7 +1499,7 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
     // Smaller lawn islands soften the outer borough blocks as well, without
     // landing inside any home, river, street, or procedural event building.
     const buildings=town.buildings(),props=town.props();
-    const obstacles=[...buildings.map(b=>[b.x+.5,b.y+.5,.78]),
+    const obstacles=[...buildings.map(b=>b.kind==='site'?[b.x+1,b.y+1,2.0]:[b.x+.5,b.y+.5,.78]),
       ...props.filter(p=>p.kind==='tree').map(p=>[p.x,p.y,.42])];
     for(let by of [3.2,4.7,8.1,9.8,12.4,15.2]){
       for(let bx of [2.4,4.8,8.2,9.8,12.5,15.3]){
@@ -1557,7 +1557,7 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
       box(arch,.11,.10,.13,'#f0dec5',dx,1.405,0);
       for(let k=0;k<4;k++){
         const a=k*1.7+dx,yy=.73+k*.15;
-        const foliage=object(arch,geo('clump',.1,k%4),leafMat(k%2?'#7da481':'#628e78'),
+        const foliage=object(arch,geo('clump',.07,k%4),leafMat(k%2?'#7da481':'#628e78'),
           dx+(dx<0?.03:-.03)+Math.sin(a)*.045,yy,.035,false);
         foliage.scale.set(1,.85,.85);
         if(k%2===0){
@@ -1763,7 +1763,7 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
   // terrain layer; the simulation's 18x18 road graph stays untouched.
   function createLandscapeComposition(){
     const occupied=[
-      ...town.buildings().map(b=>[b.x+.5,b.y+.5,b.kind==='site'?1.34:.81]),
+      ...town.buildings().map(b=>b.kind==='site'?[b.x+1,b.y+1,2.35]:[b.x+.5,b.y+.5,.81]),
       ...town.props().filter(p=>!['flowers','duck'].includes(p.kind))
         .map(p=>[p.x,p.y,p.kind==='tree'?.46:.61])
     ];
@@ -2953,7 +2953,7 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
     porchLamps.push({b,glass});
   }
   function rebuild(){
-    timeVisit=null;round=null;papers=[];effects=[];porchLamps.length=0;precip=null;dusting=null;weatherKind='';
+    site.built=false;site.workers=[];timeVisit=null;round=null;papers=[];effects=[];porchLamps.length=0;precip=null;dusting=null;weatherKind='';
     ambient.length = 0; plazaLights.length = 0; festoonBulbs.length = 0;
     windowMaterials.clear();
     gardenElements = 0; woodlandShapes = 0; terrainContours = 0; composedBuildings = 0; districtGardenRooms = 0; landmarkCount = 0;
@@ -2965,8 +2965,7 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
     for(const b of town.buildings()){
       // All structures share the same ground-contact light: five bespoke
       // landmarks should not seem pasted onto brighter pavement than houses.
-      groundingShadow(b.x+.5,b.y+.5,b.kind==='site'?2.25:1.48,
-        b.kind==='site'?2.12:1.44,b.hero?.235:.166);
+      if(b.kind!=='site')groundingShadow(b.x+.5,b.y+.5,1.48,1.44,b.hero?.235:.166);
       // The five central landmarks are *entire independent models*.
       // Avoid drawing the generic body, roof, porch or old atelier overlays
       // behind them; an authored asset replaces that complete building.
@@ -2989,10 +2988,7 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
       else if(b.kind==='shop')composeSecondaryBuilding(b,shop(b));
       else if(b.kind==='tower')tower(b);
       else if(b.kind==='fire')fireStation(b);
-      else if(b.kind==='site'){
-        box(world,1.55,.42,1.5,'#dac9ac',b.x+.5,.24,b.y+.5);
-        box(world,.4,.55,.43,'#bda78b',b.x+.7,.75,b.y+.6);
-      }
+      else if(b.kind==='site')buildingSite(b);
     }
     const ps=town.props();
     for(let i=0;i<ps.length;i++)smallProps(ps[i],i);
@@ -3552,6 +3548,118 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
       if(d>.02){const v=Math.min(d,.09*dt);s.x+=dx/d*v;s.z+=dz/d*v;s.g.rotation.y=-Math.atan2(dz,dx);s.head.rotation.z=0;s.g.position.set(s.x,.17+Math.abs(Math.sin(s.ph*7))*.006,s.z);}
       else{s.head.rotation.z=s.wait>0&&Math.sin(s.ph*.7)>-.2?-.55:0;   // grazing
         if(s.wait<=0){s.tx=x0+.1+Math.random()*(x1-x0-.2);s.tz=z0+.2+Math.random()*(z1-z0-.4);s.wait=3+Math.random()*6;}}
+    }
+  }
+
+  /* ---- The building site: a hoarded plot with a half-built house (slab, brick
+     walls with window gaps, scaffolding, rafters), a tower crane whose jib swings
+     and whose hook lifts a load, a cement mixer, bricks, sand, cones, a sign and
+     hard-hatted workers who really work. ---- */
+  const site={crane:null,jib:null,hook:null,load:null,mixer:null,workers:[],t:0,built:false};
+  function buildingSite(b){
+    const cx=b.x+1,cz=b.y+1,base=.17,g=new THREE.Group();world.add(g);
+    const S=3.25;
+    // Packed-earth pad with tyre tracks, a kerb of sandbags and the hoarding.
+    box(g,S,.03,S,'#d9c39d',cx,base+.005,cz,false).receiveShadow=true;
+    for(const k of [-.55,.55])box(g,.07,.012,S*.78,'#c3ab81',cx+k,base+.025,cz+.1,false);
+    const fence=(x0,z0,x1,z1,gap)=>{
+      const n=Math.max(2,Math.round(Math.hypot(x1-x0,z1-z0)/.42));
+      for(let i=0;i<n;i++){
+        const t0=i/n,t1=(i+1)/n;if(gap&&t0>gap[0]&&t1<gap[1])continue;
+        const mx=(x0+(x1-x0)*(t0+t1)/2),mz=(z0+(z1-z0)*(t0+t1)/2),len=Math.hypot(x1-x0,z1-z0)/n,ang=-Math.atan2(z1-z0,x1-x0);
+        const panel=box(g,len*.96,.19,.022,i%2?'#f5c04b':'#f7d36d',mx,base+.13,mz);panel.rotation.y=ang;panel.castShadow=false;
+        const stripe=box(g,len*.96,.035,.026,'#d66a3a',mx,base+.2,mz,false);stripe.rotation.y=ang;
+        const post=box(g,.03,.24,.03,'#9a7b5b',mx-Math.cos(ang)*len/2,base+.14,mz+Math.sin(ang)*len/2,false);post.castShadow=false;
+      }
+    };
+    const h=S/2;
+    fence(cx-h,cz-h,cx+h,cz-h);fence(cx-h,cz-h,cx-h,cz+h);fence(cx+h,cz-h,cx+h,cz+h);fence(cx-h,cz+h,cx+h,cz+h,[.38,.62]);
+    // Gate posts and the sign.
+    for(const gx of [cx-.2,cx+.2])box(g,.04,.3,.04,'#8a6d4e',gx,base+.17,cz+h,false);
+    sign(g,'BUILDING SITE',cx,base+.43,cz+h+.02,.62);
+    // The half-built house: slab, brick walls with window gaps, scaffold, rafters.
+    const hx=cx-.55,hz=cz+.05;
+    box(g,1.2,.07,.95,'#b9b6ae',hx,base+.05,hz);
+    const brick=mat('#c8745f',.95),brickB=mat('#d98b72',.95);
+    const wall=(w,d,x,z,lenFull)=>{
+      const wallMesh=box(g,w,.3,d,brick,x,base+.25,z);
+      for(let r=0;r<3;r++)box(g,w*(r===2?.55:1),.012,d*1.04,brickB,x-(r===2?w*.22:0),base+.15+r*.1,z,false);
+    };
+    wall(1.2,.07,hx,hz-.45);wall(.07,.95,hx-.58,hz);wall(.07,.62,hx+.58,hz-.15);
+    wall(.45,.07,hx-.37,hz+.45);wall(.45,.07,hx+.37,hz+.45);   // front wall with a door gap
+    box(g,.4,.04,.07,'#b9b6ae',hx,base+.1,hz+.45,false);
+    // Scaffolding on the front: poles, ledgers and planks.
+    for(const px of [-.62,-.2,.2,.62])cylinder(g,.012,.012,.78,'#c7ccd1',hx+px,base+.43,hz+.62).castShadow=false;
+    for(const y of [.28,.5,.7])box(g,1.3,.014,.012,'#c7ccd1',hx,base+y,hz+.62,false);
+    box(g,1.3,.025,.14,'#c99a64',hx,base+.5,hz+.55,false);box(g,1.3,.025,.14,'#c99a64',hx,base+.7,hz+.55,false);
+    for(const px of [-.5,0,.5])box(g,.012,.4,.012,'#c7ccd1',hx+px,base+.5,hz+.62,false).rotation.z=px?.5*Math.sign(px):0;
+    // Roof frame: a few rafters against the sky.
+    for(let k=-2;k<=2;k++){const r=box(g,.025,.025,.72,'#d2a56e',hx+k*.26,base+.58,hz-.15,false);r.rotation.x=.0;}
+    box(g,1.25,.025,.025,'#d2a56e',hx,base+.7,hz-.15,false);
+    // Tower crane: lattice mast, slewing jib, counterweight, cab, hook and a swinging load.
+    const kx=cx+1.05,kz=cz-.95,yellow=mat('#f2b632',.6),dark=mat('#4a4a4a',.7);
+    box(g,.2,.06,.2,'#8d8d8d',kx,base+.04,kz);
+    for(const [dx,dz] of [[-.07,-.07],[.07,-.07],[-.07,.07],[.07,.07]])box(g,.018,1.9,.018,yellow,kx+dx,base+.99,kz+dz,false);
+    for(let k=0;k<9;k++){const y=base+.14+k*.2;box(g,.15,.012,.012,yellow,kx,y,kz-.07,false);box(g,.15,.012,.012,yellow,kx,y,kz+.07,false);box(g,.012,.012,.15,yellow,kx-.07,y,kz,false);box(g,.012,.012,.15,yellow,kx+.07,y,kz,false);}
+    const slew=new THREE.Group();slew.position.set(kx,base+1.95,kz);g.add(slew);
+    box(slew,.14,.12,.14,'#e8a62b',0,0,0);box(slew,.1,.1,.12,'#9cc4d4',.08,.03,0);
+    box(slew,2.1,.035,.035,yellow,.85,.09,0,false);box(slew,.55,.035,.035,yellow,-.35,.09,0,false);
+    for(let k=0;k<7;k++)box(slew,.012,.09,.012,yellow,-.05+k*.28,.05,0,false);
+    box(slew,.2,.11,.1,'#6d6d6d',-.58,.03,0);
+    const trolley=new THREE.Group();slew.add(trolley);trolley.position.set(1.2,.07,0);
+    box(trolley,.05,.03,.05,dark,0,0,0,false);
+    const cable=cylinder(trolley,.004,.004,1,'#3a3a3a',0,-.5,0);cable.castShadow=false;
+    const hook=new THREE.Group();trolley.add(hook);
+    box(hook,.06,.05,.05,'#d94b3a',0,0,0);
+    const load=box(hook,.16,.1,.12,'#a97b5c',0,-.09,0);box(hook,.16,.012,.12,'#c99a64',0,-.14,0,false);
+    site.slew=slew;site.trolley=trolley;site.cable=cable;site.hook=hook;site.load=load;site.kx=kx;site.kz=kz;
+    // Cement mixer, brick pile, sand heap, pipes, cones, wheelbarrow.
+    const mix=new THREE.Group();mix.position.set(cx+.75,base+.05,cz+.65);g.add(mix);
+    const drum=cylinder(mix,.1,.07,.2,'#e8664d',0,.12,0);drum.rotation.z=.9;site.mixer=drum;
+    box(mix,.04,.1,.2,'#555',0,.04,0,false);
+    for(let r=0;r<3;r++)for(let c=0;c<4;c++)box(g,.07,.03,.035,brick,cx-1.2+c*.075,base+.035+r*.032,cz-.55-(r%2)*.01,false);
+    const sand=ball(g,.2,mat('#e3cf9c',1),cx-1.0,base+.02,cz+.78);sand.scale.set(1,.5,.9);
+    for(let k=0;k<5;k++)cylinder(g,.016,.016,.3,'#9aa3aa',cx+.75,base+.04+(k>2?.032:0),cz-.45+k*.034-(k>2?.1:0)).rotation.z=Math.PI/2;
+    for(const [px,pz] of [[cx-.1,cz+h-.15],[cx+.1,cz+h-.15],[cx+h-.15,cz+.2],[cx-h+.2,cz-.9],[cx+.2,cz-.7],[cx-.95,cz+.4]]){
+      cylinder(g,.012,.034,.09,'#ff7a2e',px,base+.065,pz).castShadow=false;box(g,.07,.01,.07,'#ff7a2e',px,base+.02,pz,false);
+    }
+    const barrow=new THREE.Group();barrow.position.set(cx-.15,base,cz+.55);barrow.rotation.y=.4;g.add(barrow);
+    box(barrow,.14,.05,.1,'#7e8a95',0,.065,0);cylinder(barrow,.03,.03,.02,'#333',.09,.035,0).rotation.x=Math.PI/2;
+    // Workers with yellow hard hats: one hammers, one carries bricks, one looks at the plans.
+    site.workers=[];
+    const spots=[{x:hx-.25,z:hz+.38,job:'hammer',face:-Math.PI/2*0+Math.PI},{x:hx+.3,z:hz+.35,job:'carry',a:[cx-1.15,cz-.4],b:[hx+.3,hz+.35]},{x:cx+.35,z:cz+.35,job:'plans',face:Math.PI*.7}];
+    spots.forEach((sp,i)=>{
+      const p=person({col:['#f08a4b','#6fb0d9','#f2d06b'][i],skin:['#d8a77c','#f1c9a5','#a8754f'][i],hair:'#333947',ph:i*2.3+1,x:i+9,y:i*3});
+      p.scale.setScalar(.9);g.add(p);
+      const hat=ball(p.userData.limbs.headPivot,.118,mat('#ffd23f',.5),0,.07,0);hat.scale.set(1,.62,1);hat.position.y=.08+.0;
+      ball(p.userData.limbs.headPivot,.03,mat('#ffd23f',.5),0,.14,0);
+      const w={g:p,sp,x:sp.x,z:sp.z,ph:i*1.7,carry:false,job:sp.job,leg:0};p.position.set(w.x,base,w.z);p.rotation.y=sp.face||0;site.workers.push(w);
+    });
+    site.built=true;site.t=0;
+  }
+  function updateSite(dt){
+    if(!site.built)return;
+    site.t+=dt;const t=site.t;
+    // Crane: the jib slowly swings, the trolley runs out and in, the load goes up and down.
+    site.slew.rotation.y=Math.sin(t*.12)*1.1+.5;
+    const reach=.9+Math.sin(t*.21)*.35;site.trolley.position.x=reach;
+    const drop=.55+Math.sin(t*.33)*.3;site.hook.position.y=-drop;site.cable.scale.y=drop;site.cable.position.y=-drop/2;
+    site.load.rotation.y=Math.sin(t*.9)*.15;site.hook.rotation.z=Math.sin(t*.6)*.05;
+    if(site.mixer)site.mixer.rotation.y+=dt*2.2;
+    for(const w of site.workers){
+      w.ph+=dt*6;const L=w.g.userData.limbs;let walking=false;
+      if(w.job==='hammer'){
+        const swing=Math.sin(w.ph*1.4);
+        if(L){L.arms[1].rotation.x=-1.2+swing*.7;L.arms[0].rotation.x=-.5;L.elbows?.forEach(e=>{e.rotation.x=-.6;});}
+      }else if(w.job==='carry'){
+        w.leg=(w.leg||0)+dt*.12;const k=(Math.sin(w.leg*Math.PI*2)+1)/2,A=w.sp.a,B=w.sp.b;
+        const nx=A[0]+(B[0]-A[0])*k,nz=A[1]+(B[1]-A[1])*k;walking=Math.hypot(nx-w.x,nz-w.z)>.0007;
+        if(walking)w.g.rotation.y=Math.atan2(nx-w.x,nz-w.z);w.x=nx;w.z=nz;
+        if(L){const a=walking?Math.sin(w.ph*1.5)*.55:0;L.legs?.forEach((l,j)=>{l.rotation.x=(j?1:-1)*a;});L.arms?.forEach(a2=>{a2.rotation.x=-.9;});}
+      }else if(L){
+        L.headPivot.rotation.x=-.25+Math.sin(w.ph*.15)*.1;L.arms[1].rotation.x=-.9;L.elbows?.forEach(e=>{e.rotation.x=-.9;});
+      }
+      w.g.position.set(w.x,.17+(walking?Math.abs(Math.sin(w.ph*1.5))*.01:0),w.z);
     }
   }
 
@@ -4156,7 +4264,7 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
     hemisphere.intensity=.86-dark*.3;
     sun.intensity=2.6-dark*1.9;
     rim.intensity=.39+dark*.06;
-    sun.color.set(tint('#ffd7a4','#ee9c70',dusk));
+    sun.color.set(tint('#ffcb8c','#ee9c70',dusk));
     rim.color.set(tint('#c0dedb','#a8b6cb',dusk));
     for(const lantern of plazaLights)lantern.intensity=dark*7.2;
     {const under=SUN_UNDER[weatherKind]??1;sun.intensity*=under;hemisphere.intensity*=.82+under*.18;
@@ -4169,7 +4277,7 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
       pane.emissiveIntensity=(pane.userData?.warm?.12:.04)+
         dark*(pane.userData?.warm?1.02:.66);
     }
-    {const sky=tint('#cee9f5','#91a9c5',dusk),grey=(SUN_UNDER[weatherKind]??1)<.9;   // an overcast sky under rain, storm, fog or snow
+    {const sky=tint('#ecdcc2','#8f9fc0',dusk),grey=(SUN_UNDER[weatherKind]??1)<.9;   // an overcast sky under rain, storm, fog or snow
      scene.background.set(grey?tint(sky,weatherKind==='snow'?'#dfe4ea':'#9aa3ab',weatherKind==='storm'?.6:.42):sky);}
     scene.fog.color.copy(scene.background);
     renderer.toneMappingExposure=.98-dark*.12;
@@ -4270,7 +4378,7 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
       syncActors();syncCamera();light(state.night||0);nightLife(state.night||0,state.clock||0);updateFollowCard();updateMoments();updateWeather(1/45);
       // Driven by the town's own clock, so they pause with the town.
       {const now=state.clock||0;const dt=lastClockAt===null?0:THREE.MathUtils.clamp(now-lastClockAt,0,.1);lastClockAt=now;sceneClock+=dt;
-       updateVisit(dt);updateRound(dt,state.night||0);updateEffects(dt);updateTrain(dt,state.night||0);updateFarm(dt);}
+       updateVisit(dt);updateRound(dt,state.night||0);updateEffects(dt);updateTrain(dt,state.night||0);updateFarm(dt);updateSite(dt);}
       placeBubble();
       animateAmbient(state.clock||0);
       const drawStart=clockMs();
@@ -4306,7 +4414,10 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
     // Test hooks: start the visitor or the paper round now.
     startVisit:()=>{if(!onThisDay.length)onThisDay=[{year:1969,text:'Apollo 11 lands on the Moon'}];startVisit();return timeVisit;},startRound:()=>{startRound();return round;},
     stepExtras:(seconds,dark=0)=>{for(let t=0;t<seconds;t+=.05){sceneClock+=.05;updateVisit(.05);updateRound(.05,dark);updateEffects(.05);}},
-    stepTrain:(seconds,dark=0)=>{for(let t=0;t<seconds;t+=.05){updateTrain(.05,dark);updateFarm(.05);}},
+    stepTrain:(seconds,dark=0)=>{for(let t=0;t<seconds;t+=.05){updateTrain(.05,dark);updateFarm(.05);updateSite(.05);}},
+    contours:()=>world.children.filter(o=>o.userData.landscapeContour).map(o=>[+o.position.x.toFixed(2),+o.position.z.toFixed(2)]),
+    probe:(x,z,r)=>world.children.filter(o=>Math.hypot(o.position.x-x,o.position.z-z)<r).map(o=>[o.type,o.geometry?.type,o.geometry?.parameters?.radius,+o.position.x.toFixed(2),+o.position.y.toFixed(2),+o.position.z.toFixed(2),o.material?.color?.getHexString?.(),Object.keys(o.userData||{}).join('|')]).slice(0,40),
+    siteStats:()=>({built:site.built,workers:site.workers.length,jib:site.slew?.rotation.y||0,t:site.t}),
     farmStats:()=>({sheep:farm.sheep.length,sails:!!farm.sails,spin:farm.sails?.rotation.x||0,at:farm.sheep.map(x=>[+x.x.toFixed(2),+x.z.toFixed(2)])}),
     railStats:()=>({len:rail.len,s:rail.s,v:rail.v,state:rail.state,stops:rail.stops,toots:rail.toots,units:rail.train?.units.length||0,pax:rail.pax.map(p=>p.state),stationS:rail.stationS,doors:rail.doors}),
     railTap:(x,y)=>trainHit(x,y),
