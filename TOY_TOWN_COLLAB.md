@@ -545,3 +545,10 @@ A `START` does not prohibit parallel edits. Avoid stepping on each other's uncom
 - Likely files: `toy-town.html`, `assets/toy-town-3d.js`, `assets/toy-town.js`, `index.html` (cache key), tests, README, this file.
 - Status: in progress.
 
+### DONE — Claude (Claude Code) — 2026-11-03 (remove the cinematic filter; ducks off the bridges; windmill that visibly turns)
+- Outcome: the warm cinematic grade is gone, ducks no longer float on bridge decks, and the windmill turns visibly. Implementation commit `6230511d` (CI `toy-town-visual` run 41646031941 **success**); squash-merged with this entry.
+- Cinematic filter removed (owner request): `toy-town.html` back to the previous CSS (`saturate(1.42) contrast(1.11)`, lens `saturate(1.3) contrast(1.08)`, the original faint vignette), the `?nograde` switch deleted; `assets/toy-town-3d.js` sun / hemisphere / sky / fog colours back to the earlier values. (The building site, rounder trees and everything else from #155 stay.)
+- Ducks: `assets/toy-town.js` (v37) `onBridge` / `clearOfBridges` with `BRIDGE_HALF = .72`: ducks spawn clear of the bridge spans, turn round at a deck (ordinary paddling and crumb-chasing), and a duck found inside a span is nudged out. Extras test runs 400 s with two crumb tosses (one at a bridge) on a fresh layout and asserts no duck is ever inside a span.
+- Windmill: `assets/toy-town-3d.js` (v59) sails now face south (toward the camera; before they faced west and were edge-on) and turn at .9 rad/s (storm faster); the extras test pins the rotation code; screenshots 1.7 s apart show the sails in different positions.
+- Cache keys sim v37, 3D v59, embed v69. Tests: all `tests/*.test.cjs` pass locally. Not verified: real iPhone/GPU look.
+

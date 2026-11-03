@@ -21,15 +21,15 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
   renderer.domElement.style.cssText = 'display:block;width:100%;height:100%;pointer-events:none';
   host.appendChild(renderer.domElement);
   const scene = new THREE.Scene();
-  scene.background = new THREE.Color('#ecdcc2');
-  scene.fog = new THREE.Fog('#ecdcc2', 22, 58);
+  scene.background = new THREE.Color('#cee9f5');
+  scene.fog = new THREE.Fog('#cee9f5', 24, 62);
   // A physical perspective lens instead of an orthographic drawing camera.
   // FOV is fixed; dolly distance preserves the existing 2D zoom scale,
   // while the foreground genuinely grows relative to the distant roofs.
   const camera = new THREE.PerspectiveCamera(35, 1, .08, 240);
-  const hemisphere = new THREE.HemisphereLight('#fff0d8', '#8a7a68', .86);
+  const hemisphere = new THREE.HemisphereLight('#fff1dc', '#6f8580', .86);
   scene.add(hemisphere);
-  const sun = new THREE.DirectionalLight('#ffcb8c', 2.6);
+  const sun = new THREE.DirectionalLight('#ffd7a4', 2.6);
   // A single large, raking key connects roofs, trees, streets and residents.
   sun.position.set(-18, 16, 12);   // late afternoon: longer, warmer shadows
   sun.castShadow = true;
@@ -3556,12 +3556,13 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
     const body=object(g,geo('cylinder',.17,.25,.78),mat('#f6ecd9',.9),wx,base+.39,wz);
     object(g,geo('cylinder',.19,.19,.04),mat('#d98b6b',.8),wx,base+.79,wz);
     const cap=object(g,new THREE.ConeGeometry(.2,.26,16),mat('#d98b6b',.8),wx,base+.93,wz);
-    box(g,.1,.17,.02,'#a97b5c',wx-.2,base+.1,wz);
-    for(const k of [-1,1])box(g,.02,.08,.07,'#a9d3d8',wx-.17,base+.5,wz+k*.0+(k*0));
-    const hub=new THREE.Group();hub.position.set(wx-.2,base+.7,wz);g.add(hub);
+    box(g,.1,.17,.02,'#a97b5c',wx,base+.1,wz+.22);
+    for(const k of [-1,1])box(g,.07,.08,.02,'#a9d3d8',wx+k*.1,base+.5,wz+.19);
+    // The sails face the front (south, toward the camera) so the turning is plain to see.
+    const hub=new THREE.Group();hub.position.set(wx,base+.7,wz+.24);g.add(hub);
     ball(hub,.04,mat('#7c5b45',.7),0,0,0);
-    for(let k=0;k<4;k++){const arm=new THREE.Group();arm.rotation.x=k*Math.PI/2;hub.add(arm);
-      box(arm,.012,.36,.02,'#8b6a52',0,.2,0,false);box(arm,.01,.26,.12,'#fff7e6',0,.25,.075*(k%2?1:1),false);}
+    for(let k=0;k<4;k++){const arm=new THREE.Group();arm.rotation.z=k*Math.PI/2;hub.add(arm);
+      box(arm,.02,.4,.014,'#8b6a52',0,.2,0,false);box(arm,.13,.27,.01,'#fff7e6',.075,.25,.0,false);}
     farm.sails=hub;
     for(const [bx,bz] of [[17.55,8.55],[17.5,10.6]]){const bale=object(g,geo('cylinder',.08,.08,.14),mat('#e6c978',.95),bx,base+.08,bz);bale.rotation.x=Math.PI/2;}
     // Pasture on the west edge: low fence, a trough, a few woolly sheep.
@@ -3585,7 +3586,7 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
     }
   }
   function updateFarm(dt){
-    if(farm.sails)farm.sails.rotation.x+=dt*(.35+(weatherKind==='storm'?1.2:weatherKind==='rain'?.5:0));
+    if(farm.sails)farm.sails.rotation.z-=dt*(.9+(weatherKind==='storm'?1.8:weatherKind==='rain'?.6:0));
     const {x0,x1,z0,z1}=farm.pen;
     for(const s of farm.sheep){
       s.ph+=dt;s.wait-=dt;
@@ -4632,7 +4633,7 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
     hemisphere.intensity=.86-dark*.3;
     sun.intensity=2.6-dark*1.9;
     rim.intensity=.39+dark*.06;
-    sun.color.set(tint('#ffcb8c','#ee9c70',dusk));
+    sun.color.set(tint('#ffd7a4','#ee9c70',dusk));
     rim.color.set(tint('#c0dedb','#a8b6cb',dusk));
     for(const lantern of plazaLights)lantern.intensity=dark*7.2;
     {const under=SUN_UNDER[weatherKind]??1;sun.intensity*=under;hemisphere.intensity*=.82+under*.18;
@@ -4644,7 +4645,7 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
       pane.emissiveIntensity=(pane.userData?.warm?.12:.04)+
         dark*(pane.userData?.warm?1.02:.66);
     }
-    {const sky=tint('#ecdcc2','#8f9fc0',dusk),grey=(SUN_UNDER[weatherKind]??1)<.9;   // an overcast sky under rain, storm, fog or snow
+    {const sky=tint('#cee9f5','#91a9c5',dusk),grey=(SUN_UNDER[weatherKind]??1)<.9;   // an overcast sky under rain, storm, fog or snow
      scene.background.set(grey?tint(sky,weatherKind==='snow'?'#dfe4ea':'#9aa3ab',weatherKind==='storm'?.6:.42):sky);}
     scene.fog.color.copy(scene.background);
     renderer.toneMappingExposure=.98-dark*.12;
@@ -4790,7 +4791,7 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
     contours:()=>world.children.filter(o=>o.userData.landscapeContour).map(o=>[+o.position.x.toFixed(2),+o.position.z.toFixed(2)]),
     probe:(x,z,r)=>world.children.filter(o=>Math.hypot(o.position.x-x,o.position.z-z)<r).map(o=>[o.type,o.geometry?.type,o.geometry?.parameters?.radius,+o.position.x.toFixed(2),+o.position.y.toFixed(2),+o.position.z.toFixed(2),o.material?.color?.getHexString?.(),Object.keys(o.userData||{}).join('|')]).slice(0,40),
     siteStats:()=>({built:site.built,workers:site.workers.length,jib:site.slew?.rotation.y||0,t:site.t}),
-    farmStats:()=>({sheep:farm.sheep.length,sails:!!farm.sails,spin:farm.sails?.rotation.x||0,at:farm.sheep.map(x=>[+x.x.toFixed(2),+x.z.toFixed(2)])}),
+    farmStats:()=>({sheep:farm.sheep.length,sails:!!farm.sails,spin:-(farm.sails?.rotation.z||0),at:farm.sheep.map(x=>[+x.x.toFixed(2),+x.z.toFixed(2)])}),
     railStats:()=>({len:rail.len,s:rail.s,v:rail.v,state:rail.state,stops:rail.stops,toots:rail.toots,units:rail.train?.units.length||0,pax:rail.pax.map(p=>p.state),stationS:rail.stationS,doors:rail.doors}),
     railTap:(x,y)=>trainHit(x,y),
     railSet:v=>{rail.s=v;rail.state='run';rail.away=1e3;rail.v=1;rail.lastS=v;placeTrain();return v;},railLen:()=>rail.len,

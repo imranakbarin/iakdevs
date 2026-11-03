@@ -113,7 +113,7 @@ assert.match(moduleCode,/districtSceneRole=p\.role/,
   'workplace roles survive into the 3D scene');
 assert.match(moduleCode,/districtTool=tool/,
   'real job-specific tools attach to resident wrists');
-assert.match(moduleCode,/const sky=tint\('#ecdcc2'/,
+assert.match(moduleCode,/const sky=tint\('#cee9f5'/,
   'the entire town shares a clearer, colorful daylight sky');
 assert.match(moduleCode,/kind:'umbrella'/,'visible animated café canopies add a lively street silhouette');
 assert.match(moduleCode,/kind:'bunting'/,'real suspended flags sway over the plaza');
@@ -121,10 +121,10 @@ assert.match(moduleCode,/kind:'pinwheel'/,'living village pinwheels animate cont
 assert.match(moduleCode,/kind:'balloon'/,'tethered colored balloons enliven the village');
 assert.match(moduleCode,/plazaInlay=true/,'colorful authored art grounds the central plaza');
 assert.match(moduleCode,/kind:'butterfly'/,'butterflies animate over planted areas');
-assert.match(html,/saturate\(1\.36\) contrast\(1\.09\) sepia\(\.07\)/,
-  'mobile WebGL receives a coherent, warm cinematic colour grade');
-assert.match(html,/radial-gradient\(ellipse 78% 70% at 50% 46%/,'a soft vignette adds depth without any blur');
-assert.doesNotMatch(html,/#town-3d[^{]*\{[^}]*blur\(/,'the grade never blurs');
+assert.match(html,/saturate\(1\.42\) contrast\(1\.11\)/,
+  'mobile WebGL receives a coherent richer color grade');
+assert.doesNotMatch(html,/sepia\(|nograde/,'no cinematic filter');
+assert.doesNotMatch(html,/#town-3d[^{]*\{[^}]*blur\(/,'and never any blur');
 assert.match(moduleCode,/function gardenIsland\(/,
   'garden beds have shaped earth volumes rather than floating square props');
 assert.match(moduleCode,/const cafeSet=/,'the village includes modeled cafe seating');
@@ -158,16 +158,16 @@ assert.match(moduleCode,/eye.scale.y=blink/,'eyelids blink without a separate an
 assert.match(html,/type="importmap"/);
 assert.match(html,/three@0\.187\.0\/build\/three\.module\.js/);
 assert.match(html,/three@0\.187\.0\/examples\/jsm\//);
-assert.match(html,/toy-town-3d\.js\?v=58/);
+assert.match(html,/toy-town-3d\.js\?v=59/);
 assert.match(html,/toy-town-landmarks\.js\?v=7/,'the independent models are requested alongside Three');
 assert.match(html,/buildLandmark:landmarks\.buildLandmark/,
   'loader injects the authored model builder into the 3D simulation');
-assert.match(html,/toy-town\.js\?v=36/);
+assert.match(html,/toy-town\.js\?v=37/);
 const classicScript=html.match(/src="assets\/toy-town\.js\?v=\d+"/);
 assert.ok(classicScript&&
   html.indexOf(classicScript[0])<html.indexOf("import('three')"),
   'the actual versioned classic script always loads before WebGL');
-assert.match(page,/toy-town\.html\?v=68&embed=1/);
+assert.match(page,/toy-town\.html\?v=69&embed=1/);
 assert.match(fs.readFileSync(path.join(root,'assets/toy-town.js'),'utf8'),
   /targetX=clamp\(\.08,p\.x,17\.92\)/,
   'scripted paths are clamped at the endpoint rather than freezing outside town');
