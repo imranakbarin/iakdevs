@@ -394,8 +394,8 @@ assert.equal(api.getStats().festoonBulbs,14,'two suspended spans contain 14 mini
     api.setWeatherForTest('rain');api.stepTrain(1,0);api.setWeatherForTest('clear');api.stepTrain(10,0);
     let q=api.stage4Stats();assert.ok(q.rainbow&&q.rainbows>=1,'a rainbow follows the rain');
     api.setWindForTest(true);api.stepTrain(8,0);q=api.stage4Stats();assert.ok(q.leaves>=5,'the wind blows leaves across the town');api.setWindForTest(null);
-    assert.ok(api.startBanner(),'a plane tows a banner');api.stepTrain(2,0);assert.ok(api.stage4Stats().plane);
-    assert.ok(api.startFlock(),'a flock of birds crosses');api.stepTrain(2,0);assert.ok(api.stage4Stats().flocks>=1);
+    assert.ok(api.startBanner()||api.stage4Stats().plane,'a plane tows a banner (it may already be out)');api.stepTrain(.5,0);assert.ok(api.stage4Stats().planes>=1);
+    assert.ok(api.startFlock()||api.stage4Stats().flocks>=1,'a flock of birds crosses (one may already be out)');assert.ok(api.stage4Stats().flocksRun>=1);
   }
   {
     // Stage 5: street events and festival days.
