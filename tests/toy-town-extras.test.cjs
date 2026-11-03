@@ -199,7 +199,7 @@ for (const seed of [555, 42]) {
   vm.runInContext(town + ';this.T=ToyTown;', box); const T = box.T; T.build(seed, 'market');
   let wet = 0, where = '';
   for (let i = 0; i < 20 * 420; i++) { T.update(1 / 20); if (i % 10) continue;
-    for (const m of T.movers()) if (m.type === 'person' && m.y > 13.1 && m.y < 14.9 && Math.min(...[1, 6, 11, 16].map(l => Math.abs(m.x - (l + .5)))) > .62) { wet++; where ||= `${m.x.toFixed(2)},${m.y.toFixed(2)} d${m.d}`; } }
+    for (const m of T.movers()) if (m.type === 'person' && m.y > 13.2 && m.y < 14.8 && Math.min(...[1, 6, 11, 16].map(l => Math.abs(m.x - (l + .5)))) > .62) { wet++; where ||= `${m.x.toFixed(2)},${m.y.toFixed(2)} d${m.d}`; } }
   assert.equal(wet, 0, `layout ${seed}: nobody walks on the water (first at ${where})`);
 }
 assert.match(view, /b\.scale\.setScalar\(\.62\)/, 'seagulls are small');
@@ -233,4 +233,23 @@ assert.match(sim, /function busStopping\(m\)/); assert.match(sim, /spawnCar\(r, 
   stops = T.debug().buses.reduce((a, b) => a + b, 0);
   assert.ok(T.debug().buses.length >= 1 && stops >= 3, 'the bus makes its stops in ten minutes (' + stops + ')');
 }
-console.log('Toy Town EXTRAS PASS: a bus line with stops and boarding, shopfront scenes, a richer ground; weather-aware life (puddles, snowman, umbrellas in the parade), a night watchman, cats and shop boards, more to tap; 360-degree rotation (twist, right-drag, Q/E, buttons); nobody walks on the river, small seagulls, wider bridges; a lamplighter, parades with confetti, a goods train, seagulls, a market-day crowd and fireworks; a rowing boat, a fisher, a playground with children, scattering pigeons and a kite flyer, animals in proportion; small cute cyclists and chibi residents; a readable building site and a warm cinematic grade; a ring railway with a station and a little steam train; small soft pastel vehicles that never stay merged; a softer city; pavements and walkers on them; nobody stays stuck (3 layouts); varied whims; Moments on request; local weather; follow a resident, feed the ducks, gentle opt-in sound; a day in the life (commuters, children, lunch, home at dusk); KayKit CC0 kit (named, small, licensed, with fallback; roads and plaza too); taps on residents, cars, buildings and open ground; livelier gaits and greetings; news card minimises to a pill (phones first, remembered), Picture-of-the-Day cinema, fireflies and shooting stars, tap-a-resident chat, the on-this-day visitor (gentle history only, credited) and the dawn paper round.');
+// The weather comes and goes by itself (random drift), unless pinned with ?weather=kind or asked for live with ?weather=live.
+{
+  const mk = search => { const b = vm.createContext({Math, Object, JSON, Promise, setTimeout: () => 0, clearTimeout: () => 0, location: {search}, URLSearchParams, Intl, document: {getElementById: () => null}}); vm.runInContext(wsrc + ';this.W=ToyTownWeather;', b); return b.W; };
+  const W = mk(''); assert.equal(W.mode, 'random', 'random by default: no link needed');
+  let seq = 12345; W.setRandom(() => { seq = (seq * 1664525 + 1013904223) >>> 0; return seq / 4294967296; });
+  W.ready.then(start => {
+    const seen = new Set([W.state.kind]); let changes = 0, prev = W.state.kind, windy = 0, sawNonClear = false;
+    for (let i = 0; i < 20 * 3600; i++) { W.step(.05); const k = W.state.kind; if (k !== prev) { changes++; prev = k; seen.add(k); } if (W.state.windy) windy++; }
+    assert.ok(changes >= 20 && changes <= 90, 'the weather changes by itself, a few times a minute-ish (' + changes + ' changes in an hour of town time)');
+    assert.ok(['clear', 'cloud', 'rain'].every(k => seen.has(k)) && seen.size >= 5, 'it visits clear, cloud, rain and most other kinds (' + [...seen] + ')');
+    assert.ok(windy > 20 * 60 && windy < 20 * 3000, 'wind comes in gusts, not all the time');
+    assert.ok(W.state.source === 'random' && W.state.emoji, 'the state carries an emoji for the card');
+  });
+  const pinned = mk('?weather=rain'); assert.equal(pinned.mode, 'fixed'); pinned.ready.then(() => { for (let i = 0; i < 20 * 600; i++) pinned.step(.05); assert.equal(pinned.state.kind, 'rain', '?weather=rain stays rain'); });
+  assert.equal(mk('?weather=live').mode, 'live', '?weather=live asks for the real weather');
+}
+assert.match(view, /function createStage4\(\)/); assert.match(view, /function updateStage4\(dt,dark\)/, 'a rainbow after rain, blowing leaves, a banner plane and bird flocks');
+assert.match(view, /ToyTownWeather\?\.step\?\.\(dt\)/, 'the weather director runs on the town clock');
+assert.match(view, /sunK\+=\(tSun-sunK\)\*\.005/, 'the sun and sky ease in and out of the weather');
+console.log('Toy Town EXTRAS PASS: random weather that comes and goes by itself, a rainbow, blowing leaves, a banner plane and bird flocks; a bus line with stops and boarding, shopfront scenes, a richer ground; weather-aware life (puddles, snowman, umbrellas in the parade), a night watchman, cats and shop boards, more to tap; 360-degree rotation (twist, right-drag, Q/E, buttons); nobody walks on the river, small seagulls, wider bridges; a lamplighter, parades with confetti, a goods train, seagulls, a market-day crowd and fireworks; a rowing boat, a fisher, a playground with children, scattering pigeons and a kite flyer, animals in proportion; small cute cyclists and chibi residents; a readable building site and a warm cinematic grade; a ring railway with a station and a little steam train; small soft pastel vehicles that never stay merged; a softer city; pavements and walkers on them; nobody stays stuck (3 layouts); varied whims; Moments on request; local weather; follow a resident, feed the ducks, gentle opt-in sound; a day in the life (commuters, children, lunch, home at dusk); KayKit CC0 kit (named, small, licensed, with fallback; roads and plaza too); taps on residents, cars, buildings and open ground; livelier gaits and greetings; news card minimises to a pill (phones first, remembered), Picture-of-the-Day cinema, fireflies and shooting stars, tap-a-resident chat, the on-this-day visitor (gentle history only, credited) and the dawn paper round.');

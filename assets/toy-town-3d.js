@@ -2699,7 +2699,8 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
   /* ---- Weather from ToyTownWeather (Open-Meteo near you, or ?weather=):
      rain streaks and umbrellas, drifting snow with a white dusting, fog,
      storm flashes, and the sun dimmed under cloud. */
-  let weatherKind='clear',precip=null,dusting=null,flashUntil=0,nextFlash=0;
+  let weatherKind='clear',precip=null,dusting=null,flashUntil=0,nextFlash=0,sunK=1,grayK=0,grayCol='#9aa3ab';
+  const leavingPrecip=[];
   const weatherState=()=>(typeof window!=='undefined'&&window.ToyTownWeather?.state)||{kind:'clear'};
   const SUN_UNDER={clear:1,cloud:.72,fog:.7,rain:.55,snow:.8,storm:.42};
   function setupPrecip(kind){
@@ -2731,7 +2732,14 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
   }
   function updateWeather(dt){
     const w=weatherState(),kind=w.kind||'clear';
-    if(kind!==weatherKind||(!precip&&(kind==='rain'||kind==='storm'||kind==='snow'))){weatherKind=kind;setupPrecip(kind);}
+    // The weather eases in and out: the sun dims and the sky greys gradually, and rain / snow fade rather than snap.
+    {const tSun=SUN_UNDER[kind]??1,tGray=tSun<.9?(kind==='storm'?.6:.42):0;sunK+=(tSun-sunK)*.005;grayK+=(tGray-grayK)*.005;if(tGray>0)grayCol=kind==='snow'?'#dfe4ea':'#9aa3ab';}
+    if(kind!==weatherKind||(!precip&&(kind==='rain'||kind==='storm'||kind==='snow'))){
+      weatherKind=kind;if(precip){precip.userData.leaving=true;leavingPrecip.push(precip);precip=null;}setupPrecip(kind);}
+    for(let i=leavingPrecip.length-1;i>=0;i--){const q=leavingPrecip[i];q.userData.fade=(q.userData.fade??1)-dt*.35;if(q.userData.fade<=0){q.parent?.remove(q);leavingPrecip.splice(i,1);continue;}
+      q.material.opacity=(q.userData.kind==='rain'?.42:.92)*q.userData.fade;
+      const a=q.geometry.attributes.position.array,fall=q.userData.kind==='rain'?7.5*dt:.55*dt;for(let j=1;j<a.length;j+=(q.userData.kind==='rain'?6:3))a[j]-=fall;q.geometry.attributes.position.needsUpdate=true;}
+    if(precip&&precip.material){precip.userData.fade=Math.min(1,(precip.userData.fade??0)+dt*.3);precip.material.opacity=(precip.userData.kind==='rain'?.42:.92)*precip.userData.fade;}
     const wet=kind==='rain'||kind==='storm';
     for(const [ref,item] of actors){
       if(item.kind!=='person')continue;
@@ -3005,7 +3013,7 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
     createStorybookVillage();
     paintVillageLife();
     createWorkingShops();
-    rail.train=null;life.built=false;more.built=false;live2.built=false;bus3.built=false;createRailway();createFarm();createLife();createMore();createStage2();createStage3();
+    rail.train=null;life.built=false;more.built=false;live2.built=false;bus3.built=false;sky4.built=false;leavingPrecip.length=0;createRailway();createFarm();createLife();createMore();createStage2();createStage3();createStage4();
     // Landmark panes are pooled across the five models. Update material
     // intensity only, not every individual window mesh, on each frame.
     const visit=node=>{
@@ -3588,7 +3596,7 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
     }
   }
   function updateFarm(dt){
-    if(farm.sails)farm.sails.rotation.z-=dt*((.9+(weatherKind==='storm'?1.8:weatherKind==='rain'?.6:0))*(1+(farm.boost>0?4:0)));
+    if(farm.sails)farm.sails.rotation.z-=dt*((.9+(weatherKind==='storm'?1.8:weatherKind==='rain'?.6:0))*(1+(farm.boost>0?4:0))*(windNow()?1.5:1));
     const {x0,x1,z0,z1}=farm.pen;
     for(const s of farm.sheep){
       s.ph+=dt;s.wait-=dt;
@@ -3846,7 +3854,7 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
     // kite
     const K=life.kite;
     if(K){
-      const lp=K.loop>0?(K.loop-=dt,Math.sin(t*5)*.6):0,kx=K.x+1.1+Math.sin(t*.5)*.25+lp,ky=1.45+Math.sin(t*.7)*.15+Math.abs(lp)*.5,kz=K.z-.9+Math.cos(t*.4)*.2;
+      const lp=K.loop>0?(K.loop-=dt,Math.sin(t*5)*.6):0,kx=K.x+1.1+Math.sin(t*.5)*.25+lp,ky=1.45+Math.sin(t*.7)*.15+Math.abs(lp)*.5+(windNow()?.35:0),kz=K.z-.9+Math.cos(t*.4)*.2;
       K.kite.position.set(kx,ky,kz);K.kite.rotation.z=Math.sin(t*.8)*.25;K.kite.rotation.y=.5;
       K.tail.forEach((s,i)=>{s.position.x=Math.sin(t*2-i*.7)*.04*(i+1)*.5;});
       pointAlong(K.string,K.x+.05,base+.28,K.z-.04,kx,ky-.1,kz);
@@ -4208,6 +4216,80 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
       if(L&&p.g.visible){const a=moving?Math.sin(p.ph*1.5)*.55:0;L.legs.forEach((l,k)=>{l.rotation.x=(k?1:-1)*a;});L.arms.forEach((l,k)=>{l.rotation.x=(k?-1:1)*a*.7;});}
       if(p.g.visible)p.g.position.set(p.x,base+(moving?Math.abs(Math.sin(p.ph*1.5))*.01:0),p.z);
     }
+  }
+
+  /* ---- Stage 4: a livelier sky. A rainbow after the rain, wind that blows leaves across the town and lifts the
+     kite, a banner plane towing the day's theme, and bird flocks at dawn and dusk. ---- */
+  const sky4={built:false,t:0,rainbow:null,rainbowT:0,wasWet:false,leaves:[],plane:null,nextPlane:35,planes:0,flocks:[],nextFlock:25,flocksRun:0,leavesBlown:0,windOverride:null,rainbows:0};
+  const windNow=()=>sky4.windOverride!==null?sky4.windOverride:!!(typeof window!=='undefined'&&window.ToyTownWeather?.state?.windy)||weatherKind==='storm';
+  function createStage4(){
+    const g=new THREE.Group();world.add(g);sky4.g=g;sky4.built=true;sky4.t=0;sky4.leaves=[];sky4.flocks=[];sky4.plane=null;sky4.rainbowT=0;
+    // rainbow: seven bands of an arch standing behind the town
+    const arch=new THREE.Group();arch.position.set(9,-.4,-5.5);g.add(arch);
+    const bands=['#ff5a5a','#ff9f43','#ffe14d','#6fd36f','#4fb3ff','#5b6bff','#a96bff'];
+    bands.forEach((c,i)=>{const m=new THREE.Mesh(new THREE.TorusGeometry(8.2+i*.2,.11,5,48,Math.PI),new THREE.MeshBasicMaterial({color:c,transparent:true,opacity:0,depthWrite:false,fog:false}));arch.add(m);});
+    arch.visible=false;sky4.rainbow=arch;
+    // leaves that blow in the wind
+    const lc=['#8fbf62','#b7c94f','#e0a13a','#d0743c','#7fae6e'];
+    for(let i=0;i<30;i++){const m=new THREE.Mesh(geo('sphere',.03),new THREE.MeshBasicMaterial({color:lc[i%5]}));m.scale.set(1.6,.18,1);m.visible=false;g.add(m);sky4.leaves.push({m,x:0,y:.6,z:0,vx:1,vz:.5,ph:i*.9,on:false});}
+    // the banner plane
+    const pl=new THREE.Group();g.add(pl);
+    const hull=object(pl,geo('soft',.34,.1,.1,.04),mat('#f2c36b',.7),0,0,0,false);
+    box(pl,.1,.012,.42,'#ff7a6b',.02,.03,0,false);box(pl,.06,.07,.012,'#ff7a6b',-.17,.07,0,false);box(pl,.05,.012,.18,'#ff7a6b',-.17,.02,0,false);
+    ball(pl,.045,mat('#fffaf0',.4),.12,.06,0).scale.set(1,.8,.9);cylinder(pl,.02,.02,.012,'#333',.19,0,0).rotation.z=Math.PI/2;
+    const prop=box(pl,.01,.12,.014,'#333',.2,0,0,false);
+    const bc=document.createElement('canvas');bc.width=512;bc.height=96;
+    const tex=new THREE.CanvasTexture(bc);if(tex)tex.colorSpace=THREE.SRGBColorSpace;
+    const banner=new THREE.Mesh(geo('plane',1.7,.32),new THREE.MeshBasicMaterial({map:tex,transparent:true,side:THREE.DoubleSide}));banner.position.set(-1.15,-.02,0);pl.add(banner);
+    box(pl,.9,.004,.004,'#333',-.55,.0,0,false);
+    pl.visible=false;sky4.plane={g:pl,prop,banner,tex,canvas:bc,x:0,z:0,dir:1,y:3.4};
+  }
+  function bannerText(){
+    let th=null;try{th=town.debug().theme;}catch(e){}
+    const title=(th&&typeof th==='object'&&th.title)||(typeof th==='string'&&town.THEMES?.[th]?.title)||'TOY TOWN',em=(th&&typeof th==='object'&&th.emoji)||'';
+    return (em?em+' ':'')+title;
+  }
+  function paintBanner(P){
+    const c=P.canvas.getContext('2d');c.fillStyle='#fff6dc';c.beginPath();if(c.roundRect)c.roundRect(4,6,504,84,22);else c.rect(4,6,504,84);c.fill();
+    c.strokeStyle='#e0a13a';c.lineWidth=6;c.stroke();c.fillStyle='#d0543a';c.textAlign='center';c.textBaseline='middle';c.font='700 46px Nunito, system-ui, sans-serif';c.fillText(bannerText(),256,50,470);
+    if(P.tex)P.tex.needsUpdate=true;
+  }
+  function startBanner(){const P=sky4.plane;if(!P||P.g.visible)return false;paintBanner(P);P.dir=Math.random()<.5?1:-1;P.x=P.dir>0?-7:25;P.z=3+Math.random()*10;P.g.visible=true;sky4.planes++;return true;}
+  function startFlock(){
+    const g=sky4.g;if(!g||sky4.flocks.length>=2)return false;
+    const grp=new THREE.Group();g.add(grp);const dir=Math.random()<.5?1:-1,birds=[];
+    for(let i=0;i<7;i++){const b=new THREE.Group();grp.add(b);ball(b,.035,mat('#4a4f5a',.8),0,0,0).scale.set(1.5,.8,.8);
+      const ws=[];for(const s of [-1,1]){const w=new THREE.Group();w.position.set(0,.01,s*.03);b.add(w);box(w,.05,.008,.09,mat('#5a6070',.8),0,0,s*.05,false);ws.push({w,s});}
+      const k=Math.ceil(i/2)*(i%2?1:-1);b.position.set(-Math.abs(k)*.22*dir,0,k*.26);birds.push({b,ws,k});}
+    grp.position.set(dir>0?-6:24,2.6+Math.random()*.8,2+Math.random()*12);
+    sky4.flocks.push({grp,birds,dir,x:grp.position.x,t:0});sky4.flocksRun++;sound('chirp');return true;
+  }
+  function updateStage4(dt,dark){
+    if(!sky4.built)return;sky4.t+=dt;const t=sky4.t,wet=weatherKind==='rain'||weatherKind==='storm',wind=windNow();
+    // rainbow after rain
+    if(sky4.wasWet&&!wet&&dark<.45&&weatherKind!=='snow'){sky4.rainbowT=75;sky4.rainbows++;}
+    sky4.wasWet=wet;
+    const R=sky4.rainbow;if(R){
+      if(sky4.rainbowT>0)sky4.rainbowT-=dt;const u=sky4.rainbowT;const k=u>0?Math.min(1,(75-u)/8,u/14):0;
+      R.visible=k>.01;R.children.forEach(m=>{m.material.opacity=.42*k;});}
+    // leaves in the wind
+    for(const L of sky4.leaves){
+      if(wind&&!L.on&&Math.random()<dt*.9){L.on=true;L.x=-1+Math.random()*4;L.z=.5+Math.random()*17;L.y=.4+Math.random()*1.0;L.vx=1.1+Math.random()*1.2;L.vz=.2+Math.random()*.8;L.m.visible=true;sky4.leavesBlown++;}
+      if(L.on){L.x+=L.vx*dt;L.z+=L.vz*dt;L.ph+=dt*4;L.y=Math.max(.2,L.y+Math.sin(L.ph*.7)*dt*.5-dt*.03);L.m.position.set(L.x,L.y,L.z);L.m.rotation.set(L.ph,L.ph*.6,L.ph*1.3);
+        if(L.x>19.5){L.on=false;L.m.visible=false;}}
+      else if(!wind&&L.m.visible)L.m.visible=false;
+    }
+    // the banner plane crosses on fine days
+    const P=sky4.plane;if(P){
+      if(!P.g.visible&&t>sky4.nextPlane&&dark<.4&&!wet&&weatherKind!=='fog'){startBanner();sky4.nextPlane=t+150+Math.random()*90;}
+      if(P.g.visible){P.x+=P.dir*2.3*dt;P.g.position.set(P.x,P.y+Math.sin(t*1.3)*.08,P.z);P.g.rotation.y=P.dir>0?0:Math.PI;P.prop.rotation.x+=dt*40;P.banner.rotation.x=Math.sin(t*3)*.05;
+        if(P.x>26||P.x<-9)P.g.visible=false;}
+    }
+    // bird flocks at dawn and dusk
+    if(t>sky4.nextFlock&&dark>.05&&dark<.55&&!wet){startFlock();sky4.nextFlock=t+80+Math.random()*60;}
+    for(let i=sky4.flocks.length-1;i>=0;i--){const F=sky4.flocks[i];F.t+=dt;F.x+=F.dir*1.5*dt;F.grp.position.x=F.x;F.grp.rotation.y=F.dir>0?0:Math.PI;
+      for(const b of F.birds){const f=Math.sin(F.t*14+b.k)*.8;for(const w of b.ws)w.w.rotation.x=f*w.s;b.b.position.y=Math.sin(F.t*2+b.k)*.05;}
+      if(F.x>26||F.x<-9){F.grp.parent?.remove(F.grp);sky4.flocks.splice(i,1);}}
   }
 
   // The vehicles are small designed machines rather than stacked colored
@@ -4823,7 +4905,7 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
     sun.color.set(tint('#ffd7a4','#ee9c70',dusk));
     rim.color.set(tint('#c0dedb','#a8b6cb',dusk));
     for(const lantern of plazaLights)lantern.intensity=dark*7.2;
-    {const under=SUN_UNDER[weatherKind]??1;sun.intensity*=under;hemisphere.intensity*=.82+under*.18;
+    {const under=sunK;sun.intensity*=under;hemisphere.intensity*=.82+under*.18;
      if(clockMs()<flashUntil){hemisphere.intensity+=2.6;}}
     for(const p of porchLamps)p.glass.emissiveIntensity=p.b.home&&dark>.25?2.4:.05;   // lights on once someone is home
     lanternGlass.emissiveIntensity=.1+dark*4.2;
@@ -4832,8 +4914,8 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
       pane.emissiveIntensity=(pane.userData?.warm?.12:.04)+
         dark*(pane.userData?.warm?1.02:.66);
     }
-    {const sky=tint('#cee9f5','#91a9c5',dusk),grey=(SUN_UNDER[weatherKind]??1)<.9;   // an overcast sky under rain, storm, fog or snow
-     scene.background.set(grey?tint(sky,weatherKind==='snow'?'#dfe4ea':'#9aa3ab',weatherKind==='storm'?.6:.42):sky);}
+    {const sky=tint('#cee9f5','#91a9c5',dusk);   // an overcast sky under rain, storm, fog or snow, eased in and out
+     scene.background.set(grayK>.01?tint(sky,grayCol,grayK):sky);}
     scene.fog.color.copy(scene.background);
     renderer.toneMappingExposure=.98-dark*.12;
     lens?.setDusk(dark);
@@ -4935,7 +5017,8 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
       syncActors();syncCamera();light(state.night||0);nightLife(state.night||0,state.clock||0);updateFollowCard();updateMoments();updateWeather(1/45);
       // Driven by the town's own clock, so they pause with the town.
       {const now=state.clock||0;const dt=lastClockAt===null?0:THREE.MathUtils.clamp(now-lastClockAt,0,.1);lastClockAt=now;sceneClock+=dt;
-       updateVisit(dt);updateRound(dt,state.night||0);updateEffects(dt);updateTrain(dt,state.night||0);updateFarm(dt);updateSite(dt);updateLife(dt);updateMore(dt,state.night||0);updateStage2(dt,state.night||0);updateStage3(dt,state.night||0);}
+       try{window.ToyTownWeather?.step?.(dt);}catch(e){}
+       updateVisit(dt);updateRound(dt,state.night||0);updateEffects(dt);updateTrain(dt,state.night||0);updateFarm(dt);updateSite(dt);updateLife(dt);updateMore(dt,state.night||0);updateStage2(dt,state.night||0);updateStage3(dt,state.night||0);updateStage4(dt,state.night||0);}
       placeBubble();
       animateAmbient(state.clock||0);
       const drawStart=clockMs();
@@ -4972,7 +5055,9 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
     startVisit:()=>{if(!onThisDay.length)onThisDay=[{year:1969,text:'Apollo 11 lands on the Moon'}];startVisit();return timeVisit;},startRound:()=>{startRound();return round;},
     stepExtras:(seconds,dark=0)=>{for(let t=0;t<seconds;t+=.05){sceneClock+=.05;updateVisit(.05);updateRound(.05,dark);updateEffects(.05);}},
     setFreight:n=>{rail.freightEvery=n;rail.mode='pass';},railMode:()=>rail.mode,
-    stepTrain:(seconds,dark=0)=>{for(let t=0;t<seconds;t+=.05){updateTrain(.05,dark);updateFarm(.05);updateSite(.05);updateLife(.05);updateMore(.05,dark);updateStage2(.05,dark);updateStage3(.05,dark);}},
+    stepTrain:(seconds,dark=0)=>{for(let t=0;t<seconds;t+=.05){updateTrain(.05,dark);updateFarm(.05);updateSite(.05);updateLife(.05);updateMore(.05,dark);updateStage2(.05,dark);updateStage3(.05,dark);updateStage4(.05,dark);}},
+    stage4Stats:()=>({built:sky4.built,rainbow:!!sky4.rainbow?.visible,rainbows:sky4.rainbows,leaves:sky4.leaves.filter(l=>l.on).length,leavesBlown:sky4.leavesBlown,plane:!!sky4.plane?.g.visible,planes:sky4.planes,flocks:sky4.flocks.length,flocksRun:sky4.flocksRun,sunK:+sunK.toFixed(2),grayK:+grayK.toFixed(2)}),
+    setWindForTest:v=>{sky4.windOverride=v;},startBanner:()=>startBanner(),startFlock:()=>startFlock(),
     stage3Stats:()=>({built:bus3.built,stops:bus3.stops.length,waiting:bus3.people.filter(p=>p.state==='wait').length,aboard:bus3.people.filter(p=>p.state==='aboard').length,boarded:bus3.boarded,alighted:bus3.alighted,boards:bus3.boards,steam:bus3.steam.length,tufts:bus3.tufts,flowers:bus3.flowers,patches:bus3.patches}),
     stage2Stats:()=>({built:live2.built,puddles:live2.puddles.filter(p=>p.puddle.visible).length,snow:+live2.snowK.toFixed(2),snowVisible:!!live2.snowman?.visible,watchman:!!live2.watch?.p.visible,cats:live2.cats.filter(c=>c.g.visible).length,boards:live2.boards.map(b=>b.shut.visible?'closed':'open'),hits:live2.hits,kiteVisible:life.kite?.kid.visible,playVisible:life.play?.sk.visible,fisherVisible:life.fisher?.p.visible,boatVisible:life.boat?.g.visible}),
     setWeatherForTest:k=>{weatherKind=k;},touch2:(x,y)=>touch2(x,y),
