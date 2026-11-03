@@ -567,3 +567,10 @@ A `START` does not prohibit parallel edits. Avoid stepping on each other's uncom
 - Tests: `water.cjs`-style probe went from 6–24 wet samples per run to 0 over many runs; the extras test now runs 420 s on two layouts and asserts nobody is on the water; all `tests/*.test.cjs` pass locally. Cache keys sim v38, 3D v60, embed v70.
 - Honest notes: the guard that sends strays back to the pavement is limited to the river rows (y 12.8–15.2) because an unrestricted version broke a shop-front test that places a walker off the grid on purpose. Not verified on a real phone.
 
+### START — Claude (Claude Code) — 2026-11-03 (360° rotation, then the whole "what's next" list)
+- Base: `9e728f3c` (master after #166; fetched, re-read this file and `CLAUDE.md`).
+- Task (owner request, "LETS START ALL, CAN WE DO 360 DEGREES ROTATION TOO"): rotate the view all the way round, then the ideas offered last time: weather-aware life, a bus line, bigger shopfront scenes, a ground restyle, a day/night rhythm (shops open and close, windows light one by one, night watchman, cats), and more to touch. Shipped in stages, each merged and checked live before the next.
+- Stage 1 (this entry): **360° rotation**. `cam.yaw` / `cam.tyaw` in the sim (all screen↔world mapping goes through `screenWorld` / `focusCamera` / the pan handlers, so panning, pinch-zoom anchoring and taps stay correct at any angle); the 3D camera orbits by the same yaw. Controls: two-finger twist, right-drag / Shift-drag on desktop, Q / E keys, and ⟲ ⟳ buttons next to the zoom buttons (also in the main page's controls via a `town:rotate` message); Fit resets the heading. No change to the simulation itself.
+- Likely files: `assets/toy-town.js`, `assets/toy-town-3d.js`, `toy-town.html`, `index.html`, tests, README, this file.
+- Status: in progress (stage 1).
+
