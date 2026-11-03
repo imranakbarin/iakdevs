@@ -159,7 +159,7 @@ const ToyTown = (() => {
     spawnStreetTrade(hero, r);
     spawnDistrictLife(blocks,r);
     for (const b of buildings) if (b.kind === 'house' && r() < .75) props.push({kind: 'flowers', x: b.x + .5, y: b.y + .88, c: [PASTEL[r() * 8 | 0], PASTEL[r() * 8 | 0]]});
-    for (let k = 0; k < 5; k++) props.push({kind: 'duck', x: 1 + r() * 16, y: 13.2 + r() * 1.6, vx: (r() - .5) * .3, ph: r() * 6});
+    for (let k = 0; k < 5; k++) props.push({kind: 'duck', x: clearOfBridges(1 + r() * 16), y: 13.2 + r() * 1.6, vx: (r() - .5) * .3, ph: r() * 6});
     sprites.clear(); ground = null;
     theme = themeKey; town.blocks = blocks;
   }
@@ -259,6 +259,10 @@ const ToyTown = (() => {
   const DIRS = [[1, 0], [-1, 0], [0, 1], [0, -1]];
   function randomRoadPoint(r) { const along = r() < .5, line = LINES[r() * 4 | 0] + .5, t = 1.5 + r() * 14.5; return along ? {x: t, y: line, d: r() < .5 ? 0 : 1} : {x: line, y: t, d: r() < .5 ? 2 : 3}; }
   const directionAngle = d => [0, Math.PI, Math.PI / 2, -Math.PI / 2][d] || 0;
+  // Ducks paddle on the open water between the bridges, never across a bridge deck.
+  const BRIDGE_HALF = .72;
+  const onBridge = x => LINES.some(l => Math.abs(x - (l + .5)) < BRIDGE_HALF);
+  function clearOfBridges(x) { for (const l of LINES) if (Math.abs(x - (l + .5)) < BRIDGE_HALF) return l + .5 + (x < l + .5 ? -1 : 1) * (BRIDGE_HALF + .05); return x; }
   function spawnCar(r = Math.random, kind) {
     const p = randomRoadPoint(r), k = kind || (r() < .12 ? 'bus' : r() < .15 ? 'taxi' : 'car');
     const m = {type: 'car', kind: k, x: p.x, y: p.y, d: p.d, heading: directionAngle(p.d), v: 0, travel: 0, moved:0, max: k === 'bus' ? .9 : 1.2 + r() * .5, col: k === 'taxi' ? '#f6c541' : k === 'bus' ? '#3f8fd6' : PASTEL[r() * PASTEL.length | 0], wait: 0, lane: .2};
@@ -2362,7 +2366,7 @@ const ToyTown = (() => {
     for(const p of props)if(p.kind==='duck'&&crumbs&&clock<crumbs.until){
       // Crumbs on the water: every duck paddles over, quickest first, and nibbles.
       const dx=crumbs.x-p.x,dy=crumbs.y-p.y,d=Math.hypot(dx,dy);
-      if(d>.22){const sp=Math.min(.42,.16+d*.12);p.vx=dx/d*sp;p.x+=dx/d*sp*dt;p.y=clamp(13.12,p.y+dy/d*sp*dt,14.88);}
+      if(d>.22){const sp=Math.min(.42,.16+d*.12);p.vx=dx/d*sp;const nx=p.x+dx/d*sp*dt;if(!onBridge(nx)||onBridge(p.x))p.x=nx;else p.vx=0;p.y=clamp(13.12,p.y+dy/d*sp*dt,14.88);}
       else{p.vx=(Math.sign(p.vx)||1)*.001;p.nibble=clock;}
       continue;
     }
@@ -2378,7 +2382,9 @@ const ToyTown = (() => {
       }else if(clock>(p.alertUntil||0)){
         p.vx+=(Math.sign(p.vx||1)*.065-p.vx)*Math.min(1,dt*.5);
       }
-      p.x+=p.vx*dt;
+      if(onBridge(p.x))p.x=clearOfBridges(p.x);
+      const nx=p.x+p.vx*dt;
+      if(onBridge(nx))p.vx*=-1;else p.x=nx;   // turn round at a bridge, like at the bank
       if(p.x<.3||p.x>17.5)p.vx*=-1;
       p.x=clamp(.3,p.x,17.5);
     }

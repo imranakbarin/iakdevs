@@ -172,8 +172,8 @@ assert.match(sim, /PAN = \.6/, 'the view can be dragged out to the railway and s
 assert.match(sim, /function separateCars\(dt\)/, 'stopped cars whose bodies touch ease apart');
 assert.match(view, /function buildingSite\(b\)/); assert.match(view, /'BUILDING SITE'/, 'the building site says what it is: hoarding, a half-built house, scaffolding, a crane, workers in hard hats');
 assert.match(view, /function updateSite\(dt\)/, 'the crane swings and the workers work');
-assert.match(html, /nograde/, 'the warm cinematic grade can be switched off with ?nograde');
-assert.doesNotMatch(html, /#town-3d[^{]*\{[^}]*blur\(/, 'and never blurs');
+assert.doesNotMatch(html, /sepia\(|nograde/, 'the cinematic filter is gone');
+assert.doesNotMatch(html, /#town-3d[^{]*\{[^}]*blur\(/, 'and nothing blurs');
 assert.match(view, /const d = \.9 \+ bump \* \.12/, 'tree canopies are smooth and round, not lumpy');
 assert.match(view, /const BIKE_SCALE=\.52;/, 'bicycles are scaled well below the toy cars');
 assert.match(view, /const CUTE=\.8,HEAD_BIG=1\.22;/, 'residents are smaller with a big round head');
@@ -183,4 +183,14 @@ assert.match(view, /const ANIMAL_SCALE=\{dog:\.5/, 'animals are scaled to match 
 assert.match(view, /function createMore\(\)/); assert.match(view, /function updateMore\(dt,dark\)/); assert.match(view, /function startParade\(\)/, 'a lamplighter, a parade, seagulls, a market crowd and fireworks');
 assert.match(view, /const fkinds=\[\['loco',\.62\]/, 'a goods train with coal, logs, a tanker, a box car and a caboose takes turns with the passenger train');
 assert.match(soundSrc, /firework: \(\) =>/, 'fireworks have a synthesised bang');
+// Ducks stay on open water: never on a bridge deck, even when chasing crumbs or startled by walkers.
+{
+  const box = vm.createContext({Math, Object, Array, JSON, Date, String, Number, RegExp, Set, Map, setTimeout: () => 0, document: {getElementById: () => ({textContent: '', style: {}})}});
+  vm.runInContext(town + ';this.T=ToyTown;', box); const T = box.T; T.build(555, 'market');
+  const ducks = T.props().filter(p => p.kind === 'duck'), onBridge = x => [1, 6, 11, 16].some(l => Math.abs(x - (l + .5)) < .7);
+  assert.ok(ducks.length >= 3 && ducks.every(d => !onBridge(d.x)), 'no duck starts on a bridge');
+  let bad = 0; for (let i = 0; i < 20 * 400; i++) { T.update(1 / 20); if (i === 600) T.feedDucks(8.5, 14); if (i === 1500) T.feedDucks(1.5, 14); for (const d of ducks) if (onBridge(d.x)) bad++; }
+  assert.equal(bad, 0, 'ducks never float on a bridge (they turn round at the deck)');
+}
+assert.match(view, /farm\.sails\.rotation\.z-=dt\*\(\.9/, 'the windmill sails face the front and turn at a clearly visible speed');
 console.log('Toy Town EXTRAS PASS: a lamplighter, parades with confetti, a goods train, seagulls, a market-day crowd and fireworks; a rowing boat, a fisher, a playground with children, scattering pigeons and a kite flyer, animals in proportion; small cute cyclists and chibi residents; a readable building site and a warm cinematic grade; a ring railway with a station and a little steam train; small soft pastel vehicles that never stay merged; a softer city; pavements and walkers on them; nobody stays stuck (3 layouts); varied whims; Moments on request; local weather; follow a resident, feed the ducks, gentle opt-in sound; a day in the life (commuters, children, lunch, home at dusk); KayKit CC0 kit (named, small, licensed, with fallback; roads and plaza too); taps on residents, cars, buildings and open ground; livelier gaits and greetings; news card minimises to a pill (phones first, remembered), Picture-of-the-Day cinema, fireflies and shooting stars, tap-a-resident chat, the on-this-day visitor (gentle history only, credited) and the dawn paper round.');
