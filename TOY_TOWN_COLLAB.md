@@ -525,3 +525,9 @@ A `START` does not prohibit parallel edits. Avoid stepping on each other's uncom
 - Honest notes: `tests/toy-town.test.cjs` "cross traffic rarely meets in a crossing" is randomly flaky (failed once with 24 near misses, then passed 6 of 6 re-runs; it uses `Math.random`). SwiftShader screenshots at phone size only (playground, kite, boat, fisher bubble seen); not verified on a real iPhone/GPU. Zoo animals and shop props were not audited one by one.
 - Next ideas offered to the owner: lamplighter at dusk, a parade with confetti, a second goods train, seagulls over the river, market-day crowd, fireworks at night.
 
+### START — Claude (Claude Code) — 2026-11-03 (six more things: lamplighter, parade, goods train, seagulls, market crowd, fireworks)
+- Base: `da04106a` (master after #159; fetched, re-read this file and `CLAUDE.md`).
+- Task (owner request, "Go ahead and add earlier ideas"): the six ideas offered last time. Plan: a lamplighter who walks the street at dusk and lights the lanterns one by one (lanterns stay dark until reached); a small parade (drummer, flag bearer, children, a float) with confetti that sets off now and then; a second, goods train with wagons on the same ring that runs the other way round on the outer line; seagulls gliding over the river and landing on the bridges; a market-day crowd of shoppers browsing the stalls; fireworks over the board after dark (and on festival days). All of it purely visual and phone-cheap (pooled meshes, no new point lights), never on buildings or trees, and the simulation is untouched.
+- Likely files: `assets/toy-town-3d.js`, `assets/toy-town-sound.js` (fireworks cue), `toy-town.html`, `index.html` (cache key), tests, README, this file.
+- Status: in progress.
+
