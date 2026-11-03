@@ -158,16 +158,16 @@ assert.match(moduleCode,/eye.scale.y=blink/,'eyelids blink without a separate an
 assert.match(html,/type="importmap"/);
 assert.match(html,/three@0\.187\.0\/build\/three\.module\.js/);
 assert.match(html,/three@0\.187\.0\/examples\/jsm\//);
-assert.match(html,/toy-town-3d\.js\?v=64/);
+assert.match(html,/toy-town-3d\.js\?v=65/);
 assert.match(html,/toy-town-landmarks\.js\?v=7/,'the independent models are requested alongside Three');
 assert.match(html,/buildLandmark:landmarks\.buildLandmark/,
   'loader injects the authored model builder into the 3D simulation');
-assert.match(html,/toy-town\.js\?v=40/);
+assert.match(html,/toy-town\.js\?v=41/);
 const classicScript=html.match(/src="assets\/toy-town\.js\?v=\d+"/);
 assert.ok(classicScript&&
   html.indexOf(classicScript[0])<html.indexOf("import('three')"),
   'the actual versioned classic script always loads before WebGL');
-assert.match(page,/toy-town\.html\?v=74&embed=1/);
+assert.match(page,/toy-town\.html\?v=75&embed=1/);
 assert.match(fs.readFileSync(path.join(root,'assets/toy-town.js'),'utf8'),
   /targetX=clamp\(\.08,p\.x,17\.92\)/,
   'scripted paths are clamped at the endpoint rather than freezing outside town');
@@ -396,6 +396,17 @@ assert.equal(api.getStats().festoonBulbs,14,'two suspended spans contain 14 mini
     api.setWindForTest(true);api.stepTrain(8,0);q=api.stage4Stats();assert.ok(q.leaves>=5,'the wind blows leaves across the town');api.setWindForTest(null);
     assert.ok(api.startBanner(),'a plane tows a banner');api.stepTrain(2,0);assert.ok(api.stage4Stats().plane);
     assert.ok(api.startFlock(),'a flock of birds crosses');api.stepTrain(2,0);assert.ok(api.stage4Stats().flocks>=1);
+  }
+  {
+    // Stage 5: street events and festival days.
+    const f0=api.stage5Stats();assert.ok(f0.built&&['none','lantern','harvest','spring'].includes(f0.festival),'a festival is chosen for the day ('+f0.festival+')');
+    for(const kind of ['wedding','cart','juggler']){
+      let started=false;for(let k=0;k<60&&!started;k++){started=api.startEvent(kind);if(!started)api.stepTrain(5,0);}
+      assert.ok(started,'a '+kind+' street event starts');assert.equal(api.stage5Stats().event,kind);
+      api.stepTrain(12,0);assert.equal(api.stage5Stats().event,kind,'and carries on');
+      for(let k=0;k<60&&api.stage5Stats().event===kind;k++)api.stepTrain(5,0);assert.notEqual(api.stage5Stats().event,kind,'then ends and clears away');
+    }
+    assert.ok(api.stage5Stats().events>=3);
   }
   const st=api.siteStats();assert.ok(st.built&&st.workers===3,'a building site with three workers on it');
   const jib0=st.jib;api.stepTrain(20,0);assert.notEqual(api.siteStats().jib,jib0,'the crane jib swings');

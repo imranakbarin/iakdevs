@@ -1400,7 +1400,7 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
     else if(k==='flowers')littleFlowers(p.x,p.y,i);
     else if(k==='duck') {
       // The 2D simulation already supplies accurate water coordinates.
-      const duck=new THREE.Group();duck.position.set(p.x,.21,p.y);world.add(duck);
+      const duck=new THREE.Group();duck.position.set(p.x,.21,p.y);duck.scale.setScalar(.68);world.add(duck);
       const body=ball(duck,.11,'#f9d767',0,0,0);body.scale.set(1.25,.70,.93);
       ball(duck,.065,'#fff0ad',.095,.07,0);
       box(duck,.065,.025,.055,'#ed9d61',.16,.055,.02);
@@ -3013,7 +3013,7 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
     createStorybookVillage();
     paintVillageLife();
     createWorkingShops();
-    rail.train=null;life.built=false;more.built=false;live2.built=false;bus3.built=false;sky4.built=false;leavingPrecip.length=0;createRailway();createFarm();createLife();createMore();createStage2();createStage3();createStage4();
+    rail.train=null;life.built=false;more.built=false;live2.built=false;bus3.built=false;sky4.built=false;fest.built=false;fest.ev=null;leavingPrecip.length=0;createRailway();createFarm();createLife();createMore();createStage2();createStage3();createStage4();createStage5();
     // Landmark panes are pooled across the five models. Update material
     // intensity only, not every individual window mesh, on each frame.
     const visit=node=>{
@@ -3130,7 +3130,7 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
         mat('#a17d4d'),0,-.024,.011);
       handle.scale.z=.58;
     }else if(ref.kind==='robot'){
-      const visor=box(face,.166,.058,.024,'#7faeb5',0,.456,.109);
+      const visor=box(face,.1,.034,.014,'#7faeb5',0,.462,.1);
       box(g,.135,.021,.034,'#627c87',0,.305,.090);
       cylinder(face,.012,.012,.077,'#aebec1',0,.580,0);
       const beacon=ball(face,.029,'#f1ca8c',0,.631,0);beacon.castShadow=false;
@@ -3937,7 +3937,7 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
   }
   function startParade(){
     if(more.parade)return false;
-    const g=new THREE.Group();world.add(g);const base=.17,z=6.5+.43;
+    const g=new THREE.Group();world.add(g);const base=.17,z=1.5+.43;
     const members=[];
     const mk=(i,col,role)=>{const q=person({col,skin:['#f1c9a5','#d8a77c','#a8754f','#7a4e33'][i%4],hair:i%2?'#49362d':'#333947',ph:i*1.7+.2,x:i+2,y:i*4,hat:role==='band'?'cap':null});if(wetNow())umbrellaFor(q,{ph:i});
       q.scale.setScalar(CUTE*(role==='kid'?.8:1));q.userData.limbs.headPivot.scale.setScalar(HEAD_BIG*(role==='kid'?1.08:1));g.add(q);return q;};
@@ -4292,6 +4292,139 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
       if(F.x>26||F.x<-9){F.grp.parent?.remove(F.grp);sky4.flocks.splice(i,1);}}
   }
 
+  /* ---- Stage 5: festival days and street events. A festival (lantern / harvest / spring) is picked at random for
+     the day (or with ?festival=); street events (a wedding procession, a street-food cart with a queue, a juggler with an
+     audience) pop up at random through the day. All visual, pooled and pavement-friendly. ---- */
+  const fest={built:false,kind:'none',t:0,lanternMats:[],dragon:null,dragonOn:0,dragonNext:20,maypole:null,ev:null,nextEv:45,events:0,log:[],decor:0,g:null,leafs:[]};
+  function festivalKind(){
+    const q=typeof location!=='undefined'?new URLSearchParams(location.search).get('festival'):null;
+    if(q&&['none','lantern','harvest','spring'].includes(q))return q;
+    let key='';try{key=town.dateKey?.()||'';}catch(e){}let h=7;for(const ch of key)h=(h*31+ch.charCodeAt(0))>>>0;const r=(h%100)/100;
+    return r<.4?'none':r<.6?'lantern':r<.8?'harvest':'spring';
+  }
+  const FEST_NAME={lantern:'Lantern Festival',harvest:'Harvest Fair',spring:'Spring Flower Day'};
+  function announce(text){try{const el=document.getElementById('tick');if(el)el.textContent=text;}catch(e){}}
+  function createStage5(){
+    const g=new THREE.Group();world.add(g);fest.g=g;fest.built=true;fest.t=0;fest.lanternMats=[];fest.dragon=null;fest.maypole=null;fest.ev=null;fest.decor=0;fest.leafs=[];
+    fest.kind=festivalKind();const base=.17;
+    if(fest.kind==='lantern'){
+      // paper lanterns strung over the two middle streets, glowing at dusk
+      const cols=['#e2463a','#f08a4b','#f5c04b','#e2463a','#ff8fb0'];
+      for(const rz of [6.5,11.5]){
+        const n=15,pts=[];
+        for(let i=0;i<n;i++){const x=2.0+i*(13.9/(n-1)),y=.92-Math.sin(i/(n-1)*Math.PI)*.1;pts.push([x,y]);
+          const m=new THREE.MeshStandardMaterial({color:cols[i%5],emissive:cols[i%5],emissiveIntensity:.3,roughness:.6});fest.lanternMats.push(m);
+          const l=object(g,geo('sphere',.05),m,x,y-.05,rz,false);l.scale.set(.85,1.15,.85);box(g,.03,.012,.03,'#8a6d4e',x,y+.005,rz,false);fest.decor++;}
+        for(let i=0;i<n-1;i++){const a=pts[i],b=pts[i+1],r=cylinder(g,.004,.004,1,'#6b5a48',(a[0]+b[0])/2,(a[1]+b[1])/2,rz);r.castShadow=false;pointAlong(r,a[0],a[1],rz,b[0],b[1],rz);}
+      }
+      // the dragon: a long red-and-gold dragon that dances round the central block in the evening
+      const dr=new THREE.Group();g.add(dr);const segs=[];
+      const head=new THREE.Group();dr.add(head);const hm=object(head,geo('soft',.2,.13,.15,.05),mat('#d6392c',.6),0,.2,0);
+      for(const s of [-1,1]){ball(head,.02,mat('#fff6d0',.3),.1,.25,s*.05);ball(head,.01,mat('#222',.4),.115,.25,s*.05);const horn=object(head,new THREE.ConeGeometry(.015,.07,5),mat('#f5c04b',.5),.0,.31,s*.05,false);horn.rotation.z=-.3;}
+      box(head,.06,.03,.12,'#f5c04b',.12,.17,0,false);
+      segs.push({m:head,head:true});
+      for(let i=0;i<9;i++){const s=object(dr,geo('sphere',.085),mat(i%2?'#f5c04b':'#d6392c',.6),0,.2,0);s.scale.set(1.1,.9,1);segs.push({m:s});}
+      const tail=object(dr,new THREE.ConeGeometry(.05,.2,6),mat('#d6392c',.6),0,.2,0);tail.rotation.z=Math.PI/2;segs.push({m:tail});
+      dr.visible=false;fest.dragon={g:dr,segs,u:0};
+    }else if(fest.kind==='harvest'){
+      const sp=(typeof freeSpots==='function'?freeSpots():[]).filter(s=>s.clear>.35).slice(0,12);
+      sp.forEach((s,i)=>{
+        const x=s.x+(i%3-1)*.35,z=s.z+(i%2?.3:-.3);
+        if(i%3===0){for(let k=0;k<3;k++){const p=ball(g,.07,mat(['#f08a2b','#e2742a','#f5a03a'][k],.7),x+k*.13-.1,base+.06,z+(k%2)*.08);p.scale.set(1.15,.85,1.15);cylinder(g,.008,.008,.04,'#5a7a3a',x+k*.13-.1,base+.13,z+(k%2)*.08);}fest.decor+=3;}
+        else if(i%3===1){const b=cylinder(g,.1,.1,.17,'#e6c978',x,base+.1,z);b.rotation.x=Math.PI/2;b.scale.z=1;cylinder(g,.1,.1,.17,'#dcb85c',x+.2,base+.1,z+.02).rotation.x=Math.PI/2;fest.decor+=2;}
+        else{for(let k=0;k<3;k++){cylinder(g,.012,.012,.26,'#9fbf4f',x+k*.06,base+.13,z);ball(g,.025,mat('#f5d04a',.6),x+k*.06,base+.28,z).scale.set(.7,1.5,.7);}fest.decor+=3;}
+      });
+      const sc=new THREE.Group();const q=sp[sp.length-1];sc.position.set(q?q.x+.4:9.6,base,q?q.z:7.4);g.add(sc);
+      cylinder(sc,.012,.012,.5,'#8a6d4e',0,.25,0);cylinder(sc,.012,.012,.34,'#8a6d4e',0,.42,0).rotation.z=Math.PI/2;ball(sc,.05,mat('#e6c978',.9),0,.55,0);cylinder(sc,.06,.06,.015,'#7a5a3a',0,.6,0);cylinder(sc,.035,.04,.05,'#7a5a3a',0,.63,0);box(sc,.22,.1,.03,'#c9743a',0,.35,0,false);fest.decor+=4;
+    }else if(fest.kind==='spring'){
+      for(const l of lanterns){   // flower garlands round the street-lamp posts
+        for(let k=0;k<7;k++){const a=k/7*TAU;ball(g,.022,mat(['#ff9fbf','#ffe27a','#ffffff','#c9a6ff','#ff9f8a'][k%5],.7),l.x+Math.cos(a)*.045,base+.55+(k%2)*.05,l.z+Math.sin(a)*.045).castShadow=false;fest.decor++;}
+      }
+      const sp=(typeof freeSpots==='function'?freeSpots():[]).filter(s=>s.clear>.9);
+      const P=sp[Math.min(2,sp.length-1)];
+      if(P){const mp=new THREE.Group();mp.position.set(P.x,base,P.z);g.add(mp);cylinder(mp,.02,.025,.95,'#c99a64',0,.47,0);ball(mp,.04,mat('#ffe27a',.5),0,.97,0);
+        const rib=[],dan=[];const rc=['#ff7a9a','#7fc4ff','#ffd23f','#9ccf6a','#c39be0','#ff9a4a'];
+        for(let k=0;k<6;k++){const r=cylinder(mp,.004,.004,1,rc[k],0,.5,0);r.castShadow=false;rib.push(r);
+          const q=person({col:rc[k],skin:['#f1c9a5','#d8a77c','#a8754f'][k%3],hair:k%2?'#49362d':'#333947',ph:k*1.3+3,x:k,y:k*2});q.scale.setScalar(CUTE*.9);q.userData.limbs.headPivot.scale.setScalar(HEAD_BIG);mp.add(q);dan.push(q);}
+        fest.maypole={g:mp,rib,dan};fest.decor+=8;}
+    }
+    if(fest.kind!=='none')announce('Today is the '+FEST_NAME[fest.kind]+'!');
+  }
+  function eventSpot(minClear=.5){const sp=(typeof freeSpots==='function'?freeSpots():[]).filter(s=>s.clear>minClear);return sp.length?sp[Math.floor(Math.random()*Math.min(5,sp.length))]:{x:14.2,z:8.8};}
+  function startEvent(kind){
+    if(!fest.built||fest.ev)return false;const g=new THREE.Group();fest.g.add(g);const base=.17,E={kind,g,t:0,dur:80,parts:[]};
+    const mk=(i,col,sc=1)=>{const q=person({col,skin:['#f1c9a5','#d8a77c','#a8754f','#7a4e33'][i%4],hair:i%2?'#49362d':'#333947',ph:i*1.9+5.5,x:i+1,y:i*3,hat:null});q.scale.setScalar(CUTE*sc);q.userData.limbs.headPivot.scale.setScalar(HEAD_BIG);g.add(q);return q;};
+    if(kind==='wedding'){
+      E.dur=75;const z=16.07;E.z=z;E.x=.9;
+      const bride=mk(1,'#ffffff'),groom=mk(2,'#2f3a4a');const veil=ball(bride.userData.limbs.headPivot,.115,mat('#ffffff',.6),0,.07,-.02);veil.scale.set(1.1,.6,1.1);
+      E.walkers=[{q:bride,off:0},{q:groom,off:-.32}];
+      for(let i=0;i<4;i++)E.walkers.push({q:mk(3+i,['#f2a99b','#9ccf9a','#7fb3d9','#f2c36b'][i],i<2?.8:1),off:-.9-i*.38});
+      const cart=new THREE.Group();g.add(cart);box(cart,.5,.07,.26,'#fff6e8',0,.09,0);for(const x of [-.18,.18])for(const s of [-1,1]){const w=cylinder(cart,.045,.045,.025,'#4f5560',x,.045,s*.14);w.rotation.x=Math.PI/2;}
+      box(cart,.34,.2,.02,'#fff6e8',0,.22,-.12);for(let k=0;k<6;k++)ball(cart,.035,mat(['#ff9fbf','#ffffff','#ffe27a'][k%3],.7),-.2+k*.08,.17,.06);sign(cart,'JUST MARRIED',0,.33,.0,.34);
+      E.cart=cart;E.walkers.push({q:null,off:-2.2,cart:true});E.nextConf=1;
+      announce('A wedding procession is marching through town!');
+    }else if(kind==='cart'){
+      E.dur=85;const s=eventSpot(.35);E.x=s.x;E.z=s.z;
+      const cart=new THREE.Group();cart.position.set(s.x,base,s.z);g.add(cart);const names=['NOODLES','TACOS','CREPES','DUMPLINGS'],name=names[Math.floor(Math.random()*4)];
+      box(cart,.5,.16,.28,'#e8664d',0,.18,0);box(cart,.54,.03,.32,'#f5e6c8',0,.28,0);for(const x of [-.2,.2])for(const sd of [-1,1]){const w=cylinder(cart,.05,.05,.025,'#4f5560',x,.05,sd*.15);w.rotation.x=Math.PI/2;}
+      for(const x of [-.23,.23])cylinder(cart,.01,.01,.34,'#8a6d4e',x,.45,-.1);const aw=box(cart,.6,.03,.36,'#f2c36b',0,.62,-.04);aw.rotation.x=.12;for(let k=0;k<6;k++)ball(cart,.03,mat(k%2?'#ffffff':'#e2463a',.8),-.25+k*.1,.6,.13).scale.set(1,.7,.6);
+      sign(cart,name,0,.74,-.02,.42);E.steam=[];for(let k=0;k<3;k++){const m=new THREE.Mesh(geo('sphere',.035),new THREE.MeshBasicMaterial({color:'#fff',transparent:true,opacity:0,depthWrite:false}));cart.add(m);E.steam.push({m,ph:k*.33});}
+      const cook=mk(7,'#ffffff');cook.position.set(s.x,base,s.z-.34);cook.rotation.y=Math.PI;E.cook=cook;
+      E.queue=[];for(let i=0;i<3;i++){const q=mk(8+i,['#9ccf9a','#c39be0','#f0a574'][i],i===1?.85:1);q.position.set(s.x+.45+i*.32,base,s.z+.28);q.rotation.y=-Math.PI/2*0+Math.PI*1.5;E.queue.push({q,i,x:s.x+.45+i*.32,z:s.z+.28,leave:0});}
+      E.nextServe=3;announce('A street-food cart is open: '+name+'!');
+    }else{
+      E.dur=70;const s=eventSpot(.4);E.x=s.x;E.z=s.z;
+      const j=mk(6,'#e2463a');j.position.set(s.x,base,s.z);E.j=j;E.balls=[0,1,2].map(i=>{const b=ball(g,.03,mat(['#ffd23f','#ff6f91','#6fd0ff'][i],.4),s.x,.6,s.z);b.castShadow=false;return b;});
+      sign(g,'THE GREAT JUGGLER',s.x,base+.9,s.z-.35,.5);
+      E.aud=[];for(let i=0;i<4;i++){const a=mk(10+i,['#7fb3d9','#f2c36b','#9ccf9a','#c39be0'][i]);const ang=Math.PI*.3+i*.7;a.position.set(s.x+Math.cos(ang)*.62,base,s.z+Math.sin(ang)*.62);a.rotation.y=Math.atan2(s.x-a.position.x,s.z-a.position.z);E.aud.push(a);}
+      announce('A juggler is performing in the park!');
+    }
+    fest.ev=E;fest.events++;fest.log.push(kind);sound('chime');return true;
+  }
+  function updateStage5(dt,dark){
+    if(!fest.built)return;fest.t+=dt;const t=fest.t,base=.17,wet=weatherKind==='rain'||weatherKind==='storm';
+    for(const m of fest.lanternMats)m.emissiveIntensity=.3+dark*2.4;
+    // dragon dance in the evenings of a lantern festival
+    const D=fest.dragon;if(D){
+      if(!fest.dragonOn&&t>fest.dragonNext&&dark>.2&&dark<.95&&!wet){fest.dragonOn=60;D.u=0;D.g.visible=true;announce('The dragon dance begins in the square!');sound('chime');}
+      if(fest.dragonOn>0){fest.dragonOn-=dt;D.u+=dt*.5;const r=[[6.93,6.93],[11.07,6.93],[11.07,11.07],[6.93,11.07]],n=4;
+        D.segs.forEach((s,i)=>{const u=((D.u-i*.14)%n+n)%n,k=Math.floor(u),f=u-k,a=r[k],b=r[(k+1)%n],x=a[0]+(b[0]-a[0])*f,z=a[1]+(b[1]-a[1])*f;
+          s.m.position.set(x,base+.06+Math.abs(Math.sin(t*5+i*.7))*.05,z);s.m.rotation.y=Math.atan2(b[0]-a[0],b[1]-a[1])-Math.PI/2;});
+        if(fest.dragonOn<=0){D.g.visible=false;fest.dragonNext=t+110+Math.random()*60;}}
+    }
+    // maypole dancers
+    const M=fest.maypole;if(M){M.dan.forEach((q,i)=>{const a=t*.7+i/6*TAU,r=.4;q.position.set(Math.cos(a)*r,0,Math.sin(a)*r);q.rotation.y=-a;walkAnim(q,true,t*6+i);});
+      M.rib.forEach((r,i)=>{const a=t*.7+i/6*TAU;pointAlong(r,0,.95,0,Math.cos(a)*.4,.34,Math.sin(a)*.4);});}
+    // street events
+    if(!fest.ev&&t>fest.nextEv&&dark<.7&&weatherKind!=='storm'){startEvent(['wedding','cart','juggler'][Math.floor(Math.random()*3)]);}
+    const E=fest.ev;if(E){
+      E.t+=dt;
+      if(E.kind==='wedding'){E.x+=.45*dt;
+        for(const w of E.walkers){const x=E.x+w.off;if(w.cart){E.cart.position.set(x,base,E.z-.03);}else{w.q.position.set(x,base+Math.abs(Math.sin(t*9+w.off*3))*.01,E.z);w.q.rotation.y=Math.PI/2;walkAnim(w.q,true,t*6+w.off*5);}}
+        if(E.t>E.nextConf){E.nextConf+=4;confettiAt(E.x-.5,.6,E.z);sound('pop');}
+        if(E.x+E.walkers[E.walkers.length-1].off>17.4)E.t=E.dur;
+      }else if(E.kind==='cart'){
+        for(const s of E.steam){const u=(t*.5+s.ph)%1;s.m.position.set(.1,.72+u*.3,0);s.m.scale.setScalar(.6+u*1.5);s.m.material.opacity=.6*(1-u);}
+        const Lc=E.cook.userData.limbs;if(Lc){Lc.arms[1].rotation.x=-.9+Math.sin(t*6)*.4;}
+        if(E.t>E.nextServe){E.nextServe+=5;const front=E.queue.find(q=>q.i===0&&!q.leave);if(front){front.leave=1;sound('pop');}}
+        for(const q of E.queue){const L=q.q.userData.limbs;
+          if(q.leave){q.q.rotation.y=Math.PI*.5;q.x+=.35*dt;q.z+=.2*dt;walkAnim(q.q,true,t*6+q.i*3);q.leave+=dt;if(q.leave>6){q.leave=0;q.i=3;q.x=E.x+.45+3*.32;q.z=E.z+.28;}}
+          else{const tx=E.x+.45+q.i*.32;if(Math.abs(q.x-tx)>.01){q.x+=Math.sign(tx-q.x)*Math.min(Math.abs(tx-q.x),.3*dt);walkAnim(q.q,true,t*6+q.i);q.q.rotation.y=-Math.PI/2*(Math.sign(tx-q.x)||1)*-1+Math.PI;}else{walkAnim(q.q,false,0);q.q.rotation.y=Math.PI*1.5;
+            if(q.i>0&&L)L.arms[1].rotation.x=0;}}
+          q.q.position.set(q.x,base,q.z);
+          // those that have walked off fade away at a distance, re-joining at the back
+          q.q.visible=!(q.leave>3.5);}
+        // advance the queue after a serve
+        const ids=E.queue.filter(q=>!q.leave).map(q=>q.i).sort((a,b)=>a-b);ids.forEach((v,k)=>{const q=E.queue.find(o=>!o.leave&&o.i===v);if(q&&q.i>k)q.i=k;});
+      }else{
+        E.balls.forEach((b,i)=>{const a=t*4.2+i*2.09;b.position.set(E.x+Math.sin(a)*.14,base+.42+Math.abs(Math.cos(a))*.3,E.z+.03);});
+        const L=E.j.userData.limbs;if(L){L.arms[0].rotation.x=-1.6+Math.sin(t*8.4)*.4;L.arms[1].rotation.x=-1.6-Math.sin(t*8.4)*.4;L.elbows.forEach(e=>{e.rotation.x=-.5;});}
+        E.aud.forEach((a,i)=>{const Q=a.userData.limbs;if(Q){const c=Math.sin(t*9+i)*.4;Q.arms[0].rotation.x=-1.2+c;Q.arms[1].rotation.x=-1.2-c;Q.elbows.forEach(e=>{e.rotation.x=-.8;});}});
+      }
+      if(E.t>=E.dur){E.g.parent?.remove(E.g);fest.ev=null;fest.nextEv=t+100+Math.random()*80;}
+    }
+  }
+
   // The vehicles are small designed machines rather than stacked colored
   // cubes. Each axle has its own spinning rig, and taillights react to
   // braking. No point lights or heavyweight physics are allocated per car.
@@ -4535,6 +4668,18 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
     world.add(g);
     actors.set(ref,{group:g,kind});
   }
+  // The bridge decks stand above the road: anything crossing rises onto the deck (a smooth ramp at each end).
+  function bridgeLift(x,z,kind){
+    if(z<12.95||z>15.05||!LINES.some(l=>Math.abs(x-(l+.5))<.66))return 0;
+    const u=Math.min(1,Math.max(0,Math.min(z-13,15-z)/.3)),e=u*u*(3-2*u);
+    return e*(kind==='car'||kind==='bike'?.178:kind==='person'?.04:0);
+  }
+  // Each resident walks in a style of their own: stride rate and swing, arm swing, bounce and lean, and a few habits.
+  function walkStyle(ref){
+    const id=ref.ph||0,rr=n=>{const x=Math.sin(id*12.9898+n*78.233)*43758.5453;return x-Math.floor(x);};
+    return {freq:.82+rr(1)*.4,amp:.78+rr(2)*.48,arm:.5+rr(3)*.95,bounce:.45+rr(4)*1.15,lean:(rr(5)-.4)*.07,
+      phone:rr(6)<.42,period:55+rr(7)*70,off:rr(8)*100,pockets:rr(9)<.22,stretch:rr(10)<.3,period2:80+rr(11)*90,off2:rr(12)*100};
+  }
   function syncActors(){
     const live=new Set(town.movers());
     for(const [ref,item] of actors)if(!live.has(ref)){
@@ -4552,7 +4697,7 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
       // Ground-contact calibration: wheels touch the road instead of floating.
       const baseY=item.kind==='car'?.078:item.kind==='bike'?.11:
         item.kind==='animal'?.13:ref.sit?.10:.16;
-      g.position.set(desiredX,baseY,desiredZ);
+      g.position.set(desiredX,baseY+bridgeLift(desiredX,desiredZ,item.kind),desiredZ);
       {const now=town.debug().clock||0;if(ref.hopUntil&&now<ref.hopUntil)g.position.y+=Math.abs(Math.sin((ref.hopUntil-now)*(item.kind==='car'?16:11)))*(item.kind==='car'?.045:.11);}
       const a=Number.isFinite(ref.heading)?-ref.heading:[0,Math.PI,-Math.PI/2,Math.PI/2][d];
       // Cars, bicycles and quadrupeds point along local +X; only sculpted
@@ -4563,7 +4708,7 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
       if(limbs){
         // Distance owns the footstep clock. Time only smooths transitions and
         // breathing, so a stopped person never runs in place or foot-slides.
-        const state=g.userData.pose,worldTime=town.debug().clock;
+        const state=g.userData.pose,worldTime=town.debug().clock,S=state.style||(state.style=walkStyle(ref));
         const dt=state.lastClock===null?1/30:
           THREE.MathUtils.clamp(worldTime-state.lastClock,1/120,.09);
         state.lastClock=worldTime;
@@ -4625,7 +4770,7 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
           if(goods.bread)goods.bread.visible=available==='bread';
           if(goods.book)goods.book.visible=available==='book';
         }
-        const stridePhase=(ref.travel||0)*17+(ref.ph||0);
+        const stridePhase=(ref.travel||0)*17*S.freq+(ref.ph||0);
         const stride=Math.sin(stridePhase);
         // Strongest motion happens in swing; each foot rocks toward the
         // street at contact rather than following a rigid pendulum.
@@ -4634,7 +4779,7 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
           const swing=phase*state.speed;
           const recover=Math.max(0,-phase)*state.speed;
           limbs.legs[k].rotation.x=-1.16*state.sit+
-            (1-state.sit)*swing*(ref.gait==='brisk'?.8:.74)+
+            (1-state.sit)*swing*(ref.gait==='brisk'?.8:.74)*S.amp+
             state.dance*.19*Math.sin(worldTime*4.2+k*Math.PI);
           limbs.shins[k].rotation.x=state.sit*.75+
             (1-state.sit)*recover*.94;
@@ -4660,7 +4805,7 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
           const receiving=dominant?state.receive:state.receive*.12;
           const using=dominant?state.enjoy:state.enjoy*.48;
           limbs.arms[k].rotation.x=state.sit*.20-
-            swing*state.speed*(carrying?.18:ref.gait==='brisk'?.62:.52)-
+            swing*state.speed*(carrying?.18:ref.gait==='brisk'?.62:.52)*S.arm-
             state.chat*(dominant?.25:.07)-speech*.30-inspect*.22-wave*.52-
             trading*.72-receiving*.56-using*1.18-
             (dominant?state.knock*1.28+state.order*.92:state.order*.13)-
@@ -4690,7 +4835,7 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
         }
         // The whole torso shifts weight, leans into greetings and settles
         // naturally after walking. Small limits preserve miniature balance.
-        const lean=state.speed*.043;
+        const lean=state.speed*(.043+S.lean);
         const beat=Math.sin(stridePhase*2);
         limbs.upperBody.rotation.x=lean+
           state.serve*.080+state.receive*.12+state.enjoy*.045+
@@ -4701,7 +4846,7 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
           state.play*.065*Math.sin(worldTime*7)+
           state.dance*.12*Math.sin(worldTime*4.2+(ref.ph||0));
         limbs.upperBody.position.y=.006*Math.sin(worldTime*2.0+(ref.ph||0))+
-          Math.abs(beat)*state.speed*(ref.gait==='skip'?.045:.018)+
+          Math.abs(beat)*state.speed*(ref.gait==='skip'?.045:.018)*S.bounce+
           state.celebrate*.038*Math.abs(Math.sin(worldTime*5.4+(ref.ph||0)))+
           state.dance*.017*Math.abs(Math.sin(worldTime*4.2+(ref.ph||0)));
         // A head turn follows an actual attention target; a chat creates
@@ -4735,7 +4880,20 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
         // Body and shoes share one small bounce, which vanishes smoothly
         // at a stop without changing the actual world-space position.
         g.position.y+=Math.max(0,Math.sin(stridePhase*2))*
-          state.speed*.009;
+          state.speed*.009*S.bounce;
+        // Habits: some residents check a phone now and then, some walk with hands in pockets, some stretch.
+        if(!ref.kind&&!ref.shopRole&&state.chat+state.speak+state.greet+state.serve<.2){
+          const walking=state.speed>.12;
+          if(S.phone&&walking&&((worldTime+S.off)%S.period)<5.5){
+            limbs.headPivot.rotation.x=.5;limbs.arms[1].rotation.x=-1.55;limbs.arms[1].rotation.z=-.15;limbs.elbows[1].rotation.x=-1.3;
+          }else if(S.pockets&&walking&&!ref.bag){
+            for(let k=0;k<2;k++){limbs.arms[k].rotation.x=.22;limbs.arms[k].rotation.z=(k?-1:1)*.2;limbs.elbows[k].rotation.x=-.35;}
+          }else if(S.stretch&&((worldTime+S.off2)%S.period2)<1.6){
+            const u=Math.sin(((worldTime+S.off2)%S.period2)/1.6*Math.PI);
+            for(let k=0;k<2;k++){limbs.arms[k].rotation.x=-2.5*u;limbs.arms[k].rotation.z=(k?-1:1)*.25*u;}
+            limbs.headPivot.rotation.x=-.2*u;
+          }
+        }
       }
       if(item.kind==='car'||item.kind==='bike'){
         const rig=g.userData.vehicleRig;
@@ -5018,7 +5176,7 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
       // Driven by the town's own clock, so they pause with the town.
       {const now=state.clock||0;const dt=lastClockAt===null?0:THREE.MathUtils.clamp(now-lastClockAt,0,.1);lastClockAt=now;sceneClock+=dt;
        try{window.ToyTownWeather?.step?.(dt);}catch(e){}
-       updateVisit(dt);updateRound(dt,state.night||0);updateEffects(dt);updateTrain(dt,state.night||0);updateFarm(dt);updateSite(dt);updateLife(dt);updateMore(dt,state.night||0);updateStage2(dt,state.night||0);updateStage3(dt,state.night||0);updateStage4(dt,state.night||0);}
+       updateVisit(dt);updateRound(dt,state.night||0);updateEffects(dt);updateTrain(dt,state.night||0);updateFarm(dt);updateSite(dt);updateLife(dt);updateMore(dt,state.night||0);updateStage2(dt,state.night||0);updateStage3(dt,state.night||0);updateStage4(dt,state.night||0);updateStage5(dt,state.night||0);}
       placeBubble();
       animateAmbient(state.clock||0);
       const drawStart=clockMs();
@@ -5055,7 +5213,9 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
     startVisit:()=>{if(!onThisDay.length)onThisDay=[{year:1969,text:'Apollo 11 lands on the Moon'}];startVisit();return timeVisit;},startRound:()=>{startRound();return round;},
     stepExtras:(seconds,dark=0)=>{for(let t=0;t<seconds;t+=.05){sceneClock+=.05;updateVisit(.05);updateRound(.05,dark);updateEffects(.05);}},
     setFreight:n=>{rail.freightEvery=n;rail.mode='pass';},railMode:()=>rail.mode,
-    stepTrain:(seconds,dark=0)=>{for(let t=0;t<seconds;t+=.05){updateTrain(.05,dark);updateFarm(.05);updateSite(.05);updateLife(.05);updateMore(.05,dark);updateStage2(.05,dark);updateStage3(.05,dark);updateStage4(.05,dark);}},
+    stepTrain:(seconds,dark=0)=>{for(let t=0;t<seconds;t+=.05){updateTrain(.05,dark);updateFarm(.05);updateSite(.05);updateLife(.05);updateMore(.05,dark);updateStage2(.05,dark);updateStage3(.05,dark);updateStage4(.05,dark);updateStage5(.05,dark);}},
+    stage5Stats:()=>({built:fest.built,festival:fest.kind,decor:fest.decor,dragon:!!fest.dragon?.g.visible,maypole:!!fest.maypole,event:fest.ev?.kind||null,eventT:fest.ev?+fest.ev.t.toFixed(1):0,eventDur:fest.ev?.dur||0,events:fest.events,log:fest.log.slice(-6)}),
+    startEvent:k=>startEvent(k),startDragon:()=>{if(fest.dragon){fest.dragonOn=60;fest.dragon.g.visible=true;return true;}return false;},
     stage4Stats:()=>({built:sky4.built,rainbow:!!sky4.rainbow?.visible,rainbows:sky4.rainbows,leaves:sky4.leaves.filter(l=>l.on).length,leavesBlown:sky4.leavesBlown,plane:!!sky4.plane?.g.visible,planes:sky4.planes,flocks:sky4.flocks.length,flocksRun:sky4.flocksRun,sunK:+sunK.toFixed(2),grayK:+grayK.toFixed(2)}),
     setWindForTest:v=>{sky4.windOverride=v;},startBanner:()=>startBanner(),startFlock:()=>startFlock(),
     stage3Stats:()=>({built:bus3.built,stops:bus3.stops.length,waiting:bus3.people.filter(p=>p.state==='wait').length,aboard:bus3.people.filter(p=>p.state==='aboard').length,boarded:bus3.boarded,alighted:bus3.alighted,boards:bus3.boards,steam:bus3.steam.length,tufts:bus3.tufts,flowers:bus3.flowers,patches:bus3.patches}),
