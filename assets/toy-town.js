@@ -829,7 +829,7 @@ const ToyTown = (() => {
     return {front:a.front+b.front+.027,side:a.side+b.side+.018};
   }
   // The drawn size of each vehicle (half length, half width): what must never overlap on screen.
-  const BODY_HALF = {bus: [.35, .135], fire: [.30, .125], bike: [.12, .06]};
+  const BODY_HALF = {bus: [.35, .135], fire: [.30, .125], bike: [.17, .075]};   // drawn half length / half width
   function tightExtent(m,ux,uy){
     const h=BODY_HALF[m.kind]||[.22,.125],d=DIRS[m.d],along=Math.abs(d[0]*ux+d[1]*uy),across=Math.abs(d[0]*uy-d[1]*ux);
     return {front:h[0]*along+h[1]*across,side:h[0]*across+h[1]*along};
@@ -918,6 +918,13 @@ const ToyTown = (() => {
     // They never teleport or step into the shop/road center to do so.
     if(m.type==='person'&&!m.kind&&!m.heroResident){
       if(clock<(m.observeUntil||0)){m.v=0;return;}
+      // Now and then a walker dawdles for a moment (a look round, a stretch, a breath) away from the junctions.
+      if(m.nextDawdle===undefined)m.nextDawdle=clock+6+Math.random()*20;
+      if(m.max>.05&&clock>=m.nextDawdle){
+        m.nextDawdle=clock+9+Math.random()*26;
+        const atJunction=LINES.some(l=>Math.abs((m.d<2?m.x:m.y)-(l+.5))<.75);
+        if(!atJunction&&Math.random()<.55){m.observeUntil=clock+.7+Math.random()*1.6;m.attention=null;m.glanceAt={x:m.x+(Math.random()-.5)*3,y:m.y+(Math.random()-.5)*3};m.glanceUntil=m.observeUntil;m.v=0;return;}
+      }
 
       if(clock>=(m.nextNotice||0)&&m.max>.05){
         m.nextNotice=clock+13+Math.random()*9;
@@ -935,6 +942,8 @@ const ToyTown = (() => {
     }
     const [dx, dy] = DIRS[m.d];
     let want = m.max;
+    // No two walkers keep the same pace: each one's speed drifts slowly up and down.
+    if (m.type === 'person' && !m.kind && !m.heroResident && m.max > .05) want *= .88 + .24 * Math.sin(clock * (.28 + ((m.ph || 0) % 1) * .3) + (m.ph || 0) * 1.7);
     const patient = clock < (m.patienceUntil || 0);   // out of patience: stop yielding (never stop avoiding a collision)
     if (m.type === 'car') {   // keep a gap to whatever is ahead in the lane, and stop for red lights
       for (const o of movers) if (!patient && o !== m && o.type === 'car' && o.d === m.d) {
@@ -2380,9 +2389,12 @@ const ToyTown = (() => {
     let rolled=0;
     for(let i=0;i<cars.length;i++)for(let j=i+1;j<cars.length;j++){
       const A=cars[i],B=cars[j];
-      if(A.v>.3||B.v>.3||!tightOverlap(A,B))continue;
-      for(const [Y,other] of [[B,A],[A,B]]){
-        const [dx,dy]=DIRS[Y.d],px=Y.x,py=Y.y,s=.35*dt,nx=px-dx*s,ny=py-dy*s;
+      if(Math.min(A.v,B.v)>.35||!tightOverlap(A,B))continue;
+      // the slower one (or, if equal, the later one) rolls gently back along its own lane
+      const order=A.v<B.v-.05?[[A,B],[B,A]]:B.v<A.v-.05?[[B,A],[A,B]]:[[B,A],[A,B]];
+      for(const [Y,other] of order){
+        if(Y.v>.35)continue;
+        const [dx,dy]=DIRS[Y.d],px=Y.x,py=Y.y,s=.7*dt,nx=px-dx*s,ny=py-dy*s;
         if(nx<1.45||nx>16.55||ny<1.45||ny>16.55)continue;
         Y.x=nx;Y.y=ny;
         if(cars.some(o=>o!==Y&&o!==other&&tightOverlap(Y,o))){Y.x=px;Y.y=py;continue;}   // never back into a third car
