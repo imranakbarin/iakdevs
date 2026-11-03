@@ -552,3 +552,11 @@ A `START` does not prohibit parallel edits. Avoid stepping on each other's uncom
 - Windmill: `assets/toy-town-3d.js` (v59) sails now face south (toward the camera; before they faced west and were edge-on) and turn at .9 rad/s (storm faster); the extras test pins the rotation code; screenshots 1.7 s apart show the sails in different positions.
 - Cache keys sim v37, 3D v59, embed v69. Tests: all `tests/*.test.cjs` pass locally. Not verified: real iPhone/GPU look.
 
+### START — Claude (Claude Code) — 2026-11-03 (people running on water; smaller seagulls)
+- Base: `c6d81066` (master after #164; fetched, re-read this file and `CLAUDE.md`).
+- Task (owner request): "Some guys are running on water 😅 seagulls can be a bit smaller."
+- Findings (headless sim, `water.cjs` probe): walkers cross the river band (13.04 < y < 14.96) away from bridges because (a) walking legs of events/whims/gatherings are straight lines that ignore the river, (b) a walker left off the road grid beside the river (after a gathering or a reading `sit` flag) strolls straight on, (c) the bridge deck (±.46) is narrower than the pavement lanes (±.43 + body), so people on a bridge hang over the parapets.
+- Plan: route every person leg round by the nearest bridge (`dryRoute`, applied in `walk()` and in `stepPath`), send a stray walker beside the river back to the pavement, widen the bridges, and scale the seagulls to ~.62. Regression test: no walker on the water over 420 s on two layouts.
+- Likely files: `assets/toy-town.js`, `assets/toy-town-3d.js`, `toy-town.html`, `index.html` (cache key), tests, this file.
+- Status: in progress.
+
