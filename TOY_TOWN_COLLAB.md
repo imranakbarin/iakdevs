@@ -560,3 +560,10 @@ A `START` does not prohibit parallel edits. Avoid stepping on each other's uncom
 - Likely files: `assets/toy-town.js`, `assets/toy-town-3d.js`, `toy-town.html`, `index.html` (cache key), tests, this file.
 - Status: in progress.
 
+### DONE — Claude (Claude Code) — 2026-11-03 (people running on water; smaller seagulls)
+- Outcome: nobody walks on the river any more, bridges are wider, and seagulls are smaller. Implementation commit `3fc938bc` (CI `toy-town-visual` run 41652876164 **success**); squash-merged with this entry.
+- `assets/toy-town.js` (v38): `dryRoute()` (+ `inRiver`, `onBridgeX`) routes a leg that would cross the water band (13.04 < y < 14.96) away from a bridge round by the nearest bridge (lane ±.3 inside the parapets) and moves a target that falls in the water to the bank; it is applied in `walk()` and, for every person, once per leg at the start of `stepPath()` (so event, gathering and errand paths that bypass `walk()` are covered too); `step()` sends a plain walker left beside the river off the street grid (e.g. after a gathering, or a reading `sit` flag that was never cleared) back to the pavement via `endWhim`.
+- `assets/toy-town-3d.js` (v60): `bridgeAt()` decks widened (±.67 ground, ±.56 deck, parapets at ±.62) so the pavement lanes (±.43) sit on the deck; seagulls scaled to .62.
+- Tests: `water.cjs`-style probe went from 6–24 wet samples per run to 0 over many runs; the extras test now runs 420 s on two layouts and asserts nobody is on the water; all `tests/*.test.cjs` pass locally. Cache keys sim v38, 3D v60, embed v70.
+- Honest notes: the guard that sends strays back to the pavement is limited to the river rows (y 12.8–15.2) because an unrestricted version broke a shop-front test that places a walker off the grid on purpose. Not verified on a real phone.
+

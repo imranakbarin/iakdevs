@@ -899,6 +899,9 @@ const ToyTown = (() => {
     if(m.communityResident&&m.intent==='chat'&&clock<(m.stopUntil||0)){
       m.v=0;return;
     }
+    // A walker left off the street grid beside the river (after a gathering, say) would stroll straight on, over the water:
+    // send them back to the nearest pavement first.
+    if(m.type==='person'&&!m.kind&&!m.path&&!m.heroResident&&!m.shopRole&&!(m.stopUntil&&clock<m.stopUntil)&&m.y>12.8&&m.y<15.2&&!LINES.some(l=>Math.abs((m.d<2?m.y:m.x)-(l+.5))<.6)){endWhim(m);return;}
     // Free pedestrians have local awareness, not a global scripted parade.
     // They notice nearby storefronts, pause briefly, then resume their route.
     // They never teleport or step into the shop/road center to do so.
@@ -1044,6 +1047,12 @@ const ToyTown = (() => {
   }
   function stepPath(m, dt) {
     const p = m.path[0]; if (!p) { m.path = null; return; }
+    // Every walking leg (events, gatherings, errands) keeps out of the river: round by a bridge, never over the water.
+    if (m.type === 'person' && !p.dry) {
+      p.dry = true; const fix = dryRoute([{x: p.x, y: p.y, speed: p.speed}], m.x, m.y), last = fix[fix.length - 1];
+      p.x = last.x; p.y = last.y;
+      if (fix.length > 1) { m.path.splice(0, 0, ...fix.slice(0, -1).map(q => ({x: q.x, y: q.y, speed: p.speed || m.max, dry: true}))); return; }
+    }
     // Scripted event paths sometimes target coordinates beyond the tabletop.
     // Clip *waypoints* before stepping, so the walker/vehicle can actually
     // reach its destination instead of getting stuck against a hard border.
@@ -1076,7 +1085,25 @@ const ToyTown = (() => {
     const near = v => LINES.reduce((a, l) => Math.abs(l + .5 - v) < Math.abs(a - v) ? l + .5 : a, LINES[0] + .5);
     const lx = near(x), ly = near(y), gx = near(tx), gy = near(ty);
     const sx = x >= lx ? PAVE : -PAVE, sy = y >= ly ? PAVE : -PAVE, ex = tx >= gx ? PAVE : -PAVE, ey = ty >= gy ? PAVE : -PAVE;
-    return [{x: lx + sx, y: ly + sy, speed}, {x: gx + ex, y: ly + sy, speed}, {x: gx + ex, y: gy + ey, speed}, {x: tx, y: ty, speed}];
+    return dryRoute([{x: lx + sx, y: ly + sy, speed}, {x: gx + ex, y: ly + sy, speed}, {x: gx + ex, y: gy + ey, speed}, {x: tx, y: ty, speed}], x, y);
+  }
+  // Nobody walks on the river: a leg that would cross the water away from a bridge goes round by the nearest bridge,
+  // and a target that falls in the water is moved to the bank.
+  const inRiver = y => y > 13.04 && y < 14.96, onBridgeX = x => LINES.some(l => Math.abs(x - (l + .5)) < .5);
+  function dryRoute(pts, x, y) {
+    const out = []; let px = x, py = y;
+    for (const p of pts) {
+      let tx = p.x, ty = p.y;
+      if (inRiver(ty) && !onBridgeX(tx)) ty = ty < 14 ? 12.95 : 15.05;
+      const cross = (py <= 13.04 && ty >= 14.96) || (py >= 14.96 && ty <= 13.04);
+      if (cross && !(onBridgeX(px) && onBridgeX(tx) && Math.abs(px - tx) < .3)) {
+        const mx = (px + tx) / 2, bx = LINES.reduce((a, l) => Math.abs(l + .5 - mx) < Math.abs(a - mx) ? l + .5 : a, LINES[0] + .5), lane = (mx >= bx ? 1 : -1) * .3;
+        const nearBank = py < 14 ? 12.95 : 15.05, farBank = py < 14 ? 15.05 : 12.95;
+        out.push({x: bx + lane, y: nearBank, speed: p.speed}, {x: bx + lane, y: farBank, speed: p.speed});
+      }
+      out.push(Object.assign({}, p, {x: tx, y: ty})); px = tx; py = ty;
+    }
+    return out;
   }
   // A walker already on the street starts from where they are drawn (their pavement), so nothing jumps.
   function walkFrom(m, tx, ty, speed) {
