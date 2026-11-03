@@ -497,3 +497,10 @@ A `START` does not prohibit parallel edits. Avoid stepping on each other's uncom
 - Not verified: real iPhone/GPU look and frame rate (SwiftShader screenshots at phone size only). The user's first screenshot showed two small black ovals by a tree at the top right; I could not reproduce them in any render, so they are not fixed. Please look at a fresh device screenshot.
 - Next ideas: a second (goods) train, ground restyle, larger shopfront scenes at phone scale.
 
+### START — Claude (Claude Code) — 2026-11-03 (smaller, cuter cycles and residents)
+- Base: `f5ac02ba` (master after #155; fetched, re-read this file and `CLAUDE.md`).
+- Task (owner request): "Cycles are bigger than cars, reduce the cycle sizes and make it cuter, and the same for the humans too."
+- Plan: shrink the bicycle (and its rider) well below the new toy cars, with chunkier tyres, a pastel frame and a big round head; give every resident the same cuter proportions (smaller overall, bigger head). The rig structure (wheels, crank, leg chains, limbs, head pivot) stays, so animation and tests keep working.
+- Likely files: `assets/toy-town-3d.js`, `toy-town.html`, `index.html` (cache key), `tests/toy-town-3d.test.cjs`, `tests/toy-town-extras.test.cjs`, README, this file.
+- Status: in progress.
+
