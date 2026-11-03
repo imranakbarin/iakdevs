@@ -158,16 +158,16 @@ assert.match(moduleCode,/eye.scale.y=blink/,'eyelids blink without a separate an
 assert.match(html,/type="importmap"/);
 assert.match(html,/three@0\.187\.0\/build\/three\.module\.js/);
 assert.match(html,/three@0\.187\.0\/examples\/jsm\//);
-assert.match(html,/toy-town-3d\.js\?v=60/);
+assert.match(html,/toy-town-3d\.js\?v=61/);
 assert.match(html,/toy-town-landmarks\.js\?v=7/,'the independent models are requested alongside Three');
 assert.match(html,/buildLandmark:landmarks\.buildLandmark/,
   'loader injects the authored model builder into the 3D simulation');
-assert.match(html,/toy-town\.js\?v=38/);
+assert.match(html,/toy-town\.js\?v=39/);
 const classicScript=html.match(/src="assets\/toy-town\.js\?v=\d+"/);
 assert.ok(classicScript&&
   html.indexOf(classicScript[0])<html.indexOf("import('three')"),
   'the actual versioned classic script always loads before WebGL');
-assert.match(page,/toy-town\.html\?v=70&embed=1/);
+assert.match(page,/toy-town\.html\?v=71&embed=1/);
 assert.match(fs.readFileSync(path.join(root,'assets/toy-town.js'),'utf8'),
   /targetX=clamp\(\.08,p\.x,17\.92\)/,
   'scripted paths are clamped at the endpoint rather than freezing outside town');
@@ -285,11 +285,11 @@ const pedestrians=[{type:'person',x:8.1,y:8.7,d:0,v:.26,travel:4,col:'#d5a6a0',s
     districtRole:'garden',districtAction:'working',
     x:3.5,y:3.5,d:2,v:0,moved:0,col:'#78a995',skin:'#d8a984',
     attention:{x:3.5,y:4.5}}];
-let seed=20261031,frameClock=6,currentCamZoom=1.52,nightValue=.25;
+let seed=20261031,frameClock=6,currentCamZoom=1.52,nightValue=.25,currentYaw=0;
 const town={
  buildings:()=>buildings,props:()=>props,movers:()=>pedestrians,
  fitView:()=>.475,debug:()=>({seed,night:nightValue,clock:frameClock,
-  cam:{x:9,y:9,z:currentCamZoom,tx:9,ty:9,tz:currentCamZoom}})
+  cam:{x:9,y:9,z:currentCamZoom,tx:9,ty:9,tz:currentCamZoom,yaw:currentYaw,tyaw:currentYaw}})
 };
 const context={THREE,window:win,document,console,
   requestAnimationFrame:cb=>{callbacks.push(cb);return callbacks.length;},
@@ -475,7 +475,7 @@ assert.match(moduleCode,/if\(!b.hero && style===0/,
   'ordinary houses have occasional attached side wings for skyline variety');
 assert.match(moduleCode,/const dx=legacy\?12\.5:7\.4,dy=legacy\?23-closeness\*11\.5:/,
   'street photo direction and eye height interpolate to a lower facade view');
-assert.match(moduleCode,/camera\.position\.set\(aimX\+dx\/length\*distance/,
+assert.match(moduleCode,/camera\.position\.set\(aimX\+dxr\/length\*distance/,
   'the camera dolly moves along the physical photographic viewing direction');
 assert.match(moduleCode,/const focusWeight=THREE\.MathUtils\.clamp/,
   'compositional framing is removed smoothly as the user pans away');
@@ -733,7 +733,21 @@ assert.ok(closeDistance<standardDistance*.7,
   'real dolly brings the perspective camera noticeably closer at street zoom');
 assert.ok(api.camera.position.y < normalCameraHeight,'close zoom lowers viewing angle to show facades');
 currentCamZoom=1.52;callbacks.shift()();
-assert.ok(Math.abs(api.camera.position.y-normalCameraHeight)<.0001,'camera returns to regular viewing angle');
+
+// 360° rotation: the camera orbits the town with the sim's yaw (0 = the original front view).
+{
+  const fw=Math.min(1,Math.max(0,(1.52-.9)/.9)),ax=9-fw*.09,az=9-fw*.42;   // the point the camera looks at
+  const front={x:api.camera.position.x-ax,z:api.camera.position.z-az};
+  currentYaw=Math.PI;callbacks.shift()();
+  const back={x:api.camera.position.x-ax,z:api.camera.position.z-az};
+  assert.ok(Math.abs(back.x+front.x)<1e-6&&Math.abs(back.z+front.z)<1e-6,'a half turn puts the camera on the opposite side of the town');
+  currentYaw=Math.PI/2;callbacks.shift()();
+  const side={x:api.camera.position.x-ax,z:api.camera.position.z-az};
+  assert.ok(Math.abs(side.x*front.x+side.z*front.z)<1e-6*Math.hypot(front.x,front.z)**2,'a quarter turn is at right angles to the front view');
+  assert.ok(Math.abs(Math.hypot(side.x,side.z)-Math.hypot(front.x,front.z))<1e-6,'and keeps the same distance and height');
+  currentYaw=0;callbacks.shift()();
+  assert.ok(Math.abs(api.camera.position.x-ax-front.x)<1e-6,'turning back restores the front view');
+}assert.ok(Math.abs(api.camera.position.y-normalCameraHeight)<.0001,'camera returns to regular viewing angle');
 assert.equal(api.getStats().actors,4,'pedestrians, vehicles and a neighborhood worker follow the simulation');
 assert.equal(api.getStats().buildings,9);
 assert.equal(api.getStats().landmarks,5,'five independently modeled buildings replace generic hero meshes');

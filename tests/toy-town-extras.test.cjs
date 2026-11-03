@@ -204,4 +204,21 @@ for (const seed of [555, 42]) {
 }
 assert.match(view, /b\.scale\.setScalar\(\.62\)/, 'seagulls are small');
 assert.match(view, /groundPiece\(1\.34,2\.05/, 'bridges are wide enough for the pavement lanes');
-console.log('Toy Town EXTRAS PASS: nobody walks on the river, small seagulls, wider bridges; a lamplighter, parades with confetti, a goods train, seagulls, a market-day crowd and fireworks; a rowing boat, a fisher, a playground with children, scattering pigeons and a kite flyer, animals in proportion; small cute cyclists and chibi residents; a readable building site and a warm cinematic grade; a ring railway with a station and a little steam train; small soft pastel vehicles that never stay merged; a softer city; pavements and walkers on them; nobody stays stuck (3 layouts); varied whims; Moments on request; local weather; follow a resident, feed the ducks, gentle opt-in sound; a day in the life (commuters, children, lunch, home at dusk); KayKit CC0 kit (named, small, licensed, with fallback; roads and plaza too); taps on residents, cars, buildings and open ground; livelier gaits and greetings; news card minimises to a pill (phones first, remembered), Picture-of-the-Day cinema, fireflies and shooting stars, tap-a-resident chat, the on-this-day visitor (gentle history only, credited) and the dawn paper round.');
+// 360° rotation: the sim keeps a heading that every screen-to-world step honours.
+{
+  const box = vm.createContext({Math, Object, Array, JSON, Date, String, Number, RegExp, Set, Map, setTimeout: () => 0, document: {getElementById: () => ({textContent: '', style: {}})}});
+  vm.runInContext(town + ';this.T=ToyTown;', box); const T = box.T; T.build(77, 'market');
+  assert.equal(T.yaw(), 0, 'starts facing front');
+  T.rotateBy(Math.PI / 2); for (let i = 0; i < 80; i++) T.update(.1);
+  assert.ok(Math.abs(T.yaw() - Math.PI / 2) < .02, 'a quarter turn is reached smoothly');
+  T.rotateBy(Math.PI); for (let i = 0; i < 80; i++) T.update(.1);
+  assert.ok(Math.abs(Math.abs(T.yaw()) - Math.PI / 2) < .02, 'turning on past a half turn wraps round (no unwinding)');
+  T.rotateTo(0); for (let i = 0; i < 120; i++) T.update(.1);
+  assert.ok(Math.abs(T.yaw()) < .02, 'and back to the front');
+  assert.ok(T.view().yaw === 0 || Math.abs(T.view().yaw) < 1e-9, 'the view reports the target heading');
+}
+assert.match(sim, /town:rotate/, 'the main page can rotate the embedded town'); assert.match(html, /id="rotate-left"/); assert.match(html, /id="rotate-right"/, 'turn buttons beside the zoom buttons');
+assert.match(sim, /Math\.abs\(twist\) > \.14/, 'two fingers twisting turn the view (with a dead zone, so a plain pinch never rotates)');
+assert.match(sim, /e\.button === 2 \|\| e\.shiftKey \|\| e\.altKey/, 'right-drag or Shift-drag turns it with a mouse');
+assert.match(sim, /e\.key === 'q'/, 'Q and E turn it from the keyboard');
+console.log('Toy Town EXTRAS PASS: 360-degree rotation (twist, right-drag, Q/E, buttons); nobody walks on the river, small seagulls, wider bridges; a lamplighter, parades with confetti, a goods train, seagulls, a market-day crowd and fireworks; a rowing boat, a fisher, a playground with children, scattering pigeons and a kite flyer, animals in proportion; small cute cyclists and chibi residents; a readable building site and a warm cinematic grade; a ring railway with a station and a little steam train; small soft pastel vehicles that never stay merged; a softer city; pavements and walkers on them; nobody stays stuck (3 layouts); varied whims; Moments on request; local weather; follow a resident, feed the ducks, gentle opt-in sound; a day in the life (commuters, children, lunch, home at dusk); KayKit CC0 kit (named, small, licensed, with fallback; roads and plaza too); taps on residents, cars, buildings and open ground; livelier gaits and greetings; news card minimises to a pill (phones first, remembered), Picture-of-the-Day cinema, fireflies and shooting stars, tap-a-resident chat, the on-this-day visitor (gentle history only, credited) and the dawn paper round.');

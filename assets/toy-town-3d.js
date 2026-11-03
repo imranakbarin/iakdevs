@@ -4689,7 +4689,9 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
     const legacy=window.location?.search?.includes('legacycam=1');
     const dx=legacy?12.5:7.4,dy=legacy?23-closeness*11.5:
       20.4-closeness*9.4,dz=legacy?22:24;
-    const length=Math.hypot(dx,dy,dz);
+    // The view orbits the town: the whole horizontal offset turns by the sim's yaw (0 = the original front view).
+    const yaw=v.yaw||0,cyaw=Math.cos(yaw),syaw=Math.sin(yaw),dxr=dx*cyaw-dz*syaw,dzr=dx*syaw+dz*cyaw;
+    const length=Math.hypot(dxr,dy,dzr);
     // Match the old orthographic camera's visible height *at the center*
     // and preserve the entire tabletop at Fit. Moving the optical center
     // closer creates genuine foreground/background size separation.
@@ -4697,9 +4699,9 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
     const verticalSpan=28/Math.max(.08,equivalentOrthoZoom);
     const distance=verticalSpan/(2*Math.tan(camera.fov*Math.PI/360));
     const targetY=legacy?.30:.43;
-    camera.position.set(aimX+dx/length*distance,
+    camera.position.set(aimX+dxr/length*distance,
       targetY+dy/length*distance,
-      aimZ+dz/length*distance);
+      aimZ+dzr/length*distance);
     camera.lookAt(aimX,targetY,aimZ);
     // Fog in the old orthographic shot assumed an eye always ~30 units
     // away. A real perspective dolly ranges from ~9 to ~50 units. Fixed
@@ -4790,6 +4792,7 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
     startParade:()=>startParade(),burstFirework:(x,y,z)=>burstFirework(x,y,z),
     lifeStats:()=>({built:life.built,boatX:life.boat?.x,playground:!!life.play,at:{play:life.play&&[life.play.x,life.play.z],kite:life.kite&&[life.kite.x,life.kite.z],flock:[life.flock.x,life.flock.z],fisher:life.fisher&&[life.fisher.x,life.fisher.z]},kite:!!life.kite,birds:life.birds.map(b=>b.state),scatters:life.scatters,catches:life.catches}),
     scatterBirds:(x,z,r)=>scatterBirds(x,z,r),
+    groundPoint:(cx,cy)=>groundAt(cx,cy),
     contours:()=>world.children.filter(o=>o.userData.landscapeContour).map(o=>[+o.position.x.toFixed(2),+o.position.z.toFixed(2)]),
     probe:(x,z,r)=>world.children.filter(o=>Math.hypot(o.position.x-x,o.position.z-z)<r).map(o=>[o.type,o.geometry?.type,o.geometry?.parameters?.radius,+o.position.x.toFixed(2),+o.position.y.toFixed(2),+o.position.z.toFixed(2),o.material?.color?.getHexString?.(),Object.keys(o.userData||{}).join('|')]).slice(0,40),
     siteStats:()=>({built:site.built,workers:site.workers.length,jib:site.slew?.rotation.y||0,t:site.t}),
