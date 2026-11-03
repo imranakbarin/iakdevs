@@ -595,3 +595,9 @@ A `START` does not prohibit parallel edits. Avoid stepping on each other's uncom
 - `toy-town.html` 3D v62, `index.html` embed v72. Tests: all `tests/*.test.cjs` pass locally; the 3D test walks rain → storm → snow → clear → night → day and checks puddles, hidden activities, perched gulls, the snowman, watchman, cats, boards and a tap; screenshots of rain (umbrella parade, puddles), snow (snowman) and night were checked.
 - Honest notes: the watchman and cats are tiny at overview zoom and were only confirmed through the stats, not seen close up; only two shops have boards in this layout; taps were verified by unit test, not by finger on a phone.
 
+### START — Claude (Claude Code) — 2026-11-03 (stage 3: bus line, shopfront scenes, ground restyle)
+- Base: `1c0ed068` (master after #170; fetched, re-read this file and `CLAUDE.md`).
+- Task (owner request "LETS START ALL", last stage of the list): (1) **bus line**: one bus always in service (the sim spawns buses only by chance today); bus stops with a shelter, sign and bench on the middle street; the bus pulls up at each stop for a few seconds (sim hook, no deadlocks), waiting passengers board and others step off; (2) **shopfront scenes** at phone scale: steam rising from the bakery, A-frame chalkboards ("FRESH BREAD", "NEW BOOKS"), a book trolley outside the bookshop, little queues of customers; (3) **ground restyle**: instanced grass tufts and pastel flower clusters over the lawns (clear of roads, river, buildings, the site and the playground) and a few soft worn footpaths, so the ground matches the cute vehicles and people.
+- Likely files: `assets/toy-town.js` (bus stops), `assets/toy-town-3d.js`, `toy-town.html`, `index.html` (cache key), tests, README, this file.
+- Status: in progress (stage 3).
+
