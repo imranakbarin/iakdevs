@@ -1106,11 +1106,15 @@ const ToyTown = (() => {
     for (const p of pts) {
       let tx = p.x, ty = p.y;
       if (inRiver(ty) && !onBridgeX(tx)) ty = ty < 14 ? 12.95 : 15.05;
-      const cross = (py <= 13.04 && ty >= 14.96) || (py >= 14.96 && ty <= 13.04);
-      if (cross && !(onBridgeX(px) && onBridgeX(tx) && Math.abs(px - tx) < .3)) {
-        const mx = (px + tx) / 2, bx = LINES.reduce((a, l) => Math.abs(l + .5 - mx) < Math.abs(a - mx) ? l + .5 : a, LINES[0] + .5), lane = (mx >= bx ? 1 : -1) * .3;
-        const nearBank = py < 14 ? 12.95 : 15.05, farBank = py < 14 ? 15.05 : 12.95;
-        out.push({x: bx + lane, y: nearBank, speed: p.speed}, {x: bx + lane, y: farBank, speed: p.speed});
+      // Does the straight leg touch the water anywhere off a bridge deck?
+      let wet = false; for (let k = 1; k <= 14 && !wet; k++) { const f = k / 15, sx = px + (tx - px) * f, sy = py + (ty - py) * f; if (inRiver(sy) && !onBridgeX(sx)) wet = true; }
+      const startOnDeck = inRiver(py) && onBridgeX(px);
+      if (wet && !startOnDeck) {
+        const targetOnDeck = inRiver(ty) && onBridgeX(tx), mx = targetOnDeck ? tx : (px + tx) / 2;
+        const bx = LINES.reduce((a, l) => Math.abs(l + .5 - mx) < Math.abs(a - mx) ? l + .5 : a, LINES[0] + .5), lane = (mx >= bx ? 1 : -1) * .3;
+        const fromNorth = py < 14, nearBank = fromNorth ? 12.95 : 15.05, farBank = fromNorth ? 15.05 : 12.95;
+        out.push({x: bx + lane, y: nearBank, speed: p.speed});
+        if (!targetOnDeck && ((fromNorth && ty >= 14.96) || (!fromNorth && ty <= 13.04))) out.push({x: bx + lane, y: farBank, speed: p.speed});
       }
       out.push(Object.assign({}, p, {x: tx, y: ty})); px = tx; py = ty;
     }
