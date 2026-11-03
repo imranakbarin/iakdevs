@@ -608,3 +608,10 @@ A `START` does not prohibit parallel edits. Avoid stepping on each other's uncom
 - `toy-town.html` 3D v63 / `index.html` embed v73. Tests: all `tests/*.test.cjs` pass locally; the 3D test (mock bus at a stop → a passenger boards), the extras test (eight stops, a bus makes ≥ 3 stops in ten minutes, one bus always in service) and the water test (0 wet samples over many runs).
 - Not verified: real phone performance with the extra instanced ground meshes (≈1,100 instances, one draw call each for tufts, flowers, pebbles, patches); boarding was only seen in screenshots and stats; only two of the layout's shops had chalkboards.
 
+### START — Claude (Claude Code) — 2026-11-03 (stage 4: random weather that comes and goes by itself, and a livelier sky)
+- Base: `744a5123` (master after #172; fetched, re-read this file and `CLAUDE.md`).
+- Task (owner request): "What else can we add to make it livelier — THE WEATHER MUST HAPPEN RANDOM rather than going into a link and changing."
+- Plan: (1) **a weather director** in `assets/toy-town-weather.js`: the weather now drifts on its own while the town runs (a Markov chain with random dwell times: clear, cloud, fog, rain, storm, snow, with random wind gusts), eased in and out (sun dimming and sky tint fade instead of snapping, rain and snow fade in); `?weather=kind` still pins one weather for previews and `?weather=live` keeps the real Open-Meteo weather as an opt-in; the card's weather emoji updates and the ticker announces each change; (2) **a livelier sky**: a rainbow after rain, wind gusts that blow leaves across the town and lift the kite, a banner plane towing the day's theme, bird flocks at dawn and dusk. Simulation untouched.
+- Likely files: `assets/toy-town-weather.js`, `assets/toy-town-3d.js`, `toy-town.html`, `index.html` (cache key), tests, README, this file.
+- Status: in progress.
+
