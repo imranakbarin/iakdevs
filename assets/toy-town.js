@@ -151,7 +151,7 @@ const ToyTown = (() => {
     for (const b of blocks.filter(b => b.river)) b.type = 'riverside';
     for (const b of blocks) fill(b, r);
     for (let x = 0; x < N; x++) for (let y = 0; y < N; y++) if (tile(x, y).kind === 'edge' && r() < .55) props.push({kind: 'tree', x: x + .5, y: y + .5, s: .8 + r() * .4, c: r() < .5 ? '#5cb85c' : '#7cc65a'});
-    for (let k = 0; k < CARS; k++) spawnCar(r);
+    for (let k = 0; k < CARS; k++) spawnCar(r, k === 0 ? 'bus' : undefined);   // one bus is always on the line
     for (let k = 0; k < BIKES; k++) spawnBike(r);
     for (let k = 0; k < PEOPLE; k++) spawnPerson(r);
     spawnHeroResidents(hero, r);
@@ -259,6 +259,16 @@ const ToyTown = (() => {
   const DIRS = [[1, 0], [-1, 0], [0, 1], [0, -1]];
   function randomRoadPoint(r) { const along = r() < .5, line = LINES[r() * 4 | 0] + .5, t = 1.5 + r() * 14.5; return along ? {x: t, y: line, d: r() < .5 ? 0 : 1} : {x: line, y: t, d: r() < .5 ? 2 : 3}; }
   const directionAngle = d => [0, Math.PI, Math.PI / 2, -Math.PI / 2][d] || 0;
+  // The bus line: the bus pulls up for a few seconds at each stop on the two middle streets, one stop per direction
+  // (eastbound lane on the south side, westbound on the north). The 3D town draws the shelters and the passengers.
+  const BUS_STOPS = [];
+  for (const y of [6.5, 11.5]) for (const x of [4.6, 12.6]) { BUS_STOPS.push({id: BUS_STOPS.length, x, y, d: 0}); BUS_STOPS.push({id: BUS_STOPS.length, x, y, d: 1}); }
+  function busStopping(m) {
+    if (m.kind !== 'bus' || m.path || clock < (m.stopCool || 0)) return;
+    for (const s of BUS_STOPS) if (s.d === m.d && Math.abs(m.y - s.y) < .05 && Math.abs(m.x - s.x) < .07) {
+      m.stopUntil = clock + 4.5; m.stopCool = clock + 20; m.atStop = s.id; m.v = 0; m.stops = (m.stops || 0) + 1; return;
+    }
+  }
   // Ducks paddle on the open water between the bridges, never across a bridge deck.
   const BRIDGE_HALF = .72;
   const onBridge = x => LINES.some(l => Math.abs(x - (l + .5)) < BRIDGE_HALF);
@@ -894,6 +904,7 @@ const ToyTown = (() => {
     if(m.intent==='browse'&&clock>=(m.observeUntil||0)){
       m.intent='walking';m.attention=null;m.observeUntil=0;
     }
+    if (m.kind === 'bus') busStopping(m);
     if (m.stopUntil && clock < m.stopUntil) { m.v = 0; return; }
     if (m.path) return stepPath(m, dt);
     if(m.communityResident&&m.intent==='chat'&&clock<(m.stopUntil||0)){
@@ -1026,7 +1037,7 @@ const ToyTown = (() => {
       const c = l + .5;
       if ((before - c) * (now - c) <= 0 && before !== now) {
         const opts = DIRS.map((_, i) => i).filter(i => i !== (m.d ^ 1)).filter(i => { const nx = Math.round((m.d < 2 ? c : m.x) - .5 + DIRS[i][0]), ny = Math.round((m.d < 2 ? m.y : c) - .5 + DIRS[i][1]); const t = tile(nx, ny); return t && (t.kind === 'road' || t.kind === 'bridge'); });
-        if (opts.length && (Math.random() < .45 || !opts.includes(m.d))) { const nd = opts[Math.random() * opts.length | 0]; if (nd !== m.d &&
+        if (opts.length && (Math.random() < (m.kind === 'bus' ? (m.d < 2 && (Math.abs(m.y - 6.5) < .05 || Math.abs(m.y - 11.5) < .05) ? .12 : .75) : .45) || !opts.includes(m.d))) { const nd = opts[Math.random() * opts.length | 0]; if (nd !== m.d &&
           (m.type!=='car'||laneFree(m,nd))) {
           const cross=DIRS[m.d][0]*DIRS[nd][1]-DIRS[m.d][1]*DIRS[nd][0];
           if(m.type==='car'){m.turnSignal=cross>0?'left':'right';m.turnUntil=clock+1.1;}
@@ -2449,7 +2460,7 @@ const ToyTown = (() => {
       nextPerformance=clock+88;
     }
     // Traffic: keep the streets busy as cars leave and events come and go.
-    while (movers.filter(m => m.type === 'car' && (m.kind === 'car' || m.kind === 'bus' || m.kind === 'taxi')).length < CARS) spawnCar();
+    while (movers.filter(m => m.type === 'car' && (m.kind === 'car' || m.kind === 'bus' || m.kind === 'taxi')).length < CARS) spawnCar(Math.random, movers.some(m => m.kind === 'bus') ? undefined : 'bus');
     while (movers.filter(m => m.kind === 'bike').length < BIKES) spawnBike();
     while (movers.filter(m => m.type === 'person' && !m.kind).length < PEOPLE) spawnPerson();
     // Preserve the pointed-at block while easing wheel/button zoom.
@@ -2791,7 +2802,7 @@ const ToyTown = (() => {
     addEventListener('hashchange', () => location.reload());
     start();
   }
-  return {gather, rotateBy, rotateTo, yaw: () => cam.yaw, viewTo, view: () => ({x: cam.tx, y: cam.ty, z: cam.tz, yaw: cam.tyaw}), follow, following: () => followRef, feedDucks, layout, render, zoomAt, resetView, fitView, pinchTo, screenWorld, streetMoment, reactToNews, hero: () => town.blocks.find(b => b.hero), TALK, nameOf, headline, dateKey, CALM, lightPhase, themeFromNews, newsThemes, VARIANTS, VARIANT_EVENTS: () => Object.keys(VARIANT_EVENTS), decorate, setToday: l => { today_ = l; }, PACE, THEMES, GRIM, build, update, events: () => events, movers: () => movers, buildings: () => buildings, props: () => props, startEvent, randomEvent, setPlaying: v => { playing = v; }, debug: () => ({separated, clock, theme, seed, greetings, whims: {...whims}, unstuck: {...unstuck}, hour: hourOfDay(), daypart, routines: {...routine}, night: nightLevel(), cam: {...cam}, fitZoom, streetMoments,communityEncounters,communityVisits,streetTransactions,streetShopVisits,newsReactions,streetPerformances,
+  return {BUS_STOPS, gather, rotateBy, rotateTo, yaw: () => cam.yaw, viewTo, view: () => ({x: cam.tx, y: cam.ty, z: cam.tz, yaw: cam.tyaw}), follow, following: () => followRef, feedDucks, layout, render, zoomAt, resetView, fitView, pinchTo, screenWorld, streetMoment, reactToNews, hero: () => town.blocks.find(b => b.hero), TALK, nameOf, headline, dateKey, CALM, lightPhase, themeFromNews, newsThemes, VARIANTS, VARIANT_EVENTS: () => Object.keys(VARIANT_EVENTS), decorate, setToday: l => { today_ = l; }, PACE, THEMES, GRIM, build, update, events: () => events, movers: () => movers, buildings: () => buildings, props: () => props, startEvent, randomEvent, setPlaying: v => { playing = v; }, debug: () => ({separated, busStops: BUS_STOPS.length, buses: movers.filter(m => m.kind === 'bus').map(m => m.stops || 0), clock, theme, seed, greetings, whims: {...whims}, unstuck: {...unstuck}, hour: hourOfDay(), daypart, routines: {...routine}, night: nightLevel(), cam: {...cam}, fitZoom, streetMoments,communityEncounters,communityVisits,streetTransactions,streetShopVisits,newsReactions,streetPerformances,
     districts:{count:districts.length,visits:districtVisits,
       meetings:districtMeetings,tasks:districtTasks,
       areas:districts.map(a=>({role:a.role,block:a.block,

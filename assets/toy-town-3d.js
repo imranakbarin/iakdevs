@@ -3005,7 +3005,7 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
     createStorybookVillage();
     paintVillageLife();
     createWorkingShops();
-    rail.train=null;life.built=false;more.built=false;live2.built=false;createRailway();createFarm();createLife();createMore();createStage2();
+    rail.train=null;life.built=false;more.built=false;live2.built=false;bus3.built=false;createRailway();createFarm();createLife();createMore();createStage2();createStage3();
     // Landmark panes are pooled across the five models. Update material
     // intensity only, not every individual window mesh, on each frame.
     const visit=node=>{
@@ -4119,6 +4119,97 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
     return false;
   }
 
+  /* ---- Stage 3: a bus line with stops and boarding, scenes at the shopfronts, and a richer ground. ---- */
+  const bus3={built:false,people:[],stops:[],handled:new Set(),boarded:0,alighted:0,steam:[],t:0,tufts:0,flowers:0,patches:0,boards:0};
+  const SHOP_BOARD={BAKERY:'FRESH BREAD',BOOKS:'NEW BOOKS',PIZZA:'HOT SLICES',TOYS:'TOYS!',CAFE:'COFFEE',SWEETS:'SWEETS',PETS:'PETS'};
+  function createStage3(){
+    const g=new THREE.Group();world.add(g);bus3.built=true;bus3.people=[];bus3.stops=[];bus3.handled=new Set();bus3.steam=[];bus3.t=0;
+    const base=.17,stops=town.BUS_STOPS||[];
+    // --- bus shelters and the people waiting in them
+    const cols=['#e58f8f','#7fb3d9','#f2c36b','#9ccf9a','#c39be0','#f0a574','#f08a4b','#6fb0d9'];
+    stops.forEach((s,si)=>{
+      const south=s.d===0,z=s.y+(south?.54:-.54),sh=new THREE.Group();sh.position.set(s.x,base,z);g.add(sh);
+      const back=south?.1:-.1;
+      for(const px of [-.24,.24])cylinder(sh,.011,.011,.34,'#5c6b73',px,.17,back,false);
+      box(sh,.62,.025,.26,'#7fc4b8',0,.35,0);for(let k=0;k<5;k++)ball(sh,.025,mat(k%2?'#ffffff':'#7fc4b8',.8),-.24+k*.12,.34,south?-.12:.12).scale.set(1,.7,.6);
+      box(sh,.58,.2,.012,mat('#cfe7ee',.2),0,.2,back*1.2);
+      box(sh,.3,.022,.07,'#c68c63',0,.1,back*.6);
+      cylinder(sh,.008,.008,.46,'#5c6b73',.38,.23,0);sign(sh,'BUS',.38,.43,0,.2);
+      bus3.stops.push({s,sh,x:s.x,z});
+      for(let k=0;k<2;k++){
+        const i=si*2+k,p=person({col:cols[i%8],skin:['#f1c9a5','#d8a77c','#a8754f','#7a4e33'][i%4],hair:i%2?'#49362d':'#333947',ph:i*1.3+.7,x:i,y:i*3,bag:k===1});
+        p.scale.setScalar(CUTE);p.userData.limbs.headPivot.scale.setScalar(HEAD_BIG);g.add(p);
+        const wx=s.x-.12+k*.24,wz=z+(south?.0:.0);p.position.set(wx,base,wz);p.rotation.y=south?0:Math.PI;
+        bus3.people.push({g:p,state:'wait',stop:si,x:wx,z:wz,tx:wx,tz:wz,ph:i,t:0,face:south?0:Math.PI});
+      }
+    });
+    // --- the shopfronts: chalkboards, steam from the bakery, a book trolley
+    for(const b of town.buildings())if(b.kind==='shop'&&SHOP_BOARD[b.name]&&bus3.boards<8){
+      bus3.boards++;const bd=new THREE.Group();bd.position.set(b.x+.84,base,b.y+.98);bd.rotation.y=.2;g.add(bd);
+      for(const s of [-1,1])box(bd,.012,.2,.012,'#8a6d4e',s*.07,.1,0,false).rotation.x=s*.16;
+      box(bd,.2,.17,.012,'#2f3a3f',0,.12,.02,false);sign(bd,SHOP_BOARD[b.name],0,.13,.032,.19);
+      if(['BAKERY','PIZZA','CAFE'].includes(b.name))for(let k=0;k<4;k++){const m=new THREE.Mesh(geo('sphere',.04),new THREE.MeshBasicMaterial({color:'#ffffff',transparent:true,opacity:0,depthWrite:false}));g.add(m);bus3.steam.push({m,x:b.x+.75,z:b.y+.35,ph:k*.25});}
+      if(b.name==='BOOKS'){const tr=new THREE.Group();tr.position.set(b.x+.5,base,b.y+1.04);g.add(tr);box(tr,.2,.04,.1,'#9a7b5b',0,.07,0);
+        for(let k=0;k<5;k++)box(tr,.034,.07+(k%2)*.02,.07,['#e58f8f','#7fb3d9','#f2c36b','#9ccf9a','#c39be0'][k],-.08+k*.04,.14,0,false);
+        for(const x of [-.07,.07]){const w=cylinder(tr,.025,.025,.012,'#333',x,.03,.056);w.rotation.x=Math.PI/2;}}
+    }
+    // --- a richer ground: grass tufts, flower clusters and a few soft patches on the lawns
+    const bs=town.buildings(),ps=town.props().filter(p=>!['flowers','duck','crane'].includes(p.kind)),LN=LINES.map(l=>l+.5);
+    const ok=(x,z,m=0)=>{
+      if(LN.some(v=>Math.abs(x-v)<.68+m||Math.abs(z-v)<.68+m))return false;
+      if(z>12.85-m&&z<15.15+m)return false;
+      if(x>6.7&&x<11.3&&z>6.7&&z<11.3)return false;
+      for(const b of bs)if(Math.hypot(b.x+(b.kind==='site'?1:.5)-x,b.y+(b.kind==='site'?1:.5)-z)<(b.kind==='site'?2.2:.85)+m)return false;
+      for(const p of ps)if(Math.hypot(p.x-x,p.y-z)<.6+m)return false;
+      if(z>17-m&&Math.abs(x-RAIL.stationX)<2.9)return false;
+      if(x>17-m&&Math.abs(z-9.55)<1.4)return false;
+      if(x<1.1+m&&z>1.9&&z<6.1)return false;
+      if(life.play&&Math.hypot(life.play.x-x,life.play.z-z)<1.3+m)return false;
+      return x>.45&&x<17.55&&z>.45&&z<17.55;
+    };
+    const spots=[];for(let k=0;spots.length<320&&k<3000;k++){const x=.45+rng(k+(worldSeed||0)%89,301)*17.1,z=.45+rng(k+(worldSeed||0)%89,302)*17.1;if(ok(x,z))spots.push([x,z,k]);}
+    const inst=(geom,material,list)=>{const m=new THREE.InstancedMesh(geom,material,list.length),o=new THREE.Object3D();
+      list.forEach((e,i)=>{o.position.set(e.x,e.y,e.z);o.rotation.set(0,e.r||0,0);o.scale.set(e.sx||1,e.sy||1,e.sz||1);o.updateMatrix();m.setMatrixAt(i,o.matrix);if(e.c&&m.setColorAt)m.setColorAt(i,new THREE.Color(e.c));});
+      m.instanceMatrix.needsUpdate=true;if(m.instanceColor)m.instanceColor.needsUpdate=true;g.add(m);return m;};
+    const greens=['#7fae6e','#8fba76','#6f9f64','#9bc27f'],tuft=[],fl=[],peb=[];
+    for(const [x,z,k] of spots){
+      for(let j=0;j<3;j++)tuft.push({x:x+(rng(k,310+j)-.5)*.1,y:base+.032,z:z+(rng(k,320+j)-.5)*.1,r:rng(k,330+j)*6,sy:.8+rng(k,340+j)*.7,c:greens[(k+j)%4]});
+      if(rng(k,350)<.3)fl.push({x:x+(rng(k,351)-.5)*.2,y:base+.07,z:z+(rng(k,352)-.5)*.2,c:['#f6c9d6','#fff0b3','#ffffff','#f3b6a2','#cdb8ee'][k%5],sx:1,sy:.9,sz:1});
+      if(rng(k,360)<.12)peb.push({x:x+.08,y:base+.012,z:z-.06,sx:1.3,sy:.5,sz:1,c:'#d7ccb8'});
+    }
+    bus3.tufts=tuft.length;bus3.flowers=fl.length;
+    if(tuft.length)inst(new THREE.ConeGeometry(.02,.07,5),new THREE.MeshStandardMaterial({color:'#ffffff',roughness:1}),tuft).castShadow=false;
+    if(fl.length)inst(geo('sphere',.024),new THREE.MeshStandardMaterial({color:'#ffffff',roughness:.8}),fl);
+    if(peb.length)inst(geo('sphere',.03),new THREE.MeshStandardMaterial({color:'#ffffff',roughness:1}),peb);
+    const patches=[];for(let k=0;patches.length<26&&k<900;k++){const x=.8+rng(k+(worldSeed||0)%83,371)*16.4,z=.8+rng(k+(worldSeed||0)%83,372)*16.4;if(!ok(x,z,.55))continue;
+      patches.push({x,y:base+.004+patches.length*.0004,z,sx:.4+rng(k,373)*.55,sz:.35+rng(k,374)*.5,r:rng(k,375)*3,c:k%2?'#9cc57f':'#7ea96b'});}
+    bus3.patches=patches.length;
+    if(patches.length){const pm=inst(geo('cylinder',1,1,.004),new THREE.MeshStandardMaterial({color:'#ffffff',roughness:1,transparent:true,opacity:.5,depthWrite:false}),patches);pm.castShadow=false;pm.receiveShadow=true;}
+  }
+  function updateStage3(dt,dark){
+    if(!bus3.built)return;bus3.t+=dt;const t=bus3.t,base=.17,clk=town.debug().clock||0;
+    // steam rises from the bakery chimney
+    for(const s of bus3.steam){const u=(t*.45+s.ph)%1;s.m.position.set(s.x+Math.sin(u*5+s.ph*9)*.03,1.0+u*.42,s.z);s.m.scale.setScalar(.6+u*1.8);s.m.material.opacity=.7*(1-u)*(dark>.7?.6:1);}
+    // a bus pulling up at a stop: someone steps on, someone steps off
+    const stopsList=town.BUS_STOPS||[];
+    for(const m of town.movers())if(m.kind==='bus'&&m.atStop!==undefined&&(m.stopUntil||0)>clk){
+      const key=m.atStop+':'+(m.stops||0);if(bus3.handled.has(key))continue;bus3.handled.add(key);if(bus3.handled.size>200)bus3.handled.clear();
+      const si=stopsList.findIndex(s=>s.id===m.atStop);if(si<0||!bus3.stops[si])continue;
+      const S=bus3.stops[si],door={x:m.x,z:m.y+(S.s.d===0?.2+.14:-.2-.14)};
+      const waiting=bus3.people.find(p=>p.state==='wait'&&p.stop===si),rider=bus3.people.find(p=>p.state==='aboard');
+      if(waiting){waiting.state='board';waiting.tx=door.x;waiting.tz=door.z;waiting.doorAt=t;}
+      if(rider){rider.state='alight';rider.stop=si;rider.x=door.x;rider.z=door.z;rider.g.visible=true;rider.tx=S.x+(rider.ph%2?.12:-.12);rider.tz=S.z;rider.alightAt=t+1.2;rider.g.visible=false;}
+    }
+    for(const p of bus3.people){
+      p.ph+=dt*6;let moving=false;const L=p.g.userData.limbs;
+      const go=(tx,tz,sp)=>{const dx=tx-p.x,dz=tz-p.z,d=Math.hypot(dx,dz);if(d<.02)return true;const st=Math.min(d,sp*dt);p.x+=dx/d*st;p.z+=dz/d*st;p.g.rotation.y=Math.atan2(dx,dz);moving=true;return false;};
+      if(p.state==='board'){if(go(p.tx,p.tz,.45)){p.state='aboard';p.g.visible=false;bus3.boarded++;}}
+      else if(p.state==='alight'){if(!p.g.visible&&t>=p.alightAt){p.g.visible=true;}if(p.g.visible&&go(p.tx,p.tz,.4)){p.state='wait';p.g.rotation.y=p.face;bus3.alighted++;}}
+      if(L&&p.g.visible){const a=moving?Math.sin(p.ph*1.5)*.55:0;L.legs.forEach((l,k)=>{l.rotation.x=(k?1:-1)*a;});L.arms.forEach((l,k)=>{l.rotation.x=(k?-1:1)*a*.7;});}
+      if(p.g.visible)p.g.position.set(p.x,base+(moving?Math.abs(Math.sin(p.ph*1.5))*.01:0),p.z);
+    }
+  }
+
   // The vehicles are small designed machines rather than stacked colored
   // cubes. Each axle has its own spinning rig, and taillights react to
   // braking. No point lights or heavyweight physics are allocated per car.
@@ -4844,7 +4935,7 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
       syncActors();syncCamera();light(state.night||0);nightLife(state.night||0,state.clock||0);updateFollowCard();updateMoments();updateWeather(1/45);
       // Driven by the town's own clock, so they pause with the town.
       {const now=state.clock||0;const dt=lastClockAt===null?0:THREE.MathUtils.clamp(now-lastClockAt,0,.1);lastClockAt=now;sceneClock+=dt;
-       updateVisit(dt);updateRound(dt,state.night||0);updateEffects(dt);updateTrain(dt,state.night||0);updateFarm(dt);updateSite(dt);updateLife(dt);updateMore(dt,state.night||0);updateStage2(dt,state.night||0);}
+       updateVisit(dt);updateRound(dt,state.night||0);updateEffects(dt);updateTrain(dt,state.night||0);updateFarm(dt);updateSite(dt);updateLife(dt);updateMore(dt,state.night||0);updateStage2(dt,state.night||0);updateStage3(dt,state.night||0);}
       placeBubble();
       animateAmbient(state.clock||0);
       const drawStart=clockMs();
@@ -4881,7 +4972,8 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
     startVisit:()=>{if(!onThisDay.length)onThisDay=[{year:1969,text:'Apollo 11 lands on the Moon'}];startVisit();return timeVisit;},startRound:()=>{startRound();return round;},
     stepExtras:(seconds,dark=0)=>{for(let t=0;t<seconds;t+=.05){sceneClock+=.05;updateVisit(.05);updateRound(.05,dark);updateEffects(.05);}},
     setFreight:n=>{rail.freightEvery=n;rail.mode='pass';},railMode:()=>rail.mode,
-    stepTrain:(seconds,dark=0)=>{for(let t=0;t<seconds;t+=.05){updateTrain(.05,dark);updateFarm(.05);updateSite(.05);updateLife(.05);updateMore(.05,dark);updateStage2(.05,dark);}},
+    stepTrain:(seconds,dark=0)=>{for(let t=0;t<seconds;t+=.05){updateTrain(.05,dark);updateFarm(.05);updateSite(.05);updateLife(.05);updateMore(.05,dark);updateStage2(.05,dark);updateStage3(.05,dark);}},
+    stage3Stats:()=>({built:bus3.built,stops:bus3.stops.length,waiting:bus3.people.filter(p=>p.state==='wait').length,aboard:bus3.people.filter(p=>p.state==='aboard').length,boarded:bus3.boarded,alighted:bus3.alighted,boards:bus3.boards,steam:bus3.steam.length,tufts:bus3.tufts,flowers:bus3.flowers,patches:bus3.patches}),
     stage2Stats:()=>({built:live2.built,puddles:live2.puddles.filter(p=>p.puddle.visible).length,snow:+live2.snowK.toFixed(2),snowVisible:!!live2.snowman?.visible,watchman:!!live2.watch?.p.visible,cats:live2.cats.filter(c=>c.g.visible).length,boards:live2.boards.map(b=>b.shut.visible?'closed':'open'),hits:live2.hits,kiteVisible:life.kite?.kid.visible,playVisible:life.play?.sk.visible,fisherVisible:life.fisher?.p.visible,boatVisible:life.boat?.g.visible}),
     setWeatherForTest:k=>{weatherKind=k;},touch2:(x,y)=>touch2(x,y),
     moreStats:()=>({built:more.built,phase:more.phase,lit:lanterns.filter(l=>l.lit).length,lanterns:lanterns.length,parade:!!more.parade,paradesRun:more.paradesRun,gulls:more.gulls.map(x=>x.state),crowd:more.crowd.length,sparks:more.fw.filter(f=>f.t<f.life).length,bursts:more.bursts,lamplighter:more.lamp?.p.visible}),
