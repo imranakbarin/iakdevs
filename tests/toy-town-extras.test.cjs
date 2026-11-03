@@ -4,6 +4,8 @@
 // tap-a-resident chat in the town's own fictional voice.
 const fs = require('node:fs'), path = require('node:path'), vm = require('node:vm'), assert = require('node:assert/strict');
 const root = path.join(__dirname, '..');
+// The simulation uses Math.random; a fixed seed keeps the day-in-the-life checks reproducible (TT_SEED overrides it to hunt for flakes).
+{ let a = (+process.env.TT_SEED || 20261103) >>> 0; Math.random = () => { a = (a + 0x6D2B79F5) >>> 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
 const html = fs.readFileSync(path.join(root, 'toy-town.html'), 'utf8'), view = fs.readFileSync(path.join(root, 'assets/toy-town-3d.js'), 'utf8'), sim = fs.readFileSync(path.join(root, 'assets/toy-town.js'), 'utf8');
 
 // The minimise control, run against a tiny DOM.
