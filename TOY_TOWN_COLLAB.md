@@ -504,3 +504,10 @@ A `START` does not prohibit parallel edits. Avoid stepping on each other's uncom
 - Likely files: `assets/toy-town-3d.js`, `toy-town.html`, `index.html` (cache key), `tests/toy-town-3d.test.cjs`, `tests/toy-town-extras.test.cjs`, README, this file.
 - Status: in progress.
 
+### DONE — Claude (Claude Code) — 2026-11-03 (smaller, cuter cycles and residents)
+- Outcome: bicycles are about half their old size (now smaller than the toy cars) and cuter; residents share chibi proportions. Implementation commit `735d4c80` (CI `toy-town-visual` run 41580476307 **success**); squash-merged with this entry.
+- `assets/toy-town-3d.js` (v56): `bicycle()` now wraps `bicycleParts()` in a group scaled by `BIKE_SCALE = .52` (the rig — `bicycleRig.wheels/crank/legs`, `vehicleClass` — is shared via `userData`, so the pedalling solver and tests are unchanged); fat tyres (torus tube .03), big round head, coral helmet, eyes. `person()` applies `CUTE = .8` to the body scale and `HEAD_BIG = 1.22` to the head pivot; station passengers and site workers use the same factors.
+- `toy-town.html` 3D v56, `index.html` embed v66. Tests: all `tests/*.test.cjs` pass locally; extras test asserts `BIKE_SCALE` and `CUTE/HEAD_BIG`.
+- Not verified: real iPhone/GPU look; only SwiftShader screenshots at phone size (bike next to a car and a resident). Sim collision boxes for bikes are unchanged (larger than the drawn bike), so bikes keep a little extra room.
+- Next ideas: a second (goods) train, ground restyle, larger shopfront scenes at phone scale.
+

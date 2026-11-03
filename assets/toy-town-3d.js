@@ -3019,6 +3019,7 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
   const smoothBall=(p,r,col,x=0,y=0,z=0)=>object(p,geo('smooth',r),typeof col==='string'?mat(col,.7):col,x,y,z);
   const limb=(p,r,len,col,x=0,y=0,z=0)=>THREE.CapsuleGeometry?
     object(p,geo('capsule',r,len),typeof col==='string'?mat(col,.72):col,x,y,z):cylinder(p,r,r,len+r*2,col,x,y,z);
+  const CUTE=.8,HEAD_BIG=1.22;
   function person(ref){
     const g=new THREE.Group();
     const skin=ref.skin||'#dbab86',coat=ref.col||'#d6a3a0',trousers=ref.trousers||'#5e6f7c',shoes='#4f4741';
@@ -3235,9 +3236,11 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
       ref.shopRole==='customer'?1.13:ref.districtResident?1.15:
       ref.heroResident?1.10:1;
     const characterPhase=ref.ph||0;
-    g.scale.set(scale*(.97+.045*Math.sin(characterPhase*1.3)),
-      scale*(.98+.055*Math.cos(characterPhase*.9)),
-      scale*(.95+.045*Math.sin(characterPhase+1)));
+    // Chibi proportions: a little smaller overall (so people sit comfortably beside the small toy cars) with a big round head.
+    g.scale.set(CUTE*scale*(.97+.045*Math.sin(characterPhase*1.3)),
+      CUTE*scale*(.98+.055*Math.cos(characterPhase*.9)),
+      CUTE*scale*(.95+.045*Math.sin(characterPhase+1)));
+    headPivot.scale.setScalar(HEAD_BIG);
     return g;
   }
   /* ---- The ring railway. A little round-faced steam train loops the town on a
@@ -3340,7 +3343,7 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
     const cols=['#e58f8f','#7fb3d9','#f2c36b','#9ccf9a','#c39be0','#f0a574'],skins=['#f1c9a5','#d8a77c','#a8754f','#7a4e33'];
     for(let i=0;i<6;i++){
       const p=person({col:cols[i],skin:skins[i%4],hair:i%2?'#49362d':'#333947',ph:i*1.7+.4,x:i,y:i*2,hat:i===3?'cap':null,bag:i%2===0});
-      p.scale.setScalar(.93);g.add(p);
+      p.scale.setScalar(.93*CUTE);p.userData.limbs.headPivot.scale.setScalar(HEAD_BIG);g.add(p);
       const spot={x:cx-1.5+i*.6+(i%2)*.1,z:18.3+(i%3)*.03};
       rail.pax.push({g:p,spot,state:i<4?'wait':'inside',x:i<4?spot.x:cx,z:i<4?spot.z:17.9,until:i<4?0:3+i*5,door:0,tx:0,tz:0,ph:i});
       p.position.set(rail.pax[i].x,platTop,rail.pax[i].z);p.visible=i<4;
@@ -3630,7 +3633,7 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
     const spots=[{x:hx-.25,z:hz+.38,job:'hammer',face:-Math.PI/2*0+Math.PI},{x:hx+.3,z:hz+.35,job:'carry',a:[cx-1.15,cz-.4],b:[hx+.3,hz+.35]},{x:cx+.35,z:cz+.35,job:'plans',face:Math.PI*.7}];
     spots.forEach((sp,i)=>{
       const p=person({col:['#f08a4b','#6fb0d9','#f2d06b'][i],skin:['#d8a77c','#f1c9a5','#a8754f'][i],hair:'#333947',ph:i*2.3+1,x:i+9,y:i*3});
-      p.scale.setScalar(.9);g.add(p);
+      p.scale.setScalar(.9*CUTE);g.add(p);
       const hat=ball(p.userData.limbs.headPivot,.118,mat('#ffd23f',.5),0,.07,0);hat.scale.set(1,.62,1);hat.position.y=.08+.0;
       ball(p.userData.limbs.headPivot,.03,mat('#ffd23f',.5),0,.14,0);
       const w={g:p,sp,x:sp.x,z:sp.z,ph:i*1.7,carry:false,job:sp.job,leg:0};p.position.set(w.x,base,w.z);p.rotation.y=sp.face||0;site.workers.push(w);
@@ -3729,12 +3732,19 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
     g.userData.vehicleClass=kind;
     return g;
   }
+  // Cyclists are small and round: the whole bicycle is scaled well below the toy cars, with fat tyres, a pastel frame and a big-headed rider.
+  const BIKE_SCALE=.52;
   function bicycle(ref){
+    const inner=bicycleParts(ref),outer=new THREE.Group();
+    inner.scale.setScalar(BIKE_SCALE);outer.add(inner);
+    outer.userData=inner.userData;return outer;
+  }
+  function bicycleParts(ref){
     const g=new THREE.Group(),col=ref.col||'#7cb2ad';
     const wheels=[];
     for(const x of [-.19,.19]){
       const spin=new THREE.Group();spin.position.set(x,.169,0);g.add(spin);
-      const tire=object(spin,geo('torus',.113,.015),mat('#465357'),0,0,0);
+      const tire=object(spin,geo('torus',.113,.03),mat('#465357'),0,0,0);
       // The frame runs along local X; wheel circles MUST lie in XY.
       // Turning a torus by 90° made the bicycle wheels edge-on/flat.
       for(let k=0;k<6;k++){
@@ -3765,9 +3775,10 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
     }
     const torso=ball(g,.077,ref.col||'#b88d86',-.055,.481,0);
     torso.scale.set(.8,1.23,.74);
-    ball(g,.067,ref.skin||'#d6ae87',-.047,.628,0);
-    const helmet=ball(g,.071,'#668b96',-.045,.684,0);
-    helmet.scale.set(1,.43,1);helmet.castShadow=false;
+    ball(g,.098,ref.skin||'#d6ae87',-.047,.655,0);
+    const helmet=ball(g,.106,'#f08a7a',-.045,.725,0);
+    helmet.scale.set(1,.5,1);helmet.castShadow=false;
+    for(const e of [-1,1])ball(g,.014,'#2d3640',.045,.665,e*.05).castShadow=false;   // eyes
     // Jointed rider legs follow the actual crank/pedal orbit, rather than
     // two decorative tubes permanently stuck to the bicycle frame.
     const legs=[];
