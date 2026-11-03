@@ -113,7 +113,7 @@ assert.match(moduleCode,/districtSceneRole=p\.role/,
   'workplace roles survive into the 3D scene');
 assert.match(moduleCode,/districtTool=tool/,
   'real job-specific tools attach to resident wrists');
-assert.match(moduleCode,/const sky=tint\('#cee9f5'/,
+assert.match(moduleCode,/const sky=tint\('#ecdcc2'/,
   'the entire town shares a clearer, colorful daylight sky');
 assert.match(moduleCode,/kind:'umbrella'/,'visible animated café canopies add a lively street silhouette');
 assert.match(moduleCode,/kind:'bunting'/,'real suspended flags sway over the plaza');
@@ -121,8 +121,10 @@ assert.match(moduleCode,/kind:'pinwheel'/,'living village pinwheels animate cont
 assert.match(moduleCode,/kind:'balloon'/,'tethered colored balloons enliven the village');
 assert.match(moduleCode,/plazaInlay=true/,'colorful authored art grounds the central plaza');
 assert.match(moduleCode,/kind:'butterfly'/,'butterflies animate over planted areas');
-assert.match(html,/saturate\(1\.42\) contrast\(1\.11\)/,
-  'mobile WebGL receives a coherent richer color grade');
+assert.match(html,/saturate\(1\.36\) contrast\(1\.09\) sepia\(\.07\)/,
+  'mobile WebGL receives a coherent, warm cinematic colour grade');
+assert.match(html,/radial-gradient\(ellipse 78% 70% at 50% 46%/,'a soft vignette adds depth without any blur');
+assert.doesNotMatch(html,/#town-3d[^{]*\{[^}]*blur\(/,'the grade never blurs');
 assert.match(moduleCode,/function gardenIsland\(/,
   'garden beds have shaped earth volumes rather than floating square props');
 assert.match(moduleCode,/const cafeSet=/,'the village includes modeled cafe seating');
@@ -156,7 +158,7 @@ assert.match(moduleCode,/eye.scale.y=blink/,'eyelids blink without a separate an
 assert.match(html,/type="importmap"/);
 assert.match(html,/three@0\.187\.0\/build\/three\.module\.js/);
 assert.match(html,/three@0\.187\.0\/examples\/jsm\//);
-assert.match(html,/toy-town-3d\.js\?v=54/);
+assert.match(html,/toy-town-3d\.js\?v=55/);
 assert.match(html,/toy-town-landmarks\.js\?v=7/,'the independent models are requested alongside Three');
 assert.match(html,/buildLandmark:landmarks\.buildLandmark/,
   'loader injects the authored model builder into the 3D simulation');
@@ -165,7 +167,7 @@ const classicScript=html.match(/src="assets\/toy-town\.js\?v=\d+"/);
 assert.ok(classicScript&&
   html.indexOf(classicScript[0])<html.indexOf("import('three')"),
   'the actual versioned classic script always loads before WebGL');
-assert.match(page,/toy-town\.html\?v=64&embed=1/);
+assert.match(page,/toy-town\.html\?v=65&embed=1/);
 assert.match(fs.readFileSync(path.join(root,'assets/toy-town.js'),'utf8'),
   /targetX=clamp\(\.08,p\.x,17\.92\)/,
   'scripted paths are clamped at the endpoint rather than freezing outside town');
@@ -254,6 +256,7 @@ const host={style:{display:'none'},clientWidth:390,clientHeight:844,
 const document={createElement:()=>({width:0,height:0,getContext:()=>canvas2d,setAttribute(){},addEventListener(){},appendChild(){},append(){},remove(){},firstChild:{},classList:{add(){},remove(){},toggle(){}},style:{}}),
   body:{appendChild(){}},getElementById:id=>id==='town'?townCanvas:null};
 let buildings=[
+  {kind:'site',x:3,y:12,h:20,wall:'#d8c79a',roof:'#c9a85a'},
   {kind:'house',x:7,y:7,h:34,hero:true,wall:'#eddfc3',roof:'#a46d50'},
   {kind:'house',x:10,y:8,h:34,hero:true,wall:'#cbdcdb',roof:'#678d9c'},
   {kind:'house',x:10,y:10,h:36,hero:true,wall:'#eadfc5',roof:'#be8165'},
@@ -348,6 +351,8 @@ assert.equal(api.getStats().festoonBulbs,14,'two suspended spans contain 14 mini
   assert.ok(dwelt&&moved,'it stops at the platform and sets off again');
   for(const k of ['wait','board','aboard','alight','inside','out'])assert.ok(seen.has(k),'passengers pass through "'+k+'"');
   assert.ok(api.railStats().toots>=1,'the whistle blows when it leaves');
+  const st=api.siteStats();assert.ok(st.built&&st.workers===3,'a building site with three workers on it');
+  const jib0=st.jib;api.stepTrain(20,0);assert.notEqual(api.siteStats().jib,jib0,'the crane jib swings');
   assert.equal(api.farmStats().sheep,4,'four sheep in the pasture');
   const before=api.farmStats().spin;api.stepTrain(5,0);assert.ok(api.farmStats().spin>before,'the windmill sails turn');
 }
@@ -706,7 +711,7 @@ assert.ok(api.camera.position.y < normalCameraHeight,'close zoom lowers viewing 
 currentCamZoom=1.52;callbacks.shift()();
 assert.ok(Math.abs(api.camera.position.y-normalCameraHeight)<.0001,'camera returns to regular viewing angle');
 assert.equal(api.getStats().actors,4,'pedestrians, vehicles and a neighborhood worker follow the simulation');
-assert.equal(api.getStats().buildings,8);
+assert.equal(api.getStats().buildings,9);
 assert.equal(api.getStats().landmarks,5,'five independently modeled buildings replace generic hero meshes');
 assert.equal(api.getStats().composedBuildings,2,
   'the secondary house has staggered visual-only architecture');
