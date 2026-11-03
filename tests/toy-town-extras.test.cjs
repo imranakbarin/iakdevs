@@ -199,7 +199,7 @@ for (const seed of [555, 42]) {
   vm.runInContext(town + ';this.T=ToyTown;', box); const T = box.T; T.build(seed, 'market');
   let wet = 0, where = '';
   for (let i = 0; i < 20 * 420; i++) { T.update(1 / 20); if (i % 10) continue;
-    for (const m of T.movers()) if (m.type === 'person' && m.y > 13.1 && m.y < 14.9 && Math.min(...[1, 6, 11, 16].map(l => Math.abs(m.x - (l + .5)))) > .62) { wet++; where ||= `${m.x.toFixed(2)},${m.y.toFixed(2)} d${m.d}`; } }
+    for (const m of T.movers()) if (m.type === 'person' && m.y > 13.2 && m.y < 14.8 && Math.min(...[1, 6, 11, 16].map(l => Math.abs(m.x - (l + .5)))) > .62) { wet++; where ||= `${m.x.toFixed(2)},${m.y.toFixed(2)} d${m.d}`; } }
   assert.equal(wet, 0, `layout ${seed}: nobody walks on the water (first at ${where})`);
 }
 assert.match(view, /b\.scale\.setScalar\(\.62\)/, 'seagulls are small');

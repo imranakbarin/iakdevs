@@ -1085,7 +1085,7 @@ const ToyTown = (() => {
     if(dist<=advance+.00001){
       m.x=targetX;m.y=targetY;m.path.shift();if(p.then)p.then(m);
     }else{
-      m.x+=ux*advance;m.y+=uy*advance;
+      m.x+=ux*advance;m.y+=uy*advance;keepDry(m);
     }
   }
   // A walking route that keeps to the pavements: along the near pavement to the
@@ -1100,7 +1100,9 @@ const ToyTown = (() => {
   }
   // Nobody walks on the river: a leg that would cross the water away from a bridge goes round by the nearest bridge,
   // and a target that falls in the water is moved to the bank.
-  const inRiver = y => y > 13.04 && y < 14.96, onBridgeX = x => LINES.some(l => Math.abs(x - (l + .5)) < .5);
+  const inRiver = y => y > 13.04 && y < 14.96, onBridgeX = x => LINES.some(l => Math.abs(x - (l + .5)) < .6);
+  // The last safety net: a walker caught in the water off a bridge deck steps back to the bank.
+  function keepDry(m) { if (m.type === 'person' && inRiver(m.y) && !onBridgeX(m.x)) m.y = m.y < 14 ? 13.0 : 15.0; }
   function dryRoute(pts, x, y) {
     const out = []; let px = x, py = y;
     for (const p of pts) {
@@ -1109,7 +1111,11 @@ const ToyTown = (() => {
       // Does the straight leg touch the water anywhere off a bridge deck?
       let wet = false; for (let k = 1; k <= 14 && !wet; k++) { const f = k / 15, sx = px + (tx - px) * f, sy = py + (ty - py) * f; if (inRiver(sy) && !onBridgeX(sx)) wet = true; }
       const startOnDeck = inRiver(py) && onBridgeX(px);
-      if (wet && !startOnDeck) {
+      if (wet && startOnDeck) {   // leaving a bridge: walk along it to the bank first, then on to the target
+        const southBank = ty >= 14 || (ty === py && py >= 14);
+        out.push({x: px, y: southBank ? 15.05 : 12.95, speed: p.speed});
+        py = southBank ? 15.05 : 12.95;
+      } else if (wet) {
         const targetOnDeck = inRiver(ty) && onBridgeX(tx), mx = targetOnDeck ? tx : (px + tx) / 2;
         const bx = LINES.reduce((a, l) => Math.abs(l + .5 - mx) < Math.abs(a - mx) ? l + .5 : a, LINES[0] + .5), lane = (mx >= bx ? 1 : -1) * .3;
         const fromNorth = py < 14, nearBank = fromNorth ? 12.95 : 15.05, farBank = fromNorth ? 15.05 : 12.95;
