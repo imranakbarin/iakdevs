@@ -10,7 +10,7 @@ assert.match(dioramaSource, /function tree\(/, 'new organic tree renderer exists
 assert.match(dioramaSource, /function gable\(/, 'real pitched roof renderer exists');
 assert.match(dioramaSource, /function glazing\(/, 'framed glazing renderer exists');
 assert.match(html, /<option value="town">Toy Town<\/option>/, 'Toy Town is in the menu');
-assert.match(html, /return 'toy-town\.html\?v=71&embed=1'\+keep;/, 'and opens its current embedded page');
+assert.match(html, /return 'toy-town\.html\?v=72&embed=1'\+keep;/, 'and opens its current embedded page');
 assert.match(html, /townFrame\.src=townSrc\(\);/, 'with this page\'s weather and fps settings passed through');
 assert.match(fs.readFileSync(path.join(root, 'toy-town.html'), 'utf8'), /assets\/toy-town\.js\?v=\d+/);
 const box = vm.createContext({Math, Object, Array, JSON, Date, String, Number, RegExp, setTimeout: () => 0, document: {getElementById: () => ({textContent: ''})}});
