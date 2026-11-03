@@ -2022,9 +2022,10 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
 
   // River bridges have pale stone shoulders, anchored to the same lanes.
   function bridgeAt(n){
-    groundPiece(1.12,2.05,'#a99f8c',n+.5,14,.17);
-    groundPiece(.92,2.06,'#78868a',n+.5,14,.22);
-    for(const side of [-.52,.52])box(world,.052,.22,2.08,'#d8d1bf',n+.5+side,.29,14);
+    // Wide enough for the pavement lanes (0.43 off centre) with a little room inside the parapets.
+    groundPiece(1.34,2.05,'#a99f8c',n+.5,14,.17);
+    groundPiece(1.12,2.06,'#78868a',n+.5,14,.22);
+    for(const side of [-.62,.62])box(world,.052,.22,2.08,'#d8d1bf',n+.5+side,.29,14);
   }
   // KayKit road tiles on the street grid: straights, a zebra crossing by the
   // plaza, T-splits on the outer edges, corners at the four outer corners and
@@ -3897,6 +3898,7 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
       const body=ball(b,.045,mat('#fbfbf8',.8),0,0,0);body.scale.set(1.6,.9,.9);ball(b,.028,mat('#fbfbf8',.8),.07,.03,0);box(b,.03,.012,.016,'#f2a23a',.11,.025,0,false);
       box(b,.05,.012,.02,'#9aa3ad',-.08,.0,0,false);
       const wings=[];for(const s of [-1,1]){const w=new THREE.Group();w.position.set(0,.02,s*.035);b.add(w);box(w,.05,.008,.13,mat('#eef0f2',.8),0,0,s*.065,false);box(w,.04,.009,.04,'#5b636d',0,0,s*.14,false);wings.push({w,s});}
+      b.scale.setScalar(.62);   // gulls are small birds, smaller than the people
       more.gulls.push({g:b,wings,ph:i*1.57,rx:5.5+i*.8,rz:1.0+i*.12,cx:9+(i%2?-1.5:1.5),perch:null,perchT:0,x:0,z:0,state:'fly'});
     }
     // --- the market-day crowd: shoppers browsing the stalls
