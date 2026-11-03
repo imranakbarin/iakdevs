@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generated_at": "2026-11-03T11:59:46.777Z",
+  "generated_at": "2026-11-03T19:33:15.500Z",
   "status": "ok",
   "successful_sources": [
     "BBC News",
@@ -12,67 +12,67 @@
   ],
   "stories": [
     {
-      "title": "US strikes Iranian island ahead of midterm elections",
-      "url": "https://www.bbc.co.uk/news/articles/cx240mrm3g8vo?at_medium=RSS&at_campaign=rss",
+      "title": "Seven flights across Europe targeted by suspected bomb threats",
+      "url": "https://www.bbc.co.uk/news/articles/c6x2wd4v04eeo?at_medium=RSS&at_campaign=rss",
       "source": "BBC News",
       "category": "World",
-      "published_at": "2026-11-03T11:33:33.000Z"
+      "published_at": "2026-11-03T17:56:03.000Z"
     },
     {
-      "title": "UK food supply chain affected by European freezer hacks, cyber chief says",
-      "url": "https://www.bbc.co.uk/news/articles/ckq6ndq8l6v0o?at_medium=RSS&at_campaign=rss",
-      "source": "BBC Technology",
-      "category": "Technology",
-      "published_at": "2026-11-03T11:32:47.000Z"
-    },
-    {
-      "title": "Drivers may get compensation offers before car finance saga ends",
-      "url": "https://www.bbc.co.uk/news/articles/cqrky5nxxn4po?at_medium=RSS&at_campaign=rss",
-      "source": "BBC Business",
-      "category": "Business",
-      "published_at": "2026-11-03T11:56:31.000Z"
-    },
-    {
-      "title": "McTominay returns as Penrice earns first Scotland call",
-      "url": "https://www.bbc.co.uk/sport/football/articles/c6wyvr870d8do?at_medium=RSS&at_campaign=rss",
-      "source": "BBC Sport",
-      "category": "Sport",
-      "published_at": "2026-11-03T11:29:06.000Z"
-    },
-    {
-      "title": "How AI giants could raise the cost of borrowing in Europe",
-      "url": "https://www.dw.com/en/how-ai-giants-could-raise-the-cost-of-borrowing-in-europe/a-79511985?maca=en-rss-en-world-4025-xml-mrss",
-      "source": "DW",
-      "category": "World",
-      "published_at": "2026-11-03T10:27:00.000Z"
-    },
-    {
-      "title": "\"At Home in Space\" opens, caps Air and Space Museum renovation",
-      "url": "https://arstechnica.com/space/2026/11/at-home-in-space-opens-caps-air-and-space-museum-renovation/",
+      "title": "NYT demands Brave shut down its paywall blocker and end deals with AI firms",
+      "url": "https://arstechnica.com/tech-policy/2026/11/nyt-demands-brave-shut-down-its-paywall-blocker-and-end-deals-with-ai-firms/",
       "source": "Ars Technica",
       "category": "Technology",
-      "published_at": "2026-11-02T23:30:16.000Z"
+      "published_at": "2026-11-03T18:30:27.000Z"
     },
     {
-      "title": "Proposal for free bus service scrapped",
-      "url": "https://www.bbc.co.uk/news/articles/cmrly74wr9n2o?at_medium=RSS&at_campaign=rss",
+      "title": "Keeping mortgage interest relief approved",
+      "url": "https://www.bbc.co.uk/news/articles/c6vgj0ljx01jo?at_medium=RSS&at_campaign=rss",
       "source": "BBC Business",
       "category": "Business",
-      "published_at": "2026-11-03T11:21:42.000Z"
+      "published_at": "2026-11-03T16:44:20.000Z"
     },
     {
-      "title": "West Ham approach Parker after sacking boss Nuno",
-      "url": "https://www.bbc.co.uk/sport/football/articles/c63dj3zpl85go?at_medium=RSS&at_campaign=rss",
+      "title": "Kenny's background 'not that important' to O'Neill",
+      "url": "https://www.bbc.co.uk/sport/football/articles/ckqxn7pzrxyro?at_medium=RSS&at_campaign=rss",
       "source": "BBC Sport",
       "category": "Sport",
-      "published_at": "2026-11-03T11:06:46.000Z"
+      "published_at": "2026-11-03T18:26:55.000Z"
     },
     {
-      "title": "Trump to remove Rwanda and South Africa from US trade deal",
-      "url": "https://www.bbc.co.uk/news/articles/c9j346xg0mkvo?at_medium=RSS&at_campaign=rss",
+      "title": "Why South Africa's local elections matter",
+      "url": "https://www.dw.com/en/why-south-africa-s-local-elections-matter/a-79842695?maca=en-rss-en-world-4025-xml-mrss",
+      "source": "DW",
+      "category": "World",
+      "published_at": "2026-11-03T15:06:00.000Z"
+    },
+    {
+      "title": "Binance says fake job interviews used as part of $6.3bn crypto hack",
+      "url": "https://www.bbc.co.uk/news/articles/ck5ynwz9gy67o?at_medium=RSS&at_campaign=rss",
+      "source": "BBC Technology",
+      "category": "Technology",
+      "published_at": "2026-11-03T16:19:29.000Z"
+    },
+    {
+      "title": "What's happening to UK interest rates and what does it mean for mortgages?",
+      "url": "https://www.bbc.co.uk/news/articles/c3dky111m40o?at_medium=RSS&at_campaign=rss",
+      "source": "BBC Business",
+      "category": "Business",
+      "published_at": "2026-11-03T15:51:23.000Z"
+    },
+    {
+      "title": "RFL backs Wilkin's £30m funding plea to Burnham",
+      "url": "https://www.bbc.co.uk/sport/rugby-league/articles/cqn06nk1rx4xo?at_medium=RSS&at_campaign=rss",
+      "source": "BBC Sport",
+      "category": "Sport",
+      "published_at": "2026-11-03T18:13:50.000Z"
+    },
+    {
+      "title": "Irish Olympian Ciara Mageean was a 'talented and inspirational human being'",
+      "url": "https://www.bbc.co.uk/news/articles/cw62ye1030njo?at_medium=RSS&at_campaign=rss",
       "source": "BBC News",
       "category": "World",
-      "published_at": "2026-11-03T10:26:26.000Z"
+      "published_at": "2026-11-03T17:07:28.000Z"
     }
   ]
 }
