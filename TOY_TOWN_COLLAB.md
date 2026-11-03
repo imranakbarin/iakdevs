@@ -538,3 +538,10 @@ A `START` does not prohibit parallel edits. Avoid stepping on each other's uncom
 - Not verified: real iPhone/GPU look and frame rate; audio output (the `firework` bang is synthesised and unheard); seagulls perching was not seen in a screenshot. The parade walks the pavement lane of the middle street and is purely visual (cars in the sim do not know about it).
 - Next ideas: ground restyle, larger shopfront scenes at phone scale, weather-aware parades (umbrellas), a bus line on the roads.
 
+### START — Claude (Claude Code) — 2026-11-03 (remove the cinematic filter; ducks off the bridges; windmill that visibly turns)
+- Base: `97e95ae6` (master after #161; fetched, re-read this file and `CLAUDE.md`).
+- Task (owner request): "Remove the cinematic filter, also the ducks are floating on bridges too and we may have to fix it, windmill doesn't revolve."
+- Plan: (1) revert the warm cinematic grade completely (CSS overlay, sepia filter, `?nograde`, warm sky/fog/sun colours) to the previous look; (2) ducks never swim into a bridge span (they turn round at the bridge edge, crumb-chasing included, and spawn outside the spans); (3) the windmill is probably turning but edge-on to the camera and very slowly: face its sails toward the front (south) and turn them faster so the revolution is visible.
+- Likely files: `toy-town.html`, `assets/toy-town-3d.js`, `assets/toy-town.js`, `index.html` (cache key), tests, README, this file.
+- Status: in progress.
+
