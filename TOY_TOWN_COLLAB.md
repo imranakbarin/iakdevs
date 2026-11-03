@@ -637,3 +637,6 @@ A `START` does not prohibit parallel edits. Avoid stepping on each other's uncom
 - `toy-town.html` 3D v65, `index.html` embed v75 (also passes `?festival=`). Tests: all `tests/*.test.cjs` pass locally; the 3D test starts and ends each street event; the extras test pins the hooks.
 - Not verified: how the new festivals and events feel over a long session on a phone; the dragon, wedding and cart were seen once each in screenshots; real phone performance with the extra decorations; "most objects overlap" was audited for vehicles (measured), the shelters, parade and playground placement, not for every prop in every layout.
 
+### 2026-11-03 · Claude · DONE (test-only follow-ups to stage 5)
+- Outcome: master visual check failed twice on random-timing test flakes, not on runtime regressions. #177 made the banner-plane / bird-flock checks tolerate one already out. Master run 246 then failed `people get home in the evening (1 houses)` in `tests/toy-town-extras.test.cjs`; the same flake family (`a day has children`, `the bus makes its stops`) reproduces on the code from before #176, so it is pre-existing.
+- Change: `tests/toy-town-extras.test.cjs` seeds `Math.random` (default seed 20261103, `TT_SEED` overrides) so the day-in-the-life checks are reproducible. Verified on seeds 1-8 and the default. No runtime files touched.
