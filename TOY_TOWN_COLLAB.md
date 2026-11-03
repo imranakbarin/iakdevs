@@ -582,3 +582,10 @@ A `START` does not prohibit parallel edits. Avoid stepping on each other's uncom
 - Tests: all `tests/*.test.cjs` pass locally; the 3D test checks half/quarter turns and distance/height; the extras test checks the heading logic and the gesture hooks. Real Chromium (Playwright): E,E → +.52 rad, Q → −.26, button → +.52, right-drag +200 px → +1.6, Shift-drag −100 px → −.8, plain drag still pans, Fit → 0; screenshots from the front, side and back look right.
 - Not verified: a real two-finger twist on a phone (the logic is in the touch handlers and covered by a source check only), real GPU/iPhone performance. The back of the billboard and cinema screen are plain dark panels. Signs show mirrored text from behind.
 
+### START — Claude (Claude Code) — 2026-11-03 (stage 2: weather-aware life, more to touch, a night rhythm)
+- Base: `3f9e8ca2` (master after #168; fetched, re-read this file and `CLAUDE.md`).
+- Task (owner request "LETS START ALL", stage 2 of the list): (1) **weather-aware life**: parades only in dry weather or under umbrellas, no kite flyer / playground children / fisher / rowing boat in rain or storms, gulls stay perched, puddles with ripples in the rain, a snowman that appears in snow and melts when it clears; (2) **more to touch**: tap a gull to scare it, the windmill to spin it up, the station to ring its bell, a sheep to hear "Baa!", the boat for a wave, the kite flyer for a loop-the-loop, the playground for cheers, the crane for a swing; (3) **night rhythm**: a night watchman with a lantern strolling the pavements, cats that appear on the pavement edge at night and flick their tails, shop boards that read OPEN by day and CLOSED at night.
+- Stage 3 (bus line with stops and boarding, shopfront scenes, ground restyle) follows as its own START/DONE.
+- Likely files: `assets/toy-town-3d.js`, `toy-town.html`, `index.html` (cache key), tests, README, this file.
+- Status: in progress (stage 2).
+
