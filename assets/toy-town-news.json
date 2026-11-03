@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generated_at": "2026-11-03T03:29:40.407Z",
+  "generated_at": "2026-11-03T11:59:46.777Z",
   "status": "ok",
   "successful_sources": [
     "BBC News",
@@ -12,39 +12,39 @@
   ],
   "stories": [
     {
-      "title": "Man and boy arrested after allegedly attacking One Nation volunteer with baseball bat in Australia",
-      "url": "https://www.bbc.co.uk/news/articles/cwly3jd27m9xo?at_medium=RSS&at_campaign=rss",
+      "title": "US strikes Iranian island ahead of midterm elections",
+      "url": "https://www.bbc.co.uk/news/articles/cx240mrm3g8vo?at_medium=RSS&at_campaign=rss",
       "source": "BBC News",
       "category": "World",
-      "published_at": "2026-11-03T03:11:16.000Z"
+      "published_at": "2026-11-03T11:33:33.000Z"
     },
     {
-      "title": "North Korea denies being behind record $6.3bn Binance hack",
-      "url": "https://www.bbc.co.uk/news/articles/c6rey4v53exgo?at_medium=RSS&at_campaign=rss",
+      "title": "UK food supply chain affected by European freezer hacks, cyber chief says",
+      "url": "https://www.bbc.co.uk/news/articles/ckq6ndq8l6v0o?at_medium=RSS&at_campaign=rss",
       "source": "BBC Technology",
       "category": "Technology",
-      "published_at": "2026-11-03T01:23:03.000Z"
+      "published_at": "2026-11-03T11:32:47.000Z"
     },
     {
-      "title": "UK and EU agree draft deal to scrap Brexit red tape over food exports",
-      "url": "https://www.bbc.co.uk/news/articles/cmp3grwre9xdo?at_medium=RSS&at_campaign=rss",
+      "title": "Drivers may get compensation offers before car finance saga ends",
+      "url": "https://www.bbc.co.uk/news/articles/cqrky5nxxn4po?at_medium=RSS&at_campaign=rss",
       "source": "BBC Business",
       "category": "Business",
-      "published_at": "2026-11-03T02:11:13.000Z"
+      "published_at": "2026-11-03T11:56:31.000Z"
     },
     {
-      "title": "Jeers again as home woes continue - Jaissle has big problems at Newcastle",
-      "url": "https://www.bbc.co.uk/sport/football/articles/cmly05n114gjo?at_medium=RSS&at_campaign=rss",
+      "title": "McTominay returns as Penrice earns first Scotland call",
+      "url": "https://www.bbc.co.uk/sport/football/articles/c6wyvr870d8do?at_medium=RSS&at_campaign=rss",
       "source": "BBC Sport",
       "category": "Sport",
-      "published_at": "2026-11-02T23:53:46.000Z"
+      "published_at": "2026-11-03T11:29:06.000Z"
     },
     {
-      "title": "Supreme Court rejects Trump bid to block 20,000 California ballots",
-      "url": "https://www.dw.com/en/supreme-court-rejects-trump-bid-to-block-20-000-california-ballots/a-79833739?maca=en-rss-en-world-4025-xml-mrss",
+      "title": "How AI giants could raise the cost of borrowing in Europe",
+      "url": "https://www.dw.com/en/how-ai-giants-could-raise-the-cost-of-borrowing-in-europe/a-79511985?maca=en-rss-en-world-4025-xml-mrss",
       "source": "DW",
       "category": "World",
-      "published_at": "2026-11-02T23:18:00.000Z"
+      "published_at": "2026-11-03T10:27:00.000Z"
     },
     {
       "title": "\"At Home in Space\" opens, caps Air and Space Museum renovation",
@@ -54,25 +54,25 @@
       "published_at": "2026-11-02T23:30:16.000Z"
     },
     {
-      "title": "From scooters to shampoo - the people saving hundreds from dumpster diving",
-      "url": "https://www.bbc.co.uk/news/articles/cm86zdp2ygqno?at_medium=RSS&at_campaign=rss",
+      "title": "Proposal for free bus service scrapped",
+      "url": "https://www.bbc.co.uk/news/articles/cmrly74wr9n2o?at_medium=RSS&at_campaign=rss",
       "source": "BBC Business",
       "category": "Business",
-      "published_at": "2026-11-03T00:41:36.000Z"
+      "published_at": "2026-11-03T11:21:42.000Z"
     },
     {
-      "title": "From nightmare debut season to Everton hero - Barry's revival",
-      "url": "https://www.bbc.co.uk/sport/football/articles/cqj346rvg3pzo?at_medium=RSS&at_campaign=rss",
+      "title": "West Ham approach Parker after sacking boss Nuno",
+      "url": "https://www.bbc.co.uk/sport/football/articles/c63dj3zpl85go?at_medium=RSS&at_campaign=rss",
       "source": "BBC Sport",
       "category": "Sport",
-      "published_at": "2026-11-02T23:28:17.000Z"
+      "published_at": "2026-11-03T11:06:46.000Z"
     },
     {
       "title": "Trump to remove Rwanda and South Africa from US trade deal",
       "url": "https://www.bbc.co.uk/news/articles/c9j346xg0mkvo?at_medium=RSS&at_campaign=rss",
       "source": "BBC News",
       "category": "World",
-      "published_at": "2026-11-03T03:00:36.000Z"
+      "published_at": "2026-11-03T10:26:26.000Z"
     }
   ]
 }
