@@ -158,7 +158,7 @@ assert.match(moduleCode,/eye.scale.y=blink/,'eyelids blink without a separate an
 assert.match(html,/type="importmap"/);
 assert.match(html,/three@0\.187\.0\/build\/three\.module\.js/);
 assert.match(html,/three@0\.187\.0\/examples\/jsm\//);
-assert.match(html,/toy-town-3d\.js\?v=57/);
+assert.match(html,/toy-town-3d\.js\?v=58/);
 assert.match(html,/toy-town-landmarks\.js\?v=7/,'the independent models are requested alongside Three');
 assert.match(html,/buildLandmark:landmarks\.buildLandmark/,
   'loader injects the authored model builder into the 3D simulation');
@@ -167,7 +167,7 @@ const classicScript=html.match(/src="assets\/toy-town\.js\?v=\d+"/);
 assert.ok(classicScript&&
   html.indexOf(classicScript[0])<html.indexOf("import('three')"),
   'the actual versioned classic script always loads before WebGL');
-assert.match(page,/toy-town\.html\?v=67&embed=1/);
+assert.match(page,/toy-town\.html\?v=68&embed=1/);
 assert.match(fs.readFileSync(path.join(root,'assets/toy-town.js'),'utf8'),
   /targetX=clamp\(\.08,p\.x,17\.92\)/,
   'scripted paths are clamped at the endpoint rather than freezing outside town');
@@ -340,6 +340,7 @@ assert.equal(gardenRooms.length,api.getStats().districtGardenRooms,
 assert.equal(api.getStats().festoonBulbs,14,'two suspended spans contain 14 miniature lamps');
 // The ring railway: a station, a round-faced steam train with three carriages, a tunnel, passengers who board and get off.
 {
+  api.setFreight(0);   // keep the passenger train running for the stop/passenger checks below
   const r0=api.railStats();
   assert.equal(r0.units,4,'one locomotive and three carriages');
   assert.ok(r0.len>70&&r0.len<80,'the loop runs round the board ('+r0.len.toFixed(1)+')');
@@ -351,6 +352,22 @@ assert.equal(api.getStats().festoonBulbs,14,'two suspended spans contain 14 mini
   assert.ok(dwelt&&moved,'it stops at the platform and sets off again');
   for(const k of ['wait','board','aboard','alight','inside','out'])assert.ok(seen.has(k),'passengers pass through "'+k+'"');
   assert.ok(api.railStats().toots>=1,'the whistle blows when it leaves');
+  {
+    // The goods train takes over every few laps (swapped in the tunnel), and goes back to the passenger train.
+    api.setFreight(2);const modes=new Set();for(let k=0;k<9000;k++){api.stepTrain(.05,0);modes.add(api.railMode());}
+    assert.ok(modes.has('freight')&&modes.has('pass'),'goods and passenger trains take turns on the ring');api.setFreight(0);
+    // Lamplighter, parade, gulls, market crowd, fireworks.
+    const m0=api.moreStats();assert.ok(m0.built&&m0.lanterns>=10,'the street lamps are registered ('+m0.lanterns+')');
+    api.stepTrain(1,0);api.stepTrain(.1,.9);assert.equal(api.moreStats().phase,'lighting','at dusk the lamplighter sets out');
+    api.stepTrain(.5,.9);assert.ok(api.moreStats().lamplighter,'and is out on the street');
+    api.stepTrain(120,.9);const m1=api.moreStats();assert.equal(m1.phase,'night','he finishes his round');assert.equal(m1.lit,m1.lanterns,'every lamp is lit');
+    api.stepTrain(.1,0);assert.equal(api.moreStats().phase,'day','at dawn the lamps go out again');assert.equal(api.moreStats().lit,0);
+    for(let k=0;k<40&&api.moreStats().parade;k++)api.stepTrain(5,0);
+    assert.ok(api.moreStats().paradesRun>=1,'parades set off by themselves now and then');
+    assert.ok(api.startParade(),'a parade sets off on request');assert.ok(api.moreStats().parade);api.stepTrain(60,0);assert.ok(!api.moreStats().parade&&api.moreStats().paradesRun>=1,'and marches off the far end');
+    assert.equal(api.moreStats().gulls.length,4,'four seagulls over the river');
+    assert.ok(api.burstFirework(9,2,9)&&api.moreStats().sparks>=1,'fireworks burst');api.stepTrain(3,0);assert.equal(api.moreStats().sparks,0,'and fade out');
+  }
   const st=api.siteStats();assert.ok(st.built&&st.workers===3,'a building site with three workers on it');
   const jib0=st.jib;api.stepTrain(20,0);assert.notEqual(api.siteStats().jib,jib0,'the crane jib swings');
   {

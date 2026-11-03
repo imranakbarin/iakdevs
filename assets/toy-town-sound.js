@@ -40,6 +40,7 @@
     pop: () => { noise(.06, .9, 1800); tone('sine', 520, 160, .08, .2); },
     chime: () => { tone('sine', 880, 880, .35, .18); tone('sine', 1318.5, 1318.5, .4, .14, .09); },
     toot: () => { tone('triangle', 392, 392, .32, .3); tone('triangle', 494, 494, .32, .26); tone('triangle', 392, 392, .45, .3, .38); tone('triangle', 494, 494, .45, .26, .38); },
+    firework: () => { noise(.12, .6, 2400); tone('sine', 900, 120, .5, .22, .0); noise(.5, .55, 140, .12); tone('sine', 80, 40, .6, .3, .12); for (let k = 0; k < 5; k++) noise(.05, .22, 3000 + Math.random() * 1500, .35 + k * .07); },
     rumble: () => { noise(1.6, .5, 90); tone('sine', 55, 40, 1.4, .25); }
   };
   // A sparse birdsong bed by day; the odd soft cricket at night.
