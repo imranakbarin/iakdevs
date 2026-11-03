@@ -2564,6 +2564,7 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
     // The river (but not a bridge): crumbs, and the ducks paddle over.
     if(spot.z>12.95&&spot.z<15.05&&!LINES.some(l=>Math.abs(spot.x-(l+.5))<.62)&&town.feedDucks){
       town.feedDucks(spot.x,spot.z);crumbsAt(spot.x,spot.z);sound('quack');taps.ducks=(taps.ducks||0)+1;return true;}
+    if(scatterBirds(spot.x,spot.z,1.1)){taps.ground++;return true;}
     const b=town.buildings().find(b=>Math.abs(b.x+.5-spot.x)<.62&&Math.abs(b.y+.5-spot.z)<.62);
     if(b){buildingHello(b,pick(HELLOS[b.kind]||HELLOS.other));sound('chime');taps.buildings++;return true;}
     surprise(spot.x,spot.z);taps.ground++;return true;
@@ -2809,7 +2810,7 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
       host.appendChild(bubble);}
     bubble.textContent=text;
     if(credit){const c=document.createElement('div');c.textContent=credit;c.style.cssText='font:500 10px/1.2 Nunito,system-ui;color:#8a8f99;margin-top:2px';bubble.appendChild(c);}
-    bubble.userData={item:{group},until:performance.now()+ms};bubble.style.opacity='1';
+    bubble.userData={item:{group},until:clockMs()+ms};bubble.style.opacity='1';
   }
   /* ---- A visitor from "on this day": a brass time pod drops into a lawn, someone
      in period clothes steps out, says the year and what happened (a gentle
@@ -2914,7 +2915,7 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
   function placeBubble(){
     if(!bubble||!bubble.userData)return;
     const {item,until}=bubble.userData;
-    if(performance.now()>until||!item.group.parent){bubble.style.opacity='0';return;}
+    if(clockMs()>until||!item.group.parent){bubble.style.opacity='0';return;}
     const v=new THREE.Vector3().copy(item.group.position);v.y+=.62;v.project(camera);
     const r=renderer.domElement.getBoundingClientRect();
     const half=(bubble.offsetWidth||120)/2+8;   // keep the whole bubble on screen
@@ -2998,7 +2999,7 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
     createStorybookVillage();
     paintVillageLife();
     createWorkingShops();
-    rail.train=null;createRailway();createFarm();
+    rail.train=null;life.built=false;createRailway();createFarm();createLife();
     // Landmark panes are pooled across the five models. Update material
     // intensity only, not every individual window mesh, on each frame.
     const visit=node=>{
@@ -3666,6 +3667,164 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
     }
   }
 
+  /* ---- Extra life: a rowing boat on the river with a fisher on the bank, a playground with
+     children, pigeon flocks that peck and scatter, and a kite flyer. Purely visual layer on free
+     lawn (never on buildings or trees); the simulation is untouched. ---- */
+  const life={t:0,built:false,boat:null,fisher:null,play:null,kite:null,birds:[],flock:{x:9,z:9.9},scatters:0,fish:0,catches:0};
+  const ANIMAL_SCALE={dog:.5,hen:.62,penguin:.6,llama:.62,dino:.8,ghost:.7};
+  function freeSpots(){
+    const bs=town.buildings(),ps=town.props().filter(p=>!['flowers','duck','crane'].includes(p.kind));
+    const cands=[];for(const bx of [2,7,12])for(const by of [2,7]) for(const [ox,oy] of [[1,1],[3,1],[1,3],[3,3],[2,2]])cands.push([bx+ox,by+oy]);
+    const score=c=>{let m=9;for(const b of bs)m=Math.min(m,Math.hypot(b.x+(b.kind==='site'?1:.5)-c[0],b.y+(b.kind==='site'?1:.5)-c[1])-(b.kind==='site'?2:.75));
+      for(const p of ps)m=Math.min(m,Math.hypot(p.x-c[0],p.y-c[1])-.5);
+      if(c[0]>6.7&&c[0]<11.3&&c[1]>6.7&&c[1]<11.3)m=-9;return m;};
+    return cands.map(c=>({x:c[0],z:c[1],clear:score(c)})).sort((a,b)=>b.clear-a.clear);   // river row excluded: only lawns north of it
+  }
+  const sitPose=(p,y=-.05)=>{const L=p.userData.limbs;if(L){L.legs.forEach(l=>{l.rotation.x=-1.35;});}p.position.y+=y;};
+  const kidOf=(i,col)=>{const p=person({col,skin:['#f1c9a5','#d8a77c','#a8754f','#7a4e33'][i%4],hair:i%2?'#49362d':'#333947',ph:i*1.9+.3,x:i+3,y:i*5});
+    p.scale.setScalar(CUTE*.8);p.userData.limbs.headPivot.scale.setScalar(HEAD_BIG*1.08);return p;};
+  function pointAlong(mesh,ax,ay,az,bx,by,bz){
+    const dx=bx-ax,dy=by-ay,dz=bz-az,len=Math.hypot(dx,dy,dz)||.001;
+    mesh.position.set((ax+bx)/2,(ay+by)/2,(az+bz)/2);mesh.rotation.order='YXZ';
+    mesh.rotation.set(Math.atan2(Math.hypot(dx,dz),dy),Math.atan2(dx,dz),0);mesh.scale.y=len;
+  }
+  function createLife(){
+    const g=new THREE.Group();world.add(g);life.built=true;life.t=0;life.birds=[];life.fish=0;
+    const base=.17;
+    // --- a rowing boat between the bridges, and a fisher on the north bank
+    const boat=new THREE.Group();g.add(boat);
+    const hull=object(boat,geo('soft',.58,.1,.24,.05),mat('#f2a99b',.7),0,.2,0);
+    box(boat,.5,.02,.19,'#fff0d8',0,.255,0,false);
+    box(boat,.06,.07,.2,'#fff7e6',-.06,.27,0);   // thwart
+    object(boat,geo('soft',.1,.1,.14,.04),mat('#f2a99b',.7),.3,.22,0);   // bow
+    const oars=[];for(const s of [-1,1]){const o=new THREE.Group();o.position.set(.04,.3,s*.13);boat.add(o);cylinder(o,.007,.007,.34,'#c99a64',0,0,s*.17).rotation.x=Math.PI/2;box(o,.07,.012,.05,'#e7c28a',0,0,s*.34,false);oars.push({o,s});}
+    const rower=kidOf(1,'#7fb3d9');rower.scale.setScalar(CUTE*.95);boat.add(rower);rower.position.set(-.04,.24,0);rower.rotation.y=-Math.PI/2*0+Math.PI/2;sitPose(rower,-.03);
+    const guest=kidOf(2,'#f2c36b');guest.scale.setScalar(CUTE*.95);boat.add(guest);guest.position.set(-.22,.24,0);guest.rotation.y=Math.PI/2*-1+Math.PI;sitPose(guest,-.03);
+    life.boat={g:boat,rower,guest,oars,x:7.5,dir:1,turn:0,z:14.0,hull};
+    // fisher
+    const fz=12.74,fx=(freeSpots().length?3.6:3.6);
+    const f=person({col:'#e58f8f',skin:'#d8a77c',hair:'#333947',ph:4.2,x:3,y:9,hat:'cap'});f.scale.setScalar(CUTE*.95);g.add(f);f.position.set(fx,base,fz);f.rotation.y=0;sitPose(f,-.04);
+    const rod=cylinder(g,.006,.006,.55,'#8a6d4e',fx+.08,base+.37,fz+.28);rod.rotation.x=.9;
+    const line=cylinder(g,.002,.002,1,'#e8e8e8',fx,base+.2,fz+.5);
+    const bob=ball(g,.016,mat('#ff5b4d',.5),fx+.08,.2,fz+.62);
+    const fish=ball(g,.03,mat('#ffb04a',.5),fx+.1,-1,fz+.6);fish.scale.set(1.6,.8,.7);
+    life.fisher={p:f,rod,line,bob,fish,x:fx,z:fz,next:6,cast:0,bite:-1};
+    // --- playground and kite on the two freest lawns
+    const spots=freeSpots().filter(s=>s.clear>.6);
+    const P=spots[0];
+    if(P){
+      const px=P.x,pz=P.z,sand=object(g,geo('cylinder',1,1,.02),mat('#ecd7a6',1),px,base+.012,pz,false);sand.scale.set(.95,1,.95);
+      const kerb=object(g,new THREE.TorusGeometry(.95,.03,6,28),mat('#caa77d',.9),px,base+.03,pz,false);kerb.rotation.x=Math.PI/2;
+      // swing set
+      const sw=new THREE.Group();sw.position.set(px-.35,base,pz-.3);g.add(sw);
+      for(const s of [-1,1]){cylinder(sw,.014,.014,.62,'#e8664d',s*.28,.3,-.08).rotation.x=.25;cylinder(sw,.014,.014,.62,'#e8664d',s*.28,.3,.08).rotation.x=-.25;}
+      cylinder(sw,.014,.014,.6,'#e8664d',0,.58,0).rotation.z=Math.PI/2;
+      const swings=[];for(const s of [-.12,.12]){const pv=new THREE.Group();pv.position.set(s,.58,0);sw.add(pv);cylinder(pv,.003,.003,.3,'#444',0,-.15,0);box(pv,.1,.016,.05,'#f5c04b',0,-.3,0);
+        const kid=kidOf(swings.length+3,['#c39be0','#9ccf9a'][swings.length]);pv.add(kid);kid.position.set(0,-.34,0);sitPose(kid,.08);kid.rotation.y=Math.PI/2*0;swings.push({pv,kid});}
+      // seesaw
+      const ss=new THREE.Group();ss.position.set(px+.3,base+.07,pz+.5);g.add(ss);
+      box(ss,.04,.1,.04,'#6fb0d9',0,-.02,0,false);const plank=new THREE.Group();plank.position.y=.05;ss.add(plank);box(plank,.7,.025,.09,'#f2a99b',0,0,0);
+      const ks=[];for(const s of [-1,1]){const k=kidOf(s>0?5:6,s>0?'#f08a4b':'#6fb0d9');plank.add(k);k.position.set(s*.27,.02,0);k.rotation.y=s>0?-Math.PI/2:Math.PI/2;sitPose(k,-.04);ks.push(k);}
+      // slide
+      const sl=new THREE.Group();sl.position.set(px+.45,base,pz-.45);sl.rotation.y=-.6;g.add(sl);
+      box(sl,.2,.03,.2,'#f5c04b',0,.34,0);for(const dx of [-.09,.09])for(const dz of [-.09,.09])cylinder(sl,.01,.01,.34,'#e8664d',dx,.17,dz);
+      const ramp=box(sl,.14,.02,.5,'#6fb0d9',0,.17,.35);ramp.rotation.x=.62;
+      for(let k=0;k<5;k++)box(sl,.12,.012,.016,'#e8664d',0,.04+k*.07,-.115,false);
+      const sk=kidOf(7,'#e58f8f');sl.add(sk);
+      life.play={swings,ks,plank,sl,sk,x:px,z:pz};
+    }
+    const K=spots.find(s=>!P||Math.hypot(s.x-P.x,s.z-P.z)>3);
+    if(K){
+      const kid=kidOf(8,'#f2d06b');g.add(kid);kid.position.set(K.x,base,K.z);
+      const kite=new THREE.Group();g.add(kite);
+      const dia=box(kite,.26,.26,.012,'#ff6f91',0,0,0,false);dia.rotation.z=Math.PI/4;box(kite,.012,.36,.016,'#fff0d8',0,0,.01,false);box(kite,.36,.012,.016,'#fff0d8',0,0,.01,false);
+      const tail=[];for(let i=0;i<5;i++){const t=box(kite,.05,.03,.012,['#f5c04b','#6fb0d9','#9ccf9a'][i%3],0,-.22-i*.09,0,false);tail.push(t);}
+      const string=cylinder(g,.0025,.0025,1,'#f4f0e6',K.x,1,K.z);
+      life.kite={kid,kite,tail,string,x:K.x,z:K.z};
+    }
+    // --- pigeons around the piazza apron (or the freest lawn)
+    const fl=spots.length>2?spots[Math.min(2,spots.length-1)]:{x:9,z:10.3};life.flock={x:fl.x,z:fl.z};
+    for(let i=0;i<7;i++){
+      const b=new THREE.Group();g.add(b);const grey=['#9aa3ad','#b3b9c0','#868e99'][i%3];
+      const body=ball(b,.04,mat(grey,.8),0,.05,0);body.scale.set(1.5,1,1);ball(b,.026,mat('#7d8791',.7),.06,.075,0);
+      box(b,.03,.012,.016,'#e0a560',.09,.07,0,false);
+      const wings=[];for(const s of [-1,1]){const w=new THREE.Group();w.position.set(0,.06,s*.03);b.add(w);box(w,.05,.008,.06,mat(grey,.8),-.02,0,s*.03,false);wings.push({w,s});}
+      const bird={g:b,wings,x:life.flock.x+(i%4-1.5)*.35,z:life.flock.z+(Math.floor(i/4)-.5)*.4,y:0,state:'peck',t:i*.7,from:null,to:null,dur:1,peck:0};
+      b.position.set(bird.x,base,bird.z);life.birds.push(bird);
+    }
+  }
+  function scatterBirds(x,z,r){
+    let n=0;for(const b of life.birds)if(b.state==='peck'&&Math.hypot(b.x-x,b.z-z)<r){
+      const a=Math.random()*TAU,d=1.4+Math.random()*1.6;
+      b.state='fly';b.t=0;b.dur=1.2+Math.random()*.8;b.from={x:b.x,z:b.z};b.to={x:life.flock.x+Math.cos(a)*d,z:life.flock.z+Math.sin(a)*d};n++;}
+    if(n){life.scatters++;sound('chirp');}return n;
+  }
+  function updateLife(dt){
+    if(!life.built)return;
+    life.t+=dt;const t=life.t,base=.17;
+    // boat
+    const B=life.boat;
+    if(B){
+      const speed=.32;
+      if(B.turn>0){B.turn-=dt;B.g.rotation.y+=Math.PI/2*dt*(B.dir>0?-1:1)*0+(Math.PI/2.4)*dt*B.spin;if(B.turn<=0){B.g.rotation.y=B.dir>0?0:Math.PI;}}
+      else{B.x+=B.dir*speed*dt;if(B.x>10.6&&B.dir>0||B.x<7.4&&B.dir<0){B.dir*=-1;B.turn=2.4;B.spin=1;}}
+      const bob=Math.sin(t*1.7)*.008;B.g.position.set(B.x,bob,B.z+Math.sin(t*.4)*.12);
+      const stroke=Math.sin(t*2.2);
+      for(const {o,s} of B.oars)o.rotation.y=stroke*.45*s*-1;
+      const L=B.rower.userData.limbs;if(L){L.arms.forEach(a=>{a.rotation.x=-.9+stroke*.35;});}
+      const G=B.guest.userData.limbs;if(G){G.arms[1].rotation.z=-1.9+Math.sin(t*5)*.4;G.arms[1].rotation.x=0;}
+    }
+    // fisher
+    const F=life.fisher;
+    if(F){
+      F.bob.position.y=.2+Math.sin(t*2.1)*.004;
+      pointAlong(F.line,F.x+.08,.17+.34,F.z+.28+.2,F.x+.08,.2,F.z+.62);
+      if(t>F.next&&F.bite<0){F.bite=0;F.next=t+14+Math.random()*10;}
+      if(F.bite>=0){F.bite+=dt;const k=F.bite;
+        F.rod.rotation.x=.9-Math.sin(Math.min(k,1.2)*Math.PI/1.2)*.5;F.bob.position.y=.2-Math.max(0,Math.sin(k*9))*.025;
+        if(k>1.2){const u=Math.min(1,(k-1.2)/1.1);F.fish.position.set(F.x+.1,.2+Math.sin(u*Math.PI)*.45,F.z+.6-u*.4);F.fish.rotation.z=u*Math.PI*2;
+          if(k>1.25&&!F.said){F.said=true;life.catches++;showBubble(F.p,['Got one!','A big one!','Look at that!'][life.catches%3],2200);}
+          if(u>=1){F.bite=-1;F.said=false;F.fish.position.y=-1;F.rod.rotation.x=.9;}}
+      }
+    }
+    // playground
+    const P=life.play;
+    if(P){
+      const a=Math.sin(t*1.7)*.7;P.swings.forEach((s,i)=>{s.pv.rotation.x=Math.sin(t*1.7+i*1.3)*.7;});
+      P.plank.rotation.z=Math.sin(t*1.3)*.22;
+      // slide kid: climb the ladder, slide down, walk round again (14 s loop)
+      const u=(t%14)/14,k=P.sk;
+      if(u<.45){const v=u/.45;k.position.set(-.05,.04+v*.3,-.12);k.rotation.y=Math.PI;}
+      else if(u<.62){const v=(u-.45)/.17;k.position.set(0,.36-v*.2,.05+v*.5);k.rotation.y=0;sitPose(k,0);}
+      else{const v=(u-.62)/.38;k.position.set(.25-.25*(1-v)*0-v*.3+.0,0,.55-v*.7);k.rotation.y=v<.5?Math.PI:Math.PI;}
+      const L=k.userData.limbs;if(L&&!(u>=.45&&u<.62))L.legs.forEach((l,j)=>{l.rotation.x=(j?1:-1)*Math.sin(t*8)*.5;});
+    }
+    // kite
+    const K=life.kite;
+    if(K){
+      const kx=K.x+1.1+Math.sin(t*.5)*.25,ky=1.45+Math.sin(t*.7)*.15,kz=K.z-.9+Math.cos(t*.4)*.2;
+      K.kite.position.set(kx,ky,kz);K.kite.rotation.z=Math.sin(t*.8)*.25;K.kite.rotation.y=.5;
+      K.tail.forEach((s,i)=>{s.position.x=Math.sin(t*2-i*.7)*.04*(i+1)*.5;});
+      pointAlong(K.string,K.x+.05,base+.28,K.z-.04,kx,ky-.1,kz);
+      const L=K.kid.userData.limbs;if(L){L.arms[1].rotation.x=-2.4;L.arms[1].rotation.z=-.1;}
+      K.kid.rotation.y=Math.atan2(kx-K.x,kz-K.z);
+    }
+    // pigeons: peck, and scatter when anyone comes close
+    const movers=town.movers();
+    for(const b of life.birds){
+      if(b.state==='peck'){
+        b.t+=dt;b.g.rotation.y=Math.sin(b.t*.3+b.x)*2;const dip=Math.max(0,Math.sin(b.t*3.2+b.x*5));b.g.children[1].position.y=.075-dip*.04;
+        b.g.position.set(b.x,base,b.z);
+        for(const m of movers){if((m.type==='person'||m.kind==='bike')&&Math.hypot(m.x-b.x,m.y-b.z)<.5&&(m.v||0)>.15){scatterBirds(b.x,b.z,.9);break;}}
+      }else{
+        b.t+=dt;const u=Math.min(1,b.t/b.dur);b.x=b.from.x+(b.to.x-b.from.x)*u;b.z=b.from.z+(b.to.z-b.from.z)*u;
+        b.g.position.set(b.x,base+Math.sin(u*Math.PI)*.55,b.z);b.g.rotation.y=Math.atan2(b.to.x-b.from.x,b.to.z-b.from.z)-Math.PI/2;
+        const fl=Math.sin(b.t*34);for(const w of b.wings)w.w.rotation.x=fl*.9*w.s;
+        if(u>=1){b.state='peck';b.t=0;for(const w of b.wings)w.w.rotation.x=0;}
+      }
+    }
+  }
+
   // The vehicles are small designed machines rather than stacked colored
   // cubes. Each axle has its own spinning rig, and taillights react to
   // braking. No point lights or heavyweight physics are allocated per car.
@@ -3896,6 +4055,7 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
   function actor(ref){
     const animal=['dog','hen','penguin','llama','dino','ghost'].includes(ref.kind);
     const g=ref.kind==='bike'?bicycle(ref):ref.type==='car'?car(ref):animal?creature(ref):person(ref);
+    if(animal)g.scale.setScalar(ANIMAL_SCALE[ref.kind]||.6);   // animals match the small residents (the dog was as tall as a person)
     g.position.set(ref.x,0,ref.y);
     const kind=ref.kind==='bike'?'bike':ref.type==='car'?'car':animal?'animal':'person';
     // Feathered miniature contact pads hold feet and tyres to the terrain
@@ -4389,7 +4549,7 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
       syncActors();syncCamera();light(state.night||0);nightLife(state.night||0,state.clock||0);updateFollowCard();updateMoments();updateWeather(1/45);
       // Driven by the town's own clock, so they pause with the town.
       {const now=state.clock||0;const dt=lastClockAt===null?0:THREE.MathUtils.clamp(now-lastClockAt,0,.1);lastClockAt=now;sceneClock+=dt;
-       updateVisit(dt);updateRound(dt,state.night||0);updateEffects(dt);updateTrain(dt,state.night||0);updateFarm(dt);updateSite(dt);}
+       updateVisit(dt);updateRound(dt,state.night||0);updateEffects(dt);updateTrain(dt,state.night||0);updateFarm(dt);updateSite(dt);updateLife(dt);}
       placeBubble();
       animateAmbient(state.clock||0);
       const drawStart=clockMs();
@@ -4425,7 +4585,9 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
     // Test hooks: start the visitor or the paper round now.
     startVisit:()=>{if(!onThisDay.length)onThisDay=[{year:1969,text:'Apollo 11 lands on the Moon'}];startVisit();return timeVisit;},startRound:()=>{startRound();return round;},
     stepExtras:(seconds,dark=0)=>{for(let t=0;t<seconds;t+=.05){sceneClock+=.05;updateVisit(.05);updateRound(.05,dark);updateEffects(.05);}},
-    stepTrain:(seconds,dark=0)=>{for(let t=0;t<seconds;t+=.05){updateTrain(.05,dark);updateFarm(.05);updateSite(.05);}},
+    stepTrain:(seconds,dark=0)=>{for(let t=0;t<seconds;t+=.05){updateTrain(.05,dark);updateFarm(.05);updateSite(.05);updateLife(.05);}},
+    lifeStats:()=>({built:life.built,boatX:life.boat?.x,playground:!!life.play,at:{play:life.play&&[life.play.x,life.play.z],kite:life.kite&&[life.kite.x,life.kite.z],flock:[life.flock.x,life.flock.z],fisher:life.fisher&&[life.fisher.x,life.fisher.z]},kite:!!life.kite,birds:life.birds.map(b=>b.state),scatters:life.scatters,catches:life.catches}),
+    scatterBirds:(x,z,r)=>scatterBirds(x,z,r),
     contours:()=>world.children.filter(o=>o.userData.landscapeContour).map(o=>[+o.position.x.toFixed(2),+o.position.z.toFixed(2)]),
     probe:(x,z,r)=>world.children.filter(o=>Math.hypot(o.position.x-x,o.position.z-z)<r).map(o=>[o.type,o.geometry?.type,o.geometry?.parameters?.radius,+o.position.x.toFixed(2),+o.position.y.toFixed(2),+o.position.z.toFixed(2),o.material?.color?.getHexString?.(),Object.keys(o.userData||{}).join('|')]).slice(0,40),
     siteStats:()=>({built:site.built,workers:site.workers.length,jib:site.slew?.rotation.y||0,t:site.t}),
