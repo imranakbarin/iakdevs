@@ -3034,7 +3034,7 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
   const smoothBall=(p,r,col,x=0,y=0,z=0)=>object(p,geo('smooth',r),typeof col==='string'?mat(col,.7):col,x,y,z);
   const limb=(p,r,len,col,x=0,y=0,z=0)=>THREE.CapsuleGeometry?
     object(p,geo('capsule',r,len),typeof col==='string'?mat(col,.72):col,x,y,z):cylinder(p,r,r,len+r*2,col,x,y,z);
-  const CUTE=.8,HEAD_BIG=1.22;
+  const CUTE=.66,HEAD_BIG=1.12;
   function person(ref){
     const g=new THREE.Group();
     const skin=ref.skin||'#dbab86',coat=ref.col||'#d6a3a0',trousers=ref.trousers||'#5e6f7c',shoes='#4f4741';
@@ -4138,11 +4138,11 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
     stops.forEach((s,si)=>{
       const south=s.d===0,z=s.y+(south?.54:-.54),sh=new THREE.Group();sh.position.set(s.x,base,z);g.add(sh);
       const back=south?.1:-.1;
-      for(const px of [-.24,.24])cylinder(sh,.011,.011,.34,'#5c6b73',px,.17,back,false);
-      box(sh,.62,.025,.26,'#7fc4b8',0,.35,0);for(let k=0;k<5;k++)ball(sh,.025,mat(k%2?'#ffffff':'#7fc4b8',.8),-.24+k*.12,.34,south?-.12:.12).scale.set(1,.7,.6);
-      box(sh,.58,.2,.012,mat('#cfe7ee',.2),0,.2,back*1.2);
+      for(const px of [-.24,.24])cylinder(sh,.011,.011,.52,'#5c6b73',px,.26,back,false);
+      box(sh,.62,.025,.26,'#7fc4b8',0,.53,0);for(let k=0;k<5;k++)ball(sh,.025,mat(k%2?'#ffffff':'#7fc4b8',.8),-.24+k*.12,.52,south?-.12:.12).scale.set(1,.7,.6);
+      box(sh,.58,.38,.012,mat('#cfe7ee',.2),0,.3,back*1.2);
       box(sh,.3,.022,.07,'#c68c63',0,.1,back*.6);
-      cylinder(sh,.008,.008,.46,'#5c6b73',.38,.23,0);sign(sh,'BUS',.38,.43,0,.2);
+      cylinder(sh,.008,.008,.62,'#5c6b73',.38,.31,0);sign(sh,'BUS',.38,.6,0,.2);
       bus3.stops.push({s,sh,x:s.x,z});
       for(let k=0;k<2;k++){
         const i=si*2+k,p=person({col:cols[i%8],skin:['#f1c9a5','#d8a77c','#a8754f','#7a4e33'][i%4],hair:i%2?'#49362d':'#333947',ph:i*1.3+.7,x:i,y:i*3,bag:k===1});
@@ -4655,7 +4655,7 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
   function actor(ref){
     const animal=['dog','hen','penguin','llama','dino','ghost'].includes(ref.kind);
     const g=ref.kind==='bike'?bicycle(ref):ref.type==='car'?car(ref):animal?creature(ref):person(ref);
-    if(animal)g.scale.setScalar(ANIMAL_SCALE[ref.kind]||.6);   // animals match the small residents (the dog was as tall as a person)
+    if(animal)g.scale.setScalar((ANIMAL_SCALE[ref.kind]||.6)*CUTE/.8);   // animals match the small residents (the dog was as tall as a person)
     g.position.set(ref.x,0,ref.y);
     const kind=ref.kind==='bike'?'bike':ref.type==='car'?'car':animal?'animal':'person';
     // Feathered miniature contact pads hold feet and tyres to the terrain
