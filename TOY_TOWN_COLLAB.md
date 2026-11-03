@@ -511,3 +511,10 @@ A `START` does not prohibit parallel edits. Avoid stepping on each other's uncom
 - Not verified: real iPhone/GPU look; only SwiftShader screenshots at phone size (bike next to a car and a resident). Sim collision boxes for bikes are unchanged (larger than the drawn bike), so bikes keep a little extra room.
 - Next ideas: a second (goods) train, ground restyle, larger shopfront scenes at phone scale.
 
+### START — Claude (Claude Code) — 2026-11-03 (dog scale audit and a livelier town)
+- Base: `cf3fbeeb` (master after #157; fetched, re-read this file and `CLAUDE.md`).
+- Task (owner request): "The dog is huge; see if other things need fixing, and what else could make a lively town rather than a routine one."
+- Plan: (1) audit every animal, prop and vehicle against the new small residents (CUTE .8) and fix the dog and anything else out of scale; (2) bring in new life that is visible and interactive rather than routine: river boats with a waving rower and a fisher on the bank, a playground with children on swings / slide / seesaw, pigeon flocks that peck and scatter when people, bikes or taps come near, a kite flyer in the park, plus whatever the audit shows is missing. Sim behaviour stays untouched except where a new thing needs a hook.
+- Likely files: `assets/toy-town-3d.js`, `toy-town.html`, `index.html` (cache key), tests, README, this file.
+- Status: in progress.
+
