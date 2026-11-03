@@ -158,7 +158,7 @@ assert.match(moduleCode,/eye.scale.y=blink/,'eyelids blink without a separate an
 assert.match(html,/type="importmap"/);
 assert.match(html,/three@0\.187\.0\/build\/three\.module\.js/);
 assert.match(html,/three@0\.187\.0\/examples\/jsm\//);
-assert.match(html,/toy-town-3d\.js\?v=56/);
+assert.match(html,/toy-town-3d\.js\?v=57/);
 assert.match(html,/toy-town-landmarks\.js\?v=7/,'the independent models are requested alongside Three');
 assert.match(html,/buildLandmark:landmarks\.buildLandmark/,
   'loader injects the authored model builder into the 3D simulation');
@@ -167,7 +167,7 @@ const classicScript=html.match(/src="assets\/toy-town\.js\?v=\d+"/);
 assert.ok(classicScript&&
   html.indexOf(classicScript[0])<html.indexOf("import('three')"),
   'the actual versioned classic script always loads before WebGL');
-assert.match(page,/toy-town\.html\?v=66&embed=1/);
+assert.match(page,/toy-town\.html\?v=67&embed=1/);
 assert.match(fs.readFileSync(path.join(root,'assets/toy-town.js'),'utf8'),
   /targetX=clamp\(\.08,p\.x,17\.92\)/,
   'scripted paths are clamped at the endpoint rather than freezing outside town');
@@ -220,7 +220,7 @@ class InstancedMesh extends Mesh {
 class Directional extends O {constructor(){super();this.color=new C('white');this.shadow={
   mapSize:{set(){}},camera:{},bias:0,radius:0};this.target=new O();}}
 class Renderer {
-  constructor(){stats.created++;this.domElement=new O();this.domElement.style={};this.shadowMap={};
+  constructor(){stats.created++;this.domElement=new O();this.domElement.style={};this.domElement.getBoundingClientRect=()=>({left:0,top:0,width:390,height:844});this.shadowMap={};
     this.domElement.width=390;this.domElement.height=844;this.throwOnRender=false;}
   setPixelRatio(v){this.pixelRatio=v;}
   setSize(w,h){this.domElement.width=w;this.domElement.height=h;}
@@ -230,7 +230,7 @@ class Renderer {
 class Shape {constructor(){this.holes=[];}moveTo(){}absarc(){stats.profileVertices++;}absellipse(){stats.profileVertices++;}lineTo(){stats.profileVertices++;}quadraticCurveTo(){stats.profileVertices++;}closePath(){}}
 class Path extends Shape {}
 class Vector2 extends V {}
-class Vector3 extends V {}
+class Vector3 extends V {project(){this.x=0;this.y=0;this.z=0;return this;}}
 class Curve {constructor(points){this.points=points;}}
 class Texture {constructor(){this.colorSpace='';stats.roofTextures++;}}
 const THREE={
@@ -251,7 +251,7 @@ const win={WebGL2RenderingContext:function(){},innerWidth:390,innerHeight:844,
   devicePixelRatio:3,matchMedia:()=>({matches:false})};
 const canvas2d={fillText(){},clearRect(){},beginPath(){},roundRect(){},ellipse(){},arc(){},fill(){stats.paintOperations++;},stroke(){},fillRect(){stats.paintOperations++;},moveTo(){},lineTo(){},closePath(){},bezierCurveTo(){},createLinearGradient:()=>({addColorStop(){}}),createRadialGradient:()=>({addColorStop(){}})};
 const townCanvas={style:{opacity:'1'}};
-const host={style:{display:'none'},clientWidth:390,clientHeight:844,
+const host={style:{display:'none'},clientWidth:390,clientHeight:844,getBoundingClientRect(){return {left:0,top:0,width:390,height:844};},
   appendChild(o){this.child=o;}};
 const document={createElement:()=>({width:0,height:0,getContext:()=>canvas2d,setAttribute(){},addEventListener(){},appendChild(){},append(){},remove(){},firstChild:{},classList:{add(){},remove(){},toggle(){}},style:{}}),
   body:{appendChild(){}},getElementById:id=>id==='town'?townCanvas:null};
@@ -353,6 +353,13 @@ assert.equal(api.getStats().festoonBulbs,14,'two suspended spans contain 14 mini
   assert.ok(api.railStats().toots>=1,'the whistle blows when it leaves');
   const st=api.siteStats();assert.ok(st.built&&st.workers===3,'a building site with three workers on it');
   const jib0=st.jib;api.stepTrain(20,0);assert.notEqual(api.siteStats().jib,jib0,'the crane jib swings');
+  {
+    const l0=api.lifeStats();assert.ok(l0.built&&l0.playground&&l0.kite,'a playground, a kite flyer and a river boat are built on free lawn');
+    api.stepTrain(30,0);const l1=api.lifeStats();assert.notEqual(l1.boatX,l0.boatX,'the rowing boat drifts along the river');
+    assert.ok(l1.catches>=1,'the fisher catches something and says so');
+    const [fx,fz]=l1.at.flock;assert.ok(api.scatterBirds(fx,fz,6)>0,'pigeons scatter when disturbed');
+    assert.ok(api.lifeStats().birds.includes('fly'),'and fly');api.stepTrain(6,0);assert.ok(!api.lifeStats().birds.includes('fly'),'then land again and peck');
+  }
   assert.equal(api.farmStats().sheep,4,'four sheep in the pasture');
   const before=api.farmStats().spin;api.stepTrain(5,0);assert.ok(api.farmStats().spin>before,'the windmill sails turn');
 }
