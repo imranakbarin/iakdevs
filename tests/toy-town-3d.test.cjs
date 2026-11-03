@@ -158,7 +158,7 @@ assert.match(moduleCode,/eye.scale.y=blink/,'eyelids blink without a separate an
 assert.match(html,/type="importmap"/);
 assert.match(html,/three@0\.187\.0\/build\/three\.module\.js/);
 assert.match(html,/three@0\.187\.0\/examples\/jsm\//);
-assert.match(html,/toy-town-3d\.js\?v=63/);
+assert.match(html,/toy-town-3d\.js\?v=64/);
 assert.match(html,/toy-town-landmarks\.js\?v=7/,'the independent models are requested alongside Three');
 assert.match(html,/buildLandmark:landmarks\.buildLandmark/,
   'loader injects the authored model builder into the 3D simulation');
@@ -167,7 +167,7 @@ const classicScript=html.match(/src="assets\/toy-town\.js\?v=\d+"/);
 assert.ok(classicScript&&
   html.indexOf(classicScript[0])<html.indexOf("import('three')"),
   'the actual versioned classic script always loads before WebGL');
-assert.match(page,/toy-town\.html\?v=73&embed=1/);
+assert.match(page,/toy-town\.html\?v=74&embed=1/);
 assert.match(fs.readFileSync(path.join(root,'assets/toy-town.js'),'utf8'),
   /targetX=clamp\(\.08,p\.x,17\.92\)/,
   'scripted paths are clamped at the endpoint rather than freezing outside town');
@@ -388,6 +388,14 @@ assert.equal(api.getStats().festoonBulbs,14,'two suspended spans contain 14 mini
     const bus={type:'car',kind:'bus',x:4.6,y:6.5,d:0,lane:.2,v:0,atStop:0,stops:1,stopUntil:1e9};pedestrians.push(bus);
     api.stepTrain(.2,0);api.stepTrain(10,0);const q1=api.stage3Stats();assert.ok(q1.boarded>=1,'a passenger steps on the bus');
     pedestrians.splice(pedestrians.indexOf(bus),1);
+  }
+  {
+    // Stage 4: a livelier sky.
+    api.setWeatherForTest('rain');api.stepTrain(1,0);api.setWeatherForTest('clear');api.stepTrain(10,0);
+    let q=api.stage4Stats();assert.ok(q.rainbow&&q.rainbows>=1,'a rainbow follows the rain');
+    api.setWindForTest(true);api.stepTrain(8,0);q=api.stage4Stats();assert.ok(q.leaves>=5,'the wind blows leaves across the town');api.setWindForTest(null);
+    assert.ok(api.startBanner(),'a plane tows a banner');api.stepTrain(2,0);assert.ok(api.stage4Stats().plane);
+    assert.ok(api.startFlock(),'a flock of birds crosses');api.stepTrain(2,0);assert.ok(api.stage4Stats().flocks>=1);
   }
   const st=api.siteStats();assert.ok(st.built&&st.workers===3,'a building site with three workers on it');
   const jib0=st.jib;api.stepTrain(20,0);assert.notEqual(api.siteStats().jib,jib0,'the crane jib swings');
