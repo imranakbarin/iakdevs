@@ -2992,6 +2992,75 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
     const lamp=box(placed,.04,.05,.04,glass,0,.385,z,false);lamp.castShadow=false;
     porchLamps.push({b,glass});
   }
+  /* ---- Static batching. The town is ~6,000 small meshes; every one is a draw call. Everything that never moves
+     (buildings, trees, roads, props) is merged, per material and per coarse map cell (so off-screen parts are still
+     culled), into a few hundred meshes. Anything that animates (the registered ambient pieces, clouds, cinema viewers),
+     everything translucent and everything invisible stays as it was. ?nobatch switches it off. ---- */
+  const batch={geos:[],removed:0,merged:0,off:typeof location!=='undefined'&&/[?&]nobatch\b/.test(location.search||''),candidates:[]};
+  const CELLS=3;
+  function batchStatic(end){
+    for(const g of batch.geos)g.dispose?.();
+    batch.geos=[];batch.removed=0;batch.merged=0;batch.candidates=[];
+    if(!THREE.Matrix4||!THREE.Matrix3||!THREE.BufferGeometry||!THREE.BufferAttribute||!world.updateMatrixWorld)return;
+    const skip=new Set(),mark=o=>o?.traverse?.(n=>skip.add(n));
+    for(const a of ambient)mark(a.mesh);   // animated pieces, and the working shopfronts (kept whole: the visual test checks their parts)
+    for(const k of clouds)mark(k.c);
+    for(const v of cinemaViewers)mark(v);
+    mark(site.slew);mark(site.trolley);mark(site.cable);mark(site.hook);mark(site.load);mark(site.mixer);
+    mark(cinemaBeam);mark(cinemaScreen);mark(shootingStar);mark(fireflies);
+    world.updateMatrixWorld(true);
+    const inv=new THREE.Matrix4().copy(world.matrixWorld).invert(),buckets=new Map(),plainBefore=THREE.Object3D.prototype.onBeforeRender;
+    const walk=o=>{
+      if(!o.visible||skip.has(o)||o.userData?.noBatch||o.userData?.limbs)return;   // hidden, animated, or a person rig
+      if(o.isMesh&&!o.isInstancedMesh&&!o.isSkinnedMesh&&!o.isPoints&&!o.isLine){
+        const m=o.material,g=o.geometry,at=g?.attributes;
+        if(m&&!Array.isArray(m)&&((!m.transparent&&m.depthWrite!==false)||m===groundingMaterial)&&!o.renderOrder&&o.frustumCulled!==false&&o.onBeforeRender===plainBefore&&
+           at?.position&&at.normal&&!at.position.isInterleavedBufferAttribute&&!at.normal.isInterleavedBufferAttribute&&!o.userData?.noBatch){
+          if(!m.vertexColors||at.color){
+            const mw=new THREE.Matrix4().multiplyMatrices(inv,o.matrixWorld);
+            const cx=Math.min(CELLS-1,Math.max(0,Math.floor(mw.elements[12]/18*CELLS))),cz=Math.min(CELLS-1,Math.max(0,Math.floor(mw.elements[14]/18*CELLS)));
+            const sig=Object.keys(at).sort().map(k=>k+at[k].itemSize+(at[k].isInterleavedBufferAttribute?'i':'')).join(',');
+            const key=m.uuid+'|'+cx+','+cz+'|'+sig+'|'+(o.castShadow?1:0)+(o.receiveShadow?1:0);
+            let b=buckets.get(key);if(!b){b={material:m,cast:o.castShadow,receive:o.receiveShadow,list:[],names:Object.keys(at).filter(k=>!at[k].isInterleavedBufferAttribute)};buckets.set(key,b);}
+            b.list.push({o,mw});
+          }
+        }
+      }
+      for(const c of o.children)walk(c);
+    };
+    for(const r of world.children.slice(0,end))walk(r);
+    batch.candidates=[...buckets.values()].flatMap(b=>b.list.map(e=>e.o));
+    if(batch.off)return;
+    const nm=new THREE.Matrix3(),v=new THREE.Vector3();
+    for(const b of buckets.values()){
+      if(b.list.length<2)continue;   // a lone mesh gains nothing
+      let nv=0,ni=0;
+      for(const {o} of b.list){nv+=o.geometry.attributes.position.count;ni+=o.geometry.index?o.geometry.index.count:o.geometry.attributes.position.count;}
+      const out={};for(const n of b.names){const a=b.list[0].o.geometry.attributes[n];out[n]=new Float32Array(nv*a.itemSize);}
+      const idx=nv>65535?new Uint32Array(ni):new Uint16Array(ni);
+      let vo=0,io=0;
+      for(const {o,mw} of b.list){
+        const g=o.geometry,pos=g.attributes.position,count=pos.count,flip=mw.determinant()<0;
+        nm.getNormalMatrix(mw);
+        for(const n of b.names){
+          const a=g.attributes[n],sz=a.itemSize,src=a.array,dst=out[n];
+          if(n==='position'){for(let i=0;i<count;i++){v.set(src[i*3],src[i*3+1],src[i*3+2]).applyMatrix4(mw);dst[(vo+i)*3]=v.x;dst[(vo+i)*3+1]=v.y;dst[(vo+i)*3+2]=v.z;}}
+          else if(n==='normal'){for(let i=0;i<count;i++){v.set(src[i*3],src[i*3+1],src[i*3+2]).applyMatrix3(nm).normalize();dst[(vo+i)*3]=v.x;dst[(vo+i)*3+1]=v.y;dst[(vo+i)*3+2]=v.z;}}
+          else for(let i=0;i<count*sz;i++)dst[vo*sz+i]=src[i];
+        }
+        const ix=g.index;
+        if(ix){const ia=ix.array;for(let i=0;i<ix.count;i+=3){if(flip){idx[io++]=ia[i]+vo;idx[io++]=ia[i+2]+vo;idx[io++]=ia[i+1]+vo;}else{idx[io++]=ia[i]+vo;idx[io++]=ia[i+1]+vo;idx[io++]=ia[i+2]+vo;}}}
+        else for(let i=0;i<count;i+=3){if(flip){idx[io++]=i+vo;idx[io++]=i+2+vo;idx[io++]=i+1+vo;}else{idx[io++]=i+vo;idx[io++]=i+1+vo;idx[io++]=i+2+vo;}}
+        vo+=count;
+      }
+      const mg=new THREE.BufferGeometry();
+      for(const n of b.names)mg.setAttribute(n,new THREE.BufferAttribute(out[n],b.list[0].o.geometry.attributes[n].itemSize));
+      mg.setIndex(new THREE.BufferAttribute(idx,1));mg.computeBoundingSphere();
+      const mesh=new THREE.Mesh(mg,b.material);mesh.castShadow=b.cast;mesh.receiveShadow=b.receive;mesh.matrixAutoUpdate=false;mesh.userData.staticBatch=true;
+      for(const {o} of b.list)o.parent?.remove(o);
+      world.add(mesh);batch.geos.push(mg);batch.removed+=b.list.length;batch.merged++;
+    }
+  }
   function rebuild(){
     site.built=false;site.workers=[];timeVisit=null;round=null;papers=[];effects=[];porchLamps.length=0;precip=null;dusting=null;weatherKind='';
     ambient.length = 0; plazaLights.length = 0; festoonBulbs.length = 0;
@@ -3038,6 +3107,7 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
     createStorybookVillage();
     paintVillageLife();
     createWorkingShops();
+    batchStatic(world.children.length);
     rail.train=null;life.built=false;more.built=false;live2.built=false;bus3.built=false;sky4.built=false;fest.built=false;fest.ev=null;leavingPrecip.length=0;createRailway();createFarm();createLife();createMore();createStage2();createStage3();createStage4();createStage5();
     // Landmark panes are pooled across the five models. Update material
     // intensity only, not every individual window mesh, on each frame.
@@ -5271,6 +5341,7 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
     stepTrain:(seconds,dark=0)=>{for(let t=0;t<seconds;t+=.05){updateTrain(.05,dark);updateFarm(.05);updateSite(.05);updateLife(.05);updateMore(.05,dark);updateStage2(.05,dark);updateStage3(.05,dark);updateStage4(.05,dark);updateStage5(.05,dark);updateStage6(.05);}},
     // Meshes whose material reads vertex colours but whose geometry has none draw pure black.
     vertexColorAudit:()=>{let bad=0;world.traverse?.(o=>{if(o.isMesh&&o.material?.vertexColors&&o.geometry?.attributes&&!o.geometry.attributes.color)bad++;});return bad;},
+    batchStats:()=>({removed:batch.removed,merged:batch.merged,candidates:batch.candidates.length,off:batch.off}),staticCandidates:()=>batch.candidates,
     stage6Stats:()=>({season:SEASON_NAME,lite,ground:bus3.ground.filter(m=>m.visible).length,notes:notes6.pool.filter(n=>n.visible).length,spawned:notes6.spawned,mood:moodOf({ph:1,kid:false})}),setLite:v=>{setLite(v);return lite;},
     stage5Stats:()=>({built:fest.built,festival:fest.kind,decor:fest.decor,dragon:!!fest.dragon?.g.visible,maypole:!!fest.maypole,event:fest.ev?.kind||null,eventT:fest.ev?+fest.ev.t.toFixed(1):0,eventDur:fest.ev?.dur||0,events:fest.events,log:fest.log.slice(-6)}),
     startEvent:k=>startEvent(k),startDragon:()=>{if(fest.dragon){fest.dragonOn=60;fest.dragon.g.visible=true;return true;}return false;},

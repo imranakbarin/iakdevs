@@ -117,6 +117,9 @@ assert.match(view, /\[\?&\]lite\\b/, '?lite forces the light mode'); assert.matc
 assert.match(view, /renderer\.shadowMap\.autoUpdate = false/); assert.match(view, /shadowMap\.needsUpdate=\(shadowTick\+\+%\(lite\?4:desktop\(\)\?1:2\)\)===0/, 'shadows are redrawn every few frames on phones, not every frame');
 assert.match(view, /function adaptSharpness\(ms,gap=0\)/); assert.match(view, /adaptSharpness\(drawn,gap\)/, 'the guard also watches the real frame gap, so a GPU that falls behind is noticed');
 assert.match(view, /const frond=object\(g,geo\('clump',\.20,k%4\)/, 'willow fronds are clumps, which carry vertex colours (a plain sphere drew black)');
+assert.match(view, /function batchStatic\(end\)/); assert.match(view, /batchStatic\(world\.children\.length\);\n\s*rail\.train=null;/, 'the static town is merged right after it is built, before the animated stages');
+assert.match(view, /\[\?&\]nobatch\\b/, '?nobatch switches the merging off'); assert.match(view, /o\.userData\?\.limbs\)return;/, 'person rigs are never merged');
+assert.match(view, /mark\(site\.slew\);mark\(site\.trolley\);mark\(site\.cable\);mark\(site\.hook\);mark\(site\.load\);mark\(site\.mixer\);/, 'the crane and the mixer stay animated');
 assert.match(view, /function moodOf\(ref\)/, 'tapping a resident shows a name and a mood');
 assert.match(fs.readFileSync(path.join(root, 'index.html'), 'utf8'), /keep=\['weather','fps','festival','season','lite'\]/, 'the main page passes ?season and ?lite through');
 // Nobody stays stuck, and walkers do things of their own: several layouts, six town-minutes each.
