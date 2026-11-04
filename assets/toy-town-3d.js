@@ -16,6 +16,7 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
   renderer.toneMappingExposure = 1.02;
   renderer.shadowMap.enabled = true;
+  renderer.shadowMap.autoUpdate = false;   // redrawn every few frames (see frame): the shadow pass costs as much as a second view of the town
   renderer.shadowMap.type = THREE.PCFShadowMap;   // PCFSoft was removed in r18x; PCF + radius gives the soft edge
   renderer.domElement.setAttribute('aria-hidden', 'true');
   renderer.domElement.style.cssText = 'display:block;width:100%;height:100%;pointer-events:none';
@@ -5162,13 +5163,15 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
   }
   // Keep the frame rate: if drawing a frame takes too long for a while, lower the
   // render resolution one step (2 → 1.6 → 1.3 → 1); never raise it back mid-visit.
-  let slowFrames=0,sharpSamples=0;
+  let slowFrames=0,sharpSamples=0,shadowTick=0;
   const clockMs=()=>globalThis.performance?.now?.()??Date.now();
-  function adaptSharpness(ms){
+  // `ms` is the CPU time of the draw call; `gap` is the real time since the previous drawn frame, which also catches a GPU that falls behind.
+  function adaptSharpness(ms,gap=0){
     if(++sharpSamples<45||(pixelRatio<=1&&lite))return;
-    slowFrames=ms>(desktop()?14:22)?slowFrames+1:Math.max(0,slowFrames-1);
+    const slow=ms>(desktop()?14:22)||(!reducedMotion&&gap>(desktop()?26:40)&&gap<250);
+    slowFrames=slow?slowFrames+1:Math.max(0,slowFrames-1);
     if(slowFrames>40){slowFrames=0;sharpSamples=0;
-      if(pixelRatio>1){pixelRatio=pixelRatio>1.7?1.6:pixelRatio>1.4?1.3:1;renderer.setPixelRatio(pixelRatio);lastSize='';}
+      if(pixelRatio>1){pixelRatio=pixelRatio>1.7?1.6:pixelRatio>1.4?1.3:1;renderer.setPixelRatio(pixelRatio);lastSize='';shadowTick=0;}
       else setLite(true);}
   }
   function setLite(on){
@@ -5202,7 +5205,7 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
     if(!fpsOn||typeof document==='undefined')return;
     if(!fpsEl){fpsEl=document.createElement('div');fpsEl.style.cssText='position:fixed;right:10px;top:calc(10px + env(safe-area-inset-top,0px));z-index:9;padding:5px 9px;border-radius:9px;background:rgba(30,36,44,.78);color:#e9f5e9;font:600 12px/1.3 ui-monospace,Menlo,monospace;pointer-events:none';document.body.appendChild(fpsEl);}
     const now=clockMs();fpsFrames++;fpsDraw+=ms;if(!fpsSince)fpsSince=now;
-    if(now-fpsSince>=1000){fpsEl.textContent=`${Math.round(fpsFrames*1000/(now-fpsSince))} fps · ${(fpsDraw/fpsFrames).toFixed(1)} ms · ${pixelRatio}x`;fpsFrames=0;fpsDraw=0;fpsSince=now;}
+    if(now-fpsSince>=1000){fpsEl.textContent=`${Math.round(fpsFrames*1000/(now-fpsSince))} fps · ${(fpsDraw/fpsFrames).toFixed(1)} ms · ${pixelRatio}x${lite?' · lite':''}`;fpsFrames=0;fpsDraw=0;fpsSince=now;}
   }
   function frame(timestamp){
     if(stopped || frozen)return;
@@ -5214,6 +5217,7 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
       const interval = reducedMotion ? 70 : desktop() ? 15 : 30;
       if(timestamp-lastFrameAt < interval)return;
     }
+    const gap=Number.isFinite(timestamp)&&frames>0?timestamp-lastFrameAt:0;
     if(Number.isFinite(timestamp)){lastFrameAt=timestamp;sceneTime=timestamp;}
     try {
       resize();
@@ -5226,9 +5230,11 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
        updateVisit(dt);updateRound(dt,state.night||0);updateEffects(dt);updateTrain(dt,state.night||0);updateFarm(dt);updateSite(dt);updateLife(dt);updateMore(dt,state.night||0);updateStage2(dt,state.night||0);updateStage3(dt,state.night||0);updateStage4(dt,state.night||0);updateStage5(dt,state.night||0);updateStage6(dt);}
       placeBubble();
       animateAmbient(state.clock||0);
+      // Shadows follow the actors a few times a second instead of every frame: every frame on desktop, every 2nd on phones, every 4th in lite mode.
+      renderer.shadowMap.needsUpdate=(shadowTick++%(lite?4:desktop()?1:2))===0;
       const drawStart=clockMs();
       if(lens)lens.render(timestamp-(api.lastAt||timestamp));else renderer.render(scene,camera);
-      const drawn=clockMs()-drawStart;adaptSharpness(drawn);fpsMeter(drawn);
+      const drawn=clockMs()-drawStart;adaptSharpness(drawn,gap);fpsMeter(drawn);
       api.lastAt=timestamp;frames++;
       if(!api.active) {
         api.active=true;window.ToyTown3D.active=true;

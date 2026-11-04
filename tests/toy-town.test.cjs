@@ -4,13 +4,15 @@
 // without error; and traffic and people keep the streets busy.
 const fs = require('node:fs'), path = require('node:path'), vm = require('node:vm'), assert = require('node:assert/strict');
 const root = path.join(__dirname, '..'), html = fs.readFileSync(path.join(root, 'index.html'), 'utf8');
+// The simulation uses Math.random; a fixed seed keeps the traffic and people checks reproducible (TT_SEED overrides it to hunt for flakes).
+{ let a = (+process.env.TT_SEED || 20261104) >>> 0; Math.random = () => { a = (a + 0x6D2B79F5) >>> 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
 const dioramaSource = fs.readFileSync(path.join(root, 'assets/toy-town-diorama.js'), 'utf8');
 assert.match(dioramaSource, /function building\(/, 'new architectural renderer exists');
 assert.match(dioramaSource, /function tree\(/, 'new organic tree renderer exists');
 assert.match(dioramaSource, /function gable\(/, 'real pitched roof renderer exists');
 assert.match(dioramaSource, /function glazing\(/, 'framed glazing renderer exists');
 assert.match(html, /<option value="town">Toy Town<\/option>/, 'Toy Town is in the menu');
-assert.match(html, /return 'toy-town\.html\?v=77&embed=1'\+keep;/, 'and opens its current embedded page');
+assert.match(html, /return 'toy-town\.html\?v=78&embed=1'\+keep;/, 'and opens its current embedded page');
 assert.match(html, /townFrame\.src=townSrc\(\);/, 'with this page\'s weather and fps settings passed through');
 assert.match(fs.readFileSync(path.join(root, 'toy-town.html'), 'utf8'), /assets\/toy-town\.js\?v=\d+/);
 const box = vm.createContext({Math, Object, Array, JSON, Date, String, Number, RegExp, setTimeout: () => 0, document: {getElementById: () => ({textContent: ''})}});
