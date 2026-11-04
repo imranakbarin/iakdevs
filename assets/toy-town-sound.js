@@ -41,14 +41,20 @@
     chime: () => { tone('sine', 880, 880, .35, .18); tone('sine', 1318.5, 1318.5, .4, .14, .09); },
     toot: () => { tone('triangle', 392, 392, .32, .3); tone('triangle', 494, 494, .32, .26); tone('triangle', 392, 392, .45, .3, .38); tone('triangle', 494, 494, .45, .26, .38); },
     firework: () => { noise(.12, .6, 2400); tone('sine', 900, 120, .5, .22, .0); noise(.5, .55, 140, .12); tone('sine', 80, 40, .6, .3, .12); for (let k = 0; k < 5; k++) noise(.05, .22, 3000 + Math.random() * 1500, .35 + k * .07); },
+    rain: () => { for (let k = 0; k < 6; k++) noise(.22, .2, 3400 + Math.random() * 900, k * .09); },
+    wind: () => { noise(1.4, .14, 420 + Math.random() * 160); },
+    owl: () => { tone('sine', 420, 400, .28, .18); tone('sine', 380, 360, .4, .16, .34); },
     rumble: () => { noise(1.6, .5, 90); tone('sine', 55, 40, 1.4, .25); }
   };
   // A sparse birdsong bed by day; the odd soft cricket at night.
   function bed() {
     if (!on || !ctx) return;
     const night = (root.ToyTown?.debug?.().night || 0) > .5;
-    if (night) { for (let k = 0; k < 4; k++) tone('sine', 4200, 4200, .03, .035, k * .06); }
-    else if (Math.random() < .7) CUES.chirp();
+    const wx = root.ToyTown3D?.weather?.().kind || 'clear';
+    if (wx === 'rain' || wx === 'storm') CUES.rain();
+    else if (wx === 'snow') { if (Math.random() < .3) CUES.wind(); }
+    else if (night) { if (Math.random() < .18) CUES.owl(); else for (let k = 0; k < 4; k++) tone('sine', 4200, 4200, .03, .035, k * .06); }
+    else { if (Math.random() < .25 && (wx === 'fog' || root.ToyTownWeather?.state?.windy)) CUES.wind(); if (Math.random() < .7) CUES.chirp(); }
     bedTimer = setTimeout(bed, 3000 + Math.random() * 5000);
   }
   function set(v, store) {
