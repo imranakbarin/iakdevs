@@ -110,6 +110,12 @@ assert.match(html, /id="sound-toggle"/); assert.match(html, /toy-town-sound\.js\
 assert.match(soundSrc, /set\(false, false\);/, 'sound starts off');
 for (const c of ['honk', 'bell', 'quack', 'chirp', 'pop', 'chime']) assert.match(soundSrc, new RegExp(c + ': \\(\\) =>'), c + ' is synthesised');
 assert.doesNotMatch(soundSrc, /\.(mp3|ogg|wav)/, 'no sound files to download');
+for (const c of ['rain', 'wind', 'owl']) assert.match(soundSrc, new RegExp(c + ': \\(\\) =>'), c + ' is a synthesised ambience cue');
+assert.match(soundSrc, /ToyTown3D\?\.weather\?\.\(\)\.kind/, 'the sound bed follows the weather');
+assert.match(view, /const SEASONS=\{/); assert.match(view, /\[\?&\]season=\(spring\|summer\|autumn\|winter\)/, '?season= previews a season');
+assert.match(view, /\[\?&\]lite\\b/, '?lite forces the light mode'); assert.match(view, /else setLite\(true\)/, 'and a slow phone drops into it by itself');
+assert.match(view, /function moodOf\(ref\)/, 'tapping a resident shows a name and a mood');
+assert.match(fs.readFileSync(path.join(root, 'index.html'), 'utf8'), /keep=\['weather','fps','festival','season','lite'\]/, 'the main page passes ?season and ?lite through');
 // Nobody stays stuck, and walkers do things of their own: several layouts, six town-minutes each.
 for (const seed of [20261102, 7, 42]) {
   const box = vm.createContext({Math, Object, Array, JSON, Date, String, Number, RegExp, Set, Map, setTimeout: () => 0, document: {getElementById: () => ({textContent: '', style: {}})}});
@@ -161,7 +167,7 @@ assert.match(sim, /function walk\(x, y, tx, ty, speed\)/); assert.match(sim, /m\
   assert.ok(samples > 50 && centre / samples < .05, `walkers on a route keep off the centre line (${centre}/${samples})`);
 }
 const index = fs.readFileSync(path.join(root, 'index.html'), 'utf8');
-assert.match(index, /keep=\['weather','fps','festival'\]/, 'the main page passes ?weather= and ?fps into the embedded town');
+assert.match(index, /keep=\['weather','fps','festival','season','lite'\]/, 'the main page passes ?weather= and ?fps into the embedded town');
 // The ring railway, the cuter vehicles and the softer city (code-level checks; the behaviour is exercised in toy-town-3d.test.cjs).
 assert.match(view, /function createRailway\(\)/); assert.match(view, /'TOY TOWN',cx,/, 'the station carries its name');
 assert.match(view, /function updatePassengers\(dt,dark\)/); assert.match(view, /if\(trainHit\(clientX,clientY\)\)/, 'tapping the train toots');
@@ -255,7 +261,7 @@ assert.match(view, /function createStage4\(\)/); assert.match(view, /function up
 assert.match(view, /ToyTownWeather\?\.step\?\.\(dt\)/, 'the weather director runs on the town clock');
 assert.match(view, /sunK\+=\(tSun-sunK\)\*\.005/, 'the sun and sky ease in and out of the weather');
 assert.match(view, /function createStage5\(\)/); assert.match(view, /function startEvent\(kind\)/); assert.match(view, /function festivalKind\(\)/, 'festival days (lantern, harvest, spring) and street events (wedding, food cart, juggler)');
-assert.match(view, /\['wedding','cart','juggler'\]/); assert.match(index, /keep=\['weather','fps','festival'\]/, 'the main page passes ?festival= into the town too');
+assert.match(view, /\['wedding','cart','juggler'\]/); assert.match(index, /keep=\['weather','fps','festival','season','lite'\]/, 'the main page passes ?festival= into the town too');
 assert.match(view, /function bridgeLift\(x,z,kind\)/, 'vehicles, cyclists and walkers rise onto the bridge deck');
 assert.match(view, /function walkStyle\(ref\)/, 'every resident has their own walking style (stride, swing, bounce, lean, habits)');
 assert.match(view, /duck\.scale\.setScalar\(\.68\)/, 'ducks are smaller'); assert.match(view, /const visor=box\(face,\.1,\.034,\.014/, 'the robots wear small visors, not huge glasses');
