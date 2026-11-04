@@ -148,22 +148,24 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
     paintedRoofCache.set(pigment,m);
     return m;
   };
+  // Phones draw every shape at a fraction of the triangles: a head is ~15 px across there, so a 24x18 sphere is pure cost.
+  const LOWPOLY = !desktop();
   const geo = (kind, ...dims) => {
     const key = kind + ':' + dims.join(':');
     if (!geometryCache.has(key)) {
       let shape;
       if (kind === 'round') shape = new RoundedBoxGeometry(dims[0],dims[1],dims[2],2,Math.min(dims[0],dims[1],dims[2])*.14);
       else if (kind === 'box') shape = new THREE.BoxGeometry(...dims);
-      else if (kind === 'sphere') shape = new THREE.SphereGeometry(dims[0],16,12);
+      else if (kind === 'sphere') shape = LOWPOLY ? new THREE.SphereGeometry(dims[0],12,8) : new THREE.SphereGeometry(dims[0],16,12);
       else if (kind === 'ball') shape = new THREE.IcosahedronGeometry(dims[0],1);
       else if (kind === 'cylinder') shape = new THREE.CylinderGeometry(...dims,14);
       else if (kind === 'torus') shape = new THREE.TorusGeometry(...dims,7,12);
       else if (kind === 'plane') shape = new THREE.PlaneGeometry(...dims);
       else if (kind === 'clump') shape = clumpGeometry(dims[0], dims[1]);
-      else if (kind === 'soft') shape = new RoundedBoxGeometry(dims[0],dims[1],dims[2],4,dims[3]);
-      else if (kind === 'smooth') shape = new THREE.SphereGeometry(dims[0],24,18);
-      else if (kind === 'capsule') shape = new THREE.CapsuleGeometry(dims[0],dims[1],6,16);
-      else if (kind === 'hairshell') shape = new THREE.SphereGeometry(dims[0],24,14,0,Math.PI*2,0,Math.PI*.56);
+      else if (kind === 'soft') shape = new RoundedBoxGeometry(dims[0],dims[1],dims[2],LOWPOLY?3:4,dims[3]);
+      else if (kind === 'smooth') shape = LOWPOLY ? new THREE.SphereGeometry(dims[0],14,10) : new THREE.SphereGeometry(dims[0],24,18);
+      else if (kind === 'capsule') shape = LOWPOLY ? new THREE.CapsuleGeometry(dims[0],dims[1],3,10) : new THREE.CapsuleGeometry(dims[0],dims[1],6,16);
+      else if (kind === 'hairshell') shape = LOWPOLY ? new THREE.SphereGeometry(dims[0],14,8,0,Math.PI*2,0,Math.PI*.56) : new THREE.SphereGeometry(dims[0],24,14,0,Math.PI*2,0,Math.PI*.56);
       geometryCache.set(key,shape);
     }
     return geometryCache.get(key);
@@ -1255,7 +1257,7 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
       // Cascading willow fronds soften the repeated round-crown profile.
       for(let k=0;k<8;k++){
         const a=k*TAU/8+.17,rad=.29+(k%3)*.037;
-        const frond=object(g,geo('sphere',.20),
+        const frond=object(g,geo('clump',.20,k%4),   // a clump carries the vertex colours the foliage material reads; a plain sphere draws black
           foliage(k%2?'#80ab8e':'#a2be9f'),
           Math.cos(a)*rad,.67+(k%2)*.10,Math.sin(a)*rad,false);
         frond.scale.set(.33,1.14,.30);
@@ -5267,6 +5269,8 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
     stepExtras:(seconds,dark=0)=>{for(let t=0;t<seconds;t+=.05){sceneClock+=.05;updateVisit(.05);updateRound(.05,dark);updateEffects(.05);}},
     setFreight:n=>{rail.freightEvery=n;rail.mode='pass';},railMode:()=>rail.mode,
     stepTrain:(seconds,dark=0)=>{for(let t=0;t<seconds;t+=.05){updateTrain(.05,dark);updateFarm(.05);updateSite(.05);updateLife(.05);updateMore(.05,dark);updateStage2(.05,dark);updateStage3(.05,dark);updateStage4(.05,dark);updateStage5(.05,dark);updateStage6(.05);}},
+    // Meshes whose material reads vertex colours but whose geometry has none draw pure black.
+    vertexColorAudit:()=>{let bad=0;world.traverse?.(o=>{if(o.isMesh&&o.material?.vertexColors&&o.geometry?.attributes&&!o.geometry.attributes.color)bad++;});return bad;},
     stage6Stats:()=>({season:SEASON_NAME,lite,ground:bus3.ground.filter(m=>m.visible).length,notes:notes6.pool.filter(n=>n.visible).length,spawned:notes6.spawned,mood:moodOf({ph:1,kid:false})}),setLite:v=>{setLite(v);return lite;},
     stage5Stats:()=>({built:fest.built,festival:fest.kind,decor:fest.decor,dragon:!!fest.dragon?.g.visible,maypole:!!fest.maypole,event:fest.ev?.kind||null,eventT:fest.ev?+fest.ev.t.toFixed(1):0,eventDur:fest.ev?.dur||0,events:fest.events,log:fest.log.slice(-6)}),
     startEvent:k=>startEvent(k),startDragon:()=>{if(fest.dragon){fest.dragonOn=60;fest.dragon.g.visible=true;return true;}return false;},
