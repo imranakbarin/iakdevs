@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generated_at": "2026-11-04T00:39:44.146Z",
+  "generated_at": "2026-11-04T07:33:27.984Z",
   "status": "ok",
   "successful_sources": [
     "BBC News",
@@ -12,11 +12,11 @@
   ],
   "stories": [
     {
-      "title": "ANC under pressure to reverse South Africa decline",
-      "url": "https://www.bbc.co.uk/news/articles/cr4g1x6l77xyo?at_medium=RSS&at_campaign=rss",
+      "title": "South Carolina elects Democratic senator for first time in almost three decades",
+      "url": "https://www.bbc.co.uk/news/articles/cjy56z440nl9o?at_medium=RSS&at_campaign=rss",
       "source": "BBC News",
       "category": "World",
-      "published_at": "2026-11-04T00:03:19.000Z"
+      "published_at": "2026-11-04T07:32:02.000Z"
     },
     {
       "title": "Graduates are managing AI - but are they learning much else?",
@@ -26,18 +26,18 @@
       "published_at": "2026-11-04T00:04:35.000Z"
     },
     {
-      "title": "Canva announces major job cuts after 'our hardest year yet'",
-      "url": "https://www.bbc.co.uk/news/articles/cw77pg7neydmo?at_medium=RSS&at_campaign=rss",
+      "title": "Poundland supplier 'will lose millions' if retailer collapses",
+      "url": "https://www.bbc.co.uk/news/articles/ck240mm3e42do?at_medium=RSS&at_campaign=rss",
       "source": "BBC Business",
       "category": "Business",
-      "published_at": "2026-11-04T00:09:35.000Z"
+      "published_at": "2026-11-04T07:31:21.000Z"
     },
     {
-      "title": "A half-time speech, a retaken penalty - and a win to save Carrick's job?",
-      "url": "https://www.bbc.co.uk/sport/football/articles/c6q8n98y4023o?at_medium=RSS&at_campaign=rss",
+      "title": "Retiring Serrano wants to end as a 'game-changer'",
+      "url": "https://www.bbc.co.uk/sport/boxing/articles/c6n047870jzeo?at_medium=RSS&at_campaign=rss",
       "source": "BBC Sport",
       "category": "Sport",
-      "published_at": "2026-11-04T00:27:37.000Z"
+      "published_at": "2026-11-04T07:12:33.000Z"
     },
     {
       "title": "Why South Africa's local elections matter",
@@ -54,25 +54,25 @@
       "published_at": "2026-11-03T22:39:37.000Z"
     },
     {
-      "title": "Poundland supplier 'will lose millions' if retailer collapses",
-      "url": "https://www.bbc.co.uk/news/articles/ck240mm3e42do?at_medium=RSS&at_campaign=rss",
+      "title": "Leisure centre price hikes on the way",
+      "url": "https://www.bbc.co.uk/news/articles/c6pvgw8gz1k4o?at_medium=RSS&at_campaign=rss",
       "source": "BBC Business",
       "category": "Business",
-      "published_at": "2026-11-04T00:03:17.000Z"
+      "published_at": "2026-11-04T06:13:19.000Z"
     },
     {
-      "title": "Emery takes positives, but Villa 'have work to do' to reach Barca level",
-      "url": "https://www.bbc.co.uk/sport/football/articles/cjwy9496qe7ko?at_medium=RSS&at_campaign=rss",
+      "title": "Who am I? Plus today's other quizzes",
+      "url": "https://www.bbc.co.uk/sport/football/articles/c6jdmg9mkg8mo?at_medium=RSS&at_campaign=rss",
       "source": "BBC Sport",
       "category": "Sport",
-      "published_at": "2026-11-03T23:58:22.000Z"
+      "published_at": "2026-11-04T07:06:19.000Z"
     },
     {
-      "title": "'I'm not a quitter': Kim Kardashian on retaking the bar exam",
-      "url": "https://www.bbc.co.uk/news/videos/cmy4x59kdknwo?at_medium=RSS&at_campaign=rss",
+      "title": "How America voted in maps and charts",
+      "url": "https://www.bbc.co.uk/news/articles/cm4g1j0n92qdo?at_medium=RSS&at_campaign=rss",
       "source": "BBC News",
       "category": "World",
-      "published_at": "2026-11-03T23:58:36.000Z"
+      "published_at": "2026-11-04T07:24:59.000Z"
     }
   ]
 }
