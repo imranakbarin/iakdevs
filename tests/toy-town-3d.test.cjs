@@ -158,7 +158,7 @@ assert.match(moduleCode,/eye.scale.y=blink/,'eyelids blink without a separate an
 assert.match(html,/type="importmap"/);
 assert.match(html,/three@0\.187\.0\/build\/three\.module\.js/);
 assert.match(html,/three@0\.187\.0\/examples\/jsm\//);
-assert.match(html,/toy-town-3d\.js\?v=68/);
+assert.match(html,/toy-town-3d\.js\?v=69/);
 assert.match(html,/toy-town-landmarks\.js\?v=7/,'the independent models are requested alongside Three');
 assert.match(html,/buildLandmark:landmarks\.buildLandmark/,
   'loader injects the authored model builder into the 3D simulation');
@@ -167,7 +167,7 @@ const classicScript=html.match(/src="assets\/toy-town\.js\?v=\d+"/);
 assert.ok(classicScript&&
   html.indexOf(classicScript[0])<html.indexOf("import('three')"),
   'the actual versioned classic script always loads before WebGL');
-assert.match(page,/toy-town\.html\?v=78&embed=1/);
+assert.match(page,/toy-town\.html\?v=79&embed=1/);
 assert.match(fs.readFileSync(path.join(root,'assets/toy-town.js'),'utf8'),
   /targetX=clamp\(\.08,p\.x,17\.92\)/,
   'scripted paths are clamped at the endpoint rather than freezing outside town');
@@ -411,6 +411,7 @@ assert.equal(api.getStats().festoonBulbs,14,'two suspended spans contain 14 mini
   {
     // Stage 6: seasons, the performance guard and music notes.
     const s6=api.stage6Stats();assert.ok(['spring','summer','autumn','winter'].includes(s6.season),'the season follows the calendar ('+s6.season+')');
+    assert.equal(api.vertexColorAudit(),0,'no mesh reads vertex colours from a geometry that has none (it would draw black)');
     assert.ok(s6.ground>=1,'the ground detail is drawn');assert.equal(s6.lite,false);assert.ok(Array.isArray(s6.mood)&&s6.mood.length===2&&s6.mood[1].length>2,'a resident has a mood');
     assert.equal(api.setLite(true),true);assert.equal(api.stage6Stats().ground,0,'lite mode drops the fine ground detail');api.stepTrain(3,0);assert.equal(api.stage6Stats().notes,0);
     assert.equal(api.setLite(false),false);assert.ok(api.stage6Stats().ground>=1,'and brings it back');api.stepTrain(3,0);
