@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generated_at": "2026-11-04T16:23:02.423Z",
+  "generated_at": "2026-11-04T22:39:46.027Z",
   "status": "ok",
   "successful_sources": [
     "BBC News",
@@ -12,67 +12,67 @@
   ],
   "stories": [
     {
-      "title": "Israel's president begins consultations with parties after election deadlock",
-      "url": "https://www.bbc.co.uk/news/articles/c6z98z5z91ppo?at_medium=RSS&at_campaign=rss",
-      "source": "BBC News",
+      "title": "Winners, losers, the EU: Five takeaways from the US midterms",
+      "url": "https://www.dw.com/en/winners-losers-the-eu-five-takeaways-from-the-us-midterms/a-79858901?maca=en-rss-en-world-4025-xml-mrss",
+      "source": "DW",
       "category": "World",
-      "published_at": "2026-11-04T16:18:21.000Z"
+      "published_at": "2026-11-04T20:27:00.000Z"
     },
     {
-      "title": "French blood supplies impacted by freezer hacks as theories swirl about culprits",
-      "url": "https://www.bbc.co.uk/news/articles/c8vgxyvz6y9ro?at_medium=RSS&at_campaign=rss",
+      "title": "Elon Musk's millions failed to deliver Republican wins in fierce midterms",
+      "url": "https://www.bbc.co.uk/news/articles/cv8ez3p3ge5ko?at_medium=RSS&at_campaign=rss",
       "source": "BBC Technology",
       "category": "Technology",
-      "published_at": "2026-11-04T16:14:57.000Z"
+      "published_at": "2026-11-04T21:41:15.000Z"
+    },
+    {
+      "title": "Pound rises to its highest level since the Brexit referendum",
+      "url": "https://www.bbc.co.uk/news/articles/c6lykq2qjn2vo?at_medium=RSS&at_campaign=rss",
+      "source": "BBC Business",
+      "category": "Business",
+      "published_at": "2026-11-04T21:35:50.000Z"
+    },
+    {
+      "title": "LIV to wind down after backers withdraw support",
+      "url": "https://www.bbc.co.uk/sport/golf/articles/cq70pdjjgy5no?at_medium=RSS&at_campaign=rss",
+      "source": "BBC Sport",
+      "category": "Sport",
+      "published_at": "2026-11-04T22:33:17.000Z"
+    },
+    {
+      "title": "Ukraine says bodycam video shows deadly Russian double-tap bombing",
+      "url": "https://www.bbc.co.uk/news/articles/c98rz6penv86o?at_medium=RSS&at_campaign=rss",
+      "source": "BBC News",
+      "category": "World",
+      "published_at": "2026-11-04T20:22:40.000Z"
+    },
+    {
+      "title": "VMware releases vSphere Express for virtualization on up to 128 cores",
+      "url": "https://arstechnica.com/information-technology/2026/11/vmware-releases-vsphere-express-for-virtualization-on-up-to-128-cores/",
+      "source": "Ars Technica",
+      "category": "Technology",
+      "published_at": "2026-11-04T21:38:49.000Z"
     },
     {
       "title": "Poundland owner in crunch talks as retailer's collapse looms",
       "url": "https://www.bbc.co.uk/news/articles/ck240mm3e42do?at_medium=RSS&at_campaign=rss",
       "source": "BBC Business",
       "category": "Business",
-      "published_at": "2026-11-04T15:45:11.000Z"
+      "published_at": "2026-11-04T19:44:46.000Z"
     },
     {
-      "title": "Morgan aims to show new attacking threat for Wales",
-      "url": "https://www.bbc.co.uk/sport/rugby-union/articles/cm9dzwg7ze59o?at_medium=RSS&at_campaign=rss",
+      "title": "Emphatic Porto thrash Napoli in second-half romp",
+      "url": "https://www.bbc.co.uk/sport/football/videos/cr1ex9vx3y50o?at_medium=RSS&at_campaign=rss",
       "source": "BBC Sport",
       "category": "Sport",
-      "published_at": "2026-11-04T16:20:53.000Z"
+      "published_at": "2026-11-04T22:17:34.000Z"
     },
     {
-      "title": "Kosovo: Protests and outrage after a woman was killed despite repeatedly seeking assistance from the authorities",
-      "url": "https://www.dw.com/en/kosovo-protests-and-outrage-after-a-woman-was-killed-despite-repeatedly-seeking-assistance-from-the-authorities/a-79856726?maca=en-rss-en-world-4025-xml-mrss",
+      "title": "36 years later: Hungary opens Communist-era secret service files",
+      "url": "https://www.dw.com/en/36-years-later-hungary-opens-communist-era-secret-service-files/a-79858016?maca=en-rss-en-world-4025-xml-mrss",
       "source": "DW",
       "category": "World",
-      "published_at": "2026-11-04T16:17:00.000Z"
-    },
-    {
-      "title": "Binance says hackers who stole billions in crypto spent months planning heist",
-      "url": "https://arstechnica.com/information-technology/2026/11/binance-says-hackers-who-stole-billions-in-crypto-spent-months-planning-heist/",
-      "source": "Ars Technica",
-      "category": "Technology",
-      "published_at": "2026-11-04T16:06:03.000Z"
-    },
-    {
-      "title": "Kellogg's admits snap, crackle and pop is quieter after uproar over Rice Krispies recipe change",
-      "url": "https://www.bbc.co.uk/news/articles/cqvg0y44ym7vo?at_medium=RSS&at_campaign=rss",
-      "source": "BBC Business",
-      "category": "Business",
-      "published_at": "2026-11-04T15:13:14.000Z"
-    },
-    {
-      "title": "Why Man Utd's Roma comeback has echoes of Mourinho and Solskjaer",
-      "url": "https://www.bbc.co.uk/sport/football/articles/cqx28zjxdxxzo?at_medium=RSS&at_campaign=rss",
-      "source": "BBC Sport",
-      "category": "Sport",
-      "published_at": "2026-11-04T16:12:46.000Z"
-    },
-    {
-      "title": "Secret police files released in Hungary, 47 years after fall of communism",
-      "url": "https://www.bbc.co.uk/news/articles/c977p01kgmmko?at_medium=RSS&at_campaign=rss",
-      "source": "BBC News",
-      "category": "World",
-      "published_at": "2026-11-04T15:28:18.000Z"
+      "published_at": "2026-11-04T19:30:00.000Z"
     }
   ]
 }
