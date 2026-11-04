@@ -650,3 +650,7 @@ A `START` does not prohibit parallel edits. Avoid stepping on each other's uncom
 - Files: `assets/toy-town-3d.js`, `toy-town.html`, `index.html`, `README.md`, tests (size and version asserts).
 - Tests: `toy-town`, `-3d`, `-extras`, `-lens`, `-news` pass locally. Checked a real-WebGL close-up of a shelter: heads are under the roof and people are clearly smaller beside the cars.
 - Not verified: every prop and scene that was positioned relative to the old person height (playground, boat, station platform, parade) at close zoom; phone rendering.
+
+### START — Claude (Claude Code) — 2026-11-04 (stage 6: close-up sizing sweep, performance guard, night life, seasons, tap-a-resident, ambient sound)
+- Owner request: "Do all at one stretch" of: (1) close-up fixes for props placed against the old person height (playground, boat, station platform, benches, parade, shop counters); (2) a frame-time guard / low-power mode that thins extras on slow phones; (3) night life (glowing windows, late bus, musicians), seasons from the date, tap-a-resident name/mood, ambient sound per weather and time of day.
+- Plan: `assets/toy-town-3d.js` (+ `toy-town.js`, `toy-town-sound.js` if needed), `toy-town.html`/`index.html` cache keys, tests, README. Debug hooks for every new feature; honest "not verified" notes (no real phone, no audio playback).
