@@ -114,6 +114,8 @@ for (const c of ['rain', 'wind', 'owl']) assert.match(soundSrc, new RegExp(c + '
 assert.match(soundSrc, /ToyTown3D\?\.weather\?\.\(\)\.kind/, 'the sound bed follows the weather');
 assert.match(view, /const SEASONS=\{/); assert.match(view, /\[\?&\]season=\(spring\|summer\|autumn\|winter\)/, '?season= previews a season');
 assert.match(view, /\[\?&\]lite\\b/, '?lite forces the light mode'); assert.match(view, /else setLite\(true\)/, 'and a slow phone drops into it by itself');
+assert.match(view, /renderer\.shadowMap\.autoUpdate = false/); assert.match(view, /shadowMap\.needsUpdate=\(shadowTick\+\+%\(lite\?4:desktop\(\)\?1:2\)\)===0/, 'shadows are redrawn every few frames on phones, not every frame');
+assert.match(view, /function adaptSharpness\(ms,gap=0\)/); assert.match(view, /adaptSharpness\(drawn,gap\)/, 'the guard also watches the real frame gap, so a GPU that falls behind is noticed');
 assert.match(view, /function moodOf\(ref\)/, 'tapping a resident shows a name and a mood');
 assert.match(fs.readFileSync(path.join(root, 'index.html'), 'utf8'), /keep=\['weather','fps','festival','season','lite'\]/, 'the main page passes ?season and ?lite through');
 // Nobody stays stuck, and walkers do things of their own: several layouts, six town-minutes each.
