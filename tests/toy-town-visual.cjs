@@ -309,6 +309,7 @@ async function main(){
       }));
       if(!job.classic&&!data.active)throw Error('3D vanished before screenshot: '+job.name);
       if(!job.classic&&!data.stats?.frozen)throw Error('3D did not freeze the captured frame');
+      if(!job.classic){const b=await page.evaluate(()=>window.ToyTown3D?.batchStats?.()||null);if(!b||b.off||b.merged<50||b.removed<500)throw Error('static batching did not merge the town: '+JSON.stringify(b)+' '+job.name);}
       if(!job.classic){const black=await page.evaluate(()=>window.ToyTown3D?.vertexColorAudit?.()||0);if(black)throw Error(black+' meshes read vertex colours from a geometry that has none (they draw black): '+job.name);}
       const record={name:job.name,bytes:image.length,...data,errors};
       records.push(record);
