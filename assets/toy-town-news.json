@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generated_at": "2026-11-03T19:33:15.500Z",
+  "generated_at": "2026-11-04T00:39:44.146Z",
   "status": "ok",
   "successful_sources": [
     "BBC News",
@@ -12,32 +12,32 @@
   ],
   "stories": [
     {
-      "title": "Seven flights across Europe targeted by suspected bomb threats",
-      "url": "https://www.bbc.co.uk/news/articles/c6x2wd4v04eeo?at_medium=RSS&at_campaign=rss",
+      "title": "ANC under pressure to reverse South Africa decline",
+      "url": "https://www.bbc.co.uk/news/articles/cr4g1x6l77xyo?at_medium=RSS&at_campaign=rss",
       "source": "BBC News",
       "category": "World",
-      "published_at": "2026-11-03T17:56:03.000Z"
+      "published_at": "2026-11-04T00:03:19.000Z"
     },
     {
-      "title": "NYT demands Brave shut down its paywall blocker and end deals with AI firms",
-      "url": "https://arstechnica.com/tech-policy/2026/11/nyt-demands-brave-shut-down-its-paywall-blocker-and-end-deals-with-ai-firms/",
-      "source": "Ars Technica",
+      "title": "Graduates are managing AI - but are they learning much else?",
+      "url": "https://www.bbc.co.uk/news/articles/c820vz6wyp65o?at_medium=RSS&at_campaign=rss",
+      "source": "BBC Technology",
       "category": "Technology",
-      "published_at": "2026-11-03T18:30:27.000Z"
+      "published_at": "2026-11-04T00:04:35.000Z"
     },
     {
-      "title": "Keeping mortgage interest relief approved",
-      "url": "https://www.bbc.co.uk/news/articles/c6vgj0ljx01jo?at_medium=RSS&at_campaign=rss",
+      "title": "Canva announces major job cuts after 'our hardest year yet'",
+      "url": "https://www.bbc.co.uk/news/articles/cw77pg7neydmo?at_medium=RSS&at_campaign=rss",
       "source": "BBC Business",
       "category": "Business",
-      "published_at": "2026-11-03T16:44:20.000Z"
+      "published_at": "2026-11-04T00:09:35.000Z"
     },
     {
-      "title": "Kenny's background 'not that important' to O'Neill",
-      "url": "https://www.bbc.co.uk/sport/football/articles/ckqxn7pzrxyro?at_medium=RSS&at_campaign=rss",
+      "title": "A half-time speech, a retaken penalty - and a win to save Carrick's job?",
+      "url": "https://www.bbc.co.uk/sport/football/articles/c6q8n98y4023o?at_medium=RSS&at_campaign=rss",
       "source": "BBC Sport",
       "category": "Sport",
-      "published_at": "2026-11-03T18:26:55.000Z"
+      "published_at": "2026-11-04T00:27:37.000Z"
     },
     {
       "title": "Why South Africa's local elections matter",
@@ -47,32 +47,32 @@
       "published_at": "2026-11-03T15:06:00.000Z"
     },
     {
-      "title": "Binance says fake job interviews used as part of $6.3bn crypto hack",
-      "url": "https://www.bbc.co.uk/news/articles/ck5ynwz9gy67o?at_medium=RSS&at_campaign=rss",
-      "source": "BBC Technology",
+      "title": "California fights \"preposterous\" Trump admin demand to scrap state broadband laws",
+      "url": "https://arstechnica.com/tech-policy/2026/11/california-fights-preposterous-trump-admin-demand-to-scrap-state-broadband-laws/",
+      "source": "Ars Technica",
       "category": "Technology",
-      "published_at": "2026-11-03T16:19:29.000Z"
+      "published_at": "2026-11-03T22:39:37.000Z"
     },
     {
-      "title": "What's happening to UK interest rates and what does it mean for mortgages?",
-      "url": "https://www.bbc.co.uk/news/articles/c3dky111m40o?at_medium=RSS&at_campaign=rss",
+      "title": "Poundland supplier 'will lose millions' if retailer collapses",
+      "url": "https://www.bbc.co.uk/news/articles/ck240mm3e42do?at_medium=RSS&at_campaign=rss",
       "source": "BBC Business",
       "category": "Business",
-      "published_at": "2026-11-03T15:51:23.000Z"
+      "published_at": "2026-11-04T00:03:17.000Z"
     },
     {
-      "title": "RFL backs Wilkin's £30m funding plea to Burnham",
-      "url": "https://www.bbc.co.uk/sport/rugby-league/articles/cqn06nk1rx4xo?at_medium=RSS&at_campaign=rss",
+      "title": "Emery takes positives, but Villa 'have work to do' to reach Barca level",
+      "url": "https://www.bbc.co.uk/sport/football/articles/cjwy9496qe7ko?at_medium=RSS&at_campaign=rss",
       "source": "BBC Sport",
       "category": "Sport",
-      "published_at": "2026-11-03T18:13:50.000Z"
+      "published_at": "2026-11-03T23:58:22.000Z"
     },
     {
-      "title": "Irish Olympian Ciara Mageean was a 'talented and inspirational human being'",
-      "url": "https://www.bbc.co.uk/news/articles/cw62ye1030njo?at_medium=RSS&at_campaign=rss",
+      "title": "'I'm not a quitter': Kim Kardashian on retaking the bar exam",
+      "url": "https://www.bbc.co.uk/news/videos/cmy4x59kdknwo?at_medium=RSS&at_campaign=rss",
       "source": "BBC News",
       "category": "World",
-      "published_at": "2026-11-03T17:07:28.000Z"
+      "published_at": "2026-11-03T23:58:36.000Z"
     }
   ]
 }
