@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generated_at": "2026-11-04T07:33:27.984Z",
+  "generated_at": "2026-11-04T16:23:02.423Z",
   "status": "ok",
   "successful_sources": [
     "BBC News",
@@ -12,67 +12,67 @@
   ],
   "stories": [
     {
-      "title": "South Carolina elects Democratic senator for first time in almost three decades",
-      "url": "https://www.bbc.co.uk/news/articles/cjy56z440nl9o?at_medium=RSS&at_campaign=rss",
+      "title": "Israel's president begins consultations with parties after election deadlock",
+      "url": "https://www.bbc.co.uk/news/articles/c6z98z5z91ppo?at_medium=RSS&at_campaign=rss",
       "source": "BBC News",
       "category": "World",
-      "published_at": "2026-11-04T07:32:02.000Z"
+      "published_at": "2026-11-04T16:18:21.000Z"
     },
     {
-      "title": "Graduates are managing AI - but are they learning much else?",
-      "url": "https://www.bbc.co.uk/news/articles/c820vz6wyp65o?at_medium=RSS&at_campaign=rss",
+      "title": "French blood supplies impacted by freezer hacks as theories swirl about culprits",
+      "url": "https://www.bbc.co.uk/news/articles/c8vgxyvz6y9ro?at_medium=RSS&at_campaign=rss",
       "source": "BBC Technology",
       "category": "Technology",
-      "published_at": "2026-11-04T00:04:35.000Z"
+      "published_at": "2026-11-04T16:14:57.000Z"
     },
     {
-      "title": "Poundland supplier 'will lose millions' if retailer collapses",
+      "title": "Poundland owner in crunch talks as retailer's collapse looms",
       "url": "https://www.bbc.co.uk/news/articles/ck240mm3e42do?at_medium=RSS&at_campaign=rss",
       "source": "BBC Business",
       "category": "Business",
-      "published_at": "2026-11-04T07:31:21.000Z"
+      "published_at": "2026-11-04T15:45:11.000Z"
     },
     {
-      "title": "Retiring Serrano wants to end as a 'game-changer'",
-      "url": "https://www.bbc.co.uk/sport/boxing/articles/c6n047870jzeo?at_medium=RSS&at_campaign=rss",
+      "title": "Morgan aims to show new attacking threat for Wales",
+      "url": "https://www.bbc.co.uk/sport/rugby-union/articles/cm9dzwg7ze59o?at_medium=RSS&at_campaign=rss",
       "source": "BBC Sport",
       "category": "Sport",
-      "published_at": "2026-11-04T07:12:33.000Z"
+      "published_at": "2026-11-04T16:20:53.000Z"
     },
     {
-      "title": "Why South Africa's local elections matter",
-      "url": "https://www.dw.com/en/why-south-africa-s-local-elections-matter/a-79842695?maca=en-rss-en-world-4025-xml-mrss",
+      "title": "Kosovo: Protests and outrage after a woman was killed despite repeatedly seeking assistance from the authorities",
+      "url": "https://www.dw.com/en/kosovo-protests-and-outrage-after-a-woman-was-killed-despite-repeatedly-seeking-assistance-from-the-authorities/a-79856726?maca=en-rss-en-world-4025-xml-mrss",
       "source": "DW",
       "category": "World",
-      "published_at": "2026-11-03T15:06:00.000Z"
+      "published_at": "2026-11-04T16:17:00.000Z"
     },
     {
-      "title": "California fights \"preposterous\" Trump admin demand to scrap state broadband laws",
-      "url": "https://arstechnica.com/tech-policy/2026/11/california-fights-preposterous-trump-admin-demand-to-scrap-state-broadband-laws/",
+      "title": "Binance says hackers who stole billions in crypto spent months planning heist",
+      "url": "https://arstechnica.com/information-technology/2026/11/binance-says-hackers-who-stole-billions-in-crypto-spent-months-planning-heist/",
       "source": "Ars Technica",
       "category": "Technology",
-      "published_at": "2026-11-03T22:39:37.000Z"
+      "published_at": "2026-11-04T16:06:03.000Z"
     },
     {
-      "title": "Leisure centre price hikes on the way",
-      "url": "https://www.bbc.co.uk/news/articles/c6pvgw8gz1k4o?at_medium=RSS&at_campaign=rss",
+      "title": "Kellogg's admits snap, crackle and pop is quieter after uproar over Rice Krispies recipe change",
+      "url": "https://www.bbc.co.uk/news/articles/cqvg0y44ym7vo?at_medium=RSS&at_campaign=rss",
       "source": "BBC Business",
       "category": "Business",
-      "published_at": "2026-11-04T06:13:19.000Z"
+      "published_at": "2026-11-04T15:13:14.000Z"
     },
     {
-      "title": "Who am I? Plus today's other quizzes",
-      "url": "https://www.bbc.co.uk/sport/football/articles/c6jdmg9mkg8mo?at_medium=RSS&at_campaign=rss",
+      "title": "Why Man Utd's Roma comeback has echoes of Mourinho and Solskjaer",
+      "url": "https://www.bbc.co.uk/sport/football/articles/cqx28zjxdxxzo?at_medium=RSS&at_campaign=rss",
       "source": "BBC Sport",
       "category": "Sport",
-      "published_at": "2026-11-04T07:06:19.000Z"
+      "published_at": "2026-11-04T16:12:46.000Z"
     },
     {
-      "title": "How America voted in maps and charts",
-      "url": "https://www.bbc.co.uk/news/articles/cm4g1j0n92qdo?at_medium=RSS&at_campaign=rss",
+      "title": "Secret police files released in Hungary, 47 years after fall of communism",
+      "url": "https://www.bbc.co.uk/news/articles/c977p01kgmmko?at_medium=RSS&at_campaign=rss",
       "source": "BBC News",
       "category": "World",
-      "published_at": "2026-11-04T07:24:59.000Z"
+      "published_at": "2026-11-04T15:28:18.000Z"
     }
   ]
 }
