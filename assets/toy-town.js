@@ -263,6 +263,21 @@ const ToyTown = (() => {
   // (eastbound lane on the south side, westbound on the north). The 3D town draws the shelters and the passengers.
   const BUS_STOPS = [];
   for (const y of [6.5, 11.5]) for (const x of [4.6, 12.6]) { BUS_STOPS.push({id: BUS_STOPS.length, x, y, d: 0}); BUS_STOPS.push({id: BUS_STOPS.length, x, y, d: 1}); }
+  // The bus runs a long closed route, not a random wander: along both middle streets in both directions, round the
+  // north and south ring roads and across the bridges. ROUTE_OUT lists the heading taken at each junction visited, in
+  // order (junction = [column, row] on the 4x4 street grid; headings 0 east, 1 west, 2 south, 3 north).
+  const ROUTE_NODES = [[0,1],[1,1],[2,1],[3,1],[3,2],[2,2],[1,2],[0,2],[0,1],[0,0],[1,0],[2,0],[3,0],[3,1],[2,1],[1,1],[0,1],[0,2],[1,2],[2,2],[3,2],[3,3],[2,3],[1,3],[0,3],[0,2]];
+  const ROUTE_OUT = [0,0,0,2,1,1,1,3,3,0,0,0,2,1,1,1,2,0,0,0,2,1,1,1,3,3];
+  function busRouteOut(m, col, row) {
+    const n = ROUTE_NODES.length, at = i => ROUTE_NODES[i % n][0] === col && ROUTE_NODES[i % n][1] === row;
+    const arrive = i => ROUTE_OUT[(i + n - 1) % n];
+    let start = m.rIdx || 0, hit = -1;
+    for (let k = 0; k < n && hit < 0; k++) if (at(start + k) && arrive(start + k) === m.d) hit = (start + k) % n;   // the next visit of this junction, arriving this way
+    if (hit < 0) for (let k = 0; k < n && hit < 0; k++) if (at(start + k) && ROUTE_OUT[(start + k) % n] !== (m.d ^ 1)) hit = (start + k) % n;   // joined the route from elsewhere
+    if (hit < 0) return -1;
+    m.rIdx = (hit + 1) % n;
+    return ROUTE_OUT[hit];
+  }
   function busStopping(m) {
     if (m.kind !== 'bus' || m.path || clock < (m.stopCool || 0)) return;
     for (const s of BUS_STOPS) if (s.d === m.d && Math.abs(m.y - s.y) < .05 && Math.abs(m.x - s.x) < .07) {
@@ -916,6 +931,38 @@ const ToyTown = (() => {
     }
     m.carWaitSince=undefined;return false;
   }
+  // Scripted walkers (errands, routines, events) wait at the kerb for the walk signal like everyone else: stepping off
+  // the pavement into a street at a junction needs the light to be green for the other direction. They give up after
+  // a full light cycle, and cars stop for them anyway.
+  function walkerMustWait(m,nx,ny){
+    if((m.kind&&m.kind!=='chef'&&m.kind!=='farmer'&&m.kind!=='keeper')||m.heroResident||m.shopRole)return false;
+    if(clock<(m.sigGoUntil||0))return false;
+    const L=lightPhase(),nearJunction=v=>LINES.some(l=>Math.abs(v-(l+.5))<.75);
+    let hold=false;
+    for(const l of LINES){
+      const c=l+.5;
+      // a street whose traffic runs along x (centre line y=c): entered from the pavement, near a junction
+      if(Math.abs(m.y-c)>=.37&&Math.abs(ny-c)<.37&&nearJunction(nx)&&(L.green==='x'||L.amber))hold=true;
+      if(Math.abs(m.x-c)>=.37&&Math.abs(nx-c)<.37&&nearJunction(ny)&&!(ny>12.9&&ny<15.1)&&(L.green==='y'||L.amber))hold=true;
+    }
+    if(!hold){m.sigWaitSince=undefined;return false;}
+    if(m.sigWaitSince===undefined)m.sigWaitSince=clock;
+    if(clock-m.sigWaitSince>14){m.sigGoUntil=clock+4;m.sigWaitSince=undefined;return false;}
+    return true;
+  }
+  // A siren (the fire truck on a call) clears the road: traffic on its street near it eases over to the kerb, and cars in
+  // front of it, going the same way, pull in and stop until it has passed (never inside a junction: they clear it first).
+  function emergencyNear(m){
+    let hit=null;
+    for(const o of movers){
+      if(o===m||!o.siren||!o.path)continue;
+      const horiz=m.d<2,perp=horiz?Math.abs(o.y-m.y):Math.abs(o.x-m.x),along=horiz?o.x-m.x:o.y-m.y;
+      if(perp>.9||Math.abs(along)>2.6)continue;
+      const sign=m.d===0||m.d===2?1:-1,ahead=along*sign<0&&o.d===m.d&&Math.abs(along)<2.2&&(o.v||0)>.25;   // the truck is behind this car, same way, moving
+      hit=hit||{};hit.near=true;if(ahead)hit.stop=true;
+    }
+    return hit;
+  }
   function atNode(m) { return LINES.some(l => Math.abs((m.d < 2 ? m.x : m.y) - (l + .5)) < .02); }
   // Would car m, pointing along direction nd from where it is now, sit clear of every other car?
   function laneFree(m,nd){
@@ -944,7 +991,8 @@ const ToyTown = (() => {
         const nx=Math.round(m.x-.5+DIRS[i][0]),ny=Math.round(m.y-.5+DIRS[i][1]),t=tile(nx,ny);
         return t&&(t.kind==='road'||t.kind==='bridge')&&laneFree(m,i);
       });
-      const nd=open.length?open[Math.random()*open.length|0]:laneFree(m,m.d^1)?m.d^1:-1;
+      let nd=open.length?open[Math.random()*open.length|0]:laneFree(m,m.d^1)?m.d^1:-1;
+      if(m.kind==='bus'&&m.rIdx!==undefined){const want=ROUTE_OUT[(m.rIdx+ROUTE_OUT.length-1)%ROUTE_OUT.length];if(open.includes(want))nd=want;}
       if(nd<0){m.v=0;m.braking=true;return;}
       if(nd!==(m.d^1)){const cross=DIRS[m.d][0]*DIRS[nd][1]-DIRS[m.d][1]*DIRS[nd][0];m.turnSignal=cross>0?'left':'right';m.turnUntil=clock+1.1;}
       else m.v=0;
@@ -996,6 +1044,13 @@ const ToyTown = (() => {
     }
     const [dx, dy] = DIRS[m.d];
     let want = m.max;
+    let em=null;
+    if(m.type==='car'){
+      if(m.baseLane===undefined)m.baseLane=m.lane;
+      em=emergencyNear(m);
+      const target=em?(m.kind==='bike'?.335:.22):m.baseLane;
+      m.lane+=clamp(-dt*.5,target-m.lane,dt*.5);
+    }
     // No two walkers keep the same pace: each one's speed drifts slowly up and down.
     if (m.type === 'person' && !m.kind && !m.heroResident && m.max > .05) want *= .88 + .24 * Math.sin(clock * (.28 + ((m.ph || 0) % 1) * .3) + (m.ph || 0) * 1.7);
     // Weather and place change how fast people and cars go: walkers hurry in the rain, cars ease off in rain, snow and fog,
@@ -1042,6 +1097,10 @@ const ToyTown = (() => {
             want=Math.min(want,Math.sqrt(2*.92*room));
           }
         }
+      }
+      if (em) {
+        const pos = m.d < 2 ? m.x : m.y;
+        if (em.stop && !LINES.some(l => Math.abs(pos - (l + .5)) < .62)) { want = 0; m.yieldUntil = clock + .6; } else want *= .6;
       }
       if (heldAtLight(m, stopD, .12)) want = 0;   // already over the line: finish clearing the junction, don't stop on the crosswalk
       // Cross-traffic clearance: a green signal does not authorize entering
@@ -1117,7 +1176,13 @@ const ToyTown = (() => {
       const c = l + .5;
       if ((before - c) * (now - c) <= 0 && before !== now) {
         const opts = DIRS.map((_, i) => i).filter(i => i !== (m.d ^ 1)).filter(i => { const nx = Math.round((m.d < 2 ? c : m.x) - .5 + DIRS[i][0]), ny = Math.round((m.d < 2 ? m.y : c) - .5 + DIRS[i][1]); const t = tile(nx, ny); return t && (t.kind === 'road' || t.kind === 'bridge'); });
-        if (opts.length && (Math.random() < (m.kind === 'bus' ? (m.d < 2 && (Math.abs(m.y - 6.5) < .05 || Math.abs(m.y - 11.5) < .05) ? .12 : .75) : .45) || !opts.includes(m.d))) { const nd = opts[Math.random() * opts.length | 0]; if (nd !== m.d &&
+        let routed = -1;
+        if (m.kind === 'bus' && !m.path) {   // the bus follows its route
+          const near = v => LINES.reduce((a, l, i) => Math.abs(l + .5 - v) < Math.abs(LINES[a] + .5 - v) ? i : a, 0);
+          const col = m.d < 2 ? LINES.indexOf(l) : near(m.x), row = m.d < 2 ? near(m.y) : LINES.indexOf(l), out = busRouteOut(m, col, row);
+          if (out >= 0 && opts.includes(out)) routed = out;
+        }
+        if (routed >= 0 || (opts.length && (Math.random() < (m.kind === 'bus' ? .75 : .45) || !opts.includes(m.d)))) { const nd = routed >= 0 ? routed : opts[Math.random() * opts.length | 0]; if (nd !== m.d &&
           (m.type!=='car'||laneFree(m,nd))) {
           const cross=DIRS[m.d][0]*DIRS[nd][1]-DIRS[m.d][1]*DIRS[nd][0];
           if(m.type==='car'){m.turnSignal=cross>0?'left':'right';m.turnUntil=clock+1.1;}
@@ -1167,16 +1232,22 @@ const ToyTown = (() => {
       if(m.turnPauseUntil&&clock<m.turnPauseUntil){
         m.v=0;m.moved=0;return;
       }
-      if(angle>.55&&dist>.18){
+      // Only a sharp turn (about 100 degrees or more: turning right round) stops for a moment; ordinary corners are
+      // taken on the move, the drawn heading swinging round over a fraction of a second.
+      if(angle>1.75&&dist>.18){
         m.d=nextDir;m.walkFacing=facing;
         m.turnPauseUntil=clock+Math.min(.85,.14+angle/3.8);
         m.v=0;m.moved=0;return;
       }
       m.turnPauseUntil=0;
-      m.walkFacing=facing;
+      const swing=Math.atan2(Math.sin(facing-previous),Math.cos(facing-previous));
+      m.walkFacing=Math.abs(swing)<.02?facing:previous+clamp(-dt*9,swing,dt*9);
     }
     m.d=nextDir;
-    if(m.type==='person'&&walkerBlocked(m,m.x+ux*Math.min(dist,sp),m.y+uy*Math.min(dist,sp))){m.v=0;m.moved=0;return;}
+    if(m.type==='person'){
+      const step=Math.min(dist,sp),nx=m.x+ux*step,ny=m.y+uy*step;
+      if(walkerMustWait(m,nx,ny)||walkerBlocked(m,nx,ny)){m.v=0;m.moved=0;return;}
+    }
     const requested=Math.min(dist,sp);
     const advance=m.type==='car'?
       safeVehicleTravel(m,ux,uy,requested):requested;
@@ -2309,9 +2380,9 @@ const ToyTown = (() => {
   }
   // A five-minute day in real time, though moving things run at 60% speed.
   function nightLevel() { return clamp(0, -Math.cos(clock / (300 * PACE) * TAU) * 2 - 1, 1); }
-  // Neighbours notice each other: when two walkers pass close by, they glance
-  // over, and now and then one of them waves. Purely gestural — no one is
-  // stopped or rerouted, so traffic and errands are unaffected.
+  // Neighbours notice each other: when two walkers pass close by on the same
+  // pavement they stop for a few seconds of real chat (stride clock frozen,
+  // looking at each other), then both carry on. Never near a crossing or across a road.
   function passingGreetings() {
     // Finish real, stationary conversations before looking for new ones.
     // A greeting is never a stationary walking loop; the stride clock stays
@@ -2355,8 +2426,8 @@ const ToyTown = (() => {
      just walking the pavement: sits on a bench, visits the fountain (and may
      toss a coin), wanders into the park to look around, stops for a chat with a
      passer-by, or breaks into a jog. Afterwards they walk back to the street. */
-  let feedings = 0;
-  let whims = {bench: 0, fountain: 0, park: 0, chat: 0, jog: 0, gather: 0, ducks: 0};
+  let feedings = 0, shopBags = 0;
+  let whims = {bench: 0, fountain: 0, park: 0, chat: 0, jog: 0, gather: 0, ducks: 0, shop: 0};
   const freeWalker = m => m.type === 'person' && !m.kind && !m.heroResident && !m.shopRole && !m.routine && !m.path && !m.busy && !m.sit && !(m.stopUntil && clock < m.stopUntil);
   const nearestRoad = (x, y) => { const lx = LINES.reduce((a, l) => Math.abs(l + .5 - x) < Math.abs(a - x) ? l + .5 : a, LINES[0] + .5), ly = LINES.reduce((a, l) => Math.abs(l + .5 - y) < Math.abs(a - y) ? l + .5 : a, LINES[0] + .5);
     return Math.abs(lx - x) < Math.abs(ly - y) ? {x: lx, y: clamp(1.6, y, 16.4), d: Math.random() < .5 ? 2 : 3} : {x: clamp(1.6, x, 16.4), y: ly, d: Math.random() < .5 ? 0 : 1}; };
@@ -2378,6 +2449,7 @@ const ToyTown = (() => {
       if (clock >= m.feedNext) { m.feedNext = clock + 2.6 + Math.random() * 1.4; m.tossAt = clock; m.waveUntil = clock + .9; feedDucks(m.x, 14); feedings++; }
     }
     for (const m of movers) if (m.whimUntil && clock > m.whimUntil && !m.path) endWhim(m);
+    for (const m of movers) if (m.shopBag >= 0 && clock > (m.bagUntil || 0)) m.shopBag = -1;
     for (const m of movers) if (m.jogUntil && clock > m.jogUntil) { m.max = m.walkMax || m.max; m.gait = m.walkGait || m.gait; m.jogUntil = 0; }
     if (clock < (updateWhims.next || 0)) return;
     updateWhims.next = clock + 1.5 + Math.random() * 2.5;
@@ -2399,6 +2471,13 @@ const ToyTown = (() => {
     else if (roll < .78) { const o = free.find(o => o !== m && Math.hypot(o.x - m.x, o.y - m.y) < 1.4);
       if (o) { const dur = 6 + Math.random() * 4; for (const [a, b] of [[m, o], [o, m]]) { a.stopUntil = clock + dur; a.whimUntil = clock + dur; a.whim = 'chat'; a.busy = true; a.intent = 'chat'; a.attention = {x: b.x, y: b.y}; }
         m.waveUntil = clock + 1.2; whims.chat++; } }
+    else if (roll < .9) {   // a shopping trip: walk to a shopfront, look in, and come away carrying a paper bag for a while
+      const shops = buildings.filter(b => b.kind === 'shop' && Math.hypot(b.x + .5 - m.x, b.y + .5 - m.y) < 6);
+      if (shops.length && !(m.shopBag >= 0)) {
+        const b = shops[Math.random() * shops.length | 0];
+        whimTo(m, b.x + .5, b.y + 1.38, 2.5 + Math.random() * 2, q => { q.attention = {x: b.x + .5, y: b.y + .5}; q.shopBag = (b.x * 3 + b.y * 5 + shopBags++) % 6; q.bagUntil = clock + 70 + Math.random() * 70; }, 'shop');
+      }
+    }
     else if (!m.jogUntil) { m.walkMax = m.max; m.walkGait = m.gait; m.max = .95; m.gait = 'brisk'; m.jogUntil = clock + 10 + Math.random() * 8; whims.jog++; }
   }
   // A tap on open ground in 3D: the nearest few walkers come over to see.
@@ -2416,7 +2495,7 @@ const ToyTown = (() => {
   function unstick(dt) {
     const phase = lightPhase();
     for (const m of movers.slice()) {
-      if (m.path || m.max === 0 || m.sit || m.shopRole || m.heroResident || (m.stopUntil && clock < m.stopUntil) || clock < (m.observeUntil || 0)) { m.stuckT = 0; continue; }
+      if (m.path || m.max === 0 || m.sit || m.shopRole || m.heroResident || (m.yieldUntil && clock < m.yieldUntil) || (m.stopUntil && clock < m.stopUntil) || clock < (m.observeUntil || 0)) { m.stuckT = 0; continue; }
       if (m.type !== 'car' && m.type !== 'person') continue;
       const axis = m.d < 2 ? 'x' : 'y', red = phase.green !== axis || phase.amber;
       const nearLight = LINES.some(l => { const d = ((l + .5) - (m.d < 2 ? m.x : m.y)) * (m.d === 0 || m.d === 2 ? 1 : -1); return d > 0 && d < 1; });
