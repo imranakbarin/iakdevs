@@ -944,6 +944,15 @@ const ToyTown = (() => {
     let want = m.max;
     // No two walkers keep the same pace: each one's speed drifts slowly up and down.
     if (m.type === 'person' && !m.kind && !m.heroResident && m.max > .05) want *= .88 + .24 * Math.sin(clock * (.28 + ((m.ph || 0) % 1) * .3) + (m.ph || 0) * 1.7);
+    // Weather and place change how fast people and cars go: walkers hurry in the rain, cars ease off in rain, snow and fog,
+    // and everyone drives slowly past the plaza.
+    const wx = typeof ToyTownWeather !== 'undefined' && ToyTownWeather.state ? ToyTownWeather.state.kind : 'clear';
+    const wet = wx === 'rain' || wx === 'storm';
+    if (m.type === 'person' && !m.kind && wet) want *= 1.18;
+    if (m.type === 'car') {
+      if (wet) want *= .86; else if (wx === 'snow' || wx === 'fog') want *= .8;
+      if (Math.abs(m.x - 9) < 3.1 && Math.abs(m.y - 9) < 3.1) want *= .78;
+    }
     const patient = clock < (m.patienceUntil || 0);   // out of patience: stop yielding (never stop avoiding a collision)
     if (m.type === 'car') {   // keep a gap to whatever is ahead in the lane, and stop for red lights
       for (const o of movers) if (!patient && o !== m && o.type === 'car' && o.d === m.d) {
@@ -2283,7 +2292,8 @@ const ToyTown = (() => {
      just walking the pavement: sits on a bench, visits the fountain (and may
      toss a coin), wanders into the park to look around, stops for a chat with a
      passer-by, or breaks into a jog. Afterwards they walk back to the street. */
-  let whims = {bench: 0, fountain: 0, park: 0, chat: 0, jog: 0, gather: 0};
+  let feedings = 0;
+  let whims = {bench: 0, fountain: 0, park: 0, chat: 0, jog: 0, gather: 0, ducks: 0};
   const freeWalker = m => m.type === 'person' && !m.kind && !m.heroResident && !m.shopRole && !m.routine && !m.path && !m.busy && !m.sit && !(m.stopUntil && clock < m.stopUntil);
   const nearestRoad = (x, y) => { const lx = LINES.reduce((a, l) => Math.abs(l + .5 - x) < Math.abs(a - x) ? l + .5 : a, LINES[0] + .5), ly = LINES.reduce((a, l) => Math.abs(l + .5 - y) < Math.abs(a - y) ? l + .5 : a, LINES[0] + .5);
     return Math.abs(lx - x) < Math.abs(ly - y) ? {x: lx, y: clamp(1.6, y, 16.4), d: Math.random() < .5 ? 2 : 3} : {x: clamp(1.6, x, 16.4), y: ly, d: Math.random() < .5 ? 0 : 1}; };
@@ -2299,6 +2309,11 @@ const ToyTown = (() => {
     m.path = [{x: px, y: py, speed: .4, then: q => { q.busy = false; q.d = r.d; q.x = r.x; q.y = r.y; q.lane = vertical ? -side * PAVE : side * PAVE; }}];
   }
   function updateWhims() {
+    // Duck feeders toss a handful of crumbs every few seconds; the ducks swim over.
+    for (const m of movers) if (m.feedUntil) {
+      if (clock >= m.feedUntil || (m.path && m.path.length)) { m.feedUntil = 0; continue; }
+      if (clock >= m.feedNext) { m.feedNext = clock + 2.6 + Math.random() * 1.4; m.tossAt = clock; m.waveUntil = clock + .9; feedDucks(m.x, 14); feedings++; }
+    }
     for (const m of movers) if (m.whimUntil && clock > m.whimUntil && !m.path) endWhim(m);
     for (const m of movers) if (m.jogUntil && clock > m.jogUntil) { m.max = m.walkMax || m.max; m.gait = m.walkGait || m.gait; m.jogUntil = 0; }
     if (clock < (updateWhims.next || 0)) return;
@@ -2307,6 +2322,13 @@ const ToyTown = (() => {
     const m = free[Math.random() * free.length | 0], roll = Math.random();
     const benches = props.filter(p => p.kind === 'bench' || p.kind === 'hero-bench').filter(p => Math.hypot(p.x - m.x, p.y - m.y) < 5);
     const fountain = props.find(p => p.kind === 'fountain' && Math.hypot(p.x - m.x, p.y - m.y) < 6);
+    // Someone near the river walks to the bank and tosses crumbs to the ducks.
+    const bankY = m.y < 14 ? 12.84 : 15.16;
+    if (roll > .93 && Math.abs(m.y - bankY) < 4.5 && !movers.some(o => o.whim === 'ducks')) {
+      const bx = clearOfBridges(clamp(1.5, m.x + (Math.random() - .5) * 2, 16.5)), dur = 8 + Math.random() * 6;
+      whimTo(m, bx, bankY, dur, q => { q.attention = {x: bx, y: 14}; q.feedUntil = clock + dur; q.feedNext = clock + 1; }, 'ducks');
+      return;
+    }
     if (roll < .22 && benches.length) { const b = benches[Math.random() * benches.length | 0]; whimTo(m, b.x, b.y + .05, 7 + Math.random() * 8, q => { q.sit = true; }, 'bench'); }
     else if (roll < .38 && fountain) { const a = Math.random() * TAU; whimTo(m, fountain.x + Math.cos(a) * .7, fountain.y + Math.sin(a) * .7, 5 + Math.random() * 3, q => { q.attention = {x: fountain.x, y: fountain.y}; if (Math.random() < .4) { q.cheerUntil = clock + 1; say(q, 'Make a wish!', 2); } }, 'fountain'); }
     else if (roll < .55) { const spots = []; for (let y = 2; y < 16; y++) for (let x = 2; x < 16; x++) if (tile(x, y) && tile(x, y).kind === 'park' && !tile(x, y).used) spots.push([x + .3 + Math.random() * .4, y + .3 + Math.random() * .4]);
@@ -2370,6 +2392,8 @@ const ToyTown = (() => {
      Lunch: people stand at the café tables with something to eat. Evening:
      residents walk home and go in, and their house counts as lit after dusk.
      Each routine sends new walkers; nobody already busy is taken. */
+  let crowdTrimmed = 0;
+  const rushFactor = () => { const h = hourOfDay(); return h >= 7 && h < 9.5 ? 1.5 : h >= 16.5 && h < 19 ? 1.5 : h >= 11.5 && h < 14 ? 1.2 : (h >= 22 || h < 5.5) ? .55 : 1; };
   const hourOfDay = () => (12 + (clock / (300 * PACE)) % 1 * 24) % 24;
   const DAYPART = h => h >= 6 && h < 9.5 ? 'morning' : h >= 11.5 && h < 14 ? 'lunch' : h >= 17 && h < 21 ? 'evening' : null;
   const homes = () => buildings.filter(b => b.kind === 'house');
@@ -2528,9 +2552,19 @@ const ToyTown = (() => {
       nextPerformance=clock+88;
     }
     // Traffic: keep the streets busy as cars leave and events come and go.
-    while (movers.filter(m => m.type === 'car' && (m.kind === 'car' || m.kind === 'bus' || m.kind === 'taxi')).length < CARS) spawnCar(Math.random, movers.some(m => m.kind === 'bus') ? undefined : 'bus');
+    // The streets breathe with the day: fuller at the morning and evening rush, thinner late at night.
+    const rush = rushFactor(), carsWanted = Math.round(CARS * rush), walkersWanted = Math.round(PEOPLE * rush);
+    const carsNow = () => movers.filter(m => m.type === 'car' && (m.kind === 'car' || m.kind === 'bus' || m.kind === 'taxi')).length;
+    while (carsNow() < Math.min(carsWanted, 11)) spawnCar(Math.random, movers.some(m => m.kind === 'bus') ? undefined : 'bus');
     while (movers.filter(m => m.kind === 'bike').length < BIKES) spawnBike();
-    while (movers.filter(m => m.type === 'person' && !m.kind).length < PEOPLE) spawnPerson();
+    while (movers.filter(m => m.type === 'person' && !m.kind).length < Math.min(walkersWanted, 22)) spawnPerson();
+    if (clock >= (update.trim || 0)) {   // when the town is over-full, one car or walker leaves at the edge now and then
+      update.trim = clock + 2;
+      const extraCar = carsNow() > carsWanted && movers.find(m => m.type === 'car' && !m.path && m.kind === 'car' && ((m.d === 0 && m.x >= 15.9) || (m.d === 1 && m.x <= 2.1) || (m.d === 2 && m.y >= 15.9) || (m.d === 3 && m.y <= 2.1)));
+      if (extraCar) { remove(extraCar); crowdTrimmed++; }
+      const extraWalker = movers.filter(m => m.type === 'person' && !m.kind).length > walkersWanted && movers.find(m => freeWalker(m) && (m.x < 1.4 || m.x > 16.6 || m.y < 1.4 || m.y > 16.6));
+      if (extraWalker) { remove(extraWalker); crowdTrimmed++; }
+    }
     // Preserve the pointed-at block while easing wheel/button zoom.
     if (Math.abs(cam.tz - cam.z) > .0002) {
       cam.z = lerp(cam.z, cam.tz, Math.min(1, dt * 12));
@@ -2870,7 +2904,7 @@ const ToyTown = (() => {
     addEventListener('hashchange', () => location.reload());
     start();
   }
-  return {BUS_STOPS, gather, rotateBy, rotateTo, yaw: () => cam.yaw, viewTo, view: () => ({x: cam.tx, y: cam.ty, z: cam.tz, yaw: cam.tyaw}), follow, following: () => followRef, feedDucks, layout, render, zoomAt, resetView, fitView, pinchTo, screenWorld, streetMoment, reactToNews, hero: () => town.blocks.find(b => b.hero), TALK, nameOf, headline, dateKey, CALM, lightPhase, themeFromNews, newsThemes, VARIANTS, VARIANT_EVENTS: () => Object.keys(VARIANT_EVENTS), decorate, setToday: l => { today_ = l; }, PACE, THEMES, GRIM, build, update, events: () => events, movers: () => movers, buildings: () => buildings, props: () => props, startEvent, randomEvent, setPlaying: v => { playing = v; }, debug: () => ({separated, busStops: BUS_STOPS.length, buses: movers.filter(m => m.kind === 'bus').map(m => m.stops || 0), clock, theme, seed, greetings, whims: {...whims}, unstuck: {...unstuck}, hour: hourOfDay(), daypart, routines: {...routine}, night: nightLevel(), cam: {...cam}, fitZoom, streetMoments,communityEncounters,communityVisits,streetTransactions,streetShopVisits,newsReactions,streetPerformances,
+  return {BUS_STOPS, gather, rotateBy, rotateTo, yaw: () => cam.yaw, viewTo, view: () => ({x: cam.tx, y: cam.ty, z: cam.tz, yaw: cam.tyaw}), follow, following: () => followRef, feedDucks, layout, render, zoomAt, resetView, fitView, pinchTo, screenWorld, streetMoment, reactToNews, hero: () => town.blocks.find(b => b.hero), TALK, nameOf, headline, dateKey, CALM, lightPhase, themeFromNews, newsThemes, VARIANTS, VARIANT_EVENTS: () => Object.keys(VARIANT_EVENTS), decorate, setToday: l => { today_ = l; }, PACE, THEMES, GRIM, build, update, events: () => events, movers: () => movers, buildings: () => buildings, props: () => props, startEvent, randomEvent, setPlaying: v => { playing = v; }, debug: () => ({separated, busStops: BUS_STOPS.length, buses: movers.filter(m => m.kind === 'bus').map(m => m.stops || 0), clock, theme, seed, greetings, whims: {...whims}, feedings, crowdTrimmed, rush: rushFactor(), unstuck: {...unstuck}, hour: hourOfDay(), daypart, routines: {...routine}, night: nightLevel(), cam: {...cam}, fitZoom, streetMoments,communityEncounters,communityVisits,streetTransactions,streetShopVisits,newsReactions,streetPerformances,
     districts:{count:districts.length,visits:districtVisits,
       meetings:districtMeetings,tasks:districtTasks,
       areas:districts.map(a=>({role:a.role,block:a.block,

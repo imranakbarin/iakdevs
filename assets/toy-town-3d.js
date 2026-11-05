@@ -1990,6 +1990,10 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
         const head=new THREE.Group();head.position.set(0,.56,0);head.rotation.y=Math.atan2(fx,fz);g.add(head);
         object(head,geo('box',.07,.17,.06),dark,0,0,0,false);
         [['r',.055],['a',0],['g',-.055]].forEach(([c,y])=>{const l=object(head,geo('sphere',.019),signal.mats[axis][c],0,y,.034,false);l.castShadow=false;});
+        // A small walk / don't-walk lamp below it for people on foot (they cross when the light on their own axis is green).
+        const ped=new THREE.Group();ped.position.set(0,.37,0);ped.rotation.y=head.rotation.y;g.add(ped);
+        object(ped,geo('box',.05,.09,.04),dark,0,0,0,false);
+        [['r',.024],['g',-.024]].forEach(([c,y])=>{const l=object(ped,geo('sphere',.014),signal.mats[axis][c],0,y,.024,false);l.castShadow=false;});
       }
     }
   }
@@ -4857,6 +4861,7 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
       const rest=item.kind==='car'?.192+arch:item.kind==='bike'?.162+arch:
         item.kind==='animal'?.13+arch:ref.sit?.10+arch:
         Math.max(groundLevel(desiredX,desiredZ),arch>0?ARCH.y0+arch:0)+GROUND.foot;
+      if(item.kind==='person'&&ref.tossAt&&ref.tossAt!==item.tossSeen){item.tossSeen=ref.tossAt;crumbsAt(ref.x,ref.y<14?13.25:14.75);sound('pop');}
       {const jit=item.kind==='person'&&!ref.sit&&path&&!ref.shopRole?(((ref.ph||0)*7.31)%1-.5)*.08:0;   // each walker keeps a slightly different line on the pavement
        g.position.set(desiredX+(d<2?0:jit),rest,desiredZ+(d<2?jit:0));}
       {const now=town.debug().clock||0;if(ref.hopUntil&&now<ref.hopUntil)g.position.y+=Math.abs(Math.sin((ref.hopUntil-now)*(item.kind==='car'?16:11)))*(item.kind==='car'?.045:.11);}
