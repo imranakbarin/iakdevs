@@ -117,8 +117,8 @@ assert.match(moduleCode,/const sky=tint\('#cee9f5'/,
   'the entire town shares a clearer, colorful daylight sky');
 assert.match(moduleCode,/kind:'umbrella'/,'visible animated café canopies add a lively street silhouette');
 assert.match(moduleCode,/kind:'bunting'/,'real suspended flags sway over the plaza');
-assert.match(moduleCode,/kind:'pinwheel'/,'living village pinwheels animate continuously');
-assert.match(moduleCode,/kind:'balloon'/,'tethered colored balloons enliven the village');
+assert.doesNotMatch(moduleCode,/ambient\.push\(\{kind:'pinwheel'/,'the pinwheels that crowded the square are retired');
+assert.doesNotMatch(moduleCode,/ambient\.push\(\{kind:'balloon'/,'and so are the tethered balloons');
 assert.match(moduleCode,/plazaInlay=true/,'colorful authored art grounds the central plaza');
 assert.match(moduleCode,/kind:'butterfly'/,'butterflies animate over planted areas');
 assert.match(html,/saturate\(1\.42\) contrast\(1\.11\)/,
@@ -128,8 +128,8 @@ assert.doesNotMatch(html,/#town-3d[^{]*\{[^}]*blur\(/,'and never any blur');
 assert.match(moduleCode,/function gardenIsland\(/,
   'garden beds have shaped earth volumes rather than floating square props');
 assert.match(moduleCode,/const cafeSet=/,'the village includes modeled cafe seating');
-assert.match(moduleCode,/const archCurve=new THREE.CatmullRomCurve3/,
-  'rose arbour has a sculpted curved timber span');
+assert.doesNotMatch(moduleCode,/const archCurve=new THREE.CatmullRomCurve3/,
+  'the rose arbour in front of the plaza is retired so the square stays readable');
 assert.match(moduleCode,/const strings=\[\[anchors\[0\],anchors\[1\]\]/,
   'restrained parallel festoon strands connect actual supports');
 assert.match(moduleCode,/createStorybookVillage\(\);/,
@@ -158,7 +158,7 @@ assert.match(moduleCode,/eye.scale.y=blink/,'eyelids blink without a separate an
 assert.match(html,/type="importmap"/);
 assert.match(html,/three@0\.187\.0\/build\/three\.module\.js/);
 assert.match(html,/three@0\.187\.0\/examples\/jsm\//);
-assert.match(html,/toy-town-3d\.js\?v=73/);
+assert.match(html,/toy-town-3d\.js\?v=74/);
 assert.match(moduleCode,/ref\.path&&Number\.isFinite\(ref\.walkFacing\)/, 'routed people use a real diagonal heading instead of a cardinal-only pose');
 assert.match(html,/toy-town-landmarks\.js\?v=7/,'the independent models are requested alongside Three');
 assert.match(html,/buildLandmark:landmarks\.buildLandmark/,
@@ -168,7 +168,7 @@ const classicScript=html.match(/src="assets\/toy-town\.js\?v=\d+"/);
 assert.ok(classicScript&&
   html.indexOf(classicScript[0])<html.indexOf("import('three')"),
   'the actual versioned classic script always loads before WebGL');
-assert.match(page,/toy-town\.html\?v=84&embed=1/);
+assert.match(page,/toy-town\.html\?v=85&embed=1/);
 assert.match(fs.readFileSync(path.join(root,'assets/toy-town.js'),'utf8'),
   /targetX=clamp\(\.08,p\.x,17\.92\)/,
   'scripted paths are clamped at the endpoint rather than freezing outside town');
@@ -413,6 +413,7 @@ assert.equal(api.getStats().festoonBulbs,14,'two suspended spans contain 14 mini
     // Stage 6: seasons, the performance guard and music notes.
     const s6=api.stage6Stats();assert.ok(['spring','summer','autumn','winter'].includes(s6.season),'the season follows the calendar ('+s6.season+')');
     assert.equal(typeof api.batchStats().merged,'number','static batching reports what it merged (the headless double has no geometry data, so it merges nothing here)');
+    assert.ok(api.signalStats().built,'traffic lights stand at the junctions');assert.equal(api.signalStats().lit.length,2,'one lit lamp per axis, from the simulation light phase');
     assert.equal(api.vertexColorAudit(),0,'no mesh reads vertex colours from a geometry that has none (it would draw black)');
     assert.ok(s6.ground>=1,'the ground detail is drawn');assert.equal(s6.lite,false);assert.ok(Array.isArray(s6.mood)&&s6.mood.length===2&&s6.mood[1].length>2,'a resident has a mood');
     assert.equal(api.setLite(true),true);assert.equal(api.stage6Stats().ground,0,'lite mode drops the fine ground detail');api.stepTrain(3,0);assert.equal(api.stage6Stats().notes,0);
