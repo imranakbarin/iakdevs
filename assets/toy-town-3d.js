@@ -2658,11 +2658,11 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
     picnic:['🧺','A picnic in the park'],painter:['🎨','A painter has set up an easel'],hotair:['🎈','A hot air balloon is going over'],icecream:['🍦','The ice cream van is here'],duck:['🦆','The giant rubber duck!']};
   function offerMoment(m){
     const now=clockMs();
-    if(offered||watching||(town.following&&town.following())||now<momentCooldown||typeof document==='undefined')return;
+    if(typeof document==='undefined'||document.visibilityState==='hidden'||offered||watching||(town.following&&town.following())||now<momentCooldown)return;
     offered=Object.assign(m,{offeredAt:now});momentStats.offered++;
     if(!momentChip){
       momentChip=document.createElement('div');momentChip.className='moment-chip';momentChip.setAttribute('role','status');
-      momentChip.style.cssText='position:fixed;left:50%;transform:translateX(-50%);bottom:calc(52px + env(safe-area-inset-bottom,0px));z-index:4;display:flex;gap:10px;align-items:center;max-width:calc(100vw - 28px);padding:7px 7px 7px 14px;border-radius:999px;background:rgba(255,253,245,.96);box-shadow:0 6px 20px rgba(30,50,70,.2);font:500 13px/1.3 Nunito,system-ui,sans-serif;color:#2d3440;transition:opacity .4s';
+      momentChip.style.cssText='position:fixed;left:50%;transform:translateX(-50%);bottom:calc(24px + env(safe-area-inset-bottom,0px));z-index:4;display:flex;gap:8px;align-items:center;max-width:calc(100vw - 28px);padding:5px 5px 5px 12px;border-radius:999px;background:rgba(255,253,245,.88);box-shadow:0 3px 12px rgba(30,50,70,.10);font:500 13px/1.3 Nunito,system-ui,sans-serif;color:#2d3440;transition:opacity .4s';
       const text=document.createElement('span');text.className='moment-text';
       const go=document.createElement('button');go.type='button';go.textContent='Watch';
       go.style.cssText='border:0;border-radius:999px;padding:6px 13px;background:#235d61;color:#fff;font:600 12.5px Nunito,system-ui;cursor:pointer';
@@ -2671,13 +2671,13 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
     }
     momentChip.firstChild.textContent=`${m.emoji} ${m.text}`;momentChip.style.display='flex';momentChip.style.opacity='1';
   }
-  function hideChip(){if(momentChip){momentChip.style.opacity='0';setTimeout(()=>{if(!offered&&momentChip)momentChip.style.display='none';},400);}offered=null;momentCooldown=clockMs()+20000;}
+  function hideChip(){if(momentChip){momentChip.style.opacity='0';setTimeout(()=>{if(!offered&&momentChip)momentChip.style.display='none';},400);}offered=null;momentCooldown=clockMs()+30000;}
   function watchMoment(m){
     hideChip();momentStats.watched++;
     watching=Object.assign(m,{started:clockMs(),home:town.view?town.view():null});
     if(m.ref&&town.follow){town.follow(m.ref,3);ensureFollowCard();followNext=0;}
     else if(town.viewTo){const p=m.at();town.viewTo(p.x,p.z,2.9);watching.lastSet=town.view();}
-    sound('chime');
+    // A voluntary camera tour should not interrupt the quiet town with a chime.
   }
   function endWatch(restore){
     const w=watching;watching=null;if(!w)return;
@@ -2686,7 +2686,7 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
   }
   function updateMoments(){
     const now=clockMs();
-    if(offered&&now-offered.offeredAt>9000)hideChip();
+    if(offered&&now-offered.offeredAt>5500)hideChip();
     if(watching){
       const w=watching,elapsed=(now-w.started)/1000;
       if(w.ref){
@@ -4818,9 +4818,14 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
           ref.intent==='browse'||ref.intent==='visiting'||
           !!ref.shopRole||!!ref.districtResident);
         const turnToFocus=focus&&toward>.11&&social&&(ref.v||0)<.055;
+        // Use the actual direction of a scripted pavement leg, including
+        // diagonal approaches to benches, counters and neighboring residents.
+        // The simulation pauses for large pivots, so this does not slide feet.
+        const pathFacing=ref.path&&Number.isFinite(ref.walkFacing)?
+          ref.walkFacing:travelFacing;
         const desiredFacing=turnToFocus?
-          Math.atan2(focus.x-ref.x,focus.y-ref.y):travelFacing;
-        if(!state.turned){g.rotation.y=travelFacing;state.turned=true;}
+          Math.atan2(focus.x-ref.x,focus.y-ref.y):pathFacing;
+        if(!state.turned){g.rotation.y=pathFacing;state.turned=true;}
         const facingError=Math.atan2(Math.sin(desiredFacing-g.rotation.y),
           Math.cos(desiredFacing-g.rotation.y));
         g.rotation.y+=THREE.MathUtils.clamp(facingError,-3.8*dt,3.8*dt);

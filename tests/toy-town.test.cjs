@@ -12,7 +12,7 @@ assert.match(dioramaSource, /function tree\(/, 'new organic tree renderer exists
 assert.match(dioramaSource, /function gable\(/, 'real pitched roof renderer exists');
 assert.match(dioramaSource, /function glazing\(/, 'framed glazing renderer exists');
 assert.match(html, /<option value="town">Toy Town<\/option>/, 'Toy Town is in the menu');
-assert.match(html, /return 'toy-town\.html\?v=80&embed=1'\+keep;/, 'and opens its current embedded page');
+assert.match(html, /return 'toy-town\.html\?v=82&embed=1'\+keep;/, 'and opens its current embedded page');
 assert.match(html, /townFrame\.src=townSrc\(\);/, 'with this page\'s weather and fps settings passed through');
 assert.match(fs.readFileSync(path.join(root, 'toy-town.html'), 'utf8'), /assets\/toy-town\.js\?v=\d+/);
 const box = vm.createContext({Math, Object, Array, JSON, Date, String, Number, RegExp, setTimeout: () => 0, document: {getElementById: () => ({textContent: ''})}});
@@ -480,7 +480,7 @@ const townPage = fs.readFileSync(path.join(root, 'toy-town.html'), 'utf8');
 for (const id of ['zoom-in', 'zoom-out', 'zoom-reset']) {
   assert.match(townPage, new RegExp('id="' + id + '"[^>]*aria-label="[^"]+"'), id + ' is accessible');
 }
-assert.match(townPage, /toy-town\.js\?v=41/, 'diorama engine is loaded');
+assert.match(townPage, /toy-town\.js\?v=42/, 'diorama engine is loaded');
 assert.match(townPage, /toy-town-news\.js\?v=1/, 'sourced news loads before the simulation');
 assert.match(townPage, /HEADLINES/, 'real reporting has a dedicated source panel');
 assert.match(townPage, /AROUND TOWN · FICTION/, 'fiction and real news are explicitly separated');
@@ -507,6 +507,75 @@ assert.match(html, /id="town-fit"/, 'mobile has a fit-the-city button');
 assert.match(html, /town:zoom/, 'outer buttons message the city');
 assert.match(townPage, /embedded/, 'embedded page hides duplicate controls');
 
+
+// Residents should face the next pavement leg before stepping sideways.
+T.build(72044,'weather');
+const cornerWalker=T.movers().find(m=>m.type==='person'&&!m.kind&&!m.heroResident&&!m.shopRole);
+assert.ok(cornerWalker,'the town provides a free walker to test turning');
+Object.assign(cornerWalker,{x:3,y:6.5,lane:0,d:0,path:[{x:3,y:7.7,speed:.5,dry:true}],
+  busy:true,max:.5,v:0,moved:0,travel:0,stopUntil:0,intent:'destination'});
+const pivotAt={x:cornerWalker.x,y:cornerWalker.y,travel:cornerWalker.travel};
+T.update(1/60);
+assert.equal(cornerWalker.d,2,'a northbound pavement leg selects the correct facing');
+assert.ok(cornerWalker.turnPauseUntil>T.debug().clock,'the walker turns before setting off');
+for(let i=0;i<15;i++)T.update(1/60);
+assert.equal(cornerWalker.x,pivotAt.x,'turning does not slide the walker sideways');
+assert.equal(cornerWalker.y,pivotAt.y,'the walker stays on the same pavement until aligned');
+assert.equal(cornerWalker.travel,pivotAt.travel,'a pivot does not advance the footstep animation');
+for(let i=0;i<28;i++)T.update(1/60);
+assert.ok(cornerWalker.y>pivotAt.y,'the walker resumes moving after the turn');
+assert.ok(cornerWalker.travel>pivotAt.travel,'gait resumes only when distance increases');
+
+// Diagonal legs should have a matching 3D facing, not a sideways shuffle.
+T.build(72144,'weather');
+const diagonalWalker=T.movers().find(m=>m.type==='person'&&!m.kind&&!m.heroResident&&!m.shopRole);
+Object.assign(diagonalWalker,{x:3,y:6.5,d:0,lane:0,busy:true,v:0,moved:0,travel:0,
+  path:[{x:4,y:7.5,speed:.5,dry:true}],stopUntil:0,intent:'destination'});
+T.update(1/60);
+assert.ok(Math.abs(diagonalWalker.walkFacing-Math.PI/4)<.01,
+  'diagonal route heading matches the actual displacement vector');
+const beforeDiagonal=[diagonalWalker.x,diagonalWalker.y,diagonalWalker.travel];
+for(let i=0;i<16;i++)T.update(1/60);
+assert.deepEqual([diagonalWalker.x,diagonalWalker.y,diagonalWalker.travel],
+  beforeDiagonal,'a strong diagonal turn pauses both feet before changing direction');
+for(let i=0;i<36;i++)T.update(1/60);
+assert.ok(diagonalWalker.x>beforeDiagonal[0]&&diagonalWalker.y>beforeDiagonal[1],
+  'a diagonal walk resumes along both physical axes');
+
+// Brief sidewalk chats should happen at a real meeting distance, not across a road.
+T.build(72530,'weather');
+const socialCandidates=T.movers().filter(m=>m.type==='person'&&!m.kind&&!m.heroResident&&!m.shopRole&&!m.routine);
+assert.ok(socialCandidates.length>=2,'the town has two free walkers');
+for(const m of socialCandidates)m.greetNext=Number.POSITIVE_INFINITY;
+const [palA,palB]=socialCandidates;
+for(const [i,m] of [palA,palB].entries())Object.assign(m,{
+  x:3+i*.36,y:6.5,d:0,lane:.43,v:.5,max:.5,path:null,busy:false,
+  stopUntil:0,sit:false,whim:null,whimUntil:0,routine:null,greetNext:0,
+  nextNotice:Number.POSITIVE_INFINITY,nextDawdle:Number.POSITIVE_INFINITY,intent:'walking'});
+T.update(1/60);
+assert.ok(palA.briefChatUntil>T.debug().clock&&palB.briefChatUntil>T.debug().clock,
+  'nearby walkers on the same pavement stop for a real chat');
+assert.equal(palA.intent,'chat');assert.equal(palB.intent,'chat');
+const chatDistance=[palA.travel,palB.travel];
+for(let i=0;i<60;i++)T.update(1/60);
+assert.equal(palA.travel,chatDistance[0],'a stopped talker does not walk in place');
+assert.equal(palB.travel,chatDistance[1],'both talkers keep stationary foot contact');
+for(let i=0;i<220;i++)T.update(1/60);
+assert.equal(palA.briefChatUntil,0,'the conversation ends without a frozen resident');
+assert.equal(palB.briefChatUntil,0,'both walkers are released');
+
+// Same road centre is NOT the same pavement: no chat across the carriageway.
+T.build(72531,'weather');
+const acrossRoad=T.movers().filter(m=>m.type==='person'&&!m.kind&&!m.heroResident&&!m.shopRole&&!m.routine);
+for(const m of acrossRoad)m.greetNext=Number.POSITIVE_INFINITY;
+const [leftWalker,rightWalker]=acrossRoad;
+for(const [i,m] of [leftWalker,rightWalker].entries())Object.assign(m,{
+  x:3+i*.1,y:6.5,d:0,lane:i===0?-.43:.43,v:.5,max:.5,
+  path:null,busy:false,stopUntil:0,sit:false,whim:null,whimUntil:0,routine:null,
+  greetNext:0,nextDawdle:Number.POSITIVE_INFINITY,nextNotice:Number.POSITIVE_INFINITY});
+T.update(1/60);
+assert.ok(!leftWalker.briefChatUntil&&!rightWalker.briefChatUntil,
+  'walkers on opposite pavements do not talk across moving cars');
 
 // A calm town: gentle moments run to their end, and traffic waits at red lights instead of piling into the crossings.
 T.build(31337, 'weather'); T.setToday([]);

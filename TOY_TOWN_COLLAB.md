@@ -38,6 +38,37 @@ A `START` does not prohibit parallel edits. Avoid stepping on each other's uncom
 
 ## Exchange log (newest first)
 
+### DONE — ChatGPT (GPT-6) — 2026-11-05 (08:17 America/New_York)
+- Milestone: credible pavement behavior **without new residents, widgets or ambient noise**. Branch: `feat/toy-town-calm-lively-moments`, based on master `4658a82`, rechecked latest master `3f7ef3e` (news-only update).
+- `assets/toy-town.js`: people following route waypoints now stop briefly to face a new leg when the angle is sharp (pivot time tracks angle); `walkFacing` tracks the actual unit movement vector including diagonals. No distance accrues during pivots. Replaced passing greeting with an at-most-two-pair sidewalk chat only for idle-purpose-free residents at genuine physical distances on the **same** pavement, away from crossings. They stop, attend, wave, converse, then resume without teleporting.
+- `assets/toy-town-3d.js`: resident facing follows `walkFacing` while on a route, retaining existing expressive gestures, distance-based footstep cycle and other actors unchanged. Previous corrected Moments-only UI pass remains (subtle 5.5s chips, 30s cooldown, no chime).
+- Cache bumps: `toy-town.html` simulation v42 / 3D v72 and `index.html` embed v82. Tests now expect these versions.
+- New `tests/toy-town.test.cjs` checks stationary corner pivots, finite turn completion, diagonal movement facing and resumption, close pavement chat, zero travel while conversing, recovery, and rejection of opposite-pavement conversations. `tests/toy-town-3d.test.cjs` validates the new 3D orientation path.
+- **Verified:** GitHub Actions [run 42033779174](https://github.com/imranakbarin/iakdevs/actions/runs/42033779174) **SUCCESS** on code head `ea5c0d6`: `toy-town.test.cjs`, `toy-town-3d.test.cjs`, `toy-town-news.test.cjs`, `toy-town-lens.test.cjs`, `toy-town-extras.test.cjs`, real Chromium `toy-town-visual.cjs` including 3D shop handoff, market, and outer-city scene checks. Screenshot artifact `toy-town-visual-276` (id 13417656812) uploaded. The mock 3D test deliberately injects a GPU failure to check classic fallback; this is not a live WebGL failure. Screenshot contents were **not** manually visually inspected here; actual iPhone motion/performance has not been validated.
+- Review correction: earlier traffic-crossing and bicycle yaw patch commits caused failing CI or duplicated existing movement. **They were reverted**; the final PR leaves legacy vehicle behavior unchanged. Remaining owner requests: eliminate actual vehicle overlap without deadlock; improve wide-camera vibrancy and proportion, verify subjective motion on iPhone, maintain news freshness.
+- No unrelated experience modified except the embed cache URL within the multi-mode home `index.html`. Before next changes read this log and latest master/Claude work.
+
+### START — ChatGPT (GPT-6) — 2026-11-05 (07:59 America/New_York)
+- Current master inspected: `3f7ef3e2b4` (news-only refresh beyond PR #185's original base). Working branch: `feat/toy-town-calm-lively-moments`, previous head `2f435f490e`. The branch's prior corrected traffic/bike edits are already reverted; avoid reintroducing them.
+- Purpose: visibly more believable social movement, not more decorative props. Add a grounded sidewalk encounter (only within physical speaking range and away from crossings) and a short actual in-place pivot before a path walker changes direction, keeping travel/footstep clock fixed while stopped. No extra residents or UI.
+- Expected edits: `assets/toy-town.js`, focused test(s), `tests/toy-town-3d.test.cjs` for cache-version assertion, `TOY_TOWN_COLLAB.md`. Existing 3D resident rig will express conversation and turning without new meshes.
+- Prior corrected branch tests: earlier `00ffb5f` and `5a4e83b` CI passed; HTML version bump `644fdc1` failed solely because tests still expect `toy-town-3d.js?v=70` and `toy-town.html?v=80`; update test contracts and verify latest CI plus actual WebGL screenshots.
+
+### PARTIAL — ChatGPT (GPT-6) — 2026-11-05 11:30 UTC
+- Audit of PR #185 after owner asked to revisit the session. **Not merged or deployed.**
+- **Reverted** the untested traffic edit fully: `assets/toy-town.js` matches `master`; the initial patch failed the real workflow's `tests/toy-town-extras.test.cjs:148` crossing-traffic patience assertion (runs [42017279588](https://github.com/imranakbarin/iakdevs/actions/runs/42017279588) and [42017598418](https://github.com/imranakbarin/iakdevs/actions/runs/42017598418)). This remains an unsolved physical-overlap problem in legacy traffic, not a completed fix.
+- **Reverted** additional 3D bike yaw/lean. Core simulation already runs `easeHeading` and animates wheel/crank movement from real travel; extra yaw smoothing would lag behind the bicycle's actual path. No new pedestrian/bike animation improvement remains in the PR.
+- **Retained only calmer optional Moments UX** in `assets/toy-town-3d.js`: a smaller subtler chip, 5.5-second exposure, 30-second cooldown, no chime, avoid hidden-tab offers; reduced-motion users can still receive prompts. Fixed document guard order. Bumped `toy-town.html` 3D JS to v71 and the embedded `index.html` iframe to v81 for future cache invalidation.
+- **Validation:** GitHub PR diff rechecked (only Moments/HTML/cache and coordination changes); the first Moments-only commit [41970932577](https://github.com/imranakbarin/iakdevs/actions/runs/41970932577) passed. Later traffic-containing commits failed as above. Corrective push runs were still running during this log; do not claim current head passes until the actual run finishes, and no visual-motion quality has been verified on iPhone.
+- **Next:** Run all Toy Town simulation, WebGL screenshots, and actual movement/playback checks. For future traffic work, make clearance and junction priority consistent with `unstick` and update matching no-overlap/deadlock tests in the same PR. Prioritize visible animation changes only when validated from actual renders, not superficial property tweaks.
+
+### START — ChatGPT (GPT-6) — 2026-11-05 11:23 UTC (late audit disclosure)
+- **Process correction:** Earlier commits in PR #185 skipped the mandatory START/handoff check; this entry records that lapse, not a claim of earlier compliance.
+- Base `master`: `4658a82be04367dd335b0e827f21836ea9fb6f35`. Branch: `feat/toy-town-calm-lively-moments`. Prior PR commits: `ee20e6c`, `ac100c5`, `9425613`.
+- Re-audit: Traffic patch removed junction escape behavior and could deadlock; bicycle yaw layer duplicates existing `easeHeading` and causes visible lag; discoverability prompt had overlong cooldown and hid itself entirely in reduced-motion mode. No CI runs or browser screenshots for these commits.
+- Already corrected before this late log: restored `assets/toy-town.js` to master (`339dd08`), removed double bicycle turn and adjusted chip cadence (`5a4e83b`). No traffic or bicycle-motion improvement is claimed.
+- Remaining cleanup: ensure safe document guard, bump asset version so any future merge refreshes, then summarize candidly and leave PR draft until actual simulation/WebGL QA.
+
 ### DONE — Claude (Claude Code) — 2026-11-02 (late, 5)
 - Outcome: pavements, walkers kept on them, and the weather preview from the main page. Code commit `83e1a37` (squash-merged with this entry).
 - **3D** (`toy-town-3d.js`):
