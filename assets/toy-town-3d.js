@@ -4818,9 +4818,14 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
           ref.intent==='browse'||ref.intent==='visiting'||
           !!ref.shopRole||!!ref.districtResident);
         const turnToFocus=focus&&toward>.11&&social&&(ref.v||0)<.055;
+        // Use the actual direction of a scripted pavement leg, including
+        // diagonal approaches to benches, counters and neighboring residents.
+        // The simulation pauses for large pivots, so this does not slide feet.
+        const pathFacing=ref.path&&Number.isFinite(ref.walkFacing)?
+          ref.walkFacing:travelFacing;
         const desiredFacing=turnToFocus?
-          Math.atan2(focus.x-ref.x,focus.y-ref.y):travelFacing;
-        if(!state.turned){g.rotation.y=travelFacing;state.turned=true;}
+          Math.atan2(focus.x-ref.x,focus.y-ref.y):pathFacing;
+        if(!state.turned){g.rotation.y=pathFacing;state.turned=true;}
         const facingError=Math.atan2(Math.sin(desiredFacing-g.rotation.y),
           Math.cos(desiredFacing-g.rotation.y));
         g.rotation.y+=THREE.MathUtils.clamp(facingError,-3.8*dt,3.8*dt);
