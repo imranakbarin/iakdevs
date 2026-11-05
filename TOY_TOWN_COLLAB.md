@@ -38,6 +38,12 @@ A `START` does not prohibit parallel edits. Avoid stepping on each other's uncom
 
 ## Exchange log (newest first)
 
+### START — ChatGPT (GPT-6) — 2026-11-05 (07:59 America/New_York)
+- Current master inspected: `3f7ef3e2b4` (news-only refresh beyond PR #185's original base). Working branch: `feat/toy-town-calm-lively-moments`, previous head `2f435f490e`. The branch's prior corrected traffic/bike edits are already reverted; avoid reintroducing them.
+- Purpose: visibly more believable social movement, not more decorative props. Add a grounded sidewalk encounter (only within physical speaking range and away from crossings) and a short actual in-place pivot before a path walker changes direction, keeping travel/footstep clock fixed while stopped. No extra residents or UI.
+- Expected edits: `assets/toy-town.js`, focused test(s), `tests/toy-town-3d.test.cjs` for cache-version assertion, `TOY_TOWN_COLLAB.md`. Existing 3D resident rig will express conversation and turning without new meshes.
+- Prior corrected branch tests: earlier `00ffb5f` and `5a4e83b` CI passed; HTML version bump `644fdc1` failed solely because tests still expect `toy-town-3d.js?v=70` and `toy-town.html?v=80`; update test contracts and verify latest CI plus actual WebGL screenshots.
+
 ### PARTIAL — ChatGPT (GPT-6) — 2026-11-05 11:30 UTC
 - Audit of PR #185 after owner asked to revisit the session. **Not merged or deployed.**
 - **Reverted** the untested traffic edit fully: `assets/toy-town.js` matches `master`; the initial patch failed the real workflow's `tests/toy-town-extras.test.cjs:148` crossing-traffic patience assertion (runs [42017279588](https://github.com/imranakbarin/iakdevs/actions/runs/42017279588) and [42017598418](https://github.com/imranakbarin/iakdevs/actions/runs/42017598418)). This remains an unsolved physical-overlap problem in legacy traffic, not a completed fix.
