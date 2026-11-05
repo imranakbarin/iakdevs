@@ -2658,7 +2658,7 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
     picnic:['🧺','A picnic in the park'],painter:['🎨','A painter has set up an easel'],hotair:['🎈','A hot air balloon is going over'],icecream:['🍦','The ice cream van is here'],duck:['🦆','The giant rubber duck!']};
   function offerMoment(m){
     const now=clockMs();
-    if(reducedMotion||document.visibilityState==='hidden'||offered||watching||(town.following&&town.following())||now<momentCooldown||typeof document==='undefined')return;
+    if(document.visibilityState==='hidden'||offered||watching||(town.following&&town.following())||now<momentCooldown||typeof document==='undefined')return;
     offered=Object.assign(m,{offeredAt:now});momentStats.offered++;
     if(!momentChip){
       momentChip=document.createElement('div');momentChip.className='moment-chip';momentChip.setAttribute('role','status');
@@ -2671,7 +2671,7 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
     }
     momentChip.firstChild.textContent=`${m.emoji} ${m.text}`;momentChip.style.display='flex';momentChip.style.opacity='1';
   }
-  function hideChip(){if(momentChip){momentChip.style.opacity='0';setTimeout(()=>{if(!offered&&momentChip)momentChip.style.display='none';},400);}offered=null;momentCooldown=clockMs()+60000;}
+  function hideChip(){if(momentChip){momentChip.style.opacity='0';setTimeout(()=>{if(!offered&&momentChip)momentChip.style.display='none';},400);}offered=null;momentCooldown=clockMs()+30000;}
   function watchMoment(m){
     hideChip();momentStats.watched++;
     watching=Object.assign(m,{started:clockMs(),home:town.view?town.view():null});
@@ -4798,18 +4798,7 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
       // Cars, bicycles and quadrupeds point along local +X; only sculpted
       // residents have local +Z faces. Keep both aligned with actual travel.
       const travelFacing=a+(item.kind==='person'?Math.PI/2:0);
-      if(item.kind==='bike') {
-        // Lean and steer through corners rather than snapping the bicycle
-        // through a quarter turn in a single rendered frame.
-        const now=town.debug().clock||0;
-        const turn=g.userData.turnState||(g.userData.turnState={angle:travelFacing,last:now});
-        const dt=Math.max(0,Math.min(.09,now-turn.last));turn.last=now;
-        const delta=Math.atan2(Math.sin(travelFacing-turn.angle),Math.cos(travelFacing-turn.angle));
-        const change=Math.sign(delta)*Math.min(Math.abs(delta),dt*3.8);
-        turn.angle+=change;
-        g.rotation.y=turn.angle;
-        g.rotation.x=reducedMotion?0:THREE.MathUtils.clamp(-change*1.25,-.13,.13);
-      } else if(item.kind!=='person')g.rotation.y=travelFacing;
+      if(item.kind!=='person')g.rotation.y=travelFacing;
       const limbs=g.userData.limbs;
       if(limbs){
         // Distance owns the footstep clock. Time only smooths transitions and
