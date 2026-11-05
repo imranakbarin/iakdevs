@@ -12,7 +12,7 @@ assert.match(dioramaSource, /function tree\(/, 'new organic tree renderer exists
 assert.match(dioramaSource, /function gable\(/, 'real pitched roof renderer exists');
 assert.match(dioramaSource, /function glazing\(/, 'framed glazing renderer exists');
 assert.match(html, /<option value="town">Toy Town<\/option>/, 'Toy Town is in the menu');
-assert.match(html, /return 'toy-town\.html\?v=81&embed=1'\+keep;/, 'and opens its current embedded page');
+assert.match(html, /return 'toy-town\.html\?v=82&embed=1'\+keep;/, 'and opens its current embedded page');
 assert.match(html, /townFrame\.src=townSrc\(\);/, 'with this page\'s weather and fps settings passed through');
 assert.match(fs.readFileSync(path.join(root, 'toy-town.html'), 'utf8'), /assets\/toy-town\.js\?v=\d+/);
 const box = vm.createContext({Math, Object, Array, JSON, Date, String, Number, RegExp, setTimeout: () => 0, document: {getElementById: () => ({textContent: ''})}});
@@ -480,7 +480,7 @@ const townPage = fs.readFileSync(path.join(root, 'toy-town.html'), 'utf8');
 for (const id of ['zoom-in', 'zoom-out', 'zoom-reset']) {
   assert.match(townPage, new RegExp('id="' + id + '"[^>]*aria-label="[^"]+"'), id + ' is accessible');
 }
-assert.match(townPage, /toy-town\.js\?v=41/, 'diorama engine is loaded');
+assert.match(townPage, /toy-town\.js\?v=42/, 'diorama engine is loaded');
 assert.match(townPage, /toy-town-news\.js\?v=1/, 'sourced news loads before the simulation');
 assert.match(townPage, /HEADLINES/, 'real reporting has a dedicated source panel');
 assert.match(townPage, /AROUND TOWN · FICTION/, 'fiction and real news are explicitly separated');
@@ -525,6 +525,22 @@ assert.equal(cornerWalker.travel,pivotAt.travel,'a pivot does not advance the fo
 for(let i=0;i<28;i++)T.update(1/60);
 assert.ok(cornerWalker.y>pivotAt.y,'the walker resumes moving after the turn');
 assert.ok(cornerWalker.travel>pivotAt.travel,'gait resumes only when distance increases');
+
+// Diagonal legs should have a matching 3D facing, not a sideways shuffle.
+T.build(72144,'weather');
+const diagonalWalker=T.movers().find(m=>m.type==='person'&&!m.kind&&!m.heroResident&&!m.shopRole);
+Object.assign(diagonalWalker,{x:3,y:6.5,d:0,lane:0,busy:true,v:0,moved:0,travel:0,
+  path:[{x:4,y:7.5,speed:.5,dry:true}],stopUntil:0,intent:'destination'});
+T.update(1/60);
+assert.ok(Math.abs(diagonalWalker.walkFacing-Math.PI/4)<.01,
+  'diagonal route heading matches the actual displacement vector');
+const beforeDiagonal=[diagonalWalker.x,diagonalWalker.y,diagonalWalker.travel];
+for(let i=0;i<16;i++)T.update(1/60);
+assert.deepEqual([diagonalWalker.x,diagonalWalker.y,diagonalWalker.travel],
+  beforeDiagonal,'a strong diagonal turn pauses both feet before changing direction');
+for(let i=0;i<36;i++)T.update(1/60);
+assert.ok(diagonalWalker.x>beforeDiagonal[0]&&diagonalWalker.y>beforeDiagonal[1],
+  'a diagonal walk resumes along both physical axes');
 
 // Brief sidewalk chats should happen at a real meeting distance, not across a road.
 T.build(72530,'weather');
