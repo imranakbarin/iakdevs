@@ -224,13 +224,13 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
     return models.size?models:null;
   })();
   // Place a clone so its footprint fits `fit` (world units) and its base sits at `y`.
-  function kitPlace(parent,name,x,y,z,{fit=null,scale=null,rotY=0,height=null,pivot=false}={}){
+  function kitPlace(parent,name,x,y,z,{fit=null,scale=null,rotY=0,height=null,pivot=false,squash=1}={}){
     const m=kit&&kit.get(name);if(!m)return null;
     const s=scale??(height?height/m.size.y:fit/Math.max(m.size.x,m.size.z));
     const holder=new THREE.Group(),clone=m.node.clone(true);
-    clone.position.set(pivot?0:-m.centre.x*s,-m.min.y*s,pivot?0:-m.centre.z*s);clone.scale.setScalar(s);   // pivot: keep the model's own origin (a lamp post's foot)
+    const sy=s*squash;clone.position.set(pivot?0:-m.centre.x*s,-m.min.y*sy,pivot?0:-m.centre.z*s);clone.scale.set(s,sy,s);   // pivot: keep the model's own origin (a lamp post's foot)
     holder.add(clone);holder.position.set(x,y,z);holder.rotation.y=rotY;parent.add(holder);
-    holder.userData.kit=name;holder.userData.size={x:m.size.x*s,y:m.size.y*s,z:m.size.z*s};
+    holder.userData.kit=name;holder.userData.size={x:m.size.x*s,y:m.size.y*sy,z:m.size.z*s};
     return holder;
   }
   const object = (parent, geometry, material, x=0,y=0,z=0, cast=true) => {
@@ -1364,6 +1364,7 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
   }
   function smallProps(p,i){
     const k=p.kind;
+    if((k==='tree'||k==='flowers'||k==='hero-shrub')&&p.x>7&&p.x<11&&p.y>7.9&&p.y<11)return;   // the city centre is paved
     if(k==='tree')tree(p,i);
     else if(k==='district-scene')districtFixture(p);
     else if(k==='hero-shrub') {
@@ -1503,14 +1504,6 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
     }
     // Repeat only in the *perimeter*, leaving the bakery, bookshop,
     // door thresholds, table, bench and pedestrian corridors untouched.
-    const beds=[
-      [7.19,8.38,.27,.37,2],[7.19,10.37,.28,.31,3],
-      [10.80,9.53,.28,.34,1],[10.78,7.73,.25,.28,4],
-      [7.83,8.15,.16,.22,0],[9.95,8.13,.17,.20,2],
-      [7.85,10.54,.18,.23,4],[9.90,10.59,.18,.23,1],
-      [8.03,9.77,.13,.21,3],[9.97,9.65,.13,.20,1]
-    ];
-    for(const [x,z,rx,rz,variant] of beds)gardenIsland(x,z,rx,rz,variant);
     // Smaller lawn islands soften the outer borough blocks as well, without
     // landing inside any home, river, street, or procedural event building.
     const buildings=town.buildings(),props=town.props();
@@ -1526,21 +1519,6 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
         gardenIsland(bx,by,.24,.29,Math.abs(Math.floor(bx*7+by))%5);
       }
     }
-    // Hand-set flagstones curve toward the courtyard. Keep both original
-    // clear walking lanes; the narrow small stones occupy their margins.
-    const stones=[
-      [8.14,8.74,.22,.16],[8.10,9.13,.23,.16],[8.10,9.53,.21,.15],
-      [9.88,8.71,.22,.17],[9.90,9.08,.24,.16],[9.88,9.46,.22,.16],
-      [8.78,10.34,.23,.17],[9.16,10.51,.23,.17],[9.52,10.73,.23,.16]
-    ];
-    for(let i=0;i<stones.length;i++){
-      const [x,z,w,d]=stones[i],r=rng(i+seed,749);
-      const slab=ball(world,.5,i%3?'#e4d4b8':'#f0e0c6',x,.221,z);
-      slab.scale.set(w*1.1,.043,d*1.1);slab.castShadow=false;
-      slab.rotation.y=(r-.5)*.20;
-    }
-    gardenElements+=stones.length;
-
     // Two authentic cafe tables beside the shops, not at the scripted
     // customers' destinations. Tiny stools, ceramic cups and planted barrels.
     const cafeSet=(x,z,turn=0)=>{
@@ -1560,48 +1538,12 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
       gardenElements+=9;
     };
     cafeSet(7.74,8.75,.25);
-    cafeSet(10.25,9.95,-.50);
 
     // (The rose arbour that stood in front of the plaza is retired: it hid what was happening in the square.)
-    // Physically suspended festoons between four slim timber poles.
-    // Warm individual bulbs brighten at sunset without extra point lights.
-    const anchors=[[7.56,9.60],[10.42,9.60],[7.58,10.58],[10.39,10.58]];
-    for(const [x,z] of anchors){
-      const pole=cylinder(world,.024,.037,1.27,'#947b62',x,.83,z);
-      const foot=cylinder(world,.074,.084,.082,'#d5c2a5',x,.24,z);
-      pole.castShadow=false;foot.castShadow=false;
-    }
-    const candle=new THREE.MeshStandardMaterial({
-      color:'#ffebbd',emissive:'#ffc67f',emissiveIntensity:.36,
-      roughness:.38,metalness:0
-    });
-    const strings=[[anchors[0],anchors[1]],[anchors[2],anchors[3]]];
-    for(let k=0;k<strings.length;k++){
-      const [a,b]=strings[k],x0=a[0],z0=a[1],x1=b[0],z1=b[1];
-      const points=[];
-      for(let j=0;j<=12;j++){
-        const t=j/12;
-        points.push(new THREE.Vector3(x0+(x1-x0)*t,
-          1.43-.14*Math.sin(t*Math.PI),z0+(z1-z0)*t));
-      }
-      const curve=new THREE.CatmullRomCurve3(points);
-      const wire=object(world,new THREE.TubeGeometry(curve,20,.008,3,false),
-        mat('#665b51'),0,0,0,false);
-      wire.castShadow=false;
-      for(let i=1;i<8;i++){
-        const t=i/8;
-        const x=x0+(x1-x0)*t,z=z0+(z1-z0)*t;
-        const y=1.43-.14*Math.sin(t*Math.PI);
-        const bulb=ball(world,.033,candle,x,y-.042,z);
-        bulb.castShadow=false;
-        festoonBulbs.push(bulb);
-      }
-    }
-    gardenElements+=30;
     // Market-hour rhythm: visible color and motion near the bakery and
     // bookshop, without cluttering the central walking routes.
     const canopyColors=['#de7966','#398f8b'];
-    for(let i=0;i<2;i++){
+    for(let i=0;i<1;i++){   // one café umbrella
       const x=i?10.23:7.75,z=i?9.95:8.75;
       const umbrella=new THREE.Group();umbrella.position.set(x,0,z);
       world.add(umbrella);
@@ -1616,39 +1558,48 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
       }
       ambient.push({kind:'umbrella',mesh:umbrella,phase:i*2.3});
     }
-    // Colorful bunting is tied to the actual festoon supports; it does
-    // not hang across a vehicle lane or move independently of its anchor.
-    const buntingColors=['#ed816d','#f3bf62','#5ca59a','#b78eb8','#f2dfb8'];
-    const pennant=(()=>{const sh=new THREE.Shape();sh.moveTo(-.05,0);sh.lineTo(.05,0);sh.lineTo(0,-.11);sh.closePath();
-      return new THREE.ExtrudeGeometry(sh,{depth:.006,bevelEnabled:false});})();
-    for(const z of [9.60])for(let i=0;i<11;i++){   // one row of flags, not two crossing the square
-      const x=7.72+i*.26;
-      const flag=new THREE.Group();flag.position.set(x,1.4-.13*
-        Math.sin((i+.5)/11*Math.PI),z);world.add(flag);
-      const fabric=object(flag,pennant,mat(buntingColors[(i+Math.round(z*10))%5],.85),0,0,0,false);
-      fabric.rotation.z=.05*(i%3-1);
-      ambient.push({kind:'bunting',mesh:flag,phase:i*.36+z});
-    }
-    // Two hand-built flower wagons make the shops feel active even when
-    // no visitor is currently standing near their counter.
-    for(const [x,z,c] of [[7.25,7.91,'#de806d'],[10.70,8.35,'#5b9990']]){
-      const cart=new THREE.Group();cart.position.set(x,.21,z);world.add(cart);
-      box(cart,.35,.18,.24,c,0,.22,0);
-      box(cart,.38,.03,.28,'#f6dcac',0,.33,0);
-      for(const side of [-1,1])for(const dx of [-.12,.12]){
-        const wheel=cylinder(cart,.062,.062,.033,'#695b52',dx,.106,side*.136);
-        wheel.rotation.x=Math.PI/2;
-      }
-      for(let k=0;k<9;k++){
-        const xx=(k%3-1)*.10,zz=(Math.floor(k/3)-1)*.075;
-        const leaf=ball(cart,.046,'#619879',xx,.395,zz);
-        leaf.scale.set(.75,1.25,.80);
-        ball(cart,.035,['#ea7c71','#f4cc70','#ed9ac2'][k%3],
-          xx,.437,zz+.016).castShadow=false;
-      }
-    }
     // (The pinwheels and tethered balloons that crowded the square are retired.)
+    cityCentre();
     gardenElements+=86;
+  }
+  /* ---- The city centre: one paved civic square with low buildings round it, a fountain, four lamp posts that glow at dusk,
+     stone planters, a signpost and a CITY CENTER board. The lawn beds, flagstones, festoon wires and flags that
+     crowded the square are gone, so what the people are doing in it can be seen. ---- */
+  function cityCentre(){
+    const gardenColors=['#5f9278','#84ad84','#a1bd93','#6a9e87','#c0cc97'],petalColors=['#f4c6c2','#f6e5b0','#cfb7ce','#fff0d6','#dcaab0'];
+    const stone=mat('#dccfb4',.92),inlay=mat('#c8b896',.92),trim=mat('#efe3cb',.9),dark=mat('#4d5660',.7),wood=mat('#9b795e');
+    const slab=(x0,x1,z0,z1,col,top,h)=>{const o=box(world,x1-x0,h,z1-z0,col,(x0+x1)/2,top-h/2,(z0+z1)/2,false);o.castShadow=false;o.receiveShadow=true;return o;};
+    slab(7.04,10.0,8.04,10.96,stone,.2225,.07);slab(10.0,10.96,9.0,10.0,stone,.2225,.07);
+    for(const [x0,x1,z0,z1] of [[7.14,9.9,8.14,8.175],[7.14,9.9,10.825,10.86],[7.14,7.175,8.14,10.86],[9.865,9.9,8.14,10.86]])slab(x0,x1,z0,z1,inlay,.2275,.012);
+    const candle=new THREE.MeshStandardMaterial({color:'#ffebbd',emissive:'#ffc67f',emissiveIntensity:.36,roughness:.38,metalness:0});
+    // a fountain at the south end, between the two walking corridors
+    {const fx=9.0,fz=10.5;
+      cylinder(world,.34,.36,.1,stone,fx,.272,fz);
+      const rim=object(world,geo('torus',.34,.03),trim,fx,.325,fz,false);rim.rotation.x=Math.PI/2;
+      const water=object(world,geo('cylinder',.3,.3,.02),new THREE.MeshStandardMaterial({color:'#86c9d2',roughness:.25,emissive:'#4b9aa8',emissiveIntensity:.18}),fx,.318,fz,false);water.castShadow=false;
+      cylinder(world,.045,.06,.2,stone,fx,.42,fz);cylinder(world,.13,.05,.05,trim,fx,.54,fz);
+      const drop=ball(world,.05,mat('#c6e8ee',.3),fx,.62,fz);drop.scale.set(.8,1.3,.8);drop.castShadow=false;
+      for(let k=0;k<2;k++){const ring=object(world,geo('torus',.16+k*.07,.008),mat('#eef9fb',.5),fx,.33,fz,false);ring.rotation.x=Math.PI/2;ambient.push({kind:'sea',mesh:ring,phase:k*1.7,y0:.33});}
+      for(const sd of [-1,1]){const b=ball(world,.03,candle,fx+sd*.34,.375,fz);b.castShadow=false;festoonBulbs.push(b);}}
+    // lamp posts with three warm bulbs each (they brighten at dusk with the town's other lights)
+    for(const [lx,lz] of [[7.22,8.30],[7.22,10.82],[9.93,10.84],[10.82,9.5]]){
+      cylinder(world,.022,.034,.62,'#5c7274',lx,.53,lz);cylinder(world,.07,.05,.05,'#455e64',lx,.86,lz);
+      cylinder(world,.085,.06,.06,'#526d6d',lx,.96,lz);
+      for(let k=0;k<3;k++){const a=k*TAU/3;const b=ball(world,.03,candle,lx+Math.cos(a)*.05,.9,lz+Math.sin(a)*.05);b.castShadow=false;festoonBulbs.push(b);}
+    }
+    // stone planters with shrubs and flowers
+    for(const [px,pz] of [[7.30,9.55],[10.62,9.12],[10.62,9.88],[7.72,10.80]]){
+      box(world,.34,.13,.34,'#d5c6a8',px,.285,pz);box(world,.28,.02,.28,'#7a6a55',px,.355,pz,false);
+      for(let k=0;k<4;k++){const a=k*TAU/4+px,sx=px+Math.cos(a)*.07,sz=pz+Math.sin(a)*.07;const sh=ball(world,.085,gardenColors[k%gardenColors.length],sx,.42,sz);sh.scale.set(1.1,.7,1.1);sh.castShadow=false;
+        const fl=ball(world,.03,petalColors[(k+Math.round(px))%petalColors.length],sx+.02,.49,sz+.01);fl.castShadow=false;}
+    }
+    // a signpost and the CITY CENTER board
+    {const g=new THREE.Group();g.position.set(7.26,.2225,9.05);world.add(g);
+      cylinder(g,.018,.022,.62,wood,0,.31,0);
+      [['PARK',.5,.04],['RIVER',.4,-.04],['STATION',.3,.03]].forEach(([t,y,r])=>{const bd=box(g,.34,.07,.025,'#f0dfc2',.1,y,0);bd.rotation.y=r;sign(g,t,.1,y,.02,.3,'#f0dfc2','#4a3f37');});}
+    {const g=new THREE.Group();g.position.set(9.0,.2225,10.93);world.add(g);
+      for(const sx of [-1,1])cylinder(g,.015,.018,.4,wood,sx*.27,.2,0);
+      box(g,.62,.2,.03,'#3d5a58',0,.38,0);sign(g,'CITY CENTER',0,.38,.02,.56,'#3d5a58','#fff3dc');}
   }
   function paintVillageLife(){
     // One translucent painted-tile medallion transforms the visual center
@@ -3009,10 +2960,11 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
   // The five plaza buildings in KayKit style. Plain-fronted models sit behind
   // the bakery and bookshop counters (their striped awnings, cabinets, bells
   // and hinged serving windows are separate shop-front pieces and unchanged).
+  const CENTRE_SQUASH=.6;
   function kitLandmark(b){
     if(!kit||!['shop','house'].includes(b.kind))return false;
     const shop=b.kind==='shop',name=shop?(b.name==='BAKERY'?'building_D':'building_B'):['building_C','building_F','building_A'][Math.abs(b.x*3+b.y)%3];
-    const placed=kitPlace(world,name,b.x+.5,.17,b.y+.5,{fit:.98});
+    const placed=kitPlace(world,name,b.x+.5,.17,b.y+.5,{fit:.98,squash:CENTRE_SQUASH});   // the city-centre buildings are low: they must not tower over the square
     if(!placed)return false;
     placed.userData.landmark=true;placed.userData.uniqueAsset=true;
     if(!shop)porchLamp(placed,b);
@@ -4035,8 +3987,98 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
       m.position.y=Math.max(.19,m.position.y+v[1]*dt);if(m.position.y<=.19){v[0]*=.9;v[2]*=.9;}m.rotation.x+=m.userData.spin*dt;m.rotation.z+=m.userData.spin*.7*dt;}}});
   }
   function walkAnim(p,moving,ph){const L=p.userData.limbs;if(!L)return;const a=moving?Math.sin(ph*1.5)*.55:0;L.legs.forEach((l,k)=>{l.rotation.x=(k?1:-1)*a;});if(moving)L.arms.forEach((l,k)=>{l.rotation.x=(k?-1:1)*a*.7;});}
+  /* ---- Fireworks. A rocket climbs with a trail of sparks, then bursts into a few hundred particles that slow with air
+     drag, fall under gravity, twinkle and fade: round peonies, drooping golden willows and flat rings. All particles live in
+     one additive Points object (the simulation also runs without one, for the headless tests). A brief glow marks each burst. ---- */
+  const fwSys={n:1400,pts:null,pos:null,col:null,vel:null,base:null,age:null,life:null,kind:null,trail:null,cursor:0,active:0,rockets:[],flashes:[],queue:[],bursts:{peony:0,willow:0,ring:0}};
+  const FW_COLOURS=['#ff4f5e','#ffd23f','#58c7ff','#7dff8a','#ffffff','#ff9f43','#c77dff'];
+  const fwRgb=h=>[parseInt(h.slice(1,3),16)/255,parseInt(h.slice(3,5),16)/255,parseInt(h.slice(5,7),16)/255];
+  function fwInit(g){
+    const n=fwSys.n;fwSys.pos=new Float32Array(n*3);fwSys.col=new Float32Array(n*3);fwSys.vel=new Float32Array(n*3);fwSys.base=new Float32Array(n*3);
+    fwSys.age=new Float32Array(n).fill(9);fwSys.life=new Float32Array(n).fill(0);fwSys.kind=new Uint8Array(n);fwSys.trail=new Float32Array(n);
+    fwSys.cursor=0;fwSys.active=0;fwSys.rockets=[];fwSys.flashes=[];fwSys.queue=[];fwSys.pts=null;
+    for(let i=0;i<n;i++)fwSys.pos[i*3+1]=-50;
+    if(THREE.Points&&THREE.BufferGeometry&&THREE.BufferAttribute&&typeof document!=='undefined'){
+      const geometry=new THREE.BufferGeometry();
+      geometry.setAttribute('position',new THREE.BufferAttribute(fwSys.pos,3));geometry.setAttribute('color',new THREE.BufferAttribute(fwSys.col,3));
+      const c=document.createElement('canvas');c.width=c.height=64;const p=c.getContext('2d'),gr=p.createRadialGradient(32,32,0,32,32,32);
+      gr.addColorStop(0,'rgba(255,255,255,1)');gr.addColorStop(.25,'rgba(255,255,255,.75)');gr.addColorStop(.6,'rgba(255,255,255,.18)');gr.addColorStop(1,'rgba(255,255,255,0)');p.fillStyle=gr;p.fillRect(0,0,64,64);
+      const pts=new THREE.Points(geometry,new THREE.PointsMaterial({map:new THREE.CanvasTexture(c),size:.26,vertexColors:true,transparent:true,depthWrite:false,blending:THREE.AdditiveBlending,sizeAttenuation:true}));
+      pts.frustumCulled=false;g.add(pts);fwSys.pts=pts;
+    }
+    // soft flashes, one per burst in flight
+    for(let k=0;k<3;k++){
+      const m=new THREE.Mesh(geo('sphere',.5),new THREE.MeshBasicMaterial({color:'#ffffff',transparent:true,opacity:0,depthWrite:false,blending:THREE.AdditiveBlending}));
+      m.frustumCulled=false;m.visible=false;g.add(m);fwSys.flashes.push({m,t:9,x:0,y:0,z:0,col:'#ffffff'});
+    }
+  }
+  function fwEmit(x,y,z,vx,vy,vz,life,rgb,kind,trail=0){
+    const S=fwSys,n=S.n;
+    for(let k=0;k<n;k++){
+      const i=(S.cursor+k)%n;
+      if(S.age[i]<S.life[i])continue;
+      S.cursor=(i+1)%n;S.age[i]=0;S.life[i]=life;S.kind[i]=kind;S.trail[i]=trail;
+      S.pos[i*3]=x;S.pos[i*3+1]=y;S.pos[i*3+2]=z;S.vel[i*3]=vx;S.vel[i*3+1]=vy;S.vel[i*3+2]=vz;
+      S.base[i*3]=rgb[0];S.base[i*3+1]=rgb[1];S.base[i*3+2]=rgb[2];S.active++;return i;
+    }
+    return -1;
+  }
+  function fwBurst(x,y,z,pattern,colHex){
+    const S=fwSys,main=fwRgb(colHex),white=[1,1,1],gold=[1,.78,.4];
+    S.bursts[pattern]++;
+    if(pattern==='willow'){
+      for(let i=0;i<105;i++){const a=Math.random()*TAU,u=Math.random()*2-1,r=Math.sqrt(1-u*u),sp=1.25+Math.random()*.5;
+        fwEmit(x,y,z,Math.cos(a)*r*sp,u*sp*.85,Math.sin(a)*r*sp,1.9+Math.random()*.5,Math.random()<.85?gold:white,3,.55);}
+    }else if(pattern==='ring'){
+      const nx=Math.random()*2-1,ny=Math.random()*2-1,nz=Math.random()*2-1,nl=Math.hypot(nx,ny,nz)||1;
+      let ux=-ny,uy=nx,uz=0;const ul=Math.hypot(ux,uy,uz)||1;ux/=ul;uy/=ul;
+      const vx=(ny/nl)*uz-(nz/nl)*uy,vy=(nz/nl)*ux-(nx/nl)*uz,vz=(nx/nl)*uy-(ny/nl)*ux;
+      for(let i=0;i<84;i++){const a=i/84*TAU,sp=2.05+Math.random()*.1,c=Math.cos(a),sn=Math.sin(a);
+        fwEmit(x,y,z,(ux*c+vx*sn)*sp,(uy*c+vy*sn)*sp,(uz*c+vz*sn)*sp,1.5+Math.random()*.3,i%2?main:white,0,.12);}
+    }else{
+      const second=fwRgb(FW_COLOURS[Math.floor(Math.random()*FW_COLOURS.length)]);
+      for(let i=0;i<165;i++){const a=Math.random()*TAU,u=Math.random()*2-1,r=Math.sqrt(1-u*u),sp=1.95+Math.random()*.5;
+        fwEmit(x,y,z,Math.cos(a)*r*sp,u*sp,Math.sin(a)*r*sp,1.6+Math.random()*.6,Math.random()<.22?second:Math.random()<.12?white:main,0,.14);}
+    }
+    // the bright flash of the burst
+    const f=fwSys.flashes.find(q=>q.t>=.3)||fwSys.flashes[0];f.t=0;f.x=x;f.y=y;f.z=z;f.m.material.color.set?.(colHex);f.m.position.set(x,y,z);f.m.visible=true;
+    sound('firework');
+  }
+  function fwLaunch(x,z){
+    const colHex=FW_COLOURS[Math.floor(Math.random()*FW_COLOURS.length)],r=Math.random();
+    fwSys.rockets.push({x,y:.3,z,vy:3.4+Math.random()*.5,vx:(Math.random()-.5)*.1,vz:(Math.random()-.5)*.1,peak:3.3+Math.random()*1.3,col:colHex,pattern:r<.2?'ring':r<.5?'willow':'peony'});
+    sound('whistle');
+  }
+  function fwStep(dt,t){
+    const S=fwSys;
+    for(const q of S.queue.slice()){q.at-=dt;if(q.at<=0){S.queue.splice(S.queue.indexOf(q),1);fwLaunch(q.x,q.z);}}
+    for(const R of S.rockets.slice()){
+      R.vy-=1.5*dt;R.x+=R.vx*dt;R.y+=R.vy*dt;R.z+=R.vz*dt;
+      for(let k=0;k<3;k++)fwEmit(R.x,R.y,R.z,(Math.random()-.5)*.14,-.18-Math.random()*.2,(Math.random()-.5)*.14,.35+Math.random()*.35,Math.random()<.5?[1,.72,.35]:[1,.55,.2],1);
+      fwEmit(R.x,R.y,R.z,0,0,0,.07,[1,.95,.85],2);
+      if(R.vy<.5||R.y>=R.peak){S.rockets.splice(S.rockets.indexOf(R),1);fwBurst(R.x,R.y,R.z,R.pattern,R.col);more.bursts++;}
+    }
+    const col=S.col,pos=S.pos,vel=S.vel,base=S.base;
+    for(let i=0;i<S.n;i++){
+      if(S.age[i]>=S.life[i]){if(S.life[i]>0){S.life[i]=0;S.age[i]=9;pos[i*3+1]=-50;col[i*3]=col[i*3+1]=col[i*3+2]=0;S.active--;}continue;}
+      const k=S.kind[i];S.age[i]+=dt;
+      if(S.age[i]>=S.life[i]){S.life[i]=0;S.age[i]=9;pos[i*3+1]=-50;col[i*3]=col[i*3+1]=col[i*3+2]=0;S.active--;continue;}
+      const u=S.age[i]/S.life[i];
+      if(k!==2){
+        const drag=Math.exp(-(k===0?1.15:k===3?1.5:2.4)*dt);vel[i*3]*=drag;vel[i*3+1]=vel[i*3+1]*drag-(k===3?1.25:k===0?.78:.2)*dt;vel[i*3+2]*=drag;
+        pos[i*3]+=vel[i*3]*dt;pos[i*3+1]+=vel[i*3+1]*dt;pos[i*3+2]+=vel[i*3+2]*dt;
+        if((k===0||k===3)&&S.trail[i]>0&&Math.random()<S.trail[i]*dt*18&&u<.8)fwEmit(pos[i*3],pos[i*3+1],pos[i*3+2],vel[i*3]*.08,vel[i*3+1]*.08,vel[i*3+2]*.08,.26+Math.random()*.1,[base[i*3]*.8,base[i*3+1]*.7,base[i*3+2]*.6],1);
+      }
+      let b=Math.pow(1-u,k===1?1.1:1.5);
+      if((k===0||k===3)&&u>.5)b*=.55+.45*Math.sin(t*41+i*1.9);   // twinkle as they die
+      if(k===0&&u<.12)b*=1.5;                                   // a hot start
+      col[i*3]=base[i*3]*b;col[i*3+1]=base[i*3+1]*b;col[i*3+2]=base[i*3+2]*b;
+    }
+    for(const f of S.flashes){if(f.t>=.3){f.m.visible=false;continue;}f.t+=dt;const q=f.t/.3;f.m.material.opacity=.55*(1-q)*(1-q);f.m.scale.setScalar(1.2+q*5.5);}
+    if(S.pts){S.pts.geometry.attributes.position.needsUpdate=true;S.pts.geometry.attributes.color.needsUpdate=true;}
+  }
   function createMore(){
-    const g=new THREE.Group();world.add(g);more.built=true;more.t=0;more.gulls=[];more.crowd=[];more.fw=[];more.parade=null;more.lamp=null;
+    const g=new THREE.Group();world.add(g);more.built=true;more.t=0;more.gulls=[];more.crowd=[];more.fw=[];fwSys.pts=null;more.parade=null;more.lamp=null;
     const base=.17;
     // --- the lamplighter (hidden until dusk) and the order he visits the lamps in
     const p=person({col:'#7a6a9a',skin:'#d8a77c',hair:'#333947',ph:7.7,x:5,y:5,hat:'cap'});p.scale.setScalar(CUTE*1.05);g.add(p);p.visible=false;p.userData.limbs.headPivot.scale.setScalar(HEAD_BIG);
@@ -4061,12 +4103,7 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
       sh.scale.setScalar(CUTE);sh.userData.limbs.headPivot.scale.setScalar(HEAD_BIG);g.add(sh);
       const hx=st.x+(k?.4:-.4),hz=st.y+.62;sh.position.set(hx,base,hz);sh.rotation.y=Math.PI;
       more.crowd.push({p:sh,x:hx,z:hz,ph:si+k,phase:k*2.1});}});
-    // --- fireworks pool: three bursts of 26 glowing sparks
-    for(let b=0;b<3;b++){
-      const matb=new THREE.MeshBasicMaterial({color:'#ffd23f',transparent:true,opacity:0,depthWrite:false,blending:THREE.AdditiveBlending});
-      const sparks=[];for(let i=0;i<30;i++){const m=new THREE.Mesh(geo('sphere',.055),matb);m.frustumCulled=false;m.visible=false;g.add(m);sparks.push({m,vx:0,vy:0,vz:0});}
-      more.fw.push({mat:matb,sparks,t:9,life:2.3,rocket:null});
-    }
+    fwInit(g);   // fireworks: rockets, bursts, trails (see the fireworks block above createMore)
   }
   function lampRoute(from,to){
     const pts=[],H=l=>l.along;let cur={x:from.x,z:from.z};
@@ -4102,12 +4139,7 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
     return true;
   }
   function burstFirework(x,y,z){
-    const f=more.fw.find(q=>q.t>=q.life);if(!f)return false;
-    const col=['#ffd23f','#ff6f91','#6fd0ff','#9cf08a','#ffffff','#ffa24a'][more.bursts++%6];
-    f.mat.color.set?f.mat.color.set(col):0;f.t=0;f.life=2.3;f.x=x;f.y=y;f.z=z;
-    f.sparks.forEach((s,i)=>{const a=Math.random()*TAU,u=Math.random()*2-1,r=Math.sqrt(1-u*u),sp=.55+Math.random()*.55;
-      s.vx=Math.cos(a)*r*sp;s.vy=u*sp;s.vz=Math.sin(a)*r*sp;s.m.position.set(x,y,z);s.m.visible=true;});
-    sound('firework');return true;
+    const r=Math.random();fwBurst(x,y,z,r<.2?'ring':r<.5?'willow':'peony',FW_COLOURS[more.bursts++%FW_COLOURS.length]);return true;
   }
   function updateMore(dt,dark){
     if(!more.built)return;
@@ -4169,13 +4201,9 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
       c.p.rotation.y=Math.PI+Math.sin(t*.35+c.phase)*.35;L.headPivot.rotation.x=u>.4?.3:0;
       L.arms[1].rotation.x=u>.7?-1.1:-.1;
     }
-    // fireworks after dark
-    if(dark>.6&&t>more.nextFw){more.nextFw=t+9+Math.random()*9;const n=2+Math.floor(Math.random()*2);for(let i=0;i<n;i++)burstFirework(4+Math.random()*10,1.9+Math.random()*1.0,2+Math.random()*11);}
-    for(const f of more.fw){
-      if(f.t>=f.life)continue;f.t+=dt;const k=f.t/f.life;f.mat.opacity=Math.max(0,1-k*k);
-      for(const s of f.sparks){s.vy-=dt*.35;s.m.position.x+=s.vx*dt;s.m.position.y+=s.vy*dt;s.m.position.z+=s.vz*dt;s.m.scale.setScalar(Math.max(.2,1-k*.8));}
-      if(f.t>=f.life)for(const s of f.sparks)s.m.visible=false;
-    }
+    // fireworks after dark: now and then a salvo of two to four rockets, a moment apart
+    if(dark>.6&&t>more.nextFw){more.nextFw=t+10+Math.random()*10;const n=2+Math.floor(Math.random()*3);for(let i=0;i<n;i++)fwSys.queue.push({at:i*(.8+Math.random()*1.2),x:3.5+Math.random()*11,z:2.5+Math.random()*11});}
+    fwStep(dt,t);
   }
 
   /* ---- Stage 2: life that follows the weather and the clock, and more to touch. ---- */
@@ -5239,11 +5267,15 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
     // Continuous color-temperature progression (no dusk hue snapping).
     // Daylight, shadow fill, haze and lanterns now belong to one exposure.
     const dusk=dark*dark*(3-2*dark);
-    hemisphere.intensity=.86-dark*.3;
-    sun.intensity=2.6-dark*1.9;
+    // Real night: past dusk the light turns cool and dim (moonlight), the sky goes deep blue and the exposure drops, so the
+    // lit windows, lamps and signals carry the scene instead of a daylight scene with a bluer tint.
+    const deep=THREE.MathUtils.clamp((dark-.3)/.6,0,1),night=deep*deep*(3-2*deep);
+    hemisphere.intensity=.86-dark*.2-night*.4;
+    hemisphere.color?.set?.(tint('#fff1dc','#7f9ee0',night));hemisphere.groundColor?.set?.(tint('#6f8580','#1b2846',night));
+    sun.intensity=2.6-dark*1.9-night*.3;
     rim.intensity=.39+dark*.06;
-    sun.color.set(tint('#ffd7a4','#ee9c70',dusk));
-    rim.color.set(tint('#c0dedb','#a8b6cb',dusk));
+    sun.color.set(tint(tint('#ffd7a4','#ee9c70',dusk),'#8fa9ee',night*.92));
+    rim.color.set(tint(tint('#c0dedb','#a8b6cb',dusk),'#6f8bd0',night));
     for(const lantern of plazaLights)lantern.intensity=dark*7.2;
     {const under=sunK;sun.intensity*=under;hemisphere.intensity*=.82+under*.18;
      if(clockMs()<flashUntil){hemisphere.intensity+=2.6;}}
@@ -5255,9 +5287,10 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
         dark*(pane.userData?.warm?1.02:.66);
     }
     {const sky=tint('#cee9f5','#91a9c5',dusk);   // an overcast sky under rain, storm, fog or snow, eased in and out
-     scene.background.set(grayK>.01?tint(sky,grayCol,grayK):sky);}
+     const nightSkyCol=tint(sky,'#0b1630',night*.97);
+     scene.background.set(grayK>.01?tint(nightSkyCol,tint(grayCol,'#1a2338',night),grayK):nightSkyCol);}
     scene.fog.color.copy(scene.background);
-    renderer.toneMappingExposure=.98-dark*.12;
+    renderer.toneMappingExposure=.98-dark*.12-night*.14;
     lens?.setDusk(dark);
     for(const p of materialCache.values()){
       if(p.emissive && p.emissive.r>.03) p.emissiveIntensity=.14+dark*1.25;
@@ -5438,8 +5471,8 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
     stage3Stats:()=>({built:bus3.built,stops:bus3.stops.length,waiting:bus3.people.filter(p=>p.state==='wait').length,aboard:bus3.people.filter(p=>p.state==='aboard').length,boarded:bus3.boarded,alighted:bus3.alighted,boards:bus3.boards,steam:bus3.steam.length,tufts:bus3.tufts,flowers:bus3.flowers,patches:bus3.patches}),
     stage2Stats:()=>({built:live2.built,puddles:live2.puddles.filter(p=>p.puddle.visible).length,snow:+live2.snowK.toFixed(2),snowVisible:!!live2.snowman?.visible,watchman:!!live2.watch?.p.visible,cats:live2.cats.filter(c=>c.g.visible).length,boards:live2.boards.map(b=>b.shut.visible?'closed':'open'),hits:live2.hits,kiteVisible:life.kite?.kid.visible,playVisible:life.play?.sk.visible,fisherVisible:life.fisher?.p.visible,boatVisible:life.boat?.g.visible}),
     setWeatherForTest:k=>{weatherKind=k;},touch2:(x,y)=>touch2(x,y),
-    moreStats:()=>({built:more.built,phase:more.phase,lit:lanterns.filter(l=>l.lit).length,lanterns:lanterns.length,parade:!!more.parade,paradesRun:more.paradesRun,gulls:more.gulls.map(x=>x.state),crowd:more.crowd.length,sparks:more.fw.filter(f=>f.t<f.life).length,bursts:more.bursts,lamplighter:more.lamp?.p.visible}),
-    startParade:()=>startParade(),burstFirework:(x,y,z)=>burstFirework(x,y,z),
+    moreStats:()=>({built:more.built,phase:more.phase,lit:lanterns.filter(l=>l.lit).length,lanterns:lanterns.length,parade:!!more.parade,paradesRun:more.paradesRun,gulls:more.gulls.map(x=>x.state),crowd:more.crowd.length,sparks:fwSys.active,rockets:fwSys.rockets.length,fwBursts:{...fwSys.bursts},bursts:more.bursts,lamplighter:more.lamp?.p.visible}),
+    startParade:()=>startParade(),burstFirework:(x,y,z)=>burstFirework(x,y,z),launchFirework:(x,z)=>{fwLaunch(x,z);return true;},
     lifeStats:()=>({built:life.built,boatX:life.boat?.x,playground:!!life.play,at:{play:life.play&&[life.play.x,life.play.z],kite:life.kite&&[life.kite.x,life.kite.z],flock:[life.flock.x,life.flock.z],fisher:life.fisher&&[life.fisher.x,life.fisher.z]},kite:!!life.kite,birds:life.birds.map(b=>b.state),scatters:life.scatters,catches:life.catches}),
     scatterBirds:(x,z,r)=>scatterBirds(x,z,r),
     groundPoint:(cx,cy)=>groundAt(cx,cy),

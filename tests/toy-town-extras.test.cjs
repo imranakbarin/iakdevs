@@ -131,6 +131,10 @@ assert.match(sim, /const rushFactor = \(\) =>/); assert.match(sim, /carsWanted =
 assert.match(sim, /'ducks'\);/); assert.match(sim, /feedDucks\(m\.x, 14\); feedings\+\+/, 'now and then a resident walks to the river and feeds the ducks');
 assert.match(sim, /if \(m\.type === 'person' && !m\.kind && wet\) want \*= 1\.18;/); assert.match(sim, /Math\.abs\(m\.x - 9\) < 3\.1 && Math\.abs\(m\.y - 9\) < 3\.1\) want \*= \.78/, 'walkers hurry in the rain and cars ease off in bad weather and near the plaza');
 assert.match(view, /crumbsAt\(ref\.x,ref\.y<14\?13\.25:14\.75\)/, 'the duck feeder\'s crumbs are drawn'); assert.match(view, /A small walk \/ don't-walk lamp/, 'signals have small pedestrian lamps');
+assert.match(soundSrc, /whistle: \(\) =>/, 'a rocket whistles as it climbs');
+assert.match(view, /function fwStep\(dt,t\)/); assert.match(view, /pattern:r<\.2\?'ring':r<\.5\?'willow':'peony'/, 'fireworks are rockets with trails that burst into peonies, willows and rings of fading, twinkling sparks');
+assert.match(view, /const deep=THREE\.MathUtils\.clamp\(\(dark-\.3\)\/\.6,0,1\)/); assert.match(view, /tint\(sky,'#0b1630',night\*\.97\)/, 'night is a deep-blue sky with cool moonlight and a lower exposure, not a tinted day');
+assert.match(view, /function cityCentre\(\)/); assert.match(view, /squash:CENTRE_SQUASH/, 'the city-centre buildings are squashed low');
 assert.match(view, /function moodOf\(ref\)/, 'tapping a resident shows a name and a mood');
 assert.match(fs.readFileSync(path.join(root, 'index.html'), 'utf8'), /keep=\['weather','fps','festival','season','lite'\]/, 'the main page passes ?season and ?lite through');
 // Nobody stays stuck, and walkers do things of their own: several layouts, six town-minutes each.

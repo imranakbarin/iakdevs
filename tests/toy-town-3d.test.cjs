@@ -116,7 +116,8 @@ assert.match(moduleCode,/districtTool=tool/,
 assert.match(moduleCode,/const sky=tint\('#cee9f5'/,
   'the entire town shares a clearer, colorful daylight sky');
 assert.match(moduleCode,/kind:'umbrella'/,'visible animated café canopies add a lively street silhouette');
-assert.match(moduleCode,/kind:'bunting'/,'real suspended flags sway over the plaza');
+assert.doesNotMatch(moduleCode,/ambient\.push\(\{kind:'bunting'/,'the flags and wires that crossed the square are retired');
+assert.match(moduleCode,/function cityCentre\(\)/,'the plaza is a paved city centre');
 assert.doesNotMatch(moduleCode,/ambient\.push\(\{kind:'pinwheel'/,'the pinwheels that crowded the square are retired');
 assert.doesNotMatch(moduleCode,/ambient\.push\(\{kind:'balloon'/,'and so are the tethered balloons');
 assert.match(moduleCode,/plazaInlay=true/,'colorful authored art grounds the central plaza');
@@ -130,8 +131,7 @@ assert.match(moduleCode,/function gardenIsland\(/,
 assert.match(moduleCode,/const cafeSet=/,'the village includes modeled cafe seating');
 assert.doesNotMatch(moduleCode,/const archCurve=new THREE.CatmullRomCurve3/,
   'the rose arbour in front of the plaza is retired so the square stays readable');
-assert.match(moduleCode,/const strings=\[\[anchors\[0\],anchors\[1\]\]/,
-  'restrained parallel festoon strands connect actual supports');
+assert.match(moduleCode,/const CENTRE_SQUASH=\.6;/,'the buildings round the city centre are low');
 assert.match(moduleCode,/createStorybookVillage\(\);/,
   'complete village set is mounted during world rebuild');
 assert.match(moduleCode,/groundPiece\(3\.96,3\.96,grassMaterial/,'central landscaping is one courtyard not sixteen tiles');
@@ -158,7 +158,7 @@ assert.match(moduleCode,/eye.scale.y=blink/,'eyelids blink without a separate an
 assert.match(html,/type="importmap"/);
 assert.match(html,/three@0\.187\.0\/build\/three\.module\.js/);
 assert.match(html,/three@0\.187\.0\/examples\/jsm\//);
-assert.match(html,/toy-town-3d\.js\?v=75/);
+assert.match(html,/toy-town-3d\.js\?v=76/);
 assert.match(moduleCode,/ref\.path&&Number\.isFinite\(ref\.walkFacing\)/, 'routed people use a real diagonal heading instead of a cardinal-only pose');
 assert.match(html,/toy-town-landmarks\.js\?v=7/,'the independent models are requested alongside Three');
 assert.match(html,/buildLandmark:landmarks\.buildLandmark/,
@@ -168,7 +168,7 @@ const classicScript=html.match(/src="assets\/toy-town\.js\?v=\d+"/);
 assert.ok(classicScript&&
   html.indexOf(classicScript[0])<html.indexOf("import('three')"),
   'the actual versioned classic script always loads before WebGL');
-assert.match(page,/toy-town\.html\?v=86&embed=1/);
+assert.match(page,/toy-town\.html\?v=87&embed=1/);
 assert.match(fs.readFileSync(path.join(root,'assets/toy-town.js'),'utf8'),
   /targetX=clamp\(\.08,p\.x,17\.92\)/,
   'scripted paths are clamped at the endpoint rather than freezing outside town');
@@ -338,7 +338,7 @@ const gardenRooms=api.scene.children.flatMap(node=>node.children||[])
   .filter(node=>node.userData?.districtGarden);
 assert.equal(gardenRooms.length,api.getStats().districtGardenRooms,
   'all planted courts are real grounded scene geometry');
-assert.equal(api.getStats().festoonBulbs,14,'two suspended spans contain 14 miniature lamps');
+assert.equal(api.getStats().festoonBulbs,14,'four lamp posts (three bulbs each) and the fountain (two) hold 14 warm bulbs');
 // The ring railway: a station, a round-faced steam train with three carriages, a tunnel, passengers who board and get off.
 {
   api.setFreight(0);   // keep the passenger train running for the stop/passenger checks below
@@ -532,8 +532,8 @@ assert.match(moduleCode,/const focusWeight=THREE\.MathUtils\.clamp/,
   'compositional framing is removed smoothly as the user pans away');
 assert.match(moduleCode,/function composeSecondaryBuilding\(/,
   'secondary houses receive bounded, deterministic street variation');
-assert.match(moduleCode,/const anchors=\[\[7\.56,9\.60\]/,
-  'lower courtyard lights are positioned away from storefront signage');
+assert.match(moduleCode,/for\(const \[lx,lz\] of \[\[7\.22,8\.30\]/,
+  'the city-centre lamp posts stand at the square\'s edges, away from the walking corridors and the storefront signage');
 assert.match(moduleCode,/function archedInset\(/,'doors/windows have dimensional arches');
 assert.match(moduleCode,/function turret\(/,'one hero cottage has its own curved tower');
 assert.match(moduleCode,/function sideCottageWing\(/,'another hero cottage has a secondary roof and wing');
