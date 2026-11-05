@@ -121,7 +121,8 @@ assert.match(moduleCode,/function cityCentre\(\)/,'the plaza is a paved city cen
 assert.doesNotMatch(moduleCode,/ambient\.push\(\{kind:'pinwheel'/,'the pinwheels that crowded the square are retired');
 assert.doesNotMatch(moduleCode,/ambient\.push\(\{kind:'balloon'/,'and so are the tethered balloons');
 assert.match(moduleCode,/plazaInlay=true/,'colorful authored art grounds the central plaza');
-assert.match(moduleCode,/kind:'butterfly'/,'butterflies animate over planted areas');
+assert.doesNotMatch(moduleCode,/ambient\.push\(\{kind:'butterfly'/,'the butterflies that hovered over bare paving are retired');
+assert.match(moduleCode,/function boardTexture\(label,ink,paper\)/,'name boards are painted plates with borders, studs and ornaments');
 assert.match(html,/saturate\(1\.42\) contrast\(1\.11\)/,
   'mobile WebGL receives a coherent richer color grade');
 assert.doesNotMatch(html,/sepia\(|nograde/,'no cinematic filter');
@@ -134,7 +135,7 @@ assert.doesNotMatch(moduleCode,/const archCurve=new THREE.CatmullRomCurve3/,
 assert.match(moduleCode,/const CENTRE_SQUASH=\.6;/,'the buildings round the city centre are low');
 assert.match(moduleCode,/createStorybookVillage\(\);/,
   'complete village set is mounted during world rebuild');
-assert.match(moduleCode,/groundPiece\(3\.96,3\.96,grassMaterial/,'central landscaping is one courtyard not sixteen tiles');
+assert.doesNotMatch(moduleCode,/groundPiece\(3\.96,3\.96,grassMaterial/,'the grass courtyard slab is gone: the heart of the town is a paved city centre');
 assert.doesNotMatch(moduleCode,/groundPiece\(\.97,\.97,middle/,'the old rigid 4 by 4 lawn patchwork is removed');
 assert.match(moduleCode,/function groundingShadow\(/,'architecture and trees have soft contact occlusion');
 assert.match(moduleCode,/const studioMat=/,'model sits on a photographed gradient table');
@@ -158,7 +159,7 @@ assert.match(moduleCode,/eye.scale.y=blink/,'eyelids blink without a separate an
 assert.match(html,/type="importmap"/);
 assert.match(html,/three@0\.187\.0\/build\/three\.module\.js/);
 assert.match(html,/three@0\.187\.0\/examples\/jsm\//);
-assert.match(html,/toy-town-3d\.js\?v=76/);
+assert.match(html,/toy-town-3d\.js\?v=77/);
 assert.match(moduleCode,/ref\.path&&Number\.isFinite\(ref\.walkFacing\)/, 'routed people use a real diagonal heading instead of a cardinal-only pose');
 assert.match(html,/toy-town-landmarks\.js\?v=7/,'the independent models are requested alongside Three');
 assert.match(html,/buildLandmark:landmarks\.buildLandmark/,
@@ -168,7 +169,7 @@ const classicScript=html.match(/src="assets\/toy-town\.js\?v=\d+"/);
 assert.ok(classicScript&&
   html.indexOf(classicScript[0])<html.indexOf("import('three')"),
   'the actual versioned classic script always loads before WebGL');
-assert.match(page,/toy-town\.html\?v=87&embed=1/);
+assert.match(page,/toy-town\.html\?v=88&embed=1/);
 assert.match(fs.readFileSync(path.join(root,'assets/toy-town.js'),'utf8'),
   /targetX=clamp\(\.08,p\.x,17\.92\)/,
   'scripted paths are clamped at the endpoint rather than freezing outside town');
@@ -250,7 +251,7 @@ const THREE={
 };
 const win={WebGL2RenderingContext:function(){},innerWidth:390,innerHeight:844,
   devicePixelRatio:3,matchMedia:()=>({matches:false})};
-const canvas2d={fillText(){},clearRect(){},beginPath(){},roundRect(){},ellipse(){},arc(){},fill(){stats.paintOperations++;},stroke(){},fillRect(){stats.paintOperations++;},moveTo(){},lineTo(){},closePath(){},bezierCurveTo(){},createLinearGradient:()=>({addColorStop(){}}),createRadialGradient:()=>({addColorStop(){}})};
+const canvas2d={fillText(){},clearRect(){},beginPath(){},roundRect(){},ellipse(){},arc(){},fill(){stats.paintOperations++;},stroke(){},fillRect(){stats.paintOperations++;},moveTo(){},lineTo(){},closePath(){},bezierCurveTo(){},createLinearGradient:()=>({addColorStop(){}}),createRadialGradient:()=>({addColorStop(){}}),save(){},restore(){},clip(){},translate(){},scale(){},strokeRect(){}};
 const townCanvas={style:{opacity:'1'}};
 const host={style:{display:'none'},clientWidth:390,clientHeight:844,getBoundingClientRect(){return {left:0,top:0,width:390,height:844};},
   appendChild(o){this.child=o;}};
@@ -493,8 +494,8 @@ assert.match(moduleCode,/const variation=\(row\*13\+col\*17\)%7/,
   'clay roof does not use an obvious large-color checkerboard');
 assert.match(moduleCode,/Miniature gabled porch roof/,
   'porch has a pitched profile rather than a flat canopy');
-assert.match(moduleCode,/Hand-set pavers follow the curved perimeter/,
-  'courtyard pavers follow the new oval stone piazza instead of a rigid grid');
+assert.doesNotMatch(moduleCode,/Hand-set pavers follow the curved perimeter/,
+  'the old oval of pavers and grass pockets is replaced by the flat paved city centre');
 assert.match(moduleCode,/function plaster\(color\)/,'walls use grainy plaster instead of plain plastic');
 assert.match(moduleCode,/function grassMaterial\(/,'garden uses a reusable painted grass texture');
 assert.match(moduleCode,/function roofCurve\(/,'story book roofs use a real curved profile');
@@ -516,7 +517,7 @@ assert.match(moduleCode,/storybook-roof:/,'the sculpted roof is cached for repea
 assert.match(moduleCode,/rounded suspended scallops/i,'shop awnings use dimensional fabric rather than bars');
 assert.match(moduleCode,/roots taper out into the lawn/i,'tree trunks have naturally grounded roots');
 assert.match(moduleCode,/grassMaterial\('#b9cba7',10\)/,'cutaway meadow has textured, continuous grass');
-assert.match(moduleCode,/paver.rotation.y=/,'stone paths have irregular handmade placement');
+assert.match(moduleCode,/terracotta=mat\('#d9a276'/,'the retired paver ring is replaced by one flat paved square with a framed inlay');
 assert.match(moduleCode,/23-closeness\*11\.5/,'close zoom lowers the eye to show character faces');
 assert.match(moduleCode,/new THREE\.PerspectiveCamera\(35/,
   'the photographic city camera has real depth and vanishing lines');
@@ -552,7 +553,7 @@ assert.match(moduleCode,/createLandscapeComposition\(\);/,
   'terrain composition is constructed alongside the roads on rebuild');
 assert.match(moduleCode,/function contour\(/,
   'free parcels have organically shaped 3D landscape contours');
-assert.match(moduleCode,/const piazzaShape=new THREE.Shape\(\)/,
+assert.doesNotMatch(moduleCode,/const piazzaShape=new THREE.Shape\(\)/,
   'the center is an irregular rounded piazza, not a square concrete slab');
 assert.match(moduleCode,/Warm rubbed cobblestones replace/,
   'all roads use hand-weathered warm stone, not highway-gray asphalt');
