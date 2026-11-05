@@ -278,17 +278,60 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
     // Trim along the canopy edge reads as one continuous stitched seam.
     box(parent,w,.014,.035,'#f5e2c4',x,y-.050,z+d*.51);
   };
+  // Name boards: painted plates with a coloured face, a double border, studs, ornaments and a carved-looking serif lettering; known
+  // shops get their own colours (warm terracotta for the bakery, deep green and gold for the books, a market-stall yellow...).
+  const BOARDS={
+    'BAKERY':{bg:['#dc875f','#b4603c'],edge:'#f6e0bd',ink:'#fff4e0',deco:'wheat'},
+    'BOOK NOOK':{bg:['#3f7d72','#2a5a52'],edge:'#e0bf6a',ink:'#fbeeb8',deco:'book'},
+    'MARKET':{bg:['#f2c05a','#dd9a35'],edge:'#8a4b22',ink:'#5b2c10',deco:'stripes'},
+    'FIRE':{bg:['#c85044','#9c352c'],edge:'#f0c36a',ink:'#fff0d0'},
+    'POST':{bg:['#4f83b4','#35618e'],edge:'#f3e2b3',ink:'#ffffff'},
+    'GARDEN':{bg:['#6aa56a','#4a8350'],edge:'#f3e2b3',ink:'#fffbe8'},
+    'BUS':{bg:['#3b8d96','#2a6d77'],edge:'#f3e2b3',ink:'#ffffff'},
+    'TOWN TIMES':{bg:['#f5ecd2','#e4d5b1'],edge:'#5a4b36',ink:'#3a2e22'},
+    'TOY TOWN':{bg:['#2f7766','#215a4d'],edge:'#e4c66a',ink:'#fff3c9',deco:'stars'},
+    'BUILDING SITE':{bg:['#f4c542','#e0a800'],edge:'#2b2b2b',ink:'#2b2b2b',deco:'hazard'}
+  };
+  function boardTexture(label,ink,paper){
+    const st=BOARDS[label]||(label==='OPEN'||label==='CLOSED'?{bg:[paper,paper],edge:ink,ink}:{bg:[paper,tint(paper,'#8a6f4e',.28)],edge:tint(ink,'#2a2118',.35),ink});
+    const cvs=document.createElement('canvas');cvs.width=512;cvs.height=192;
+    const cx=cvs.getContext('2d');
+    cx.fillStyle='rgba(40,30,20,.22)';cx.beginPath();cx.roundRect(10,14,494,170,34);cx.fill();                       // a soft drop shadow
+    const g=cx.createLinearGradient(0,6,0,180);g.addColorStop(0,st.bg[0]);g.addColorStop(1,st.bg[1]);
+    cx.fillStyle=g;cx.beginPath();cx.roundRect(6,6,494,170,34);cx.fill();
+    cx.strokeStyle=st.edge;cx.lineWidth=9;cx.stroke();
+    cx.strokeStyle=st.edge;cx.globalAlpha=.65;cx.lineWidth=3;cx.beginPath();cx.roundRect(22,22,462,138,22);cx.stroke();cx.globalAlpha=1;
+    cx.fillStyle=st.edge;for(const [sx,sy] of [[40,40],[466,40],[40,142],[466,142]]){cx.beginPath();cx.arc(sx,sy,6,0,Math.PI*2);cx.fill();}   // studs
+    if(st.deco==='stripes'){for(let i=0;i<9;i++){cx.fillStyle=i%2?'#fff3d4':'#c9482f';cx.fillRect(36+i*49,24,49,12);}}
+    if(st.deco==='hazard'){cx.save();cx.beginPath();cx.roundRect(22,22,462,138,22);cx.clip();cx.fillStyle='#2b2b2b';for(let i=-2;i<14;i++){cx.beginPath();cx.moveTo(i*44,150);cx.lineTo(i*44+22,150);cx.lineTo(i*44+44,176);cx.lineTo(i*44+22,176);cx.fill();}cx.restore();}
+    cx.fillStyle=st.edge;
+    const diamond=(x,y,r)=>{cx.beginPath();cx.moveTo(x,y-r);cx.lineTo(x+r,y);cx.lineTo(x,y+r);cx.lineTo(x-r,y);cx.closePath();cx.fill();};
+    if(st.deco==='wheat'){for(const sd of [-1,1])for(let k=0;k<4;k++){cx.beginPath();cx.ellipse(256+sd*(188-k*5),58+k*17,15,6,sd*(-.9+k*.1),0,Math.PI*2);cx.fill();}}
+    else if(st.deco==='book'){for(const sd of [-1,1]){cx.fillRect(256+sd*196-14,66,28,36);cx.fillStyle=st.bg[1];cx.fillRect(256+sd*196-1,66,2,36);cx.fillStyle=st.edge;}}
+    else if(st.deco==='stars'){for(const sd of [-1,1])diamond(256+sd*190,88,12);}
+    else if(!st.deco){for(const sd of [-1,1]){diamond(256+sd*205,88,9);diamond(256+sd*226,88,5);}}
+    cx.textAlign='center';cx.textBaseline='middle';cx.font='italic 700 68px Georgia,"Times New Roman",serif';
+    if('letterSpacing' in cx)cx.letterSpacing=label.length>8?'1px':'4px';
+    cx.fillStyle='rgba(0,0,0,.30)';cx.fillText(label,259,95,330);                                                  // the lettering stands a little proud
+    cx.fillStyle=st.ink;cx.fillText(label,256,91,330);
+    const tx=new THREE.CanvasTexture(cvs);tx.colorSpace=THREE.SRGBColorSpace;return tx;
+  }
   function sign(parent, label, x,y,z,w, ink='#575049',paper='#fff0d0'){
-    const cvs=document.createElement('canvas');cvs.width=256;cvs.height=96;
-    const cx=cvs.getContext('2d');cx.fillStyle=paper;
-    cx.beginPath();cx.roundRect(3,4,250,88,16);cx.fill();
-    cx.strokeStyle='#b9a584';cx.lineWidth=5;cx.stroke();
-    cx.fillStyle=ink;cx.textAlign='center';cx.textBaseline='middle';
-    cx.font='bold 33px Georgia,serif';cx.fillText(label,128,49,238);
-    const tx=new THREE.CanvasTexture(cvs);tx.colorSpace=THREE.SRGBColorSpace;
-    const mesh=object(parent,geo('plane',w,w*96/256),new THREE.MeshBasicMaterial({map:tx,transparent:true,side:THREE.DoubleSide}),x,y,z,false);
+    const tx=boardTexture(label,ink,paper);
+    const mesh=object(parent,geo('plane',w,w*192/512),new THREE.MeshBasicMaterial({map:tx,transparent:true,side:THREE.DoubleSide}),x,y,z,false);
     mesh.userData.ownedTexture=tx;
     return mesh;
+  }
+  // A painted arrow board for a signpost: points along +x (dir 1) or -x (dir -1).
+  function arrowBoard(parent,label,x,y,z,w,dir,col){
+    const cvs=document.createElement('canvas');cvs.width=512;cvs.height=160;const cx=cvs.getContext('2d');
+    cx.save();if(dir<0){cx.translate(512,0);cx.scale(-1,1);}
+    cx.fillStyle='rgba(40,30,20,.2)';cx.beginPath();cx.moveTo(14,26);cx.lineTo(380,26);cx.lineTo(500,84);cx.lineTo(380,142);cx.lineTo(14,142);cx.closePath();cx.fill();
+    cx.fillStyle=col;cx.strokeStyle='#fbf0d6';cx.lineWidth=9;cx.beginPath();cx.moveTo(8,18);cx.lineTo(374,18);cx.lineTo(496,76);cx.lineTo(374,134);cx.lineTo(8,134);cx.closePath();cx.fill();cx.stroke();
+    cx.restore();
+    cx.textAlign='center';cx.textBaseline='middle';cx.font='italic 700 62px Georgia,serif';cx.fillStyle='#fffaf0';cx.fillText(label,dir>0?212:300,80,320);
+    const tx=new THREE.CanvasTexture(cvs);tx.colorSpace=THREE.SRGBColorSpace;
+    const m=object(parent,geo('plane',w,w*160/512),new THREE.MeshBasicMaterial({map:tx,transparent:true,side:THREE.DoubleSide}),x,y,z,false);m.userData.ownedTexture=tx;return m;
   }
   function pane(parent,x,y,z,w,h,nightColor='#ffd99a',side=false){
     const group=new THREE.Group();group.position.set(x,y,z);
@@ -1566,40 +1609,50 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
      stone planters, a signpost and a CITY CENTER board. The lawn beds, flagstones, festoon wires and flags that
      crowded the square are gone, so what the people are doing in it can be seen. ---- */
   function cityCentre(){
-    const gardenColors=['#5f9278','#84ad84','#a1bd93','#6a9e87','#c0cc97'],petalColors=['#f4c6c2','#f6e5b0','#cfb7ce','#fff0d6','#dcaab0'];
-    const stone=mat('#dccfb4',.92),inlay=mat('#c8b896',.92),trim=mat('#efe3cb',.9),dark=mat('#4d5660',.7),wood=mat('#9b795e');
-    const slab=(x0,x1,z0,z1,col,top,h)=>{const o=box(world,x1-x0,h,z1-z0,col,(x0+x1)/2,top-h/2,(z0+z1)/2,false);o.castShadow=false;o.receiveShadow=true;return o;};
-    slab(7.04,10.0,8.04,10.96,stone,.2225,.07);slab(10.0,10.96,9.0,10.0,stone,.2225,.07);
-    for(const [x0,x1,z0,z1] of [[7.14,9.9,8.14,8.175],[7.14,9.9,10.825,10.86],[7.14,7.175,8.14,10.86],[9.865,9.9,8.14,10.86]])slab(x0,x1,z0,z1,inlay,.2275,.012);
+    const TOP=.18,cc=new THREE.Group();cc.position.y=TOP-.2225;world.add(cc);   // built at the old height, shifted flush with the roads
+    const gardenColors=['#6fae6e','#8cc07a','#a7cf86','#5fa27c','#c0d98a'],petalColors=['#f27d72','#f9c74f','#f4a6c6','#fff2cc','#c9a6e8'];
+    const sand=mat('#efdcb4',.9),terracotta=mat('#d9a276',.9),teal=mat('#86bdb4',.9),cream=mat('#fbf0d6',.9),wood=mat('#9b795e'),pot=mat('#cf8b63',.85);
+    const slab=(x0,x1,z0,z1,col,top,h)=>{const o=box(cc,x1-x0,h,z1-z0,col,(x0+x1)/2,top-h/2,(z0+z1)/2,false);o.castShadow=false;o.receiveShadow=true;return o;};
+    // one warm sandstone square with a terracotta frame and a thin teal line inside it
+    slab(7.04,10.0,8.04,10.96,sand,.2225,.07);slab(10.0,10.96,9.0,10.0,sand,.2225,.07);
+    for(const [x0,x1,z0,z1] of [[7.12,9.92,8.12,8.17],[7.12,9.92,10.83,10.88],[7.12,7.17,8.12,10.88],[9.87,9.92,8.12,10.88]])slab(x0,x1,z0,z1,terracotta,.2285,.014);
+    for(const [x0,x1,z0,z1] of [[7.22,9.82,8.22,8.245],[7.22,9.82,10.755,10.78],[7.22,7.245,8.22,10.78],[9.795,9.82,8.22,10.78]])slab(x0,x1,z0,z1,teal,.2295,.012);
+    for(const [rx,rz] of [[7.145,8.145],[9.895,8.145],[7.145,10.855],[9.895,10.855]]){const d=cylinder(cc,.07,.07,.016,terracotta,rx,.2285,rz);d.castShadow=false;cylinder(cc,.04,.04,.018,cream,rx,.229,rz).castShadow=false;}
     const candle=new THREE.MeshStandardMaterial({color:'#ffebbd',emissive:'#ffc67f',emissiveIntensity:.36,roughness:.38,metalness:0});
-    // a fountain at the south end, between the two walking corridors
+    // a fountain at the south end, between the two walking corridors, with CITY CENTER carved into its basin
     {const fx=9.0,fz=10.5;
-      cylinder(world,.34,.36,.1,stone,fx,.272,fz);
-      const rim=object(world,geo('torus',.34,.03),trim,fx,.325,fz,false);rim.rotation.x=Math.PI/2;
-      const water=object(world,geo('cylinder',.3,.3,.02),new THREE.MeshStandardMaterial({color:'#86c9d2',roughness:.25,emissive:'#4b9aa8',emissiveIntensity:.18}),fx,.318,fz,false);water.castShadow=false;
-      cylinder(world,.045,.06,.2,stone,fx,.42,fz);cylinder(world,.13,.05,.05,trim,fx,.54,fz);
-      const drop=ball(world,.05,mat('#c6e8ee',.3),fx,.62,fz);drop.scale.set(.8,1.3,.8);drop.castShadow=false;
-      for(let k=0;k<2;k++){const ring=object(world,geo('torus',.16+k*.07,.008),mat('#eef9fb',.5),fx,.33,fz,false);ring.rotation.x=Math.PI/2;ambient.push({kind:'sea',mesh:ring,phase:k*1.7,y0:.33});}
-      for(const sd of [-1,1]){const b=ball(world,.03,candle,fx+sd*.34,.375,fz);b.castShadow=false;festoonBulbs.push(b);}}
+      cylinder(cc,.34,.36,.12,mat('#e9d8b6',.9),fx,.283,fz);
+      const cv=document.createElement('canvas');cv.width=1024;cv.height=128;const c2=cv.getContext('2d');
+      c2.fillStyle='#e9d8b6';c2.fillRect(0,0,1024,128);
+      c2.strokeStyle='#bfa57c';c2.lineWidth=5;c2.strokeRect(6,10,1012,108);
+      c2.textAlign='center';c2.textBaseline='middle';c2.font='italic 700 68px Georgia,serif';if('letterSpacing' in c2)c2.letterSpacing='10px';
+      c2.fillStyle='rgba(255,250,235,.9)';c2.fillText('CITY CENTER',515,69);   // the highlight under the cut
+      c2.fillStyle='#8a6b46';c2.fillText('CITY CENTER',512,65);
+      const tx=new THREE.CanvasTexture(cv);tx.colorSpace=THREE.SRGBColorSpace;
+      const band=new THREE.Mesh(new THREE.CylinderGeometry(.362,.362,.1,48,1,true,-.95,1.9),new THREE.MeshStandardMaterial({map:tx,roughness:.85,side:THREE.DoubleSide}));
+      band.position.set(fx,.28,fz);band.castShadow=false;cc.add(band);
+      const rim=object(cc,geo('torus',.35,.03),cream,fx,.34,fz,false);rim.rotation.x=Math.PI/2;
+      const water=object(cc,geo('cylinder',.31,.31,.02),new THREE.MeshStandardMaterial({color:'#86c9d2',roughness:.25,emissive:'#4b9aa8',emissiveIntensity:.18}),fx,.335,fz,false);water.castShadow=false;
+      cylinder(cc,.045,.06,.2,sand,fx,.43,fz);cylinder(cc,.13,.05,.05,cream,fx,.55,fz);
+      const drop=ball(cc,.05,mat('#c6e8ee',.3),fx,.63,fz);drop.scale.set(.8,1.3,.8);drop.castShadow=false;
+      for(let k=0;k<2;k++){const ring=object(cc,geo('torus',.16+k*.07,.008),mat('#eef9fb',.5),fx,.347,fz,false);ring.rotation.x=Math.PI/2;ambient.push({kind:'sea',mesh:ring,phase:k*1.7,y0:.347});}
+      for(const sd of [-1,1]){const b=ball(cc,.03,candle,fx+sd*.36,.39,fz);b.castShadow=false;festoonBulbs.push(b);}}
     // lamp posts with three warm bulbs each (they brighten at dusk with the town's other lights)
     for(const [lx,lz] of [[7.22,8.30],[7.22,10.82],[9.93,10.84],[10.82,9.5]]){
-      cylinder(world,.022,.034,.62,'#5c7274',lx,.53,lz);cylinder(world,.07,.05,.05,'#455e64',lx,.86,lz);
-      cylinder(world,.085,.06,.06,'#526d6d',lx,.96,lz);
-      for(let k=0;k<3;k++){const a=k*TAU/3;const b=ball(world,.03,candle,lx+Math.cos(a)*.05,.9,lz+Math.sin(a)*.05);b.castShadow=false;festoonBulbs.push(b);}
+      cylinder(cc,.022,.034,.62,'#4f6b63',lx,.53,lz);cylinder(cc,.07,.05,.05,'#3d544d',lx,.86,lz);
+      cylinder(cc,.085,.06,.06,'#486259',lx,.96,lz);
+      for(let k=0;k<3;k++){const a=k*TAU/3;const b=ball(cc,.03,candle,lx+Math.cos(a)*.05,.9,lz+Math.sin(a)*.05);b.castShadow=false;festoonBulbs.push(b);}
     }
-    // stone planters with shrubs and flowers
+    // terracotta planters, brim-full of flowers
     for(const [px,pz] of [[7.30,9.55],[10.62,9.12],[10.62,9.88],[7.72,10.80]]){
-      box(world,.34,.13,.34,'#d5c6a8',px,.285,pz);box(world,.28,.02,.28,'#7a6a55',px,.355,pz,false);
-      for(let k=0;k<4;k++){const a=k*TAU/4+px,sx=px+Math.cos(a)*.07,sz=pz+Math.sin(a)*.07;const sh=ball(world,.085,gardenColors[k%gardenColors.length],sx,.42,sz);sh.scale.set(1.1,.7,1.1);sh.castShadow=false;
-        const fl=ball(world,.03,petalColors[(k+Math.round(px))%petalColors.length],sx+.02,.49,sz+.01);fl.castShadow=false;}
+      box(cc,.34,.13,.34,pot,px,.285,pz);box(cc,.37,.03,.37,mat('#e0a47c',.85),px,.355,pz);box(cc,.28,.02,.28,'#6f5a46',px,.37,pz,false);
+      for(let k=0;k<5;k++){const a=k*TAU/5+px,sx=px+Math.cos(a)*.075,sz=pz+Math.sin(a)*.075;const sh=ball(cc,.085,gardenColors[k%gardenColors.length],sx,.43,sz);sh.scale.set(1.1,.75,1.1);sh.castShadow=false;
+        const fl=ball(cc,.035,petalColors[(k+Math.round(px))%petalColors.length],sx+.02,.5,sz+.01);fl.castShadow=false;}
     }
-    // a signpost and the CITY CENTER board
-    {const g=new THREE.Group();g.position.set(7.26,.2225,9.05);world.add(g);
-      cylinder(g,.018,.022,.62,wood,0,.31,0);
-      [['PARK',.5,.04],['RIVER',.4,-.04],['STATION',.3,.03]].forEach(([t,y,r])=>{const bd=box(g,.34,.07,.025,'#f0dfc2',.1,y,0);bd.rotation.y=r;sign(g,t,.1,y,.02,.3,'#f0dfc2','#4a3f37');});}
-    {const g=new THREE.Group();g.position.set(9.0,.2225,10.93);world.add(g);
-      for(const sx of [-1,1])cylinder(g,.015,.018,.4,wood,sx*.27,.2,0);
-      box(g,.62,.2,.03,'#3d5a58',0,.38,0);sign(g,'CITY CENTER',0,.38,.02,.56,'#3d5a58','#fff3dc');}
+    // a signpost with painted arrow boards
+    {const g=new THREE.Group();g.position.set(7.26,.2225,9.05);cc.add(g);
+      cylinder(g,.018,.022,.66,wood,0,.33,0);ball(g,.03,'#d9b45a',0,.68,0);
+      [['PARK',.52,1,'#5f9a64'],['RIVER',.42,-1,'#4f95a8'],['STATION',.32,1,'#d9825a']].forEach(([t,y,dir,col])=>arrowBoard(g,t,dir*.15,y,0,.36,dir,col));}
   }
   function paintVillageLife(){
     // One translucent painted-tile medallion transforms the visual center
@@ -1638,25 +1691,8 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
     const tile=object(world,geo('plane',2.15,2.15),
       new THREE.MeshBasicMaterial({map:texture,transparent:true,opacity:.79,
         depthWrite:false,side:THREE.DoubleSide}),9,.270,9,false);
-    tile.rotation.x=-Math.PI/2;tile.userData.plazaInlay=true;
-    // Three small inhabitants stay in their flowerbed territories; no
-    // repetitive cross-city flight paths through walls or traffic lanes.
-    for(const [x,z,phase,col] of [
-      [7.40,8.43,.3,'#e9877d'],
-      [10.43,9.46,2.4,'#f4c772'],
-      [7.46,10.38,4.6,'#7eaebc']
-    ]){
-      const insect=new THREE.Group();world.add(insect);
-      const wings=[];
-      for(const side of [-1,1]){
-        const wing=new THREE.Group();insect.add(wing);
-        const petal=ball(wing,.083,col,side*.065,0,0);
-        petal.scale.set(1.05,.46,1.27);petal.castShadow=false;
-        wings.push(wing);
-      }
-      ball(insect,.034,'#6b5b53',0,0,0).castShadow=false;
-      ambient.push({kind:'butterfly',mesh:insect,wings,x,z,phase});
-    }
+    tile.rotation.x=-Math.PI/2;tile.userData.plazaInlay=true;tile.userData.villagePiazza=true;
+    // (The three butterflies that hovered over the old flowerbeds are retired: over bare paving they read as floating litter.)
     gardenElements+=8;
   }
 
@@ -2132,73 +2168,15 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
       }
       bridgeAt(n);
     }
-    // The hero neighborhood is one continuous garden, not sixteen lawns
-    // boxed into independent tiles with dark grid joints between them.
-    groundPiece(3.96,3.96,grassMaterial('#94c5a4'),9,9,.179);
-    // A continuous, softly scalloped village green replaces the boxy central
-    // paving slab. The heart is a rounded stone piazza with irregular lawn
-    // pockets; the same pedestrian routes remain visible and unobstructed.
-    const piazzaShape=new THREE.Shape();
-    for(let i=0;i<=32;i++){
-      const a=i*TAU/32,organic=1+.055*Math.sin(3*a+.3)+
-        .035*Math.sin(7*a-1.1);
-      const px=Math.cos(a)*1.14*organic,pz=Math.sin(a)*1.09*organic;
-      if(i===0)piazzaShape.moveTo(px,pz);else piazzaShape.lineTo(px,pz);
-    }
-    piazzaShape.closePath();
-    const piazza=object(world,new THREE.ExtrudeGeometry(piazzaShape,{
-      depth:.038,bevelEnabled:true,bevelSize:.028,bevelThickness:.009,
-      bevelSegments:2,steps:1
-    }),mat('#e5d9bd'),9,.185,9,false);
-    piazza.rotation.x=-Math.PI/2;
-    piazza.userData.villagePiazza=true;
-    // Hand-set pavers follow the curved perimeter, not a square grid.
-    const stone=['#ede1c9','#e6d7ba','#e9ddc7','#e2d4bb'];
-    for(let row=0;row<7;row++)for(let col=0;col<7;col++){
-      const px=8.06+col*.305+(row%2)*.065;
-      const pz=8.07+row*.307;
-      const dx=px-9,dz=pz-9;
-      if((dx*dx)/(1.08*1.08)+(dz*dz)/(1.02*1.02)>.91)continue;
-      const jitter=(rng(col*19+row,434)-.5)*.065;
-      const paver=groundPiece(.251+rng(col,row)*.037,
-        .251+rng(row,col)*.038,stone[(row*3+col)%4],
-        px+jitter,pz-jitter*.7,.235);
-      // Slight handmade irregularity removes the machine-perfect grid.
-      paver.rotation.y=(rng(col*37+row,row*17+col)-.5)*.13;
-    }
-    // Hand-set garden ribbons transition the little courtyard into the grass,
-    // instead of floating as a paved square cut out of a flat sheet.
-    for(let row=0;row<4;row++) {
-      for(let col=0;col<4;col++){
-        const x=7.27+col*1.0,z=7.22+row*.98;
-        if((row===1||row===2)&&(col===1||col===2))continue;
-        for(let n=0;n<3;n++){
-          const seed=row*29+col*17+n*7;
-          const px=x+.15+rng(seed,32)*.52,pz=z+.13+rng(seed,41)*.50;
-          const bloom=ball(world,.07,seed%2?'#87aa87':'#a3bf91',px,.24,pz);
-          bloom.scale.set(1.35,.58,1.24);
-          if(n===1)ball(world,.025,'#f3c6bf',px,.29,pz+.018);
-        }
-      }
-    }
-    // A low, warm stone border defines the central neighborhood as one
-    // landscaped courtyard; it leaves walkways open for arriving residents.
-    const edging=mat('#e4d4b7');
+    // The hero neighbourhood is the paved city centre (cityCentre): no grass slab, scattered blooms, pavers or garden beds here any more.
+    // Only a low, warm stone border runs round the block; it leaves the walkways open for arriving residents.
+    const edging=mat('#e8d6b4');
     for(let n=0;n<4;n++) {
       for(const z of [7.05,10.94]) {
         if(n!==1&&n!==2)box(world,.78,.095,.072,edging,7.5+n,.23,z);
       }
       for(const x of [7.05,10.94]) {
         if(n!==1&&n!==2)box(world,.072,.095,.78,edging,x,.23,7.5+n);
-      }
-    }
-    // Dappled garden beds stay below doors and away from the moving pavement.
-    for(const [x,z] of [[7.23,8.52],[10.73,8.82],[7.31,10.45],[10.65,10.42]]) {
-      box(world,.36,.09,.28,'#bba27d',x,.22,z);
-      for(let j=0;j<5;j++) {
-        const xx=x-.12+j*.06;
-        ball(world,.073,j%2?'#649d7b':'#8aba91',xx,.31,z);
-        if(j%2===0)ball(world,.027,j===0?'#edb4b3':'#fff0c8',xx,.39,z);
       }
     }
     // Four grounded zebra stripes on the actual southern road.
@@ -2968,7 +2946,7 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
     if(!placed)return false;
     placed.userData.landmark=true;placed.userData.uniqueAsset=true;
     if(!shop)porchLamp(placed,b);
-    if(shop){const z=placed.userData.size.z/2+.012;sign(placed,b.name==='BAKERY'?'BAKERY':'BOOK NOOK',0,.98,z,.62,'#4a3f37','#fff3dc');}
+    if(shop){const z=placed.userData.size.z/2+.012;sign(placed,b.name==='BAKERY'?'BAKERY':'BOOK NOOK',0,placed.userData.size.y*.8,z,.52,'#4a3f37','#fff3dc');}
     return true;
   }
   function kitBuilding(b){
@@ -4859,9 +4837,15 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
     if(d<.34)return GROUND.road;
     return d<.5?GROUND.road+(GROUND.pave-GROUND.road)*smooth01(.34,.38,d):GROUND.pave+(GROUND.lawn-GROUND.pave)*smooth01(.5,.56,d);
   }
+  // The paved city centre (see cityCentre) is a flat square at CENTRE_TOP; people stand on it, not in the lawn under it.
+  const CENTRE_TOP=.18;
+  function centreAmount(x,z){
+    const r=(x0,x1,z0,z1)=>smooth01(0,.07,Math.min(x-x0,x1-x,z-z0,z1-z));
+    return Math.max(r(7.04,10.0,8.04,10.96),r(9.9,10.96,9.0,10.0));
+  }
   function groundLevel(x,z){
     let dx=9,dz=9;for(const l of LINES){dx=Math.min(dx,Math.abs(x-(l+.5)));dz=Math.min(dz,Math.abs(z-(l+.5)));}
-    return Math.max(streetLevel(dx),streetLevel(dz));
+    return Math.max(streetLevel(dx),streetLevel(dz),GROUND.lawn+(CENTRE_TOP-GROUND.lawn)*centreAmount(x,z));
   }
   // Each resident walks in a style of their own: stride rate and swing, arm swing, bounce and lean, and a few habits.
   function walkStyle(ref){
