@@ -38,6 +38,14 @@ A `START` does not prohibit parallel edits. Avoid stepping on each other's uncom
 
 ## Exchange log (newest first)
 
+### PARTIAL — ChatGPT (GPT-6) — 2026-11-05 11:30 UTC
+- Audit of PR #185 after owner asked to revisit the session. **Not merged or deployed.**
+- **Reverted** the untested traffic edit fully: `assets/toy-town.js` matches `master`; the initial patch failed the real workflow's `tests/toy-town-extras.test.cjs:148` crossing-traffic patience assertion (runs [42017279588](https://github.com/imranakbarin/iakdevs/actions/runs/42017279588) and [42017598418](https://github.com/imranakbarin/iakdevs/actions/runs/42017598418)). This remains an unsolved physical-overlap problem in legacy traffic, not a completed fix.
+- **Reverted** additional 3D bike yaw/lean. Core simulation already runs `easeHeading` and animates wheel/crank movement from real travel; extra yaw smoothing would lag behind the bicycle's actual path. No new pedestrian/bike animation improvement remains in the PR.
+- **Retained only calmer optional Moments UX** in `assets/toy-town-3d.js`: a smaller subtler chip, 5.5-second exposure, 30-second cooldown, no chime, avoid hidden-tab offers; reduced-motion users can still receive prompts. Fixed document guard order. Bumped `toy-town.html` 3D JS to v71 and the embedded `index.html` iframe to v81 for future cache invalidation.
+- **Validation:** GitHub PR diff rechecked (only Moments/HTML/cache and coordination changes); the first Moments-only commit [41970932577](https://github.com/imranakbarin/iakdevs/actions/runs/41970932577) passed. Later traffic-containing commits failed as above. Corrective push runs were still running during this log; do not claim current head passes until the actual run finishes, and no visual-motion quality has been verified on iPhone.
+- **Next:** Run all Toy Town simulation, WebGL screenshots, and actual movement/playback checks. For future traffic work, make clearance and junction priority consistent with `unstick` and update matching no-overlap/deadlock tests in the same PR. Prioritize visible animation changes only when validated from actual renders, not superficial property tweaks.
+
 ### START — ChatGPT (GPT-6) — 2026-11-05 11:23 UTC (late audit disclosure)
 - **Process correction:** Earlier commits in PR #185 skipped the mandatory START/handoff check; this entry records that lapse, not a claim of earlier compliance.
 - Base `master`: `4658a82be04367dd335b0e827f21836ea9fb6f35`. Branch: `feat/toy-town-calm-lively-moments`. Prior PR commits: `ee20e6c`, `ac100c5`, `9425613`.
