@@ -564,6 +564,19 @@ for(let i=0;i<220;i++)T.update(1/60);
 assert.equal(palA.briefChatUntil,0,'the conversation ends without a frozen resident');
 assert.equal(palB.briefChatUntil,0,'both walkers are released');
 
+// Same road centre is NOT the same pavement: no chat across the carriageway.
+T.build(72531,'weather');
+const acrossRoad=T.movers().filter(m=>m.type==='person'&&!m.kind&&!m.heroResident&&!m.shopRole&&!m.routine);
+for(const m of acrossRoad)m.greetNext=Number.POSITIVE_INFINITY;
+const [leftWalker,rightWalker]=acrossRoad;
+for(const [i,m] of [leftWalker,rightWalker].entries())Object.assign(m,{
+  x:3+i*.1,y:6.5,d:0,lane:i===0?-.43:.43,v:.5,max:.5,
+  path:null,busy:false,stopUntil:0,sit:false,whim:null,whimUntil:0,routine:null,
+  greetNext:0,nextDawdle:Number.POSITIVE_INFINITY,nextNotice:Number.POSITIVE_INFINITY});
+T.update(1/60);
+assert.ok(!leftWalker.briefChatUntil&&!rightWalker.briefChatUntil,
+  'walkers on opposite pavements do not talk across moving cars');
+
 // A calm town: gentle moments run to their end, and traffic waits at red lights instead of piling into the crossings.
 T.build(31337, 'weather'); T.setToday([]);
 for (const name of T.CALM) T.startEvent(name);
