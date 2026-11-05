@@ -2035,12 +2035,88 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
     mesh.userData.stoneShoulder=axis;
   }
 
+  const SEA_Y=-.42;
+  let lighthouse=null;
+  /* ---- The town sits in a sea instead of on an empty table: a striped lighthouse on a rocky islet off the north-west
+     corner (its beam turns at night), two more islets with a tree, sailboats circling slowly, buoys and ripples. ---- */
+  function seaAndLighthouse(){
+    lighthouse=null;
+    // A foam collar that follows the slab's own rounded outline, a little wider than the wood.
+    if(!geometryCache.has('foam'))geometryCache.set('foam',new THREE.ShapeGeometry(organicBoardOutline(-.55)));
+    const foamMat=new THREE.MeshBasicMaterial({color:'#ffffff',transparent:true,opacity:.42,depthWrite:false});
+    const foam=object(world,geometryCache.get('foam'),foamMat,9,SEA_Y+.012,9,false);
+    foam.rotation.x=-Math.PI/2;foam.castShadow=false;foam.receiveShadow=false;
+    const rock=leafMat('#a39889'),cap=leafMat('#84b26f');
+    const islet=(x,z,r,k)=>{
+      const base=object(world,geo('clump',r,k%4),rock,x,SEA_Y+r*.12,z);base.scale.set(1.25,.62,1.1);
+      const top=object(world,geo('clump',r*.62,(k+1)%4),cap,x+r*.05,SEA_Y+r*.5,z);top.scale.set(1.1,.45,1);
+      return {x,z,top:SEA_Y+r*.62};
+    };
+    // the lighthouse
+    const L=islet(-2.7,-2.5,1.35,0),g=new THREE.Group();g.position.set(L.x,L.top,L.z);world.add(g);
+    const H=2.9,r0=.42,r1=.27,bands=5;
+    for(let i=0;i<bands;i++){
+      const rb=r0+(r1-r0)*i/bands,rt=r0+(r1-r0)*(i+1)/bands;
+      cylinder(g,rt,rb,H/bands,i%2?'#f4efe6':'#d9503f',0,H/bands*(i+.5),0);
+    }
+    cylinder(g,.36,.36,.05,'#4d5660',0,H+.02,0);                                  // gallery
+    const rail=object(g,geo('torus',.34,.012),mat('#3f4750'),0,H+.1,0,false);rail.rotation.x=Math.PI/2;
+    box(g,.12,.2,.03,'#5b4636',0,.14,r0*.98);                                   // door
+    for(const wy of [1.1,1.9])box(g,.07,.12,.03,'#2f3a40',0,wy,(r0+(r1-r0)*wy/H)*.98,false);
+    const lampMat=new THREE.MeshStandardMaterial({color:'#ffe8a8',emissive:'#ffcf6a',emissiveIntensity:.4,roughness:.3});
+    const lamp=object(g,geo('cylinder',.17,.17,.3),lampMat,0,H+.28,0,false);
+    cylinder(g,0,.26,.24,'#d9503f',0,H+.55,0);ball(g,.04,'#f0d27a',0,H+.7,0);
+    const beamMat=new THREE.MeshBasicMaterial({color:'#fff1b8',transparent:true,opacity:0,depthWrite:false,blending:THREE.AdditiveBlending});
+    const beam=new THREE.Group();beam.position.set(0,H+.28,0);g.add(beam);
+    for(const sd of [-1,1]){const c=object(beam,geo('cylinder',.03,.42,3.4),beamMat,sd*1.75,0,0,false);c.rotation.z=Math.PI/2;c.castShadow=false;}
+    lighthouse={beam,lampMat,beamMat,foamMat};
+    // two more islets, each with a tree
+    for(const [x,z,r,k] of [[-3.3,12.8,.9,2],[21.9,5.2,.8,3]]){const I=islet(x,z,r,k);tree({x:I.x,y:I.z,s:.6},k*7+1);}
+    islet(15.6,22.6,.55,1);islet(-1.5,20.5,.45,2);
+    // buoys, ripples and sailboats (animated, so the ambient pass moves them)
+    for(let i=0;i<5;i++){
+      const a=rng(i,901)*TAU,d=13.2+rng(i,902)*7,x=9+Math.cos(a)*d,z=9+Math.sin(a)*d;
+      if(Math.abs(x-9)<10.6&&Math.abs(z-9)<10.6)continue;
+      const b=new THREE.Group();b.position.set(x,SEA_Y,z);world.add(b);
+      ball(b,.07,'#e2463a',0,.04,0);cylinder(b,.012,.012,.16,'#4a4f56',0,.14,0);ball(b,.02,'#ffd23f',0,.24,0);
+      ambient.push({kind:'sea',mesh:b,phase:i*1.1,y0:SEA_Y,bob:true});
+    }
+    for(let i=0;i<9;i++){
+      const a=rng(i,911)*TAU,d=12.6+rng(i,912)*9,x=9+Math.cos(a)*d,z=9+Math.sin(a)*d;
+      if(Math.abs(x-9)<10.6&&Math.abs(z-9)<10.6)continue;
+      const ring=object(world,geo('torus',.34+rng(i,913)*.3,.012),mat('#eaf7f4',.6),x,SEA_Y+.016,z,false);ring.rotation.x=Math.PI/2;
+      ambient.push({kind:'sea',mesh:ring,phase:i*.85,y0:SEA_Y+.016});
+    }
+    const sailMat=new THREE.MeshStandardMaterial({color:'#fff7ec',roughness:.85,side:THREE.DoubleSide});
+    if(!geometryCache.has('sail')){const sh=new THREE.Shape();sh.moveTo(0,0);sh.lineTo(.3,0);sh.lineTo(0,.46);geometryCache.set('sail',new THREE.ShapeGeometry(sh));}
+    for(const [R,speed,ph,col] of [[15.2,.045,0,'#e2463a'],[17.6,-.035,2.4,'#3f8fd6']]){
+      const boat=new THREE.Group();world.add(boat);
+      object(boat,geo('soft',.5,.1,.2,.05),mat('#f4f0e6',.7),0,.05,0);box(boat,.3,.02,.2,col,.02,.11,0,false);
+      cylinder(boat,.01,.012,.62,'#8a6d4e',0,.4,0);
+      const sail=object(boat,geometryCache.get('sail'),sailMat,-.15,.16,.0,false);sail.castShadow=false;
+      ambient.push({kind:'sail',mesh:boat,phase:ph,R,speed});
+    }
+  }
   // River bridges have pale stone shoulders, anchored to the same lanes.
+  // A humpback stone arch: the deck curves up from the road at each bank, and the river runs through the opening
+  // underneath, so the rowing boat and the ducks can pass under it. ARCH.y0 is the asphalt top.
+  const ARCH={y0:.172,L:1.3,H:.54,T:.09,a:.88,yb:.1,W:1.34};
+  const archTop=u=>ARCH.y0+ARCH.H*(1-(u/ARCH.L)*(u/ARCH.L));
   function bridgeAt(n){
-    // Wide enough for the pavement lanes (0.43 off centre) with a little room inside the parapets.
-    groundPiece(1.34,2.05,'#a99f8c',n+.5,14,.17);
-    groundPiece(1.12,2.06,'#78868a',n+.5,14,.22);
-    for(const side of [-.62,.62])box(world,.052,.22,2.08,'#d8d1bf',n+.5+side,.29,14);
+    const A=ARCH,N=18,apex=A.y0+A.H-A.T,mk=(key,build,depth)=>{
+      if(!geometryCache.has(key)){const g=new THREE.ExtrudeGeometry(build(),{depth,bevelEnabled:false,curveSegments:14});geometryCache.set(key,g);}
+      return geometryCache.get(key);};
+    const band=(off0,off1)=>()=>{const sh=new THREE.Shape();sh.moveTo(-A.L,archTop(-A.L)+off0);
+      for(let i=1;i<=N;i++){const u=-A.L+2*A.L*i/N;sh.lineTo(u,archTop(u)+off0);}
+      for(let i=N;i>=0;i--){const u=-A.L+2*A.L*i/N;sh.lineTo(u,archTop(u)+off1);}return sh;};
+    const body=()=>{const sh=new THREE.Shape();sh.moveTo(-A.L,A.yb);sh.lineTo(-A.L,archTop(-A.L));
+      for(let i=1;i<=N;i++){const u=-A.L+2*A.L*i/N;sh.lineTo(u,archTop(u));}
+      sh.lineTo(A.L,A.yb);sh.lineTo(A.a,A.yb);sh.absellipse(0,A.yb,A.a,apex-A.yb,0,Math.PI,false,0);sh.lineTo(-A.L,A.yb);return sh;};
+    // Extrusion runs along local z; turning the mesh a quarter turn lays the depth along world x and the profile along world z.
+    const put=(geometry,material,cx,depth)=>{const m=object(world,geometry,material,cx+depth/2,0,14);m.rotation.y=-Math.PI/2;return m;};
+    put(mk('bridge:body',body,A.W),mat('#b4a98f',.9),n+.5,A.W);
+    put(mk('bridge:deck',band(0,.012),1.1),mat('#78868a',.92),n+.5,1.1).castShadow=false;
+    for(const side of [-1,1])put(mk('bridge:rail',band(.0,.2),.052),mat('#d8d1bf',.9),n+.5+side*.62-.0,.052);
   }
   // KayKit road tiles on the street grid: straights, a zebra crossing by the
   // plaza, T-splits on the outer edges, corners at the four outer corners and
@@ -2090,11 +2166,9 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
   function createGround(){
     // A generous matte studio table under the actual miniature slab.
     // Soft ambient contrast makes the scene read like a photographed model.
-    const backdrop=box(world,110,.07,110,studioMat,9,-1.25,9);
+    // The town stands in a calm sea (see seaAndLighthouse): the sea level cuts the wooden base about a third of the way up.
+    const backdrop=box(world,140,.07,140,mat('#7dbcc4',.5),9,SEA_Y-.035,9);
     backdrop.castShadow=false;
-    // A feathered shadow between the wood slab and studio table completes the
-    // real-world tabletop scale; this stays outside the town's active streets.
-    groundingShadow(9,9,23.5,23.5,-1.205);
     terrainCutaway();
     // One continuous painted meadow rests over the sculpted board. Its
     // geometry is shared with the rounded earth outline, not a square slab.
@@ -2519,6 +2593,7 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
     shootingStar.scale.set(2.4,.035,1);world.add(shootingStar);
   }
   function nightLife(dark,time){
+    if(lighthouse){lighthouse.beam.rotation.y=time*.7;lighthouse.beamMat.opacity=Math.max(0,dark-.12)*.3;lighthouse.lampMat.emissiveIntensity=.4+dark*3.2;lighthouse.foamMat.opacity=.42-dark*.28;}
     for(const k of clouds)k.c.position.x=((k.x+time*k.speed*(k.speedScale||1)+6)%30)-6;   // a slow drift, wrapping round (faster in wind)
     if(cinemaBeam){cinemaBeam.material.opacity=Math.max(0,dark-.2)*.16;for(const v of cinemaViewers)v.visible=dark>.3;
       if(cinemaScreen)cinemaScreen.material.color.set(dark>.3?'#ffffff':'#d8d8d8');}
@@ -3102,7 +3177,7 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
     const ps=town.props();
     for(let i=0;i<ps.length;i++)smallProps(ps[i],i);
     streetLanterns();
-    openAirCinema();
+    seaAndLighthouse();   // (the open-air cinema screen that stood here is retired)
     nightSky();
     createStorybookVillage();
     paintVillageLife();
@@ -3839,7 +3914,7 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
     const g=new THREE.Group();world.add(g);life.built=true;life.t=0;life.birds=[];life.fish=0;
     const base=.17;
     // --- a rowing boat between the bridges, and a fisher on the north bank
-    const boat=new THREE.Group();g.add(boat);
+    const boat=new THREE.Group();g.add(boat);boat.scale.setScalar(.82);   // small enough to row under the arches
     const hull=object(boat,geo('soft',.58,.1,.24,.05),mat('#f2a99b',.7),0,.2,0);
     box(boat,.5,.02,.19,'#fff0d8',0,.255,0,false);
     box(boat,.06,.07,.2,'#fff7e6',-.06,.27,0);   // thwart
@@ -3914,7 +3989,7 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
     if(B){
       const speed=.32;
       if(B.turn>0){B.turn-=dt;B.g.rotation.y+=Math.PI/2*dt*(B.dir>0?-1:1)*0+(Math.PI/2.4)*dt*B.spin;if(B.turn<=0){B.g.rotation.y=B.dir>0?0:Math.PI;}}
-      else{B.x+=B.dir*speed*dt;if(B.x>10.6&&B.dir>0||B.x<7.4&&B.dir<0){B.dir*=-1;B.turn=2.4;B.spin=1;}}
+      else{B.x+=B.dir*speed*dt;if(B.x>14.2&&B.dir>0||B.x<3.8&&B.dir<0){B.dir*=-1;B.turn=2.4;B.spin=1;}}
       const bob=Math.sin(t*1.7)*.008;B.g.position.set(B.x,bob,B.z+Math.sin(t*.4)*.12);
       const stroke=Math.sin(t*2.2);
       for(const {o,s} of B.oars)o.rotation.y=stroke*.45*s*-1;
@@ -4111,7 +4186,7 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
         gl.g.position.set(gl.x,y,gl.z);gl.g.rotation.y=-Math.atan2(-Math.sin(gl.ph)*gl.rx,Math.cos(gl.ph*1.3)*gl.rz*1.3)+Math.PI;
         gl.g.rotation.z=Math.sin(gl.ph*2)*.2;
         const flap=Math.sin(t*(Math.sin(gl.ph*3)>.3?14:3)+gl.ph*9)*.5;for(const w of gl.wings)w.w.rotation.x=flap*w.s;
-        gl.perchT-=dt;if(gl.perchT<=0&&(wetNow()||Math.random()<.002)){gl.state='perch';gl.perchT=6+Math.random()*5;{const bx=[1.5,6.5,11.5,16.5].reduce((a,v)=>Math.abs(v-gl.x)<Math.abs(a-gl.x)?v:a,1.5);gl.g.position.set(bx+(gl.ph>0?.3:-.3),.42,13.1);}gl.g.rotation.z=0;for(const w of gl.wings)w.w.rotation.x=.1*w.s*-1;sound('chirp');}
+        gl.perchT-=dt;if(gl.perchT<=0&&(wetNow()||Math.random()<.002)){gl.state='perch';gl.perchT=6+Math.random()*5;{const bx=[1.5,6.5,11.5,16.5].reduce((a,v)=>Math.abs(v-gl.x)<Math.abs(a-gl.x)?v:a,1.5);gl.g.position.set(bx+(gl.ph>0?.62:-.62),.66,13.1);}gl.g.rotation.z=0;for(const w of gl.wings)w.w.rotation.x=.1*w.s*-1;sound('chirp');}
       }else{gl.perchT-=dt;if(gl.perchT<=0&&!wetNow()){gl.state='fly';gl.perchT=12+Math.random()*10;}}
     }
     // market crowd: browse, turn, and reach for something
@@ -4764,10 +4839,26 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
     actors.set(ref,{group:g,kind});
   }
   // The bridge decks stand above the road: anything crossing rises onto the deck (a smooth ramp at each end).
-  function bridgeLift(x,z,kind){
-    if(z<12.95||z>15.05||!LINES.some(l=>Math.abs(x-(l+.5))<.66))return 0;
-    const u=Math.min(1,Math.max(0,Math.min(z-13,15-z)/.3)),e=u*u*(3-2*u);
-    return e*(kind==='car'||kind==='bike'?.178:kind==='person'?.04:0);
+  // How high the arched deck stands above the road at (x,z): 0 off the bridge.
+  function archHeight(x,z){
+    const u=z-14;if(Math.abs(u)>=ARCH.L||!LINES.some(l=>Math.abs(x-(l+.5))<.66))return 0;
+    return archTop(u)-ARCH.y0;
+  }
+  function archSlope(x,z){   // dy/dz of the deck
+    const u=z-14;if(Math.abs(u)>=ARCH.L||!LINES.some(l=>Math.abs(x-(l+.5))<.66))return 0;
+    return -2*ARCH.H*u/(ARCH.L*ARCH.L);
+  }
+  // Raised pavements and the asphalt sit above the meadow, so a resident's feet follow whatever is under them.
+  const GROUND={lawn:.13,road:.172,pave:.225,foot:.034};
+  const smooth01=(a,b,x)=>{const t=Math.min(1,Math.max(0,(x-a)/(b-a)));return t*t*(3-2*t);};
+  function streetLevel(d){
+    if(d>=.56)return GROUND.lawn;
+    if(d<.34)return GROUND.road;
+    return d<.5?GROUND.road+(GROUND.pave-GROUND.road)*smooth01(.34,.38,d):GROUND.pave+(GROUND.lawn-GROUND.pave)*smooth01(.5,.56,d);
+  }
+  function groundLevel(x,z){
+    let dx=9,dz=9;for(const l of LINES){dx=Math.min(dx,Math.abs(x-(l+.5)));dz=Math.min(dz,Math.abs(z-(l+.5)));}
+    return Math.max(streetLevel(dx),streetLevel(dz));
   }
   // Each resident walks in a style of their own: stride rate and swing, arm swing, bounce and lean, and a few habits.
   function walkStyle(ref){
@@ -4790,15 +4881,20 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
         (d<2?{x:0,z:lane}:{x:-lane,z:0});
       const desiredX=ref.x+(path?0:off.x),desiredZ=ref.y+(path?0:off.z);
       // Ground-contact calibration: wheels touch the road instead of floating.
-      const baseY=item.kind==='car'?.078:item.kind==='bike'?.11:
-        item.kind==='animal'?.13:ref.sit?.10:.16;
-      g.position.set(desiredX,baseY+bridgeLift(desiredX,desiredZ,item.kind),desiredZ);
+      // Wheels and feet rest on the surface under them: the asphalt top is .172, a pavement .225, the meadow .13.
+      const arch=archHeight(desiredX,desiredZ);
+      const rest=item.kind==='car'?.192+arch:item.kind==='bike'?.162+arch:
+        item.kind==='animal'?.13+arch:ref.sit?.10+arch:
+        Math.max(groundLevel(desiredX,desiredZ),arch>0?ARCH.y0+arch:0)+GROUND.foot;
+      g.position.set(desiredX,rest,desiredZ);
       {const now=town.debug().clock||0;if(ref.hopUntil&&now<ref.hopUntil)g.position.y+=Math.abs(Math.sin((ref.hopUntil-now)*(item.kind==='car'?16:11)))*(item.kind==='car'?.045:.11);}
       const a=Number.isFinite(ref.heading)?-ref.heading:[0,Math.PI,-Math.PI/2,Math.PI/2][d];
       // Cars, bicycles and quadrupeds point along local +X; only sculpted
       // residents have local +Z faces. Keep both aligned with actual travel.
       const travelFacing=a+(item.kind==='person'?Math.PI/2:0);
-      if(item.kind!=='person')g.rotation.y=travelFacing;
+      if(item.kind!=='person'){g.rotation.y=travelFacing;
+        // On the arch a car or bike tips up the slope and down the other side (it points along local +X).
+        if(item.kind==='car'||item.kind==='bike'){g.rotation.order='YXZ';g.rotation.z=Math.atan(archSlope(desiredX,desiredZ)*-Math.sin(travelFacing));}}
       const limbs=g.userData.limbs;
       if(limbs){
         // Distance owns the footstep clock. Time only smooths transitions and
@@ -5098,6 +5194,15 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
         const pulse=.88+.16*Math.sin(time*1.1+a.phase);
         a.mesh.scale.set(pulse,pulse,pulse);
         a.mesh.position.y=.159+.004*Math.sin(time*.85+a.phase);
+      } else if(a.kind==='sea'){
+        const pulse=.9+.12*Math.sin(time*1.0+a.phase);
+        if(a.bob)a.mesh.position.y=a.y0+.012*Math.sin(time*1.4+a.phase);
+        else{a.mesh.scale.set(pulse,pulse,pulse);}
+      } else if(a.kind==='sail'){
+        const t=time*a.speed+a.phase,dir=a.speed<0?-1:1;
+        a.mesh.position.set(9+Math.cos(t)*a.R,SEA_Y+.004*Math.sin(time*1.3+a.phase),9+Math.sin(t)*a.R*.94);
+        a.mesh.rotation.y=Math.atan2(-Math.cos(t)*dir,-Math.sin(t)*dir);
+        a.mesh.rotation.z=.04*Math.sin(time*.9+a.phase);
       } else if(a.kind==='umbrella'){
         a.mesh.rotation.y=.055*Math.sin(time*.28+a.phase);
       } else if(a.kind==='bunting'){

@@ -2489,9 +2489,8 @@ const ToyTown = (() => {
       }else if(clock>(p.alertUntil||0)){
         p.vx+=(Math.sign(p.vx||1)*.065-p.vx)*Math.min(1,dt*.5);
       }
-      if(onBridge(p.x))p.x=clearOfBridges(p.x);
       const nx=p.x+p.vx*dt;
-      if(onBridge(nx))p.vx*=-1;else p.x=nx;   // turn round at a bridge, like at the bank
+      p.x=nx;   // the bridges are arches now: ducks swim underneath
       if(p.x<.3||p.x>17.5)p.vx*=-1;
       p.x=clamp(.3,p.x,17.5);
     }
