@@ -124,6 +124,9 @@ assert.match(html, /@media \(max-width:700px\)\{#hint\{display:none\}#zoom-contr
 assert.match(fs.readFileSync(path.join(root, 'index.html'), 'utf8'), /@media \(max-width:700px\)\{\.town-mode #town-zoom\{display:none\}\}/, 'the main page hides its zoom, fit and rotate buttons on phones');
 assert.match(view, /function seaAndLighthouse\(\)/); assert.match(view, /seaAndLighthouse\(\);   \/\/ \(the open-air cinema screen/, 'the town stands in a sea with a lighthouse where the cinema screen used to be');
 assert.match(view, /lighthouse\.beam\.rotation\.y=time\*\.7/, 'the lighthouse beam turns at night'); assert.match(view, /kind==='sail'/, 'sailboats circle the town');
+assert.match(view, /function createSignals\(\)/); assert.match(view, /town\.lightPhase\?\.\(\)/, 'the 3D traffic lights read the simulation light phase, so they match what the cars do');
+assert.match(view, /E\.walkers=\[\{q:bride,off:0,dz:-\.04\}/, 'the wedding procession walks in pairs on the pavement, not in single file');
+assert.match(view, /const HAIRS=\[/, 'residents have a range of hair colours');
 assert.match(view, /function moodOf\(ref\)/, 'tapping a resident shows a name and a mood');
 assert.match(fs.readFileSync(path.join(root, 'index.html'), 'utf8'), /keep=\['weather','fps','festival','season','lite'\]/, 'the main page passes ?season and ?lite through');
 // Nobody stays stuck, and walkers do things of their own: several layouts, six town-minutes each.
@@ -194,7 +197,7 @@ assert.doesNotMatch(html, /sepia\(|nograde/, 'the cinematic filter is gone');
 assert.doesNotMatch(html, /#town-3d[^{]*\{[^}]*blur\(/, 'and nothing blurs');
 assert.match(view, /const d = \.9 \+ bump \* \.12/, 'tree canopies are smooth and round, not lumpy');
 assert.match(view, /const BIKE_SCALE=\.52;/, 'bicycles are scaled well below the toy cars');
-assert.match(view, /const CUTE=\.66,HEAD_BIG=1\.12;/, 'residents are small and soft with a gently big head');
+assert.match(view, /const CUTE=\.6,HEAD_BIG=\.94;/, 'residents are small and soft with a gently big head');
 assert.match(view, /function createLife\(\)/); assert.match(view, /function scatterBirds\(x,z,r\)/, 'pigeons peck and scatter');
 assert.match(view, /if\(scatterBirds\(spot\.x,spot\.z,1\.1\)\)/, 'a tap on open ground can startle them');
 assert.match(view, /const ANIMAL_SCALE=\{dog:\.5/, 'animals are scaled to match the small residents (the dog was huge)');

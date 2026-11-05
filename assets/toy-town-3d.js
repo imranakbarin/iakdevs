@@ -1562,45 +1562,7 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
     cafeSet(7.74,8.75,.25);
     cafeSet(10.25,9.95,-.50);
 
-    // An original rose-covered arbour welcomes walkers from the south.
-    // Its opening aligns with the plaza, not any vehicle lane.
-    const arch=new THREE.Group();
-    arch.position.set(8.52,0,10.66);world.add(arch);
-    for(const dx of [-.41,.41]){
-      const post=cylinder(arch,.047,.057,1.18,'#9a7860',dx,.78,0);
-      box(arch,.17,.13,.19,sandstone,dx,.244,0);
-      box(arch,.11,.10,.13,'#f0dec5',dx,1.405,0);
-      for(let k=0;k<4;k++){
-        const a=k*1.7+dx,yy=.73+k*.15;
-        const foliage=object(arch,geo('clump',.07,k%4),leafMat(k%2?'#7da481':'#628e78'),
-          dx+(dx<0?.03:-.03)+Math.sin(a)*.045,yy,.035,false);
-        foliage.scale.set(1,.85,.85);
-        if(k%2===0){
-          const rose=ball(arch,.037,k%4?'#e9b4bb':'#f2d4b7',
-            dx+(dx<0?.04:-.04),yy+.06,.098);
-          rose.castShadow=false;
-        }
-      }
-    }
-    // Curved timber arch: geometry is one actual connected 3D beam.
-    const points=[];
-    for(let k=0;k<=16;k++){
-      const a=Math.PI-k*Math.PI/16;
-      points.push(new THREE.Vector3(Math.cos(a)*.42,1.19+Math.sin(a)*.39,0));
-    }
-    const archCurve=new THREE.CatmullRomCurve3(points);
-    object(arch,new THREE.TubeGeometry(archCurve,32,.051,6,false),wood,0,0,0,false);
-    for(let k=1;k<15;k++){
-      const a=Math.PI-k*Math.PI/16;
-      if(k%2)continue;
-      const leaf=object(arch,geo('clump',.11,k%4),leafMat(k%4?'#7fa989':'#90b38e'),
-        Math.cos(a)*.42,1.2+Math.sin(a)*.39,.01,false);
-      leaf.scale.set(.95,.85,.85);
-      if(k%4===0)ball(arch,.038,'#e9b2ba',
-        Math.cos(a)*.42,1.25+Math.sin(a)*.39,.087);
-    }
-    gardenElements+=32;
-
+    // (The rose arbour that stood in front of the plaza is retired: it hid what was happening in the square.)
     // Physically suspended festoons between four slim timber poles.
     // Warm individual bulbs brighten at sunset without extra point lights.
     const anchors=[[7.56,9.60],[10.42,9.60],[7.58,10.58],[10.39,10.58]];
@@ -1659,7 +1621,7 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
     const buntingColors=['#ed816d','#f3bf62','#5ca59a','#b78eb8','#f2dfb8'];
     const pennant=(()=>{const sh=new THREE.Shape();sh.moveTo(-.05,0);sh.lineTo(.05,0);sh.lineTo(0,-.11);sh.closePath();
       return new THREE.ExtrudeGeometry(sh,{depth:.006,bevelEnabled:false});})();
-    for(const z of [9.60,10.58])for(let i=0;i<11;i++){
+    for(const z of [9.60])for(let i=0;i<11;i++){   // one row of flags, not two crossing the square
       const x=7.72+i*.26;
       const flag=new THREE.Group();flag.position.set(x,1.4-.13*
         Math.sin((i+.5)/11*Math.PI),z);world.add(flag);
@@ -1685,32 +1647,7 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
           xx,.437,zz+.016).castShadow=false;
       }
     }
-    // Pinwheels and tethered balloons give the village a persistent
-    // slow heartbeat that is actually observable on a phone close-up.
-    for(const [x,z,phase] of [[7.29,9.12,.2],[10.64,10.02,1.8]]){
-      cylinder(world,.013,.016,.65,'#95775f',x,.55,z);
-      const rotor=new THREE.Group();rotor.position.set(x,.87,z);world.add(rotor);
-      for(let k=0;k<4;k++){
-        const blade=box(rotor,.085,.18,.014,
-          buntingColors[(k+Math.floor(phase))%5],0,.113,0);
-        blade.rotation.z=k*Math.PI/2+.27;
-        const bladeArm=new THREE.Group();
-        rotor.remove(blade);bladeArm.rotation.z=k*Math.PI/2;
-        blade.rotation.z=.25;bladeArm.add(blade);rotor.add(bladeArm);
-      }
-      ball(rotor,.031,'#f9dc92',0,0,.019);
-      ambient.push({kind:'pinwheel',mesh:rotor,phase});
-    }
-    for(const [x,z,phase,color] of [
-      [7.48,8.24,.3,'#e98583'],[10.55,8.30,1.5,'#f0c16b'],
-      [10.53,10.51,2.4,'#7ec4ba']
-    ]){
-      const g=new THREE.Group();g.position.set(x,.20,z);world.add(g);
-      cylinder(g,.006,.006,.74,'#b9a78b',0,.46,0).castShadow=false;
-      const balloon=ball(g,.105,color,0,1.06,0);
-      balloon.scale.set(.81,1.19,.84);balloon.castShadow=false;
-      ambient.push({kind:'balloon',mesh:g,phase});
-    }
+    // (The pinwheels and tethered balloons that crowded the square are retired.)
     gardenElements+=86;
   }
   function paintVillageLife(){
@@ -2035,6 +1972,35 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
     mesh.userData.stoneShoulder=axis;
   }
 
+  /* ---- Traffic lights. The simulation already holds cars at red and releases them on green (town.lightPhase); these are
+     the real signals: four poles at every junction with a head facing each approach, lit from that same phase. Poles and
+     heads are static and merge with the town; only the six shared lamp materials change. ---- */
+  const signal={mats:null};
+  function createSignals(){
+    const mk=(hex)=>new THREE.MeshStandardMaterial({color:hex,emissive:hex,emissiveIntensity:.1,roughness:.4});
+    signal.mats={x:{r:mk('#e2463a'),a:mk('#f4b73a'),g:mk('#4fbf72')},y:{r:mk('#e2463a'),a:mk('#f4b73a'),g:mk('#4fbf72')}};
+    const first=LINES[0],last=LINES[LINES.length-1],e=.45,dark=mat('#2e343a',.6),pole=mat('#59636b',.7);
+    for(const jx of LINES)for(const jz of LINES){
+      if((jx===first||jx===last)&&(jz===first||jz===last))continue;   // the four corner bends have no crossing traffic
+      const cx=jx+.5,cz=jz+.5;
+      // [corner dx, corner dz, axis it controls, direction its face looks along the approach]
+      for(const [sx,sz,axis,fx,fz] of [[1,1,'x',-1,0],[-1,-1,'x',1,0],[-1,1,'y',0,-1],[1,-1,'y',0,1]]){
+        const g=new THREE.Group();g.position.set(cx+sx*e,GROUND.pave,cz+sz*e);world.add(g);
+        object(g,geo('cylinder',.012,.014,.52),pole,0,.26,0,false);
+        const head=new THREE.Group();head.position.set(0,.56,0);head.rotation.y=Math.atan2(fx,fz);g.add(head);
+        object(head,geo('box',.07,.17,.06),dark,0,0,0,false);
+        [['r',.055],['a',0],['g',-.055]].forEach(([c,y])=>{const l=object(head,geo('sphere',.019),signal.mats[axis][c],0,y,.034,false);l.castShadow=false;});
+      }
+    }
+  }
+  function updateSignals(dark){
+    if(!signal.mats)return;
+    const ph=town.lightPhase?.();
+    for(const axis of ['x','y']){
+      const state=!ph?'g':ph.green===axis?(ph.amber?'a':'g'):'r',m=signal.mats[axis];
+      for(const c of ['r','a','g'])m[c].emissiveIntensity=(state===c?1.6+dark*1.4:.06);
+    }
+  }
   const SEA_Y=-.42;
   let lighthouse=null;
   /* ---- The town sits in a sea instead of on an empty table: a striped lighthouse on a rocky islet off the north-west
@@ -2593,6 +2559,7 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
     shootingStar.scale.set(2.4,.035,1);world.add(shootingStar);
   }
   function nightLife(dark,time){
+    updateSignals(dark);
     if(lighthouse){lighthouse.beam.rotation.y=time*.7;lighthouse.beamMat.opacity=Math.max(0,dark-.12)*.3;lighthouse.lampMat.emissiveIntensity=.4+dark*3.2;lighthouse.foamMat.opacity=.42-dark*.28;}
     for(const k of clouds)k.c.position.x=((k.x+time*k.speed*(k.speedScale||1)+6)%30)-6;   // a slow drift, wrapping round (faster in wind)
     if(cinemaBeam){cinemaBeam.material.opacity=Math.max(0,dark-.2)*.16;for(const v of cinemaViewers)v.visible=dark>.3;
@@ -3178,6 +3145,7 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
     for(let i=0;i<ps.length;i++)smallProps(ps[i],i);
     streetLanterns();
     seaAndLighthouse();   // (the open-air cinema screen that stood here is retired)
+    createSignals();
     nightSky();
     createStorybookVillage();
     paintVillageLife();
@@ -3204,7 +3172,7 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
   const smoothBall=(p,r,col,x=0,y=0,z=0)=>object(p,geo('smooth',r),typeof col==='string'?mat(col,.7):col,x,y,z);
   const limb=(p,r,len,col,x=0,y=0,z=0)=>THREE.CapsuleGeometry?
     object(p,geo('capsule',r,len),typeof col==='string'?mat(col,.72):col,x,y,z):cylinder(p,r,r,len+r*2,col,x,y,z);
-  const CUTE=.66,HEAD_BIG=1.12;
+  const CUTE=.6,HEAD_BIG=.94;
   function person(ref){
     const g=new THREE.Group();
     const skin=ref.skin||'#dbab86',coat=ref.col||'#d6a3a0',trousers=ref.trousers||'#5e6f7c',shoes='#4f4741';
@@ -3215,7 +3183,8 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
     const headPivot=new THREE.Group();headPivot.position.y=.405;g.add(headPivot);
     const face=new THREE.Group();face.position.y=-.405;headPivot.add(face);
     const head=smoothBall(face,.1,skin,0,.462,0);head.scale.set(1,.98,.96);
-    const hairTone=ref.hair||'#5b4639';
+    const HAIRS=['#2b2a33','#49362d','#6b4a32','#8a6a3f','#c29a52','#d9b46a','#8c3b2a','#a5a5aa','#3a3040'];
+    const hairTone=ref.kind||ref.hat==='beanie'?(ref.hair||'#5b4639'):HAIRS[Math.abs(Math.floor((ref.ph||0)*13+(ref.x||0)*5))%HAIRS.length];
     // A hair cap that wraps the crown and the back of the head; three styles.
     const hairStyle=(Math.round((ref.x||0)*11+(ref.y||0)*7))%3;
     if(!ref.hat){
@@ -3422,9 +3391,10 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
       ref.heroResident?1.10:1;
     const characterPhase=ref.ph||0;
     // Chibi proportions: a little smaller overall (so people sit comfortably beside the small toy cars) with a big round head.
-    g.scale.set(CUTE*scale*(.97+.045*Math.sin(characterPhase*1.3)),
-      CUTE*scale*(.98+.055*Math.cos(characterPhase*.9)),
-      CUTE*scale*(.95+.045*Math.sin(characterPhase+1)));
+    // Slimmer and a little taller than the chibi build, with a small head: adults read as people, not as toys.
+    g.scale.set(CUTE*scale*(.9+.045*Math.sin(characterPhase*1.3)),
+      CUTE*scale*(1.04+.07*Math.cos(characterPhase*.9)),
+      CUTE*scale*(.88+.045*Math.sin(characterPhase+1)));
     headPivot.scale.setScalar(HEAD_BIG);
     return g;
   }
@@ -4527,11 +4497,12 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
     if(kind==='wedding'){
       E.dur=75;const z=16.07;E.z=z;E.x=.9;
       const bride=mk(1,'#ffffff'),groom=mk(2,'#2f3a4a');const veil=ball(bride.userData.limbs.headPivot,.115,mat('#ffffff',.6),0,.07,-.02);veil.scale.set(1.1,.6,1.1);
-      E.walkers=[{q:bride,off:0},{q:groom,off:-.32}];
-      for(let i=0;i<4;i++)E.walkers.push({q:mk(3+i,['#f2a99b','#9ccf9a','#7fb3d9','#f2c36b'][i],i<2?.8:1),off:-.9-i*.38});
+      // Side by side, in pairs, not in single file: the couple first, then three pairs of guests.
+      E.walkers=[{q:bride,off:0,dz:-.04},{q:groom,off:.02,dz:.04}];
+      for(let i=0;i<6;i++)E.walkers.push({q:mk(3+i,['#f2a99b','#9ccf9a','#7fb3d9','#f2c36b','#c39be0','#f0a574'][i],i<2?.8:1),off:-.75-Math.floor(i/2)*.5-(i%2)*.06,dz:i%2?.04:-.04});
       const cart=new THREE.Group();g.add(cart);box(cart,.5,.07,.26,'#fff6e8',0,.09,0);for(const x of [-.18,.18])for(const s of [-1,1]){const w=cylinder(cart,.045,.045,.025,'#4f5560',x,.045,s*.14);w.rotation.x=Math.PI/2;}
       box(cart,.34,.2,.02,'#fff6e8',0,.22,-.12);for(let k=0;k<6;k++)ball(cart,.035,mat(['#ff9fbf','#ffffff','#ffe27a'][k%3],.7),-.2+k*.08,.17,.06);sign(cart,'JUST MARRIED',0,.33,.0,.34);
-      E.cart=cart;E.walkers.push({q:null,off:-2.2,cart:true});E.nextConf=1;
+      E.cart=cart;E.walkers.push({q:null,off:-2.5,cart:true});E.nextConf=1;
       announce('A wedding procession is marching through town!');
     }else if(kind==='cart'){
       E.dur=85;const s=eventSpot(.35);E.x=s.x;E.z=s.z;
@@ -4570,7 +4541,7 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
     const E=fest.ev;if(E){
       E.t+=dt;
       if(E.kind==='wedding'){E.x+=.45*dt;
-        for(const w of E.walkers){const x=E.x+w.off;if(w.cart){E.cart.position.set(x,base,E.z-.03);}else{w.q.position.set(x,base+Math.abs(Math.sin(t*9+w.off*3))*.01,E.z);w.q.rotation.y=Math.PI/2;walkAnim(w.q,true,t*6+w.off*5);}}
+        for(const w of E.walkers){const x=E.x+w.off;if(w.cart){E.cart.position.set(x,base,E.z-.03);}else{w.q.position.set(x,GROUND.pave+GROUND.foot+Math.abs(Math.sin(t*9+w.off*3))*.01,E.z+(w.dz||0));w.q.rotation.y=Math.PI/2;walkAnim(w.q,true,t*6+w.off*5);}}
         if(E.t>E.nextConf){E.nextConf+=4;confettiAt(E.x-.5,.6,E.z);sound('pop');}
         if(E.x+E.walkers[E.walkers.length-1].off>17.4)E.t=E.dur;
       }else if(E.kind==='cart'){
@@ -4886,7 +4857,8 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
       const rest=item.kind==='car'?.192+arch:item.kind==='bike'?.162+arch:
         item.kind==='animal'?.13+arch:ref.sit?.10+arch:
         Math.max(groundLevel(desiredX,desiredZ),arch>0?ARCH.y0+arch:0)+GROUND.foot;
-      g.position.set(desiredX,rest,desiredZ);
+      {const jit=item.kind==='person'&&!ref.sit&&path&&!ref.shopRole?(((ref.ph||0)*7.31)%1-.5)*.08:0;   // each walker keeps a slightly different line on the pavement
+       g.position.set(desiredX+(d<2?0:jit),rest,desiredZ+(d<2?jit:0));}
       {const now=town.debug().clock||0;if(ref.hopUntil&&now<ref.hopUntil)g.position.y+=Math.abs(Math.sin((ref.hopUntil-now)*(item.kind==='car'?16:11)))*(item.kind==='car'?.045:.11);}
       const a=Number.isFinite(ref.heading)?-ref.heading:[0,Math.PI,-Math.PI/2,Math.PI/2][d];
       // Cars, bicycles and quadrupeds point along local +X; only sculpted
@@ -5452,6 +5424,7 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
     // Meshes whose material reads vertex colours but whose geometry has none draw pure black.
     vertexColorAudit:()=>{let bad=0;world.traverse?.(o=>{if(o.isMesh&&o.material?.vertexColors&&o.geometry?.attributes&&!o.geometry.attributes.color)bad++;});return bad;},
     batchStats:()=>({removed:batch.removed,merged:batch.merged,candidates:batch.candidates.length,off:batch.off}),staticCandidates:()=>batch.candidates,
+    signalStats:()=>({built:!!signal.mats,phase:town.lightPhase?.()||null,lit:signal.mats?['x','y'].map(a=>['r','a','g'].filter(c=>signal.mats[a][c].emissiveIntensity>1).join('')):null}),
     stage6Stats:()=>({season:SEASON_NAME,lite,ground:bus3.ground.filter(m=>m.visible).length,notes:notes6.pool.filter(n=>n.visible).length,spawned:notes6.spawned,mood:moodOf({ph:1,kid:false})}),setLite:v=>{setLite(v);return lite;},
     stage5Stats:()=>({built:fest.built,festival:fest.kind,decor:fest.decor,dragon:!!fest.dragon?.g.visible,maypole:!!fest.maypole,event:fest.ev?.kind||null,eventT:fest.ev?+fest.ev.t.toFixed(1):0,eventDur:fest.ev?.dur||0,events:fest.events,log:fest.log.slice(-6)}),
     startEvent:k=>startEvent(k),startDragon:()=>{if(fest.dragon){fest.dragonOn=60;fest.dragon.g.visible=true;return true;}return false;},
