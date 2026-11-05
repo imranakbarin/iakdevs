@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generated_at": "2026-11-05T03:32:04.098Z",
+  "generated_at": "2026-11-05T12:28:16.533Z",
   "status": "ok",
   "successful_sources": [
     "BBC News",
@@ -12,39 +12,39 @@
   ],
   "stories": [
     {
-      "title": "Ukraine says bodycam video shows deadly Russian double-tap bombing",
-      "url": "https://www.bbc.co.uk/news/articles/c98rz6penv86o?at_medium=RSS&at_campaign=rss",
-      "source": "BBC News",
-      "category": "World",
-      "published_at": "2026-11-04T22:48:43.000Z"
-    },
-    {
-      "title": "Nintendo's biggest ROM chip supplier is bowing out of the business",
-      "url": "https://arstechnica.com/gaming/2026/11/the-tech-memory-shortage-comes-for-nintendos-cartridge-supply-chain/",
-      "source": "Ars Technica",
-      "category": "Technology",
-      "published_at": "2026-11-04T22:47:51.000Z"
-    },
-    {
-      "title": "Australia's oldest department store David Jones folds after 188 years",
-      "url": "https://www.bbc.co.uk/news/articles/cky93z5y0171o?at_medium=RSS&at_campaign=rss",
-      "source": "BBC Business",
-      "category": "Business",
-      "published_at": "2026-11-05T00:59:22.000Z"
-    },
-    {
-      "title": "Why Iraola's Liverpool are still a work in progress",
-      "url": "https://www.bbc.co.uk/sport/football/videos/c9rky37kx37lo?at_medium=RSS&at_campaign=rss",
-      "source": "BBC Sport",
-      "category": "Sport",
-      "published_at": "2026-11-04T23:22:35.000Z"
-    },
-    {
-      "title": "Winners, losers, the EU: Five takeaways from the US midterms",
-      "url": "https://www.dw.com/en/winners-losers-the-eu-five-takeaways-from-the-us-midterms/a-79858901?maca=en-rss-en-world-4025-xml-mrss",
+      "title": "North Korea tells EU to 'mind its own business' on human rights",
+      "url": "https://www.dw.com/en/north-korea-tells-eu-to-mind-its-own-business-on-human-rights/a-79862196?maca=en-rss-en-world-4025-xml-mrss",
       "source": "DW",
       "category": "World",
-      "published_at": "2026-11-04T20:27:00.000Z"
+      "published_at": "2026-11-05T11:14:00.000Z"
+    },
+    {
+      "title": "Mercedes-AMG GT 4-Door Coupe first drive: Where tech and fun collide",
+      "url": "https://arstechnica.com/cars/2026/11/mercedes-amg-gt-4-door-coupe-first-drive-where-tech-and-fun-collide/",
+      "source": "Ars Technica",
+      "category": "Technology",
+      "published_at": "2026-11-05T09:00:13.000Z"
+    },
+    {
+      "title": "Interest rates hiked to 4% in first increase in over three years",
+      "url": "https://www.bbc.co.uk/news/articles/ck5ynw45jrgqo?at_medium=RSS&at_campaign=rss",
+      "source": "BBC Business",
+      "category": "Business",
+      "published_at": "2026-11-05T12:17:47.000Z"
+    },
+    {
+      "title": "'What a ride' - Meet the UFC's longest-serving Brit",
+      "url": "https://www.bbc.co.uk/sport/mixed-martial-arts/articles/cw62ymmq3l41o?at_medium=RSS&at_campaign=rss",
+      "source": "BBC Sport",
+      "category": "Sport",
+      "published_at": "2026-11-05T12:11:35.000Z"
+    },
+    {
+      "title": "Was an Italian chef really fired over refusal to put pineapple on pizza?",
+      "url": "https://www.bbc.co.uk/news/videos/cmvg9yy8wpweo?at_medium=RSS&at_campaign=rss",
+      "source": "BBC News",
+      "category": "World",
+      "published_at": "2026-11-05T10:33:21.000Z"
     },
     {
       "title": "Elon Musk's millions failed to deliver Republican wins in fierce midterms",
@@ -54,25 +54,25 @@
       "published_at": "2026-11-04T21:41:15.000Z"
     },
     {
-      "title": "Interest rates expected to rise for first time in over three years",
-      "url": "https://www.bbc.co.uk/news/articles/ck5ynw45jrgqo?at_medium=RSS&at_campaign=rss",
+      "title": "Three ways the interest rate rise could affect you",
+      "url": "https://www.bbc.co.uk/news/articles/cx4g1q3vlp62o?at_medium=RSS&at_campaign=rss",
       "source": "BBC Business",
       "category": "Business",
-      "published_at": "2026-11-05T00:00:09.000Z"
+      "published_at": "2026-11-05T12:11:04.000Z"
     },
     {
-      "title": "World record 51 red cards shown in Brazilian youth game",
-      "url": "https://www.bbc.co.uk/sport/football/articles/cmy0rz7741ywo?at_medium=RSS&at_campaign=rss",
+      "title": "Sheffield-born Jorgensen out to inflict more pain on England",
+      "url": "https://www.bbc.co.uk/sport/rugby-union/articles/cmze4zzz2wl8o?at_medium=RSS&at_campaign=rss",
       "source": "BBC Sport",
       "category": "Sport",
-      "published_at": "2026-11-04T23:22:27.000Z"
+      "published_at": "2026-11-05T12:04:57.000Z"
     },
     {
-      "title": "36 years later: Hungary opens Communist-era secret service files",
-      "url": "https://www.dw.com/en/36-years-later-hungary-opens-communist-era-secret-service-files/a-79858016?maca=en-rss-en-world-4025-xml-mrss",
-      "source": "DW",
+      "title": "France gears up for strikes and protests as unions promise national mobilisation",
+      "url": "https://www.bbc.co.uk/news/articles/ckx2qzv835pgo?at_medium=RSS&at_campaign=rss",
+      "source": "BBC News",
       "category": "World",
-      "published_at": "2026-11-04T19:30:00.000Z"
+      "published_at": "2026-11-05T10:26:03.000Z"
     }
   ]
 }
