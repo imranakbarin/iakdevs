@@ -1082,22 +1082,29 @@ const ToyTown = (() => {
     if(dist<.00001){
       m.v=0;m.path.shift();if(p.then)p.then(m);return;
     }
+    const ux=dx/dist,uy=dy/dist;
     const nextDir=Math.abs(dx)>Math.abs(dy)?(dx>0?0:1):(dy>0?2:3);
     if(m.type==='person'){
-      // Let the resident face the next pavement leg *before* setting off.
-      // Otherwise their feet slide sideways while the 3D rig catches up.
-      // The simulation's actual distance (and the gait clock) stays still.
+      // A route segment can be diagonal. Store its REAL travel direction
+      // for the 3D body rather than showing a north-facing person sliding
+      // northeast. Rotate in place before a large path bend.
+      const facing=Math.atan2(ux,uy);
+      const previous=Number.isFinite(m.walkFacing)?m.walkFacing:
+        [Math.PI/2,-Math.PI/2,0,Math.PI][m.d];
+      const angle=Math.abs(Math.atan2(Math.sin(facing-previous),
+        Math.cos(facing-previous)));
       if(m.turnPauseUntil&&clock<m.turnPauseUntil){
         m.v=0;m.moved=0;return;
       }
-      if(nextDir!==m.d&&dist>.18){
-        m.d=nextDir;m.turnPauseUntil=clock+.38;
+      if(angle>.55&&dist>.18){
+        m.d=nextDir;m.walkFacing=facing;
+        m.turnPauseUntil=clock+Math.min(.85,.14+angle/3.8);
         m.v=0;m.moved=0;return;
       }
       m.turnPauseUntil=0;
+      m.walkFacing=facing;
     }
     m.d=nextDir;
-    const ux=dx/dist,uy=dy/dist;
     const requested=Math.min(dist,sp);
     const advance=m.type==='car'?
       safeVehicleTravel(m,ux,uy,requested):requested;
