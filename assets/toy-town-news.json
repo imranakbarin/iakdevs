@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generated_at": "2026-11-04T07:33:27.984Z",
+  "generated_at": "2026-11-05T12:28:16.533Z",
   "status": "ok",
   "successful_sources": [
     "BBC News",
@@ -12,67 +12,67 @@
   ],
   "stories": [
     {
-      "title": "South Carolina elects Democratic senator for first time in almost three decades",
-      "url": "https://www.bbc.co.uk/news/articles/cjy56z440nl9o?at_medium=RSS&at_campaign=rss",
-      "source": "BBC News",
-      "category": "World",
-      "published_at": "2026-11-04T07:32:02.000Z"
-    },
-    {
-      "title": "Graduates are managing AI - but are they learning much else?",
-      "url": "https://www.bbc.co.uk/news/articles/c820vz6wyp65o?at_medium=RSS&at_campaign=rss",
-      "source": "BBC Technology",
-      "category": "Technology",
-      "published_at": "2026-11-04T00:04:35.000Z"
-    },
-    {
-      "title": "Poundland supplier 'will lose millions' if retailer collapses",
-      "url": "https://www.bbc.co.uk/news/articles/ck240mm3e42do?at_medium=RSS&at_campaign=rss",
-      "source": "BBC Business",
-      "category": "Business",
-      "published_at": "2026-11-04T07:31:21.000Z"
-    },
-    {
-      "title": "Retiring Serrano wants to end as a 'game-changer'",
-      "url": "https://www.bbc.co.uk/sport/boxing/articles/c6n047870jzeo?at_medium=RSS&at_campaign=rss",
-      "source": "BBC Sport",
-      "category": "Sport",
-      "published_at": "2026-11-04T07:12:33.000Z"
-    },
-    {
-      "title": "Why South Africa's local elections matter",
-      "url": "https://www.dw.com/en/why-south-africa-s-local-elections-matter/a-79842695?maca=en-rss-en-world-4025-xml-mrss",
+      "title": "North Korea tells EU to 'mind its own business' on human rights",
+      "url": "https://www.dw.com/en/north-korea-tells-eu-to-mind-its-own-business-on-human-rights/a-79862196?maca=en-rss-en-world-4025-xml-mrss",
       "source": "DW",
       "category": "World",
-      "published_at": "2026-11-03T15:06:00.000Z"
+      "published_at": "2026-11-05T11:14:00.000Z"
     },
     {
-      "title": "California fights \"preposterous\" Trump admin demand to scrap state broadband laws",
-      "url": "https://arstechnica.com/tech-policy/2026/11/california-fights-preposterous-trump-admin-demand-to-scrap-state-broadband-laws/",
+      "title": "Mercedes-AMG GT 4-Door Coupe first drive: Where tech and fun collide",
+      "url": "https://arstechnica.com/cars/2026/11/mercedes-amg-gt-4-door-coupe-first-drive-where-tech-and-fun-collide/",
       "source": "Ars Technica",
       "category": "Technology",
-      "published_at": "2026-11-03T22:39:37.000Z"
+      "published_at": "2026-11-05T09:00:13.000Z"
     },
     {
-      "title": "Leisure centre price hikes on the way",
-      "url": "https://www.bbc.co.uk/news/articles/c6pvgw8gz1k4o?at_medium=RSS&at_campaign=rss",
+      "title": "Interest rates hiked to 4% in first increase in over three years",
+      "url": "https://www.bbc.co.uk/news/articles/ck5ynw45jrgqo?at_medium=RSS&at_campaign=rss",
       "source": "BBC Business",
       "category": "Business",
-      "published_at": "2026-11-04T06:13:19.000Z"
+      "published_at": "2026-11-05T12:17:47.000Z"
     },
     {
-      "title": "Who am I? Plus today's other quizzes",
-      "url": "https://www.bbc.co.uk/sport/football/articles/c6jdmg9mkg8mo?at_medium=RSS&at_campaign=rss",
+      "title": "'What a ride' - Meet the UFC's longest-serving Brit",
+      "url": "https://www.bbc.co.uk/sport/mixed-martial-arts/articles/cw62ymmq3l41o?at_medium=RSS&at_campaign=rss",
       "source": "BBC Sport",
       "category": "Sport",
-      "published_at": "2026-11-04T07:06:19.000Z"
+      "published_at": "2026-11-05T12:11:35.000Z"
     },
     {
-      "title": "How America voted in maps and charts",
-      "url": "https://www.bbc.co.uk/news/articles/cm4g1j0n92qdo?at_medium=RSS&at_campaign=rss",
+      "title": "Was an Italian chef really fired over refusal to put pineapple on pizza?",
+      "url": "https://www.bbc.co.uk/news/videos/cmvg9yy8wpweo?at_medium=RSS&at_campaign=rss",
       "source": "BBC News",
       "category": "World",
-      "published_at": "2026-11-04T07:24:59.000Z"
+      "published_at": "2026-11-05T10:33:21.000Z"
+    },
+    {
+      "title": "Elon Musk's millions failed to deliver Republican wins in fierce midterms",
+      "url": "https://www.bbc.co.uk/news/articles/cv8ez3p3ge5ko?at_medium=RSS&at_campaign=rss",
+      "source": "BBC Technology",
+      "category": "Technology",
+      "published_at": "2026-11-04T21:41:15.000Z"
+    },
+    {
+      "title": "Three ways the interest rate rise could affect you",
+      "url": "https://www.bbc.co.uk/news/articles/cx4g1q3vlp62o?at_medium=RSS&at_campaign=rss",
+      "source": "BBC Business",
+      "category": "Business",
+      "published_at": "2026-11-05T12:11:04.000Z"
+    },
+    {
+      "title": "Sheffield-born Jorgensen out to inflict more pain on England",
+      "url": "https://www.bbc.co.uk/sport/rugby-union/articles/cmze4zzz2wl8o?at_medium=RSS&at_campaign=rss",
+      "source": "BBC Sport",
+      "category": "Sport",
+      "published_at": "2026-11-05T12:04:57.000Z"
+    },
+    {
+      "title": "France gears up for strikes and protests as unions promise national mobilisation",
+      "url": "https://www.bbc.co.uk/news/articles/ckx2qzv835pgo?at_medium=RSS&at_campaign=rss",
+      "source": "BBC News",
+      "category": "World",
+      "published_at": "2026-11-05T10:26:03.000Z"
     }
   ]
 }
