@@ -843,10 +843,10 @@ const ToyTown = (() => {
     // Two cars that end up nose to flank in a junction each see the other "in
     // front" and would wait forever. One that has run out of patience may edge
     // out past crossing traffic; it never closes on traffic going its own way.
-    const pushing=clock<(m.patienceUntil||0);
+    // Patience may change right-of-way, but must never disable physical
+    // clearance checks against cross traffic or cyclists at junctions.
     for(const o of movers){
       if(o===m||o.type!=='car')continue;
-      if(pushing&&(o.d<2)!==(m.d<2))continue;
       const other=vehiclePoint(o);
       const rx=other.x-here.x,ry=other.y-here.y;
       const front=rx*ux+ry*uy,side=Math.abs(rx*uy-ry*ux);
@@ -882,7 +882,7 @@ const ToyTown = (() => {
   function laneFree(m,nd){
     const me={...m,d:nd},p=vehiclePoint(me),a=bodyExtent(me,1,0),c=bodyExtent(me,0,1);
     return movers.every(o=>{
-      if(o===m||o.type!=='car'||o.kind==='bike')return true;
+      if(o===m||o.type!=='car')return true;
       const q=vehiclePoint(o),b=bodyExtent(o,1,0),d=bodyExtent(o,0,1);
       return Math.abs(p.x-q.x)>a.front+b.front+.03||Math.abs(p.y-q.y)>c.front+d.front+.03;
     });
