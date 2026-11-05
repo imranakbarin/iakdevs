@@ -1082,7 +1082,21 @@ const ToyTown = (() => {
     if(dist<.00001){
       m.v=0;m.path.shift();if(p.then)p.then(m);return;
     }
-    if (Math.abs(dx) > Math.abs(dy)) m.d = dx > 0 ? 0 : 1; else m.d = dy > 0 ? 2 : 3;
+    const nextDir=Math.abs(dx)>Math.abs(dy)?(dx>0?0:1):(dy>0?2:3);
+    if(m.type==='person'){
+      // Let the resident face the next pavement leg *before* setting off.
+      // Otherwise their feet slide sideways while the 3D rig catches up.
+      // The simulation's actual distance (and the gait clock) stays still.
+      if(m.turnPauseUntil&&clock<m.turnPauseUntil){
+        m.v=0;m.moved=0;return;
+      }
+      if(nextDir!==m.d&&dist>.18){
+        m.d=nextDir;m.turnPauseUntil=clock+.38;
+        m.v=0;m.moved=0;return;
+      }
+      m.turnPauseUntil=0;
+    }
+    m.d=nextDir;
     const ux=dx/dist,uy=dy/dist;
     const requested=Math.min(dist,sp);
     const advance=m.type==='car'?
@@ -2220,15 +2234,41 @@ const ToyTown = (() => {
   // over, and now and then one of them waves. Purely gestural — no one is
   // stopped or rerouted, so traffic and errands are unaffected.
   function passingGreetings() {
-    const walkers = movers.filter(m => m.type === 'person' && (!m.kind || m.kind === 'neighbor') && !m.shopRole && (m.v || 0) > .05);
-    for (let i = 0; i < walkers.length; i++) for (let j = i + 1; j < walkers.length; j++) {
-      const a = walkers[i], b = walkers[j];
-      if (Math.abs(a.x - b.x) > .6 || Math.abs(a.y - b.y) > .6 || Math.hypot(a.x - b.x, a.y - b.y) > .55) continue;
-      if (clock < (a.greetNext || 0) || clock < (b.greetNext || 0)) continue;
-      a.greetNext = b.greetNext = clock + 9 + Math.random() * 8;
-      a.glanceAt = {x: b.x, y: b.y}; b.glanceAt = {x: a.x, y: a.y}; a.glanceUntil = b.glanceUntil = clock + 1.6;
-      if (Math.random() < .45) (Math.random() < .5 ? a : b).waveUntil = clock + 1.3;
+    // Finish real, stationary conversations before looking for new ones.
+    // A greeting is never a stationary walking loop; the stride clock stays
+    // frozen while both people look at one another and gesture.
+    for(const m of movers)if(m.briefChatUntil&&clock>=m.briefChatUntil){
+      if(m.intent==='chat'){
+        m.intent='walking';m.attention=null;
+        if((m.stopUntil||0)<=clock)m.stopUntil=0;
+      }
+      m.busy=false;m.briefChatUntil=0;
+    }
+    if(movers.filter(m=>m.briefChatUntil>clock).length>=4)return;
+    const walkers=movers.filter(m=>freeWalker(m)&&m.max>.05&&
+      (m.v||0)>.06&&clock>=(m.greetNext||0));
+    const nearCrossing=m=>LINES.some(l=>
+      Math.abs((m.d<2?m.x:m.y)-(l+.5))<.65);
+    for(let i=0;i<walkers.length;i++)for(let j=i+1;j<walkers.length;j++){
+      const a=walkers[i],b=walkers[j];
+      // Compare *drawn pavement coordinates*, not road-centre values.
+      // A wave across the road should not freeze two people meters apart.
+      if((a.d<2)!==(b.d<2)||nearCrossing(a)||nearCrossing(b))continue;
+      const pa=vehiclePoint(a),pb=vehiclePoint(b);
+      const gap=Math.hypot(pa.x-pb.x,pa.y-pb.y);
+      if(gap<.25||gap>.58)continue;
+      const across=a.d<2?Math.abs(pa.y-pb.y):Math.abs(pa.x-pb.x);
+      if(across>.17)continue; // same sidewalk, not opposite pavements
+      const until=clock+2.4+Math.random()*1.2;
+      a.greetNext=b.greetNext=clock+32+Math.random()*20;
+      for(const [m,other] of [[a,b],[b,a]]){
+        m.briefChatUntil=until;m.stopUntil=until;
+        m.intent='chat';m.attention={x:other.x,y:other.y};
+        m.busy=true;m.v=0;m.moved=0;
+      }
+      (Math.random()<.5?a:b).waveUntil=clock+1.1;
       greetings++;
+      return; // a quiet, readable encounter, not a crowded synchronized chorus
     }
   }
   let greetings = 0;
