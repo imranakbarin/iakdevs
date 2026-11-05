@@ -12,7 +12,7 @@ assert.match(dioramaSource, /function tree\(/, 'new organic tree renderer exists
 assert.match(dioramaSource, /function gable\(/, 'real pitched roof renderer exists');
 assert.match(dioramaSource, /function glazing\(/, 'framed glazing renderer exists');
 assert.match(html, /<option value="town">Toy Town<\/option>/, 'Toy Town is in the menu');
-assert.match(html, /return 'toy-town\.html\?v=88&embed=1'\+keep;/, 'and opens its current embedded page');
+assert.match(html, /return 'toy-town\.html\?v=89&embed=1'\+keep\+\(bar\.hidden\?'&clean=1':''\);/, 'and opens its current embedded page');
 assert.match(html, /townFrame\.src=townSrc\(\);/, 'with this page\'s weather and fps settings passed through');
 assert.match(fs.readFileSync(path.join(root, 'toy-town.html'), 'utf8'), /assets\/toy-town\.js\?v=\d+/);
 const box = vm.createContext({Math, Object, Array, JSON, Date, String, Number, RegExp, setTimeout: () => 0, document: {getElementById: () => ({textContent: ''})}});
@@ -168,6 +168,41 @@ Object.assign(leading,{x:3.31,y:1.5,d:0,lane:.20,v:0,max:1.1,path:null});
 T.update(1/60);
 assert.equal(following.braking,true,
   'a moving vehicle exposes a brake-light intention when closing on traffic');
+
+// Cars at a road end drive to the last junction and turn left or right; they turn round only when both sides are blocked.
+{
+  T.build(61001,'market');
+  const cars=T.movers().filter(m=>m.type==='car'&&m.kind!=='bike');
+  const park=cars.slice(1);park.forEach((c,i)=>Object.assign(c,{x:3+i*.5,y:16.5,d:0,v:0,max:0,stopUntil:1e9,path:null}));
+  const lone=cars[0];let side=0,round=0;
+  for(let trial=0;trial<16;trial++){
+    Object.assign(lone,{x:15.6,y:6.5,d:0,v:.8,max:1,lane:.16,path:null,stopUntil:0,patienceUntil:0,turnSignal:null});
+    let turnedTo=null;
+    for(let i=0;i<60*5&&turnedTo===null;i++){
+      T.update(1/60);
+      if(lone.d!==0)turnedTo=lone.d;
+    }
+    if(turnedTo===2||turnedTo===3)side++;else if(turnedTo===1)round++;
+    assert.ok(lone.x<=16.56,'a car never drives past the last junction');
+  }
+  assert.ok(side>=14&&round<=2,'at the end of the road cars turn left or right, not back the way they came ('+side+' side, '+round+' round)');
+}
+// A car stops for a walker standing in the carriageway; a walker waits rather than step into a car.
+{
+  T.build(61002,'market');
+  const cars=T.movers().filter(m=>m.type==='car'&&m.kind!=='bike'),walkers=T.movers().filter(m=>m.type==='person'&&!m.kind&&!m.path);
+  cars.slice(2).forEach((c,i)=>Object.assign(c,{x:3+i*.5,y:16.5,d:0,v:0,max:0,stopUntil:1e9,path:null}));
+  const car=cars[0],stopped=cars[1],w=walkers[0],w2=walkers[1];
+  Object.assign(stopped,{x:15,y:16.5,d:0,v:0,max:0,stopUntil:1e9,path:null});
+  Object.assign(w,{x:3.9,y:1.5,d:0,lane:0,v:0,max:0,stopUntil:1e9,path:null,heroResident:false});
+  Object.assign(car,{x:2.6,y:1.5,d:0,v:1,max:1.2,lane:.16,path:null,stopUntil:0,patienceUntil:0});
+  for(let i=0;i<60*3;i++){T.update(1/60);if(car.d!==0)break;}
+  assert.ok(car.x<w.x-.15,'a car does not drive through a walker standing in its lane ('+car.x.toFixed(2)+' vs '+w.x+')');
+  Object.assign(stopped,{x:5,y:6.5,d:0,v:0,max:0,lane:.16,stopUntil:1e9,path:null});
+  Object.assign(w2,{x:4.4,y:6.66,d:0,lane:0,v:0,max:.5,stopUntil:0,observeUntil:0,nextDawdle:1e9,nextNotice:1e9,path:null,heroResident:false,carGoUntil:0,carWaitSince:undefined});
+  for(let i=0;i<60*2;i++)T.update(1/60);
+  assert.ok(w2.x<4.84,'a walker waits at a stopped car instead of stepping into its body ('+w2.x.toFixed(2)+')');
+}
 
 // Outer neighborhoods are services with meaningful safe routes, not scenery.
 T.build(60624,'market');
@@ -480,7 +515,7 @@ const townPage = fs.readFileSync(path.join(root, 'toy-town.html'), 'utf8');
 for (const id of ['zoom-in', 'zoom-out', 'zoom-reset']) {
   assert.match(townPage, new RegExp('id="' + id + '"[^>]*aria-label="[^"]+"'), id + ' is accessible');
 }
-assert.match(townPage, /toy-town\.js\?v=44/, 'diorama engine is loaded');
+assert.match(townPage, /toy-town\.js\?v=45/, 'diorama engine is loaded');
 assert.match(townPage, /toy-town-news\.js\?v=1/, 'sourced news loads before the simulation');
 assert.match(townPage, /HEADLINES/, 'real reporting has a dedicated source panel');
 assert.match(townPage, /AROUND TOWN · FICTION/, 'fiction and real news are explicitly separated');

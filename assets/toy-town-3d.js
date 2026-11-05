@@ -4640,10 +4640,15 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
     }
     g.userData.vehicleRig={wheels,brakeMaterial,indicators};
     g.userData.vehicleClass=kind;
-    return g;
+    // Tiny toy vehicles: the whole machine is drawn at VEHICLE_SCALE (the simulation's bodies are sized to match).
+    const outer=new THREE.Group();
+    g.scale.setScalar(VEHICLE_SCALE);outer.add(g);
+    outer.userData=g.userData;
+    return outer;
   }
   // Cyclists are small and round: the whole bicycle is scaled well below the toy cars, with fat tyres, a pastel frame and a big-headed rider.
-  const BIKE_SCALE=.52;
+  const BIKE_SCALE=.42;
+  const VEHICLE_SCALE=.8;
   function bicycle(ref){
     const inner=bicycleParts(ref),outer=new THREE.Group();
     inner.scale.setScalar(BIKE_SCALE);outer.add(inner);
@@ -4813,8 +4818,8 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
     // even under overcast lighting and at close zoom.
     const pad=object(g,geo('sphere',.11),contactMaterial,0,
       kind==='car'?.101:kind==='bike'?.057:kind==='animal'?.042:.012,0,false);
-    const spread=kind==='car'?[3.05,.065,1.75]:
-      kind==='bike'?[1.9,.06,1.1]:kind==='animal'?[1.35,.05,1.05]:[.85,.045,.60];
+    const spread=kind==='car'?[2.45,.065,1.4]:
+      kind==='bike'?[1.55,.06,.9]:kind==='animal'?[1.35,.05,1.05]:[.85,.045,.60];
     pad.scale.set(...spread);
     world.add(g);
     actors.set(ref,{group:g,kind});
@@ -5083,7 +5088,7 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
       if(item.kind==='car'||item.kind==='bike'){
         const rig=g.userData.vehicleRig;
         if(rig){
-          for(const wheel of rig.wheels)wheel.rotation.z=-(ref.travel||0)*12;
+          for(const wheel of rig.wheels)wheel.rotation.z=-(ref.travel||0)*15;   // smaller wheels turn faster for the same ground speed
           rig.brakeMaterial.emissiveIntensity=ref.braking?.90:.075;
           for(const {lamp,side} of rig.indicators){
             const flashes=ref.turnSignal&&(ref.turnUntil||0)>town.debug().clock &&

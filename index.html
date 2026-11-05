@@ -105,8 +105,14 @@ input[type=range]{width:80px;accent-color:#E63B2E}
 #town-zoom #town-fit{font-size:12px;min-width:50px}
 @media (max-width:700px){.town-mode #town-zoom{display:none}}   /* phones pinch, twist and drag instead */
 .town-mode .bar{background:rgba(45,52,64,.88);color:#fff7e5;border:1px solid #ffffff40}
-.town-mode .bar > :not(#mode):not(#play):not(#new){display:none!important}
-.town-mode .bar #mode,.town-mode .bar #play,.town-mode .bar #new{color:#fff7e5;display:block!important}
+.town-mode .bar > :not(#mode):not(#play):not(#new):not(#hide){display:none!important}
+.town-mode .bar #mode,.town-mode .bar #play,.town-mode .bar #new,.town-mode .bar #hide{color:#fff7e5;display:block!important}
+/* Clean view: no toolbar, no zoom buttons; only a faint dot (and the H key) brings them back. */
+.town-mode.art-ui-hidden #town-zoom{display:none}
+.town-mode.art-ui-hidden #show{width:30px;height:30px;font-size:13px;opacity:.22;background:rgba(30,36,44,.4);color:#fff;border:0;border-radius:50%;transition:opacity .2s}
+.town-mode.art-ui-hidden #show:hover,.town-mode.art-ui-hidden #show:focus-visible,.town-mode.art-ui-hidden #show:active{opacity:1}
+#ui-toast{position:fixed;left:50%;bottom:calc(22px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);z-index:9;padding:8px 14px;border-radius:999px;background:rgba(30,36,44,.82);color:#fff;font:600 12.5px system-ui;pointer-events:none;opacity:0;transition:opacity .4s;max-width:calc(100vw - 32px);text-align:center}
+#ui-toast.on{opacity:1}
 #pip-host{display:none;position:fixed;inset:0;z-index:1;background:#8fcdf2}
 .pip-mode #pip-host{display:block}
 .pip-mode #c,.pip-mode #zen-backdrop,.pip-mode #zen-sand,.pip-mode #cozy-host,.pip-mode #mushroom-host{display:none!important}
@@ -151,6 +157,7 @@ input[type=range]{width:80px;accent-color:#E63B2E}
   <button id="zen-fullscreen" hidden>Full screen</button>
   <button id="hide" aria-label="Hide controls" title="Hide controls (H)">Hide</button>
 </div><button id="show" class="fab" hidden aria-label="Show controls" title="Show controls (H)">☰</button></div>
+<div id="ui-toast" role="status" aria-live="polite"></div>
 <div id="trip-status" hidden role="status" style="position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:var(--panel);padding:8px 18px;border-radius:30px;white-space:nowrap;pointer-events:none"></div>
 <div id="art-status" class="art-status" role="status" hidden></div>
 <aside id="art-caption" aria-label="Artwork description"><strong id="art-title">Living paintings</strong><span id="art-medium">A collection of moving worlds</span></aside>
@@ -2145,7 +2152,7 @@ const playBtn=document.getElementById('play'),syncPlay=()=>{playBtn.textContent=
 playBtn.onclick=()=>{playing=!playing;syncPlay();if(modeBtn.value==='cozy'&&window.CozyWorlds)(playing?CozyWorlds.resume():CozyWorlds.pause)();if(modeBtn.value==='mushroom')mushroomMotion(playing);if(modeBtn.value==='pip')pipMotion(playing);if(modeBtn.value==='town')townMotion(playing);};
 document.getElementById('spd').oninput=e=>speed=+e.target.value;
 // The embedded Toy Town gets this page's ?weather= and ?fps settings too, so previews work from here.
-function townSrc(){const q=new URLSearchParams(location.search),keep=['weather','fps','festival','season','lite'].filter(k=>q.has(k)).map(k=>'&'+k+(q.get(k)?'='+encodeURIComponent(q.get(k)):'')).join('');return 'toy-town.html?v=88&embed=1'+keep;}
+function townSrc(){const q=new URLSearchParams(location.search),keep=['weather','fps','festival','season','lite'].filter(k=>q.has(k)).map(k=>'&'+k+(q.get(k)?'='+encodeURIComponent(q.get(k)):'')).join('');return 'toy-town.html?v=89&embed=1'+keep+(bar.hidden?'&clean=1':'');}
 document.getElementById('new').onclick=()=>{if(modeBtn.value==='town'){townFrame.src=townSrc()+'#new-'+Date.now();return;}if(modeBtn.value==='pip'){pipShared='';pipFrame.src='pip-run.html#new-'+Date.now();history.replaceState(null,'',location.pathname+location.search+'#pip-run');return;}if(modeBtn.value==='mushroom'){document.getElementById('mushroom-frame').src='mushroom-island.html';return;}if(modeBtn.value==='zen'){zenReset();return;}if(modeBtn.value==='art'){setSeed(Math.random()*1e6|0);camX=(seed%3-1)*1300;return;}journey=0;roadObjectThemes.clear();roadPlaceTransition.autoTime=0;roadPlaceTransition.current=null;roadPlaceTransition.selection=null;roadAtmosphere.autoTime=0;roadAtmosphere.current=null;roadAtmosphere.selection=null;tripDrive.x=speed/40;tripDrive.v=0;SceneMotion.resetLane();RoadTraffic.reset();setSeed(Math.random()*1e6|0);};
 document.getElementById('sty').onchange=e=>setSeed(seed,e.target.value);
 cv.addEventListener('pointerdown',e=>{if(modeBtn.value==='zen'){if(!zenScare(e.clientX,e.clientY)){if(zenRakeStart(e.clientX,e.clientY))cv.setPointerCapture(e.pointerId);else zenRippleAt(e.clientX,e.clientY);}wakeScene();return;}drag={x:e.clientX,c:camX,lx:e.clientX,lt:performance.now()};dragV=0;cv.setPointerCapture(e.pointerId);cv.style.cursor='grabbing';});
@@ -2162,8 +2169,13 @@ function openSettings(on){document.body.classList.toggle('controls-open',on);set
 settingsBtn.onclick=()=>openSettings(!document.body.classList.contains('controls-open'));
 addEventListener('keydown',e=>{if(e.key==='Escape'&&modeBtn.value!=='art'){openSettings(false);settingsBtn.focus();}});
 
-function setUI(on){bar.hidden=!on;showBtn.hidden=on;document.body.classList.toggle('art-ui-hidden',!on);try{localStorage.setItem('gond-ui',on?'1':'0');}catch(e){}}
+const uiHooks=[];
+function setUI(on){bar.hidden=!on;showBtn.hidden=on;document.body.classList.toggle('art-ui-hidden',!on);try{localStorage.setItem('gond-ui',on?'1':'0');}catch(e){}for(const f of uiHooks)f(!on);}
 document.getElementById('hide').onclick=()=>{setUI(false);showBtn.focus();};
+// In Toy Town the hidden state is a clean view of the city only: tell the player once how to get the controls back.
+let uiToastTimer=0;
+function uiToast(text){const el=document.getElementById('ui-toast');el.textContent=text;el.classList.add('on');clearTimeout(uiToastTimer);uiToastTimer=setTimeout(()=>el.classList.remove('on'),4200);}
+uiHooks.push(hidden=>{if(hidden&&document.body.classList.contains('town-mode'))uiToast('Clean view · tap the faint ☰ in the corner (or press H) to bring the controls back');});
 showBtn.onclick=()=>{setUI(true);settingsBtn.focus();};
 addEventListener('keydown',e=>{if(e.key==='h'||e.key==='H')setUI(bar.hidden);else if(e.key===' '&&e.target===document.body){playBtn.click();e.preventDefault();}});
 try{if(localStorage.getItem('gond-ui')==='0')setUI(false);}catch(e){}
@@ -2184,7 +2196,9 @@ document.getElementById('town-out').addEventListener('click',()=>townZoom('town:
 document.getElementById('town-fit').addEventListener('click',()=>townZoom('town:fit'));
 document.getElementById('town-rl').addEventListener('click',()=>{if(townFrame.getAttribute('src'))townFrame.contentWindow?.postMessage({type:'town:rotate',delta:-Math.PI/6},location.origin);});
 document.getElementById('town-rr').addEventListener('click',()=>{if(townFrame.getAttribute('src'))townFrame.contentWindow?.postMessage({type:'town:rotate',delta:Math.PI/6},location.origin);});
-townFrame.addEventListener('load',()=>townMotion(modeBtn.value==='town'&&playing));
+function townUI(hidden){if(townFrame.getAttribute('src'))townFrame.contentWindow?.postMessage({type:'town:ui',hidden:Boolean(hidden)},location.origin);}
+uiHooks.push(townUI);
+townFrame.addEventListener('load',()=>{townMotion(modeBtn.value==='town'&&playing);townUI(bar.hidden);});
 function pipMotion(on){if(pipFrame.getAttribute('src'))pipFrame.contentWindow?.postMessage({type:'pip:motion',playing:Boolean(on)},location.origin);}
 pipFrame.addEventListener('load',()=>{pipMotion(modeBtn.value==='pip'&&playing);if(modeBtn.value==='pip')pipFrame.contentWindow?.document.getElementById('game')?.focus();});
 let cozyPromise=null;
