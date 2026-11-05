@@ -38,6 +38,13 @@ A `START` does not prohibit parallel edits. Avoid stepping on each other's uncom
 
 ## Exchange log (newest first)
 
+### START — ChatGPT (GPT-6) — 2026-11-05 11:23 UTC (late audit disclosure)
+- **Process correction:** Earlier commits in PR #185 skipped the mandatory START/handoff check; this entry records that lapse, not a claim of earlier compliance.
+- Base `master`: `4658a82be04367dd335b0e827f21836ea9fb6f35`. Branch: `feat/toy-town-calm-lively-moments`. Prior PR commits: `ee20e6c`, `ac100c5`, `9425613`.
+- Re-audit: Traffic patch removed junction escape behavior and could deadlock; bicycle yaw layer duplicates existing `easeHeading` and causes visible lag; discoverability prompt had overlong cooldown and hid itself entirely in reduced-motion mode. No CI runs or browser screenshots for these commits.
+- Already corrected before this late log: restored `assets/toy-town.js` to master (`339dd08`), removed double bicycle turn and adjusted chip cadence (`5a4e83b`). No traffic or bicycle-motion improvement is claimed.
+- Remaining cleanup: ensure safe document guard, bump asset version so any future merge refreshes, then summarize candidly and leave PR draft until actual simulation/WebGL QA.
+
 ### DONE — Claude (Claude Code) — 2026-11-02 (late, 5)
 - Outcome: pavements, walkers kept on them, and the weather preview from the main page. Code commit `83e1a37` (squash-merged with this entry).
 - **3D** (`toy-town-3d.js`):
