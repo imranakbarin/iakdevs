@@ -52,6 +52,8 @@ html.embedded #zoom-controls{display:none}
 #card.min .k{font-size:9px;padding-right:0}
 #card.min #card-min{top:50%;transform:translateY(-50%)}
 @media (max-width:600px){#card{top:calc(64px + env(safe-area-inset-top,0px));padding:8px 12px}#card .t{font-size:16px}}
+/* Phones: pinch, twist and drag already do this, so only the sound button stays and the hint line goes. */
+@media (max-width:700px){#hint{display:none}#zoom-controls #rotate-left,#zoom-controls #rotate-right,#zoom-controls #zoom-out,#zoom-controls #zoom-reset,#zoom-controls #zoom-in{display:none}}
 </style>
 <script type="importmap">
 {"imports":{
@@ -97,7 +99,7 @@ html.embedded #zoom-controls{display:none}
 <script src="assets/toy-town-news.js?v=1"></script>
 <script src="assets/toy-town-sound.js?v=5"></script>
 <script src="assets/toy-town-weather.js?v=2"></script>
-<script src="assets/toy-town.js?v=42"></script>
+<script src="assets/toy-town.js?v=43"></script>
 <script type="module">
   // Opt out with ?classic=1 for the original Canvas experience.
   // Loading errors are deliberately isolated from the existing town engine.
@@ -105,7 +107,7 @@ html.embedded #zoom-controls{display:none}
     Promise.all([
       import('three'),
       import('three/addons/geometries/RoundedBoxGeometry.js'),
-      import('./assets/toy-town-3d.js?v=72'),
+      import('./assets/toy-town-3d.js?v=73'),
       import('./assets/toy-town-landmarks.js?v=7'),
       // The photographed-miniature lens. Any failure here leaves plain 3D running.
       Promise.all(['EffectComposer','RenderPass','ShaderPass','UnrealBloomPass','OutputPass']

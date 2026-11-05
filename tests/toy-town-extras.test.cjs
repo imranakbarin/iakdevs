@@ -120,6 +120,10 @@ assert.match(view, /const frond=object\(g,geo\('clump',\.20,k%4\)/, 'willow fron
 assert.match(view, /function batchStatic\(end\)/); assert.match(view, /batchStatic\(world\.children\.length\);\n\s*rail\.train=null;/, 'the static town is merged right after it is built, before the animated stages');
 assert.match(view, /\[\?&\]nobatch\\b/, '?nobatch switches the merging off'); assert.match(view, /o\.userData\?\.limbs\)return;/, 'person rigs are never merged');
 assert.match(view, /mark\(site\.slew\);mark\(site\.trolley\);mark\(site\.cable\);mark\(site\.hook\);mark\(site\.load\);mark\(site\.mixer\);/, 'the crane and the mixer stay animated');
+assert.match(html, /@media \(max-width:700px\)\{#hint\{display:none\}#zoom-controls #rotate-left,#zoom-controls #rotate-right,#zoom-controls #zoom-out,#zoom-controls #zoom-reset,#zoom-controls #zoom-in\{display:none\}\}/, 'on phones only the sound button stays and the gesture hint goes');
+assert.match(fs.readFileSync(path.join(root, 'index.html'), 'utf8'), /@media \(max-width:700px\)\{\.town-mode #town-zoom\{display:none\}\}/, 'the main page hides its zoom, fit and rotate buttons on phones');
+assert.match(view, /function seaAndLighthouse\(\)/); assert.match(view, /seaAndLighthouse\(\);   \/\/ \(the open-air cinema screen/, 'the town stands in a sea with a lighthouse where the cinema screen used to be');
+assert.match(view, /lighthouse\.beam\.rotation\.y=time\*\.7/, 'the lighthouse beam turns at night'); assert.match(view, /kind==='sail'/, 'sailboats circle the town');
 assert.match(view, /function moodOf\(ref\)/, 'tapping a resident shows a name and a mood');
 assert.match(fs.readFileSync(path.join(root, 'index.html'), 'utf8'), /keep=\['weather','fps','festival','season','lite'\]/, 'the main page passes ?season and ?lite through');
 // Nobody stays stuck, and walkers do things of their own: several layouts, six town-minutes each.
@@ -203,8 +207,9 @@ assert.match(soundSrc, /firework: \(\) =>/, 'fireworks have a synthesised bang')
   vm.runInContext(town + ';this.T=ToyTown;', box); const T = box.T; T.build(555, 'market');
   const ducks = T.props().filter(p => p.kind === 'duck'), onBridge = x => [1, 6, 11, 16].some(l => Math.abs(x - (l + .5)) < .7);
   assert.ok(ducks.length >= 3 && ducks.every(d => !onBridge(d.x)), 'no duck starts on a bridge');
-  let bad = 0; for (let i = 0; i < 20 * 400; i++) { T.update(1 / 20); if (i === 600) T.feedDucks(8.5, 14); if (i === 1500) T.feedDucks(1.5, 14); for (const d of ducks) if (onBridge(d.x)) bad++; }
-  assert.equal(bad, 0, 'ducks never float on a bridge (they turn round at the deck)');
+  let under = 0, wet = 0; for (let i = 0; i < 20 * 400; i++) { T.update(1 / 20); if (i === 600) T.feedDucks(8.5, 14); if (i === 1500) T.feedDucks(1.5, 14); for (const d of ducks) { if (onBridge(d.x)) under++; if (d.y < 13.04 || d.y > 14.96) wet++; } }
+  assert.equal(wet, 0, 'ducks stay on the river');
+  assert.ok(under > 0, 'ducks swim under the arched bridges (the arches are open to the water)');
 }
 assert.match(view, /farm\.sails\.rotation\.z-=dt\*\(\(\.9/, 'the windmill sails face the front and turn at a clearly visible speed (and spin up when tapped)');
 // Nobody walks on the river: events, gatherings, whims and errands all keep to land and bridges.
@@ -217,7 +222,7 @@ for (const seed of [555, 42]) {
   assert.equal(wet, 0, `layout ${seed}: nobody walks on the water (first at ${where})`);
 }
 assert.match(view, /b\.scale\.setScalar\(\.62\)/, 'seagulls are small');
-assert.match(view, /groundPiece\(1\.34,2\.05/, 'bridges are wide enough for the pavement lanes');
+assert.match(view, /const ARCH=\{y0:\.172,L:1\.3,H:\.54,T:\.09,a:\.88,yb:\.1,W:1\.34\}/, 'bridges are arches, wide enough for the pavement lanes, with an opening the river runs through');
 // 360° rotation: the sim keeps a heading that every screen-to-world step honours.
 {
   const box = vm.createContext({Math, Object, Array, JSON, Date, String, Number, RegExp, Set, Map, setTimeout: () => 0, document: {getElementById: () => ({textContent: '', style: {}})}});
@@ -268,7 +273,7 @@ assert.match(view, /ToyTownWeather\?\.step\?\.\(dt\)/, 'the weather director run
 assert.match(view, /sunK\+=\(tSun-sunK\)\*\.005/, 'the sun and sky ease in and out of the weather');
 assert.match(view, /function createStage5\(\)/); assert.match(view, /function startEvent\(kind\)/); assert.match(view, /function festivalKind\(\)/, 'festival days (lantern, harvest, spring) and street events (wedding, food cart, juggler)');
 assert.match(view, /\['wedding','cart','juggler'\]/); assert.match(index, /keep=\['weather','fps','festival','season','lite'\]/, 'the main page passes ?festival= into the town too');
-assert.match(view, /function bridgeLift\(x,z,kind\)/, 'vehicles, cyclists and walkers rise onto the bridge deck');
+assert.match(view, /function archHeight\(x,z\)/, 'vehicles, cyclists and walkers rise over the arched bridge deck'); assert.match(view, /const GROUND=\{lawn:\.13,road:\.172,pave:\.225,foot:\.034\}/, 'residents stand on the surface under them (pavement, asphalt, meadow)');
 assert.match(view, /function walkStyle\(ref\)/, 'every resident has their own walking style (stride, swing, bounce, lean, habits)');
 assert.match(view, /duck\.scale\.setScalar\(\.68\)/, 'ducks are smaller'); assert.match(view, /const visor=box\(face,\.1,\.034,\.014/, 'the robots wear small visors, not huge glasses');
 assert.match(sim, /m\.nextDawdle/, 'walkers dawdle now and then and vary their pace'); assert.match(sim, /Math\.min\(A\.v,B\.v\)>\.35/, 'touching vehicles ease apart faster');
