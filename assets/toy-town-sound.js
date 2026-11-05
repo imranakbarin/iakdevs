@@ -44,6 +44,7 @@
     rain: () => { for (let k = 0; k < 6; k++) noise(.22, .2, 3400 + Math.random() * 900, k * .09); },
     wind: () => { noise(1.4, .14, 420 + Math.random() * 160); },
     owl: () => { tone('sine', 420, 400, .28, .18); tone('sine', 380, 360, .4, .16, .34); },
+    whistle: () => { tone('sine', 620, 2200, .8, .09); tone('triangle', 640, 2240, .8, .03); noise(.7, .05, 3800); },
     rumble: () => { noise(1.6, .5, 90); tone('sine', 55, 40, 1.4, .25); }
   };
   // A sparse birdsong bed by day; the odd soft cricket at night.
