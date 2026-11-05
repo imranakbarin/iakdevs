@@ -2658,7 +2658,7 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
     picnic:['🧺','A picnic in the park'],painter:['🎨','A painter has set up an easel'],hotair:['🎈','A hot air balloon is going over'],icecream:['🍦','The ice cream van is here'],duck:['🦆','The giant rubber duck!']};
   function offerMoment(m){
     const now=clockMs();
-    if(document.visibilityState==='hidden'||offered||watching||(town.following&&town.following())||now<momentCooldown||typeof document==='undefined')return;
+    if(typeof document==='undefined'||document.visibilityState==='hidden'||offered||watching||(town.following&&town.following())||now<momentCooldown)return;
     offered=Object.assign(m,{offeredAt:now});momentStats.offered++;
     if(!momentChip){
       momentChip=document.createElement('div');momentChip.className='moment-chip';momentChip.setAttribute('role','status');
