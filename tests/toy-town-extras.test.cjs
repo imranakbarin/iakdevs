@@ -120,6 +120,8 @@ assert.match(view, /const frond=object\(g,geo\('clump',\.20,k%4\)/, 'willow fron
 assert.match(view, /function batchStatic\(end\)/); assert.match(view, /batchStatic\(world\.children\.length\);\n\s*rail\.train=null;/, 'the static town is merged right after it is built, before the animated stages');
 assert.match(view, /\[\?&\]nobatch\\b/, '?nobatch switches the merging off'); assert.match(view, /o\.userData\?\.limbs\)return;/, 'person rigs are never merged');
 assert.match(view, /mark\(site\.slew\);mark\(site\.trolley\);mark\(site\.cable\);mark\(site\.hook\);mark\(site\.load\);mark\(site\.mixer\);/, 'the crane and the mixer stay animated');
+assert.match(html, /@media \(max-width:700px\)\{#hint\{display:none\}#zoom-controls #rotate-left,#zoom-controls #rotate-right,#zoom-controls #zoom-out,#zoom-controls #zoom-reset,#zoom-controls #zoom-in\{display:none\}\}/, 'on phones only the sound button stays and the gesture hint goes');
+assert.match(fs.readFileSync(path.join(root, 'index.html'), 'utf8'), /@media \(max-width:700px\)\{\.town-mode #town-zoom\{display:none\}\}/, 'the main page hides its zoom, fit and rotate buttons on phones');
 assert.match(view, /function moodOf\(ref\)/, 'tapping a resident shows a name and a mood');
 assert.match(fs.readFileSync(path.join(root, 'index.html'), 'utf8'), /keep=\['weather','fps','festival','season','lite'\]/, 'the main page passes ?season and ?lite through');
 // Nobody stays stuck, and walkers do things of their own: several layouts, six town-minutes each.
