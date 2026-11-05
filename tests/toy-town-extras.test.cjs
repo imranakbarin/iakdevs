@@ -163,7 +163,7 @@ for (const seed of [20261102, 7, 42]) {
   assert.ok(kinds >= 4, `layout ${seed}: walkers follow varied whims (${JSON.stringify(w)})`);
   const g = T.gather(9, 9.5); assert.ok(g >= 0);
 }
-assert.match(sim, /if\(pushing&&\(o\.d<2\)!==\(m\.d<2\)\)continue;/, 'a car out of patience can edge past crossing traffic (and separateCars eases touching stopped cars apart afterwards)');
+assert.match(sim, /const crossing=pushing&&\(o\.d<2\)!==\(m\.d<2\);\s*const gap=crossing\?tightGap\(m,o,ux,uy\)/, 'a car out of patience can edge past crossing traffic, but only as far as the drawn bodies allow (no driving through a car)');
 // Moments: offered, never automatic; Watch follows and narrates.
 assert.match(view, /function offerMoment\(m\)/); assert.match(view, /go\.onclick=\(\)=>\{if\(offered\)watchMoment\(offered\);\}/, 'the camera moves only when Watch is tapped');
 assert.match(view, /town\.follow\(m\.ref,3\);ensureFollowCard\(\)/, 'watching follows close with the narrating card');
@@ -207,7 +207,16 @@ assert.match(view, /function updateSite\(dt\)/, 'the crane swings and the worker
 assert.doesNotMatch(html, /sepia\(|nograde/, 'the cinematic filter is gone');
 assert.doesNotMatch(html, /#town-3d[^{]*\{[^}]*blur\(/, 'and nothing blurs');
 assert.match(view, /const d = \.9 \+ bump \* \.12/, 'tree canopies are smooth and round, not lumpy');
-assert.match(view, /const BIKE_SCALE=\.52;/, 'bicycles are scaled well below the toy cars');
+assert.match(view, /const BIKE_SCALE=\.42;\s*const VEHICLE_SCALE=\.8;/, 'bicycles and the toy cars are tiny');
+assert.match(view, /g\.scale\.setScalar\(VEHICLE_SCALE\)/, 'every car, bus and van is drawn at the vehicle scale');
+assert.match(sim, /const BODY_HALF = \{bus: \[\.28, \.108\], fire: \[\.24, \.10\], bike: \[\.14, \.05\]\};/, 'and the simulation bodies are sized to match');
+assert.match(sim, /function atRoadEnd\(m\)/, 'cars turn at the last junction centre instead of before it');
+assert.match(sim, /function walkerBlocked\(m,nx,ny\)/, 'walkers do not step into a car body');
+assert.match(sim, /function personInRoad\(o\)/, 'cars stop for a walker in the carriageway');
+assert.match(fs.readFileSync(path.join(root, 'toy-town.html'), 'utf8'), /html\.ui-off #card,html\.ui-off #ticker/, 'the clean view hides every overlay');
+assert.match(fs.readFileSync(path.join(root, 'toy-town.html'), 'utf8'), /type==='town:ui'/, 'the host page can ask for it');
+assert.match(fs.readFileSync(path.join(root, 'index.html'), 'utf8'), /uiHooks\.push\(townUI\)/, 'hiding the toolbar hides the town overlays too');
+assert.match(fs.readFileSync(path.join(root, 'index.html'), 'utf8'), /\.town-mode\.art-ui-hidden #town-zoom\{display:none\}/, 'and the zoom buttons');
 assert.match(view, /const CUTE=\.6,HEAD_BIG=\.94;/, 'residents are small and soft with a gently big head');
 assert.match(view, /function createLife\(\)/); assert.match(view, /function scatterBirds\(x,z,r\)/, 'pigeons peck and scatter');
 assert.match(view, /if\(scatterBirds\(spot\.x,spot\.z,1\.1\)\)/, 'a tap on open ground can startle them');

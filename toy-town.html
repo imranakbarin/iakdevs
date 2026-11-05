@@ -18,6 +18,13 @@ html,body{margin:0;height:100%;overflow:hidden;background:#bfe6f7;font-family:Nu
 
 #card,#ticker,#hint,#zoom-controls{z-index:3}
 html.embedded #zoom-controls{display:none}
+/* Clean view: only the city. Every overlay (news card, ticker, hint, buttons, moment chip, follow card, bubbles) goes;
+   a faint dot in the corner (standalone) or the host page's own dot (embedded) brings them back. */
+html.ui-off #card,html.ui-off #ticker,html.ui-off #hint,html.ui-off #zoom-controls,html.ui-off .moment-chip,html.ui-off .follow-card,html.ui-off .resident-bubble{display:none!important}
+#ui-show{display:none;position:fixed;left:calc(10px + env(safe-area-inset-left,0px));bottom:calc(10px + env(safe-area-inset-bottom,0px));z-index:4;width:30px;height:30px;padding:0;border:0;border-radius:50%;background:rgba(30,36,44,.35);color:#fff;font:600 15px/1 Nunito,system-ui;opacity:.22;cursor:pointer;touch-action:manipulation;transition:opacity .2s}
+#ui-show:hover,#ui-show:focus-visible,#ui-show:active{opacity:1}
+html.ui-off:not(.embedded) #ui-show{display:block}
+#zoom-controls #ui-hide{font-size:12px;min-width:43px}
 #card{position:fixed;left:14px;top:calc(72px + env(safe-area-inset-top,0px));width:min(354px,calc(100vw - 28px));box-sizing:border-box;padding:12px 14px;border-radius:16px;background:rgba(255,253,245,.94);box-shadow:0 9px 30px rgba(30,50,70,.19);color:#2d3440;pointer-events:auto;backdrop-filter:blur(12px)}
 #news-toggle{display:flex;align-items:center;justify-content:space-between;gap:9px;width:100%;margin-top:9px;padding:8px 10px;background:#235d61;color:#fff;border:0;border-radius:10px;text-align:left;cursor:pointer;font:600 11px/1.2 Nunito,system-ui;letter-spacing:.03em}
 #news-toggle:focus-visible,.headline-item:focus-visible{outline:2px solid #f6b554;outline-offset:2px}
@@ -79,8 +86,24 @@ html.embedded #zoom-controls{display:none}
   <button id="zoom-out" type="button" aria-label="Zoom out" title="Zoom out">−</button>
   <button id="zoom-reset" type="button" aria-label="Reset city view" title="Fit city">Fit</button>
   <button id="zoom-in" type="button" aria-label="Zoom in" title="Zoom in">+</button>
+  <button id="ui-hide" type="button" aria-label="Hide all text and buttons" title="Hide all text and buttons (H)">Hide</button>
 </div>
+<button id="ui-show" type="button" aria-label="Show text and buttons" title="Show text and buttons (H)">☰</button>
 <script>if(new URLSearchParams(location.search).has('embed'))document.documentElement.classList.add('embedded');</script>
+<script>
+// Clean view: "Hide" (or H) removes every overlay so only the city shows full screen. The host page sends the same state
+// (town:ui) when its own toolbar is hidden; ?clean=1 starts that way. Standalone, a faint dot in the corner restores it.
+(function(){
+  const root=document.documentElement,KEY='toy-town:clean';
+  const set=(off,store)=>{root.classList.toggle('ui-off',off);if(store)try{localStorage.setItem(KEY,off?'1':'0');}catch(e){}};
+  const q=new URLSearchParams(location.search);let saved=null;try{saved=localStorage.getItem(KEY);}catch(e){}
+  set(q.has('clean')||(!q.has('embed')&&saved==='1'),false);
+  document.getElementById('ui-hide').addEventListener('click',()=>set(true,true));
+  document.getElementById('ui-show').addEventListener('click',()=>set(false,true));
+  addEventListener('keydown',e=>{if(!q.has('embed')&&(e.key==='h'||e.key==='H')&&!e.metaKey&&!e.ctrlKey&&!e.altKey)set(!root.classList.contains('ui-off'),true);});
+  addEventListener('message',e=>{if(e.origin===location.origin&&e.data&&e.data.type==='town:ui')set(!!e.data.hidden,false);});
+})();
+</script>
 <script>
 // The news card can be minimised to a small pill. The choice is remembered on
 // this device; phones start minimised the first time, since the card would cover most of the town.
@@ -99,7 +122,7 @@ html.embedded #zoom-controls{display:none}
 <script src="assets/toy-town-news.js?v=1"></script>
 <script src="assets/toy-town-sound.js?v=6"></script>
 <script src="assets/toy-town-weather.js?v=2"></script>
-<script src="assets/toy-town.js?v=44"></script>
+<script src="assets/toy-town.js?v=45"></script>
 <script type="module">
   // Opt out with ?classic=1 for the original Canvas experience.
   // Loading errors are deliberately isolated from the existing town engine.
@@ -107,7 +130,7 @@ html.embedded #zoom-controls{display:none}
     Promise.all([
       import('three'),
       import('three/addons/geometries/RoundedBoxGeometry.js'),
-      import('./assets/toy-town-3d.js?v=77'),
+      import('./assets/toy-town-3d.js?v=78'),
       import('./assets/toy-town-landmarks.js?v=7'),
       // The photographed-miniature lens. Any failure here leaves plain 3D running.
       Promise.all(['EffectComposer','RenderPass','ShaderPass','UnrealBloomPass','OutputPass']
