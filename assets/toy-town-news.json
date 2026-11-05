@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generated_at": "2026-11-04T22:39:46.027Z",
+  "generated_at": "2026-11-05T03:32:04.098Z",
   "status": "ok",
   "successful_sources": [
     "BBC News",
@@ -11,6 +11,34 @@
     "Ars Technica"
   ],
   "stories": [
+    {
+      "title": "Ukraine says bodycam video shows deadly Russian double-tap bombing",
+      "url": "https://www.bbc.co.uk/news/articles/c98rz6penv86o?at_medium=RSS&at_campaign=rss",
+      "source": "BBC News",
+      "category": "World",
+      "published_at": "2026-11-04T22:48:43.000Z"
+    },
+    {
+      "title": "Nintendo's biggest ROM chip supplier is bowing out of the business",
+      "url": "https://arstechnica.com/gaming/2026/11/the-tech-memory-shortage-comes-for-nintendos-cartridge-supply-chain/",
+      "source": "Ars Technica",
+      "category": "Technology",
+      "published_at": "2026-11-04T22:47:51.000Z"
+    },
+    {
+      "title": "Australia's oldest department store David Jones folds after 188 years",
+      "url": "https://www.bbc.co.uk/news/articles/cky93z5y0171o?at_medium=RSS&at_campaign=rss",
+      "source": "BBC Business",
+      "category": "Business",
+      "published_at": "2026-11-05T00:59:22.000Z"
+    },
+    {
+      "title": "Why Iraola's Liverpool are still a work in progress",
+      "url": "https://www.bbc.co.uk/sport/football/videos/c9rky37kx37lo?at_medium=RSS&at_campaign=rss",
+      "source": "BBC Sport",
+      "category": "Sport",
+      "published_at": "2026-11-04T23:22:35.000Z"
+    },
     {
       "title": "Winners, losers, the EU: Five takeaways from the US midterms",
       "url": "https://www.dw.com/en/winners-losers-the-eu-five-takeaways-from-the-us-midterms/a-79858901?maca=en-rss-en-world-4025-xml-mrss",
@@ -26,46 +54,18 @@
       "published_at": "2026-11-04T21:41:15.000Z"
     },
     {
-      "title": "Pound rises to its highest level since the Brexit referendum",
-      "url": "https://www.bbc.co.uk/news/articles/c6lykq2qjn2vo?at_medium=RSS&at_campaign=rss",
+      "title": "Interest rates expected to rise for first time in over three years",
+      "url": "https://www.bbc.co.uk/news/articles/ck5ynw45jrgqo?at_medium=RSS&at_campaign=rss",
       "source": "BBC Business",
       "category": "Business",
-      "published_at": "2026-11-04T21:35:50.000Z"
+      "published_at": "2026-11-05T00:00:09.000Z"
     },
     {
-      "title": "LIV to wind down after backers withdraw support",
-      "url": "https://www.bbc.co.uk/sport/golf/articles/cq70pdjjgy5no?at_medium=RSS&at_campaign=rss",
+      "title": "World record 51 red cards shown in Brazilian youth game",
+      "url": "https://www.bbc.co.uk/sport/football/articles/cmy0rz7741ywo?at_medium=RSS&at_campaign=rss",
       "source": "BBC Sport",
       "category": "Sport",
-      "published_at": "2026-11-04T22:33:17.000Z"
-    },
-    {
-      "title": "Ukraine says bodycam video shows deadly Russian double-tap bombing",
-      "url": "https://www.bbc.co.uk/news/articles/c98rz6penv86o?at_medium=RSS&at_campaign=rss",
-      "source": "BBC News",
-      "category": "World",
-      "published_at": "2026-11-04T20:22:40.000Z"
-    },
-    {
-      "title": "VMware releases vSphere Express for virtualization on up to 128 cores",
-      "url": "https://arstechnica.com/information-technology/2026/11/vmware-releases-vsphere-express-for-virtualization-on-up-to-128-cores/",
-      "source": "Ars Technica",
-      "category": "Technology",
-      "published_at": "2026-11-04T21:38:49.000Z"
-    },
-    {
-      "title": "Poundland owner in crunch talks as retailer's collapse looms",
-      "url": "https://www.bbc.co.uk/news/articles/ck240mm3e42do?at_medium=RSS&at_campaign=rss",
-      "source": "BBC Business",
-      "category": "Business",
-      "published_at": "2026-11-04T19:44:46.000Z"
-    },
-    {
-      "title": "Emphatic Porto thrash Napoli in second-half romp",
-      "url": "https://www.bbc.co.uk/sport/football/videos/cr1ex9vx3y50o?at_medium=RSS&at_campaign=rss",
-      "source": "BBC Sport",
-      "category": "Sport",
-      "published_at": "2026-11-04T22:17:34.000Z"
+      "published_at": "2026-11-04T23:22:27.000Z"
     },
     {
       "title": "36 years later: Hungary opens Communist-era secret service files",
