@@ -36,7 +36,7 @@ export function createLens(THREE, addons, renderer, scene, camera, opts = {}) {
     // dark: 0 day → 1 night. The glow (and the composer) only runs once the lamps are on.
     setDusk(dark) {
       glowing = dark > .12 && !off.includes('bloom');
-      bloom.enabled = glowing; bloom.threshold = 1.6 - dark * .5; bloom.strength = dark * .55; bloom.radius = .55 + dark * .2;
+      bloom.enabled = glowing; bloom.threshold = 1.7 - dark * .3; bloom.strength = dark * .38; bloom.radius = .55 + dark * .2;
     },
     setFocus() {},   // kept for the 3D view's API; there is no focus blur any more
     render() { if (glowing) composer.render(); else renderer.render(scene, camera); },

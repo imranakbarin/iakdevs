@@ -110,6 +110,8 @@ People no longer walk on the river: every walking leg (events, gatherings, whims
 
 **Small ducks and filled-in corners.** The river ducks are small, rounded and come in three plumages (yellow, mallard, white). The apartment towers are lower so nothing dwarfs the city centre, the park fountain has a real jet, and the lawn strips beside the railway have allotment plots, an orchard, flower beds, hay bales and a hedge.
 
+**No more flashing on phones, more colour.** Firework bursts glow locally instead of flashing a white sphere across a phone-width screen, storm lightning is a brief fading brightening, the lighthouse beam turns slowly and faintly and the night bloom is gentler. Buildings come in salmon, butter, sage, sky and peach, and the west and east strips inside the railway are planted like the north and south ones.
+
 ## Deep links
 
 `#<style>-<seed>` opens a style at a seed, e.g. `#gond-12345`, `#warli-7`. Prefix `painting-` for the painted panorama (`#painting-kangra-3`). `#zen-…`, `#road-…` and `#cozy-…` open the other modes; `#today` (or no hash) opens the home screen. Seeds vary the starting layout; they do not regenerate painted panoramas. Editing the hash in an open tab loads that world.
