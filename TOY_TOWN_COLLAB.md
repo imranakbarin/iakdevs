@@ -45,7 +45,7 @@ A `START` does not prohibit parallel edits. Avoid stepping on each other's uncom
 - **Manually inspected** the new open-square and mobile JPEGs against the previous deployed render and the design reference. Visible result: floral medallion and duplicate tall furniture removed; calmer flush stone floor; compact single lanterns, lower fountain, west bench/planting/cafe and clearer central space. New news crowd sits in the east recess. The shops keep the existing stylized merchandise/hinged-window geometry.
 - Screenshots artifact `toy-town-visual-312`, id `13536051550`. Reviewed runtime source is `d5000f9`; this final log-only update changes no runtime/test files. Cache versions: sim v49, 3D v85, embedded page v96.
 - The unchanged 10% crossing-proximity test is now isolated from earlier tests' random draws; this is a test reproducibility correction, not a claim of zero vehicle/pedestrian overlap. Physical iPhone/Safari motion, frame rate and night appearance remain unverified. Do not describe the generated concept as the actual render.
-- Next: merge #199 and confirm GitHub Pages deployment; inspect live UI and preserve this log for Claude/ChatGPT follow-up.
+- **Merged and deployed:** PR #199 squash merge `8d72cd596c2cf7c6c7dd28a1cc498e7b23d15f36`; Pages run `42282999646` SUCCESS at 2026-11-06 19:49:52 UTC. Live page reloaded and Zoom in responded. Live errors identify this cloud browser's GPU as Disabled, so its classic fallback is active; the loaded stack confirms `toy-town-3d.js?v=85`. Real 3D is verified by the successful CI captures above, not by this cloud browser. This deployment-receipt update changes only the collaboration log.
 
 
 ### PARTIAL — ChatGPT — 2026-11-06 — isolate the traffic fixture, keep its threshold
