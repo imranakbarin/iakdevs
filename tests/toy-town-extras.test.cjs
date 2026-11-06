@@ -123,7 +123,7 @@ assert.match(view, /mark\(site\.slew\);mark\(site\.trolley\);mark\(site\.cable\)
 assert.match(html, /@media \(max-width:700px\)\{#hint\{display:none\}#zoom-controls #rotate-left,#zoom-controls #rotate-right,#zoom-controls #zoom-out,#zoom-controls #zoom-reset,#zoom-controls #zoom-in\{display:none\}\}/, 'on phones only the sound button stays and the gesture hint goes');
 assert.match(fs.readFileSync(path.join(root, 'index.html'), 'utf8'), /@media \(max-width:700px\)\{\.town-mode #town-zoom\{display:none\}\}/, 'the main page hides its zoom, fit and rotate buttons on phones');
 assert.match(view, /function seaAndLighthouse\(\)/); assert.match(view, /seaAndLighthouse\(\);   \/\/ \(the open-air cinema screen/, 'the town stands in a sea with a lighthouse where the cinema screen used to be');
-assert.match(view, /lighthouse\.beam\.rotation\.y=time\*\.7/, 'the lighthouse beam turns at night'); assert.match(view, /kind==='sail'/, 'sailboats circle the town');
+assert.match(view, /lighthouse\.beam\.rotation\.y=time\*\.3/, 'the lighthouse beam turns at night'); assert.match(view, /kind==='sail'/, 'sailboats circle the town');
 assert.match(view, /function createSignals\(\)/); assert.match(view, /town\.lightPhase\?\.\(\)/, 'the 3D traffic lights read the simulation light phase, so they match what the cars do');
 assert.match(view, /E\.walkers=\[\{q:bride,off:0,dz:-\.04\}/, 'the wedding procession walks in pairs on the pavement, not in single file');
 assert.match(view, /const HAIRS=\[/, 'residents have a range of hair colours');
@@ -216,6 +216,11 @@ assert.match(sim, /function emergencyNear\(m\)/, 'traffic makes way for a siren'
 assert.match(sim, /const ROUTE_OUT = \[/, 'the bus follows a long closed route');
 assert.match(sim, /if\(angle>1\.75&&dist>\.18\)/, 'only a sharp turn stops to pivot');
 assert.match(view, /const kindOfDuck=i%3/, 'ducks come in three plumages and are small'); assert.match(view, /duck\.scale\.setScalar\(\.4\+\(i%3\)\*\.03\)/);
+assert.match(view, /function hueVariant\(material,hue\)/); assert.match(view, /BUILDING_HUES=\[/, 'the kit buildings come in several colours, not all salmon');
+assert.match(view, /f\.m\.material\.opacity=\.2\*\(1-q\)\*\(1-q\);f\.m\.scale\.setScalar\(\.7\+q\*1\.5\)/, 'a firework burst glows locally; it no longer flashes the whole phone screen');
+assert.match(view, /hemisphere\.intensity\+=\.9\*Math\.min\(1,left\/260\)/, 'storm lightning is a brief fading brightening');
+assert.match(view, /lighthouse\.beam\.rotation\.y=time\*\.3;/, 'the lighthouse beam turns slowly and faintly');
+assert.match(view, /vert:true,z0:-\.22,z1:\.5/, 'the west and east strips inside the railway are planted too');
 assert.match(view, /TOWER_SQUASH=\.74/, 'the apartment towers are lower');
 assert.match(view, /A slim jet that arches into the pool/, 'the park fountain has a jet, not an egg'); assert.doesNotMatch(view, /d6f4f2/);
 assert.match(view, /bus3\.strips=\{soil:/, 'the bare strips beside the railway have allotments, an orchard, beds and a hedge');

@@ -130,12 +130,12 @@ html.ui-off:not(.embedded) #ui-show{display:block}
     Promise.all([
       import('three'),
       import('three/addons/geometries/RoundedBoxGeometry.js'),
-      import('./assets/toy-town-3d.js?v=80'),
+      import('./assets/toy-town-3d.js?v=81'),
       import('./assets/toy-town-landmarks.js?v=7'),
       // The photographed-miniature lens. Any failure here leaves plain 3D running.
       Promise.all(['EffectComposer','RenderPass','ShaderPass','UnrealBloomPass','OutputPass']
         .map(n => import(`three/addons/postprocessing/${n}.js`).catch(() => ({}))))
-        .then(mods => import('./assets/toy-town-lens.js?v=4').then(lens => ({lens, addons: Object.assign({}, ...mods)})))
+        .then(mods => import('./assets/toy-town-lens.js?v=5').then(lens => ({lens, addons: Object.assign({}, ...mods)})))
         .catch(() => null),
       // KayKit CC0 models (buildings, cars, trees, street props) in one file.
       // Without them the town falls back to its hand-built geometry.

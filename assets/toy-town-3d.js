@@ -223,12 +223,38 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
     }
     return models.size?models:null;
   })();
+  // Recoloured copies of a kit material (its atlas texture hue-rotated by hand, because Safari has no canvas filter), shared
+  // per hue so the static batching still merges them: the town's buildings are not all the same salmon.
+  const hueCache=new Map();
+  function hueVariant(material,hue){
+    if(!hue||!material||!material.map||!material.map.image||typeof document==='undefined')return material;
+    const key=material.uuid+':'+hue;if(hueCache.has(key))return hueCache.get(key);
+    let out=material;
+    try{
+      const img=material.map.image,w=img.width||img.naturalWidth,h=img.height||img.naturalHeight;
+      const c=document.createElement('canvas');c.width=w;c.height=h;const x=c.getContext('2d');x.drawImage(img,0,0,w,h);
+      const data=x.getImageData(0,0,w,h),px=data.data,a=hue*Math.PI/180,cs=Math.cos(a),sn=Math.sin(a);
+      const m=[.213+cs*.787-sn*.213,.715-cs*.715-sn*.715,.072-cs*.072+sn*.928,.213-cs*.213+sn*.143,.715+cs*.285+sn*.14,.072-cs*.072-sn*.283,.213-cs*.213-sn*.787,.715-cs*.715+sn*.715,.072+cs*.928+sn*.072];
+      for(let i=0;i<px.length;i+=4){
+        const r=px[i],g=px[i+1],b=px[i+2];
+        let nr=m[0]*r+m[1]*g+m[2]*b,ng=m[3]*r+m[4]*g+m[5]*b,nb=m[6]*r+m[7]*g+m[8]*b;
+        const l=.3*nr+.59*ng+.11*nb;   // a little softer than the original
+        px[i]=Math.max(0,Math.min(255,l+(nr-l)*.82));px[i+1]=Math.max(0,Math.min(255,l+(ng-l)*.82));px[i+2]=Math.max(0,Math.min(255,l+(nb-l)*.82));
+      }
+      x.putImageData(data,0,0);
+      const tex=new THREE.CanvasTexture(c);const src=material.map;
+      tex.flipY=src.flipY;tex.colorSpace=src.colorSpace;tex.wrapS=src.wrapS;tex.wrapT=src.wrapT;tex.anisotropy=src.anisotropy;tex.magFilter=src.magFilter;tex.minFilter=src.minFilter;
+      out=material.clone();out.map=tex;out.userData={...material.userData};
+    }catch(e){out=material;}
+    hueCache.set(key,out);return out;
+  }
   // Place a clone so its footprint fits `fit` (world units) and its base sits at `y`.
-  function kitPlace(parent,name,x,y,z,{fit=null,scale=null,rotY=0,height=null,pivot=false,squash=1}={}){
+  function kitPlace(parent,name,x,y,z,{fit=null,scale=null,rotY=0,height=null,pivot=false,squash=1,hue=0}={}){
     const m=kit&&kit.get(name);if(!m)return null;
     const s=scale??(height?height/m.size.y:fit/Math.max(m.size.x,m.size.z));
     const holder=new THREE.Group(),clone=m.node.clone(true);
     const sy=s*squash;clone.position.set(pivot?0:-m.centre.x*s,-m.min.y*sy,pivot?0:-m.centre.z*s);clone.scale.set(s,sy,s);   // pivot: keep the model's own origin (a lamp post's foot)
+    if(hue)clone.traverse(o=>{if(o.isMesh)o.material=Array.isArray(o.material)?o.material.map(q=>hueVariant(q,hue)):hueVariant(o.material,hue);});
     holder.add(clone);holder.position.set(x,y,z);holder.rotation.y=rotY;parent.add(holder);
     holder.userData.kit=name;holder.userData.size={x:m.size.x*s,y:m.size.y*sy,z:m.size.z*s};
     return holder;
@@ -2507,7 +2533,7 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
   }
   function nightLife(dark,time){
     updateSignals(dark);
-    if(lighthouse){lighthouse.beam.rotation.y=time*.7;lighthouse.beamMat.opacity=Math.max(0,dark-.12)*.3;lighthouse.lampMat.emissiveIntensity=.4+dark*3.2;lighthouse.foamMat.opacity=.42-dark*.28;}
+    if(lighthouse){lighthouse.beam.rotation.y=time*.3;lighthouse.beamMat.opacity=Math.max(0,dark-.12)*.14;lighthouse.lampMat.emissiveIntensity=.4+dark*3.2;lighthouse.foamMat.opacity=.42-dark*.28;}
     for(const k of clouds)k.c.position.x=((k.x+time*k.speed*(k.speedScale||1)+6)%30)-6;   // a slow drift, wrapping round (faster in wind)
     if(cinemaBeam){cinemaBeam.material.opacity=Math.max(0,dark-.2)*.16;for(const v of cinemaViewers)v.visible=dark>.3;
       if(cinemaScreen)cinemaScreen.material.color.set(dark>.3?'#ffffff':'#d8d8d8');}
@@ -2772,7 +2798,7 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
       }
       pos.needsUpdate=true;
     }
-    if(kind==='storm'){const now=clockMs();if(now>nextFlash){flashUntil=now+120;nextFlash=now+6000+Math.random()*9000;sound('rumble');}}
+    if(kind==='storm'){const now=clockMs();if(now>nextFlash){flashUntil=now+260;nextFlash=now+10000+Math.random()*14000;sound('rumble');}}
     for(const k of clouds)k.speedScale=w.windy?3:1;
   }
   function updateFollowCard(){
@@ -2952,6 +2978,7 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
   // The five plaza buildings in KayKit style. Plain-fronted models sit behind
   // the bakery and bookshop counters (their striped awnings, cabinets, bells
   // and hinged serving windows are separate shop-front pieces and unchanged).
+  const BUILDING_HUES=[0,30,95,200,0,18];   // degrees: salmon, butter, sage, sky, salmon, peach
   const CENTRE_SQUASH=.6,TOWER_SQUASH=.74;   // the apartment towers are lower too: nothing in town dwarfs the square
   function kitLandmark(b){
     if(!kit||!['shop','house'].includes(b.kind))return false;
@@ -2968,7 +2995,7 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
     const pickFrom={house:['building_A','building_C','building_B'],shop:['building_B','building_D','building_F'],tower:['building_H','building_G','building_E']}[b.kind];
     const name=pickFrom[Math.abs(Math.round(b.x*7+b.y*13+(worldSeed||0)))%pickFrom.length];
     // Fronts face the street that runs past the block (south, toward the camera, like the town's own houses).
-    const placed=kitPlace(world,name,b.x+.5,.17,b.y+.5,{fit:b.kind==='tower'?1.02:.98,rotY:0,squash:b.kind==='tower'?TOWER_SQUASH:1});
+    const placed=kitPlace(world,name,b.x+.5,.17,b.y+.5,{fit:b.kind==='tower'?1.02:.98,rotY:0,squash:b.kind==='tower'?TOWER_SQUASH:1,hue:BUILDING_HUES[Math.abs(Math.round(b.x*5+b.y*11+(worldSeed||0)))%BUILDING_HUES.length]});
     if(!placed)return false;
     placed.userData.buildingKind=b.kind;composedBuildings++;
     if(b.kind==='house')porchLamp(placed,b);
@@ -4071,7 +4098,7 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
       if(k===0&&u<.12)b*=1.5;                                   // a hot start
       col[i*3]=base[i*3]*b;col[i*3+1]=base[i*3+1]*b;col[i*3+2]=base[i*3+2]*b;
     }
-    for(const f of S.flashes){if(f.t>=.3){f.m.visible=false;continue;}f.t+=dt;const q=f.t/.3;f.m.material.opacity=.55*(1-q)*(1-q);f.m.scale.setScalar(1.2+q*5.5);}
+    for(const f of S.flashes){if(f.t>=.3){f.m.visible=false;continue;}f.t+=dt;const q=f.t/.3;f.m.material.opacity=.2*(1-q)*(1-q);f.m.scale.setScalar(.7+q*1.5);}   // a soft local glow: it used to be a 3-unit white sphere that flashed the whole phone screen
     if(S.pts){S.pts.geometry.attributes.position.needsUpdate=true;S.pts.geometry.attributes.color.needsUpdate=true;}
   }
   function createMore(){
@@ -4365,14 +4392,17 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
     {
       const soil=[],crops=[],trunks=[],crowns=[],fruit=[],hay=[],hedge=[],blooms=[];
       const cropCols=['#6fae5a','#8bbf5c','#5f9d56','#a3c964'],fruitCols=['#e2543f','#f3b13a','#d9686a'];
-      const strips=[{z0:17.42,z1:18.18,skip:[8.9,3.1],hedgeZ:17.3,tag:1},{z0:-.28,z1:.66,skip:[9,2.4],hedgeZ:.82,tag:2}];
+      const strips=[{z0:17.42,z1:18.18,skip:[8.9,3.1],hedgeZ:17.3,tag:1},{z0:-.28,z1:.66,skip:[9,2.4],hedgeZ:.82,tag:2},
+        {vert:true,z0:-.22,z1:.5,skip:[3.95,2.5],tag:3},{vert:true,z0:17.5,z1:18.22,skip:[9.2,2.4],tag:4}];   // the last two run north-south inside the west and east rails (the railway loop is at -0.62 and 18.62)
       const free=(x,z)=>!ps.some(q=>Math.hypot(q.x-x,q.y-z)<.42)&&!bs.some(q=>Math.hypot(q.x+.5-x,q.y+.5-z)<.9);
       for(const st of strips){
-        for(let x=1.05,k=0;x<17;x+=.5,k++){
+        for(let x=st.vert?1.5:1.05,k=0;x<(st.vert?16.6:17);x+=.5,k++){
           const key=k*7+st.tag*131+(worldSeed||0)%53;
           if(Math.abs(x-st.skip[0])<st.skip[1])continue;
-          const z=st.z0+(st.z1-st.z0)*(.25+rng(key,401)*.5),cx=x+(rng(key,402)-.5)*.1,t=rng(key,403);
-          if(!free(cx,z))continue;
+          const cc=st.z0+(st.z1-st.z0)*(.25+rng(key,401)*.5),sx=x+(rng(key,402)-.5)*.1,t=rng(key,403);
+          const px=st.vert?cc:sx,z=st.vert?sx:cc;   // position across/along the strip
+          if(!free(px,z))continue;
+          const cx=px;
           if(t<.5){   // an allotment plot: dark soil with three rows of crops
             soil.push({x:cx,y:base+.012,z,r:0,sx:.46,sy:.026,sz:.34,c:'#8c6b4d'});
             for(let row=-1;row<=1;row++)for(let c=-1;c<=1;c++)crops.push({x:cx+c*.13,y:base+.045,z:z+row*.1,sx:1,sy:.8+rng(key+row*3+c,404)*.5,sz:1,c:cropCols[(key+row+c+9)%4]});
@@ -4385,7 +4415,7 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
             for(let f=0;f<7;f++)blooms.push({x:cx+(f%4-1.5)*.095,y:base+.06,z:z+(f<4?-.05:.06),sx:1,sy:.9,sz:1,c:SEASON.flowers[(k+f)%SEASON.flowers.length]});
           }else hay.push({x:cx,y:base+.055,z,sx:1,sy:1,sz:1,c:'#e3c47a'});
         }
-        for(let x=1.15;x<17;x+=.5){if(Math.abs(x-st.skip[0])<st.skip[1])continue;hedge.push({x,y:base+.05,z:st.hedgeZ,sx:.5,sy:.1,sz:.07,c:'#5e9a52'});}
+        if(!st.vert)for(let x=1.15;x<17;x+=.5){if(Math.abs(x-st.skip[0])<st.skip[1])continue;hedge.push({x,y:base+.05,z:st.hedgeZ,sx:.5,sy:.1,sz:.07,c:'#5e9a52'});}
       }
       const boxGeo=geo('box',1,1,1);
       if(soil.length)inst(boxGeo,new THREE.MeshStandardMaterial({color:'#ffffff',roughness:1}),soil).castShadow=false;
@@ -5330,7 +5360,7 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
     rim.color.set(tint(tint('#c0dedb','#a8b6cb',dusk),'#6f8bd0',night));
     for(const lantern of plazaLights)lantern.intensity=dark*7.2;
     {const under=sunK;sun.intensity*=under;hemisphere.intensity*=.82+under*.18;
-     if(clockMs()<flashUntil){hemisphere.intensity+=2.6;}}
+     {const left=flashUntil-clockMs();if(left>0)hemisphere.intensity+=.9*Math.min(1,left/260);}}   // a brief fading brightening, not a white-out
     for(const p of porchLamps)p.glass.emissiveIntensity=p.b.home&&dark>.25?2.4:.05;   // lights on once someone is home
     lanternGlass.emissiveIntensity=.1+dark*4.2;
     for(const bulb of festoonBulbs)bulb.material.emissiveIntensity=.32+dark*1.65;
