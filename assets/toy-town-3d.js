@@ -2669,7 +2669,7 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
      — the follow card narrates — then returns to where the view was. */
   let momentChip=null,offered=null,watching=null,momentCooldown=0,lastSeen=new WeakMap(),seenEvents=new WeakSet(),momentScan=0;
   const momentStats={offered:0,watched:0};
-  const EVENT_MOMENTS={band:['🎺','The marching band is out'],busker:['🎸','A street musician is playing'],kite:['🪁','Kite flying in the park'],balloon:['🎈','A balloon is drifting away'],
+  const EVENT_MOMENTS={jogger:['🏃','A jogger is doing laps'],dogwalk:['🐕','A dog is walking its owner'],wedding:['💒','A wedding in the park'],school:['🎒','A school trip is crossing town'],gallery:['🖼️','A gallery opening in the park'],trees:['🌳','Tree planting in the park'],green:['🌱','Green Energy Day in the park'],health:['🩺','Wellness morning in the park'],jobs:['💼','A jobs fair at the market'],goodnews:['🌟','Good news: confetti!'],cars:['🚗','An electric car show'],food:['🍕','A food fair'],band:['🎺','The marching band is out'],busker:['🎸','A street musician is playing'],kite:['🪁','Kite flying in the park'],balloon:['🎈','A balloon is drifting away'],
     picnic:['🧺','A picnic in the park'],painter:['🎨','A painter has set up an easel'],hotair:['🎈','A hot air balloon is going over'],icecream:['🍦','The ice cream van is here'],duck:['🦆','The giant rubber duck!']};
   function offerMoment(m){
     const now=clockMs();
@@ -3161,7 +3161,7 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
   const SHOP_BAG_COLOURS=['#e9c46a','#e76f51','#8ab17d','#6fa8dc','#d4a5c9','#f4a261'];
   function person(ref){
     const g=new THREE.Group();
-    const skin=ref.skin||'#dbab86',coat=ref.col||'#d6a3a0',trousers=ref.trousers||'#5e6f7c',shoes='#4f4741';
+    const skin=ref.skin||'#dbab86',coat=ref.col||'#d6a3a0',trousers=ref.trousers||'#5e6f7c',sport=ref.kind==='runner',shoes=sport?'#f4f4f4':'#4f4741';
     // One rounded body, slightly pear-shaped, with a soft collar.
     const torso=limb(g,.082,.085,coat,0,.262,0);torso.scale.set(1.06,1,.82);
     const collar=smoothBall(g,.05,tint(coat,'#ffffff',.35),0,.335,.02);collar.scale.set(1.5,.42,1.05);
@@ -3201,9 +3201,10 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
       const leg=new THREE.Group();leg.position.set(side*.04,.178,0);
       limb(leg,.029,.045,trousers,0,-.045,0);
       const shin=new THREE.Group();shin.position.set(0,-.096,0);
-      limb(shin,.025,.04,trousers,0,-.038,0);
+      limb(shin,.025,.04,sport?skin:trousers,0,-.038,0);   // runners wear shorts: bare shins
       const ankle=new THREE.Group();ankle.position.set(0,-.1,.024);
       const shoe=smoothBall(ankle,.036,shoes,0,0,.01);shoe.scale.set(.95,.62,1.45);
+      if(sport){const sock=cylinder(ankle,.026,.028,.035,'#ffffff',0,.03,-.01);sock.castShadow=false;}
       shin.add(ankle);
       leg.add(shin);g.add(leg);legs.push(leg);shins.push(shin);
       feet.push(ankle);
@@ -3216,6 +3217,13 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
       palm.scale.set(.9,1.05,.8);
       elbow.add(wrist);arm.add(elbow);g.add(arm);
       arms.push(arm);elbows.push(elbow);wrists.push(wrist);hands.push(wrist);
+    }
+    if(sport){   // running kit: a bib with a stripe on the chest and back, a sweatband and wristbands
+      const bibCol=tint(coat,'#ffffff',.78);
+      box(g,.1,.095,.012,'#ffffff',0,.27,.088,false);box(g,.1,.022,.014,'#d0343a',0,.292,.089,false);box(g,.04,.03,.014,'#2b2f36',0,.255,.09,false);
+      box(g,.1,.095,.012,'#ffffff',0,.27,-.088,false);
+      const band=object(face,geo('torus',.099,.012),mat(coat===('#ffffff')?'#d0343a':tint(coat,'#ffffff',.2),.8),0,.505,0);band.rotation.x=Math.PI/2;band.scale.z=1.3;
+      for(const w of wrists)cylinder(w,.027,.027,.022,'#ffffff',0,-.0,0).castShadow=false;
     }
     if(ref.backpack){const pack=box(g,.13,.15,.07,ref.backpack,0,.27,-.085);pack.castShadow=false;box(g,.1,.04,.02,tint(ref.backpack,'#ffffff',.3),0,.23,-.122,false);}
     if(ref.briefcase){const brief=new THREE.Group();brief.position.set(0,-.08,0);hands[0].add(brief);box(brief,.13,.095,.04,'#5b4636',0,-.03,0);
@@ -4557,6 +4565,7 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
     if(C&&items.length&&!news7.reading&&t>=news7.nextRead&&dark<.9){
       const item=items[news7.idx%items.length];news7.idx++;news7.reads++;
       news7.reading={item,t:0,cheer:/⚽|🎭|🏆|🗳️/.test(item.emoji)};
+      try{town.stageHeadline&&town.stageHeadline(item.full||item.title);}catch(e){}   // the town acts out the headline the crier is reading
       news7.nextRead=t+75+Math.random()*25;
       for(const b of news7.boards)paintNewsBoard(b,item);news7.boardAt=t+9;
       news7.listeners.forEach((q,i)=>{q.state='in';q.p.visible=true;q.delay=i*.35;});
