@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generated_at": "2026-11-06T01:36:17.552Z",
+  "generated_at": "2026-11-06T09:28:49.480Z",
   "status": "ok",
   "successful_sources": [
     "BBC News",
@@ -12,32 +12,32 @@
   ],
   "stories": [
     {
-      "title": "Democratic socialist defeats incumbent Karen Bass in Los Angeles mayor's race",
-      "url": "https://www.bbc.co.uk/news/articles/c6e3xxwk3k11o?at_medium=RSS&at_campaign=rss",
+      "title": "Trump signs order to preserve Oval Office as national monument",
+      "url": "https://www.bbc.co.uk/news/articles/cmy0eeg101djo?at_medium=RSS&at_campaign=rss",
       "source": "BBC News",
       "category": "World",
-      "published_at": "2026-11-06T01:28:03.000Z"
+      "published_at": "2026-11-06T09:19:57.000Z"
     },
     {
-      "title": "Major tech stocks plunge as US midterms add to fears of AI slowdown",
+      "title": "Global tech stocks plunge as US midterms add to AI slowdown fears",
       "url": "https://www.bbc.co.uk/news/articles/cmn04705rd8jo?at_medium=RSS&at_campaign=rss",
       "source": "BBC Technology",
       "category": "Technology",
-      "published_at": "2026-11-06T01:26:52.000Z"
+      "published_at": "2026-11-06T07:27:26.000Z"
     },
     {
-      "title": "'I was asked if I was a crier': Your worst job interviews revealed",
-      "url": "https://www.bbc.co.uk/news/articles/c3j4751pqnj8o?at_medium=RSS&at_campaign=rss",
+      "title": "How does it affect me if share prices fall?",
+      "url": "https://www.bbc.co.uk/news/articles/c33zdz2m1e2o?at_medium=RSS&at_campaign=rss",
       "source": "BBC Business",
       "category": "Business",
-      "published_at": "2026-11-06T00:02:52.000Z"
+      "published_at": "2026-11-06T09:21:50.000Z"
     },
     {
-      "title": "Duran & Osmand spark Celtic into life - but where does that leave Hogh?",
-      "url": "https://www.bbc.co.uk/sport/football/articles/cwd099ez7z4yo?at_medium=RSS&at_campaign=rss",
+      "title": "Lampard looks for Coventry progress as belief grows",
+      "url": "https://www.bbc.co.uk/sport/football/articles/cr20w943gvl5o?at_medium=RSS&at_campaign=rss",
       "source": "BBC Sport",
       "category": "Sport",
-      "published_at": "2026-11-06T00:10:28.000Z"
+      "published_at": "2026-11-06T08:11:03.000Z"
     },
     {
       "title": "Americans voted against Trump's Iran war. Gulf countries hope that means an end to the conflict",
@@ -58,21 +58,21 @@
       "url": "https://www.bbc.co.uk/news/articles/cmd9343z3zw2o?at_medium=RSS&at_campaign=rss",
       "source": "BBC Business",
       "category": "Business",
-      "published_at": "2026-11-05T22:32:02.000Z"
+      "published_at": "2026-11-06T07:36:41.000Z"
     },
     {
-      "title": "Anderson could be given chance to join Surrey",
-      "url": "https://www.bbc.co.uk/sport/cricket/articles/c6wyvvdx2xe9o?at_medium=RSS&at_campaign=rss",
+      "title": "Australia recruit Hussey for Ashes build-up",
+      "url": "https://www.bbc.co.uk/sport/cricket/articles/c9y7lln8vyglo?at_medium=RSS&at_campaign=rss",
       "source": "BBC Sport",
       "category": "Sport",
-      "published_at": "2026-11-05T23:33:52.000Z"
+      "published_at": "2026-11-06T08:05:05.000Z"
     },
     {
-      "title": "Pope begins lengthy trip to Latin America weeks after lung cancer surgery",
-      "url": "https://www.bbc.co.uk/news/articles/cqn06j0y61k6o?at_medium=RSS&at_campaign=rss",
+      "title": "Somalia's top court rejects president's term extension amid political crisis",
+      "url": "https://www.bbc.co.uk/news/articles/c977ppnezep6o?at_medium=RSS&at_campaign=rss",
       "source": "BBC News",
       "category": "World",
-      "published_at": "2026-11-06T00:02:57.000Z"
+      "published_at": "2026-11-06T08:18:10.000Z"
     }
   ]
 }
