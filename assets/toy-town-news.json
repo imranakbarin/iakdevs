@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generated_at": "2026-11-06T01:36:17.552Z",
+  "generated_at": "2026-11-06T13:50:00.402Z",
   "status": "ok",
   "successful_sources": [
     "BBC News",
@@ -8,71 +8,85 @@
     "BBC Business",
     "BBC Sport",
     "DW",
-    "Ars Technica"
+    "Ars Technica",
+    "BBC Science",
+    "BBC Culture",
+    "Good News Network",
+    "Positive News",
+    "NASA"
   ],
   "stories": [
     {
-      "title": "Democratic socialist defeats incumbent Karen Bass in Los Angeles mayor's race",
-      "url": "https://www.bbc.co.uk/news/articles/c6e3xxwk3k11o?at_medium=RSS&at_campaign=rss",
-      "source": "BBC News",
-      "category": "World",
-      "published_at": "2026-11-06T01:28:03.000Z"
+      "title": "Geothermal Utilities Power Wave of US Affordable Housing with 40% Energy Savings",
+      "url": "https://www.goodnewsnetwork.org/geothermal-utilities-power-wave-of-us-affordable-housing-with-40-energy-savings/",
+      "source": "Good News Network",
+      "category": "Good news",
+      "tone": "light",
+      "published_at": "2026-11-06T12:30:16.000Z"
     },
     {
-      "title": "Major tech stocks plunge as US midterms add to fears of AI slowdown",
-      "url": "https://www.bbc.co.uk/news/articles/cmn04705rd8jo?at_medium=RSS&at_campaign=rss",
-      "source": "BBC Technology",
-      "category": "Technology",
-      "published_at": "2026-11-06T01:26:52.000Z"
+      "title": "Wales scraps controversial Uganda tree-planting scheme",
+      "url": "https://www.bbc.co.uk/news/articles/cqm26m2l4p7eo?at_medium=RSS&at_campaign=rss",
+      "source": "BBC Science",
+      "category": "Science",
+      "tone": "light",
+      "published_at": "2026-11-06T13:14:24.000Z"
     },
     {
-      "title": "'I was asked if I was a crier': Your worst job interviews revealed",
-      "url": "https://www.bbc.co.uk/news/articles/c3j4751pqnj8o?at_medium=RSS&at_campaign=rss",
-      "source": "BBC Business",
-      "category": "Business",
-      "published_at": "2026-11-06T00:02:52.000Z"
+      "title": "Katherine Ryan says she feels 'grief and relief' after Russell Brand conviction",
+      "url": "https://www.bbc.co.uk/news/articles/cxyvrr686lzqo?at_medium=RSS&at_campaign=rss",
+      "source": "BBC Culture",
+      "category": "Culture",
+      "tone": "light",
+      "published_at": "2026-11-06T13:12:20.000Z"
     },
     {
-      "title": "Duran & Osmand spark Celtic into life - but where does that leave Hogh?",
-      "url": "https://www.bbc.co.uk/sport/football/articles/cwd099ez7z4yo?at_medium=RSS&at_campaign=rss",
+      "title": "England secure group top spot with Ireland win",
+      "url": "https://www.bbc.co.uk/sport/rugby-league/videos/cxly441nej84o?at_medium=RSS&at_campaign=rss",
       "source": "BBC Sport",
       "category": "Sport",
-      "published_at": "2026-11-06T00:10:28.000Z"
+      "tone": "light",
+      "published_at": "2026-11-06T13:42:25.000Z"
     },
     {
-      "title": "Americans voted against Trump's Iran war. Gulf countries hope that means an end to the conflict",
-      "url": "https://www.dw.com/en/americans-voted-against-trump-s-iran-war-gulf-countries-hope-that-means-an-end-to-the-conflict/a-79868398?maca=en-rss-en-world-4025-xml-mrss",
-      "source": "DW",
-      "category": "World",
-      "published_at": "2026-11-05T19:12:00.000Z"
-    },
-    {
-      "title": "Blue Origin says it is building a higher-performing rocket engine at 1/4 the cost",
-      "url": "https://arstechnica.com/space/2026/11/blue-origin-announces-rocket-upgrades-aimed-at-lower-costs-more-performance/",
-      "source": "Ars Technica",
+      "title": "Elon Musk appears to signal the end of the road for Cybertruck",
+      "url": "https://www.bbc.co.uk/news/articles/cq1j33w7d232o?at_medium=RSS&at_campaign=rss",
+      "source": "BBC Technology",
       "category": "Technology",
-      "published_at": "2026-11-06T00:17:06.000Z"
+      "tone": "light",
+      "published_at": "2026-11-06T09:57:04.000Z"
     },
     {
-      "title": "Firms told to publish salaries in job adverts ahead of new law",
+      "title": "PM tells firms to publish salaries in job adverts ahead of new law",
       "url": "https://www.bbc.co.uk/news/articles/cmd9343z3zw2o?at_medium=RSS&at_campaign=rss",
       "source": "BBC Business",
       "category": "Business",
-      "published_at": "2026-11-05T22:32:02.000Z"
+      "tone": "light",
+      "published_at": "2026-11-06T13:19:07.000Z"
     },
     {
-      "title": "Anderson could be given chance to join Surrey",
-      "url": "https://www.bbc.co.uk/sport/cricket/articles/c6wyvvdx2xe9o?at_medium=RSS&at_campaign=rss",
-      "source": "BBC Sport",
-      "category": "Sport",
-      "published_at": "2026-11-05T23:33:52.000Z"
-    },
-    {
-      "title": "Pope begins lengthy trip to Latin America weeks after lung cancer surgery",
-      "url": "https://www.bbc.co.uk/news/articles/cqn06j0y61k6o?at_medium=RSS&at_campaign=rss",
-      "source": "BBC News",
+      "title": "Zambia's civil service overhaul raises questions",
+      "url": "https://www.dw.com/en/zambia-s-civil-service-overhaul-raises-questions/a-79875892?maca=en-rss-en-world-4025-xml-mrss",
+      "source": "DW",
       "category": "World",
-      "published_at": "2026-11-06T00:02:57.000Z"
+      "tone": "light",
+      "published_at": "2026-11-06T13:28:00.000Z"
+    },
+    {
+      "title": "What went right this week: the good news that matters",
+      "url": "https://www.positive.news/society/good-news-stories-from-week-45-of-2026/",
+      "source": "Positive News",
+      "category": "Good news",
+      "tone": "light",
+      "published_at": "2026-11-06T05:00:54.000Z"
+    },
+    {
+      "title": "APOD: 2026 November 6 – A Farewell to Swift",
+      "url": "https://science.nasa.gov/image-article/apod-2026-november-6-a-farewell-to-swift/",
+      "source": "NASA",
+      "category": "Science",
+      "tone": "light",
+      "published_at": "2026-11-06T05:05:00.000Z"
     }
   ]
 }
