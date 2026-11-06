@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generated_at": "2026-11-06T14:04:33.322Z",
+  "generated_at": "2026-11-06T17:32:28.127Z",
   "status": "ok",
   "successful_sources": [
     "BBC News",
@@ -17,60 +17,60 @@
   ],
   "stories": [
     {
-      "title": "Geothermal Utilities Power Wave of US Affordable Housing with 40% Energy Savings",
-      "url": "https://www.goodnewsnetwork.org/geothermal-utilities-power-wave-of-us-affordable-housing-with-40-energy-savings/",
+      "title": "Man Spends 12 Days Returning Lost Cash a Laborer Needed for His Daughter",
+      "url": "https://www.goodnewsnetwork.org/man-spends-12-days-returning-lost-cash-a-laborer-needed-for-his-daughter/",
       "source": "Good News Network",
       "category": "Good news",
       "tone": "light",
-      "published_at": "2026-11-06T12:30:16.000Z"
+      "published_at": "2026-11-06T16:30:31.000Z"
     },
     {
-      "title": "Wales scraps controversial Uganda tree-planting scheme",
-      "url": "https://www.bbc.co.uk/news/articles/cqm26m2l4p7eo?at_medium=RSS&at_campaign=rss",
+      "title": "A really simple guide to climate change",
+      "url": "https://www.bbc.co.uk/news/articles/c9w15nggj58o?at_medium=RSS&at_campaign=rss",
       "source": "BBC Science",
       "category": "Science",
       "tone": "light",
-      "published_at": "2026-11-06T13:14:24.000Z"
+      "published_at": "2026-11-06T16:40:51.000Z"
     },
     {
-      "title": "'We have our own fair playing field': 1Xtra launches first ever UK rap chart",
-      "url": "https://www.bbc.co.uk/news/articles/cqrkyymd3533o?at_medium=RSS&at_campaign=rss",
+      "title": "Brand's barrister refers himself to regulator after report he confronted journalist",
+      "url": "https://www.bbc.co.uk/news/articles/c8kgee9yxvn7o?at_medium=RSS&at_campaign=rss",
       "source": "BBC Culture",
       "category": "Culture",
       "tone": "light",
-      "published_at": "2026-11-06T12:37:58.000Z"
+      "published_at": "2026-11-06T16:49:31.000Z"
     },
     {
-      "title": "England secure group top spot with Ireland win",
-      "url": "https://www.bbc.co.uk/sport/rugby-league/videos/cxly441nej84o?at_medium=RSS&at_campaign=rss",
+      "title": "James out for minimum of five games - Bompastor",
+      "url": "https://www.bbc.co.uk/sport/football/articles/crq5nnqn84zyo?at_medium=RSS&at_campaign=rss",
       "source": "BBC Sport",
       "category": "Sport",
       "tone": "light",
-      "published_at": "2026-11-06T13:42:25.000Z"
+      "published_at": "2026-11-06T16:44:44.000Z"
     },
     {
-      "title": "Elon Musk appears to signal the end of the road for Cybertruck",
-      "url": "https://www.bbc.co.uk/news/articles/cq1j33w7d232o?at_medium=RSS&at_campaign=rss",
+      "title": "AI stocks climb after trillions wiped from market values",
+      "url": "https://www.bbc.co.uk/news/articles/c35ynnpzdq51o?at_medium=RSS&at_campaign=rss",
       "source": "BBC Technology",
       "category": "Technology",
       "tone": "light",
-      "published_at": "2026-11-06T09:57:04.000Z"
+      "published_at": "2026-11-06T17:03:02.000Z"
     },
     {
-      "title": "PM tells firms to publish salaries in job adverts ahead of new law",
-      "url": "https://www.bbc.co.uk/news/articles/cmd9343z3zw2o?at_medium=RSS&at_campaign=rss",
+      "title": "Foodbank to close after 16 years amid rising costs",
+      "url": "https://www.bbc.co.uk/news/articles/cqrkyyj6rx7ro?at_medium=RSS&at_campaign=rss",
       "source": "BBC Business",
       "category": "Business",
       "tone": "light",
-      "published_at": "2026-11-06T13:19:07.000Z"
+      "published_at": "2026-11-06T16:42:23.000Z"
     },
     {
-      "title": "Zambia's civil service overhaul raises questions",
-      "url": "https://www.dw.com/en/zambia-s-civil-service-overhaul-raises-questions/a-79875892?maca=en-rss-en-world-4025-xml-mrss",
-      "source": "DW",
+      "title": "Dozens of Democrats eyeing 2028 presidential run, says former Obama aide",
+      "url": "https://www.bbc.co.uk/news/articles/cx8dzzy8n713o?at_medium=RSS&at_campaign=rss",
+      "source": "BBC News",
       "category": "World",
       "tone": "light",
-      "published_at": "2026-11-06T13:28:00.000Z"
+      "published_at": "2026-11-06T16:51:01.000Z"
     },
     {
       "title": "What went right this week: the good news that matters",
@@ -81,12 +81,12 @@
       "published_at": "2026-11-06T05:00:54.000Z"
     },
     {
-      "title": "APOD: 2026 November 6 – A Farewell to Swift",
-      "url": "https://science.nasa.gov/image-article/apod-2026-november-6-a-farewell-to-swift/",
+      "title": "M30’s Sparkling Stars",
+      "url": "https://www.nasa.gov/image-article/m30s-sparkling-stars/",
       "source": "NASA",
       "category": "Science",
       "tone": "light",
-      "published_at": "2026-11-06T05:05:00.000Z"
+      "published_at": "2026-11-06T16:23:41.000Z"
     }
   ]
 }
