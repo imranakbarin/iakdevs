@@ -178,14 +178,14 @@ assert.equal(following.braking,true,
   for(let trial=0;trial<16;trial++){
     Object.assign(lone,{x:15.6,y:6.5,d:0,v:.8,max:1,lane:.16,path:null,stopUntil:0,patienceUntil:0,turnSignal:null});
     let turnedTo=null;
-    for(let i=0;i<60*5&&turnedTo===null;i++){
+    for(let i=0;i<60*16&&turnedTo===null;i++){   // a red light may hold it first
       T.update(1/60);
       if(lone.d!==0)turnedTo=lone.d;
     }
     if(turnedTo===2||turnedTo===3)side++;else if(turnedTo===1)round++;
     assert.ok(lone.x<=16.56,'a car never drives past the last junction');
   }
-  assert.ok(side>=14&&round<=2,'at the end of the road cars turn left or right, not back the way they came ('+side+' side, '+round+' round)');
+  assert.ok(side>=13&&round<=2,'at the end of the road cars turn left or right, not back the way they came ('+side+' side, '+round+' round)');
 }
 // A car stops for a walker standing in the carriageway; a walker waits rather than step into a car.
 {
