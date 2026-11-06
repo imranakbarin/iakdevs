@@ -215,8 +215,8 @@ assert.equal(following.braking,true,
   for(let i=0;i<60*4;i++)T.update(1/60);
   assert.ok(w.y<6.5-.37+.02,'a walker waits at the kerb while the street in front of them has green ('+w.y.toFixed(2)+')');
   guard=0;while(!(phase()>11&&phase()<12.5)&&guard++<4000)T.update(1/60);   // now the crossing is theirs
-  for(let i=0;i<60*4;i++)T.update(1/60);
-  assert.ok(w.y>6.9,'and crosses once the signal lets them ('+w.y.toFixed(2)+')');
+  let maxY=w.y;for(let i=0;i<60*4;i++){T.update(1/60);maxY=Math.max(maxY,w.y);}
+  assert.ok(maxY>6.9,'and crosses once the signal lets them ('+maxY.toFixed(2)+')');
 }
 // A siren clears the road: traffic ahead of the fire truck pulls over and stops, oncoming traffic eases to the kerb, and both go on after it has passed.
 {

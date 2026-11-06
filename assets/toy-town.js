@@ -947,7 +947,8 @@ const ToyTown = (() => {
     }
     if(!hold){m.sigWaitSince=undefined;return false;}
     if(m.sigWaitSince===undefined)m.sigWaitSince=clock;
-    if(clock-m.sigWaitSince>14){m.sigGoUntil=clock+4;m.sigWaitSince=undefined;return false;}
+    if(clock-m.sigWaitSince>(m.routine?4:14)){m.sigGoUntil=clock+4;   // commuters and children on a routine are in more of a hurry
+     m.sigWaitSince=undefined;return false;}
     return true;
   }
   // A siren (the fire truck on a call) clears the road: traffic on its street near it eases over to the kerb, and cars in
