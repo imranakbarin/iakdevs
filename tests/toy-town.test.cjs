@@ -581,7 +581,7 @@ for (const id of ['zoom-in', 'zoom-out', 'zoom-reset']) {
   assert.match(townPage, new RegExp('id="' + id + '"[^>]*aria-label="[^"]+"'), id + ' is accessible');
 }
 assert.match(townPage, /toy-town\.js\?v=47/, 'diorama engine is loaded');
-assert.match(townPage, /toy-town-news\.js\?v=1/, 'sourced news loads before the simulation');
+assert.match(townPage, /toy-town-news\.js\?v=2/, 'sourced news loads before the simulation');
 assert.match(townPage, /HEADLINES/, 'real reporting has a dedicated source panel');
 assert.match(townPage, /AROUND TOWN · FICTION/, 'fiction and real news are explicitly separated');
 assert.ok(townPage.indexOf('toy-town-news.js')<townPage.indexOf('toy-town.js'),

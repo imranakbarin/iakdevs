@@ -112,6 +112,8 @@ People no longer walk on the river: every walking leg (events, gatherings, whims
 
 **No more flashing on phones, more colour.** Firework bursts glow locally instead of flashing a white sphere across a phone-width screen, storm lightning is a brief fading brightening, the lighthouse beam turns slowly and faintly and the night bloom is gentler. Buildings come in salmon, butter, sage, sky and peach, and the west and east strips inside the railway are planted like the north and south ones.
 
+**A town that reads the news out.** The headline feed is lighter: more positive and science/culture sources, serious stories capped at two, hidden behind a "Show serious stories" button and never leading. Every light headline is staged in the town: a town crier on the plaza rings a bell and reads it out (with its source) to a small crowd that cheers or looks up with the topic, and the headlines are painted on the Town Times stand and the crier's chalkboard; the card says which story the day's theme came from. Kids play football on a lawn.
+
 ## Deep links
 
 `#<style>-<seed>` opens a style at a seed, e.g. `#gond-12345`, `#warli-7`. Prefix `painting-` for the painted panorama (`#painting-kangra-3`). `#zen-…`, `#road-…` and `#cozy-…` open the other modes; `#today` (or no hash) opens the home screen. Seeds vary the starting layout; they do not regenerate painted panoramas. Editing the hash in an open tab loads that world.
