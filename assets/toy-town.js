@@ -21,7 +21,7 @@ const ToyTown = (() => {
     return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
   };
   const today = () => dateKey(), narrow = () => typeof innerWidth === 'number' && innerWidth < 700;
-  let rnd = Math.random, seed = 0, day = '', theme = null, newsLine = '', today_ = [], nextHeadline = 12, headIx = 0;
+  let rnd = Math.random, seed = 0, day = '', theme = null, newsLine = '', today_ = [], nextHeadline = 12, headIx = 0, programme = [], progIx = 0;
   let W = 0, H = 0, dpr = 1, S = 1, cam = {x: N / 2, y: N / 2, z: 1, tx: N / 2, ty: N / 2, tz: 1, yaw: 0, tyaw: 0}, base = 1;
   let grid = [], buildings = [], props = [], movers = [], events = [], parts = [], bubbles = [], ground = null, sprites = new Map();
   const MIN_ZOOM = .42, MAX_ZOOM = 3.25, PAN = .6;   // how near the board edge the view may be dragged (the station and railway sit out there)
@@ -62,36 +62,45 @@ const ToyTown = (() => {
     ['sports', 'cricket', ['cricket', 'test match', 'wicket', 'ipl', 't20'], 'Cricket Day', '🏏'],
     ['sports', 'tennis', ['tennis', 'wimbledon', 'grand slam'], 'Tennis Day', '🎾'],
     ['sports', 'race', ['formula one', 'grand prix', 'f1', 'motorsport', 'nascar'], 'Grand Prix Day', '🏎️'],
-    ['sports', 'marathon', ['marathon', 'cycling', 'tour de france', 'athletics'], 'Marathon Day', '🏃'],
+    ['sports', 'marathon', ['marathon', 'cycling', 'tour de france', 'athletics', 'running', 'runner', 'runners', 'parkrun'], 'Marathon Day', '🏃'],
     ['sports', 'medals', ['olympic', 'paralympic', 'medal', 'world championships'], 'Medal Day', '🥇'],
-    ['sports', 'football', ['football', 'soccer', 'cup', 'league', 'fifa'], 'Big Match Day', '⚽'],
-    ['sports', 'match', ['championship', 'tournament', 'final', 'rugby', 'golf', 'basketball', 'baseball', 'hockey', 'world series'], 'Big Match Day', '🏆'],
+    ['sports', 'football', ['football', 'soccer', 'cup', 'league', 'fifa', 'win', 'wins', 'beat', 'beats', 'victory', 'secure*', 'squad', 'coach', 'player*', 'goal', 'goals', 'semi-final', 'knockout', 'top spot', 'lionesses', 'euros'], 'Big Match Day', '⚽'],
+    ['sports', 'match', ['championship', 'tournament', 'final', 'rugby', 'golf', 'basketball', 'baseball', 'hockey', 'world series', 'swimming', 'boxing', 'athlete*'], 'Big Match Day', '🏆'],
     ['space', 'moon', ['moon', 'lunar', 'artemis', 'chandrayaan'], 'Moonshot Day', '🌕'],
     ['space', 'mars', ['mars', 'martian', 'rover'], 'Mars Day', '🔴'],
-    ['space', 'comet', ['comet', 'asteroid', 'meteor', 'eclipse', 'telescope'], 'Sky Show', '☄️'],
+    ['space', 'comet', ['comet', 'asteroid', 'meteor', 'eclipse', 'telescope', 'apod', 'astronomy', 'galax*', 'nebula', 'planet*', 'hubble', 'webb', 'aurora', 'cosmic', 'universe', 'supernova', 'northern lights'], 'Sky Show', '☄️'],
     ['space', 'launch', ['space', 'rocket', 'nasa', 'isro', 'esa', 'spacex', 'satellite', 'astronaut', 'orbit', 'spacecraft'], 'Rocket Launch Day', '🚀'],
-    ['election', 'vote', ['election', 'elected', 'vote', 'votes', 'referendum', 'prime minister', 'president', 'parliament', 'campaign', 'sworn in', 'inaugurat'], 'Election Fever', '🗳️'],
+    ['tech', 'cars', ['cybertruck', 'tesla', 'musk', 'electric car*', 'electric vehicle*', 'ev', 'evs', 'carmaker*', 'automaker*', 'self-driving', 'driverless', 'truck*', 'motoring'], 'Electric Car Show', '🚗'],
+    ['science', 'green', ['geothermal', 'solar', 'renewable*', 'climate', 'green energy', 'energy', 'emissions', 'battery', 'batteries', 'hydrogen', 'recycl*', 'sustainab*', 'wind farm', 'wind power', 'offshore'], 'Green Energy Day', '🌱'],
+    ['science', 'trees', ['tree', 'trees', 'planting', 'forest*', 'garden*', 'nature', 'bees', 'woodland', 'meadow', 'rewild*', 'conservation'], 'Tree Planting Day', '🌳'],
+    ['market', 'jobs', ['salary', 'salaries', 'wage', 'wages', 'jobs', 'job', 'pay', 'workers', 'firms', 'employer*', 'hiring', 'unemployment', 'staff', 'careers', 'pension*'], 'Jobs Fair', '💼'],
+    ['election', 'vote', ['election', 'elected', 'vote', 'votes', 'referendum', 'prime minister', 'president', 'parliament', 'campaign', 'sworn in', 'inaugurat', 'scheme', 'council', 'law', 'laws', 'government', 'minister*', 'pm', 'mp', 'mps', 'reform*', 'policy', 'civil service', 'mayor', 'talks', 'summit', 'treaty', 'legislation'], 'Election Fever', '🗳️'],
     ['festival', 'diwali', ['diwali', 'deepavali'], 'Diwali Lights', '🪔'],
     ['festival', 'christmas', ['christmas', 'santa'], 'Christmas in Toy Town', '🎄'],
     ['festival', 'halloween', ['halloween'], 'Spooky Day', '🎃'],
     ['festival', 'newyear', ['new year', 'hogmanay'], 'New Year Countdown', '🎉'],
     ['festival', 'holi', ['holi'], 'Holi Colours', '🌈'],
     ['festival', 'eid', ['eid', 'ramadan'], 'Eid Lanterns', '🏮'],
-    ['festival', 'fest', ['festival', 'celebrat', 'carnival', 'anniversary', 'lantern', 'parade'], 'Festival Night', '🎆'],
-    ['awards', 'music', ['music', 'album', 'concert', 'singer', 'grammy', 'song'], 'Concert Night', '🎵'],
+    ['festival', 'school', ['school*', 'student*', 'pupil*', 'teacher*', 'children', 'child', 'kids', 'university', 'universities', 'classroom', 'exam*', 'graduat*', 'nursery', 'education', 'learn*'], 'School Trip', '🎒'],
+    ['festival', 'fest', ['festival', 'celebrat*', 'carnival', 'anniversary', 'lantern', 'parade'], 'Festival Night', '🎆'],
+    ['awards', 'music', ['music', 'album', 'concert', 'singer', 'grammy', 'song', 'chart', 'charts', 'rap', 'rapper', 'radio', 'playlist', 'band', 'gig', 'dj', 'pop', 'orchestra', 'choir', '1xtra'], 'Concert Night', '🎵'],
     ['awards', 'nobel', ['nobel'], 'Prize Day', '🏅'],
-    ['awards', 'film', ['film', 'movie', 'oscar', 'award', 'prize', 'emmy', 'box office', 'booker'], 'Red Carpet Day', '🎬'],
+    ['awards', 'film', ['film', 'movie', 'oscar', 'award', 'prize', 'emmy', 'box office', 'booker', 'actor', 'actress', 'cinema', 'netflix', 'tv', 'series', 'documentary', 'premiere', 'director', 'bafta', 'streaming'], 'Red Carpet Day', '🎬'],
+    ['awards', 'gallery', ['museum', 'gallery', 'exhibition*', 'artist*', 'painting*', 'sculpture*', 'theatre', 'ballet', 'opera', 'author*', 'novel*', 'poet*', 'library', 'book', 'books', 'art'], 'Gallery Opening', '🖼️'],
     ['tech', 'phone', ['smartphone', 'iphone', 'phone'], 'Phone Frenzy', '📱'],
     ['tech', 'robots', ['artificial intelligence', 'robot', 'ai', 'chatbot'], 'Robot Rush', '🤖'],
-    ['tech', 'drones', ['technology', 'software', 'chip', 'computer', 'internet', 'quantum', 'drone'], 'Drone Delivery Day', '📦'],
+    ['tech', 'drones', ['technology', 'software', 'chip', 'computer', 'internet', 'quantum', 'drone', 'train', 'trains', 'rail', 'railway', 'airport', 'flight*', 'delivery', 'parcel*', 'shipping', 'logistics', 'amazon'], 'Drone Delivery Day', '📦'],
     ['animals', 'panda', ['panda'], 'Panda Visit', '🐼'],
     ['animals', 'whale', ['whale', 'dolphin'], 'Whale Watch', '🐋'],
     ['animals', 'dino', ['dinosaur', 'fossil'], 'Dino Day', '🦕'],
     ['animals', 'penguin', ['penguin'], 'Penguin Parade', '🐧'],
-    ['animals', 'zoo', ['zoo', 'species', 'wildlife', 'elephant'], 'Zoo Escape', '🐘'],
+    ['animals', 'zoo', ['zoo', 'species', 'wildlife', 'elephant', 'animal*', 'bird*', 'dog', 'dogs', 'cat', 'cats', 'pet', 'pets'], 'Zoo Escape', '🐘'],
     ['market', 'coins', ['bitcoin', 'crypto', 'gold price'], 'Coin Rain', '🪙'],
-    ['market', 'stocks', ['economy', 'stock', 'market', 'inflation', 'trade', 'budget', 'gdp', 'currency', 'interest rate'], 'Market Mania', '💸'],
-    ['science', 'lab', ['scientist', 'discover', 'research', 'physics', 'chemistry', 'experiment', 'genome'], 'Mad Science Day', '🧪'],
+    ['market', 'food', ['food', 'restaurant*', 'chef*', 'recipe*', 'bakery', 'bread', 'pizza', 'cheese', 'coffee', 'tea', 'chocolate', 'cake*', 'cook*', 'menu', 'curry', 'fruit', 'vegetable*', 'farm*'], 'Food Fair', '🍕'],
+    ['market', 'stocks', ['economy', 'stock', 'market', 'inflation', 'trade', 'budget', 'gdp', 'currency', 'interest rate', 'bank*', 'shares', 'profit*', 'sales', 'retail*', 'prices', 'price*', 'housing', 'rent', 'mortgage*', 'tax*'], 'Market Mania', '💸'],
+    ['science', 'health', ['health', 'hospital*', 'doctor*', 'nurse*', 'nhs', 'vaccine*', 'medical', 'medicine', 'cure', 'fitness', 'sleep', 'diet', 'mental', 'patients'], 'Wellness Day', '🩺'],
+    ['science', 'lab', ['scientist', 'scientists', 'discover', 'research', 'physics', 'chemistry', 'experiment', 'genome', 'study', 'invent*', 'innovat*', 'laborator*', 'professor*'], 'Mad Science Day', '🧪'],
+    ['festival', 'goodnews', ['good news', 'went right', 'positive', 'hope', 'rescued', 'charity', 'donat*', 'volunteer*', 'kindness', 'breakthrough', 'hero', 'heroes'], 'Good News Day', '🌟'],
     ['weather', 'rain', [], 'Wild Weather', '🌧️'], ['weather', 'snow', [], 'Snow Day', '❄️'], ['weather', 'wind', [], 'Windy Day', '🌬️']
   ].map(([key, variant, words, title, emoji]) => ({key, variant, words, title, emoji}));
   // Up to three light stories, each a different theme; the first leads the day.
@@ -141,6 +150,17 @@ const ToyTown = (() => {
     const heavy = s => (s.tone || (T && T.tone ? T.tone(s.title) : GRIM.some(w => has(s.title, w)) ? 'heavy' : 'light')) === 'heavy';
     const light = (stories || []).filter(s => !heavy(s)).slice(0, 6).map(s => ({title: s.title.length <= 96 ? s.title : headline(s.title), full: s.title, source: s.source || '', ...topicOf(s.title)}));
     newsFeed = {light, heavy: (stories || []).filter(heavy).length, version: newsFeed.version + 1};
+    programme = light.map(s => stageFor(s.full)); progIx = 0;   // one staged scene per light headline
+  }
+  // Every light headline gets a scene: its own variant if a keyword matches, else the broader subject's scene, else the
+  // newspaper seller reading it out. The programme is staged on rotation (randomEvent) and when the town crier reads one.
+  const TOPIC_STAGE = {'⚽': 'football', '🚀': 'launch', '🤖': 'robots', '💼': 'jobs', '🗳️': 'vote', '🎭': 'gallery', '🔬': 'lab', '🌍': 'goodnews'};
+  function stageFor(story) {
+    const v = VARIANTS.find(v => v.words.some(w => has(story, w.length <= 3 ? w : w + '*')));
+    if (v) return {...v, story, name: nameOf(story)};
+    const t = TOPICS.find(([, words]) => words.some(w => has(story, w.endsWith('*') || w.length <= 3 ? w : w + '*')));
+    const base = VARIANTS.find(x => x.variant === TOPIC_STAGE[t && t[0]]) || {key: 'festival', variant: 'newsie', title: 'Town Talk', emoji: '📰', banner: 'TOWN TALK'};
+    return {...base, story, name: nameOf(story), fallback: true};
   }
   // News is now a separate publisher-attributed, freshness-checked feed.
   // No Wikimedia one-shot feed, endless localStorage cache, or fabricated
@@ -1201,7 +1221,7 @@ const ToyTown = (() => {
     const now = m.d < 2 ? m.x : m.y;
     for (const l of LINES) {   // crossing an intersection centre: maybe turn
       const c = l + .5;
-      if ((before - c) * (now - c) <= 0 && before !== now) {
+      if (before !== c && (before - c) * (now - c) <= 0 && before !== now) {   // leaving from exactly the centre (just turned there) is not a new crossing: that made vehicles re-turn every frame
         const opts = DIRS.map((_, i) => i).filter(i => i !== (m.d ^ 1)).filter(i => { const nx = Math.round((m.d < 2 ? c : m.x) - .5 + DIRS[i][0]), ny = Math.round((m.d < 2 ? m.y : c) - .5 + DIRS[i][1]); const t = tile(nx, ny); return t && (t.kind === 'road' || t.kind === 'bridge'); });
         let routed = -1;
         if (m.kind === 'bus' && !m.path) {   // the bus follows its route
@@ -1484,26 +1504,38 @@ const ToyTown = (() => {
     }
   };
   function remove(m) { const i = movers.indexOf(m); if (i >= 0) movers.splice(i, 1); }
-  function startEvent(name, x, y) {
+  function startEvent(name, x, y, item) {
     const make = VARIANT_EVENTS[name] || THEME_EVENTS[name] || EVENTS[name]; if (!make) return null;
     if ((VARIANT_EVENTS[name] || THEME_EVENTS[name]) && events.some(e => e.name === name)) return null;   // one launch (or match, or parade) at a time
     const e = make(x, y); if (!e) return null;
-    const news = today_.find(v => v.variant === name);
+    const news = item || programme.find(v => v.variant === name) || today_.find(v => v.variant === name);
     if (news) {   // the story's own name on a banner over the scene, and on the fans' signs
       const N_ = (news.name || '').toUpperCase(), BAN = {sports: N_ ? `GO ${N_}!` : 'GO TEAM!', space: N_ ? `${N_} 🚀` : 'TO THE STARS!', election: N_ ? `${N_}: VOTE!` : 'VOTE!', festival: N_ ? `HAPPY ${N_}!` : 'HAPPY DAY!', awards: N_ ? `★ ${N_} ★` : '★ BRAVO ★', tech: N_ ? `${N_} ✨` : 'THE FUTURE!', animals: N_ ? `WELCOME, ${N_}!` : 'HELLO, ANIMALS!', market: N_ ? `${N_} ↑↓` : 'BUY! SELL!', science: N_ ? `${N_} 🧪` : 'EUREKA!'};
-      e.banner = BAN[news.key] || news.title.toUpperCase();
+      e.banner = news.banner || BAN[news.key] || news.title.toUpperCase(); e.story = news.story;
       if (news.name) for (const m of movers.filter(m => m.type === 'person' && !m.kind).slice(0, 4)) { m.sign = news.name.split(' ')[0].toUpperCase().slice(0, 10); setTimeout(() => { m.sign = null; }, 20000); }
-      if (Math.random() < .5) tick('The village is reacting to a recent headline. The scene is fictional.');
+      if (Math.random() < .5) tick(`The village is reacting to “${headline(news.story)}”. The scene is fictional.`);
     }
     e.name = name; e.t = 0; events.push(e); feature(e, name in VARIANT_EVENTS || name in THEME_EVENTS ? 11 : 7); return e;
   }
   function randomEvent(x, y) {
     const names = CALM;
+    // The headline programme: each light headline in turn gets its scene (the lead one first), most of the time.
+    if (programme.length && Math.random() < .45) {
+      for (let k = 0; k < programme.length; k++) {
+        const item = programme[(progIx + k) % programme.length];
+        if (!events.some(e => e.name === item.variant)) { progIx = (progIx + k + 1) % programme.length; return startEvent(item.variant, x, y, item); }
+      }
+    }
     // The day's theme comes round often; the town's everyday chaos fills the rest.
     // The day's news comes round often (the lead story most); everyday chaos fills the rest.
     const news = today_.length ? (Math.random() < .55 ? today_[0] : today_[Math.random() * today_.length | 0]).variant : theme;
-    const free = names.filter(n => !events.some(e => e.name === n));
-    const pick = Math.random() < .35 && !events.some(e => e.name === news) ? news : free[Math.random() * free.length | 0];
+    // Variety: not what is already on, not what just happened (the last six), and only what suits the hour of the day.
+    const hr = hourOfDay(), suits = n => { const w = CALM_HOURS[n]; return !w || (hr >= w[0] && hr < w[1]); };
+    let free = names.filter(n => !events.some(e => e.name === n) && !recentCalm.includes(n) && suits(n));
+    if (!free.length) free = names.filter(n => !events.some(e => e.name === n) && suits(n));
+    if (!free.length) free = names.filter(n => !events.some(e => e.name === n));
+    const pick = Math.random() < .2 && !events.some(e => e.name === news) && !recentCalm.slice(-2).includes(news) ? news : free[Math.random() * free.length | 0];
+    recentCalm.push(pick); if (recentCalm.length > 6) recentCalm.shift();
     return startEvent(pick, x, y);
   }
 
@@ -1665,13 +1697,45 @@ const ToyTown = (() => {
     return {x: 9, y: 9, dur: 34, quiet: true, sky: sky('plane', -6, 3, 230, 1.0, .15), towed: text, update(e, dt) { e.sky.x += e.sky.vx * dt; e.sky.y += e.sky.vy * dt; }};
   };
   EVENTS.newsie = () => {
-    if (!today_.some(v => v.story)) return EVENTS.balloon();
-    const kid = spawnPerson(Math.random, {kind: 'newsie', col: '#3f78c9', max: .45}), stories = today_.filter(v => v.story);
+    if (!programme.length && !today_.some(v => v.story)) return EVENTS.balloon();
+    const kid = spawnPerson(Math.random, {kind: 'newsie', col: '#3f78c9', max: .45}), stories = programme.length ? programme : today_.filter(v => v.story);
     tick('The newspaper seller is out with today\'s Toy Town Times.');
     return {x: kid.x, y: kid.y, dur: 30, follow: kid, quiet: true, update(e, dt) { if ((e.next = (e.next || 1) - dt) <= 0) { e.next = 7; const v = stories[(e.k = (e.k || 0) + 1) % stories.length]; say(kid, `Extra! ${headline(v.story).slice(0, 44)}${headline(v.story).length > 44 ? '…' : ''}`, 5); } }, end() { remove(kid); }};
   };
+  Object.assign(EVENTS, {
+    jogger() {
+      const r = spawnPerson(Math.random, {kind: 'runner', max: .75});
+      sportsKit(r, 0);
+      const x0 = LINES[1] + .5, x1 = LINES[2] + .5, loop = [[x1, x0], [x1, x1], [x0, x1], [x0, x0]], pts = [];
+      for (let k = 0; k < 4; k++) pts.push({x: loop[k][0] + (k % 2 ? .22 : -.22), y: loop[k][1] + (k < 2 ? -.22 : .22), speed: .75});
+      r.path = pts;
+      tick('A jogger is doing laps of the middle block. Their watch says "keep going".');
+      return {x: 9, y: 9, dur: 26, follow: r, quiet: true, update(e) { if (e.t > 6 && !e.s) { e.s = 1; say(r, ['Huff, puff…', 'Nearly a personal best!', 'Lap three!'][Math.random() * 3 | 0], 2.2); } }, end() { remove(r); }};
+    },
+    dogwalk() {
+      const owner = spawnPerson(Math.random, {max: .45}), dog = spawnPerson(Math.random, {kind: 'dog', max: .6, lane: .3});
+      const line = LINES[1 + (Math.random() * 2 | 0)] + .5, along = Math.random() < .5, from = 1.6, to = 16.4;
+      owner.x = along ? from : line - .3; owner.y = along ? line - .3 : from; dog.x = along ? from + .5 : line - .1; dog.y = along ? line - .1 : from + .5;
+      owner.path = [{x: along ? to : owner.x, y: along ? owner.y : to, speed: .42}]; dog.path = [{x: along ? to + .5 : dog.x, y: along ? dog.y : to + .5, speed: .5}];
+      tick('Someone is walking their dog. The dog is walking them, mostly.');
+      return {x: 9, y: line, dur: 34, follow: dog, quiet: true, update(e) { if (e.t > 5 && !e.s) { e.s = 1; say(dog, 'woof!', 1.5); } }, end() { remove(owner); remove(dog); }};
+    },
+    wedding() {
+      const [x, y] = parkSpot(), bride = spawnPerson(Math.random, {col: '#ffffff', max: .35}), groom = spawnPerson(Math.random, {col: '#2b2f36', trousers: '#1f2430', max: .35});
+      sendTo(bride, x - .2, y, q => { q.stopUntil = clock + 12; }); sendTo(groom, x + .2, y, q => { q.stopUntil = clock + 12; });
+      const guests = assemble(x, y - .4, 5, ['Aww!', 'So happy!', 'Congratulations!'], 9);
+      tick('A wedding in the park! The guests are crying a little and the pigeons are in their best feathers.');
+      return {x, y, dur: 20, follow: bride, update(e, dt) { if (e.t > 8 && Math.random() < dt * 5) burst(x + (Math.random() - .5) * 1.4, y, 30 + Math.random() * 20, 3, ['#ffffff', '#ffd0dc', '#ffe08a'], {up: 20, spread: 1, g: 22, life: 1.6, r: 1.8}); if (e.t > 8 && !e.s) { e.s = 1; say(bride, 'I do!', 2.4); } }, end() { release(guests); for (const m of [bride, groom]) { m.busy = false; } }};
+    }
+  });
   // What the town does on its own when the news is quiet: gentle things, mostly.
-  const CALM = ['newsie', 'chat', 'chat', 'skybanner', 'kite', 'picnic', 'gardener', 'painter', 'reading', 'butterflies', 'catnap', 'balloon', 'sweeper', 'icecream', 'busker', 'hotair', 'pigeons', 'band', 'duck'];
+  // Running kit for the marathon and the joggers (3D dresses kind 'runner': bright vest, shorts, bib, headband).
+  const KIT = ['#e2463a', '#2f7fd6', '#f6c541', '#2fae7a', '#ff8a3d', '#8a5fd6', '#ffffff', '#22b8c4', '#ec5b9d'];
+  function sportsKit(w, i) { w.col = KIT[(i + (Math.random() * KIT.length | 0)) % KIT.length]; w.trousers = Math.random() < .5 ? '#1f2a44' : '#2b2f36'; w.hat = null; w.bag = false; w.scarf = false; w.sports = true; return w; }
+  const CALM = ['newsie', 'chat', 'chat', 'skybanner', 'kite', 'picnic', 'gardener', 'painter', 'reading', 'butterflies', 'catnap', 'balloon', 'sweeper', 'icecream', 'busker', 'hotair', 'pigeons', 'band', 'duck', 'jogger', 'dogwalk', 'wedding'];
+  // When each kind of calm event suits the day: [from hour, to hour]; the rest any time. Recently seen ones sit out a while.
+  const CALM_HOURS = {kite: [9, 18], picnic: [10, 17], gardener: [7, 18], painter: [9, 18], icecream: [12, 19], sweeper: [5, 10], jogger: [5, 20], dogwalk: [6, 21], wedding: [11, 18], balloon: [8, 19], hotair: [7, 19], busker: [15, 23], butterflies: [8, 18], newsie: [6, 19]};
+  const recentCalm = [];
 
   /* ---------------- the news, toy-sized ---------------- */
   const sky = (kind, x, y, z, vx = 0, vy = 0) => ({kind, x, y, z, vx, vy});
@@ -1698,7 +1762,8 @@ const ToyTown = (() => {
       return {x: 9, y: 6.5, dur: 22, blocks: true, follow: racers[3], update(e) { if (e.t > 3 && !e.s) { e.s = 1; say(racers[3], 'VROOOOM!', 1.5); } }, end() { say({x: 6.5, y: 6.5, z: 20}, `#${racers.reduce((a, c) => c.path && c.path.length < (a.path ? a.path.length : 99) ? c : a).num} wins!`, 2.5); for (const r of racers) remove(r); }};
     },
     marathon() {
-      const p = procession('runner', 9, .9);
+      const p = procession('runner', 7 + (Math.random() * 6 | 0), .8 + Math.random() * .25);
+      p.walkers.forEach(sportsKit);
       for (const m of peopleNear(p.x, p.y, 6).slice(0, 3)) say(m, ['Go go go!', 'You can do it!', 'Nearly there!'][Math.random() * 3 | 0], 2);
       tick('The Toy Town Marathon is running through the middle of town!');
       return {x: p.x, y: p.y, dur: 24, blocks: true, follow: p.walkers[0], end() { for (const w of p.walkers) remove(w); }};
@@ -1815,6 +1880,69 @@ const ToyTown = (() => {
     snow() { tick('Snow day! Everyone is building snowmen instead of working.'); return {x: 9, y: 9, dur: 22, snow: true}; },
     wind() { const e = EVENTS.hat(); tick('Windy day in Toy Town! Hats, leaves and one umbrella are flying.'); e.leaves = true; return e; }
   };
+  // Scenes for the headlines the old variants never covered (jobs, planting, culture, health, food, school, good news, cars).
+  const assemble = (x, y, n, text, secs = 7) => {   // n free walkers wander over to (x, y) and stand there a while
+    const crowd = []; for (let i = 0; i < n; i++) { const m = walker(); if (crowd.includes(m)) continue; crowd.push(m); sendTo(m, x + (Math.random() - .5) * 2.2, y + .8 + Math.random() * .9, q => { q.stopUntil = clock + secs + Math.random() * 3; if (text) say(q, text[Math.random() * text.length | 0], 2); }); }
+    return crowd;
+  };
+  const release = crowd => { for (const m of crowd) m.busy = false; };
+  const planting = line => {
+    const [x, y] = parkSpot(), crew = assemble(x, y - .6, 4, ['Dig, dig, dig!', 'Right here?', 'Water it!'], 10);
+    tick(line);
+    return {x, y, dur: 16, update(e, dt) { if (Math.random() < dt * 3) burst(x + (Math.random() - .5) * 1.6, y, 20, 1, ['#7fd36b', '#b6e8a0'], {up: 30, spread: 1, g: 30, life: 1.2, r: 1.8}); if (e.t > 9 && !e.s) { e.s = 1; say({x, y, z: 34}, 'It is a tree!', 2.4); props.push({kind: 'flowers', x: x + .3, y: y + .2, c: ['#9ad66b', '#ffd23f']}); } }, end() { release(crew); }};
+  };
+  Object.assign(VARIANT_EVENTS, {
+    jobs() {
+      const mk = props.find(p => p.kind === 'market') || {x: 9, y: 9};
+      const crowd = assemble(mk.x, mk.y, 5, ['We are hiring!', 'Fair pay!', 'Any ducks?', 'Apply within!']);
+      tick('Jobs fair at the market: every stall wants staff. Most vacancies are for ducks.');
+      return {x: mk.x, y: mk.y, dur: 14, update(e) { if (e.t > 5 && !e.s) { e.s = 1; say({x: mk.x, y: mk.y, z: 34}, 'Pay rise!', 2.4); burst(mk.x, mk.y, 40, 20, ['#ffd23f', '#7fd36b'], {up: 60, spread: 1.6}); } }, end() { release(crowd); }};
+    },
+    trees() { return planting('Tree planting in the park: four volunteers, one spade and a lot of advice.'); },
+    green() {
+      return planting('Green Energy Day: the park is trying out a very small, very proud wind turbine. Everyone is planting something.');
+    },
+    gallery() {
+      const [x, y] = parkSpot(), easel = {kind: 'easel', x: x + .25, y, t: 0}; props.push(easel);
+      const crowd = assemble(x, y, 4, ['Ooh, a swirl.', 'Very modern.', 'Is it a duck?', 'I love it.'], 9);
+      tick('Gallery opening in the park: one easel, four critics and a lot of chin-stroking.');
+      return {x, y, dur: 16, update(e, dt) { easel.t += dt; if (e.t > 7 && !e.s) { e.s = 1; say({x, y, z: 28}, 'Bravo!', 2.2); } }, end() { props.splice(props.indexOf(easel), 1); release(crowd); }};
+    },
+    health() {
+      const [x, y] = parkSpot(), crowd = assemble(x, y, 5, ['Breathe in…', 'And stretch!', 'Touch your toes!', 'Feeling good!'], 10);
+      tick('Wellness morning in the park: stretching, deep breaths and one person asleep on a bench.');
+      return {x, y, dur: 14, update(e, dt) { if (Math.random() < dt * 1.2) burst(x + (Math.random() - .5) * 2, y, 22, 1, ['#ff8fa8', '#ffd0dc'], {up: 25, spread: .6, g: -6, life: 1.6, r: 2}); }, end() { release(crowd); }};
+    },
+    food() {
+      const e = EVENTS.icecream(); tick('Food fair! The ice cream van has been joined by a very hopeful sausage roll.');
+      const truck = movers.find(m => m.kind === 'icecream');
+      if (truck) for (const m of peopleNear(truck.x, truck.y, 7).filter(m => !m.kind).slice(0, 3)) say(m, ['Yum!', 'Is that cake?', 'Seconds, please!'][Math.random() * 3 | 0], 2.4);
+      return e;
+    },
+    school() {
+      const p = procession('kid', 6, .5);
+      for (const w of p.walkers) w.max = .5;
+      tick('School trip! A neat line of very excited children and one very tired teacher.');
+      const lead = p.walkers[0]; say(lead, 'Hold hands!', 2.4);
+      return {x: p.x, y: p.y, dur: 26, blocks: true, follow: lead, update(e) { if (e.t > 8 && !e.s) { e.s = 1; say(p.walkers[2], 'Are we there yet?', 2.4); } }, end() { for (const w of p.walkers) remove(w); }};
+    },
+    goodnews() {
+      tick('Good news! The whole town is waving and somebody has found the confetti.');
+      for (const m of peopleNear(9, 9, 12).filter(m => !m.kind).slice(0, 9)) { m.waveUntil = clock + 3; }
+      return {x: 9, y: 9, dur: 12, update(e, dt) { if (Math.random() < dt * 3) { const x = 2 + Math.random() * 14, y = 2 + Math.random() * 14; burst(x, y, 70 + Math.random() * 40, 24, [['#ffd23f', '#ff8fd0'], ['#7fd36b', '#ffffff'], ['#5dd3ff', '#ffd23f']][Math.random() * 3 | 0], {up: 30, spread: 1.6, g: 25, life: 1.8, r: 2}); } if (e.t > 3 && !e.s) { e.s = 1; say({x: 9, y: 9, z: 40}, 'Hooray!', 2.4); } }};
+    },
+    cars() {
+      const lap = [[6.5, 6.5], [11.5, 6.5], [11.5, 11.5], [6.5, 11.5]], cols = ['#3fbf8a', '#6fa8ff', '#e8edf2'];
+      const cars = cols.map((col, i) => { const c = spawnCar(Math.random, 'racer'); c.col = col; c.x = 6.5 - i * .9; c.y = 6.5; const pts = []; for (const [x, y] of lap.slice(1).concat([lap[0]])) pts.push({x, y, speed: 1.1 + i * .05}); c.path = pts; return c; });
+      tick('Electric car show on the middle block: silent, shiny and politely slow.');
+      return {x: 9, y: 6.5, dur: 22, blocks: true, follow: cars[0], update(e) { if (e.t > 3 && !e.s) { e.s = 1; say(cars[0], 'zzzzzz…', 2); } }, end() { for (const c of cars) remove(c); }};
+    }
+  });
+  // The town crier (3D) reads a headline: stage that very one. Returns the event or null.
+  function stageHeadline(title) {
+    const i = programme.findIndex(p => p.story === title || headline(p.story) === title || p.story.startsWith(String(title).replace(/…$/, '')));
+    return i < 0 ? null : startEvent(programme[i].variant, undefined, undefined, programme[i]);
+  }
   // Decorations for the day's news (lamps for Diwali, pumpkins for Halloween, a podium for medals…).
   let decorN = 0;
   const TV_DAYS = ['sports', 'space', 'election', 'awards', 'festival'];
@@ -2823,7 +2951,8 @@ const ToyTown = (() => {
     const snapshot=!random&&service?await service.load():null;
     const liveStories=snapshot?.stories||[];
     if(!random)setNews(liveStories);
-    const matched=random?[]:newsThemes(liveStories.map(item=>item.title));
+    let matched=random?[]:newsThemes(liveStories.map(item=>item.title));
+    if(!random&&!matched.length&&programme.length)matched=[programme[0]];   // every light headline has a scene, so the day is never just the date's
     const linkedToNews=matched.length>0;
     today_=linkedToNews?matched:[
       VARIANTS[((random?Math.random()*1e9|0:daySeed)>>>0)%VARIANTS.length]
@@ -2850,7 +2979,8 @@ const ToyTown = (() => {
           const next=await service.load();
           service.paint(next);
           setNews(next.stories||[]);
-          const selected=newsThemes((next.stories||[]).map(item=>item.title));
+          let selected=newsThemes((next.stories||[]).map(item=>item.title));
+          if(!selected.length&&programme.length)selected=[programme[0]];
           if(selected.length){
             if(selected[0].story!==today_[0].story){
               today_=selected;
@@ -3075,7 +3205,7 @@ const ToyTown = (() => {
     addEventListener('hashchange', () => location.reload());
     start();
   }
-  return {BUS_STOPS, news: () => newsFeed, setNews, gather, rotateBy, rotateTo, yaw: () => cam.yaw, viewTo, view: () => ({x: cam.tx, y: cam.ty, z: cam.tz, yaw: cam.tyaw}), follow, following: () => followRef, feedDucks, layout, render, zoomAt, resetView, fitView, pinchTo, screenWorld, streetMoment, reactToNews, hero: () => town.blocks.find(b => b.hero), TALK, nameOf, headline, dateKey, CALM, lightPhase, themeFromNews, newsThemes, VARIANTS, VARIANT_EVENTS: () => Object.keys(VARIANT_EVENTS), decorate, setToday: l => { today_ = l; }, PACE, THEMES, GRIM, build, update, events: () => events, movers: () => movers, buildings: () => buildings, props: () => props, startEvent, randomEvent, setPlaying: v => { playing = v; }, debug: () => ({separated, busStops: BUS_STOPS.length, buses: movers.filter(m => m.kind === 'bus').map(m => m.stops || 0), clock, theme, seed, greetings, whims: {...whims}, feedings, crowdTrimmed, rush: rushFactor(), unstuck: {...unstuck}, hour: hourOfDay(), daypart, routines: {...routine}, night: nightLevel(), cam: {...cam}, fitZoom, streetMoments,communityEncounters,communityVisits,streetTransactions,streetShopVisits,newsReactions,streetPerformances,
+  return {BUS_STOPS, news: () => newsFeed, setNews, programme: () => programme, stageFor, stageHeadline, gather, rotateBy, rotateTo, yaw: () => cam.yaw, viewTo, view: () => ({x: cam.tx, y: cam.ty, z: cam.tz, yaw: cam.tyaw}), follow, following: () => followRef, feedDucks, layout, render, zoomAt, resetView, fitView, pinchTo, screenWorld, streetMoment, reactToNews, hero: () => town.blocks.find(b => b.hero), TALK, nameOf, headline, dateKey, CALM, lightPhase, themeFromNews, newsThemes, VARIANTS, VARIANT_EVENTS: () => Object.keys(VARIANT_EVENTS), decorate, setToday: l => { today_ = l; }, PACE, THEMES, GRIM, build, update, events: () => events, movers: () => movers, buildings: () => buildings, props: () => props, startEvent, randomEvent, setPlaying: v => { playing = v; }, debug: () => ({separated, busStops: BUS_STOPS.length, buses: movers.filter(m => m.kind === 'bus').map(m => m.stops || 0), clock, theme, seed, greetings, whims: {...whims}, feedings, crowdTrimmed, rush: rushFactor(), unstuck: {...unstuck}, hour: hourOfDay(), daypart, routines: {...routine}, night: nightLevel(), cam: {...cam}, fitZoom, streetMoments,communityEncounters,communityVisits,streetTransactions,streetShopVisits,newsReactions,streetPerformances,
     districts:{count:districts.length,visits:districtVisits,
       meetings:districtMeetings,tasks:districtTasks,
       areas:districts.map(a=>({role:a.role,block:a.block,

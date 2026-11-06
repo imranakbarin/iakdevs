@@ -12,7 +12,7 @@ assert.match(dioramaSource, /function tree\(/, 'new organic tree renderer exists
 assert.match(dioramaSource, /function gable\(/, 'real pitched roof renderer exists');
 assert.match(dioramaSource, /function glazing\(/, 'framed glazing renderer exists');
 assert.match(html, /<option value="town">Toy Town<\/option>/, 'Toy Town is in the menu');
-assert.match(html, /return 'toy-town\.html\?v=94&embed=1'\+keep\+\(bar\.hidden\?'&clean=1':''\);/, 'and opens its current embedded page');
+assert.match(html, /return 'toy-town\.html\?v=95&embed=1'\+keep\+\(bar\.hidden\?'&clean=1':''\);/, 'and opens its current embedded page');
 assert.match(html, /townFrame\.src=townSrc\(\);/, 'with this page\'s weather and fps settings passed through');
 assert.match(fs.readFileSync(path.join(root, 'toy-town.html'), 'utf8'), /assets\/toy-town\.js\?v=\d+/);
 const box = vm.createContext({Math, Object, Array, JSON, Date, String, Number, RegExp, setTimeout: () => 0, document: {getElementById: () => ({textContent: ''})}});
@@ -26,7 +26,9 @@ assert.equal(T.themeFromNews(['The national football team wins the cup']).key, '
 assert.equal(T.themeFromNews(['Voters elect a new president in a run-off']).key, 'election');
 assert.equal(T.themeFromNews(['Thousands celebrate Diwali across the country']).key, 'festival');
 assert.equal(T.themeFromNews(['A new species of frog is described']).key, 'animals');
-assert.equal(T.themeFromNews(['The paintings were restored']), null, 'nothing matching: the date chooses');
+assert.equal(T.themeFromNews(['The council met on Tuesday']) .variant, 'vote', 'broader words now map a civic headline');
+assert.equal(T.themeFromNews(['Something odd happened somewhere']), null, 'nothing matching: the date chooses');
+assert.equal(T.stageFor('Something odd happened somewhere').variant, 'newsie', 'every light headline still gets a scene: the newspaper seller');
 assert.equal(T.themeFromNews(['Explosion at a fireworks festival injures dozens']), null);
 
 // The specific kind of story picks its variant, so the town matches the news.
@@ -211,11 +213,14 @@ assert.equal(following.braking,true,
   const w=T.movers().find(m=>m.type==='person'&&!m.kind&&!m.heroResident&&!m.shopRole);
   const phase=()=>{const c=T.debug().clock%20;return c;};
   let guard=0;while(!(phase()>1&&phase()<3)&&guard++<4000)T.update(1/60);   // the x streets have green
-  Object.assign(w,{x:6.93,y:6.0,d:2,lane:0,path:[{x:6.93,y:7.0,speed:.5,dry:true}],busy:true,max:.5,v:0,stopUntil:0,observeUntil:0,nextDawdle:1e9,nextNotice:1e9,sigWaitSince:undefined,sigGoUntil:0});
-  for(let i=0;i<60*4;i++)T.update(1/60);
+  for(let ms=T.movers(),i=ms.length-1;i>=0;i--)if(ms[i]!==w&&ms[i].type==='person'&&ms[i].path&&Math.hypot(ms[i].x-6.93,ms[i].y-6.5)<3)ms.splice(i,1);   // an event's walkers (a dog walk, a jogger) must not cross at the same moment
+  Object.assign(w,{x:7.05,y:6.0,d:2,lane:0,path:[{x:7.05,y:7.0,speed:.5,dry:true}],busy:true,max:.5,v:0,stopUntil:0,observeUntil:0,nextDawdle:1e9,nextNotice:1e9,sigWaitSince:undefined,sigGoUntil:0});
+  const keep=()=>{ if(!w.path||!w.path[0]||w.path[0].x!==7.05)w.path=[{x:7.05,y:7.0,speed:.5,dry:true}]; };   // a random rally or fair may recruit this walker: put the errand back
+  for(let i=0;i<60*4;i++){keep();T.update(1/60);}
   assert.ok(w.y<6.5-.37+.02,'a walker waits at the kerb while the street in front of them has green ('+w.y.toFixed(2)+')');
   guard=0;while(!(phase()>11&&phase()<12.5)&&guard++<4000)T.update(1/60);   // now the crossing is theirs
-  let maxY=w.y;for(let i=0;i<60*4;i++){T.update(1/60);maxY=Math.max(maxY,w.y);}
+  for(let ms=T.movers(),i=ms.length-1;i>=0;i--)if(ms[i]!==w&&Math.hypot(ms[i].x-7.05,ms[i].y-6.8)<3)ms.splice(i,1);   // traffic respawns while the light cycles; this test is about the signal, not about a car in the way
+  let maxY=w.y;for(let i=0;i<60*4;i++){keep();T.update(1/60);maxY=Math.max(maxY,w.y);}
   assert.ok(maxY>6.9,'and crosses once the signal lets them ('+maxY.toFixed(2)+')');
 }
 // A siren clears the road: traffic ahead of the fire truck pulls over and stops, oncoming traffic eases to the kerb, and both go on after it has passed.
@@ -580,7 +585,7 @@ const townPage = fs.readFileSync(path.join(root, 'toy-town.html'), 'utf8');
 for (const id of ['zoom-in', 'zoom-out', 'zoom-reset']) {
   assert.match(townPage, new RegExp('id="' + id + '"[^>]*aria-label="[^"]+"'), id + ' is accessible');
 }
-assert.match(townPage, /toy-town\.js\?v=47/, 'diorama engine is loaded');
+assert.match(townPage, /toy-town\.js\?v=48/, 'diorama engine is loaded');
 assert.match(townPage, /toy-town-news\.js\?v=2/, 'sourced news loads before the simulation');
 assert.match(townPage, /HEADLINES/, 'real reporting has a dedicated source panel');
 assert.match(townPage, /AROUND TOWN · FICTION/, 'fiction and real news are explicitly separated');
@@ -699,4 +704,32 @@ T.update((dayCycle / 2 - phase + dayCycle) % dayCycle);
 assert.ok(T.debug().night > .99, 'night halfway through the real-time cycle');
 T.update(dayCycle / 2);
 assert.ok(T.debug().night < .01, 'daylight returns after a five-minute cycle');
+
+// Follow-up 16: every light headline gets a scene, on a rotation; vehicles never re-turn every frame; runners wear sports kit.
+{
+  const heads=['Geothermal Utilities Power Wave of US Affordable Housing with 40% Energy Savings','Wales scraps controversial Uganda tree-planting scheme',"'We have our own fair playing field': 1Xtra launches first ever UK rap chart",'England secure group top spot with Ireland win','Elon Musk appears to signal the end of the road for Cybertruck','PM tells firms to publish salaries in job adverts ahead of new law',"Zambia's civil service overhaul raises questions",'What went right this week: the good news that matters','APOD: 2026 November 6 – A Farewell to Swift'];
+  const want=['green','trees','music','football','cars','jobs','vote','goodnews','comet'];
+  heads.forEach((h,i)=>assert.equal(T.stageFor(h).variant,want[i],'headline maps to its scene: '+h));
+  assert.equal(T.stageFor('Something odd happened somewhere').fallback,true,'an unmatched headline still gets the newspaper seller');
+  T.build(52045,'market');T.setNews(heads.map(title=>({title,source:'Test',tone:'light'})));
+  assert.equal(T.programme().length,heads.slice(0,6).length,'one staged scene per light headline (max six)');
+  for(const v of ['jobs','trees','green','gallery','health','food','school','goodnews','cars','jogger','dogwalk','wedding'])
+    assert.ok(T.VARIANT_EVENTS().includes(v)||T.CALM.includes(v),'scene exists: '+v);
+  const seen=new Set();
+  for(let i=0;i<60*400;i++){T.update(1/60);for(const e of T.events())if(!seen.has(e)){seen.add(e);}}
+  const names=[...seen].map(e=>e.name);
+  for(const p of T.programme())assert.ok(names.includes(p.variant),'the rotation staged '+p.variant);
+  assert.ok(new Set(names).size>=10,'plenty of different scenes in a few minutes ('+new Set(names).size+')');
+  const run=T.startEvent('marathon');assert.ok(run);
+  const kit=T.movers().filter(m=>m.kind==='runner');assert.ok(kit.length>=7&&kit.every(m=>m.sports&&!m.hat&&!m.bag&&m.trousers),'marathon runners wear running kit');
+  assert.ok(new Set(kit.map(m=>m.col)).size>=4,'in different colours');
+  const staged=T.stageHeadline(heads[3]);assert.ok(staged&&staged.name==='football','the crier reading a headline stages that headline');
+}
+{
+  // A vehicle that has just turned at a junction centre must not turn again on the next frame (the flicker at road ends and junctions).
+  T.build(52045,'market');
+  const last=new Map();let flips=0,frames=0;
+  for(let i=0;i<60*240;i++){T.update(1/60);for(const m of T.movers()){if(m.type!=='car'||m.path)continue;const p=last.get(m);if(p&&p.d!==m.d){if(p.turnedAt===i-1||p.turnedAt===i-2)flips++;p.turnedAt=i;}last.set(m,{d:m.d,turnedAt:(p&&p.d!==m.d)?i:(p?p.turnedAt:-9)});frames++;}}
+  assert.equal(flips,0,'no vehicle turns again on the frame after turning ('+flips+')');
+}
 console.log(`Toy Town PASS: ${T.VARIANTS.length} news variants (cricket to Diwali to dinosaurs) each with its own event, grim stories never become themes, light ones pick ${Object.keys(T.THEMES).length - 1} kinds of day, the same day builds the same town with its theme block and fire station, and every event in every theme runs to its end with the streets kept busy.`);
