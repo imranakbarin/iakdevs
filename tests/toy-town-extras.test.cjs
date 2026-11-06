@@ -216,6 +216,11 @@ assert.match(sim, /function emergencyNear\(m\)/, 'traffic makes way for a siren'
 assert.match(sim, /const ROUTE_OUT = \[/, 'the bus follows a long closed route');
 assert.match(sim, /if\(angle>1\.75&&dist>\.18\)/, 'only a sharp turn stops to pivot');
 assert.match(view, /const kindOfDuck=i%3/, 'ducks come in three plumages and are small'); assert.match(view, /duck\.scale\.setScalar\(\.4\+\(i%3\)\*\.03\)/);
+assert.match(view, /function createNewsroom\(\)/); assert.match(view, /function updateNewsroom\(dt,dark\)/, 'the town reads its light headlines out: a crier, a crowd and billboards');
+assert.match(view, /showCrierBubble\(C\.g,/, 'the crier has a bubble of his own'); assert.match(view, /news7\.football=\{a,b,ball/, 'and kids play football on a lawn');
+const newsJs = fs.readFileSync(path.join(root, 'assets/toy-town-news.js'), 'utf8');
+assert.match(newsJs, /headline-more/, 'serious stories are hidden behind a button'); assert.match(newsJs, /const HEAVY=\[/);
+assert.match(sim, /function topicOf\(title\)/, 'every light headline gets a topic');
 assert.match(view, /function hueVariant\(material,hue\)/); assert.match(view, /BUILDING_HUES=\[/, 'the kit buildings come in several colours, not all salmon');
 assert.match(view, /f\.m\.material\.opacity=\.2\*\(1-q\)\*\(1-q\);f\.m\.scale\.setScalar\(\.7\+q\*1\.5\)/, 'a firework burst glows locally; it no longer flashes the whole phone screen');
 assert.match(view, /hemisphere\.intensity\+=\.9\*Math\.min\(1,left\/260\)/, 'storm lightning is a brief fading brightening');

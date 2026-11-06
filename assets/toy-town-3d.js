@@ -2553,7 +2553,7 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
   }
   /* ---- Tap a resident: they stop for a moment and say something about the day.
      Fiction only, in the town's own voice: real reporting stays in the sourced headline panel. */
-  let bubble=null;
+  let bubble=null,crierBubble=null;   // the crier has a bubble of its own, so chatter never replaces the headline
   const CHATTER=['Lovely evening for it.','Have you seen the picture at the cinema?','Just popping to the bakery.','Mind the ducks!','The lanterns look lovely tonight.','Is it Tuesday already?','I love this little town.','Off to the book shop!'];
   function chatLine(){
     const state=town.debug(),lines=(town.TALK&&town.TALK[state.theme])||[];
@@ -2857,6 +2857,15 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
     for(let i=effects.length-1;i>=0;i--){const e=effects[i];e.t+=dt;e.tick(e,dt);
       if(e.t>e.life){for(const p of e.parts)p.parent?.remove(p);effects.splice(i,1);}}
   }
+  function showCrierBubble(group,text,ms,credit){
+    if(typeof document==='undefined')return;
+    if(!crierBubble){crierBubble=document.createElement('div');crierBubble.className='resident-bubble';
+      crierBubble.style.cssText='position:absolute;transform:translate(-50%,-100%);width:max-content;max-width:min(320px,84vw);padding:7px 13px;border-radius:16px;background:#fff6dc;border:2px solid #e2b24f;color:#3d4552;font:700 13px/1.3 Nunito,system-ui,sans-serif;box-shadow:0 6px 18px rgba(30,50,70,.2);pointer-events:none;transition:opacity .3s;z-index:4;opacity:0';
+      host.appendChild(crierBubble);}
+    crierBubble.textContent=text;
+    if(credit){const c=document.createElement('div');c.textContent=credit;c.style.cssText='font:500 10px/1.2 Nunito,system-ui;color:#8a7440;margin-top:3px';crierBubble.appendChild(c);}
+    crierBubble.userData={item:{group},until:clockMs()+ms};crierBubble.style.opacity='1';
+  }
   function showBubble(group,text,ms,credit){
     if(typeof document==='undefined')return;
     if(!bubble){bubble=document.createElement('div');bubble.className='resident-bubble';
@@ -2966,7 +2975,8 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
     if(r.x>16.6&&!r.flying.length){world.remove(r.g);round=null;}
   }
   let sceneClock=0,lastClockAt=null;
-  function placeBubble(){
+  function placeBubble(){for(const b of [bubble,crierBubble])placeOne(b);}
+  function placeOne(bubble){
     if(!bubble||!bubble.userData)return;
     const {item,until}=bubble.userData;
     if(clockMs()>until||!item.group.parent||item.group.visible===false){bubble.style.opacity='0';return;}
@@ -3126,7 +3136,7 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
     paintVillageLife();
     createWorkingShops();
     batchStatic(world.children.length);
-    rail.train=null;life.built=false;more.built=false;live2.built=false;bus3.built=false;sky4.built=false;fest.built=false;fest.ev=null;leavingPrecip.length=0;createRailway();createFarm();createLife();createMore();createStage2();createStage3();createStage4();createStage5();
+    rail.train=null;life.built=false;more.built=false;live2.built=false;bus3.built=false;news7.built=false;sky4.built=false;fest.built=false;fest.ev=null;leavingPrecip.length=0;createRailway();createFarm();createLife();createMore();createStage2();createStage3();createNewsroom();createStage4();createStage5();
     // Landmark panes are pooled across the five models. Update material
     // intensity only, not every individual window mesh, on each frame.
     const visit=node=>{
@@ -4455,6 +4465,164 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
     }
   }
 
+  /* ---- Stage 7: the news in town. Every light headline the town knows (town.news(): serious ones are never staged) is
+     read out by a town crier on the plaza, who rings a bell while a small crowd gathers and reacts to the topic, and is
+     painted on the Town Times billboard and on the crier's chalkboard. A kids' football game fills a lawn. ---- */
+  const news7={built:false,t:0,ver:-1,idx:0,nextRead:9,boards:[],crier:null,listeners:[],reading:null,ball:null,kicks:0,reads:0,bubbleAt:0,football:null};
+  function wrapLines(ctx,text,maxW,maxLines){
+    const words=String(text).split(/\s+/),lines=[];let cur='';
+    for(const w of words){const t=cur?cur+' '+w:w;if(ctx.measureText(t).width>maxW&&cur){lines.push(cur);cur=w;}else cur=t;}
+    if(cur)lines.push(cur);
+    if(lines.length>maxLines){lines.length=maxLines;lines[maxLines-1]=lines[maxLines-1].replace(/\s*\S*$/,'')+'…';}
+    return lines;
+  }
+  function paintNewsBoard(b,item){
+    const c=b.ctx,W=b.cv.width,H=b.cv.height;if(!c||!c.fillRect)return;
+    c.fillStyle='#fff8e7';c.fillRect(0,0,W,H);
+    c.fillStyle='#c4473a';c.fillRect(0,0,W,Math.round(H*.2));
+    c.fillStyle='#fff8e7';c.font='700 '+Math.round(H*.13)+'px Nunito,system-ui,sans-serif';c.textBaseline='middle';c.fillText('TOWN TIMES',W*.05,H*.1);
+    if(item){
+      c.fillStyle='#3a3f4a';c.font='700 '+Math.round(H*.12)+'px Nunito,system-ui,sans-serif';c.textBaseline='top';
+      const lines=wrapLines(c,item.title,W*.9,4);lines.forEach((l,i)=>c.fillText(l,W*.05,H*.25+i*H*.15));
+      c.fillStyle='#8a8f99';c.font='600 '+Math.round(H*.075)+'px Nunito,system-ui,sans-serif';c.fillText((item.emoji||'')+'  '+(item.source||''),W*.05,H*.89);
+    }else{
+      c.fillStyle='#8a8f99';c.font='600 '+Math.round(H*.1)+'px Nunito,system-ui,sans-serif';c.textBaseline='top';c.fillText('A quiet news day.',W*.05,H*.35);
+    }
+    if(b.tex)b.tex.needsUpdate=true;
+  }
+  function newsBoard(w,h,x,y,z,ry,res){
+    if(typeof document==='undefined'||!THREE.CanvasTexture)return null;
+    const cv=document.createElement('canvas');cv.width=res[0];cv.height=res[1];const ctx=cv.getContext&&cv.getContext('2d');
+    const tex=new THREE.CanvasTexture(cv);if(THREE.SRGBColorSpace)tex.colorSpace=THREE.SRGBColorSpace;
+    const mesh=new THREE.Mesh(geo('plane',w,h),new THREE.MeshBasicMaterial({map:tex,toneMapped:false}));
+    mesh.position.set(x,y,z);mesh.rotation.y=ry;mesh.castShadow=false;world.add(mesh);
+    const b={cv,ctx,tex,mesh};paintNewsBoard(b,null);news7.boards.push(b);ambient.push({kind:'newsboard',mesh});return b;
+  }
+  const grownUp=(i,col)=>{const p=person({col,skin:['#f1c9a5','#d8a77c','#a8754f','#7a4e33'][i%4],hair:['#49362d','#333947','#7a5a3a','#222'][i%4],ph:i*1.7+.4,x:i+9,y:i*3,hat:i%3===0?'cap':null,bag:i%2===1});
+    p.scale.setScalar(CUTE);p.userData.limbs.headPivot.scale.setScalar(HEAD_BIG);p.visible=false;return p;};
+  function createNewsroom(){
+    news7.built=true;news7.t=0;news7.ver=-1;news7.idx=0;news7.nextRead=9;news7.boards=[];news7.listeners=[];news7.reading=null;news7.ball=null;news7.football=null;news7.kicks=0;news7.reads=0;
+    const g=new THREE.Group();world.add(g);const base=.17;
+    // the Town Times stand shows today's headlines
+    const times=town.props().find(p=>p.kind==='times');
+    if(times)news7.stand=newsBoard(.6,.46,times.x,1.13,times.y+.044,0,[512,392]);
+    // the town crier on a crate at the west edge of the plaza, with a chalkboard
+    const C={x:7.62,z:9.42};
+    const crate=box(g,.26,.12,.26,'#b88a5a',C.x,CENTRE_TOP+.06,C.z);
+    const crier=person({col:'#b5473c',skin:'#d8a77c',hair:'#4a3a2f',ph:2.1,x:5,y:7,hat:'cap'});crier.scale.setScalar(CUTE);crier.userData.limbs.headPivot.scale.setScalar(HEAD_BIG);
+    g.add(crier);crier.position.set(C.x,CENTRE_TOP+.12,C.z);crier.rotation.y=Math.PI/2;
+    const hand=crier.userData.limbs.hands?.[1];
+    if(hand){const bell=cylinder(hand,.004,.03,.06,'#e6b94a',0,-.07,0);bell.castShadow=false;}
+    cylinder(g,.014,.014,.8,'#8a6d4e',C.x-.06,CENTRE_TOP+.4,C.z-.68);cylinder(g,.014,.014,.8,'#8a6d4e',C.x+.9,CENTRE_TOP+.4,C.z-.68);
+    const chalk=newsBoard(1.0,.68,C.x+.42,CENTRE_TOP+.78,C.z-.66,0,[640,435]);
+    news7.crier={g:crier,C,chalk,crate,ring:0,hand};
+    // listeners: they walk in from the plaza and stand round the crier
+    const cols=['#7fb3d9','#f2c36b','#9ccf9a','#c39be0','#f0a574','#e58f8f'];
+    const n=lite?3:6;
+    for(let i=0;i<n;i++){
+      const a=-1.15+i*(2.3/(n-1)),from=1.9+(i%2)*.4,to=.62+(i%3)*.16;
+      const p=grownUp(i,cols[i%6]);g.add(p);
+      const home={x:C.x+Math.cos(a)*from+.4,z:C.z+Math.sin(a)*from},spot={x:C.x+.15+Math.cos(a)*to,z:C.z+Math.sin(a)*to};
+      news7.listeners.push({p,home,spot,x:home.x,z:home.z,state:'away',ph:i*1.3,face:Math.atan2(C.x-spot.x,C.z-spot.z)});
+    }
+    // football on a free lawn
+    const lawns=freeSpots().filter(q=>q.clear>.7);
+    const P=life.play,K=life.kite;
+    const F=lawns.find(q=>(!P||Math.hypot(q.x-P.x,q.z-P.z)>2.4)&&(!K||Math.hypot(q.x-K.x,q.z-K.z)>2.4));
+    if(F&&!lite){
+      const a=kidOf(10,'#e8664d'),b=kidOf(11,'#5fa0d6'),ball=ball0(g);
+      g.add(a);g.add(b);
+      news7.football={a,b,ball,x:F.x,z:F.z,t:0,next:1.2,from:0,cheer:0,goalAt:11};
+      // two little goal posts
+      for(const sd of [-1,1]){const gp=new THREE.Group();gp.position.set(F.x+sd*1.05,base,F.z);g.add(gp);
+        cylinder(gp,.01,.01,.22,'#f4efe2',0,.11,-.14);cylinder(gp,.01,.01,.22,'#f4efe2',0,.11,.14);cylinder(gp,.01,.01,.3,'#f4efe2',0,.22,0).rotation.x=Math.PI/2;}
+    }
+  }
+  function ball0(g){const b=new THREE.Group();g.add(b);ball(b,.04,'#fffaf0',0,0,0);const sp=ball(b,.018,'#3a3f4a',.032,.012,0);sp.castShadow=false;return b;}
+  const limbSwing=(p,a)=>{const L=p.userData.limbs;if(!L)return;L.legs.forEach((l,k)=>{l.rotation.x=(k?1:-1)*a;});L.arms.forEach((l,k)=>{l.rotation.x=(k?-1:1)*a*.7;});};
+  function updateNewsroom(dt,dark){
+    if(!news7.built)return;news7.t+=dt;const t=news7.t,N=town.news?town.news():{light:[],version:0};
+    const items=N.light||[];
+    // a new feed: repaint, and read the lead story soon
+    if(N.version!==news7.ver){news7.ver=N.version;news7.idx=0;if(items.length)news7.nextRead=Math.min(news7.nextRead,t+3);}
+    // the boards cycle through the headlines
+    if(items.length&&t>=(news7.boardAt||0)){
+      news7.boardAt=t+9;const it=news7.reading?news7.reading.item:items[news7.idx%items.length];
+      for(const b of news7.boards)paintNewsBoard(b,it);
+    }else if(!items.length&&!news7.boardBlank){news7.boardBlank=true;for(const b of news7.boards)paintNewsBoard(b,null);}
+    if(items.length)news7.boardBlank=false;
+    const C=news7.crier;
+    if(C){C.g.visible=items.length>0;C.crate.visible=items.length>0;if(C.chalk)C.chalk.mesh.visible=items.length>0;}
+    // start a reading
+    if(C&&items.length&&!news7.reading&&t>=news7.nextRead&&dark<.9){
+      const item=items[news7.idx%items.length];news7.idx++;news7.reads++;
+      news7.reading={item,t:0,cheer:/⚽|🎭|🏆|🗳️/.test(item.emoji)};
+      news7.nextRead=t+75+Math.random()*25;
+      for(const b of news7.boards)paintNewsBoard(b,item);news7.boardAt=t+9;
+      news7.listeners.forEach((q,i)=>{q.state='in';q.p.visible=true;q.delay=i*.35;});
+    }
+    const R=news7.reading;
+    if(R){
+      R.t+=dt;
+      if(R.t>2.4&&!R.said){R.said=true;showCrierBubble(C.g,R.item.emoji+' '+R.item.title,9500,R.item.source?'Read out by the town crier · '+R.item.source:'Read out by the town crier');}
+      if(R.t>11.5&&!R.leaving){R.leaving=true;news7.listeners.forEach(q=>{q.state='out';});}
+      if(R.t>15){news7.reading=null;for(const q of news7.listeners){q.p.visible=false;q.state='away';q.x=q.home.x;q.z=q.home.z;}}
+    }
+    // the crier: rings the bell, then gestures while reading
+    if(C&&C.g.visible){
+      const L=C.g.userData.limbs;
+      if(L){
+        const ringing=R&&R.t<2.6;
+        L.arms[1].rotation.x=ringing?-2.2+Math.sin(t*16)*.4:R?(-.6+Math.sin(t*2.2)*.25):0;
+        L.arms[1].rotation.z=ringing?-.2:0;
+        L.arms[0].rotation.x=R&&R.t>2.6?-.4+Math.sin(t*1.7)*.15:0;
+        if(L.headPivot)L.headPivot.rotation.x=R?-.08:0;
+      }
+      C.g.position.y=CENTRE_TOP+.12+(R&&R.t<2.6?Math.abs(Math.sin(t*16))*.006:0);
+    }
+    // listeners walk in, stand round the crier and react to the topic
+    for(const q of news7.listeners){
+      if(q.state==='away')continue;
+      if(q.state==='in'&&(q.delay-=dt)>0)continue;
+      const tx=q.state==='out'?q.home.x:q.spot.x,tz=q.state==='out'?q.home.z:q.spot.z,dx=tx-q.x,dz=tz-q.z,d=Math.hypot(dx,dz);
+      let walking=false;
+      if(d>.03){const st=Math.min(d,.55*dt);q.x+=dx/d*st;q.z+=dz/d*st;q.p.rotation.y=Math.atan2(dx,dz);walking=true;}
+      else if(q.state==='in'){q.p.rotation.y=q.face;}
+      q.ph+=dt*6;limbSwing(q.p,walking?Math.sin(q.ph*1.5)*.55:0);
+      const L=q.p.userData.limbs;
+      if(!walking&&R&&R.t>2.6&&L){
+        if(R.cheer){const u=Math.max(0,Math.sin(t*5+q.ph));L.arms[1].rotation.x=-2.5*u;L.arms[0].rotation.x=-2.2*u*.8;}
+        else if(L.headPivot)L.headPivot.rotation.x=-.18+Math.sin(t*1.5+q.ph)*.05;
+      }
+      q.p.position.set(q.x,CENTRE_TOP+(walking?Math.abs(Math.sin(q.ph*1.5))*.008:0),q.z);
+    }
+    // the football game
+    const F=news7.football;
+    if(F){
+      const vis=dark<.7&&!(weatherKind==='rain'||weatherKind==='storm'||weatherKind==='snow');
+      F.a.visible=F.b.visible=F.ball.visible=vis;
+      if(vis){
+        F.t+=dt;
+        const ax=F.x-.7,bx=F.x+.7,base=.17;
+        if(F.t>=F.next){F.next=F.t+2.1+Math.random()*.8;F.from^=1;news7.kicks++;F.kickT=0;if(F.t>F.goalAt){F.goalAt=F.t+12+Math.random()*8;F.cheer=1.6;}}
+        F.kickT=(F.kickT||0)+dt;const u=Math.min(1,F.kickT/1.5),dir=F.from?-1:1;   // from 0: a kicks to b
+        const sx=F.from?bx:ax,ex=F.from?ax:bx;
+        F.ball.position.set(sx+(ex-sx)*u,base+.04+Math.sin(u*Math.PI)*.22,F.z+Math.sin(u*Math.PI)*.12*dir);
+        F.ball.rotation.z=-u*9*dir;
+        F.a.position.set(ax,base,F.z);F.b.position.set(bx,base,F.z);
+        F.a.rotation.y=Math.PI/2;F.b.rotation.y=-Math.PI/2;
+        F.cheer=Math.max(0,F.cheer-dt);
+        for(const [k,kid] of [[0,F.a],[1,F.b]]){
+          const kicker=(F.from===k),L=kid.userData.limbs;if(!L)continue;
+          const swing=kicker&&F.kickT<.35?Math.sin(F.kickT/.35*Math.PI)*1.1:Math.sin(t*3+k)*.12;
+          L.legs[0].rotation.x=swing;L.legs[1].rotation.x=-swing*.4;
+          if(F.cheer>0){L.arms.forEach(a=>{a.rotation.x=-2.5;});kid.position.y=base+Math.abs(Math.sin(t*9+k))*.035;}
+          else L.arms.forEach((a,i)=>{a.rotation.x=Math.sin(t*3+i)*.15;});
+        }
+      }
+    }
+  }
+
   /* ---- Stage 4: a livelier sky. A rainbow after the rain, wind that blows leaves across the town and lifts the
      kite, a banner plane towing the day's theme, and bird flocks at dawn and dusk. ---- */
   const sky4={built:false,t:0,rainbow:null,rainbowT:0,wasWet:false,leaves:[],plane:null,nextPlane:35,planes:0,flocks:[],nextFlock:25,flocksRun:0,leavesBlown:0,windOverride:null,rainbows:0};
@@ -5501,7 +5669,7 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
       // Driven by the town's own clock, so they pause with the town.
       {const now=state.clock||0;const dt=lastClockAt===null?0:THREE.MathUtils.clamp(now-lastClockAt,0,.1);lastClockAt=now;sceneClock+=dt;
        try{window.ToyTownWeather?.step?.(dt);}catch(e){}
-       updateVisit(dt);updateRound(dt,state.night||0);updateEffects(dt);updateTrain(dt,state.night||0);updateFarm(dt);updateSite(dt);updateLife(dt);updateMore(dt,state.night||0);updateStage2(dt,state.night||0);updateStage3(dt,state.night||0);updateStage4(dt,state.night||0);updateStage5(dt,state.night||0);updateStage6(dt);}
+       updateVisit(dt);updateRound(dt,state.night||0);updateEffects(dt);updateTrain(dt,state.night||0);updateFarm(dt);updateSite(dt);updateLife(dt);updateMore(dt,state.night||0);updateStage2(dt,state.night||0);updateStage3(dt,state.night||0);updateNewsroom(dt,state.night||0);updateStage4(dt,state.night||0);updateStage5(dt,state.night||0);updateStage6(dt);}
       placeBubble();
       animateAmbient(state.clock||0);
       // Shadows follow the actors a few times a second instead of every frame: every frame on desktop, every 2nd on phones, every 4th in lite mode.
@@ -5540,7 +5708,7 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
     startVisit:()=>{if(!onThisDay.length)onThisDay=[{year:1969,text:'Apollo 11 lands on the Moon'}];startVisit();return timeVisit;},startRound:()=>{startRound();return round;},
     stepExtras:(seconds,dark=0)=>{for(let t=0;t<seconds;t+=.05){sceneClock+=.05;updateVisit(.05);updateRound(.05,dark);updateEffects(.05);}},
     setFreight:n=>{rail.freightEvery=n;rail.mode='pass';},railMode:()=>rail.mode,
-    stepTrain:(seconds,dark=0)=>{for(let t=0;t<seconds;t+=.05){updateTrain(.05,dark);updateFarm(.05);updateSite(.05);updateLife(.05);updateMore(.05,dark);updateStage2(.05,dark);updateStage3(.05,dark);updateStage4(.05,dark);updateStage5(.05,dark);updateStage6(.05);}},
+    stepTrain:(seconds,dark=0)=>{for(let t=0;t<seconds;t+=.05){updateTrain(.05,dark);updateFarm(.05);updateSite(.05);updateLife(.05);updateMore(.05,dark);updateStage2(.05,dark);updateStage3(.05,dark);updateNewsroom(.05,dark);updateStage4(.05,dark);updateStage5(.05,dark);updateStage6(.05);}},
     // Meshes whose material reads vertex colours but whose geometry has none draw pure black.
     vertexColorAudit:()=>{let bad=0;world.traverse?.(o=>{if(o.isMesh&&o.material?.vertexColors&&o.geometry?.attributes&&!o.geometry.attributes.color)bad++;});return bad;},
     batchStats:()=>({removed:batch.removed,merged:batch.merged,candidates:batch.candidates.length,off:batch.off}),staticCandidates:()=>batch.candidates,
@@ -5550,6 +5718,7 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
     startEvent:k=>startEvent(k),startDragon:()=>{if(fest.dragon){fest.dragonOn=60;fest.dragon.g.visible=true;return true;}return false;},
     stage4Stats:()=>({built:sky4.built,rainbow:!!sky4.rainbow?.visible,rainbows:sky4.rainbows,leaves:sky4.leaves.filter(l=>l.on).length,leavesBlown:sky4.leavesBlown,plane:!!sky4.plane?.g.visible,planes:sky4.planes,flocks:sky4.flocks.length,flocksRun:sky4.flocksRun,sunK:+sunK.toFixed(2),grayK:+grayK.toFixed(2)}),
     setWindForTest:v=>{sky4.windOverride=v;},startBanner:()=>startBanner(),startFlock:()=>startFlock(),
+    newsStats:()=>({built:news7.built,boards:news7.boards.length,reads:news7.reads,reading:!!news7.reading,item:news7.reading?.item?.title||null,listeners:news7.listeners.filter(q=>q.state!=='away').length,football:!!news7.football,footballAt:news7.football?[news7.football.x,news7.football.z]:null,kicks:news7.kicks,crier:!!news7.crier}),
     stage3Stats:()=>({built:bus3.built,stops:bus3.stops.length,waiting:bus3.people.filter(p=>p.state==='wait').length,aboard:bus3.people.filter(p=>p.state==='aboard').length,boarded:bus3.boarded,alighted:bus3.alighted,boards:bus3.boards,steam:bus3.steam.length,tufts:bus3.tufts,flowers:bus3.flowers,patches:bus3.patches,strips:bus3.strips}),
     stage2Stats:()=>({built:live2.built,puddles:live2.puddles.filter(p=>p.puddle.visible).length,snow:+live2.snowK.toFixed(2),snowVisible:!!live2.snowman?.visible,watchman:!!live2.watch?.p.visible,cats:live2.cats.filter(c=>c.g.visible).length,boards:live2.boards.map(b=>b.shut.visible?'closed':'open'),hits:live2.hits,kiteVisible:life.kite?.kid.visible,playVisible:life.play?.sk.visible,fisherVisible:life.fisher?.p.visible,boatVisible:life.boat?.g.visible}),
     setWeatherForTest:k=>{weatherKind=k;},touch2:(x,y)=>touch2(x,y),

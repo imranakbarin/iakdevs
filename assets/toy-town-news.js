@@ -5,6 +5,13 @@
   const RAW='https://raw.githubusercontent.com/imranakbarin/iakdevs/master/assets/toy-town-news.json';
   const LOCAL='assets/toy-town-news.json';
   const HOUR=3600000,MAX_FEED_AGE=6*HOUR,MAX_HEADLINE_AGE=30*HOUR;
+  /* Tone: a heavy headline (war, death, disaster, crime, crisis) is kept out of the town's lead and hidden behind a
+     "show serious stories" button; the town leads with, and stages, the lighter ones. Whole words, or word beginnings
+     ending in '*' (so "fire" never blocks "fireworks"). */
+  const HEAVY=['kill*','dead','death*','dies','died','dying','war','wars','warfare','attack*','bomb*','shoot*','shot','murder*','crash*','earthquake*','flood*','wildfire*','blaze','hostage*','terror*','massacre*','injur*','victim*','casualt*','wound*','stab*','explosion*','blast*','missile*','troops','invasion','invade*','military','ceasefire','genocide','refugee*','famine','drought','hurricane*','tornado*','storm*','outbreak*','virus','pandemic','cancer','surgery','abuse*','assault*','rape*','crime*','arrest*','jail*','prison*','sentenc*','trial','fraud','scandal*','lawsuit*','sue','sues','sanction*','conflict*','strike*','protest*','riot*','crisis','collapse*','plunge*','slump*','tumble*','fears','threat*','warns','warning','layoff*','job cuts','shortage*','recall*','toll','iran','gaza','ukraine','russia','israel','hamas','sudan','trump'];
+  const esc=w=>w.replace(/[.+?^${}()|[\]\\]/g,'\\$&');
+  const hit=(text,w)=>w.endsWith('*')?new RegExp('\\b'+esc(w.slice(0,-1)),'i').test(text):new RegExp('\\b'+esc(w)+'\\b','i').test(text);
+  const tone=title=>HEAVY.some(w=>hit(String(title||''),w))?'heavy':'light';
   const clean=(payload,now=Date.now())=>{
     if(!payload||payload.version!==1||!Array.isArray(payload.stories))return null;
     const generated=Date.parse(payload.generated_at);
@@ -17,7 +24,9 @@
       const time=Date.parse(s.published_at);
       return url.protocol==='https:'&&Number.isFinite(time)&&time<=now+600000&&
         now-time<=MAX_HEADLINE_AGE;
-    }).slice(0,9);
+    }).map(s=>({...s,tone:s.tone==='heavy'||s.tone==='light'?s.tone:tone(s.title)})).slice(0,9);
+    // Light stories lead (newest first within each tone); heavy ones follow.
+    stories.sort((a,b)=>(a.tone==='heavy')-(b.tone==='heavy'));
     return {status:stories.length>=3?'live':stories.length?'limited':'unavailable',
       stories,generated_at:payload.generated_at};
   };
@@ -51,14 +60,15 @@
       headline=document.getElementById('news-headline'),
       list=document.getElementById('headlines');
     if(!status||!headline||!list)return;
-    const live=feed&&feed.stories?.length;
-    status.textContent=live?'HEADLINES · '+age(feed.generated_at):
-      'HEADLINES UNAVAILABLE';
-    headline.textContent=live?feed.stories[0].title:
+    const all=feed&&feed.stories?feed.stories:[],lightOnes=all.filter(s=>s.tone!=='heavy'),heavyOnes=all.filter(s=>s.tone==='heavy');
+    let showHeavy=false;try{showHeavy=localStorage.getItem('toy-town:serious')==='1';}catch(_){}
+    const live=all.length>0;
+    status.textContent=live?'HEADLINES · '+age(feed.generated_at):'HEADLINES UNAVAILABLE';
+    headline.textContent=live?(lightOnes[0]||all[0]).title:
       'The town is playing its own story today. No verified headlines available.';
     list.replaceChildren();
     if(!live)return;
-    for(const item of feed.stories){
+    const add=item=>{
       const link=document.createElement('a');
       link.className='headline-item';link.href=item.url;
       link.target='_blank';link.rel='noopener noreferrer';
@@ -67,6 +77,14 @@
       const meta=document.createElement('small');meta.textContent=
         item.source+' · '+age(item.published_at);
       link.append(title,meta);list.append(link);
+    };
+    for(const item of lightOnes)add(item);
+    if(heavyOnes.length){
+      const more=document.createElement('button');more.type='button';more.className='headline-more';
+      more.textContent=showHeavy?'Hide serious stories':'Show '+heavyOnes.length+' serious '+(heavyOnes.length===1?'story':'stories');
+      more.addEventListener('click',()=>{try{localStorage.setItem('toy-town:serious',showHeavy?'0':'1');}catch(_){}paint(feed);});
+      list.append(more);
+      if(showHeavy)for(const item of heavyOnes)add(item);
     }
   }
   function init(){
@@ -84,5 +102,5 @@
       }
     });
   }
-  root.ToyTownNews={clean,load,age,paint,init};
+  root.ToyTownNews={clean,load,age,paint,init,tone,HEAVY};
 })(typeof window!=='undefined'?window:globalThis);

@@ -31,6 +31,24 @@ assert.equal(chooseStories([
   {...same[1],source:'BBC Technology',category:'Technology'}
 ])[0].category,'Technology',
 'cross-posted headlines retain their more useful specialist topic');
+// Tone: heavy stories never lead and are capped; light ones are staged.
+{
+  const T=globalThis.ToyTownNews;
+  assert.equal(T.tone('Missiles hit the capital as the war enters a new week'),'heavy');
+  assert.equal(T.tone('Firework display lights up the harbour for the festival'),'light','fireworks are not fire');
+  assert.equal(T.tone('A giant panda cub is born at the zoo'),'light');
+  const mk=(t,i)=>({title:t,source:'BBC News',category:'World',published_at:new Date(now-i*1000).toISOString(),url:'https://www.bbc.co.uk/x'+i,tone:T.tone(t)});
+  const heavy=['Troops killed in border attack','Bomb blast injures dozens in market','Court jails fraud ringleader after trial','Storm leaves thousands without power'].map((t,i)=>mk(t,i));
+  const light=['Panda cub makes its first public appearance','Team wins the cup final in a thriller','Scientists discover a new species of frog'].map((t,i)=>mk(t,i+10));
+  const picked=chooseStories([...heavy,...light]);
+  assert.ok(picked.slice(0,3).every(i=>i.tone==='light'),'light stories lead');
+  assert.ok(picked.filter(i=>i.tone==='heavy').length<=2,'at most two heavy stories');
+  const code=fs.readFileSync(path.join(__dirname,'../assets/toy-town-news.js'),'utf8');
+  const ctx=vm.createContext({Date,URL,setTimeout,clearTimeout});vm.runInContext(code,ctx);
+  const cleaned=ctx.ToyTownNews.clean({version:1,generated_at:new Date(now).toISOString(),stories:[...heavy.slice(0,2),...light].map(i=>({...i,tone:undefined}))},now);
+  assert.equal(cleaned.stories[0].tone,'light','the browser puts a light story first even from an older payload without tone');
+  assert.equal(cleaned.stories[cleaned.stories.length-1].tone,'heavy','and heavy ones follow');
+}
 (async()=>{
   const mixed=await refresh({now,feeds:[feed,{source:'Broken Feed',category:'World',url:'https://example.com'}],
     fetcher:async url=>{if(url.includes('example'))throw Error('down');return xml;}});
