@@ -232,7 +232,7 @@ const ToyTown = (() => {
     b.hero = true;
     // Furniture occupies free tiles and is placed directly on the lawn/terrace.
     props.push(
-      {kind:'hero-bench', x:x + 1.43, y:y + 2.52},
+      {kind:'hero-bench', x:x + .38, y:y + 2.80},
       {kind:'hero-table', x:x + 2.49, y:y + 2.55, flower:true},
       {kind:'hero-lamp', x:x + .65, y:y + 1.65},
       {kind:'hero-lamp', x:x + 3.31, y:y + 2.65},
@@ -358,11 +358,11 @@ const ToyTown = (() => {
   function spawnHeroResidents(b, r) {
     const {xa:x, ya:y} = b;
     const routes = [
-      [{x:x+1.49,y:y+1.18,dwell:3,wave:true},{x:x+1.49,y:y+1.96,dwell:1.2},
-       {x:x+1.42,y:y+2.53,dwell:4.4,sit:true},{x:x+1.48,y:y+1.87,dwell:1}],
-      [{x:x+2.48,y:y+1.2,dwell:3,wave:true},{x:x+2.46,y:y+1.85,dwell:1},
+      [{x:x+1.02,y:y+2.55,dwell:3,wave:true},{x:x+1.49,y:y+1.96,dwell:1.2},
+       {x:x+.47,y:y+2.80,dwell:4.4,sit:true},{x:x+1.48,y:y+1.87,dwell:1}],
+      [{x:x+2.85,y:y+3.15,dwell:3,wave:true},{x:x+2.46,y:y+1.85,dwell:1},
        {x:x+2.49,y:y+2.62,dwell:3.8},{x:x+2.39,y:y+1.7,dwell:1}],
-      [{x:x+1.43,y:y+2.52,dwell:4,sit:true},{x:x+1.64,y:y+1.88,dwell:1.4},
+      [{x:x+.47,y:y+2.80,dwell:4,sit:true},{x:x+1.64,y:y+1.88,dwell:1.4},
        {x:x+1.5,y:y+3.72,dwell:.8},
        {x:x+1.5,y:y+5.2,dwell:1.4,cross:true},  // reach the riverside across the marked road
        {x:x+1.5,y:y+3.72,dwell:1.2,cross:true},
@@ -418,8 +418,8 @@ const ToyTown = (() => {
       residents,dog,nextMeeting:clock+12+r()*4,
       meetingUntil:0,meetingCount:0,
       destinations:[
-        {name:'bakery',x:x+1.49,y:y+1.66},
-        {name:'books',x:x+2.49,y:y+1.67},
+        {name:'bakery',x:x+1.04,y:y+1.93},
+        {name:'books',x:x+2.93,y:y+1.93},
         {name:'garden',x:x+1.82,y:y+2.16},
         {name:'terrace',x:x+2.24,y:y+2.17}
       ]
@@ -530,10 +530,10 @@ const ToyTown = (() => {
   function spawnStreetTrade(hero,r){
     const x=hero.xa,y=hero.ya;
     const places=[
-      {kind:'bakery',product:'bread',vendor:{x:x+1.07,y:y+1.42},
-        serve:{x:x+1.32,y:y+1.78},rest:{x:x+1.17,y:y+2.31}},
-      {kind:'bookshop',product:'book',vendor:{x:x+2.93,y:y+1.42},
-        serve:{x:x+2.68,y:y+1.78},rest:{x:x+2.78,y:y+2.34}}
+      {kind:'bakery',product:'bread',vendor:{x:x+1.50,y:y+1.12},
+        serve:{x:x+1.50,y:y+1.66},rest:{x:x+1.17,y:y+2.31}},
+      {kind:'bookshop',product:'book',vendor:{x:x+2.50,y:y+1.12},
+        serve:{x:x+2.50,y:y+1.66},rest:{x:x+2.78,y:y+2.34}}
     ];
     const stalls=places.map((place,i)=>{
       const clerk=spawnPerson(r,{kind:'shopkeeper',shopRole:'vendor',

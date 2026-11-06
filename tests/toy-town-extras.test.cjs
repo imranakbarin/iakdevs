@@ -137,7 +137,7 @@ assert.match(view, /function fwStep\(dt,t\)/); assert.match(view, /pattern:r<\.2
 assert.match(view, /const deep=THREE\.MathUtils\.clamp\(\(dark-\.3\)\/\.6,0,1\)/); assert.match(view, /tint\(sky,'#0b1630',night\*\.97\)/, 'night is a deep-blue sky with cool moonlight and a lower exposure, not a tinted day');
 assert.match(view, /function cityCentre\(\)/); assert.match(view, /squash:CENTRE_SQUASH/, 'the city-centre buildings are squashed low');
 assert.match(view, /const CENTRE_TOP=\.18;/); assert.match(view, /GROUND\.lawn\+\(CENTRE_TOP-GROUND\.lawn\)\*centreAmount\(x,z\)/, 'people in the city centre stand on the paving, not in the lawn under it');
-assert.match(view, /c2\.fillText\('CITY CENTER',512,65\)/); assert.doesNotMatch(view, /sign\(g,'CITY CENTER'/, '"CITY CENTER" is carved into the fountain basin, not shown on a board');
+assert.doesNotMatch(view, /fillText\('CITY CENTER'/, 'oversized civic lettering is retired'); assert.doesNotMatch(view, /sign\(g,'CITY CENTER'/, 'the open square has no oversized civic name board');
 assert.match(view, /function arrowBoard\(/); assert.match(view, /placed\.userData\.size\.y\*\.8/, 'name boards hang on the facade (the buildings are low now), painted and ornamented');
 assert.match(view, /function moodOf\(ref\)/, 'tapping a resident shows a name and a mood');
 assert.match(fs.readFileSync(path.join(root, 'index.html'), 'utf8'), /keep=\['weather','fps','festival','season','lite'\]/, 'the main page passes ?season and ?lite through');

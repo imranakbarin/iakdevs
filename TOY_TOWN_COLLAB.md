@@ -38,6 +38,45 @@ A `START` does not prohibit parallel edits. Avoid stepping on each other's uncom
 
 ## Exchange log (newest first)
 
+### DONE — ChatGPT — 2026-11-06 — open city square verified for deployment
+- Owner approved publication. PR #199: https://github.com/imranakbarin/iakdevs/pull/199 . Source head `d5000f9544fdf2f2efda666701d350b81ec02f86`; local implementation `303a5fe` and fixture follow-up `972c8cd` have the same source contents. Remote START `d4844e2` preceded source `7f1148a`. Remote master rechecked at `4e1a3a9`; no concurrent source changes were overwritten.
+- Full GitHub Actions run **42281290384 SUCCESS**: simulation (45 news variants, headline programme, traffic and pedestrian scenarios), 3D mock scene/hinges/handoffs/rebuild/fallback, sourced news, lens, extras, and real Chromium/WebGL capture script. The printed GPU failure is the deliberately injected fallback test, not a browser failure.
+- Real screenshots captured: mobile 390×844, desktop 1280×820 close/wide, new open-square 1280×900, social scene 1080×760, and classic mobile fallback. All audit `errors` arrays empty. Actual windows open for an arriving shopper, merchandise is held, live social rigs and outer-district tools are checked, and the real scene has seven civic fixtures, two facade-aligned counters and two lanterns.
+- **Manually inspected** the new open-square and mobile JPEGs against the previous deployed render and the design reference. Visible result: floral medallion and duplicate tall furniture removed; calmer flush stone floor; compact single lanterns, lower fountain, west bench/planting/cafe and clearer central space. New news crowd sits in the east recess. The shops keep the existing stylized merchandise/hinged-window geometry.
+- Screenshots artifact `toy-town-visual-312`, id `13536051550`. Reviewed runtime source is `d5000f9`; this final log-only update changes no runtime/test files. Cache versions: sim v49, 3D v85, embedded page v96.
+- The unchanged 10% crossing-proximity test is now isolated from earlier tests' random draws; this is a test reproducibility correction, not a claim of zero vehicle/pedestrian overlap. Physical iPhone/Safari motion, frame rate and night appearance remain unverified. Do not describe the generated concept as the actual render.
+- Next: merge #199 and confirm GitHub Pages deployment; inspect live UI and preserve this log for Claude/ChatGPT follow-up.
+
+
+### PARTIAL — ChatGPT — 2026-11-06 — isolate the traffic fixture, keep its threshold
+- The failing traffic check consumed the global PRNG left by every earlier scenario. The layout/service route changes alter trip counts and therefore subsequent random draws, making the traffic fixture depend on unrelated preceding tests.
+- Compared baseline `4e1a3a9` and this rework with the existing default seed 20261104 reset immediately before the same 120-second fixture: baseline 0 / 240, rework 20 / 240 near-miss samples, both under the unchanged 10% threshold. These are proximity samples, not a claim of zero vehicle overlap. Traffic logic remains unchanged.
+- `tests/toy-town.test.cjs`: extracted the existing deterministic generator into `seedScenarioRandom()`; reset it before the crossing fixture. Preserved the default seed, `TT_SEED` override, duration, traffic/events, and 10% assertion. No retry or relaxed assertion.
+- `tests/toy-town-visual.cjs`: include the dedicated open-square JPEG in logs so the exact rendered frame can be inspected even if binary artifact access is unavailable. Rerun full CI before merge.
+
+
+### START — ChatGPT — 2026-11-06 — publication authorized, investigate traffic CI
+- Owner explicitly approved pushing and the prior deployment plan. Published branch through the GitHub connector (shell has no credentials): START `d4844e2`, code `7f1148a`; draft PR #199.
+- CI run `42280226426` failed the crossing near-miss test: 34 samples / 240 exceeds the unchanged 10% threshold. Other earlier simulation assertions passed; screenshots were skipped. Investigate isolated baseline/current scenarios and random-state coupling before changing any source; do not weaken the threshold or merge failing code.
+- Expected files if needed: focused simulation test, current log, and any proven square-path defect. Preserve existing traffic protections and Claude's junction fix.
+
+
+### PARTIAL — ChatGPT — 2026-11-06 — open city square implemented locally, publication blocked
+- Branch: `feat/city-centre-open-square`; base `4e1a3a9`; START committed as `f738580` before implementation. Latest remote master re-fetched and remains `4e1a3a9`.
+- Replaced layered central decoration with warm stone paving and subtle flush joints, one low fountain with a connected animated jet, two slim single lanterns, three low perimeter planters, one west-edge bench and one smaller cream cafe umbrella/table set. Retired duplicate hero furniture, the floral medallion and coloured frames. Working service windows now meet the actual north shop facades; the simulation vendors, customer approaches and seating agree with their new positions. Moved news readings and a smaller audience into the east recess. Claude's headline programme, sports kit and junction fix retained.
+- Source: `assets/toy-town-3d.js`, `assets/toy-town.js`; cache versions sim v49, 3D v85 and home embed v96. Updated matching tests and added a dedicated real-WebGL open-square capture/geometry check to `tests/toy-town-visual.cjs`.
+- Verified locally: syntax and whitespace; `node tests/toy-town-3d.test.cjs` PASS (mock scene, window hinges, handoffs, new fixture layout, rebuild and deliberate GPU-failure fallback); `toy-town-news.test.cjs` PASS; `toy-town-lens.test.cjs` PASS; `toy-town-extras.test.cjs` PASS. A focused 80-second simulation produced 16 actual shop visits/transactions. The existing neighborhood/companion/knock/transaction/news-reaction/concert blocks were rerun on the final simulation and PASS.
+- Full simulation suite launched before the cache bump reached the HTML assertions after its long scenario/render checks, then failed because its already-loaded test expected v48 while HTML had become v49; this is not a claimed full-suite PASS. Remaining latest-source follow-up blocks are being checked separately; rerun the full suite in CI on the committed head.
+- **Not visually verified:** Browser extension unavailable in this session; cloud browser cannot access localhost; local Chromium cannot create its required Unix socket. Browser download attempts returned invalid archives. Generated concept is a design reference only, never evidence of the implemented render. Must inspect actual new desktop/mobile screenshots, playing motion, storefront integration, listener clearance and night lights before merge/deployment. Physical iPhone appearance/performance unverified.
+- **Publication blocked:** automatic approval review rejected `git push` because this public-repository write needs explicit authorization. No alternate write path attempted, no PR created, no source deployed. Need owner approval to push the branch for real CI/browser checks, then deploy only after visual review succeeds.
+
+
+### START — ChatGPT — 2026-11-06 — cohesive open city square
+- Base: `4e1a3a9` on latest master; reviewed Claude's merged #198 and its headline programme, runner kit and junction fix. Owner supplied a close-up showing an overcrowded square and requested a substantial rework.
+- Outcome: coherent stone paving, clear pedestrian corridors, restrained low street furniture, shopfronts integrated into the existing buildings, and better-spaced news listeners. Preserve working shop transactions, news staging and unrelated experiences.
+- Likely files: `assets/toy-town-3d.js`, focused tests, `toy-town.html`, home embed cache, and this log. Visual design and real browser comparison before completion; physical iPhone playback remains outside automated proof.
+
+
 ### DONE — ChatGPT (GPT-6) — 2026-11-05 (08:17 America/New_York)
 - Milestone: credible pavement behavior **without new residents, widgets or ambient noise**. Branch: `feat/toy-town-calm-lively-moments`, based on master `4658a82`, rechecked latest master `3f7ef3e` (news-only update).
 - `assets/toy-town.js`: people following route waypoints now stop briefly to face a new leg when the angle is sharp (pivot time tracks angle); `walkFacing` tracks the actual unit movement vector including diagonals. No distance accrues during pivots. Replaced passing greeting with an at-most-two-pair sidewalk chat only for idle-purpose-free residents at genuine physical distances on the **same** pavement, away from crossings. They stop, attend, wave, converse, then resume without teleporting.

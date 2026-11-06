@@ -33,6 +33,7 @@ async function main(){
     const jobs=[
       {name:'mobile-3d-close',w:390,h:844,classic:false,zoom:1.7},
       {name:'desktop-3d-close',w:1280,h:820,classic:false,zoom:1.8},
+      {name:'desktop-open-square',w:1280,h:900,classic:false,zoom:3.1,square:true},
       {name:'desktop-social-life',w:1080,h:760,classic:false,zoom:2.05,social:true},
       {name:'desktop-3d-wide',w:1280,h:820,classic:false,zoom:.65},
       {name:'mobile-classic-reference',w:390,h:844,classic:true,zoom:1.7}
@@ -119,6 +120,7 @@ async function main(){
         ToyTown.setPlaying(false);
         ToyTown.zoomAt(f);
       },job.zoom);
+      if(job.square)await page.evaluate(()=>ToyTown.pinchTo(3.1,innerWidth/2,innerHeight/2,{x:9,y:9.35}));
       if(job.name==='mobile-3d-close'){
         // A pretty frame is not proof of city life. Advance the REAL
         // simulation in Chromium until trading and the street concert
@@ -165,6 +167,24 @@ async function main(){
         console.log('SHOP_THRESHOLD_KNOCK '+JSON.stringify(staged));
         beforeFrame=await page.evaluate(()=>
           window.ToyTown3D?.getStats?.().frames||0);
+      }
+      if(job.square){
+        const square=await page.evaluate(()=>{
+          let civic=null,fronts=[];
+          ToyTown3D.scene.traverse(o=>{
+            if(o.userData?.citySquare)civic=o;
+            if(o.userData?.workingShop)fronts.push(o);
+          });
+          const fixtures=civic?.children.filter(o=>o.userData?.squareFixture)||[];
+          return {fixtures:fixtures.map(o=>({kind:o.userData.squareFixture,x:o.position.x,z:o.position.z})),
+            attached:fronts.filter(o=>o.userData.facadeAttached&&o.position.z===8.25).length,
+            lamps:ToyTown3D.getStats().plazaLights};
+        });
+        if(square.attached!==2||square.lamps!==2||square.fixtures.length!==7)
+          throw Error('Civic layout missing in the real render: '+JSON.stringify(square));
+        if(square.fixtures.some(o=>[8.5,9.5].some(x=>Math.abs(x-o.x)<.3)))
+          throw Error('Civic furniture obstructs a shop walking aisle');
+        console.log('OPEN_SQUARE_GPU '+JSON.stringify(square));
       }
       if(job.name==='desktop-3d-wide'){
         const local=await page.evaluate(()=>{
@@ -317,6 +337,8 @@ async function main(){
       if(job.name==='mobile-3d-close'){
         // Image can be recovered without binary artifact download permissions.
         console.log('TOY_CITY_JPEG_BEGIN '+image.toString('base64')+' TOY_CITY_JPEG_END');
+      }else if(job.square){
+        console.log('TOY_CITY_SQUARE_JPEG_BEGIN '+image.toString('base64')+' TOY_CITY_SQUARE_JPEG_END');
       }else if(job.name==='desktop-3d-wide'){
         console.log('TOY_CITY_WIDE_JPEG_BEGIN '+image.toString('base64')+' TOY_CITY_WIDE_JPEG_END');
       }else if(job.name==='desktop-social-life'){

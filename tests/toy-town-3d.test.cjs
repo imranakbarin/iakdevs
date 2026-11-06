@@ -120,7 +120,7 @@ assert.doesNotMatch(moduleCode,/ambient\.push\(\{kind:'bunting'/,'the flags and 
 assert.match(moduleCode,/function cityCentre\(\)/,'the plaza is a paved city centre');
 assert.doesNotMatch(moduleCode,/ambient\.push\(\{kind:'pinwheel'/,'the pinwheels that crowded the square are retired');
 assert.doesNotMatch(moduleCode,/ambient\.push\(\{kind:'balloon'/,'and so are the tethered balloons');
-assert.match(moduleCode,/plazaInlay=true/,'colorful authored art grounds the central plaza');
+assert.match(moduleCode,/plazaInlay=true/,'subtle stone joints ground the square');
 assert.doesNotMatch(moduleCode,/ambient\.push\(\{kind:'butterfly'/,'the butterflies that hovered over bare paving are retired');
 assert.match(moduleCode,/function boardTexture\(label,ink,paper\)/,'name boards are painted plates with borders, studs and ornaments');
 assert.match(html,/saturate\(1\.42\) contrast\(1\.11\)/,
@@ -159,17 +159,17 @@ assert.match(moduleCode,/eye.scale.y=blink/,'eyelids blink without a separate an
 assert.match(html,/type="importmap"/);
 assert.match(html,/three@0\.187\.0\/build\/three\.module\.js/);
 assert.match(html,/three@0\.187\.0\/examples\/jsm\//);
-assert.match(html,/toy-town-3d\.js\?v=84/);
+assert.match(html,/toy-town-3d\.js\?v=85/);
 assert.match(moduleCode,/ref\.path&&Number\.isFinite\(ref\.walkFacing\)/, 'routed people use a real diagonal heading instead of a cardinal-only pose');
 assert.match(html,/toy-town-landmarks\.js\?v=7/,'the independent models are requested alongside Three');
 assert.match(html,/buildLandmark:landmarks\.buildLandmark/,
   'loader injects the authored model builder into the 3D simulation');
-assert.match(html,/toy-town\.js\?v=48/);
+assert.match(html,/toy-town\.js\?v=49/);
 const classicScript=html.match(/src="assets\/toy-town\.js\?v=\d+"/);
 assert.ok(classicScript&&
   html.indexOf(classicScript[0])<html.indexOf("import('three')"),
   'the actual versioned classic script always loads before WebGL');
-assert.match(page,/toy-town\.html\?v=95&embed=1/);
+assert.match(page,/toy-town\.html\?v=96&embed=1/);
 assert.match(fs.readFileSync(path.join(root,'assets/toy-town-3d.js'),'utf8'),/sport=ref\.kind==='runner'[\s\S]*bib with a stripe/,'marathon runners are dressed in sports kit (vest, shorts, bib, headband)');
 assert.match(fs.readFileSync(path.join(root,'assets/toy-town-3d.js'),'utf8'),/town\.stageHeadline/,'the town crier makes the town act out the headline');
 assert.match(fs.readFileSync(path.join(root,'assets/toy-town.js'),'utf8'),
@@ -341,7 +341,7 @@ const gardenRooms=api.scene.children.flatMap(node=>node.children||[])
   .filter(node=>node.userData?.districtGarden);
 assert.equal(gardenRooms.length,api.getStats().districtGardenRooms,
   'all planted courts are real grounded scene geometry');
-assert.equal(api.getStats().festoonBulbs,14,'four lamp posts (three bulbs each) and the fountain (two) hold 14 warm bulbs');
+assert.equal(api.getStats().festoonBulbs,2,'two small single lanterns light the square');
 // The ring railway: a station, a round-faced steam train with three carriages, a tunnel, passengers who board and get off.
 {
   api.setFreight(0);   // keep the passenger train running for the stop/passenger checks below
@@ -458,8 +458,24 @@ assert.ok(workingLocal?.userData?.pose,
   'a local worker holds a physical tool with an articulated pose');
 const contours=sceneWorld.children.filter(o=>o.userData?.landscapeContour);
 assert.ok(contours.length>=2,'real geometric lawn contours join several lots');
+// A square is an edited composition: the old furniture layer must not
+// survive underneath the new one, and the north/south aisles stay clear.
+const civic=sceneWorld.children.find(o=>o.userData?.citySquare);
+assert.ok(civic,'one civic furniture layer owns the square');
+const fixtures=civic.children.filter(o=>o.userData?.squareFixture);
+assert.equal(fixtures.filter(o=>o.userData.squareFixture==='lantern').length,2);
+assert.equal(fixtures.filter(o=>o.userData.squareFixture==='fountain').length,1);
+assert.equal(fixtures.filter(o=>o.userData.squareFixture==='bench').length,1);
+assert.equal(fixtures.filter(o=>o.userData.squareFixture==='planter').length,3);
+assert.ok(fixtures.every(o=>[8.5,9.5].every(x=>Math.abs(o.position.x-x)>.3)),
+  'furniture leaves the two customer and pedestrian aisles open');
+assert.ok(workingDesks.every(o=>o.userData.facadeAttached&&
+  (o.position.x===8.5||o.position.x===9.5)&&o.position.z===8.25),
+  'both active counters sit against their actual north-side shop facade');
+assert.ok(fixtures.filter(o=>o.userData.squareFixture==='lantern').every(o=>
+  o.children.every(c=>c.position.y<.8)), 'lanterns no longer dwarf the residents');
 const piazza=sceneWorld.children.find(o=>o.userData?.villagePiazza);
-assert.ok(piazza && piazza.position.x===9 && piazza.position.z===9,
+assert.ok(piazza && piazza.position.x===8.52 && piazza.position.z===9.5,
   'rounded central stone piazza is placed at the heart of the village');
 assert.ok(contours.every(o=>o.position.x>2 && o.position.x<16 &&
   o.position.z>2 && o.position.z<13),
@@ -519,7 +535,7 @@ assert.match(moduleCode,/storybook-roof:/,'the sculpted roof is cached for repea
 assert.match(moduleCode,/rounded suspended scallops/i,'shop awnings use dimensional fabric rather than bars');
 assert.match(moduleCode,/roots taper out into the lawn/i,'tree trunks have naturally grounded roots');
 assert.match(moduleCode,/grassMaterial\('#b9cba7',10\)/,'cutaway meadow has textured, continuous grass');
-assert.match(moduleCode,/terracotta=mat\('#d9a276'/,'the retired paver ring is replaced by one flat paved square with a framed inlay');
+assert.match(moduleCode,/pen.strokeStyle='rgba\(139,119,90,\.17\)'/,'the square has restrained flush stone joints');
 assert.match(moduleCode,/23-closeness\*11\.5/,'close zoom lowers the eye to show character faces');
 assert.match(moduleCode,/new THREE\.PerspectiveCamera\(35/,
   'the photographic city camera has real depth and vanishing lines');
@@ -535,8 +551,8 @@ assert.match(moduleCode,/const focusWeight=THREE\.MathUtils\.clamp/,
   'compositional framing is removed smoothly as the user pans away');
 assert.match(moduleCode,/function composeSecondaryBuilding\(/,
   'secondary houses receive bounded, deterministic street variation');
-assert.match(moduleCode,/for\(const \[lx,lz\] of \[\[7\.22,8\.30\]/,
-  'the city-centre lamp posts stand at the square\'s edges, away from the walking corridors and the storefront signage');
+assert.match(moduleCode,/\[\[7\.25,8\.22\],\[9\.88,10\.72\]\]/,
+  'only two slim lanterns stand at the square edges');
 assert.match(moduleCode,/function archedInset\(/,'doors/windows have dimensional arches');
 assert.match(moduleCode,/function turret\(/,'one hero cottage has its own curved tower');
 assert.match(moduleCode,/function sideCottageWing\(/,'another hero cottage has a secondary roof and wing');
@@ -575,7 +591,7 @@ assert.doesNotMatch(moduleCode,/for\(let t=2;t<16;t\+=1\.28\)/,
   'modern repeating highway dashed lines have been removed');
 
 
-assert.equal(api.getStats().plazaLights,1,'modeled plaza lamps have physical warm light');
+assert.equal(api.getStats().plazaLights,2,'two perimeter lanterns have physical warm light');
 const lantern=api.scene.children.find(o=>o.children?.some(x=>x.isPointLight))?.children.find(x=>x.isPointLight);
 assert.ok(lantern && lantern.intensity>0, 'dusk physically illuminates the courtyard');
 const lampAtDusk=lantern.intensity;
@@ -635,18 +651,18 @@ assert.ok(Math.abs(cycle.userData.bicycleRig.crank.rotation.z)>1,
   'pedals and bicycle wheels rotate with physical distance');
 // A vendor offers actual stock, a purchaser only carries it once purchased.
 const shopkeeperRef={type:'person',kind:'shopkeeper',shopRole:'vendor',
-  shopVenue:'bakery',shopAction:'offering',x:8.07,y:8.42,d:2,
+  shopVenue:'bakery',shopAction:'offering',x:8.5,y:8.12,d:2,
   max:0,v:0,travel:0,ph:2,col:'#de8f69',skin:'#d8ac8e'};
 const buyerRef={type:'person',kind:'shopper',shopRole:'customer',
   shopAt:'bakery',shopPhase:'ordering',
-  shopAction:'ordering',x:8.32,y:8.78,d:3,max:.4,
+  shopAction:'ordering',x:8.5,y:8.66,d:3,max:.4,
   v:0,travel:0,ph:1.5,col:'#a28bce',skin:'#d4b295'};
 pedestrians.push(shopkeeperRef,buyerRef);
 frameClock+=1/30;callbacks.shift()();
 const sellerModel=sceneWorld.children.find(o=>o.userData?.shopProps?.bread&&
-  o.position.x===shopkeeperRef.x);
+  o.position.x===shopkeeperRef.x&&o.position.z===shopkeeperRef.y);
 const buyerModel=sceneWorld.children.find(o=>o.userData?.shopProps?.book&&
-  o.position.x===buyerRef.x);
+  o.position.x===buyerRef.x&&o.position.z===buyerRef.y);
 assert.ok(sellerModel&&buyerModel,'both roles have real connected merchandise rigs');
 assert.equal(sellerModel.userData.shopProps.bread.visible,true,
   'the baker visibly offers bread in an articulated hand');
@@ -851,7 +867,7 @@ assert.equal(api.getStats().actors,3,'departing residents are removed');
 assert.ok(stats.renders>oldCount);
 seed++;buildings=buildings.slice();callbacks.shift()();
 assert.equal(api.getStats().redrawCount,2,'new daily town triggers a full rebuild');
-assert.equal(api.getStats().festoonBulbs,14,'garden lighting is recreated, never duplicated');
+assert.equal(api.getStats().festoonBulbs,2,'garden lighting is recreated, never duplicated');
 assert.equal(api.getStats().gardenElements,initialGardenCount,
   'curated surroundings are deterministic across world rebuilds');
 const cameraZoom=api.camera.zoom;

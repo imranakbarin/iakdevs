@@ -5,14 +5,15 @@
 const fs = require('node:fs'), path = require('node:path'), vm = require('node:vm'), assert = require('node:assert/strict');
 const root = path.join(__dirname, '..'), html = fs.readFileSync(path.join(root, 'index.html'), 'utf8');
 // The simulation uses Math.random; a fixed seed keeps the traffic and people checks reproducible (TT_SEED overrides it to hunt for flakes).
-{ let a = (+process.env.TT_SEED || 20261104) >>> 0; Math.random = () => { a = (a + 0x6D2B79F5) >>> 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+function seedScenarioRandom() { let a = (+process.env.TT_SEED || 20261104) >>> 0; Math.random = () => { a = (a + 0x6D2B79F5) >>> 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+seedScenarioRandom();
 const dioramaSource = fs.readFileSync(path.join(root, 'assets/toy-town-diorama.js'), 'utf8');
 assert.match(dioramaSource, /function building\(/, 'new architectural renderer exists');
 assert.match(dioramaSource, /function tree\(/, 'new organic tree renderer exists');
 assert.match(dioramaSource, /function gable\(/, 'real pitched roof renderer exists');
 assert.match(dioramaSource, /function glazing\(/, 'framed glazing renderer exists');
 assert.match(html, /<option value="town">Toy Town<\/option>/, 'Toy Town is in the menu');
-assert.match(html, /return 'toy-town\.html\?v=95&embed=1'\+keep\+\(bar\.hidden\?'&clean=1':''\);/, 'and opens its current embedded page');
+assert.match(html, /return 'toy-town\.html\?v=96&embed=1'\+keep\+\(bar\.hidden\?'&clean=1':''\);/, 'and opens its current embedded page');
 assert.match(html, /townFrame\.src=townSrc\(\);/, 'with this page\'s weather and fps settings passed through');
 assert.match(fs.readFileSync(path.join(root, 'toy-town.html'), 'utf8'), /assets\/toy-town\.js\?v=\d+/);
 const box = vm.createContext({Math, Object, Array, JSON, Date, String, Number, RegExp, setTimeout: () => 0, document: {getElementById: () => ({textContent: ''})}});
@@ -375,6 +376,11 @@ assert.equal(stallWorkers.length,2,'a baker and bookseller staff the real storef
 assert.equal(marketCustomers.length,3,'three independent shoppers form a small active market');
 assert.ok(stallWorkers.every(m=>m.max===0&&m.x>7&&m.x<11&&m.y>8&&m.y<9),
   'shopkeepers remain grounded at their own storefront counters');
+assert.ok(stallWorkers.every((m,i)=>Math.abs(m.x-(8.5+i))<.001&&Math.abs(m.y-8.12)<.001),
+  'sellers stand behind the two facade-attached service windows');
+const squareBench=T.props().find(p=>p.kind==='hero-bench');
+assert.ok(squareBench&&Math.hypot(squareBench.x-7.38,squareBench.y-9.8)<.001,
+  'simulation seating matches the west-edge bench');
 const marketMetrics={peakHolding:0,peakService:0,furthestTravel:0};
 for(let i=0;i<60*80;i++){
   T.update(1/60);
@@ -585,7 +591,7 @@ const townPage = fs.readFileSync(path.join(root, 'toy-town.html'), 'utf8');
 for (const id of ['zoom-in', 'zoom-out', 'zoom-reset']) {
   assert.match(townPage, new RegExp('id="' + id + '"[^>]*aria-label="[^"]+"'), id + ' is accessible');
 }
-assert.match(townPage, /toy-town\.js\?v=48/, 'diorama engine is loaded');
+assert.match(townPage, /toy-town\.js\?v=49/, 'diorama engine is loaded');
 assert.match(townPage, /toy-town-news\.js\?v=2/, 'sourced news loads before the simulation');
 assert.match(townPage, /HEADLINES/, 'real reporting has a dedicated source panel');
 assert.match(townPage, /AROUND TOWN · FICTION/, 'fiction and real news are explicitly separated');
@@ -685,6 +691,10 @@ assert.ok(!leftWalker.briefChatUntil&&!rightWalker.briefChatUntil,
   'walkers on opposite pavements do not talk across moving cars');
 
 // A calm town: gentle moments run to their end, and traffic waits at red lights instead of piling into the crossings.
+// Isolate this stochastic traffic fixture from random draws made by earlier
+// scenario tests (e.g. the number of trips to a repositioned shop). Keep the
+// existing default seed, TT_SEED override, duration and collision threshold.
+seedScenarioRandom();
 T.build(31337, 'weather'); T.setToday([]);
 for (const name of T.CALM) T.startEvent(name);
 let clashes = 0, samples = 0;
