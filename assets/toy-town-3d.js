@@ -1434,6 +1434,7 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
   function smallProps(p,i){
     const k=p.kind;
     if((k==='tree'||k==='flowers'||k==='hero-shrub')&&p.x>7&&p.x<11&&p.y>7.9&&p.y<11)return;   // the city centre is paved
+    if(k.startsWith('hero-'))return;   // cityCentre owns the square's furniture; do not stack legacy props
     if(k==='tree')tree(p,i);
     else if(k==='district-scene')districtFixture(p);
     else if(k==='hero-shrub') {
@@ -1602,138 +1603,103 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
         gardenIsland(bx,by,.24,.29,Math.abs(Math.floor(bx*7+by))%5);
       }
     }
-    // Two authentic cafe tables beside the shops, not at the scripted
-    // customers' destinations. Tiny stools, ceramic cups and planted barrels.
-    const cafeSet=(x,z,turn=0)=>{
-      const g=new THREE.Group();g.position.set(x,0,z);g.rotation.y=turn;
-      g.scale.setScalar(.83);world.add(g);
-      const pedestal=cylinder(g,.023,.04,.37,wood,0,.40,0);
-      const tabletop=cylinder(g,.26,.26,.05,'#d0a681',0,.605,0);
-      const edge=cylinder(g,.271,.271,.024,'#f1dbbb',0,.58,0);
-      for(const dx of [-.34,.34]){
-        cylinder(g,.022,.025,.31,wood,dx,.315,0);
-        const seat=cylinder(g,.14,.14,.043,'#b88466',dx,.48,0);
-        seat.castShadow=false;
+    // One compact cafe corner, with furniture scaled relative to a resident.
+    const cafeSet=(x,z)=>{
+      const g=new THREE.Group();g.position.set(x,CENTRE_TOP,z);world.add(g);
+      g.userData.squareFixture='cafe';
+      cylinder(g,.018,.035,.27,wood,0,.135,0);
+      cylinder(g,.18,.18,.032,'#b38c65',0,.286,0);
+      for(const dx of [-.27,.27]){
+        for(const dz of [-.06,.06])cylinder(g,.012,.015,.18,wood,dx,.09,dz);
+        box(g,.15,.025,.15,'#b38c65',dx,.19,0);
+        box(g,.15,.13,.018,'#b38c65',dx,.26,-.07);
       }
-      const cup=cylinder(g,.041,.036,.052,'#fff4df',-.07,.66,.055);
-      const saucer=cylinder(g,.067,.067,.012,'#e7d1b8',-.07,.635,.055);
-      ball(g,.028,'#e7bd9c',.095,.65,-.04).scale.set(1,.56,1);
-      gardenElements+=9;
+      cylinder(g,.025,.022,.032,'#f6eee0',.07,.32,.04);
+      const umbrella=new THREE.Group();g.add(umbrella);
+      cylinder(umbrella,.012,.017,.72,wood,0,.36,0);
+      object(umbrella,new THREE.ConeGeometry(.32,.11,12),mat('#e9d9b9',.9),0,.755,0,false);
+      ambient.push({kind:'umbrella',mesh:umbrella,phase:0});
+      gardenElements+=12;
     };
-    cafeSet(7.74,8.75,.25);
-
-    // (The rose arbour that stood in front of the plaza is retired: it hid what was happening in the square.)
-    // Market-hour rhythm: visible color and motion near the bakery and
-    // bookshop, without cluttering the central walking routes.
-    const canopyColors=['#de7966','#398f8b'];
-    for(let i=0;i<1;i++){   // one café umbrella
-      const x=i?10.23:7.75,z=i?9.95:8.75;
-      const umbrella=new THREE.Group();umbrella.position.set(x,0,z);
-      world.add(umbrella);
-      cylinder(umbrella,.022,.026,.67,'#94755c',0,.72,0);
-      const fabric=object(umbrella,new THREE.ConeGeometry(.43,.19,10),
-        mat(canopyColors[i],.83),0,1.15,0,false);
-      for(let k=0;k<10;k++){
-        const a=k*TAU/10;
-        const trim=ball(umbrella,.058,k%2?'#ffe1a6':'#fff3dc',
-          Math.cos(a)*.418,1.057,Math.sin(a)*.418);
-        trim.scale.set(1,.56,1);trim.castShadow=false;
-      }
-      ambient.push({kind:'umbrella',mesh:umbrella,phase:i*2.3});
-    }
+    cafeSet(7.77,8.72);
     // (The pinwheels and tethered balloons that crowded the square are retired.)
     cityCentre();
     gardenElements+=86;
   }
-  /* ---- The city centre: one paved civic square with low buildings round it, a fountain, four lamp posts that glow at dusk,
-     stone planters, a signpost and a CITY CENTER board. The lawn beds, flagstones, festoon wires and flags that
-     crowded the square are gone, so what the people are doing in it can be seen. ---- */
+  /* One open civic square. A single furniture layer, restrained paving,
+     clear north/south walking corridors and flush shopfronts replace the
+     former medallion, duplicate lamps, oversized tables and kiosk roofs. */
   function cityCentre(){
-    const TOP=.18,cc=new THREE.Group();cc.position.y=TOP-.2225;world.add(cc);   // built at the old height, shifted flush with the roads
-    const gardenColors=['#6fae6e','#8cc07a','#a7cf86','#5fa27c','#c0d98a'],petalColors=['#f27d72','#f9c74f','#f4a6c6','#fff2cc','#c9a6e8'];
-    const sand=mat('#efdcb4',.9),terracotta=mat('#d9a276',.9),teal=mat('#86bdb4',.9),cream=mat('#fbf0d6',.9),wood=mat('#9b795e'),pot=mat('#cf8b63',.85);
-    const slab=(x0,x1,z0,z1,col,top,h)=>{const o=box(cc,x1-x0,h,z1-z0,col,(x0+x1)/2,top-h/2,(z0+z1)/2,false);o.castShadow=false;o.receiveShadow=true;return o;};
-    // one warm sandstone square with a terracotta frame and a thin teal line inside it
-    slab(7.04,10.0,8.04,10.96,sand,.2225,.07);slab(10.0,10.96,9.0,10.0,sand,.2225,.07);
-    for(const [x0,x1,z0,z1] of [[7.12,9.92,8.12,8.17],[7.12,9.92,10.83,10.88],[7.12,7.17,8.12,10.88],[9.87,9.92,8.12,10.88]])slab(x0,x1,z0,z1,terracotta,.2285,.014);
-    for(const [x0,x1,z0,z1] of [[7.22,9.82,8.22,8.245],[7.22,9.82,10.755,10.78],[7.22,7.245,8.22,10.78],[9.795,9.82,8.22,10.78]])slab(x0,x1,z0,z1,teal,.2295,.012);
-    for(const [rx,rz] of [[7.145,8.145],[9.895,8.145],[7.145,10.855],[9.895,10.855]]){const d=cylinder(cc,.07,.07,.016,terracotta,rx,.2285,rz);d.castShadow=false;cylinder(cc,.04,.04,.018,cream,rx,.229,rz).castShadow=false;}
-    const candle=new THREE.MeshStandardMaterial({color:'#ffebbd',emissive:'#ffc67f',emissiveIntensity:.36,roughness:.38,metalness:0});
-    // a fountain at the south end, between the two walking corridors, with CITY CENTER carved into its basin
-    {const fx=9.0,fz=10.5;
-      cylinder(cc,.34,.36,.12,mat('#e9d8b6',.9),fx,.283,fz);
-      const cv=document.createElement('canvas');cv.width=1024;cv.height=128;const c2=cv.getContext('2d');
-      c2.fillStyle='#e9d8b6';c2.fillRect(0,0,1024,128);
-      c2.strokeStyle='#bfa57c';c2.lineWidth=5;c2.strokeRect(6,10,1012,108);
-      c2.textAlign='center';c2.textBaseline='middle';c2.font='italic 700 68px Georgia,serif';if('letterSpacing' in c2)c2.letterSpacing='10px';
-      c2.fillStyle='rgba(255,250,235,.9)';c2.fillText('CITY CENTER',515,69);   // the highlight under the cut
-      c2.fillStyle='#8a6b46';c2.fillText('CITY CENTER',512,65);
-      const tx=new THREE.CanvasTexture(cv);tx.colorSpace=THREE.SRGBColorSpace;
-      const band=new THREE.Mesh(new THREE.CylinderGeometry(.362,.362,.1,48,1,true,-.95,1.9),new THREE.MeshStandardMaterial({map:tx,roughness:.85,side:THREE.DoubleSide}));
-      band.position.set(fx,.28,fz);band.castShadow=false;cc.add(band);
-      const rim=object(cc,geo('torus',.35,.03),cream,fx,.34,fz,false);rim.rotation.x=Math.PI/2;
-      const water=object(cc,geo('cylinder',.31,.31,.02),new THREE.MeshStandardMaterial({color:'#86c9d2',roughness:.25,emissive:'#4b9aa8',emissiveIntensity:.18}),fx,.335,fz,false);water.castShadow=false;
-      cylinder(cc,.045,.06,.2,sand,fx,.43,fz);cylinder(cc,.13,.05,.05,cream,fx,.55,fz);
-      const drop=ball(cc,.05,mat('#c6e8ee',.3),fx,.63,fz);drop.scale.set(.8,1.3,.8);drop.castShadow=false;
-      for(let k=0;k<2;k++){const ring=object(cc,geo('torus',.16+k*.07,.008),mat('#eef9fb',.5),fx,.347,fz,false);ring.rotation.x=Math.PI/2;ambient.push({kind:'sea',mesh:ring,phase:k*1.7,y0:.347});}
-      for(const sd of [-1,1]){const b=ball(cc,.03,candle,fx+sd*.36,.39,fz);b.castShadow=false;festoonBulbs.push(b);}}
-    // lamp posts with three warm bulbs each (they brighten at dusk with the town's other lights)
-    for(const [lx,lz] of [[7.22,8.30],[7.22,10.82],[9.93,10.84],[10.82,9.5]]){
-      cylinder(cc,.022,.034,.62,'#4f6b63',lx,.53,lz);cylinder(cc,.07,.05,.05,'#3d544d',lx,.86,lz);
-      cylinder(cc,.085,.06,.06,'#486259',lx,.96,lz);
-      for(let k=0;k<3;k++){const a=k*TAU/3;const b=ball(cc,.03,candle,lx+Math.cos(a)*.05,.9,lz+Math.sin(a)*.05);b.castShadow=false;festoonBulbs.push(b);}
+    const cc=new THREE.Group();world.add(cc);cc.userData.citySquare=true;
+    const stone=mat('#eadfc9',.94),edge=mat('#cfbfa5',.95),cream=mat('#f1e7d4',.9);
+    const wood=mat('#947153'),iron=mat('#514a3e',.7);
+    const slab=(x0,x1,z0,z1,material,top,h)=>{
+      const o=box(cc,x1-x0,h,z1-z0,material,(x0+x1)/2,top-h/2,(z0+z1)/2,false);
+      o.castShadow=false;o.receiveShadow=true;return o;
+    };
+    slab(7.04,10,8.04,10.96,stone,CENTRE_TOP,.06);
+    slab(10,10.96,9,10,stone,CENTRE_TOP,.06);
+    // A quiet stone soldier course, not multiple coloured ornamental borders.
+    for(const [x0,x1,z0,z1] of [[7.04,7.10,8.04,10.96],[7.04,10,10.90,10.96]])
+      slab(x0,x1,z0,z1,edge,CENTRE_TOP+.001,.012);
+    // Low elongated planting along the margins, never on a shop approach.
+    for(const [x,z,w,d] of [[7.28,8.72,.23,.95],[7.55,10.75,.78,.22],[10.65,9.88,.48,.17]]){
+      const g=new THREE.Group();g.position.set(x,CENTRE_TOP,z);cc.add(g);g.userData.squareFixture='planter';
+      box(g,w,.072,d,cream,0,.036,0);box(g,w-.035,.009,d-.035,'#786f52',0,.076,0,false);
+      const along=w>d,count=along?5:6;
+      for(let k=0;k<count;k++){
+        const t=(k/(count-1)-.5)*(along?w-.09:d-.09),px=along?t:0,pz=along?0:t;
+        const sh=ball(g,.064,k%2?'#8aa477':'#78956d',px,.125,pz);sh.scale.set(1,.7,1);sh.castShadow=false;
+        if(k%3===1){const fl=ball(g,.018,'#e7b9a5',px+.025,.16,pz+.012);fl.castShadow=false;}
+      }
     }
-    // terracotta planters, brim-full of flowers
-    for(const [px,pz] of [[7.30,9.55],[10.62,9.12],[10.62,9.88],[7.72,10.80]]){
-      box(cc,.34,.13,.34,pot,px,.285,pz);box(cc,.37,.03,.37,mat('#e0a47c',.85),px,.355,pz);box(cc,.28,.02,.28,'#6f5a46',px,.37,pz,false);
-      for(let k=0;k<5;k++){const a=k*TAU/5+px,sx=px+Math.cos(a)*.075,sz=pz+Math.sin(a)*.075;const sh=ball(cc,.085,gardenColors[k%gardenColors.length],sx,.43,sz);sh.scale.set(1.1,.75,1.1);sh.castShadow=false;
-        const fl=ball(cc,.035,petalColors[(k+Math.round(px))%petalColors.length],sx+.02,.5,sz+.01);fl.castShadow=false;}
+    // One bench against the west edge; its simulation seat is in this same place.
+    {const g=new THREE.Group();g.position.set(7.38,CENTRE_TOP,9.80);g.rotation.y=Math.PI/2;cc.add(g);g.userData.squareFixture='bench';
+      for(const x of [-.21,.21])for(const z of [-.07,.07])box(g,.018,.17,.022,iron,x,.085,z);
+      for(let i=0;i<3;i++)box(g,.52,.025,.047,wood,0,.18,(i-1)*.052);
+      for(let i=0;i<2;i++)box(g,.52,.045,.023,wood,0,.245+i*.055,-.074);
+      for(const x of [-.21,.21])box(g,.018,.23,.025,iron,x,.16,-.08);
     }
-    // a signpost with painted arrow boards
-    {const g=new THREE.Group();g.position.set(7.26,.2225,9.05);cc.add(g);
-      cylinder(g,.018,.022,.66,wood,0,.33,0);ball(g,.03,'#d9b45a',0,.68,0);
-      [['PARK',.52,1,'#5f9a64'],['RIVER',.42,-1,'#4f95a8'],['STATION',.32,1,'#d9825a']].forEach(([t,y,dir,col])=>arrowBoard(g,t,dir*.15,y,0,.36,dir,col));}
+    // Two slim, single lanterns. Each has one warm source, at human scale.
+    for(const [x,z] of [[7.25,8.22],[9.88,10.72]]){
+      const g=new THREE.Group();g.position.set(x,CENTRE_TOP,z);cc.add(g);g.userData.squareFixture='lantern';
+      cylinder(g,.035,.045,.035,iron,0,.018,0);cylinder(g,.012,.021,.56,iron,0,.30,0);
+      const glass=box(g,.062,.09,.062,new THREE.MeshStandardMaterial({color:'#fff0d3',emissive:'#ffca88',emissiveIntensity:.32,roughness:.4}),0,.61,0,false);
+      cylinder(g,.055,.055,.017,iron,0,.557,0);object(g,new THREE.ConeGeometry(.065,.047,8),iron,0,.68,0,false);
+      for(const dx of [-.034,.034])for(const dz of [-.034,.034])box(g,.006,.106,.006,iron,dx,.61,dz,false);
+      festoonBulbs.push(glass);
+      const glow=new THREE.PointLight('#ffd19a',0,1.7,2);glow.position.set(x,CENTRE_TOP+.61,z);glow.castShadow=false;world.add(glow);plazaLights.push(glow);
+    }
+    // One low basin, with a grounded continuous jet instead of hovering droplets.
+    {const g=new THREE.Group();g.position.set(9,CENTRE_TOP,10.48);cc.add(g);g.userData.squareFixture='fountain';
+      cylinder(g,.29,.31,.07,cream,0,.035,0);
+      cylinder(g,.257,.257,.014,new THREE.MeshStandardMaterial({color:'#8cbec5',roughness:.27,metalness:.05}),0,.071,0);
+      const rim=object(g,geo('torus',.283,.018),cream,0,.077,0,false);rim.rotation.x=Math.PI/2;
+      cylinder(g,.035,.06,.035,stone,0,.09,0);
+      const stream=new THREE.Group();stream.position.y=.107;g.add(stream);
+      const jet=cylinder(stream,.012,.021,.20,mat('#c5e2df',.25),0,.10,0);jet.castShadow=false;
+      const tip=ball(stream,.018,'#c5e2df',0,.204,0);tip.scale.set(.7,1,.7);tip.castShadow=false;
+      for(let k=0;k<2;k++){const ring=object(g,geo('torus',.12+k*.065,.004),mat('#d9efeb',.5),0,.081,0,false);ring.rotation.x=Math.PI/2;
+        ambient.push({kind:'sea',mesh:ring,phase:k*1.7,y0:.081});}
+      ambient.push({kind:'squareJet',mesh:stream});
+    }
+    gardenElements+=42;
   }
   function paintVillageLife(){
-    // One translucent painted-tile medallion transforms the visual center
-    // without adding a collider or hiding the articulated village residents.
-    const canvas=document.createElement('canvas');
-    canvas.width=512;canvas.height=512;
-    const pen=canvas.getContext('2d'),cx=256,cy=256;
-    pen.clearRect(0,0,512,512);
-    pen.strokeStyle='rgba(53,130,124,.80)';pen.lineWidth=7;
-    for(const r of [185,167,122,108]){
-      pen.beginPath();pen.arc(cx,cy,r,0,TAU);pen.stroke();
+    // Faint staggered sandstone joints. This is a flat surface, not an extra
+    // raised floor: feet and all furniture share CENTRE_TOP.
+    const canvas=document.createElement('canvas');canvas.width=768;canvas.height=768;
+    const pen=canvas.getContext('2d');pen.clearRect(0,0,768,768);
+    pen.strokeStyle='rgba(139,119,90,.17)';pen.lineWidth=1;
+    for(let row=0;row<12;row++){
+      const y=row*64;pen.beginPath();pen.moveTo(0,y);pen.lineTo(768,y);pen.stroke();
+      for(let x=(row%2)*64;x<768;x+=128){pen.beginPath();pen.moveTo(x,y);pen.lineTo(x,y+64);pen.stroke();}
     }
-    const paints=['#d78771','#efbe70','#6aafa1','#9aa4c3','#e3a3ac'];
-    for(let k=0;k<20;k++){
-      const a=k*TAU/20,x=cx+144*Math.cos(a),y=cy+144*Math.sin(a);
-      pen.fillStyle=paints[k%5];pen.beginPath();
-      pen.ellipse(x,y,17,10,a,0,TAU);pen.fill();
-      pen.fillStyle='rgba(255,245,220,.72)';
-      pen.beginPath();pen.arc(x,y,5,0,TAU);pen.fill();
-    }
-    for(let k=0;k<12;k++){
-      const a=k*TAU/12,x=cx+56*Math.cos(a),y=cy+56*Math.sin(a);
-      pen.fillStyle=paints[k%5];pen.beginPath();
-      pen.ellipse(x,y,41,20,a,0,TAU);pen.fill();
-    }
-    pen.fillStyle='#f9e4ad';pen.beginPath();pen.arc(cx,cy,29,0,TAU);pen.fill();
-    pen.strokeStyle='#ca7f67';pen.lineWidth=5;
-    pen.beginPath();pen.arc(cx,cy,29,0,TAU);pen.stroke();
-    for(let k=0;k<8;k++){
-      const a=k*TAU/8;pen.fillStyle='#609d8e';
-      pen.beginPath();pen.arc(cx+14*Math.cos(a),cy+14*Math.sin(a),4,0,TAU);
-      pen.fill();
-    }
-    const texture=new THREE.CanvasTexture(canvas);
-    texture.colorSpace=THREE.SRGBColorSpace;
-    const tile=object(world,geo('plane',2.15,2.15),
-      new THREE.MeshBasicMaterial({map:texture,transparent:true,opacity:.79,
-        depthWrite:false,side:THREE.DoubleSide}),9,.270,9,false);
+    const texture=new THREE.CanvasTexture(canvas);texture.colorSpace=THREE.SRGBColorSpace;
+    const material=new THREE.MeshBasicMaterial({map:texture,transparent:true,opacity:.72,depthWrite:false,side:THREE.DoubleSide});
+    const tile=object(world,geo('plane',2.96,2.92),material,8.52,CENTRE_TOP+.0015,9.5,false);
     tile.rotation.x=-Math.PI/2;tile.userData.plazaInlay=true;tile.userData.villagePiazza=true;
-    // (The three butterflies that hovered over the old flowerbeds are retired: over bare paving they read as floating litter.)
-    gardenElements+=8;
+    const wing=object(world,geo('plane',.96,1),material,10.48,CENTRE_TOP+.0015,9.5,false);wing.rotation.x=-Math.PI/2;
   }
 
   // Painted landscape composition: irregular planted contours and natural
@@ -2269,13 +2235,13 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
   // corridors at x=8.5 and x=9.5; nothing is placed on a traffic lane.
   function createWorkingShops(){
     const workplaces=[
-      {kind:'bakery',x:8.17,z:8.56,color:'#d69072',trim:'#f8dcab'},
-      {kind:'bookshop',x:9.83,z:8.56,color:'#478d89',trim:'#d7e5c7'}
+      {kind:'bakery',x:8.50,z:8.25,color:'#d69072',trim:'#f8dcab'},
+      {kind:'bookshop',x:9.50,z:8.25,color:'#478d89',trim:'#d7e5c7'}
     ];
     for(const place of workplaces){
       const shop=new THREE.Group();
       shop.position.set(place.x,.176,place.z);
-      shop.userData.workingShop=place.kind;world.add(shop);
+      shop.userData.workingShop=place.kind;shop.userData.facadeAttached=true;world.add(shop);
       const base=box(shop,.54,.315,.26,place.color,0,.168,0);
       const top=box(shop,.61,.045,.30,'#f2ddbd',0,.347,0);
       for(const side of [-1,1]){
@@ -2311,48 +2277,38 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
         box(shop,.15,.027,.11,'#edcd91',.137,.405,.067);
         box(shop,.14,.020,.11,'#ad897b',.132,.430,.067);
       }
-      // This is a joined architectural frontage, not a second stand
-      // scattered on the paving. A real column-supported cloth roof
-      // frames the person-to-person handoff without entering the aisle.
-      const awningColor=place.kind==='bakery'?'#bf6f5c':'#4e9088';
-      for(const side of [-1,1]){
-        const post=cylinder(shop,.022,.029,.64,'#927459',
-          side*.315,.57,-.125);
-        post.castShadow=false;
-        box(shop,.083,.069,.10,'#d8bc92',side*.315,.257,-.125);
-        const timber=box(shop,.040,.035,.40,'#f0d4af',
-          side*.315,.885,-.038);
-        timber.castShadow=false;
-      }
-      fabric(shop,0,.914,-.043,awningColor,.77,.43);
-      box(shop,.87,.031,.036,'#875f4b',0,.912,-.265);
+      // A shallow awning attaches to the building face; no kiosk legs or
+      // roof freestanding on the square. Its back meets the facade at z=8.0.
+      const awningColor=place.kind==='bakery'?'#b67c65':'#708e76';
+      fabric(shop,0,.73,-.08,awningColor,.76,.36);
+      box(shop,.78,.025,.025,'#947153',0,.756,-.253);
       // Glazed display cabinetry behind the counter, with layered
       // merchandise that remains readable under the photographic lens.
-      box(shop,.58,.39,.142,'#886b59',0,.626,-.205);
-      const displayGlass=box(shop,.523,.337,.029,
+      box(shop,.58,.24,.142,'#886b59',0,.57,-.205);
+      const displayGlass=box(shop,.523,.213,.029,
         new THREE.MeshStandardMaterial({
           color:'#c6e4dc',transparent:true,opacity:.38,depthWrite:false,
           roughness:.15,metalness:.06
-        }),0,.63,-.122);
+        }),0,.565,-.122);
       displayGlass.castShadow=false;
-      box(shop,.59,.035,.18,'#f3dcbb',0,.82,-.204);
+      box(shop,.59,.035,.18,'#f3dcbb',0,.70,-.204);
       box(shop,.59,.027,.18,'#c9aa83',0,.51,-.204);
       box(shop,.59,.024,.18,'#c9aa83',0,.64,-.204);
       if(place.kind==='bakery'){
         for(let row=0;row<2;row++)for(let k=0;k<4;k++){
-          const x=(k-1.5)*.11,y=.57+row*.133;
+          const x=(k-1.5)*.11,y=.53+row*.10;
           const loaf=ball(shop,.068,
             k%2?'#d38b52':'#e5b071',x,y,-.129);
           loaf.scale.set(.70,.44,.44);
           loaf.castShadow=false;
         }
-        const oven=box(shop,.19,.16,.027,'#745b50',.162,.78,-.113);
+        const oven=box(shop,.13,.08,.027,'#745b50',.162,.65,-.113);
         oven.castShadow=false;
-        box(shop,.142,.088,.029,'#eab77c',.162,.78,-.092);
+        box(shop,.10,.045,.029,'#eab77c',.162,.65,-.092);
       }else{
         const covers=['#c87873','#e5be75','#609f93','#9d8cba','#dba78f'];
         for(let row=0;row<2;row++)for(let k=0;k<5;k++){
-          const x=(k-2)*.096,y=.573+row*.132;
+          const x=(k-2)*.096,y=.53+row*.10;
           const book=box(shop,.075,.104,.031,covers[(k+row*2)%5],
             x,y,-.113);
           book.rotation.z=(k%2?.045:-.035);
@@ -2371,10 +2327,10 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
         color:'#fff1d4',emissive:'#f6bc79',emissiveIntensity:.20,
         roughness:.42
       });
-      const lantern=ball(shop,.041,lampMaterial,-.296,.863,.123);
+      const lantern=ball(shop,.026,lampMaterial,-.296,.69,.07);
       lantern.castShadow=false;
       const smallSign=sign(shop,place.kind==='bakery'?'FRESH':'OPEN',
-        0,.247,.148,.27,'#574a42','#f8eed8');
+        0,.247,.148,.19,'#574a42','#f8eed8');
       // Two true hinged glazed serving leaves. Both pivot from the
       // outer jamb so the counter stays physically unobstructed when open.
       // This is a street-service window, NOT an imaginary doorway through
@@ -2388,15 +2344,15 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
         const hinge=new THREE.Group();
         // Pivot at the actual front edge of the serving hatch. From the
         // regular phone camera this now visibly clears the customer access.
-        hinge.position.set(side*.255,.65,.169);shop.add(hinge);
+        hinge.position.set(side*.255,.578,.169);shop.add(hinge);
         const sx=-side*.128;
-        const pane=box(hinge,.247,.302,.018,glazing,sx,0,0);
+        const pane=box(hinge,.247,.21,.018,glazing,sx,0,0);
         pane.castShadow=false;
-        for(const yy of [-.158,.158])
+        for(const yy of [-.112,.112])
           box(hinge,.266,.022,.036,'#d6ae86',sx,yy,.008);
-        box(hinge,.022,.333,.039,'#b48a69',sx+side*.113,0,.012);
-        box(hinge,.022,.330,.039,'#b48a69',sx-side*.113,0,.012);
-        box(hinge,.024,.267,.038,'#e2c6a2',sx,0,.015);
+        box(hinge,.022,.24,.039,'#b48a69',sx+side*.113,0,.012);
+        box(hinge,.022,.24,.039,'#b48a69',sx-side*.113,0,.012);
+        box(hinge,.024,.20,.038,'#e2c6a2',sx,0,.015);
         ball(hinge,.018,'#f0d5a4',sx-side*.075,-.047,.040)
           .castShadow=false;
         shutters.push({hinge,side});
@@ -2997,7 +2953,7 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
     if(!placed)return false;
     placed.userData.landmark=true;placed.userData.uniqueAsset=true;
     if(!shop)porchLamp(placed,b);
-    if(shop){const z=placed.userData.size.z/2+.012;sign(placed,b.name==='BAKERY'?'BAKERY':'BOOK NOOK',0,placed.userData.size.y*.8,z,.52,'#4a3f37','#fff3dc');}
+    if(shop){const z=placed.userData.size.z/2+.012;sign(placed,b.name==='BAKERY'?'BAKERY':'BOOK NOOK',0,placed.userData.size.y*.8,z,.36,'#4a3f37','#fff3dc');}
     return true;
   }
   function kitBuilding(b){
@@ -4515,22 +4471,24 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
     const times=town.props().find(p=>p.kind==='times');
     if(times)news7.stand=newsBoard(.6,.46,times.x,1.13,times.y+.044,0,[512,392]);
     // the town crier on a crate at the west edge of the plaza, with a chalkboard
-    const C={x:7.62,z:9.42};
-    const crate=box(g,.26,.12,.26,'#b88a5a',C.x,CENTRE_TOP+.06,C.z);
+    const C={x:10.65,z:9.42};
+    const crate=box(g,.19,.045,.19,'#ac9270',C.x,CENTRE_TOP+.0225,C.z);
     const crier=person({col:'#b5473c',skin:'#d8a77c',hair:'#4a3a2f',ph:2.1,x:5,y:7,hat:'cap'});crier.scale.setScalar(CUTE);crier.userData.limbs.headPivot.scale.setScalar(HEAD_BIG);
-    g.add(crier);crier.position.set(C.x,CENTRE_TOP+.12,C.z);crier.rotation.y=Math.PI/2;
+    g.add(crier);crier.position.set(C.x,CENTRE_TOP+.045,C.z);crier.rotation.y=-Math.PI/2;
     const hand=crier.userData.limbs.hands?.[1];
     if(hand){const bell=cylinder(hand,.004,.03,.06,'#e6b94a',0,-.07,0);bell.castShadow=false;}
-    cylinder(g,.011,.011,.62,'#8a6d4e',C.x+.03,CENTRE_TOP+.31,C.z-.68);cylinder(g,.011,.011,.62,'#8a6d4e',C.x+.73,CENTRE_TOP+.31,C.z-.68);
-    const chalk=newsBoard(.74,.5,C.x+.38,CENTRE_TOP+.66,C.z-.66,0,[640,435]);
+    cylinder(g,.009,.012,.35,'#8a6d4e',C.x-.12,CENTRE_TOP+.175,C.z-.22);
+    cylinder(g,.009,.012,.35,'#8a6d4e',C.x+.18,CENTRE_TOP+.175,C.z-.22);
+    const chalk=newsBoard(.32,.22,C.x+.03,CENTRE_TOP+.37,C.z-.22,0,[480,330]);
     news7.crier={g:crier,C,chalk,crate,ring:0,hand};
     // listeners: they walk in from the plaza and stand round the crier
     const cols=['#7fb3d9','#f2c36b','#9ccf9a','#c39be0','#f0a574','#e58f8f'];
-    const n=lite?3:6;
+    const n=lite?2:3;
     for(let i=0;i<n;i++){
-      const a=-1.15+i*(2.3/(n-1)),from=1.9+(i%2)*.4,to=.62+(i%3)*.16;
       const p=grownUp(i,cols[i%6]);g.add(p);
-      const home={x:C.x+Math.cos(a)*from+.4,z:C.z+Math.sin(a)*from},spot={x:C.x+.15+Math.cos(a)*to,z:C.z+Math.sin(a)*to};
+      // Distinct seats in a shallow arc; no additional crowd walks through
+      // the shop service points, cafe, bench or main x=8.5/9.5 aisles.
+      const home={x:9.82+i*.12,z:9.14+i*.24},spot={x:10.15+(i%2)*.10,z:9.17+i*.25};
       news7.listeners.push({p,home,spot,x:home.x,z:home.z,state:'away',ph:i*1.3,face:Math.atan2(C.x-spot.x,C.z-spot.z)});
     }
     // football on a free lawn
@@ -4587,7 +4545,7 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
         L.arms[0].rotation.x=R&&R.t>2.6?-.4+Math.sin(t*1.7)*.15:0;
         if(L.headPivot)L.headPivot.rotation.x=R?-.08:0;
       }
-      C.g.position.y=CENTRE_TOP+.12+(R&&R.t<2.6?Math.abs(Math.sin(t*16))*.006:0);
+      C.g.position.y=CENTRE_TOP+.045+(R&&R.t<2.6?Math.abs(Math.sin(t*16))*.006:0);
     }
     // listeners walk in, stand round the crier and react to the topic
     for(const q of news7.listeners){
@@ -5458,6 +5416,8 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
         const pulse=.88+.16*Math.sin(time*1.1+a.phase);
         a.mesh.scale.set(pulse,pulse,pulse);
         a.mesh.position.y=.159+.004*Math.sin(time*.85+a.phase);
+      } else if(a.kind==='squareJet'){
+        a.mesh.scale.y=.985+.015*Math.sin(time*2.2);
       } else if(a.kind==='sea'){
         const pulse=.9+.12*Math.sin(time*1.0+a.phase);
         if(a.bob)a.mesh.position.y=a.y0+.012*Math.sin(time*1.4+a.phase);

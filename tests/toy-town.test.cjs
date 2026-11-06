@@ -12,7 +12,7 @@ assert.match(dioramaSource, /function tree\(/, 'new organic tree renderer exists
 assert.match(dioramaSource, /function gable\(/, 'real pitched roof renderer exists');
 assert.match(dioramaSource, /function glazing\(/, 'framed glazing renderer exists');
 assert.match(html, /<option value="town">Toy Town<\/option>/, 'Toy Town is in the menu');
-assert.match(html, /return 'toy-town\.html\?v=95&embed=1'\+keep\+\(bar\.hidden\?'&clean=1':''\);/, 'and opens its current embedded page');
+assert.match(html, /return 'toy-town\.html\?v=96&embed=1'\+keep\+\(bar\.hidden\?'&clean=1':''\);/, 'and opens its current embedded page');
 assert.match(html, /townFrame\.src=townSrc\(\);/, 'with this page\'s weather and fps settings passed through');
 assert.match(fs.readFileSync(path.join(root, 'toy-town.html'), 'utf8'), /assets\/toy-town\.js\?v=\d+/);
 const box = vm.createContext({Math, Object, Array, JSON, Date, String, Number, RegExp, setTimeout: () => 0, document: {getElementById: () => ({textContent: ''})}});
@@ -375,6 +375,11 @@ assert.equal(stallWorkers.length,2,'a baker and bookseller staff the real storef
 assert.equal(marketCustomers.length,3,'three independent shoppers form a small active market');
 assert.ok(stallWorkers.every(m=>m.max===0&&m.x>7&&m.x<11&&m.y>8&&m.y<9),
   'shopkeepers remain grounded at their own storefront counters');
+assert.ok(stallWorkers.every((m,i)=>Math.abs(m.x-(8.5+i))<.001&&Math.abs(m.y-8.12)<.001),
+  'sellers stand behind the two facade-attached service windows');
+const squareBench=T.props().find(p=>p.kind==='hero-bench');
+assert.ok(squareBench&&Math.hypot(squareBench.x-7.38,squareBench.y-9.8)<.001,
+  'simulation seating matches the west-edge bench');
 const marketMetrics={peakHolding:0,peakService:0,furthestTravel:0};
 for(let i=0;i<60*80;i++){
   T.update(1/60);
@@ -585,7 +590,7 @@ const townPage = fs.readFileSync(path.join(root, 'toy-town.html'), 'utf8');
 for (const id of ['zoom-in', 'zoom-out', 'zoom-reset']) {
   assert.match(townPage, new RegExp('id="' + id + '"[^>]*aria-label="[^"]+"'), id + ' is accessible');
 }
-assert.match(townPage, /toy-town\.js\?v=48/, 'diorama engine is loaded');
+assert.match(townPage, /toy-town\.js\?v=49/, 'diorama engine is loaded');
 assert.match(townPage, /toy-town-news\.js\?v=2/, 'sourced news loads before the simulation');
 assert.match(townPage, /HEADLINES/, 'real reporting has a dedicated source panel');
 assert.match(townPage, /AROUND TOWN · FICTION/, 'fiction and real news are explicitly separated');
