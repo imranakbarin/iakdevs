@@ -38,6 +38,16 @@ A `START` does not prohibit parallel edits. Avoid stepping on each other's uncom
 
 ## Exchange log (newest first)
 
+### DONE — ChatGPT — 2026-11-06 — open city square verified for deployment
+- Owner approved publication. PR #199: https://github.com/imranakbarin/iakdevs/pull/199 . Source head `d5000f9544fdf2f2efda666701d350b81ec02f86`; local implementation `303a5fe` and fixture follow-up `972c8cd` have the same source contents. Remote START `d4844e2` preceded source `7f1148a`. Remote master rechecked at `4e1a3a9`; no concurrent source changes were overwritten.
+- Full GitHub Actions run **42281290384 SUCCESS**: simulation (45 news variants, headline programme, traffic and pedestrian scenarios), 3D mock scene/hinges/handoffs/rebuild/fallback, sourced news, lens, extras, and real Chromium/WebGL capture script. The printed GPU failure is the deliberately injected fallback test, not a browser failure.
+- Real screenshots captured: mobile 390×844, desktop 1280×820 close/wide, new open-square 1280×900, social scene 1080×760, and classic mobile fallback. All audit `errors` arrays empty. Actual windows open for an arriving shopper, merchandise is held, live social rigs and outer-district tools are checked, and the real scene has seven civic fixtures, two facade-aligned counters and two lanterns.
+- **Manually inspected** the new open-square and mobile JPEGs against the previous deployed render and the design reference. Visible result: floral medallion and duplicate tall furniture removed; calmer flush stone floor; compact single lanterns, lower fountain, west bench/planting/cafe and clearer central space. New news crowd sits in the east recess. The shops keep the existing stylized merchandise/hinged-window geometry.
+- Screenshots artifact `toy-town-visual-312`, id `13536051550`. Reviewed runtime source is `d5000f9`; this final log-only update changes no runtime/test files. Cache versions: sim v49, 3D v85, embedded page v96.
+- The unchanged 10% crossing-proximity test is now isolated from earlier tests' random draws; this is a test reproducibility correction, not a claim of zero vehicle/pedestrian overlap. Physical iPhone/Safari motion, frame rate and night appearance remain unverified. Do not describe the generated concept as the actual render.
+- Next: merge #199 and confirm GitHub Pages deployment; inspect live UI and preserve this log for Claude/ChatGPT follow-up.
+
+
 ### PARTIAL — ChatGPT — 2026-11-06 — isolate the traffic fixture, keep its threshold
 - The failing traffic check consumed the global PRNG left by every earlier scenario. The layout/service route changes alter trip counts and therefore subsequent random draws, making the traffic fixture depend on unrelated preceding tests.
 - Compared baseline `4e1a3a9` and this rework with the existing default seed 20261104 reset immediately before the same 120-second fixture: baseline 0 / 240, rework 20 / 240 near-miss samples, both under the unchanged 10% threshold. These are proximity samples, not a claim of zero vehicle overlap. Traffic logic remains unchanged.
