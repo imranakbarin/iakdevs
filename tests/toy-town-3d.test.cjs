@@ -132,7 +132,7 @@ assert.match(moduleCode,/function gardenIsland\(/,
 assert.match(moduleCode,/const cafeSet=/,'the village includes modeled cafe seating');
 assert.doesNotMatch(moduleCode,/const archCurve=new THREE.CatmullRomCurve3/,
   'the rose arbour in front of the plaza is retired so the square stays readable');
-assert.match(moduleCode,/const CENTRE_SQUASH=\.6;/,'the buildings round the city centre are low');
+assert.match(moduleCode,/const CENTRE_SQUASH=\.6,TOWER_SQUASH=\.74;/,'the buildings round the city centre are low');
 assert.match(moduleCode,/createStorybookVillage\(\);/,
   'complete village set is mounted during world rebuild');
 assert.doesNotMatch(moduleCode,/groundPiece\(3\.96,3\.96,grassMaterial/,'the grass courtyard slab is gone: the heart of the town is a paved city centre');
@@ -159,7 +159,7 @@ assert.match(moduleCode,/eye.scale.y=blink/,'eyelids blink without a separate an
 assert.match(html,/type="importmap"/);
 assert.match(html,/three@0\.187\.0\/build\/three\.module\.js/);
 assert.match(html,/three@0\.187\.0\/examples\/jsm\//);
-assert.match(html,/toy-town-3d\.js\?v=79/);
+assert.match(html,/toy-town-3d\.js\?v=80/);
 assert.match(moduleCode,/ref\.path&&Number\.isFinite\(ref\.walkFacing\)/, 'routed people use a real diagonal heading instead of a cardinal-only pose');
 assert.match(html,/toy-town-landmarks\.js\?v=7/,'the independent models are requested alongside Three');
 assert.match(html,/buildLandmark:landmarks\.buildLandmark/,
@@ -169,7 +169,7 @@ const classicScript=html.match(/src="assets\/toy-town\.js\?v=\d+"/);
 assert.ok(classicScript&&
   html.indexOf(classicScript[0])<html.indexOf("import('three')"),
   'the actual versioned classic script always loads before WebGL');
-assert.match(page,/toy-town\.html\?v=90&embed=1/);
+assert.match(page,/toy-town\.html\?v=91&embed=1/);
 assert.match(fs.readFileSync(path.join(root,'assets/toy-town.js'),'utf8'),
   /targetX=clamp\(\.08,p\.x,17\.92\)/,
   'scripted paths are clamped at the endpoint rather than freezing outside town');

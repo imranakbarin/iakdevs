@@ -1436,8 +1436,15 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
       cylinder(world,.50,.55,.19,'#e6d9bc',p.x,.11,p.y);
       cylinder(world,.43,.43,.04,'#75b9cb',p.x,.225,p.y);
       cylinder(world,.07,.11,.35,'#eddfc7',p.x,.35,p.y);
-      const w=ball(world,.13,mat('#d6f4f2',.15,'#7197a8'),p.x,.52,p.y);
-      w.scale.set(.9,1.3,.9);
+      // A slim jet that arches into the pool in six thin falling streams (it was an egg).
+      const jetMat=mat('#cdeff6',.12,'#7fb6c8');
+      cylinder(world,.016,.03,.3,jetMat,p.x,.5,p.y,false);
+      ball(world,.034,jetMat,p.x,.66,p.y,false);
+      for(let a=0;a<6;a++){
+        const ang=a*Math.PI/3+.3,rr=.2;
+        for(let k=1;k<=3;k++){const u=k/3,r=.04+rr*u,y=.62-.35*u*u+.05*u;ball(world,.017-.003*k,jetMat,p.x+Math.cos(ang)*r,y,p.y+Math.sin(ang)*r,false);}
+      }
+      const ring=object(world,geo('torus',.3,.008),mat('#eaf9fb',.4),p.x,.235,p.y,false);ring.rotation.x=Math.PI/2;
     }
     else if(k==='stadium'){
       cylinder(world,1.42,1.55,.28,'#d5c5b0',p.x,.15,p.y);
@@ -1458,15 +1465,22 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
     }
     else if(k==='flowers')littleFlowers(p.x,p.y,i);
     else if(k==='duck') {
-      // The 2D simulation already supplies accurate water coordinates.
-      const duck=new THREE.Group();duck.position.set(p.x,.21,p.y);duck.scale.setScalar(.68);world.add(duck);
-      const body=ball(duck,.11,'#f9d767',0,0,0);body.scale.set(1.25,.70,.93);
-      ball(duck,.065,'#fff0ad',.095,.07,0);
-      box(duck,.065,.025,.055,'#ed9d61',.16,.055,.02);
+      // The 2D simulation already supplies accurate water coordinates. Small, rounded river ducks in three plumages
+      // (yellow, mallard with a green head and white collar, white) with a neck, an upturned tail, a bill and eyes.
+      const duck=new THREE.Group();duck.position.set(p.x,.21,p.y);duck.scale.setScalar(.4+(i%3)*.03);world.add(duck);
+      const kindOfDuck=i%3,bodyCol=['#f9d767','#b49272','#fffaf0'][kindOfDuck],headCol=['#fbe083','#2f8a63','#fffaf0'][kindOfDuck];
+      const wingCol=['#e9c76b','#8d6e52','#f0e8d8'][kindOfDuck];
+      const body=ball(duck,.11,bodyCol,0,0,0);body.scale.set(1.3,.72,.95);
+      const tail=ball(duck,.05,wingCol,-.145,.05,0);tail.scale.set(1.2,.7,.8);tail.rotation.z=.5;
+      ball(duck,.062,bodyCol,.075,.045,0).scale.set(1,1.1,.9);            // chest and neck
+      ball(duck,.058,headCol,.108,.125,0);                                  // head
+      if(kindOfDuck===1)box(duck,.012,.03,.1,'#fffaf0',.082,.08,0,false);  // the mallard's white collar
+      box(duck,.055,.02,.045,'#f2a03d',.17,.112,0,false);                  // bill
+      for(const side of [-1,1])ball(duck,.011,'#2b2b2b',.13,.14,side*.038).castShadow=false;
       const wings=[];
       for(const side of [-1,1]){
-        const wing=new THREE.Group();wing.position.set(-.028,.034,side*.076);
-        const plumage=ball(wing,.069,'#e9c76b',-.025,0,side*.013);
+        const wing=new THREE.Group();wing.position.set(-.028,.034,side*.078);
+        const plumage=ball(wing,.069,wingCol,-.025,0,side*.013);
         plumage.scale.set(1.05,.45,.65);duck.add(wing);wings.push(wing);
       }
       duck.userData.duckWings=wings;
@@ -2938,7 +2952,7 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
   // The five plaza buildings in KayKit style. Plain-fronted models sit behind
   // the bakery and bookshop counters (their striped awnings, cabinets, bells
   // and hinged serving windows are separate shop-front pieces and unchanged).
-  const CENTRE_SQUASH=.6;
+  const CENTRE_SQUASH=.6,TOWER_SQUASH=.74;   // the apartment towers are lower too: nothing in town dwarfs the square
   function kitLandmark(b){
     if(!kit||!['shop','house'].includes(b.kind))return false;
     const shop=b.kind==='shop',name=shop?(b.name==='BAKERY'?'building_D':'building_B'):['building_C','building_F','building_A'][Math.abs(b.x*3+b.y)%3];
@@ -2954,7 +2968,7 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
     const pickFrom={house:['building_A','building_C','building_B'],shop:['building_B','building_D','building_F'],tower:['building_H','building_G','building_E']}[b.kind];
     const name=pickFrom[Math.abs(Math.round(b.x*7+b.y*13+(worldSeed||0)))%pickFrom.length];
     // Fronts face the street that runs past the block (south, toward the camera, like the town's own houses).
-    const placed=kitPlace(world,name,b.x+.5,.17,b.y+.5,{fit:b.kind==='tower'?1.02:.98,rotY:0});
+    const placed=kitPlace(world,name,b.x+.5,.17,b.y+.5,{fit:b.kind==='tower'?1.02:.98,rotY:0,squash:b.kind==='tower'?TOWER_SQUASH:1});
     if(!placed)return false;
     placed.userData.buildingKind=b.kind;composedBuildings++;
     if(b.kind==='house')porchLamp(placed,b);
@@ -4346,6 +4360,44 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
     if(peb.length)inst(geo('sphere',.03),new THREE.MeshStandardMaterial({color:'#ffffff',roughness:1}),peb);
     const patches=[];for(let k=0;patches.length<26&&k<900;k++){const x=.8+rng(k+(worldSeed||0)%83,371)*16.4,z=.8+rng(k+(worldSeed||0)%83,372)*16.4;if(!ok(x,z,.55))continue;
       patches.push({x,y:base+.004+patches.length*.0004,z,sx:.4+rng(k,373)*.55,sz:.35+rng(k,374)*.5,r:rng(k,375)*3,c:k%2?'#9cc57f':'#7ea96b'});}
+    // --- the strips between the ring roads and the railway were bare lawn: allotment plots with crop rows, an orchard,
+    //     flower beds, hay bales and a low hedge along the pavement (south and north; the station and tunnel stay clear)
+    {
+      const soil=[],crops=[],trunks=[],crowns=[],fruit=[],hay=[],hedge=[],blooms=[];
+      const cropCols=['#6fae5a','#8bbf5c','#5f9d56','#a3c964'],fruitCols=['#e2543f','#f3b13a','#d9686a'];
+      const strips=[{z0:17.42,z1:18.18,skip:[8.9,3.1],hedgeZ:17.3,tag:1},{z0:-.28,z1:.66,skip:[9,2.4],hedgeZ:.82,tag:2}];
+      const free=(x,z)=>!ps.some(q=>Math.hypot(q.x-x,q.y-z)<.42)&&!bs.some(q=>Math.hypot(q.x+.5-x,q.y+.5-z)<.9);
+      for(const st of strips){
+        for(let x=1.05,k=0;x<17;x+=.5,k++){
+          const key=k*7+st.tag*131+(worldSeed||0)%53;
+          if(Math.abs(x-st.skip[0])<st.skip[1])continue;
+          const z=st.z0+(st.z1-st.z0)*(.25+rng(key,401)*.5),cx=x+(rng(key,402)-.5)*.1,t=rng(key,403);
+          if(!free(cx,z))continue;
+          if(t<.5){   // an allotment plot: dark soil with three rows of crops
+            soil.push({x:cx,y:base+.012,z,r:0,sx:.46,sy:.026,sz:.34,c:'#8c6b4d'});
+            for(let row=-1;row<=1;row++)for(let c=-1;c<=1;c++)crops.push({x:cx+c*.13,y:base+.045,z:z+row*.1,sx:1,sy:.8+rng(key+row*3+c,404)*.5,sz:1,c:cropCols[(key+row+c+9)%4]});
+          }else if(t<.72){   // an orchard tree with a little fruit
+            trunks.push({x:cx,y:base+.09,z,sx:1,sy:1,sz:1,c:'#8a6a4c'});
+            crowns.push({x:cx,y:base+.24,z,sx:1.05+rng(key,405)*.3,sy:.95,sz:1.05,c:['#78b45e','#6aa956','#8cc064'][k%3]});
+            for(let f=0;f<4;f++){const a=f*1.57+rng(key,406+f)*1.2;fruit.push({x:cx+Math.cos(a)*.11,y:base+.22+rng(key,410+f)*.07,z:z+Math.sin(a)*.11,c:fruitCols[(k+f)%3]});}
+          }else if(t<.92){   // a flower bed
+            soil.push({x:cx,y:base+.012,z,r:0,sx:.4,sy:.026,sz:.24,c:'#7a5c40'});
+            for(let f=0;f<7;f++)blooms.push({x:cx+(f%4-1.5)*.095,y:base+.06,z:z+(f<4?-.05:.06),sx:1,sy:.9,sz:1,c:SEASON.flowers[(k+f)%SEASON.flowers.length]});
+          }else hay.push({x:cx,y:base+.055,z,sx:1,sy:1,sz:1,c:'#e3c47a'});
+        }
+        for(let x=1.15;x<17;x+=.5){if(Math.abs(x-st.skip[0])<st.skip[1])continue;hedge.push({x,y:base+.05,z:st.hedgeZ,sx:.5,sy:.1,sz:.07,c:'#5e9a52'});}
+      }
+      const boxGeo=geo('box',1,1,1);
+      if(soil.length)inst(boxGeo,new THREE.MeshStandardMaterial({color:'#ffffff',roughness:1}),soil).castShadow=false;
+      if(crops.length)inst(geo('sphere',.03),new THREE.MeshStandardMaterial({color:'#ffffff',roughness:.9}),crops).castShadow=false;
+      if(trunks.length)inst(geo('cylinder',.018,.026,.18),new THREE.MeshStandardMaterial({color:'#ffffff',roughness:.95}),trunks);
+      if(crowns.length)inst(geo('sphere',.1),new THREE.MeshStandardMaterial({color:'#ffffff',roughness:.85}),crowns);
+      if(fruit.length)inst(geo('sphere',.016),new THREE.MeshStandardMaterial({color:'#ffffff',roughness:.7}),fruit).castShadow=false;
+      if(hay.length)inst(geo('cylinder',.075,.075,.11),new THREE.MeshStandardMaterial({color:'#ffffff',roughness:1}),hay);
+      if(hedge.length)inst(boxGeo,new THREE.MeshStandardMaterial({color:'#ffffff',roughness:.95}),hedge).castShadow=false;
+      if(blooms.length)inst(geo('sphere',.022),new THREE.MeshStandardMaterial({color:'#ffffff',roughness:.8}),blooms).castShadow=false;
+      bus3.strips={soil:soil.length,crops:crops.length,trees:crowns.length,beds:blooms.length/7,hay:hay.length,hedge:hedge.length};
+    }
     bus3.patches=patches.length;
     if(patches.length){const pm=inst(geo('cylinder',1,1,.004),new THREE.MeshStandardMaterial({color:'#ffffff',roughness:1,transparent:true,opacity:.5,depthWrite:false}),patches);pm.castShadow=false;pm.receiveShadow=true;}
   }
@@ -5468,7 +5520,7 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
     startEvent:k=>startEvent(k),startDragon:()=>{if(fest.dragon){fest.dragonOn=60;fest.dragon.g.visible=true;return true;}return false;},
     stage4Stats:()=>({built:sky4.built,rainbow:!!sky4.rainbow?.visible,rainbows:sky4.rainbows,leaves:sky4.leaves.filter(l=>l.on).length,leavesBlown:sky4.leavesBlown,plane:!!sky4.plane?.g.visible,planes:sky4.planes,flocks:sky4.flocks.length,flocksRun:sky4.flocksRun,sunK:+sunK.toFixed(2),grayK:+grayK.toFixed(2)}),
     setWindForTest:v=>{sky4.windOverride=v;},startBanner:()=>startBanner(),startFlock:()=>startFlock(),
-    stage3Stats:()=>({built:bus3.built,stops:bus3.stops.length,waiting:bus3.people.filter(p=>p.state==='wait').length,aboard:bus3.people.filter(p=>p.state==='aboard').length,boarded:bus3.boarded,alighted:bus3.alighted,boards:bus3.boards,steam:bus3.steam.length,tufts:bus3.tufts,flowers:bus3.flowers,patches:bus3.patches}),
+    stage3Stats:()=>({built:bus3.built,stops:bus3.stops.length,waiting:bus3.people.filter(p=>p.state==='wait').length,aboard:bus3.people.filter(p=>p.state==='aboard').length,boarded:bus3.boarded,alighted:bus3.alighted,boards:bus3.boards,steam:bus3.steam.length,tufts:bus3.tufts,flowers:bus3.flowers,patches:bus3.patches,strips:bus3.strips}),
     stage2Stats:()=>({built:live2.built,puddles:live2.puddles.filter(p=>p.puddle.visible).length,snow:+live2.snowK.toFixed(2),snowVisible:!!live2.snowman?.visible,watchman:!!live2.watch?.p.visible,cats:live2.cats.filter(c=>c.g.visible).length,boards:live2.boards.map(b=>b.shut.visible?'closed':'open'),hits:live2.hits,kiteVisible:life.kite?.kid.visible,playVisible:life.play?.sk.visible,fisherVisible:life.fisher?.p.visible,boatVisible:life.boat?.g.visible}),
     setWeatherForTest:k=>{weatherKind=k;},touch2:(x,y)=>touch2(x,y),
     moreStats:()=>({built:more.built,phase:more.phase,lit:lanterns.filter(l=>l.lit).length,lanterns:lanterns.length,parade:!!more.parade,paradesRun:more.paradesRun,gulls:more.gulls.map(x=>x.state),crowd:more.crowd.length,sparks:fwSys.active,rockets:fwSys.rockets.length,fwBursts:{...fwSys.bursts},bursts:more.bursts,lamplighter:more.lamp?.p.visible}),
