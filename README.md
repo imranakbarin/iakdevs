@@ -106,6 +106,8 @@ People no longer walk on the river: every walking leg (events, gatherings, whims
 
 **Tiny vehicles, no overlaps, a clean view.** Cars, buses and vans are drawn at 80% (bicycles at 42%) and the simulation's bodies, lanes and stop lines match: cars ride a narrower lane, bicycles keep off the pavement edge, a vehicle stops a body-length short of the crosswalk, and a car that has run out of patience can edge past crossing traffic but never through a drawn body. Cars stop for a walker in the carriageway and walkers wait at the kerb rather than step into a car. At the end of a road cars drive to the last junction and turn left or right (a U-turn only when both are blocked). **Hide** (the toolbar button, or the `H` key) shows only the city: the news card, ticker, hint, zoom buttons, moment chip and follow card all go, a faint dot in the corner (or `H`) brings them back, and `?clean=1` starts that way.
 
+**Smoother, more social streets.** Residents take ordinary corners on the move and only pivot to turn right round; scripted walkers wait at the kerb for the walk signal; traffic eases to the kerb for the fire truck's siren and cars ahead of it pull in and stop; the bus runs a long closed route over both bridges and round the ring roads, calling at all eight stops; residents sometimes visit a shopfront and carry a paper bag for a while.
+
 ## Deep links
 
 `#<style>-<seed>` opens a style at a seed, e.g. `#gond-12345`, `#warli-7`. Prefix `painting-` for the painted panorama (`#painting-kangra-3`). `#zen-…`, `#road-…` and `#cozy-…` open the other modes; `#today` (or no hash) opens the home screen. Seeds vary the starting layout; they do not regenerate painted panoramas. Editing the hash in an open tab loads that world.

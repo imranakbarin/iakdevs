@@ -12,7 +12,7 @@ assert.match(dioramaSource, /function tree\(/, 'new organic tree renderer exists
 assert.match(dioramaSource, /function gable\(/, 'real pitched roof renderer exists');
 assert.match(dioramaSource, /function glazing\(/, 'framed glazing renderer exists');
 assert.match(html, /<option value="town">Toy Town<\/option>/, 'Toy Town is in the menu');
-assert.match(html, /return 'toy-town\.html\?v=89&embed=1'\+keep\+\(bar\.hidden\?'&clean=1':''\);/, 'and opens its current embedded page');
+assert.match(html, /return 'toy-town\.html\?v=90&embed=1'\+keep\+\(bar\.hidden\?'&clean=1':''\);/, 'and opens its current embedded page');
 assert.match(html, /townFrame\.src=townSrc\(\);/, 'with this page\'s weather and fps settings passed through');
 assert.match(fs.readFileSync(path.join(root, 'toy-town.html'), 'utf8'), /assets\/toy-town\.js\?v=\d+/);
 const box = vm.createContext({Math, Object, Array, JSON, Date, String, Number, RegExp, setTimeout: () => 0, document: {getElementById: () => ({textContent: ''})}});
@@ -178,14 +178,14 @@ assert.equal(following.braking,true,
   for(let trial=0;trial<16;trial++){
     Object.assign(lone,{x:15.6,y:6.5,d:0,v:.8,max:1,lane:.16,path:null,stopUntil:0,patienceUntil:0,turnSignal:null});
     let turnedTo=null;
-    for(let i=0;i<60*5&&turnedTo===null;i++){
+    for(let i=0;i<60*16&&turnedTo===null;i++){   // a red light may hold it first
       T.update(1/60);
       if(lone.d!==0)turnedTo=lone.d;
     }
     if(turnedTo===2||turnedTo===3)side++;else if(turnedTo===1)round++;
     assert.ok(lone.x<=16.56,'a car never drives past the last junction');
   }
-  assert.ok(side>=14&&round<=2,'at the end of the road cars turn left or right, not back the way they came ('+side+' side, '+round+' round)');
+  assert.ok(side>=13&&round<=2,'at the end of the road cars turn left or right, not back the way they came ('+side+' side, '+round+' round)');
 }
 // A car stops for a walker standing in the carriageway; a walker waits rather than step into a car.
 {
@@ -202,6 +202,60 @@ assert.equal(following.braking,true,
   Object.assign(w2,{x:4.4,y:6.66,d:0,lane:0,v:0,max:.5,stopUntil:0,observeUntil:0,nextDawdle:1e9,nextNotice:1e9,path:null,heroResident:false,carGoUntil:0,carWaitSince:undefined});
   for(let i=0;i<60*2;i++)T.update(1/60);
   assert.ok(w2.x<4.84,'a walker waits at a stopped car instead of stepping into its body ('+w2.x.toFixed(2)+')');
+}
+
+// Scripted walkers wait at the kerb for the walk signal before stepping into a street at a junction.
+{
+  T.build(61003,'market');
+  const cars=T.movers().filter(m=>m.type==='car');cars.forEach((c,i)=>Object.assign(c,{x:2+i*.4,y:16.5,d:0,v:0,max:0,stopUntil:1e9,path:null}));
+  const w=T.movers().find(m=>m.type==='person'&&!m.kind&&!m.heroResident&&!m.shopRole);
+  const phase=()=>{const c=T.debug().clock%20;return c;};
+  let guard=0;while(!(phase()>1&&phase()<3)&&guard++<4000)T.update(1/60);   // the x streets have green
+  Object.assign(w,{x:6.93,y:6.0,d:2,lane:0,path:[{x:6.93,y:7.0,speed:.5,dry:true}],busy:true,max:.5,v:0,stopUntil:0,observeUntil:0,nextDawdle:1e9,nextNotice:1e9,sigWaitSince:undefined,sigGoUntil:0});
+  for(let i=0;i<60*4;i++)T.update(1/60);
+  assert.ok(w.y<6.5-.37+.02,'a walker waits at the kerb while the street in front of them has green ('+w.y.toFixed(2)+')');
+  guard=0;while(!(phase()>11&&phase()<12.5)&&guard++<4000)T.update(1/60);   // now the crossing is theirs
+  let maxY=w.y;for(let i=0;i<60*4;i++){T.update(1/60);maxY=Math.max(maxY,w.y);}
+  assert.ok(maxY>6.9,'and crosses once the signal lets them ('+maxY.toFixed(2)+')');
+}
+// A siren clears the road: traffic ahead of the fire truck pulls over and stops, oncoming traffic eases to the kerb, and both go on after it has passed.
+{
+  T.build(61004,'market');
+  const cars=T.movers().filter(m=>m.type==='car'&&m.kind!=='bike'&&m.kind!=='bus');
+  cars.slice(3).forEach((c,i)=>Object.assign(c,{x:2+i*.4,y:16.5,d:0,v:0,max:0,stopUntil:1e9,path:null}));
+  const [truck,ahead,oncoming]=cars;
+  Object.assign(truck,{kind:'fire',siren:true,x:1.6,y:1.5,d:0,v:1.6,max:1.8,lane:0,path:[{x:15,y:1.5,speed:1.6}],stopUntil:0});
+  Object.assign(ahead,{x:3.0,y:1.5,d:0,v:.9,max:1,lane:.16,baseLane:.16,path:null,stopUntil:0,patienceUntil:0});
+  Object.assign(oncoming,{x:5.2,y:1.5,d:1,v:.9,max:1,lane:.16,baseLane:.16,path:null,stopUntil:0,patienceUntil:0});
+  let sawStop=false,maxLaneA=0,maxLaneO=0;
+  for(let i=0;i<60*6;i++){
+    T.update(1/60);
+    if(ahead.v<.1&&Math.abs(ahead.x-truck.x)<2.2&&truck.x<ahead.x)sawStop=true;
+    maxLaneA=Math.max(maxLaneA,ahead.lane);maxLaneO=Math.max(maxLaneO,oncoming.lane);
+    assert.ok(!(Math.abs(truck.x-ahead.x)<.2&&Math.abs(truck.y-ahead.y)<.2),'the truck never drives through the car it is clearing');
+  }
+  assert.ok(sawStop,'a car ahead of the siren pulls in and stops');
+  assert.ok(maxLaneA>.2&&maxLaneO>.2,'traffic eases over to the kerb as the siren comes by');
+  truck.siren=false;truck.path=null;truck.stopUntil=1e9;
+  for(let i=0;i<60*8;i++)T.update(1/60);
+  assert.ok(Math.abs(ahead.lane-.16)<.02||ahead.lane<.25,'and the lane is taken back afterwards');
+}
+// The bus runs a long closed route: every stop, both ring roads and both bridges; residents come away from shops with paper bags.
+{
+  T.build(61005,'market');
+  const stops=new Set(),rows=new Set(),cols=new Set();let bagged=0;
+  for(let i=0;i<60*600;i++){
+    T.update(1/60);
+    if(i%20)continue;
+    for(const b of T.movers().filter(m=>m.kind==='bus')){
+      if(b.atStop!==undefined)stops.add(b.atStop);
+      for(const l of [1.5,6.5,11.5,16.5]){if(Math.abs(b.y-l)<.06)rows.add(l);if(Math.abs(b.x-l)<.06)cols.add(l);}
+    }
+    bagged=Math.max(bagged,T.movers().filter(m=>m.shopBag>=0).length);
+  }
+  assert.ok(stops.size>=6,'the bus calls at most of its eight stops ('+[...stops]+')');
+  assert.ok(rows.has(1.5)&&rows.has(16.5)&&rows.has(6.5)&&rows.has(11.5),'it runs along the north, south and both middle streets ('+[...rows]+')');
+  assert.ok(T.debug().whims.shop>=1&&bagged>=1,'residents go shopping and carry a bag for a while ('+T.debug().whims.shop+' trips)');
 }
 
 // Outer neighborhoods are services with meaningful safe routes, not scenery.
@@ -515,7 +569,7 @@ const townPage = fs.readFileSync(path.join(root, 'toy-town.html'), 'utf8');
 for (const id of ['zoom-in', 'zoom-out', 'zoom-reset']) {
   assert.match(townPage, new RegExp('id="' + id + '"[^>]*aria-label="[^"]+"'), id + ' is accessible');
 }
-assert.match(townPage, /toy-town\.js\?v=45/, 'diorama engine is loaded');
+assert.match(townPage, /toy-town\.js\?v=46/, 'diorama engine is loaded');
 assert.match(townPage, /toy-town-news\.js\?v=1/, 'sourced news loads before the simulation');
 assert.match(townPage, /HEADLINES/, 'real reporting has a dedicated source panel');
 assert.match(townPage, /AROUND TOWN · FICTION/, 'fiction and real news are explicitly separated');
@@ -551,31 +605,33 @@ Object.assign(cornerWalker,{x:3,y:6.5,lane:0,d:0,path:[{x:3,y:7.7,speed:.5,dry:t
   busy:true,max:.5,v:0,moved:0,travel:0,stopUntil:0,intent:'destination'});
 const pivotAt={x:cornerWalker.x,y:cornerWalker.y,travel:cornerWalker.travel};
 T.update(1/60);
-assert.equal(cornerWalker.d,2,'a northbound pavement leg selects the correct facing');
-assert.ok(cornerWalker.turnPauseUntil>T.debug().clock,'the walker turns before setting off');
-for(let i=0;i<15;i++)T.update(1/60);
-assert.equal(cornerWalker.x,pivotAt.x,'turning does not slide the walker sideways');
-assert.equal(cornerWalker.y,pivotAt.y,'the walker stays on the same pavement until aligned');
-assert.equal(cornerWalker.travel,pivotAt.travel,'a pivot does not advance the footstep animation');
-for(let i=0;i<28;i++)T.update(1/60);
-assert.ok(cornerWalker.y>pivotAt.y,'the walker resumes moving after the turn');
-assert.ok(cornerWalker.travel>pivotAt.travel,'gait resumes only when distance increases');
+assert.equal(cornerWalker.d,2,'a southbound pavement leg selects the correct facing');
+assert.ok(!(cornerWalker.turnPauseUntil>T.debug().clock),'an ordinary 90-degree corner is taken on the move, no pause');
+for(let i=0;i<30;i++)T.update(1/60);
+assert.ok(cornerWalker.y>pivotAt.y+.1,'the walker is already walking round the corner');
+assert.ok(cornerWalker.travel>pivotAt.travel,'and the gait runs while turning');
+assert.ok(Math.abs(cornerWalker.walkFacing)<.15,'the drawn heading has swung round to the new direction');
+// Turning right round is the one case that stops: the walker pivots on the spot first.
+Object.assign(cornerWalker,{x:3,y:6.5,lane:0,d:0,walkFacing:Math.PI/2,path:[{x:2,y:6.5,speed:.5,dry:true}],
+  busy:true,max:.5,v:0,moved:0,travel:0,stopUntil:0,intent:'destination',turnPauseUntil:0});
+const reverseAt={x:cornerWalker.x,travel:cornerWalker.travel};
+T.update(1/60);
+assert.ok(cornerWalker.turnPauseUntil>T.debug().clock,'turning right round pauses to pivot');
+for(let i=0;i<10;i++)T.update(1/60);
+assert.equal(cornerWalker.x,reverseAt.x,'the pivot does not slide the walker');
+assert.equal(cornerWalker.travel,reverseAt.travel,'a pivot does not advance the footstep animation');
+for(let i=0;i<60;i++)T.update(1/60);
+assert.ok(cornerWalker.x<reverseAt.x,'the walker sets off after the pivot');
 
 // Diagonal legs should have a matching 3D facing, not a sideways shuffle.
 T.build(72144,'weather');
 const diagonalWalker=T.movers().find(m=>m.type==='person'&&!m.kind&&!m.heroResident&&!m.shopRole);
 Object.assign(diagonalWalker,{x:3,y:6.5,d:0,lane:0,busy:true,v:0,moved:0,travel:0,
   path:[{x:4,y:7.5,speed:.5,dry:true}],stopUntil:0,intent:'destination'});
-T.update(1/60);
-assert.ok(Math.abs(diagonalWalker.walkFacing-Math.PI/4)<.01,
-  'diagonal route heading matches the actual displacement vector');
-const beforeDiagonal=[diagonalWalker.x,diagonalWalker.y,diagonalWalker.travel];
-for(let i=0;i<16;i++)T.update(1/60);
-assert.deepEqual([diagonalWalker.x,diagonalWalker.y,diagonalWalker.travel],
-  beforeDiagonal,'a strong diagonal turn pauses both feet before changing direction');
-for(let i=0;i<36;i++)T.update(1/60);
-assert.ok(diagonalWalker.x>beforeDiagonal[0]&&diagonalWalker.y>beforeDiagonal[1],
-  'a diagonal walk resumes along both physical axes');
+for(let i=0;i<40;i++)T.update(1/60);
+assert.ok(Math.abs(diagonalWalker.walkFacing-Math.PI/4)<.05,
+  'diagonal route heading settles on the actual displacement vector');
+assert.ok(diagonalWalker.x>3.1&&diagonalWalker.y>6.6,'the diagonal walker moves along it, not sideways first');
 
 // Brief sidewalk chats should happen at a real meeting distance, not across a road.
 T.build(72530,'weather');

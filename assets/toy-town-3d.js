@@ -3107,6 +3107,7 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
   const limb=(p,r,len,col,x=0,y=0,z=0)=>THREE.CapsuleGeometry?
     object(p,geo('capsule',r,len),typeof col==='string'?mat(col,.72):col,x,y,z):cylinder(p,r,r,len+r*2,col,x,y,z);
   const CUTE=.6,HEAD_BIG=.94;
+  const SHOP_BAG_COLOURS=['#e9c46a','#e76f51','#8ab17d','#6fa8dc','#d4a5c9','#f4a261'];
   function person(ref){
     const g=new THREE.Group();
     const skin=ref.skin||'#dbab86',coat=ref.col||'#d6a3a0',trousers=ref.trousers||'#5e6f7c',shoes='#4f4741';
@@ -3168,6 +3169,10 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
     if(ref.backpack){const pack=box(g,.13,.15,.07,ref.backpack,0,.27,-.085);pack.castShadow=false;box(g,.1,.04,.02,tint(ref.backpack,'#ffffff',.3),0,.23,-.122,false);}
     if(ref.briefcase){const brief=new THREE.Group();brief.position.set(0,-.08,0);hands[0].add(brief);box(brief,.13,.095,.04,'#5b4636',0,-.03,0);
       const handle=object(brief,geo('torus',.022,.006),mat('#3d2f25'),0,.025,0);handle.scale.set(1,.8,.5);}
+    if(!ref.kind&&!ref.shopRole&&!ref.heroResident&&!ref.routine){
+      // A paper shopping bag in the right hand: only drawn once the resident has been to a shop (ref.shopBag = colour index).
+      const sb=box(hands[1],.085,.115,.055,'#e9c46a',0,-.075,0);sb.visible=false;sb.castShadow=false;g.userData.shopBag=sb;
+    }
     if(ref.bag&&ref.kind!=='farmer'&&ref.kind!=='keeper'){
       // This handbag is actually gripped and follows the left wrist.
       const bag=new THREE.Group();bag.position.set(-.003,-.072,-.023);
@@ -4890,6 +4895,12 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
         // On the arch a car or bike tips up the slope and down the other side (it points along local +X).
         if(item.kind==='car'||item.kind==='bike'){g.rotation.order='YXZ';g.rotation.z=Math.atan(archSlope(desiredX,desiredZ)*-Math.sin(travelFacing));}}
       const limbs=g.userData.limbs;
+      const shopBag=g.userData.shopBag;
+      if(shopBag){
+        const on=ref.shopBag>=0;
+        if(shopBag.visible!==on)shopBag.visible=on;
+        if(on&&shopBag.userData.bagColour!==ref.shopBag){shopBag.material=mat(SHOP_BAG_COLOURS[ref.shopBag%SHOP_BAG_COLOURS.length],.85);shopBag.userData.bagColour=ref.shopBag;}
+      }
       if(limbs){
         // Distance owns the footstep clock. Time only smooths transitions and
         // breathing, so a stopped person never runs in place or foot-slides.
@@ -4989,8 +5000,8 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
           const speech=dominant?state.speak:state.chat*.17;
           const inspect=dominant?state.observe:0;
           const wave=dominant?state.greet:0;
-          const carrying=k===0&&(ref.bag||ref.kind==='farmer'||
-            ref.kind==='keeper');
+          const carrying=(k===0&&(ref.bag||ref.kind==='farmer'||
+            ref.kind==='keeper'))||(k===1&&ref.shopBag>=0);
           const trading=dominant?state.serve:state.serve*.18;
           const receiving=dominant?state.receive:state.receive*.12;
           const using=dominant?state.enjoy:state.enjoy*.48;

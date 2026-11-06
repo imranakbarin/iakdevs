@@ -210,6 +210,11 @@ assert.match(view, /const d = \.9 \+ bump \* \.12/, 'tree canopies are smooth an
 assert.match(view, /const BIKE_SCALE=\.42;\s*const VEHICLE_SCALE=\.8;/, 'bicycles and the toy cars are tiny');
 assert.match(view, /g\.scale\.setScalar\(VEHICLE_SCALE\)/, 'every car, bus and van is drawn at the vehicle scale');
 assert.match(sim, /const BODY_HALF = \{bus: \[\.28, \.108\], fire: \[\.24, \.10\], bike: \[\.14, \.05\]\};/, 'and the simulation bodies are sized to match');
+assert.match(view, /SHOP_BAG_COLOURS=\[/); assert.match(view, /g\.userData\.shopBag=sb/, 'residents carry a paper shopping bag once they have been to a shop');
+assert.match(sim, /function walkerMustWait\(m,nx,ny\)/, 'scripted walkers wait for the walk signal');
+assert.match(sim, /function emergencyNear\(m\)/, 'traffic makes way for a siren');
+assert.match(sim, /const ROUTE_OUT = \[/, 'the bus follows a long closed route');
+assert.match(sim, /if\(angle>1\.75&&dist>\.18\)/, 'only a sharp turn stops to pivot');
 assert.match(sim, /function atRoadEnd\(m\)/, 'cars turn at the last junction centre instead of before it');
 assert.match(sim, /function walkerBlocked\(m,nx,ny\)/, 'walkers do not step into a car body');
 assert.match(sim, /function personInRoad\(o\)/, 'cars stop for a walker in the carriageway');
