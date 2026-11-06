@@ -12,7 +12,7 @@ const html = fs.readFileSync(path.join(root, 'toy-town.html'), 'utf8'), view = f
 assert.match(html, /<button id="card-min"[^>]*aria-label="Minimise news"/, 'the card has a minimise button');
 const script = html.match(/<script>\n\/\/ The news card can be minimised[\s\S]*?<\/script>/)[0].replace(/<\/?script>/g, '');
 const run = (width, stored) => {
-  const store = stored === undefined ? {} : {'toy-town:card-min': stored}, handlers = {};
+  const store = stored === undefined ? {} : {'toy-town:card-min2': stored}, handlers = {};
   const el = () => ({cls: new Set(), attrs: {}, classList: {toggle(c, on) { on ? this.s.add(c) : this.s.delete(c); }, contains(c) { return this.s.has(c); }}, setAttribute(k, v) { this.attrs[k] = v; }, addEventListener(n, f) { this.on = this.on || {}; this.on[n] = f; }});
   const card = el(), btn = el(); card.classList.s = new Set(); btn.classList.s = new Set();
   vm.runInNewContext(script, {innerWidth: width, document: {getElementById: id => id === 'card' ? card : btn}, localStorage: {getItem: k => k in store ? store[k] : null, setItem: (k, v) => { store[k] = v; }}});
@@ -20,10 +20,11 @@ const run = (width, stored) => {
 };
 let t = run(390); assert.ok(t.card.classList.contains('min'), 'a phone starts with the card minimised');
 assert.equal(t.btn.textContent, '+'); assert.equal(t.btn.attrs['aria-expanded'], 'false');
-t.btn.on.click({stopPropagation() {}}); assert.ok(!t.card.classList.contains('min'), '+ opens it'); assert.equal(t.store['toy-town:card-min'], '0', 'and remembers');
+t.btn.on.click({stopPropagation() {}}); assert.ok(!t.card.classList.contains('min'), '+ opens it'); assert.equal(t.store['toy-town:card-min2'], '0', 'and remembers');
 t.btn.on.click({stopPropagation() {}}); assert.ok(t.card.classList.contains('min'), '− minimises it again');
-t = run(1280); assert.ok(!t.card.classList.contains('min'), 'a desktop starts with the card open');
-t = run(1280, '1'); assert.ok(t.card.classList.contains('min'), 'a remembered choice wins');
+t = run(1280); assert.ok(t.card.classList.contains('min'), 'the news starts as a small pill on a desktop too, out of the way');
+assert.match(html, /Light news chrome: small, translucent and out of the way/, 'the news card, ticker and bubbles are light and small');
+t = run(1280, '0'); assert.ok(!t.card.classList.contains('min'), 'a remembered choice to keep it open wins'); t = run(1280, '1'); assert.ok(t.card.classList.contains('min'));
 t.card.on.click(); assert.ok(!t.card.classList.contains('min'), 'tapping the pill opens the card');
 
 // The 3D additions.

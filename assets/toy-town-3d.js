@@ -2655,7 +2655,7 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
   function ensureFollowCard(){
     if(typeof document!=='undefined'&&!followCard){
       followCard=document.createElement('div');followCard.className='follow-card';
-      followCard.style.cssText='position:fixed;left:14px;bottom:calc(52px + env(safe-area-inset-bottom,0px));z-index:4;display:flex;gap:10px;align-items:center;max-width:min(320px,calc(100vw - 28px));padding:9px 10px 9px 14px;border-radius:14px;background:rgba(255,253,245,.95);box-shadow:0 6px 20px rgba(30,50,70,.18);font:500 13px/1.35 Nunito,system-ui,sans-serif;color:#2d3440';
+      followCard.style.cssText='position:fixed;left:14px;bottom:calc(52px + env(safe-area-inset-bottom,0px));z-index:4;display:flex;gap:10px;align-items:center;max-width:min(280px,calc(100vw - 28px));padding:6px 8px 6px 12px;border-radius:14px;background:rgba(255,253,245,.7);box-shadow:0 2px 10px rgba(30,50,70,.08);font:400 12px/1.35 Nunito,system-ui,sans-serif;color:#3d4552';
       const text=document.createElement('div');text.className='follow-text';
       const stop=document.createElement('button');stop.type='button';stop.textContent='✕';stop.setAttribute('aria-label','Stop following');
       stop.style.cssText='border:0;border-radius:9px;width:28px;height:28px;background:rgba(45,52,64,.08);color:#2d3440;font:600 14px Nunito,system-ui;cursor:pointer';
@@ -2677,10 +2677,10 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
     offered=Object.assign(m,{offeredAt:now});momentStats.offered++;
     if(!momentChip){
       momentChip=document.createElement('div');momentChip.className='moment-chip';momentChip.setAttribute('role','status');
-      momentChip.style.cssText='position:fixed;left:50%;transform:translateX(-50%);bottom:calc(24px + env(safe-area-inset-bottom,0px));z-index:4;display:flex;gap:8px;align-items:center;max-width:calc(100vw - 28px);padding:5px 5px 5px 12px;border-radius:999px;background:rgba(255,253,245,.88);box-shadow:0 3px 12px rgba(30,50,70,.10);font:500 13px/1.3 Nunito,system-ui,sans-serif;color:#2d3440;transition:opacity .4s';
+      momentChip.style.cssText='position:fixed;left:50%;transform:translateX(-50%);bottom:calc(40px + env(safe-area-inset-bottom,0px));z-index:4;display:flex;gap:8px;align-items:center;max-width:calc(100vw - 28px);padding:3px 4px 3px 11px;border-radius:999px;background:rgba(255,253,245,.66);box-shadow:none;font:400 12px/1.3 Nunito,system-ui,sans-serif;color:#4a5260;transition:opacity .4s';
       const text=document.createElement('span');text.className='moment-text';
       const go=document.createElement('button');go.type='button';go.textContent='Watch';
-      go.style.cssText='border:0;border-radius:999px;padding:6px 13px;background:#235d61;color:#fff;font:600 12.5px Nunito,system-ui;cursor:pointer';
+      go.style.cssText='border:1px solid rgba(63,102,106,.3);border-radius:999px;padding:3px 10px;background:transparent;color:#3f666a;font:500 11.5px Nunito,system-ui;cursor:pointer';
       go.onclick=()=>{if(offered)watchMoment(offered);};
       momentChip.append(text,go);document.body.appendChild(momentChip);
     }
@@ -2860,10 +2860,10 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
   function showCrierBubble(group,text,ms,credit){
     if(typeof document==='undefined')return;
     if(!crierBubble){crierBubble=document.createElement('div');crierBubble.className='resident-bubble';
-      crierBubble.style.cssText='position:absolute;transform:translate(-50%,-100%);width:max-content;max-width:min(320px,84vw);padding:7px 13px;border-radius:16px;background:#fff6dc;border:2px solid #e2b24f;color:#3d4552;font:700 13px/1.3 Nunito,system-ui,sans-serif;box-shadow:0 6px 18px rgba(30,50,70,.2);pointer-events:none;transition:opacity .3s;z-index:4;opacity:0';
+      crierBubble.style.cssText='position:absolute;transform:translate(-50%,-100%);width:max-content;max-width:min(230px,66vw);padding:4px 10px;border-radius:12px;background:rgba(255,249,232,.82);border:1px solid rgba(226,178,79,.32);color:#4a5260;font:400 11.5px/1.3 Nunito,system-ui,sans-serif;box-shadow:0 2px 8px rgba(30,50,70,.08);pointer-events:none;transition:opacity .4s;z-index:4;opacity:0';
       host.appendChild(crierBubble);}
     crierBubble.textContent=text;
-    if(credit){const c=document.createElement('div');c.textContent=credit;c.style.cssText='font:500 10px/1.2 Nunito,system-ui;color:#8a7440;margin-top:3px';crierBubble.appendChild(c);}
+    if(credit){const c=document.createElement('div');c.textContent=credit;c.style.cssText='font:400 9.5px/1.2 Nunito,system-ui;color:#9a8a60;margin-top:2px';crierBubble.appendChild(c);}
     crierBubble.userData={item:{group},until:clockMs()+ms};crierBubble.style.opacity='1';
   }
   function showBubble(group,text,ms,credit){
@@ -4479,12 +4479,12 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
   function paintNewsBoard(b,item){
     const c=b.ctx,W=b.cv.width,H=b.cv.height;if(!c||!c.fillRect)return;
     c.fillStyle='#fff8e7';c.fillRect(0,0,W,H);
-    c.fillStyle='#c4473a';c.fillRect(0,0,W,Math.round(H*.2));
-    c.fillStyle='#fff8e7';c.font='700 '+Math.round(H*.13)+'px Nunito,system-ui,sans-serif';c.textBaseline='middle';c.fillText('TOWN TIMES',W*.05,H*.1);
+    c.fillStyle='#dba295';c.fillRect(0,0,W,Math.round(H*.17));
+    c.fillStyle='#fffaf0';c.font='500 '+Math.round(H*.1)+'px Nunito,system-ui,sans-serif';c.textBaseline='middle';c.fillText('TOWN TIMES',W*.05,H*.085);
     if(item){
-      c.fillStyle='#3a3f4a';c.font='700 '+Math.round(H*.12)+'px Nunito,system-ui,sans-serif';c.textBaseline='top';
-      const lines=wrapLines(c,item.title,W*.9,4);lines.forEach((l,i)=>c.fillText(l,W*.05,H*.25+i*H*.15));
-      c.fillStyle='#8a8f99';c.font='600 '+Math.round(H*.075)+'px Nunito,system-ui,sans-serif';c.fillText((item.emoji||'')+'  '+(item.source||''),W*.05,H*.89);
+      c.fillStyle='#4a5260';c.font='500 '+Math.round(H*.105)+'px Nunito,system-ui,sans-serif';c.textBaseline='top';
+      const lines=wrapLines(c,item.title,W*.9,4);lines.forEach((l,i)=>c.fillText(l,W*.05,H*.23+i*H*.14));
+      c.fillStyle='#9a9fa8';c.font='400 '+Math.round(H*.07)+'px Nunito,system-ui,sans-serif';c.fillText((item.emoji||'')+'  '+(item.source||''),W*.05,H*.9);
     }else{
       c.fillStyle='#8a8f99';c.font='600 '+Math.round(H*.1)+'px Nunito,system-ui,sans-serif';c.textBaseline='top';c.fillText('A quiet news day.',W*.05,H*.35);
     }
@@ -4513,8 +4513,8 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
     g.add(crier);crier.position.set(C.x,CENTRE_TOP+.12,C.z);crier.rotation.y=Math.PI/2;
     const hand=crier.userData.limbs.hands?.[1];
     if(hand){const bell=cylinder(hand,.004,.03,.06,'#e6b94a',0,-.07,0);bell.castShadow=false;}
-    cylinder(g,.014,.014,.8,'#8a6d4e',C.x-.06,CENTRE_TOP+.4,C.z-.68);cylinder(g,.014,.014,.8,'#8a6d4e',C.x+.9,CENTRE_TOP+.4,C.z-.68);
-    const chalk=newsBoard(1.0,.68,C.x+.42,CENTRE_TOP+.78,C.z-.66,0,[640,435]);
+    cylinder(g,.011,.011,.62,'#8a6d4e',C.x+.03,CENTRE_TOP+.31,C.z-.68);cylinder(g,.011,.011,.62,'#8a6d4e',C.x+.73,CENTRE_TOP+.31,C.z-.68);
+    const chalk=newsBoard(.74,.5,C.x+.38,CENTRE_TOP+.66,C.z-.66,0,[640,435]);
     news7.crier={g:crier,C,chalk,crate,ring:0,hand};
     // listeners: they walk in from the plaza and stand round the crier
     const cols=['#7fb3d9','#f2c36b','#9ccf9a','#c39be0','#f0a574','#e58f8f'];
@@ -4564,7 +4564,7 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
     const R=news7.reading;
     if(R){
       R.t+=dt;
-      if(R.t>2.4&&!R.said){R.said=true;showCrierBubble(C.g,R.item.emoji+' '+R.item.title,9500,R.item.source?'Read out by the town crier · '+R.item.source:'Read out by the town crier');}
+      if(R.t>2.4&&!R.said){R.said=true;showCrierBubble(C.g,R.item.emoji+' '+(R.item.title.length>64?R.item.title.slice(0,62).replace(/\s\S*$/,'')+'…':R.item.title),6500,R.item.source?'Town crier · '+R.item.source:'Town crier');}
       if(R.t>11.5&&!R.leaving){R.leaving=true;news7.listeners.forEach(q=>{q.state='out';});}
       if(R.t>15){news7.reading=null;for(const q of news7.listeners){q.p.visible=false;q.state='away';q.x=q.home.x;q.z=q.home.z;}}
     }
