@@ -215,6 +215,10 @@ assert.match(sim, /function walkerMustWait\(m,nx,ny\)/, 'scripted walkers wait f
 assert.match(sim, /function emergencyNear\(m\)/, 'traffic makes way for a siren');
 assert.match(sim, /const ROUTE_OUT = \[/, 'the bus follows a long closed route');
 assert.match(sim, /if\(angle>1\.75&&dist>\.18\)/, 'only a sharp turn stops to pivot');
+assert.match(view, /const kindOfDuck=i%3/, 'ducks come in three plumages and are small'); assert.match(view, /duck\.scale\.setScalar\(\.4\+\(i%3\)\*\.03\)/);
+assert.match(view, /TOWER_SQUASH=\.74/, 'the apartment towers are lower');
+assert.match(view, /A slim jet that arches into the pool/, 'the park fountain has a jet, not an egg'); assert.doesNotMatch(view, /d6f4f2/);
+assert.match(view, /bus3\.strips=\{soil:/, 'the bare strips beside the railway have allotments, an orchard, beds and a hedge');
 assert.match(sim, /function atRoadEnd\(m\)/, 'cars turn at the last junction centre instead of before it');
 assert.match(sim, /function walkerBlocked\(m,nx,ny\)/, 'walkers do not step into a car body');
 assert.match(sim, /function personInRoad\(o\)/, 'cars stop for a walker in the carriageway');

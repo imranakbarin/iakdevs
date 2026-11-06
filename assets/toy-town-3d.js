@@ -4366,21 +4366,21 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
       const soil=[],crops=[],trunks=[],crowns=[],fruit=[],hay=[],hedge=[],blooms=[];
       const cropCols=['#6fae5a','#8bbf5c','#5f9d56','#a3c964'],fruitCols=['#e2543f','#f3b13a','#d9686a'];
       const strips=[{z0:17.42,z1:18.18,skip:[8.9,3.1],hedgeZ:17.3,tag:1},{z0:-.28,z1:.66,skip:[9,2.4],hedgeZ:.82,tag:2}];
-      const free=(x,z)=>!ps.some(q=>Math.hypot(q.x-x,q.y-z)<.5)&&!bs.some(q=>Math.hypot(q.x+.5-x,q.y+.5-z)<.9);
+      const free=(x,z)=>!ps.some(q=>Math.hypot(q.x-x,q.y-z)<.42)&&!bs.some(q=>Math.hypot(q.x+.5-x,q.y+.5-z)<.9);
       for(const st of strips){
-        for(let x=1.05,k=0;x<17;x+=.62,k++){
+        for(let x=1.05,k=0;x<17;x+=.5,k++){
           const key=k*7+st.tag*131+(worldSeed||0)%53;
           if(Math.abs(x-st.skip[0])<st.skip[1])continue;
-          const z=st.z0+(st.z1-st.z0)*(.35+rng(key,401)*.3),cx=x+(rng(key,402)-.5)*.1,t=rng(key,403);
+          const z=st.z0+(st.z1-st.z0)*(.25+rng(key,401)*.5),cx=x+(rng(key,402)-.5)*.1,t=rng(key,403);
           if(!free(cx,z))continue;
-          if(t<.42){   // an allotment plot: dark soil with three rows of crops
+          if(t<.5){   // an allotment plot: dark soil with three rows of crops
             soil.push({x:cx,y:base+.012,z,r:0,sx:.46,sy:.026,sz:.34,c:'#8c6b4d'});
             for(let row=-1;row<=1;row++)for(let c=-1;c<=1;c++)crops.push({x:cx+c*.13,y:base+.045,z:z+row*.1,sx:1,sy:.8+rng(key+row*3+c,404)*.5,sz:1,c:cropCols[(key+row+c+9)%4]});
-          }else if(t<.66){   // an orchard tree with a little fruit
+          }else if(t<.72){   // an orchard tree with a little fruit
             trunks.push({x:cx,y:base+.09,z,sx:1,sy:1,sz:1,c:'#8a6a4c'});
             crowns.push({x:cx,y:base+.24,z,sx:1.05+rng(key,405)*.3,sy:.95,sz:1.05,c:['#78b45e','#6aa956','#8cc064'][k%3]});
             for(let f=0;f<4;f++){const a=f*1.57+rng(key,406+f)*1.2;fruit.push({x:cx+Math.cos(a)*.11,y:base+.22+rng(key,410+f)*.07,z:z+Math.sin(a)*.11,c:fruitCols[(k+f)%3]});}
-          }else if(t<.86){   // a flower bed
+          }else if(t<.92){   // a flower bed
             soil.push({x:cx,y:base+.012,z,r:0,sx:.4,sy:.026,sz:.24,c:'#7a5c40'});
             for(let f=0;f<7;f++)blooms.push({x:cx+(f%4-1.5)*.095,y:base+.06,z:z+(f<4?-.05:.06),sx:1,sy:.9,sz:1,c:SEASON.flowers[(k+f)%SEASON.flowers.length]});
           }else hay.push({x:cx,y:base+.055,z,sx:1,sy:1,sz:1,c:'#e3c47a'});
