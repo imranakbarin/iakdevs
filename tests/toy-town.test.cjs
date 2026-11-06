@@ -5,7 +5,8 @@
 const fs = require('node:fs'), path = require('node:path'), vm = require('node:vm'), assert = require('node:assert/strict');
 const root = path.join(__dirname, '..'), html = fs.readFileSync(path.join(root, 'index.html'), 'utf8');
 // The simulation uses Math.random; a fixed seed keeps the traffic and people checks reproducible (TT_SEED overrides it to hunt for flakes).
-{ let a = (+process.env.TT_SEED || 20261104) >>> 0; Math.random = () => { a = (a + 0x6D2B79F5) >>> 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+function seedScenarioRandom() { let a = (+process.env.TT_SEED || 20261104) >>> 0; Math.random = () => { a = (a + 0x6D2B79F5) >>> 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+seedScenarioRandom();
 const dioramaSource = fs.readFileSync(path.join(root, 'assets/toy-town-diorama.js'), 'utf8');
 assert.match(dioramaSource, /function building\(/, 'new architectural renderer exists');
 assert.match(dioramaSource, /function tree\(/, 'new organic tree renderer exists');
@@ -690,6 +691,10 @@ assert.ok(!leftWalker.briefChatUntil&&!rightWalker.briefChatUntil,
   'walkers on opposite pavements do not talk across moving cars');
 
 // A calm town: gentle moments run to their end, and traffic waits at red lights instead of piling into the crossings.
+// Isolate this stochastic traffic fixture from random draws made by earlier
+// scenario tests (e.g. the number of trips to a repositioned shop). Keep the
+// existing default seed, TT_SEED override, duration and collision threshold.
+seedScenarioRandom();
 T.build(31337, 'weather'); T.setToday([]);
 for (const name of T.CALM) T.startEvent(name);
 let clashes = 0, samples = 0;

@@ -337,6 +337,8 @@ async function main(){
       if(job.name==='mobile-3d-close'){
         // Image can be recovered without binary artifact download permissions.
         console.log('TOY_CITY_JPEG_BEGIN '+image.toString('base64')+' TOY_CITY_JPEG_END');
+      }else if(job.square){
+        console.log('TOY_CITY_SQUARE_JPEG_BEGIN '+image.toString('base64')+' TOY_CITY_SQUARE_JPEG_END');
       }else if(job.name==='desktop-3d-wide'){
         console.log('TOY_CITY_WIDE_JPEG_BEGIN '+image.toString('base64')+' TOY_CITY_WIDE_JPEG_END');
       }else if(job.name==='desktop-social-life'){

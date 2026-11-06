@@ -38,6 +38,19 @@ A `START` does not prohibit parallel edits. Avoid stepping on each other's uncom
 
 ## Exchange log (newest first)
 
+### PARTIAL — ChatGPT — 2026-11-06 — isolate the traffic fixture, keep its threshold
+- The failing traffic check consumed the global PRNG left by every earlier scenario. The layout/service route changes alter trip counts and therefore subsequent random draws, making the traffic fixture depend on unrelated preceding tests.
+- Compared baseline `4e1a3a9` and this rework with the existing default seed 20261104 reset immediately before the same 120-second fixture: baseline 0 / 240, rework 20 / 240 near-miss samples, both under the unchanged 10% threshold. These are proximity samples, not a claim of zero vehicle overlap. Traffic logic remains unchanged.
+- `tests/toy-town.test.cjs`: extracted the existing deterministic generator into `seedScenarioRandom()`; reset it before the crossing fixture. Preserved the default seed, `TT_SEED` override, duration, traffic/events, and 10% assertion. No retry or relaxed assertion.
+- `tests/toy-town-visual.cjs`: include the dedicated open-square JPEG in logs so the exact rendered frame can be inspected even if binary artifact access is unavailable. Rerun full CI before merge.
+
+
+### START — ChatGPT — 2026-11-06 — publication authorized, investigate traffic CI
+- Owner explicitly approved pushing and the prior deployment plan. Published branch through the GitHub connector (shell has no credentials): START `d4844e2`, code `7f1148a`; draft PR #199.
+- CI run `42280226426` failed the crossing near-miss test: 34 samples / 240 exceeds the unchanged 10% threshold. Other earlier simulation assertions passed; screenshots were skipped. Investigate isolated baseline/current scenarios and random-state coupling before changing any source; do not weaken the threshold or merge failing code.
+- Expected files if needed: focused simulation test, current log, and any proven square-path defect. Preserve existing traffic protections and Claude's junction fix.
+
+
 ### PARTIAL — ChatGPT — 2026-11-06 — open city square implemented locally, publication blocked
 - Branch: `feat/city-centre-open-square`; base `4e1a3a9`; START committed as `f738580` before implementation. Latest remote master re-fetched and remains `4e1a3a9`.
 - Replaced layered central decoration with warm stone paving and subtle flush joints, one low fountain with a connected animated jet, two slim single lanterns, three low perimeter planters, one west-edge bench and one smaller cream cafe umbrella/table set. Retired duplicate hero furniture, the floral medallion and coloured frames. Working service windows now meet the actual north shop facades; the simulation vendors, customer approaches and seating agree with their new positions. Moved news readings and a smaller audience into the east recess. Claude's headline programme, sports kit and junction fix retained.
