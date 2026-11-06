@@ -108,6 +108,8 @@ People no longer walk on the river: every walking leg (events, gatherings, whims
 
 **Smoother, more social streets.** Residents take ordinary corners on the move and only pivot to turn right round; scripted walkers wait at the kerb for the walk signal; traffic eases to the kerb for the fire truck's siren and cars ahead of it pull in and stop; the bus runs a long closed route over both bridges and round the ring roads, calling at all eight stops; residents sometimes visit a shopfront and carry a paper bag for a while.
 
+**Small ducks and filled-in corners.** The river ducks are small, rounded and come in three plumages (yellow, mallard, white). The apartment towers are lower so nothing dwarfs the city centre, the park fountain has a real jet, and the lawn strips beside the railway have allotment plots, an orchard, flower beds, hay bales and a hedge.
+
 ## Deep links
 
 `#<style>-<seed>` opens a style at a seed, e.g. `#gond-12345`, `#warli-7`. Prefix `painting-` for the painted panorama (`#painting-kangra-3`). `#zen-…`, `#road-…` and `#cozy-…` open the other modes; `#today` (or no hash) opens the home screen. Seeds vary the starting layout; they do not regenerate painted panoramas. Editing the hash in an open tab loads that world.
