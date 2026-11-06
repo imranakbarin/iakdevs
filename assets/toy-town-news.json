@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generated_at": "2026-11-06T17:32:28.127Z",
+  "generated_at": "2026-11-06T23:14:29.378Z",
   "status": "ok",
   "successful_sources": [
     "BBC News",
@@ -17,12 +17,12 @@
   ],
   "stories": [
     {
-      "title": "Man Spends 12 Days Returning Lost Cash a Laborer Needed for His Daughter",
-      "url": "https://www.goodnewsnetwork.org/man-spends-12-days-returning-lost-cash-a-laborer-needed-for-his-daughter/",
+      "title": "People Around the World Help Buy Royal Estate for Wildlife Conservation",
+      "url": "https://www.goodnewsnetwork.org/people-around-the-world-help-buy-royal-estate-for-wildlife-conservation/",
       "source": "Good News Network",
       "category": "Good news",
       "tone": "light",
-      "published_at": "2026-11-06T16:30:31.000Z"
+      "published_at": "2026-11-06T21:16:55.000Z"
     },
     {
       "title": "A really simple guide to climate change",
@@ -41,23 +41,23 @@
       "published_at": "2026-11-06T16:49:31.000Z"
     },
     {
-      "title": "James out for minimum of five games - Bompastor",
-      "url": "https://www.bbc.co.uk/sport/football/articles/crq5nnqn84zyo?at_medium=RSS&at_campaign=rss",
+      "title": "Whole Australia team knew of sandpaper use - Khawaja",
+      "url": "https://www.bbc.co.uk/sport/cricket/articles/cjdx33kyzk3lo?at_medium=RSS&at_campaign=rss",
       "source": "BBC Sport",
       "category": "Sport",
       "tone": "light",
-      "published_at": "2026-11-06T16:44:44.000Z"
+      "published_at": "2026-11-06T23:11:56.000Z"
     },
     {
-      "title": "AI stocks climb after trillions wiped from market values",
-      "url": "https://www.bbc.co.uk/news/articles/c35ynnpzdq51o?at_medium=RSS&at_campaign=rss",
+      "title": "Elon Musk appears to signal the end of the road for Cybertruck",
+      "url": "https://www.bbc.co.uk/news/articles/cq1j33w7d232o?at_medium=RSS&at_campaign=rss",
       "source": "BBC Technology",
       "category": "Technology",
       "tone": "light",
-      "published_at": "2026-11-06T17:03:02.000Z"
+      "published_at": "2026-11-06T21:49:50.000Z"
     },
     {
-      "title": "Foodbank to close after 16 years amid rising costs",
+      "title": "Food bank to close amid rising costs",
       "url": "https://www.bbc.co.uk/news/articles/cqrkyyj6rx7ro?at_medium=RSS&at_campaign=rss",
       "source": "BBC Business",
       "category": "Business",
@@ -65,12 +65,12 @@
       "published_at": "2026-11-06T16:42:23.000Z"
     },
     {
-      "title": "Dozens of Democrats eyeing 2028 presidential run, says former Obama aide",
-      "url": "https://www.bbc.co.uk/news/articles/cx8dzzy8n713o?at_medium=RSS&at_campaign=rss",
+      "title": "Nigerian court rules opposition candidate cannot stand in elections",
+      "url": "https://www.bbc.co.uk/news/articles/cw8rzzx46jd5o?at_medium=RSS&at_campaign=rss",
       "source": "BBC News",
       "category": "World",
       "tone": "light",
-      "published_at": "2026-11-06T16:51:01.000Z"
+      "published_at": "2026-11-06T17:35:55.000Z"
     },
     {
       "title": "What went right this week: the good news that matters",
