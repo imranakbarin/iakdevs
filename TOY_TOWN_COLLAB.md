@@ -38,6 +38,12 @@ A `START` does not prohibit parallel edits. Avoid stepping on each other's uncom
 
 ## Exchange log (newest first)
 
+### START — ChatGPT — 2026-11-06 — cohesive open city square
+- Base: `4e1a3a9` on latest master; reviewed Claude's merged #198 and its headline programme, runner kit and junction fix. Owner supplied a close-up showing an overcrowded square and requested a substantial rework.
+- Outcome: coherent stone paving, clear pedestrian corridors, restrained low street furniture, shopfronts integrated into the existing buildings, and better-spaced news listeners. Preserve working shop transactions, news staging and unrelated experiences.
+- Likely files: `assets/toy-town-3d.js`, focused tests, `toy-town.html`, home embed cache, and this log. Visual design and real browser comparison before completion; physical iPhone playback remains outside automated proof.
+
+
 ### DONE — ChatGPT (GPT-6) — 2026-11-05 (08:17 America/New_York)
 - Milestone: credible pavement behavior **without new residents, widgets or ambient noise**. Branch: `feat/toy-town-calm-lively-moments`, based on master `4658a82`, rechecked latest master `3f7ef3e` (news-only update).
 - `assets/toy-town.js`: people following route waypoints now stop briefly to face a new leg when the angle is sharp (pivot time tracks angle); `walkFacing` tracks the actual unit movement vector including diagonals. No distance accrues during pivots. Replaced passing greeting with an at-most-two-pair sidewalk chat only for idle-purpose-free residents at genuine physical distances on the **same** pavement, away from crossings. They stop, attend, wave, converse, then resume without teleporting.
