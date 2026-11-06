@@ -1458,15 +1458,22 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
     }
     else if(k==='flowers')littleFlowers(p.x,p.y,i);
     else if(k==='duck') {
-      // The 2D simulation already supplies accurate water coordinates.
-      const duck=new THREE.Group();duck.position.set(p.x,.21,p.y);duck.scale.setScalar(.68);world.add(duck);
-      const body=ball(duck,.11,'#f9d767',0,0,0);body.scale.set(1.25,.70,.93);
-      ball(duck,.065,'#fff0ad',.095,.07,0);
-      box(duck,.065,.025,.055,'#ed9d61',.16,.055,.02);
+      // The 2D simulation already supplies accurate water coordinates. Small, rounded river ducks in three plumages
+      // (yellow, mallard with a green head and white collar, white) with a neck, an upturned tail, a bill and eyes.
+      const duck=new THREE.Group();duck.position.set(p.x,.21,p.y);duck.scale.setScalar(.4+(i%3)*.03);world.add(duck);
+      const kindOfDuck=i%3,bodyCol=['#f9d767','#b49272','#fffaf0'][kindOfDuck],headCol=['#fbe083','#2f8a63','#fffaf0'][kindOfDuck];
+      const wingCol=['#e9c76b','#8d6e52','#f0e8d8'][kindOfDuck];
+      const body=ball(duck,.11,bodyCol,0,0,0);body.scale.set(1.3,.72,.95);
+      const tail=ball(duck,.05,wingCol,-.145,.05,0);tail.scale.set(1.2,.7,.8);tail.rotation.z=.5;
+      ball(duck,.062,bodyCol,.075,.045,0).scale.set(1,1.1,.9);            // chest and neck
+      ball(duck,.058,headCol,.108,.125,0);                                  // head
+      if(kindOfDuck===1)box(duck,.012,.03,.1,'#fffaf0',.082,.08,0,false);  // the mallard's white collar
+      box(duck,.055,.02,.045,'#f2a03d',.17,.112,0,false);                  // bill
+      for(const side of [-1,1])ball(duck,.011,'#2b2b2b',.13,.14,side*.038).castShadow=false;
       const wings=[];
       for(const side of [-1,1]){
-        const wing=new THREE.Group();wing.position.set(-.028,.034,side*.076);
-        const plumage=ball(wing,.069,'#e9c76b',-.025,0,side*.013);
+        const wing=new THREE.Group();wing.position.set(-.028,.034,side*.078);
+        const plumage=ball(wing,.069,wingCol,-.025,0,side*.013);
         plumage.scale.set(1.05,.45,.65);duck.add(wing);wings.push(wing);
       }
       duck.userData.duckWings=wings;
