@@ -12,7 +12,7 @@ assert.match(dioramaSource, /function tree\(/, 'new organic tree renderer exists
 assert.match(dioramaSource, /function gable\(/, 'real pitched roof renderer exists');
 assert.match(dioramaSource, /function glazing\(/, 'framed glazing renderer exists');
 assert.match(html, /<option value="town">Toy Town<\/option>/, 'Toy Town is in the menu');
-assert.match(html, /return 'toy-town\.html\?v=92&embed=1'\+keep\+\(bar\.hidden\?'&clean=1':''\);/, 'and opens its current embedded page');
+assert.match(html, /return 'toy-town\.html\?v=93&embed=1'\+keep\+\(bar\.hidden\?'&clean=1':''\);/, 'and opens its current embedded page');
 assert.match(html, /townFrame\.src=townSrc\(\);/, 'with this page\'s weather and fps settings passed through');
 assert.match(fs.readFileSync(path.join(root, 'toy-town.html'), 'utf8'), /assets\/toy-town\.js\?v=\d+/);
 const box = vm.createContext({Math, Object, Array, JSON, Date, String, Number, RegExp, setTimeout: () => 0, document: {getElementById: () => ({textContent: ''})}});
@@ -258,6 +258,17 @@ assert.equal(following.braking,true,
   assert.ok(T.debug().whims.shop>=1&&bagged>=1,'residents go shopping and carry a bag for a while ('+T.debug().whims.shop+' trips)');
 }
 
+// The town knows today's light headlines (for the crier and the billboards) and never stages serious ones.
+{
+  T.setNews([{title:'A giant panda cub is born at the city zoo',source:'BBC News',tone:'light'},{title:'Team wins the cup final after dramatic penalties',source:'BBC Sport'},{title:'Missiles hit the capital as the war enters a new week',source:'DW'}]);
+  const N=T.news();
+  assert.equal(N.light.length,2,'two light headlines are kept for the town');
+  assert.equal(N.heavy,1,'the serious one is counted, not staged');
+  assert.ok(N.light.every(i=>i.title&&i.emoji&&i.source),'each has text, a topic emoji and its source');
+  assert.equal(N.light[0].emoji,'🐼','a panda story gets the panda');
+  assert.equal(N.light[1].emoji,'⚽','and a cup final the ball');
+  assert.ok(N.version>=1,'the version changes with every feed');
+}
 // Outer neighborhoods are services with meaningful safe routes, not scenery.
 T.build(60624,'market');
 assert.equal(T.debug().districts.count,4,
@@ -569,8 +580,8 @@ const townPage = fs.readFileSync(path.join(root, 'toy-town.html'), 'utf8');
 for (const id of ['zoom-in', 'zoom-out', 'zoom-reset']) {
   assert.match(townPage, new RegExp('id="' + id + '"[^>]*aria-label="[^"]+"'), id + ' is accessible');
 }
-assert.match(townPage, /toy-town\.js\?v=46/, 'diorama engine is loaded');
-assert.match(townPage, /toy-town-news\.js\?v=1/, 'sourced news loads before the simulation');
+assert.match(townPage, /toy-town\.js\?v=47/, 'diorama engine is loaded');
+assert.match(townPage, /toy-town-news\.js\?v=2/, 'sourced news loads before the simulation');
 assert.match(townPage, /HEADLINES/, 'real reporting has a dedicated source panel');
 assert.match(townPage, /AROUND TOWN · FICTION/, 'fiction and real news are explicitly separated');
 assert.ok(townPage.indexOf('toy-town-news.js')<townPage.indexOf('toy-town.js'),

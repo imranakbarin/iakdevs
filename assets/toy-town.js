@@ -116,6 +116,32 @@ const ToyTown = (() => {
   // A story shortened to a headline the town can shout.
   const headline = story => { const t = String(story).split(/[;:]|, (?:and|while|after|as) /)[0]; return t.length > 70 ? t.slice(0, t.lastIndexOf(' ', 68)) + '…' : t; };
   function themeFromNews(stories) { return newsThemes(stories, 1)[0] || null; }
+  // What the town knows about today's news, for the 3D town to stage: the light headlines (shortened for the town crier
+  // and the Town Times billboard) with a topic emoji, and how many serious ones were left out. Heavy stories are never
+  // staged. Every light headline gets a topic: the theme variant if one matches, else a broader subject.
+  const TOPICS = [
+    ['⚽', ['football', 'soccer', 'cricket', 'tennis', 'rugby', 'golf', 'olympic', 'cup', 'league', 'match', 'win', 'wins', 'beat', 'beats', 'champion*', 'team', 'surrey', 'celtic']],
+    ['🚀', ['space', 'rocket', 'nasa', 'moon', 'mars', 'satellite', 'astronaut', 'engine', 'orbit', 'launch*']],
+    ['🤖', ['ai', 'robot', 'tech', 'software', 'chip', 'computer', 'app', 'phone', 'internet', 'digital']],
+    ['💼', ['firms', 'business', 'company', 'companies', 'jobs', 'job', 'salar*', 'economy', 'market', 'shares', 'profit', 'pay', 'trade', 'bank', 'price*']],
+    ['🗳️', ['election', 'vote', 'mayor', 'minister', 'president', 'parliament', 'law', 'council', 'government', 'pope']],
+    ['🎭', ['film', 'music', 'album', 'concert', 'art', 'museum', 'theatre', 'book', 'show', 'festival', 'star', 'award', 'prize']],
+    ['🔬', ['scientist*', 'discover*', 'research*', 'study', 'species', 'fossil', 'climate', 'energy', 'solar', 'wind', 'health', 'medical', 'cure', 'vaccine']],
+    ['🌍', ['world', 'global', 'international', 'summit', 'trip', 'visit', 'peace', 'talks', 'deal']]
+  ];
+  function topicOf(title) {
+    const v = VARIANTS.find(v => v.words.some(w => has(title, w.length <= 3 ? w : w + '*')));
+    if (v) return {emoji: v.emoji, label: v.title};
+    const t = TOPICS.find(([, words]) => words.some(w => has(title, w.endsWith('*') || w.length <= 3 ? w : w + '*')));
+    return {emoji: t ? t[0] : '📰', label: 'In the news'};
+  }
+  let newsFeed = {light: [], heavy: 0, version: 0};
+  function setNews(stories) {
+    const T = typeof window !== 'undefined' ? window.ToyTownNews : null;
+    const heavy = s => (s.tone || (T && T.tone ? T.tone(s.title) : GRIM.some(w => has(s.title, w)) ? 'heavy' : 'light')) === 'heavy';
+    const light = (stories || []).filter(s => !heavy(s)).slice(0, 6).map(s => ({title: s.title.length <= 96 ? s.title : headline(s.title), full: s.title, source: s.source || '', ...topicOf(s.title)}));
+    newsFeed = {light, heavy: (stories || []).filter(heavy).length, version: newsFeed.version + 1};
+  }
   // News is now a separate publisher-attributed, freshness-checked feed.
   // No Wikimedia one-shot feed, endless localStorage cache, or fabricated
   // breaking-news events when RSS updates fail.
@@ -2779,7 +2805,7 @@ const ToyTown = (() => {
       {weekday:'short',day:'numeric',month:'short'});
     document.getElementById('theme').textContent = `${lead.emoji} ${lead.title}`;
     document.getElementById('news').textContent = linkedToNews?
-      'A playful town scene inspired by a recent headline. Actual reporting is linked below.':
+      `A playful town scene staged from “${headline(lead.story)}”; the town crier reads the other light headlines out. Actual reporting is linked below.`:
       'Storybook city life · not a real news report.';
   }
   async function start() {
@@ -2796,6 +2822,7 @@ const ToyTown = (() => {
     // Factual headlines and whimsical city events have separate labels.
     const snapshot=!random&&service?await service.load():null;
     const liveStories=snapshot?.stories||[];
+    if(!random)setNews(liveStories);
     const matched=random?[]:newsThemes(liveStories.map(item=>item.title));
     const linkedToNews=matched.length>0;
     today_=linkedToNews?matched:[
@@ -2822,6 +2849,7 @@ const ToyTown = (() => {
         try{
           const next=await service.load();
           service.paint(next);
+          setNews(next.stories||[]);
           const selected=newsThemes((next.stories||[]).map(item=>item.title));
           if(selected.length){
             if(selected[0].story!==today_[0].story){
@@ -3047,7 +3075,7 @@ const ToyTown = (() => {
     addEventListener('hashchange', () => location.reload());
     start();
   }
-  return {BUS_STOPS, gather, rotateBy, rotateTo, yaw: () => cam.yaw, viewTo, view: () => ({x: cam.tx, y: cam.ty, z: cam.tz, yaw: cam.tyaw}), follow, following: () => followRef, feedDucks, layout, render, zoomAt, resetView, fitView, pinchTo, screenWorld, streetMoment, reactToNews, hero: () => town.blocks.find(b => b.hero), TALK, nameOf, headline, dateKey, CALM, lightPhase, themeFromNews, newsThemes, VARIANTS, VARIANT_EVENTS: () => Object.keys(VARIANT_EVENTS), decorate, setToday: l => { today_ = l; }, PACE, THEMES, GRIM, build, update, events: () => events, movers: () => movers, buildings: () => buildings, props: () => props, startEvent, randomEvent, setPlaying: v => { playing = v; }, debug: () => ({separated, busStops: BUS_STOPS.length, buses: movers.filter(m => m.kind === 'bus').map(m => m.stops || 0), clock, theme, seed, greetings, whims: {...whims}, feedings, crowdTrimmed, rush: rushFactor(), unstuck: {...unstuck}, hour: hourOfDay(), daypart, routines: {...routine}, night: nightLevel(), cam: {...cam}, fitZoom, streetMoments,communityEncounters,communityVisits,streetTransactions,streetShopVisits,newsReactions,streetPerformances,
+  return {BUS_STOPS, news: () => newsFeed, setNews, gather, rotateBy, rotateTo, yaw: () => cam.yaw, viewTo, view: () => ({x: cam.tx, y: cam.ty, z: cam.tz, yaw: cam.tyaw}), follow, following: () => followRef, feedDucks, layout, render, zoomAt, resetView, fitView, pinchTo, screenWorld, streetMoment, reactToNews, hero: () => town.blocks.find(b => b.hero), TALK, nameOf, headline, dateKey, CALM, lightPhase, themeFromNews, newsThemes, VARIANTS, VARIANT_EVENTS: () => Object.keys(VARIANT_EVENTS), decorate, setToday: l => { today_ = l; }, PACE, THEMES, GRIM, build, update, events: () => events, movers: () => movers, buildings: () => buildings, props: () => props, startEvent, randomEvent, setPlaying: v => { playing = v; }, debug: () => ({separated, busStops: BUS_STOPS.length, buses: movers.filter(m => m.kind === 'bus').map(m => m.stops || 0), clock, theme, seed, greetings, whims: {...whims}, feedings, crowdTrimmed, rush: rushFactor(), unstuck: {...unstuck}, hour: hourOfDay(), daypart, routines: {...routine}, night: nightLevel(), cam: {...cam}, fitZoom, streetMoments,communityEncounters,communityVisits,streetTransactions,streetShopVisits,newsReactions,streetPerformances,
     districts:{count:districts.length,visits:districtVisits,
       meetings:districtMeetings,tasks:districtTasks,
       areas:districts.map(a=>({role:a.role,block:a.block,

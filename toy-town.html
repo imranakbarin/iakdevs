@@ -32,6 +32,8 @@ html.ui-off:not(.embedded) #ui-show{display:block}
 #news-panel:not([hidden]){display:grid;gap:5px;margin-top:9px;max-height:min(45vh,340px);overflow-y:auto;border-top:1px solid #d5d8ce;padding-top:6px}
 #news-panel[hidden]{display:none}
 .headline-item{display:grid;gap:4px;padding:9px 5px;text-decoration:none;color:#2d3440;border-bottom:1px solid #e6e3d9}
+.headline-more{margin:6px 0 2px;padding:8px 10px;border:1px dashed #b9c4c0;border-radius:10px;background:transparent;color:#4b6468;font:600 12px Nunito,system-ui;cursor:pointer;text-align:left}
+.headline-more:hover{background:#f3f2ea}
 .headline-title{font:600 12.5px/1.32 Nunito,system-ui}
 .headline-item small{font:500 10.5px/1.25 Nunito,system-ui;color:#64767a}
 .headline-item:hover .headline-title{text-decoration:underline}
@@ -119,10 +121,10 @@ html.ui-off:not(.embedded) #ui-show{display:block}
 })();
 </script>
 <script src="assets/toy-town-diorama.js?v=1"></script>
-<script src="assets/toy-town-news.js?v=1"></script>
+<script src="assets/toy-town-news.js?v=2"></script>
 <script src="assets/toy-town-sound.js?v=6"></script>
 <script src="assets/toy-town-weather.js?v=2"></script>
-<script src="assets/toy-town.js?v=46"></script>
+<script src="assets/toy-town.js?v=47"></script>
 <script type="module">
   // Opt out with ?classic=1 for the original Canvas experience.
   // Loading errors are deliberately isolated from the existing town engine.
@@ -130,7 +132,7 @@ html.ui-off:not(.embedded) #ui-show{display:block}
     Promise.all([
       import('three'),
       import('three/addons/geometries/RoundedBoxGeometry.js'),
-      import('./assets/toy-town-3d.js?v=81'),
+      import('./assets/toy-town-3d.js?v=82'),
       import('./assets/toy-town-landmarks.js?v=7'),
       // The photographed-miniature lens. Any failure here leaves plain 3D running.
       Promise.all(['EffectComposer','RenderPass','ShaderPass','UnrealBloomPass','OutputPass']

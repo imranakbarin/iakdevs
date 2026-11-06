@@ -5,14 +5,23 @@
 const https=require('node:https');
 const fs=require('node:fs/promises');
 const path=require('node:path');
+require('../assets/toy-town-news.js');
+const {tone}=globalThis.ToyTownNews;
 const FEEDS=[
   {source:'BBC News',category:'World',url:'https://feeds.bbci.co.uk/news/world/rss.xml'},
   {source:'BBC Technology',category:'Technology',url:'https://feeds.bbci.co.uk/news/technology/rss.xml'},
   {source:'BBC Business',category:'Business',url:'https://feeds.bbci.co.uk/news/business/rss.xml'},
   {source:'BBC Sport',category:'Sport',url:'https://feeds.bbci.co.uk/sport/rss.xml'},
   {source:'DW',category:'World',url:'https://rss.dw.com/xml/rss-en-world'},
-  {source:'Ars Technica',category:'Technology',url:'https://feeds.arstechnica.com/arstechnica/index'}
+  {source:'Ars Technica',category:'Technology',url:'https://feeds.arstechnica.com/arstechnica/index'},
+  // Lighter sources, so the town has good news to stage (a failing feed never blocks the others).
+  {source:'BBC Science',category:'Science',url:'https://feeds.bbci.co.uk/news/science_and_environment/rss.xml'},
+  {source:'BBC Culture',category:'Culture',url:'https://feeds.bbci.co.uk/news/entertainment_and_arts/rss.xml'},
+  {source:'Good News Network',category:'Good news',url:'https://www.goodnewsnetwork.org/feed/'},
+  {source:'Positive News',category:'Good news',url:'https://www.positive.news/feed/'},
+  {source:'NASA',category:'Science',url:'https://www.nasa.gov/feed/'}
 ];
+const MAX_HEAVY=2;   // at most this many heavy stories, always after the light ones
 const MAX_ARTICLE_AGE_MS=30*60*60*1000;
 const decode=s=>String(s||'').replace(/<!\[CDATA\[([\s\S]*?)\]\]>/gi,'$1')
   .replace(/&#(x[0-9a-f]+|\d+);/gi,(_,code)=>{
@@ -44,7 +53,7 @@ function parseRss(xml,feed,now=Date.now()){
     if(title.length<12||title.length>240||!url||
       !Number.isFinite(time)||time>now+15*60*1000||
       now-time>MAX_ARTICLE_AGE_MS)continue;
-    items.push({title,url,source:feed.source,category:feed.category,
+    items.push({title,url,source:feed.source,category:feed.category,tone:tone(title),
       published_at:new Date(time).toISOString()});
   }
   return items;
@@ -62,21 +71,28 @@ function chooseStories(all,limit=9){
   }
   const valid=[...byTitle.values()].sort((a,b)=>
     Date.parse(b.published_at)-Date.parse(a.published_at));
-  const picked=[],categories=['World','Technology','Business','Sport'];
+  const picked=[],categories=['Good news','Science','Culture','Sport','Technology','Business','World'];
+  const heavyCount=()=>picked.filter(i=>i.tone==='heavy').length;
   const used=new Set();
   // Breadth and source diversity beat a feed full of near-identical sports
   // stories, but publication time determines order within each section.
+  const lightPool=valid.filter(item=>item.tone!=='heavy');
   for(let round=0;round<3&&picked.length<limit;round++){
     for(const category of categories){
       if(picked.length>=limit)break;
-      const pool=valid.filter(item=>item.category===category&&!picked.includes(item));
+      const pool=lightPool.filter(item=>item.category===category&&!picked.includes(item));
       const article=pool.find(item=>!used.has(item.source))||pool[0];
       if(article){picked.push(article);used.add(article.source);}
     }
   }
-  for(const article of valid){
+  for(const article of lightPool){
     if(picked.length>=limit)break;
     if(!picked.includes(article))picked.push(article);
+  }
+  // A quiet news day: a couple of serious stories may follow, never lead.
+  for(const article of valid){
+    if(picked.length>=limit||heavyCount()>=MAX_HEAVY)break;
+    if(article.tone==='heavy'&&!picked.includes(article))picked.push(article);
   }
   return picked.slice(0,limit);
 }
