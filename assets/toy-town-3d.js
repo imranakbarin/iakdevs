@@ -1235,7 +1235,7 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
     box(world,.65,.49,.07,'#6a6870',x,.32,z+.41);
     sign(world,'FIRE',x,.85,z+.46,.55,'#9b4339');
   }
-  // Four authored silhouettes replace the previous repeating broccoli crowns.
+  // Six position-seeded species vary crown shape, bark and seasonal colour.
   // The geometry stays inexpensive: wide, interlocking ellipsoids with exposed
   // branching and planted, shadowed root flares; no leaf particle systems.
   function tree(p,i){
@@ -1243,25 +1243,24 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
     if(p.y>17&&Math.abs(p.x-RAIL.stationX)<2.7)return;          // the railway station
     if(p.x>17&&Math.abs(p.y-9.55)<1.3)return;                   // the windmill
     if(p.x<1.2&&p.y>2&&p.y<6.1)return;                        // the sheep pasture
-    if(kit&&(i%9===4||i%4===0)){   // most trees are round and soft; a few tall pines stay for variety
-      const cluster=i%9===4,name=cluster?(i%2?'trees_A_medium':'trees_B_medium'):(i%3?'tree_single_A':'tree_single_B');
-      groundingShadow(p.x,p.y,cluster?1.4:1.0,cluster?1.3:.95,.166);
-      if(kitPlace(world,name,p.x,.16,p.y,{height:(cluster?.95:1.05)*(p.s||1),rotY:rng(i,61)*TAU})){woodlandShapes++;return;}
-    }
     const x=p.x,z=p.y;
     // Keep the foreground riverbank open so the miniature village can be
     // read through the trees. The side orchards still frame the lens.
-    const riverForeground=z>=10.85&&z<=13.15&&x>6&&x<12;
-    const sc=(p.s||1)*(riverForeground?.72:z<7?1.05:1);
+    const riverForeground=z>=10.85&&z<=13.15;
+    const seed=Math.abs(Math.round(x*19+z*31));
+    const sc=(p.s||1)*(riverForeground?.69:z<7?.94:.90)*(.86+rng(seed,41)*.17);
     const g=new THREE.Group();g.position.set(x,0,z);world.add(g);g.scale.setScalar(sc);
     g.userData.woodlandSilhouette=true;
-    const family=i%13===0?'cypress':i%13===6?'willow':i%11===0?'orchard':'oak';
+    const family=['oak','birch','cypress','willow','orchard','acacia'][seed%6];
+    g.userData.treeSpecies=family;
     const mist=THREE.MathUtils.clamp((9-z)/17,0,.28);
     const plantedHue=p.c?tint(p.c,'#839d89',.76):'#86a58b';
-    const foliage=(color)=>leafMat(tint(tint(tint(tint(color,plantedHue,.13),'#d4dbc4',mist),'#3f7a45',.22),seasonLeaf(i),SEASON.k));
+    const foliage=(color)=>leafMat(tint(tint(tint(tint(color,plantedHue,.13),'#d4dbc4',mist),'#3f7a45',.22),seasonLeaf(i),SEASON.k*(family==='cypress'?.18:family==='willow'?.42:.85)));
     groundingShadow(x,z,1.15*sc,1.04*sc,.166);
-    const height=family==='cypress'?.69:family==='willow'?.70:.66;
-    const trunk=cylinder(g,.044,.080,height,'#826b54',0,height*.51,0);
+    const height=family==='birch'?.85:family==='acacia'?.79:family==='cypress'?.69:.66;
+    const bark=family==='birch'?'#c9cbbb':family==='willow'?'#7d8067':'#826b54';
+    const trunk=cylinder(g,family==='birch'?.030:.040,family==='birch'?.042:.070,height,bark,0,height*.51,0);
+    if(family==='birch')for(let n=0;n<5;n++)box(g,.04,.012,.010,'#7b806f',(n%2-.5)*.009,.24+n*.11,.035,false);
     trunk.rotation.z=(rng(i,27)-.5)*.13;
     // Roots taper out into the lawn rather than meeting it as a cut cylinder.
     for(let n=0;n<4;n++){
@@ -1288,14 +1287,17 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
     // lobes build a leaf silhouette instead of many equally sized balls.
     const under=object(g,geo('clump',.38,i%4),foliage(shade),
       .025,.84,-.016,false);
-    under.scale.set(1.18,.49,1.04);
+    under.scale.set(family==='birch'?.65:1.0,family==='acacia'?.24:.40,family==='birch'?.6:.9);
+    if(family==='acacia')under.position.y=1.02;
     const branching=[[-.19,.73,-.02,.46],[.19,.72,.02,-.46],[0,.77,.15,.14]];
     for(const [bx,by,bz,twist] of branching){
       const stem=cylinder(g,.018,.032,.43,'#806b54',bx*.49,by,bz*.55);
       stem.rotation.z=twist;stem.castShadow=false;
     }
     const isWeeping=family==='willow';
-    const lobes=isWeeping?[
+    const lobes=family==='birch'?[[-.13,.96,-.03,.19,.25,.17],[.13,1.11,.02,.19,.26,.18],[-.03,1.30,-.03,.17,.22,.16],[.03,.88,.17,.17,.21,.16]]:
+      family==='acacia'?[[-.26,1.04,-.05,.36,.13,.28],[.24,1.10,-.09,.37,.14,.27],[.01,1.15,.15,.40,.12,.31]]:
+      family==='orchard'?[[-.20,.85,-.02,.25,.23,.24],[.18,.89,-.12,.27,.24,.24],[.06,1.06,.12,.27,.23,.24],[-.10,.83,.22,.22,.22,.22]]:isWeeping?[
       [-.25,.86,-.03,.34,.32,.32], [.17,.99,-.11,.40,.27,.35],
       [.06,.79,.20,.38,.26,.32],[-.05,1.12,.01,.31,.26,.30]
     ]:[
@@ -3197,6 +3199,34 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
     object(p,geo('capsule',r,len),typeof col==='string'?mat(col,.72):col,x,y,z):cylinder(p,r,r,len+r*2,col,x,y,z);
   const CUTE=.6,HEAD_BIG=.90;
   const SHOP_BAG_COLOURS=['#e9c46a','#e76f51','#8ab17d','#6fa8dc','#d4a5c9','#f4a261'];
+  // Shared transparent expression plates replace many tiny facial draw calls.
+  // Nose, head, hair and joint rig remain physical; controls choose atlas frames.
+  const faceFrames=new Map();
+  function faceFrame(expression='neutral',direction=0){
+    const key=expression+':'+direction;if(faceFrames.has(key))return faceFrames.get(key);
+    const cv=document.createElement('canvas');cv.width=128;cv.height=96;const c=cv.getContext('2d');
+    c.clearRect(0,0,128,96);
+    c.fillStyle='rgba(208,141,130,.28)';for(const x of [14,114]){c.beginPath();c.ellipse(x,74,9,5,0,0,TAU);c.fill();}
+    for(const [x,side] of [[35,-1],[93,1]]){
+      if(expression==='blink'){
+        c.strokeStyle='#49443c';c.lineWidth=3;c.beginPath();c.moveTo(x-8,44);c.bezierCurveTo(x-3,48,x+3,48,x+8,44);c.stroke();
+      }else{
+        c.fillStyle='#eee8dc';c.beginPath();c.ellipse(x,44,10,13,0,0,TAU);c.fill();
+        c.fillStyle='#34342f';c.beginPath();c.ellipse(x+direction*2,expression==='read'?47:44,6.4,9,0,0,TAU);c.fill();
+        c.fillStyle='#fff9eb';c.beginPath();c.ellipse(x+direction*2-2,40,1.5,2,0,0,TAU);c.fill();
+      }
+      const raised=expression==='happy'?4:expression==='listen'&&side<0?5:0;
+      c.strokeStyle='#5d4b3d';c.lineWidth=2.5;c.beginPath();c.moveTo(x-10,19-raised);c.bezierCurveTo(x-3,15-raised,x+3,15-raised,x+10,18-raised);c.stroke();
+    }
+    c.strokeStyle='#8f5a56';c.lineWidth=2.5;
+    if(expression==='talk'||expression==='happy'||expression==='eat'){
+      c.fillStyle='#825951';c.beginPath();c.ellipse(64,84,expression==='happy'?10:7,expression==='talk'?7:4,0,0,TAU);c.fill();
+      c.fillStyle='#d5a09a';c.beginPath();c.ellipse(64,87,4,1.5,0,0,TAU);c.fill();
+    }else{c.beginPath();c.moveTo(53,81);c.bezierCurveTo(59,89,69,89,75,81);c.stroke();}
+    const tx=new THREE.CanvasTexture(cv);tx.colorSpace=THREE.SRGBColorSpace;tx.userData={expression,direction};
+    const m=new THREE.MeshStandardMaterial({map:tx,transparent:true,alphaTest:.04,depthWrite:false,roughness:.9});
+    m.userData={faceExpression:expression,direction};faceFrames.set(key,m);return m;
+  }
   function person(ref){
     const g=new THREE.Group();
     const skin=ref.skin||'#dbab86',coat=ref.col||'#d6a3a0',trousers=ref.trousers||'#5e6f7c',sport=ref.kind==='runner',shoes=sport?'#f4f4f4':'#4f4741';
@@ -3222,22 +3252,19 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
       else if(hairStyle===1){const bun=smoothBall(face,.036,hairTone,0,.555,-.045);}                               // a bun
       else{const fringe=smoothBall(face,.052,hairTone,.02,.519,.045);fringe.scale.set(1.35,.42,.7);}               // a side fringe
     }
-    // Dot eyes, rosy cheeks, a small nose and a gentle smile on the +Z face.
+    // Lightweight joint controls keep eyelids, gaze and mouth state explicit.
+    // A shared expression plate renders them together in one draw call.
     const eyelids=[];
     for(const sx of [-1,1]){
-      const eye=smoothBall(face,.009,'#34342f',sx*.029,.468,.082);eye.scale.set(.85,1.15,.6);
-      eyelids.push(eye);
-      const cheek=smoothBall(face,.012,tint(skin,'#d99685',.30),sx*.051,.440,.070);cheek.scale.set(1,.6,.4);
+      const eye=new THREE.Group();eye.position.set(sx*.029,.468,.082);
+      eye.userData.pupil=new THREE.Group();eyelids.push(eye);
     }
     smoothBall(face,.011,tint(skin,'#c98d6f',.16),0,.450,.087);
-    const smile=object(face,geo('torus',.015,.0025),mat('#8f5a56'),0,.428,.082);
-    smile.scale.set(1,.42,.3);
-    const brows=[];
-    for(const side of [-1,1]){
-      const brow=box(face,.022,.004,.005,hairTone,side*.029,.494,.083);
-      brow.rotation.z=side*-.12;
-      brows.push(brow);
-    }
+    const smile=new THREE.Group();smile.scale.set(1,.42,.3);
+    const mouth=new THREE.Group();mouth.visible=false;
+    const brows=[new THREE.Group(),new THREE.Group()];
+    const faceSurface=object(face,geo('plane',.13,.09),faceFrame(),0,.464,.086,false);
+    faceSurface.userData.faceSurface=true;
     const legs=[],arms=[],elbows=[],wrists=[],hands=[],shins=[],feet=[];
     for(const side of [-1,1]){
       const leg=new THREE.Group();leg.position.set(side*.04,.178,0);
@@ -3420,7 +3447,7 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
     }
     g.add(upperBody);
     g.userData.limbs={legs,arms,elbows,wrists,hands,shins,feet,
-      eyelids,headPivot,upperBody,smile,brows};
+      eyelids,headPivot,upperBody,smile,brows,mouth,faceSurface};
     if(ref.kid)g.scale.setScalar(.76);   // children are smaller
     g.userData.shopProps=shopProps;
     g.userData.pose={speed:0,sit:0,chat:0,speak:0,greet:0,observe:0,
@@ -5203,7 +5230,7 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
       p[axis]+=(p.j.rotation[axis]-p[axis])*k;p.j.rotation[axis]=p[axis];
     }
   }
-  function syncActors(){
+  function syncActors(poseDt=null){
     const live=new Set(town.movers());
     for(const [ref,item] of actors)if(!live.has(ref)){
       item.group.parent?.remove(item.group);actors.delete(ref);
@@ -5248,8 +5275,8 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
         // Distance owns the footstep clock. Time only smooths transitions and
         // breathing, so a stopped person never runs in place or foot-slides.
         const state=g.userData.pose,worldTime=town.debug().clock,S=state.style||(state.style=walkStyle(ref));
-        const dt=state.lastClock===null?1/30:
-          THREE.MathUtils.clamp(worldTime-state.lastClock,1/120,.09);
+        const dt=poseDt??(state.lastClock===null?1/30:
+          THREE.MathUtils.clamp(worldTime-state.lastClock,1/120,.09));
         state.lastClock=worldTime;
         const ease=(value,target,rate)=>value+(target-value)*
           (1-Math.exp(-rate*dt));
@@ -5347,7 +5374,8 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
             ref.kind==='keeper'))||(k===1&&ref.shopBag>=0);
           const trading=dominant?state.serve:state.serve*.18;
           const receiving=dominant?state.receive:state.receive*.12;
-          const using=dominant?state.enjoy:state.enjoy*.48;
+          const reading=ref.carrying==='book';
+          const using=dominant||reading?state.enjoy:state.enjoy*.60;
           limbs.arms[k].rotation.x=state.sit*.20-
             swing*state.speed*(carrying?.18:ref.gait==='brisk'?.62:.52)*S.arm-
             state.chat*(dominant?.25:.07)-speech*.30-inspect*.22-wave*.52-
@@ -5359,7 +5387,7 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
             (dominant?state.work*.66:state.work*.14)-
             (dominant?state.play*.62:state.play*.39);
           limbs.arms[k].rotation.z=(k===0?1:-1)*
-            (.07+.10*state.chat+.06*state.observe)-
+            (.07+.10*state.chat+.06*state.observe+state.enjoy*(reading?.50:.20))-
             wave*.89;
           limbs.elbows[k].rotation.x=
             -.56*speech-.46*inspect-.84*wave-
@@ -5379,13 +5407,13 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
         }
         for(let k=0;k<2;k++){
           const hand=limbs.hands[k].userData.handRig;if(!hand)continue;
-          const held=k===0?(ref.bag||ref.briefcase||ref.kind==='farmer'||ref.kind==='keeper'):
+          const held=k===0?(ref.bag||ref.briefcase||ref.kind==='farmer'||ref.kind==='keeper'||(ref.carrying==='book'&&state.enjoy>.1)):
             (ref.carrying||ref.shopBag>=0||ref.shopRole==='vendor'||ref.guitar);
           const target=held?.82:Math.min(.4,.16+state.speed*.14+state.knock*.24);
           hand.curl=ease(hand.curl,target,10);
           hand.fingers.forEach((f,i)=>{f.rotation.x=-hand.curl*(1+i*.08);f.rotation.z=(i-1)*state.speak*.10;});
           hand.thumb.rotation.z=(k?1:-1)*(.18+hand.curl*.45);
-          limbs.wrists[k].rotation.y=(k?1:-1)*(state.speak*.22+state.greet*.17-state.receive*.12);
+          limbs.wrists[k].rotation.y=(k?1:-1)*(state.speak*.22+state.greet*.17-state.receive*.12+state.enjoy*.15);
         }
         // The whole torso shifts weight, leans into greetings and settles
         // naturally after walking. Small limits preserve miniature balance.
@@ -5396,9 +5424,10 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
           state.work*.060+state.knock*.065+state.order*.046+
           state.chat*.036*Math.sin(worldTime*1.5+(ref.ph||0));
         limbs.upperBody.rotation.z=.020*state.speed*stride+
-          .032*state.chat*(ref.ph%2?1:-1)+
+          .024*state.chat*(Math.floor(ref.ph||0)%2?1:-1)+
           state.play*.065*Math.sin(worldTime*7)+
           state.dance*.12*Math.sin(worldTime*4.2+(ref.ph||0));
+        limbs.upperBody.position.x=.008*state.chat*(1-state.speak)*(Math.floor(ref.ph||0)%2?1:-1);
         limbs.upperBody.position.y=.006*Math.sin(worldTime*2.0+(ref.ph||0))+
           Math.abs(beat)*state.speed*(ref.gait==='skip'?.045:.018)*S.bounce+
           state.celebrate*.038*Math.abs(Math.sin(worldTime*5.4+(ref.ph||0)))+
@@ -5417,8 +5446,7 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
         if(!target&&!reducedMotion){const idle=Math.sin(worldTime*.37+(ref.ph||0)*2.3);if(Math.abs(idle)>.82)yaw=Math.sign(idle)*.42;}   // a look about now and then
         limbs.headPivot.rotation.y+=(yaw-limbs.headPivot.rotation.y)*
           (1-Math.exp(-6.5*dt));
-        limbs.headPivot.rotation.x=.045*state.chat*
-          Math.sin(worldTime*2.0+(ref.ph||0));
+        limbs.headPivot.rotation.x=(.025*state.speak+.055*state.chat*(1-state.speak))*Math.sin(worldTime*1.6+(ref.ph||0))+state.enjoy*(ref.carrying==='book'?.24:.07);
         limbs.headPivot.rotation.z=(1-state.chat)*.021*
           Math.sin(worldTime*.95+(ref.ph||0));
         // A mouth and eyebrows that answer the conversation, instead of
@@ -5428,9 +5456,17 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
         for(let k=0;k<2;k++)
           limbs.brows[k].rotation.z=(k===0?1:-1)*
             (.12+.15*state.speak+.10*state.observe);
+        const chew=ref.carrying==='bread'?state.enjoy*(.45+.35*Math.sin(worldTime*5)):0;
+        limbs.mouth.visible=state.speak>.08||state.celebrate>.15||chew>.1;
+        limbs.mouth.scale.y=.15+state.speak*.65+state.celebrate*.45+chew*.25;
         const blink=(worldTime*.96+(ref.ph||0)*.53)%6.8;
-        for(const eye of limbs.eyelids||[])
+        for(const eye of limbs.eyelids||[]){
           eye.scale.y=blink<.12?.16:1;
+          if(eye.userData.pupil){eye.userData.pupil.position.x=yaw*.004;eye.userData.pupil.position.y=-state.enjoy*.003;}
+        }
+        const expression=blink<.12?'blink':state.celebrate>.15?'happy':state.speak>.08?'talk':
+          state.enjoy>.2?(ref.carrying==='book'?'read':'eat'):state.chat>.15?'listen':'neutral';
+        limbs.faceSurface.material=faceFrame(expression,yaw>.25?1:yaw<-.25?-1:0);
         // Body and shoes share one small bounce, which vanishes smoothly
         // at a stop without changing the actual world-space position.
         g.position.y+=Math.max(0,Math.sin(stridePhase*2))*
@@ -5803,6 +5839,8 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
   renderer.domElement.addEventListener('webglcontextrestored',restored,false);
   const api={
     active:false,renderer,scene,camera,
+    stepPoses:seconds=>{for(let t=0;t<seconds;t+=.05)syncActors(Math.min(.05,seconds-t));},
+    renderInfo:()=>({calls:renderer.info?.render?.calls??null,triangles:renderer.info?.render?.triangles??null,geometries:renderer.info?.memory?.geometries??null,textures:renderer.info?.memory?.textures??null}),
     getStats:()=>({frames,redrawCount,actors:actors.size,ambient:ambient.length,plazaLights:plazaLights.length,festoonBulbs:festoonBulbs.length,gardenElements,woodlandShapes,terrainContours,composedBuildings,districtGardenRooms,landmarks:landmarkCount,windowMaterials:windowMaterials.size,photographicLens:!!lens,pixelRatio,kitModels:kit?kit.size:0,cameraProjection:'perspective',lens:lens?.stats?.()||null,buildings:town.buildings().length,webgl:true,frozen}),
     // A stable actual GPU-rendered frame for visual regression screenshots.
     // Unlike stop(), freeze does not switch to the Canvas fallback.
