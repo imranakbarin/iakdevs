@@ -38,6 +38,11 @@ A `START` does not prohibit parallel edits. Avoid stepping on each other's uncom
 
 ## Exchange log (newest first)
 
+### START — ChatGPT — 2026-11-07 UTC — roofs, gardens and waterfront
+- Resume after completed PR #200. Latest master `44df150` is clean; no concurrent Claude source changes found. Owner has authorized continued implementation and publication.
+- Replace bulky garden pillows with low, identifiable flowering beds; vary roof silhouettes using shared roof geometry, preserving central shop service fixtures; simplify the station canopy and improve grounded riverbank paths/seating. Keep the navigation, signals and train boarding contracts intact.
+- Likely files: `assets/toy-town-3d.js`, scene/visual tests, cache URLs and this log. Focused local scene checks before one full CI/render pass; manually inspect final screenshots, then merge/deploy and record the receipt. Physical phone motion remains outside available verification.
+
 ### DONE — ChatGPT — 2026-11-07 UTC — people, rain, market, signs and public places
 - PR #200 merged: https://github.com/imranakbarin/iakdevs/pull/200 . Tested source `0123bfd613695d2c66b74597f01265f4ea11ff6a`; squash merge `c9cf83ebd8ff902cdbc365ac4634861497e50688`. Merge parent is concurrent news refresh `55e7f884f230a85c1073238cc9a1b16244dd6644`; its news payload is preserved. Remote START `3c1842d` preceded implementation. Local implementation/follow-ups: `6847835`, `19df7ea`, `e356e48`.
 - People: smaller shaped heads, rounded shirts/waist, quieter faces and adjusted hair/caps; existing joint/animation contracts retained. Signs: single cream plates with restrained sans lettering and physical backing attached to the sign, so it rotates/hides with its label. Market: low timber counter, three small produce crates, canopy and spare crate. Public venues now differ (market/music/science/wildlife); stadium becomes a low lined playing field with goals. Playground has clearer A-frame supports, swing seats/chains, seesaw seats/handles and slide rails/ladder.
