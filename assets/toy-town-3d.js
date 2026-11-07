@@ -3135,7 +3135,106 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
   }
   // These are selected street traditions, not a claim that one style defines
   // an entire country. Each model replaces a building inside its existing lot.
+  let countryPlace=null,countryLot=null;
+  const COUNTRY_PLACES={india:['Stepwell','drawing water'],japan:['Shrine garden','bowing at the gate'],italy:['Bell tower piazza','having a coffee'],netherlands:['Windmill','watching the sails'],usa:['Town hall court','shooting hoops']};
+  function countryLandmark(b){
+    const g=new THREE.Group();g.position.set(b.x+.5,.17,b.y+.5);world.add(g);
+    g.userData={countryBuilding:country,buildingKind:b.kind,landmark:true,countryLandmark:COUNTRY_PLACES[country][0],roofTop:1.65,noBatch:true};
+    const cream='#eadbbd',wood='#795c44',stone='#c8b69b';
+    box(g,.94,.06,.94,stone,0,.03,0,false);
+    let rotor=null,bell=null,ballMesh=null;
+    if(country==='india'){
+      // A raised, contained stepwell: the steps descend to actual water.
+      box(g,.86,.30,.80,'#ca9d75',0,.17,0,false);
+      box(g,.42,.025,.36,'#79b7b3',0,.335,0,false);
+      for(const side of [-1,1])for(let i=0;i<3;i++){
+        box(g,.085,.045,.66,'#e9caa2',side*(.27+i*.075),.36+i*.045,0,false);
+        box(g,.48,.045,.075,'#e9caa2',0,.36+i*.045,side*(.23+i*.075),false);
+      }
+      for(const x of [-.34,.34])cylinder(g,.025,.032,.55,cream,x,.57,-.31);
+      box(g,.84,.06,.28,cream,0,.85,-.31,false);
+      const dome=ball(g,.20,'#b36e50',0,.91,-.31);dome.scale.y=.55;
+      sign(g,'STEPWELL',0,.73,-.15,.42);
+    }else if(country==='japan'){
+      // Torii at the entrance, with a compact shrine behind a stone garden.
+      box(g,.43,.46,.39,'#e4d4b5',0,.31,-.21,false);
+      const rg=new THREE.Group();g.add(rg);roof(rg,'#505a5c',.55);rg.scale.set(.55,.65,.5);rg.position.set(0,.18,-.21);
+      box(g,.15,.29,.022,wood,0,.23,.00,false);
+      for(const x of [-.35,.35])cylinder(g,.025,.034,.69,'#b7503b',x,.40,.28);
+      box(g,.88,.045,.095,'#b7503b',0,.77,.28,false);box(g,.76,.035,.07,'#b7503b',0,.62,.28,false);
+      for(const x of [-.32,.31]){const rock=ball(g,.085,'#88958b',x,.10,-.20);rock.scale.set(.8,.65,1.2);}
+      for(let i=0;i<4;i++)box(g,.14,.015,.08,'#abb4a3',0,.075,.13+i*.085,false);
+    }else if(country==='italy'){
+      box(g,.37,1.22,.36,'#d2b183',-.17,.68,-.17,false);
+      for(const x of [-.28,-.06])box(g,.11,.23,.025,'#686452',x,1.17,.025,false);
+      for(const x of [-.34,.0])box(g,.045,.32,.41,cream,x,1.17,-.17,false);
+      box(g,.46,.055,.46,cream,-.17,1.38,-.17,false);
+      const roofG=new THREE.Group();g.add(roofG);roof(roofG,'#b97451',0);roofG.position.set(-.17,1.39,-.17);roofG.scale.set(.45,.48,.45);
+      bell=cylinder(g,.045,.075,.10,'#bd9255',-.17,1.20,.04);bell.rotation.x=.2;
+      cylinder(g,.16,.16,.035,'#bd9468',.20,.32,.26);cylinder(g,.025,.025,.25,wood,.20,.18,.26);
+      for(const x of [.00,.39]){box(g,.13,.025,.13,wood,x,.18,.27,false);box(g,.025,.14,.025,wood,x,.10,.27,false);}
+      sign(g,'PIAZZA',.20,.11,.45,.36);
+    }else if(country==='netherlands'){
+      cylinder(g,.19,.31,1.07,'#af8562',0,.60,-.11);
+      const cap=object(g,new THREE.ConeGeometry(.29,.33,12),mat('#667573'),0,1.26,-.11);
+      box(g,.15,.30,.025,'#576962',0,.23,.21,false);
+      rotor=new THREE.Group();rotor.position.set(0,1.04,.23);rotor.scale.setScalar(.78);g.add(rotor);
+      cylinder(rotor,.06,.06,.10,wood,0,0,0).rotation.x=Math.PI/2;
+      for(let i=0;i<4;i++){
+        const sail=new THREE.Group();sail.rotation.z=i*Math.PI/2;rotor.add(sail);
+        box(sail,.026,.66,.03,wood,0,.30,0,false);
+        for(let n=0;n<5;n++)box(sail,.16,.026,.024,cream,.055,.17+n*.09,.015,false);
+      }
+      for(const x of [-.34,.34])for(let z=0;z<3;z++){cylinder(g,.008,.008,.11,'#6c8d63',x,.12,-.32+z*.18);ball(g,.035,['#df8d7d','#e7b75d','#e7d8b7'][z],x,.18,-.32+z*.18);}
+    }else{
+      box(g,.73,.65,.37,'#c9b59a',0,.40,-.23,false);
+      for(const x of [-.28,-.10,.10,.28])cylinder(g,.025,.028,.43,cream,x,.40,-.015);
+      box(g,.83,.065,.45,cream,0,.75,-.23,false);
+      const clock=ball(g,.10,'#f5e7c8',0,.62,-.025);clock.scale.z=.15;
+      box(g,.014,.06,.021,wood,0,.64,.00,false);box(g,.05,.014,.021,wood,.02,.62,.00,false);
+      sign(g,'TOWN HALL',0,.81,.015,.48);
+      box(g,.77,.014,.36,'#839f92',0,.074,.28,false);
+      box(g,.018,.69,.018,'#536967',-.30,.42,.27,false);
+      box(g,.27,.17,.025,'#eee8d8',-.30,.76,.29,false);
+      const hoop=object(g,geo('torus',.075,.009),mat('#bd7958'),-.30,.68,.38);hoop.rotation.x=Math.PI/2;
+      ballMesh=ball(g,.043,'#d19155',.22,.35,.40);
+    }
+    const visitors=[];
+    for(let i=0;i<2;i++){
+      const p=person({col:i?'#b995a9':'#779d9b',skin:i?'#c5916e':'#e2b18d',ph:2+i,x:b.x,y:b.y});p.scale.setScalar(.48);g.add(p);
+      p.userData.countryVisitor=true;
+      const hand=p.userData.limbs.hands[1];
+      if(country==='italy'){const cup=cylinder(hand,.030,.026,.045,'#f0e6ce',0,-.045,.025);cup.userData.countryProp='coffee';}
+      if(country==='india'){const jug=ball(hand,.046,'#b77f56',0,-.063,.025);jug.scale.y=1.25;jug.userData.countryProp='water jug';}
+      visitors.push(p);
+    }
+    countryPlace={g,rotor,bell,ballMesh,visitors,x:b.x+.5,z:b.y+.5,time:0,activity:COUNTRY_PLACES[country][1]};
+    rainRoofs.push({x:b.x+.5,z:b.y+.5,rx:.47,rz:.47,top:country==='india'?.17+.50:1.82});
+    countryBuildings++;composedBuildings++;return true;
+  }
+  function updateCountryPlace(time){
+    const p=countryPlace;if(!p)return;p.time=time;
+    if(p.rotor)p.rotor.rotation.z=reducedMotion?0:time*.35;
+    if(p.bell)p.bell.rotation.x=reducedMotion?0:Math.sin(time*2)*.28;
+    for(let i=0;i<p.visitors.length;i++){
+      const person=p.visitors[i],phase=(time+i*7)%18;
+      const travel=phase<4?phase/4:phase<12?1:1-(phase-12)/6;
+      person.position.set(-.32+.54*travel,.07,.54+i*.055);
+      person.rotation.y=phase<4?Math.PI/2:phase<12?Math.PI:-Math.PI/2;
+      const L=person.userData.limbs,moving=phase<4||phase>=12;
+      for(let k=0;k<2;k++){L.legs[k].rotation.x=moving&&!reducedMotion?Math.sin(travel*16+k*Math.PI)*.55:0;L.shins[k].rotation.x=moving?Math.max(0,-Math.sin(travel*16+k*Math.PI))*.6:0;L.arms[k].rotation.x=moving?-.25*L.legs[k].rotation.x:-.6;}
+      L.headPivot.rotation.x=!moving&&country==='japan'?.30:0;
+      if(!moving&&country==='italy'){L.arms[1].rotation.x=-1.4;L.elbows[1].rotation.x=-.6;}
+      if(!moving&&country==='india')L.upperBody.rotation.x=.25;else L.upperBody.rotation.x=0;
+      if(!moving&&country==='netherlands')L.headPivot.rotation.x=-.25;
+      if(!moving&&country==='usa'){L.arms[1].rotation.x=-2.1;L.elbows[1].rotation.x=-.45;}
+      person.userData.countryAction=moving?'walking':p.activity;
+    }
+    if(p.ballMesh){const t=(time%3)/3;p.ballMesh.position.set(.22-.52*t,.35+t*.33+Math.sin(t*Math.PI)*.55,.40);}
+  }
+
   function countryBuilding(b){
+    if(b===countryLot)return countryLandmark(b);
     if(b.kind==='site')return false;
     const styles={
       india:{walls:['#d9a184','#e0b69a','#cd907b'],roof:'#b56e51',trim:'#f5dfb9',wood:'#85533e'},
@@ -3242,7 +3341,7 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
     site.built=false;site.workers=[];timeVisit=null;round=null;papers=[];effects=[];porchLamps.length=0;precip=null;dusting=null;weatherKind='';
     ambient.length = 0; plazaLights.length = 0; festoonBulbs.length = 0;rainRoofs.length=0;rainSplashes=[];
     windowMaterials.clear();
-    countryBuildings=0;
+    countryBuildings=0;countryPlace=null;countryLot=country==='town'?null:town.buildings().filter(b=>b.hero&&b.kind==='house').sort((a,b)=>b.y-a.y||b.x-a.x)[0];
     gardenElements = 0; woodlandShapes = 0; terrainContours = 0; composedBuildings = 0; districtGardenRooms = 0; landmarkCount = 0;
     while(world.children.length)world.remove(world.children[0]);
     for(const [ref,obj] of actors){obj.group.parent?.remove(obj.group);}
@@ -5938,7 +6037,7 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
       resize();
       const state=town.debug();
       if(worldBuildings!==town.buildings()||worldSeed!==state.seed)rebuild();
-      syncActors();syncCamera();light(state.night||0);nightLife(state.night||0,state.clock||0);updateFollowCard();updateMoments();updateWeather(1/45);
+      syncActors();updateCountryPlace(state.clock||0);syncCamera();light(state.night||0);nightLife(state.night||0,state.clock||0);updateFollowCard();updateMoments();updateWeather(1/45);
       // Driven by the town's own clock, so they pause with the town.
       {const now=state.clock||0;const dt=lastClockAt===null?0:THREE.MathUtils.clamp(now-lastClockAt,0,.1);lastClockAt=now;sceneClock+=dt;
        try{window.ToyTownWeather?.step?.(dt);}catch(e){}
@@ -5971,6 +6070,8 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
   const api={
     active:false,renderer,scene,camera,
     setCountry:id=>{if(!COUNTRY_IDS.includes(id))return false;if(id===country)return true;country=id;rebuild();syncActors();return true;},
+    countryPlace:()=>countryPlace?({name:COUNTRY_PLACES[country][0],activity:countryPlace.activity,x:countryPlace.x,z:countryPlace.z,time:countryPlace.time,visitors:countryPlace.visitors.map(v=>({x:v.position.x,z:v.position.z,action:v.userData.countryAction})),rotor:countryPlace.rotor?.rotation.z??null}):null,
+    previewCountryActivity:time=>{updateCountryPlace(time);},
     stepPoses:seconds=>{for(let t=0;t<seconds;t+=.05)syncActors(Math.min(.05,seconds-t));},
     renderInfo:()=>({calls:renderer.info?.render?.calls??null,triangles:renderer.info?.render?.triangles??null,geometries:renderer.info?.memory?.geometries??null,textures:renderer.info?.memory?.textures??null}),
     getStats:()=>({country,countryBuildings,mobileBudget:!desktop(),frames,redrawCount,actors:actors.size,ambient:ambient.length,plazaLights:plazaLights.length,festoonBulbs:festoonBulbs.length,gardenElements,woodlandShapes,terrainContours,composedBuildings,districtGardenRooms,landmarks:landmarkCount,windowMaterials:windowMaterials.size,photographicLens:!!lens,pixelRatio,kitModels:kit?kit.size:0,cameraProjection:'perspective',lens:lens?.stats?.()||null,buildings:town.buildings().length,webgl:true,frozen}),
