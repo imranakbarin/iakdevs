@@ -334,8 +334,8 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
   }
   function sign(parent, label, x,y,z,w, ink='#575049',paper='#fff0d0'){
     const tx=boardTexture(label,ink,paper);
-    box(parent,w+.012,w*192/512+.012,.018,'#927d61',x,y,z-.013,false);
     const mesh=object(parent,geo('plane',w,w*192/512),new THREE.MeshBasicMaterial({map:tx,transparent:true,side:THREE.DoubleSide}),x,y,z,false);
+    box(mesh,w+.012,w*192/512+.012,.018,'#927d61',0,0,-.013,false);
     mesh.userData.ownedTexture=tx;
     return mesh;
   }
@@ -1746,7 +1746,10 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
   // theme events, or scripted walking destinations. This is a visual-only
   // terrain layer; the simulation's 18x18 road graph stays untouched.
   function createLandscapeComposition(){
+    // Reserve the same play site before the static gardens are batched.
+    const playground=freeSpots().find(s=>s.clear>.6);
     const occupied=[
+      ...(playground?[[playground.x,playground.z,1.15]]:[]),
       ...town.buildings().map(b=>b.kind==='site'?[b.x+1,b.y+1,2.35]:[b.x+.5,b.y+.5,.81]),
       ...town.props().filter(p=>!['flowers','duck'].includes(p.kind))
         .map(p=>[p.x,p.y,p.kind==='tree'?.46:.61])
@@ -5767,6 +5770,7 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
     newsStats:()=>({built:news7.built,boards:news7.boards.length,reads:news7.reads,reading:!!news7.reading,item:news7.reading?.item?.title||null,listeners:news7.listeners.filter(q=>q.state!=='away').length,football:!!news7.football,footballAt:news7.football?[news7.football.x,news7.football.z]:null,kicks:news7.kicks,crier:!!news7.crier}),
     stage3Stats:()=>({built:bus3.built,stops:bus3.stops.length,waiting:bus3.people.filter(p=>p.state==='wait').length,aboard:bus3.people.filter(p=>p.state==='aboard').length,boarded:bus3.boarded,alighted:bus3.alighted,boards:bus3.boards,steam:bus3.steam.length,tufts:bus3.tufts,flowers:bus3.flowers,patches:bus3.patches,strips:bus3.strips}),
     stage2Stats:()=>({built:live2.built,puddles:live2.puddles.filter(p=>p.puddle.visible).length,snow:+live2.snowK.toFixed(2),snowVisible:!!live2.snowman?.visible,watchman:!!live2.watch?.p.visible,cats:live2.cats.filter(c=>c.g.visible).length,boards:live2.boards.map(b=>b.shut.visible?'closed':'open'),hits:live2.hits,kiteVisible:life.kite?.kid.visible,playVisible:life.play?.sk.visible,fisherVisible:life.fisher?.p.visible,boatVisible:life.boat?.g.visible}),
+    stepWeather:seconds=>{for(let t=0;t<seconds;t+=.05)updateWeather(Math.min(.05,seconds-t));},
     setWeatherForTest:k=>{weatherKind=k;},touch2:(x,y)=>touch2(x,y),
     moreStats:()=>({built:more.built,phase:more.phase,lit:lanterns.filter(l=>l.lit).length,lanterns:lanterns.length,parade:!!more.parade,paradesRun:more.paradesRun,gulls:more.gulls.map(x=>x.state),crowd:more.crowd.length,sparks:fwSys.active,rockets:fwSys.rockets.length,fwBursts:{...fwSys.bursts},bursts:more.bursts,lamplighter:more.lamp?.p.visible}),
     startParade:()=>startParade(),burstFirework:(x,y,z)=>burstFirework(x,y,z),launchFirework:(x,z)=>{fwLaunch(x,z);return true;},

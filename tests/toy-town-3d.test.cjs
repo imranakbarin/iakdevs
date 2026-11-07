@@ -339,6 +339,9 @@ assert.ok(api.getStats().districtGardenRooms>=1,
   'empty outer lots receive at least one low landscaped courtyard');
 const gardenRooms=api.scene.children.flatMap(node=>node.children||[])
   .filter(node=>node.userData?.districtGarden);
+const playSite=api.lifeStats().at.play;
+if(playSite)assert.ok(api.contours().every(([x,z])=>Math.hypot(x-playSite[0],z-playSite[1])>1.3),
+  'landscape contours reserve the playground footprint');
 assert.equal(gardenRooms.length,api.getStats().districtGardenRooms,
   'all planted courts are real grounded scene geometry');
 assert.equal(api.getStats().festoonBulbs,2,'two small single lanterns light the square');

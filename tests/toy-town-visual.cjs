@@ -71,7 +71,7 @@ async function main(){
       const errors=[];
       page.on('pageerror',err=>errors.push('pageerror:'+err.message));
       page.on('console',m=>{if(m.type()==='error')errors.push('console:'+m.text().slice(0,250));});
-      await page.goto('http://127.0.0.1:'+port+'/toy-town.html?visual=1'+(job.classic?'&classic=1':'')+(job.weather?'&weather='+job.weather:''),
+      await page.goto('http://127.0.0.1:'+port+'/toy-town.html?visual=1'+(job.classic?'&classic=1':'')+'&weather='+(job.weather||'clear'),
         {waitUntil:'domcontentloaded',timeout:45000});
       await page.waitForFunction(()=>typeof ToyTown!=='undefined'&&ToyTown.buildings().length>0,
         {timeout:50000});
@@ -136,12 +136,15 @@ async function main(){
       if(job.weather){
         await page.waitForFunction(()=>ToyTown3D.weather().kind==='rain',null,{timeout:20000});
         const rain=await page.evaluate(()=>{
+          ToyTown3D.stepWeather(4);
           let drops=null;ToyTown3D.scene.traverse(o=>{if(o.userData?.kind==='rain'&&o.userData.lengths)drops=o;});
           if(!drops)throw Error('Detailed rain stream missing');
-          return {count:drops.userData.lengths.length,min:Math.min(...drops.userData.lengths),max:Math.max(...drops.userData.lengths),
+          const before=Array.from(drops.geometry.attributes.position.array);ToyTown3D.stepWeather(.15);
+          const moved=before.some((v,i)=>Math.abs(v-drops.geometry.attributes.position.array[i])>.01);
+          return {opacity:drops.material.opacity,moved,count:drops.userData.lengths.length,min:Math.min(...drops.userData.lengths),max:Math.max(...drops.userData.lengths),
             varied:new Set([...drops.userData.lengths].map(v=>v.toFixed(3))).size,depthWrite:drops.material.depthWrite};
         });
-        if(rain.varied<20||rain.min<.04||rain.max>.15||rain.depthWrite)
+        if(rain.varied<20||rain.min<.04||rain.max>.15||rain.depthWrite||rain.opacity<.19||!rain.moved)
           throw Error('Rain must be short, varied and not write an opaque depth layer: '+JSON.stringify(rain));
         console.log('RAIN_GPU '+JSON.stringify(rain));
         await page.evaluate(()=>{for(let i=0;i<60;i++)ToyTown.update(1/60);});
@@ -355,6 +358,7 @@ async function main(){
       }));
       if(!job.classic&&!data.active)throw Error('3D vanished before screenshot: '+job.name);
       if(!job.classic&&!data.stats?.frozen)throw Error('3D did not freeze the captured frame');
+      if(job.place==='park'){const overlap=await page.evaluate(()=>{const p=ToyTown3D.lifeStats().at.play;return ToyTown3D.contours().filter(([x,z])=>Math.hypot(x-p[0],z-p[1])<1.3);});if(overlap.length)throw Error('Garden contours overlap playground: '+JSON.stringify(overlap));}
       if(!job.classic){const b=await page.evaluate(()=>window.ToyTown3D?.batchStats?.()||null);if(!b||b.off||b.merged<50||b.removed<500)throw Error('static batching did not merge the town: '+JSON.stringify(b)+' '+job.name);}
       if(!job.classic){const black=await page.evaluate(()=>window.ToyTown3D?.vertexColorAudit?.()||0);if(black)throw Error(black+' meshes read vertex colours from a geometry that has none (they draw black): '+job.name);}
       const record={name:job.name,bytes:image.length,...data,errors};
