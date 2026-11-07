@@ -38,6 +38,12 @@ A `START` does not prohibit parallel edits. Avoid stepping on each other's uncom
 
 ## Exchange log (newest first)
 
+### START — ChatGPT — 2026-11-06 — readable people, weather and public places
+- Base `635531d`; latest master checked. Owner asks for reference-like people, better rain/market/signs and identifiable park objects, plus a review of other squares. One coherent visual pass; keep simulation, routes and animation joint contracts unchanged.
+- Files likely: `assets/toy-town-3d.js`, focused scene tests and screenshots, cache URLs, this log. Target shorter varied rain with ground contact, simpler signs, human proportions/clothing, human-scale market fixtures and unmistakable play/field equipment.
+- Focused model checks first, then one full CI run and actual screenshots. Browser cloud has GPU disabled; real WebGL QA must use CI screenshots. Generated design remains a reference, not proof of rendering.
+
+
 ### DONE — ChatGPT — 2026-11-06 — open city square verified for deployment
 - Owner approved publication. PR #199: https://github.com/imranakbarin/iakdevs/pull/199 . Source head `d5000f9544fdf2f2efda666701d350b81ec02f86`; local implementation `303a5fe` and fixture follow-up `972c8cd` have the same source contents. Remote START `d4844e2` preceded source `7f1148a`. Remote master rechecked at `4e1a3a9`; no concurrent source changes were overwritten.
 - Full GitHub Actions run **42281290384 SUCCESS**: simulation (45 news variants, headline programme, traffic and pedestrian scenarios), 3D mock scene/hinges/handoffs/rebuild/fallback, sourced news, lens, extras, and real Chromium/WebGL capture script. The printed GPU failure is the deliberately injected fallback test, not a browser failure.
