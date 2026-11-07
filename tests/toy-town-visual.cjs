@@ -56,7 +56,7 @@ async function main(){
     for(const job of jobs){
       const context=await browser.newContext({viewport:{width:job.w,height:job.h},deviceScaleFactor:1,
         isMobile:!!job.mobile||job.w<500,hasTouch:!!job.mobile||job.w<500,reducedMotion:job.reduced?'reduce':'no-preference',
-        ...(job.weather?{recordVideo:{dir:out,size:{width:job.w,height:job.h}}}:{})});
+        ...((job.weather||job.social)?{recordVideo:{dir:out,size:{width:job.w,height:job.h}}}:{})});
       const page=await context.newPage();
       // Exercise real headline UI with controlled current publisher data.
       // The production hourly RSS job is tested separately.
@@ -399,6 +399,20 @@ async function main(){
           throw Error('Choreographed 3D scene failed to express live social interaction: '+
             JSON.stringify(animated));
       }
+      if(job.social){
+        // Capture moving frames as well as stills. Real simulation displacement
+        // must advance; elapsed time alone cannot make a parked cycle pedal.
+        await page.evaluate(()=>{window.__motionBefore=ToyTown.movers().map(m=>({m,x:m.x,y:m.y,travel:m.travel||0}));});
+        for(let frame=0;frame<15;frame++){
+          await page.evaluate(()=>{for(let f=0;f<6;f++){ToyTown.update(1/30);ToyTown3D.stepPoses(1/30);}ToyTown3D.renderer.render(ToyTown3D.scene,ToyTown3D.camera);});
+          await page.waitForTimeout(80);
+        }
+        const motion=await page.evaluate(()=>({rendered:15,
+          people:window.__motionBefore.filter(q=>q.m.type==='person'&&Math.hypot(q.m.x-q.x,q.m.y-q.y)>.03).length,
+          cycles:window.__motionBefore.filter(q=>q.m.kind==='bike'&&(q.m.travel||0)>q.travel+.03).length}));
+        if(motion.people<1||motion.cycles<1)throw Error('Motion capture has no real walking/cycling: '+JSON.stringify(motion));
+        console.log('MOTION_GPU '+JSON.stringify(motion));
+      }
       if(!job.mobileCheck)await page.addStyleTag({content:'#card,#ticker,#hint,#zoom-controls{display:none!important}'});
       await page.waitForTimeout(150);
       // A moving WebGL canvas may never satisfy Playwright's stability check.
@@ -456,7 +470,7 @@ async function main(){
       }else if(job.name==='desktop-social-life'){
         console.log('TOY_CITY_SOCIAL_JPEG_BEGIN '+image.toString('base64')+' TOY_CITY_SOCIAL_JPEG_END');
       }
-      const video=job.weather?page.video():null;
+      const video=job.weather||job.social?page.video():null;
       await context.close();
       if(video)await fs.rename(await video.path(),path.join(out,job.name+'.webm'));
     }
