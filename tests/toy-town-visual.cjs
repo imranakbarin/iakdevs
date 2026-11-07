@@ -137,7 +137,7 @@ async function main(){
       let beforeFrame=await page.evaluate(()=>window.ToyTown3D?.getStats?.().frames||0);
       await page.evaluate(f=>{
         ToyTown.setPlaying(false);
-        ToyTown.zoomAt(f);
+        if(window.ToyTown3D?.active)ToyTown.pinchTo(f,innerWidth/2,innerHeight/2,{x:9,y:9});else ToyTown.zoomAt(f);
       },job.zoom);
       if(job.country){
         await page.evaluate(()=>{window.__countryBuildings=ToyTown.buildings();window.__countryResidents=ToyTown.movers().slice();window.ToyTown3D?.freeze?.();});
