@@ -130,9 +130,12 @@ async function main(){
         ToyTown.zoomAt(f);
       },job.zoom);
       if(job.touchCheck||job.mobileCheck){
-        const before=await page.evaluate(()=>ToyTown.debug().cam.tz),button=await page.locator('#zoom-in').boundingBox();
-        if(!button)throw Error('Mobile zoom control missing');
-        await page.touchscreen.tap(button.x+button.width/2,button.y+button.height/2);
+        const before=await page.evaluate(()=>ToyTown.debug().cam.tz),cdp=await context.newCDPSession(page);
+        const x=job.w/2,y=job.h*.52;
+        const points=d=>[{x:x-d,y,id:1,radiusX:4,radiusY:4,force:1},{x:x+d,y,id:2,radiusX:4,radiusY:4,force:1}];
+        await cdp.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:points(28)});
+        for(const d of [34,40,46,52])await cdp.send('Input.dispatchTouchEvent',{type:'touchMove',touchPoints:points(d)});
+        await cdp.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});await cdp.detach();
         await page.waitForFunction(z=>ToyTown.debug().cam.tz>z+.005,before,{timeout:15000});
         const ui=await page.evaluate(()=>({width:innerWidth,overflow:document.documentElement.scrollWidth>innerWidth+1,
           clipped:[...document.querySelectorAll('#zoom-controls button')].map(e=>e.getBoundingClientRect()).filter(r=>r.width>0).some(r=>r.left<0||r.right>innerWidth+1||r.top<0||r.bottom>innerHeight+1),
