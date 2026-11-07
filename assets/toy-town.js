@@ -2114,7 +2114,7 @@ const ToyTown = (() => {
     c.restore();
   }
   function drawBuilding(c, b, night) {
-    b=window.ToyTownCountry?.building(b)||b;
+    b=globalThis.ToyTownCountry?.building(b)||b;
     // Offscreen culling is important now that each shop has material layers:
     // keep its full roof height in the vertical margin.
     const foot = P(b.x+.5,b.y+.5);
