@@ -5,6 +5,9 @@ on:
   push:
     paths:
       - 'assets/toy-town-3d.js'
+      - 'assets/toy-town-country.js'
+      - 'assets/toy-town-diorama.js'
+      - 'tests/toy-town-country.test.cjs'
       - 'assets/toy-town-landmarks.js'
       - 'assets/toy-town-lens.js'
       - 'assets/toy-town-sound.js'
