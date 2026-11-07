@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generated_at": "2026-11-07T16:52:50.747Z",
+  "generated_at": "2026-11-07T20:56:42.752Z",
   "status": "ok",
   "successful_sources": [
     "BBC News",
@@ -17,20 +17,20 @@
   ],
   "stories": [
     {
-      "title": "Adventurer Finally Hugs Mom After 28-Year Walk Around the World From Home in UK",
-      "url": "https://www.goodnewsnetwork.org/adventurer-finally-hugs-mom-after-28-year-walk-around-the-world-from-home-in-uk/",
+      "title": "Baby Saved After Racing Heartbeat Detected by Family Doberman",
+      "url": "https://www.goodnewsnetwork.org/baby-saved-as-racing-heartbeat-detected-by-pet/",
       "source": "Good News Network",
       "category": "Good news",
       "tone": "light",
-      "published_at": "2026-11-07T14:11:37.000Z"
+      "published_at": "2026-11-07T16:58:40.000Z"
     },
     {
-      "title": "APOD: 2026 November 7 – De Gerlache-Kocher Massif",
-      "url": "https://science.nasa.gov/image-article/apod-2026-november-7-de-gerlache-kocher-massif/",
+      "title": "NASA Seeks Next Generation of Explorers to Join Astronaut Corps",
+      "url": "https://www.nasa.gov/news-release/nasa-seeks-next-generation-of-explorers-to-join-astronaut-corps/",
       "source": "NASA",
       "category": "Science",
       "tone": "light",
-      "published_at": "2026-11-07T05:05:00.000Z"
+      "published_at": "2026-11-07T18:11:57.000Z"
     },
     {
       "title": "Knicks defend Taylor Swift after players name her 'fakest celebrity fan'",
@@ -41,12 +41,12 @@
       "published_at": "2026-11-07T13:03:57.000Z"
     },
     {
-      "title": "De Zerbi focuses on Spurs' failings - but should Bogle have seen red?",
-      "url": "https://www.bbc.co.uk/sport/football/articles/c39wz9llg255o?at_medium=RSS&at_campaign=rss",
+      "title": "Delap double inspires Forest to stunning win over Man City",
+      "url": "https://www.bbc.co.uk/sport/football/videos/crp3gewxj77eo?at_medium=RSS&at_campaign=rss",
       "source": "BBC Sport",
       "category": "Sport",
       "tone": "light",
-      "published_at": "2026-11-07T16:35:26.000Z"
+      "published_at": "2026-11-07T20:02:25.000Z"
     },
     {
       "title": "The Bantu expansion changed Africa. Scientists are still tracing how.",
@@ -65,20 +65,20 @@
       "published_at": "2026-11-07T01:41:36.000Z"
     },
     {
-      "title": "No clear winner after tight New Zealand general election",
-      "url": "https://www.bbc.co.uk/news/articles/c3ewev11g1e0o?at_medium=RSS&at_campaign=rss",
+      "title": "What we know so far after Polish gunman opens fire in Krakow main square",
+      "url": "https://www.bbc.co.uk/news/articles/cmd7q15drwgeo?at_medium=RSS&at_campaign=rss",
       "source": "BBC News",
       "category": "World",
       "tone": "light",
-      "published_at": "2026-11-07T15:56:28.000Z"
+      "published_at": "2026-11-07T20:23:17.000Z"
     },
     {
-      "title": "Your Positive Weekly Horoscope: ‘Free Will Astrology’ by Rob Brezsny",
-      "url": "https://www.goodnewsnetwork.org/horoscope-from-rob-brezsnys-free-will-astrology-11-7-2026/",
+      "title": "Adventurer Finally Hugs Mom After 28-Year Walk Around the World From Home in UK",
+      "url": "https://www.goodnewsnetwork.org/adventurer-finally-hugs-mom-after-28-year-walk-around-the-world-from-home-in-uk/",
       "source": "Good News Network",
       "category": "Good news",
       "tone": "light",
-      "published_at": "2026-11-07T11:00:33.000Z"
+      "published_at": "2026-11-07T14:11:37.000Z"
     },
     {
       "title": "One of the year's most prolific meteor showers to light up the night sky this weekend",
