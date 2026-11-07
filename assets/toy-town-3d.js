@@ -3219,7 +3219,7 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
     for(let i=0;i<p.visitors.length;i++){
       const person=p.visitors[i],phase=(time+i*7)%18;
       const travel=phase<4?phase/4:phase<12?1:1-(phase-12)/6;
-      person.position.set(-.32+.54*travel,.07,.54+i*.055);
+      person.position.set(-.32+.54*travel,.07,.50+i*.11);
       person.rotation.y=phase<4?Math.PI/2:phase<12?Math.PI:-Math.PI/2;
       const L=person.userData.limbs,moving=phase<4||phase>=12;
       for(let k=0;k<2;k++){L.legs[k].rotation.x=moving&&!reducedMotion?Math.sin(travel*16+k*Math.PI)*.55:0;L.shins[k].rotation.x=moving?Math.max(0,-Math.sin(travel*16+k*Math.PI))*.6:0;L.arms[k].rotation.x=moving?-.25*L.legs[k].rotation.x:-.6;}
