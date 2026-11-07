@@ -143,6 +143,7 @@ async function main(){
           models:window.ToyTown3D?.getStats().countryBuildings||0,stats:window.ToyTown3D?.getStats()||null}),job.country);
         if(selected.id!==job.country||selected.url!==job.country||selected.saved!==job.country||!selected.unchanged||(!job.classic&&selected.models<15))throw Error('Country selection failed: '+JSON.stringify(selected));
         console.log('COUNTRY_SELECTION '+job.country+' '+JSON.stringify(selected));
+        if(!job.classic)await page.evaluate(()=>{const p=ToyTown3D.countryPlace();if(!p)throw Error('Country landmark missing');ToyTown3D.previewCountryActivity(7);ToyTown.pinchTo(3.25,innerWidth/2,innerHeight/2,{x:p.x,y:p.z});});
         await page.evaluate(()=>window.ToyTown3D?.unfreeze?.());
         beforeFrame=await page.evaluate(()=>window.ToyTown3D?.getStats().frames||0);
       }
@@ -433,7 +434,7 @@ async function main(){
       }));
       if(!job.classic&&!data.active)throw Error('3D vanished before screenshot: '+job.name);
       if(!job.classic&&!data.stats?.frozen)throw Error('3D did not freeze the captured frame');
-      if(job.country&&!job.classic){const features=await page.evaluate(()=>{const f=new Set();ToyTown3D.scene.traverse(n=>{if(n.userData?.countryFeature)f.add(n.userData.countryFeature);});return [...f];});if(!features.length)throw Error('Country architecture lacks modeled roof features');console.log('COUNTRY_FEATURES '+job.country+' '+JSON.stringify(features));}
+      if(job.country&&!job.classic){const features=await page.evaluate(()=>{const f=new Set();ToyTown3D.scene.traverse(n=>{if(n.userData?.countryFeature)f.add(n.userData.countryFeature);});return [...f];});if(!features.length)throw Error('Country architecture lacks modeled roof features');const activity=await page.evaluate(()=>{ToyTown3D.previewCountryActivity(2);const a=ToyTown3D.countryPlace();ToyTown3D.previewCountryActivity(7);const b=ToyTown3D.countryPlace();return {a,b};});if(activity.a.visitors[0].x===activity.b.visitors[0].x||activity.b.visitors[0].action!==activity.b.activity)throw Error('Country activity did not reach its destination');console.log('COUNTRY_ACTIVITY '+JSON.stringify(activity));console.log('COUNTRY_FEATURES '+job.country+' '+JSON.stringify(features));}
       if(job.reader){const r=await page.evaluate(()=>{
         let reader=null;ToyTown3D.scene.traverse(o=>{if(o.userData?.shopProps?.book&&Math.abs(o.position.x-9)<.01&&Math.abs(o.position.z-9.65)<.01)reader=o;});
         if(!reader)throw Error('Rendered reader missing');
