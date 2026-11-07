@@ -2160,7 +2160,7 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
     // A generous matte studio table under the actual miniature slab.
     // Soft ambient contrast makes the scene read like a photographed model.
     // The town stands in a calm sea (see seaAndLighthouse): the sea level cuts the wooden base about a third of the way up.
-    const backdrop=box(world,140,.07,140,mat('#7dbcc4',.5),9,SEA_Y-.035,9);
+    const backdrop=box(world,400,.07,400,mat('#7dbcc4',.5),9,SEA_Y-.035,9);
     backdrop.castShadow=false;
     terrainCutaway();
     // One continuous painted meadow rests over the sculpted board. Its
@@ -6053,7 +6053,7 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
   function syncCamera(){
     const state=town.debug(),v=state.cam;
     const aspect=renderer.domElement.width/Math.max(1,renderer.domElement.height);
-    const fit=Math.min(1,Math.max(.30,aspect*28/27))*.47;
+    const fit=Math.min(1,Math.max(.30,aspect*28/27))*(desktop()?.70:.50);
     const t=THREE.MathUtils.clamp((v.z-(town.fitView?.()||.475))/.52,0,1);
     const scaled=v.z*(desktop()?1.5:1.58);
     const equivalentOrthoZoom=THREE.MathUtils.lerp(fit,scaled,t);
