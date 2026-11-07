@@ -3023,7 +3023,7 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
     const size=placed.userData.size,key=Math.abs(b.x*7+b.y*13);
     const top=size.y;
     const g=new THREE.Group();placed.add(g);g.position.y=top-.025;
-    if(b.kind==='house'){
+    if(b.kind==='house'&&key%3!==0){
       const color=['#a97761','#82918c','#ad8d67'][key%3];
       roof(g,color,0);g.scale.set(size.x*.99,.56,size.z*.99);
       if(key%2)g.rotation.y=Math.PI;
@@ -3032,7 +3032,7 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
       box(chimney,.115,.035,.125,'#e1d5be',0,.1,0);
       return top+.25;
     }
-    if(b.kind==='tower'){
+    if(b.kind==='tower'||b.kind==='house'){
       box(g,size.x*.60,.12,size.z*.55,'#a99b83',0,.06,-size.z*.12);
       box(g,size.x*.66,.025,size.z*.6,'#788e89',0,.13,-size.z*.12);
       placed.userData.roofStyle='terrace';
