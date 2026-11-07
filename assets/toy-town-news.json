@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generated_at": "2026-11-06T23:14:29.378Z",
+  "generated_at": "2026-11-07T02:54:42.240Z",
   "status": "ok",
   "successful_sources": [
     "BBC News",
@@ -25,12 +25,12 @@
       "published_at": "2026-11-06T21:16:55.000Z"
     },
     {
-      "title": "A really simple guide to climate change",
-      "url": "https://www.bbc.co.uk/news/articles/c9w15nggj58o?at_medium=RSS&at_campaign=rss",
+      "title": "One of the year's most prolific meteor showers to light up the night sky this weekend",
+      "url": "https://www.bbc.co.uk/weather/articles/cmlykqq7zg9zo?at_medium=RSS&at_campaign=rss",
       "source": "BBC Science",
       "category": "Science",
       "tone": "light",
-      "published_at": "2026-11-06T16:40:51.000Z"
+      "published_at": "2026-11-07T02:03:28.000Z"
     },
     {
       "title": "Brand's barrister refers himself to regulator after report he confronted journalist",
@@ -41,28 +41,28 @@
       "published_at": "2026-11-06T16:49:31.000Z"
     },
     {
-      "title": "Whole Australia team knew of sandpaper use - Khawaja",
-      "url": "https://www.bbc.co.uk/sport/cricket/articles/cjdx33kyzk3lo?at_medium=RSS&at_campaign=rss",
+      "title": "Six tries and a big win - but were Ireland ruthless?",
+      "url": "https://www.bbc.co.uk/sport/rugby-union/articles/cmde88ppx39go?at_medium=RSS&at_campaign=rss",
       "source": "BBC Sport",
       "category": "Sport",
       "tone": "light",
-      "published_at": "2026-11-06T23:11:56.000Z"
+      "published_at": "2026-11-06T23:57:05.000Z"
     },
     {
-      "title": "Elon Musk appears to signal the end of the road for Cybertruck",
-      "url": "https://www.bbc.co.uk/news/articles/cq1j33w7d232o?at_medium=RSS&at_campaign=rss",
-      "source": "BBC Technology",
+      "title": "Doctors pull knife from man's eye that went through his brain—and he's fine now",
+      "url": "https://arstechnica.com/health/2026/11/man-unexpectedly-recovers-from-a-knife-wound-through-his-eye-and-brain/",
+      "source": "Ars Technica",
       "category": "Technology",
       "tone": "light",
-      "published_at": "2026-11-06T21:49:50.000Z"
+      "published_at": "2026-11-06T23:09:45.000Z"
     },
     {
-      "title": "Food bank to close amid rising costs",
-      "url": "https://www.bbc.co.uk/news/articles/cqrkyyj6rx7ro?at_medium=RSS&at_campaign=rss",
+      "title": "'My mortgage is going up £200': How rising interest rates are hitting people's pockets",
+      "url": "https://www.bbc.co.uk/news/articles/c617kjqjvk12o?at_medium=RSS&at_campaign=rss",
       "source": "BBC Business",
       "category": "Business",
       "tone": "light",
-      "published_at": "2026-11-06T16:42:23.000Z"
+      "published_at": "2026-11-07T01:41:36.000Z"
     },
     {
       "title": "Nigerian court rules opposition candidate cannot stand in elections",
