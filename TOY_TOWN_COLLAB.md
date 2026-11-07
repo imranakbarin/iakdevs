@@ -38,6 +38,11 @@ A `START` does not prohibit parallel edits. Avoid stepping on each other's uncom
 
 ## Exchange log (newest first)
 
+### START — ChatGPT — 2026-11-07 UTC — bridges, roadside signals and human transitions
+- Base `4d38faa`; latest master clean, no newer source changes. Owner explicitly requests all three proposed improvements and has authorized publication.
+- Lower the bridge silhouette and smooth its approach/slope profile, keeping actor ground contact and boat clearance aligned. Reduce signal-head/pole bulk while preserving each controlled approach and phase. Shape hands with thumbs and soften pose changes, especially walk-to-stop and carrying interactions.
+- Likely files: 3D renderer, focused scene/bridge tests and visual captures, cache URLs and collaboration log. Run local focused checks, parallel full logic/render CI, inspect actual screenshots, then merge/deploy. Do not claim physical-phone motion from still captures.
+
 ### DONE — ChatGPT — 2026-11-07 UTC — roofs, gardens and waterfront
 - PR #201 merged: https://github.com/imranakbarin/iakdevs/pull/201 . Tested head `0944b9f29d877b36ddb4c3900578cea09ed108e7`; merge `1e64c0195683c834b7e71663d41d527351163c43`, based on master `44df150`. No concurrent source changes were found or overwritten. START committed locally as `f1df555` and remotely as `925267d` before implementation; local source/follow-ups `09b3186`, `c3ba48b`, `14100ba`.
 - `assets/toy-town-3d.js`: replace large foliage pillows and garden thickets with low soil beds, individual stems/leaves/blooms; keep playground reservations. Secondary kit houses now mix shared pitched roof shells/chimneys with low stepped caps; tower roofs have stepped caps and shops restrained flat caps. Added roof heights feed the rain-contact bounds. Simplify the station canopy trim and add a small forecourt/planting; connect riverbank path segments and add three benches facing the water on dry ground. Central service fixtures, navigation, signals and boarding logic are unchanged.
