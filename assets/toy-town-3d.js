@@ -3454,7 +3454,7 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
   function updateMetropolis(time){
     metro.time=time;
     for(const v of metro.vehicles){const p=metroLoop(time*.45+v.offset,4.12);v.g.position.set(v.x+p.x,.192,v.z+p.z);v.g.rotation.y=p.angle;const rig=v.g.userData.vehicleRig;if(rig)for(const w of rig.wheels)w.rotation.z=-time*5;}
-    for(const v of metro.walkers){const t=(time+v.offset)%54;const distance=Math.min(t,45)*.21+v.offset,p=metroLoop(distance,3.56);v.g.position.set(v.x+p.x,.20,v.z+p.z);v.g.rotation.y=p.angle+Math.PI/2;const L=v.g.userData.limbs;for(let i=0;i<2;i++)L.legs[i].rotation.x=t<45&&!reducedMotion?Math.sin(distance*16+i*Math.PI)*.45:0;}
+    for(const v of metro.walkers){const t=(time+v.offset)%54;const distance=(Math.floor((time+v.offset)/54)*45+Math.min(t,45))*.21+v.offset,p=metroLoop(distance,3.56);v.g.position.set(v.x+p.x,.20,v.z+p.z);v.g.rotation.y=p.angle+Math.PI/2;const L=v.g.userData.limbs;for(let i=0;i<2;i++)L.legs[i].rotation.x=t<45&&!reducedMotion?Math.sin(distance*16+i*Math.PI)*.45:0;}
     for(const v of metro.bridges){const t=(Math.sin(time*.07)+1)/2;for(let k=0;k<2;k++)v.g.userData.limbs.legs[k].rotation.x=reducedMotion?0:Math.sin(t*v.length*14+k*Math.PI)*.45;v.g.position.set(v.ax+(v.bx-v.ax)*t,v.height(t)+.035,v.az+(v.bz-v.az)*t);v.g.rotation.y=Math.atan2(v.bx-v.ax,v.bz-v.az)+(Math.cos(time*.07)<0?Math.PI:0);}
   }
 
@@ -6193,7 +6193,7 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
   const api={
     active:false,renderer,scene,camera,
     setCountry:id=>{if(!COUNTRY_IDS.includes(id))return false;if(id===country)return true;country=id;rebuild();syncActors();return true;},
-    metropolis:()=>({bounds:{...CITY_BOUNDS},districts:METRO_DISTRICTS.map(d=>({...d})),buildings:metro.buildings.length,vehicles:metro.vehicles.map(v=>({x:v.g.position.x,z:v.g.position.z,district:v.district})),walkers:metro.walkers.length,bridges:metro.bridges.length,time:metro.time}),
+    metropolis:()=>({bounds:{...CITY_BOUNDS},districts:METRO_DISTRICTS.map(d=>({...d})),buildings:metro.buildings.length,vehicles:metro.vehicles.map(v=>({x:v.g.position.x,z:v.g.position.z,district:v.district})),walkers:metro.walkers.length,pedestrians:metro.walkers.map(v=>({x:v.g.position.x,z:v.g.position.z})),bridges:metro.bridges.length,time:metro.time}),
     previewMetropolis:time=>updateMetropolis(time),
     countryPlace:()=>countryPlace?({name:COUNTRY_PLACES[country][0],activity:countryPlace.activity,x:countryPlace.x,z:countryPlace.z,time:countryPlace.time,visitors:countryPlace.visitors.map(v=>({x:v.position.x,z:v.position.z,action:v.userData.countryAction})),rotor:countryPlace.rotor?.rotation.z??null}):null,
     previewCountryActivity:time=>{updateCountryPlace(time);},

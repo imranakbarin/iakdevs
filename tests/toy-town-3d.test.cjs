@@ -941,6 +941,7 @@ assert.equal(api.metropolis().walkers,18);
 api.previewMetropolis(0);const metroStart=api.metropolis();api.previewMetropolis(10);const metroNext=api.metropolis();
 assert.notEqual(metroStart.vehicles[0].x,metroNext.vehicles[0].x,'new district traffic travels');
 for(let t=0;t<180;t+=2){api.previewMetropolis(t);const v=api.metropolis().vehicles;for(let i=0;i<v.length;i++)for(let j=i+1;j<v.length;j++)if(v[i].district===v[j].district)assert.ok(Math.hypot(v[i].x-v[j].x,v[i].z-v[j].z)>3,'perimeter traffic keeps ample separation through corners');}
+api.previewMetropolis(53.99);const beforeLoop=api.metropolis().pedestrians;api.previewMetropolis(54.01);const afterLoop=api.metropolis().pedestrians;assert.ok(Math.hypot(beforeLoop[0].x-afterLoop[0].x,beforeLoop[0].z-afterLoop[0].z)<.01,'walkers continue from their stop without teleporting at the cycle boundary');
 api.previewMetropolis(10);const paused=JSON.stringify(api.metropolis());api.previewMetropolis(10);assert.equal(JSON.stringify(api.metropolis()),paused,'clock pause freezes metro routes');
 
 // Country changes replace real models without mutating the simulation or view.
