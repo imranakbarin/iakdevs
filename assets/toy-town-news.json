@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generated_at": "2026-11-07T02:54:42.240Z",
+  "generated_at": "2026-11-07T10:22:38.054Z",
   "status": "ok",
   "successful_sources": [
     "BBC News",
@@ -25,28 +25,28 @@
       "published_at": "2026-11-06T21:16:55.000Z"
     },
     {
-      "title": "One of the year's most prolific meteor showers to light up the night sky this weekend",
-      "url": "https://www.bbc.co.uk/weather/articles/cmlykqq7zg9zo?at_medium=RSS&at_campaign=rss",
-      "source": "BBC Science",
+      "title": "APOD: 2026 November 7 – De Gerlache-Kocher Massif",
+      "url": "https://science.nasa.gov/image-article/apod-2026-november-7-de-gerlache-kocher-massif/",
+      "source": "NASA",
       "category": "Science",
       "tone": "light",
-      "published_at": "2026-11-07T02:03:28.000Z"
+      "published_at": "2026-11-07T05:05:00.000Z"
     },
     {
-      "title": "Brand's barrister refers himself to regulator after report he confronted journalist",
-      "url": "https://www.bbc.co.uk/news/articles/c8kgee9yxvn7o?at_medium=RSS&at_campaign=rss",
+      "title": "Relief, tears and sadness: Married at First Sight UK cast react to show being axed",
+      "url": "https://www.bbc.co.uk/news/articles/crx233lx94n7o?at_medium=RSS&at_campaign=rss",
       "source": "BBC Culture",
       "category": "Culture",
       "tone": "light",
-      "published_at": "2026-11-06T16:49:31.000Z"
+      "published_at": "2026-11-07T05:12:52.000Z"
     },
     {
-      "title": "Six tries and a big win - but were Ireland ruthless?",
-      "url": "https://www.bbc.co.uk/sport/rugby-union/articles/cmde88ppx39go?at_medium=RSS&at_campaign=rss",
+      "title": "New Zealand sweep aside Samoa to reach Women's World Cup final",
+      "url": "https://www.bbc.co.uk/sport/rugby-league/articles/c680zz8k3nvvo?at_medium=RSS&at_campaign=rss",
       "source": "BBC Sport",
       "category": "Sport",
       "tone": "light",
-      "published_at": "2026-11-06T23:57:05.000Z"
+      "published_at": "2026-11-07T08:32:15.000Z"
     },
     {
       "title": "Doctors pull knife from man's eye that went through his brain—and he's fine now",
@@ -65,12 +65,12 @@
       "published_at": "2026-11-07T01:41:36.000Z"
     },
     {
-      "title": "Nigerian court rules opposition candidate cannot stand in elections",
-      "url": "https://www.bbc.co.uk/news/articles/cw8rzzx46jd5o?at_medium=RSS&at_campaign=rss",
-      "source": "BBC News",
+      "title": "US: Giant pandas from China make public debut at Atlanta zoo",
+      "url": "https://www.dw.com/en/us-giant-pandas-from-china-make-public-debut-at-atlanta-zoo/a-79883388?maca=en-rss-en-world-4025-xml-mrss",
+      "source": "DW",
       "category": "World",
       "tone": "light",
-      "published_at": "2026-11-06T17:35:55.000Z"
+      "published_at": "2026-11-07T07:33:00.000Z"
     },
     {
       "title": "What went right this week: the good news that matters",
@@ -81,12 +81,12 @@
       "published_at": "2026-11-06T05:00:54.000Z"
     },
     {
-      "title": "M30’s Sparkling Stars",
-      "url": "https://www.nasa.gov/image-article/m30s-sparkling-stars/",
-      "source": "NASA",
+      "title": "One of the year's most prolific meteor showers to light up the night sky this weekend",
+      "url": "https://www.bbc.co.uk/weather/articles/cmlykqq7zg9zo?at_medium=RSS&at_campaign=rss",
+      "source": "BBC Science",
       "category": "Science",
       "tone": "light",
-      "published_at": "2026-11-06T16:23:41.000Z"
+      "published_at": "2026-11-07T02:03:28.000Z"
     }
   ]
 }
