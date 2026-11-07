@@ -1335,6 +1335,20 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
     }
     woodlandShapes++;
   }
+  function plantedBed(parent,x,z,rx,rz,variant=0,y=.22){
+    const bed=new THREE.Group();bed.position.set(x,y,z);parent.add(bed);
+    bed.userData.plantedBed=true;
+    const soil=cylinder(bed,1,1,.015,'#a18c6c',0,0,0);soil.scale.set(rx,1,rz);soil.castShadow=false;
+    for(let k=0;k<7;k++){
+      const a=k*2.4+variant,r=k===0?0:.55;
+      const xx=Math.cos(a)*rx*r,zz=Math.sin(a)*rz*r,h=.065+(k%3)*.018;
+      cylinder(bed,.004,.005,h,'#668463',xx,h/2,zz).castShadow=false;
+      const leaf=ball(bed,.026,'#7b9b6f',xx+.012,.027,zz);leaf.scale.set(1.4,.24,.65);leaf.castShadow=false;
+      const bloom=ball(bed,.029,['#e9caa9','#e7b9bd','#f0e6c6'][variant%3],xx,h,zz);bloom.scale.set(1,.45,1);bloom.castShadow=false;
+      ball(bed,.010,'#c6a45f',xx,h+.014,zz).castShadow=false;
+    }
+    return bed;
+  }
   function littleFlowers(x,z,i){
     for(let n=0;n<3;n++){
       const a=rng(i,n+5)*TAU,r=.09+.15*rng(i,10+n);
@@ -1584,18 +1598,8 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
       gardenElements+=2;
     };
     const thicket=(x,z,spread=.2,seedNo=0)=>{
-      const palette=gardenColors;
-      for(let k=0;k<5;k++){
-        const a=(k*2.4+seedNo*.31);
-        const xx=x+Math.cos(a)*spread*(.33+.45*rng(k+seedNo,81));
-        const zz=z+Math.sin(a)*spread*(.33+.45*rng(k+seedNo,93));
-        const shrub=ball(world,.105+(k%3)*.021,
-          palette[(k+seedNo)%palette.length],xx,.29+(k%2)*.029,zz);
-        shrub.scale.set(1.35,.53,.95);
-        shrub.castShadow=false;
-        if(k%2===0)flower(xx+.036,zz+.028,(k+seedNo)%5,.71);
-      }
-      gardenElements+=5;
+      plantedBed(world,x,z,spread*.95,spread*.8,seedNo%3,.245);
+      gardenElements+=8;
     };
     function gardenIsland(x,z,rx,rz,paletteIndex=0){
       // Actual rounded, shallow extruded earth — not floating foliage
@@ -1788,25 +1792,8 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
       }),raisedEarth[variant%4],x,.155,z,false);
       turf.rotation.x=-Math.PI/2;turf.receiveShadow=true;
       turf.userData.landscapeContour=true;
-      // Two very flat foliage pillows blend the top into the turf; exposed
-      // soil remains visible at the outer scalloped boundary.
-      for(let i=0;i<2;i++){
-        const leaf=object(world,geo('sphere',.45),
-          leafMat[(i+variant)%4],x+(i?rx*.24:-rx*.22),
-          .205,z+(i?rz*.17:-rz*.21),false);
-        leaf.scale.set(rx*.70,.067,rz*.66);
-      }
-      for(let i=0;i<4;i++){
-        const a=i*TAU/4+.24,rr=.58+.14*rng(i,variant+91);
-        const xx=x+Math.cos(a)*rx*rr,zz=z+Math.sin(a)*rz*rr;
-        const grass=object(world,geo('sphere',.14),
-          mat(i%2?'#779d7f':'#8cae88'),xx,.264,zz,false);
-        grass.scale.set(.84,.39,.73);
-        if((i+variant)%3===0){
-          const flower=ball(world,.024,'#e8cfb9',xx,.319,zz);
-          flower.scale.set(1.2,.65,.9);flower.castShadow=false;
-        }
-      }
+      // Low soil and individual stems make these read as flower beds.
+      plantedBed(world,x,z,rx*.8,rz*.8,variant%3,.225);
       terrainContours++;
     }
     // Open neighborhood sites become small flowing gardens rather than
@@ -1879,21 +1866,7 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
         mat('#d9cab0'),x,.215,z,false);
       ring.rotation.x=-Math.PI/2;
       ring.scale.set(1,.82,1);
-      // Two paired flowering beds have height but never cover a shopfront.
-      for(let k=0;k<4;k++){
-        const a=k*TAU/4+(district%2)*.42;
-        const px=x+Math.cos(a)*.28,pz=z+Math.sin(a)*.25;
-        const bush=ball(world,.13,k%2?'#729c7f':'#93b297',px,.268,pz);
-        bush.scale.set(1.15,.56,.84);
-        bush.castShadow=false;
-        if(k%2===0){
-          const bloom=ball(world,.035,district%2?'#f0d2ad':'#e7b4b6',
-            px,.35,pz);
-          bloom.castShadow=false;
-        }
-      }
-      const marker=ball(world,.068,'#d1baa0',x,.227,z);
-      marker.scale.set(1.15,.27,.75);marker.castShadow=false;
+      plantedBed(world,x,z,.29,.24,district%3,.228);
       districtGardenRooms++;
     }
   }
@@ -2246,10 +2219,16 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
     // street lawns; the bank is interrupted precisely at each bridge.
     for(let i=1;i<17;i++){
       if(!isRoad(i)) {
-        groundPiece(.85,.15,'#e1d3b7',i+.5,12.90,.17);
+        const path=groundPiece(.98,.23,'#dfd2b9',i+.5,12.90,.17);path.userData.riverPath=true;
         paintedVerge(i+.5,12.98,.84,.24,'east-west',.174);
         littleFlowers(i+.35,12.63,i*17);
       }
+    }
+    for(const x of [4.35,9.05,14.4]){
+      const bench=new THREE.Group();bench.position.set(x,.17,12.48);world.add(bench);bench.userData.riverBench=true;
+      for(const dx of [-.17,.17])box(bench,.025,.13,.16,'#657268',dx,.065,0);
+      for(const z of [-.06,0,.06])box(bench,.44,.022,.042,'#ad8f6b',0,.145,z);
+      box(bench,.44,.12,.025,'#ad8f6b',0,.23,-.085);
     }
     // City benches and planted corners are integrated with the paved streets:
     // small seasonal flower beds, low stone troughs and soft ground cover.
@@ -3035,9 +3014,33 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
     const placed=kitPlace(world,name,b.x+.5,.17,b.y+.5,{fit:b.kind==='tower'?1.02:.98,rotY:0,squash:b.kind==='tower'?TOWER_SQUASH:1,hue:BUILDING_HUES[Math.abs(Math.round(b.x*5+b.y*11+(worldSeed||0)))%BUILDING_HUES.length]});
     if(!placed)return false;
     placed.userData.buildingKind=b.kind;composedBuildings++;
-    rainRoofs.push({x:b.x+.5,z:b.y+.5,rx:placed.userData.size.x/2,rz:placed.userData.size.z/2,top:.17+placed.userData.size.y});
+    const roofTop=finishRoof(placed,b);
+    rainRoofs.push({x:b.x+.5,z:b.y+.5,rx:placed.userData.size.x/2,rz:placed.userData.size.z/2,top:.17+roofTop});
     if(b.kind==='house')porchLamp(placed,b);
     return true;
+  }
+  function finishRoof(placed,b){
+    const size=placed.userData.size,key=Math.abs(b.x*7+b.y*13);
+    const top=size.y;
+    const g=new THREE.Group();placed.add(g);g.position.y=top-.025;
+    if(b.kind==='house'&&key%3!==0){
+      const color=['#a97761','#82918c','#ad8d67'][key%3];
+      roof(g,color,0);g.scale.set(size.x*.99,.56,size.z*.99);
+      if(key%2)g.rotation.y=Math.PI;
+      placed.userData.roofStyle='gable';
+      const chimney=box(placed,.09,.20,.10,'#b7a48c',size.x*.22,top+.13,-size.z*.19);
+      box(chimney,.115,.035,.125,'#e1d5be',0,.1,0);
+      return top+.25;
+    }
+    if(b.kind==='tower'||b.kind==='house'){
+      box(g,size.x*.60,.12,size.z*.55,'#a99b83',0,.06,-size.z*.12);
+      box(g,size.x*.66,.025,size.z*.6,'#788e89',0,.13,-size.z*.12);
+      placed.userData.roofStyle='terrace';
+      return top+.15;
+    }
+    // Low, differently coloured roof caps give shops a calm horizontal edge.
+    box(g,size.x*1.025,.035,size.z*1.025,['#86968a','#b29a7e','#9a8679'][key%3],0,.02,0);
+    placed.userData.roofStyle='flat';return top+.04;
   }
   const porchLamps=[];
   function porchLamp(placed,b){
@@ -3477,6 +3480,7 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
       const hole=new THREE.Mesh(new THREE.ShapeGeometry(flatShape(.21,.43)),new THREE.MeshBasicMaterial({color:'#2d2a35'}));
       for(const [m,off,dy] of [[frame,.006,top-.005],[hole,.011,top-.005]]){m.position.set(RAIL.hillX+sd*(hillL/2+off),dy,RAIL.y0);m.rotation.y=sd*Math.PI/2;g.add(m);}
     }
+    g.userData.civicStation=true;
     // Station: platform, hall, clock tower, canopy, lamps, benches.
     const cx=RAIL.stationX,py=top,platTop=py+.08;
     box(g,3.9,.08,.46,'#efe3cd',cx,py+.04,18.19).castShadow=false;
@@ -3504,7 +3508,9 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
     // Sign and canopy over the platform.
     for(const px of [-1,0,1])cylinder(g,.015,.015,.7,'#f6efe2',cx+px,platTop+.35,18.24);
     box(g,2.3,.04,.36,'#86c9bd',cx,platTop+.71,18.08);
-    for(let k=0;k<9;k++)ball(g,.05,mat(k%2?'#ffffff':'#86c9bd',.8),cx-1.08+k*.27,platTop+.68,18.27).scale.set(1,.75,.6);
+    box(g,2.34,.055,.035,'#e8ddc5',cx,platTop+.685,18.27);
+    box(g,3.6,.025,.27,'#d9cdb6',cx,py+.015,17.12);
+    for(const side of [-1,1])plantedBed(g,cx+side*1.5,17.12,.17,.095,side+1,py+.035);
     sign(g,'TOY TOWN',cx,platTop+.93,18.2,.8).rotation.x=-.2;
     // Platform furniture.
     for(const bx of [-.9,.9]){

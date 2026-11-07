@@ -36,6 +36,7 @@ async function main(){
       {name:'desktop-open-square',w:1280,h:900,classic:false,zoom:3.1,square:true},
       {name:'market-place',w:1100,h:820,classic:false,zoom:3.25,place:'market'},
       {name:'park-playground',w:1100,h:820,classic:false,zoom:3.25,place:'park'},
+      {name:'station-waterfront',w:1280,h:900,classic:false,zoom:2.7,waterfront:true},
       {name:'rain-mobile',w:390,h:844,classic:false,zoom:1.9,weather:'rain'},
       {name:'desktop-social-life',w:1080,h:760,classic:false,zoom:2.05,social:true},
       {name:'desktop-3d-wide',w:1280,h:820,classic:false,zoom:.65},
@@ -124,6 +125,7 @@ async function main(){
         ToyTown.setPlaying(false);
         ToyTown.zoomAt(f);
       },job.zoom);
+      if(job.waterfront)await page.evaluate(()=>ToyTown.pinchTo(2.7,innerWidth/2,innerHeight/2,{x:9,y:16.2}));
       if(job.square)await page.evaluate(()=>ToyTown.pinchTo(3.1,innerWidth/2,innerHeight/2,{x:9,y:9.35}));
       if(job.place){
         await page.evaluate(place=>{
@@ -360,6 +362,7 @@ async function main(){
       if(!job.classic&&!data.stats?.frozen)throw Error('3D did not freeze the captured frame');
       if(job.place==='park'){const overlap=await page.evaluate(()=>{const p=ToyTown3D.lifeStats().at.play;return ToyTown3D.contours().filter(([x,z])=>Math.hypot(x-p[0],z-p[1])<1.3);});if(overlap.length)throw Error('Garden contours overlap playground: '+JSON.stringify(overlap));}
       if(!job.classic){const b=await page.evaluate(()=>window.ToyTown3D?.batchStats?.()||null);if(!b||b.off||b.merged<50||b.removed<500)throw Error('static batching did not merge the town: '+JSON.stringify(b)+' '+job.name);}
+      if(job.name==='desktop-3d-wide'){const roofs=await page.evaluate(()=>{const styles=new Set();ToyTown3D.scene.traverse(o=>{if(o.userData?.roofStyle)styles.add(o.userData.roofStyle);});return [...styles];});if(!roofs.includes('gable')||!roofs.includes('terrace'))throw Error('Roof silhouettes missing: '+JSON.stringify(roofs));console.log('ROOF_STYLES '+JSON.stringify(roofs));}
       if(!job.classic){const black=await page.evaluate(()=>window.ToyTown3D?.vertexColorAudit?.()||0);if(black)throw Error(black+' meshes read vertex colours from a geometry that has none (they draw black): '+job.name);}
       const record={name:job.name,bytes:image.length,...data,errors};
       records.push(record);

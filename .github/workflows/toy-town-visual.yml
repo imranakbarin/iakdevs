@@ -26,6 +26,18 @@ permissions:
   contents: read
 
 jobs:
+  town-logic:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Verify town logic, camera controls and 3D environment
+        run: node scripts/check-toy-town.cjs
+
+  # Both jobs are mandatory; render checks do not depend on logic outputs.
   real-browser-screenshots:
     runs-on: ubuntu-24.04   # ubuntu-latest became 26.04, which Playwright 1.58 does not support
     timeout-minutes: 15
@@ -38,8 +50,6 @@ jobs:
         run: |
           npm install --no-save --no-package-lock playwright@1.58.2
           npx playwright install --with-deps chromium
-      - name: Verify town logic, camera controls and 3D environment
-        run: node scripts/check-toy-town.cjs
       - name: Test real WebGL and capture close-up views
         run: node tests/toy-town-visual.cjs
       - name: Keep rendered screenshots

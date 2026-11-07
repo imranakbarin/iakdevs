@@ -159,7 +159,7 @@ assert.match(moduleCode,/eye.scale.y=blink/,'eyelids blink without a separate an
 assert.match(html,/type="importmap"/);
 assert.match(html,/three@0\.187\.0\/build\/three\.module\.js/);
 assert.match(html,/three@0\.187\.0\/examples\/jsm\//);
-assert.match(html,/toy-town-3d\.js\?v=86/);
+assert.match(html,/toy-town-3d\.js\?v=87/);
 assert.match(moduleCode,/ref\.path&&Number\.isFinite\(ref\.walkFacing\)/, 'routed people use a real diagonal heading instead of a cardinal-only pose');
 assert.match(html,/toy-town-landmarks\.js\?v=7/,'the independent models are requested alongside Three');
 assert.match(html,/buildLandmark:landmarks\.buildLandmark/,
@@ -169,7 +169,7 @@ const classicScript=html.match(/src="assets\/toy-town\.js\?v=\d+"/);
 assert.ok(classicScript&&
   html.indexOf(classicScript[0])<html.indexOf("import('three')"),
   'the actual versioned classic script always loads before WebGL');
-assert.match(page,/toy-town\.html\?v=97&embed=1/);
+assert.match(page,/toy-town\.html\?v=98&embed=1/);
 assert.match(fs.readFileSync(path.join(root,'assets/toy-town-3d.js'),'utf8'),/sport=ref\.kind==='runner'[\s\S]*bib with a stripe/,'marathon runners are dressed in sports kit (vest, shorts, bib, headband)');
 assert.match(fs.readFileSync(path.join(root,'assets/toy-town-3d.js'),'utf8'),/town\.stageHeadline/,'the town crier makes the town act out the headline');
 assert.match(fs.readFileSync(path.join(root,'assets/toy-town.js'),'utf8'),
@@ -331,6 +331,13 @@ assert.ok(workingDesks.every(s=>s.children.length>30),
   'supported awnings and dimensional merchandise actually exist in the 3D scene');
 assert.ok(workingDesks.every(s=>s.position.x>7&&s.position.x<11&&
   s.position.z>8&&s.position.z<9),'shop counters are on the living village frontage');
+const sceneNodes=[];const collectScene=o=>{sceneNodes.push(o);for(const c of o.children||[])collectScene(c);};collectScene(api.scene);
+const planted=sceneNodes.filter(o=>o.userData?.plantedBed);
+assert.ok(planted.length>=4,'real low flower beds replace bulky foliage pillows');
+assert.ok(planted.every(b=>b.children.length>=22),'flower beds contain stems, leaves and blooms');
+const riverBenches=sceneNodes.filter(o=>o.userData?.riverBench);
+assert.equal(riverBenches.length,3,'three actual grounded seats face the river');
+assert.ok(riverBenches.every(b=>b.position.z<12.8),'seats stay on dry bank, outside the water');
 assert.ok(api.getStats().woodlandShapes>=1,
   'simulation trees use the authored asymmetric crowns');
 assert.ok(api.getStats().terrainContours>=2,
