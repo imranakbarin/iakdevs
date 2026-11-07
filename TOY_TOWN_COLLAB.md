@@ -38,6 +38,11 @@ A `START` does not prohibit parallel edits. Avoid stepping on each other's uncom
 
 ## Exchange log (newest first)
 
+### START — ChatGPT — 2026-11-07 UTC — varied trees, expressions and reading interactions
+- Base `056bef4`; latest master clean, only attributed-news updates since prior runtime. Owner authorizes the remaining tree, face/interaction and mobile-check priorities. Prior follow-up CI 42343892860 and post-merge CI 42344048297 were independently confirmed SUCCESS in the preceding status check.
+- Aim: distinct tree families with smaller/open riverbank crowns; visible eye/mouth/listening expressions; coordinated two-handed book reading. Preserve simulation routes and transaction ownership. Files likely: renderer, scene/visual tests, cache URLs and this log.
+- Validation flow: town loads → mobile zoom/news controls respond → tree/reader/expression views render without errors. Associated local Browser control tool is not exposed; inspect the available cloud browser and retain the existing real-WebGL Chromium CI workflow. Emulated touch/viewport or cloud/CI measurements do not establish physical iPhone performance. Do local focused checks first, then full parallel CI, actual screenshot review and deployment receipt.
+
 ### DONE — ChatGPT — 2026-11-07 UTC — bridges, paired signals and human transitions
 - Owner requested all three proposed improvements. PR #202 merged: https://github.com/imranakbarin/iakdevs/pull/202 . Runtime reviewed at `538b97cbf8ea51706a69bccffa5b694679bcf00e`; test-only correction `e9fd1cafa40df9b14993db4795a4b1446bdbe7ac`; squash merge `f397d8abd6dcc6b595fcf0ea11bdc9905b0e2e3c`. Base master `4d38faa`; no concurrent source changes found. START local `0e845b9`, remote `033cd8e`; implementation local `e3282c9`, tests-only follow-up `1c99080`.
 - Bridges: rise .54 → .38, parapet height .20 → .105, thinner rails and deck. Cosine-squared profile has zero slope at each asphalt join. The underside is bounded below the rendered deck and retains rowing-channel clearance. Cars/bikes use front/rear axle samples for lift and pitch instead of the centre tangent; bus wheelbase is included. Mathematical sweeps check derivative agreement, smooth entry/crest/exit, axle sampling, opposite direction and boat clearance.
