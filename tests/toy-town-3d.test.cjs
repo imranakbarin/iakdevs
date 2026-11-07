@@ -159,7 +159,7 @@ assert.match(moduleCode,/eye.scale.y=blink/,'eyelids blink without a separate an
 assert.match(html,/type="importmap"/);
 assert.match(html,/three@0\.187\.0\/build\/three\.module\.js/);
 assert.match(html,/three@0\.187\.0\/examples\/jsm\//);
-assert.match(html,/toy-town-3d\.js\?v=85/);
+assert.match(html,/toy-town-3d\.js\?v=86/);
 assert.match(moduleCode,/ref\.path&&Number\.isFinite\(ref\.walkFacing\)/, 'routed people use a real diagonal heading instead of a cardinal-only pose');
 assert.match(html,/toy-town-landmarks\.js\?v=7/,'the independent models are requested alongside Three');
 assert.match(html,/buildLandmark:landmarks\.buildLandmark/,
@@ -169,7 +169,7 @@ const classicScript=html.match(/src="assets\/toy-town\.js\?v=\d+"/);
 assert.ok(classicScript&&
   html.indexOf(classicScript[0])<html.indexOf("import('three')"),
   'the actual versioned classic script always loads before WebGL');
-assert.match(page,/toy-town\.html\?v=96&embed=1/);
+assert.match(page,/toy-town\.html\?v=97&embed=1/);
 assert.match(fs.readFileSync(path.join(root,'assets/toy-town-3d.js'),'utf8'),/sport=ref\.kind==='runner'[\s\S]*bib with a stripe/,'marathon runners are dressed in sports kit (vest, shorts, bib, headband)');
 assert.match(fs.readFileSync(path.join(root,'assets/toy-town-3d.js'),'utf8'),/town\.stageHeadline/,'the town crier makes the town act out the headline');
 assert.match(fs.readFileSync(path.join(root,'assets/toy-town.js'),'utf8'),
@@ -339,6 +339,9 @@ assert.ok(api.getStats().districtGardenRooms>=1,
   'empty outer lots receive at least one low landscaped courtyard');
 const gardenRooms=api.scene.children.flatMap(node=>node.children||[])
   .filter(node=>node.userData?.districtGarden);
+const playSite=api.lifeStats().at.play;
+if(playSite)assert.ok(api.contours().every(([x,z])=>Math.hypot(x-playSite[0],z-playSite[1])>1.3),
+  'landscape contours reserve the playground footprint');
 assert.equal(gardenRooms.length,api.getStats().districtGardenRooms,
   'all planted courts are real grounded scene geometry');
 assert.equal(api.getStats().festoonBulbs,2,'two small single lanterns light the square');
@@ -460,6 +463,13 @@ const contours=sceneWorld.children.filter(o=>o.userData?.landscapeContour);
 assert.ok(contours.length>=2,'real geometric lawn contours join several lots');
 // A square is an edited composition: the old furniture layer must not
 // survive underneath the new one, and the north/south aisles stay clear.
+const referencePeople=sceneWorld.children.filter(o=>o.userData?.referenceHuman);
+assert.ok(referencePeople.length>=1,'reference-style people are built in the actual scene');
+assert.ok(referencePeople.every(o=>o.userData.referenceHuman.headRadius*2<o.userData.referenceHuman.shoulderWidth),
+  'adult heads are narrower than their shoulders, with the existing articulated rig');
+assert.ok(sceneWorld.children.some(o=>o.userData?.playingField),'the old blank green ring is a marked playing field');
+const producePlace=sceneWorld.children.find(o=>o.userData?.districtSceneRole==='produce');
+assert.ok(producePlace?.children.some(o=>o.userData?.marketStall),'the produce workplace uses a real crate-and-awning stall');
 const civic=sceneWorld.children.find(o=>o.userData?.citySquare);
 assert.ok(civic,'one civic furniture layer owns the square');
 const fixtures=civic.children.filter(o=>o.userData?.squareFixture);

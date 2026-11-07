@@ -34,6 +34,9 @@ async function main(){
       {name:'mobile-3d-close',w:390,h:844,classic:false,zoom:1.7},
       {name:'desktop-3d-close',w:1280,h:820,classic:false,zoom:1.8},
       {name:'desktop-open-square',w:1280,h:900,classic:false,zoom:3.1,square:true},
+      {name:'market-place',w:1100,h:820,classic:false,zoom:3.25,place:'market'},
+      {name:'park-playground',w:1100,h:820,classic:false,zoom:3.25,place:'park'},
+      {name:'rain-mobile',w:390,h:844,classic:false,zoom:1.9,weather:'rain'},
       {name:'desktop-social-life',w:1080,h:760,classic:false,zoom:2.05,social:true},
       {name:'desktop-3d-wide',w:1280,h:820,classic:false,zoom:.65},
       {name:'mobile-classic-reference',w:390,h:844,classic:true,zoom:1.7}
@@ -41,7 +44,8 @@ async function main(){
     const records=[];
     for(const job of jobs){
       const context=await browser.newContext({viewport:{width:job.w,height:job.h},deviceScaleFactor:1,
-        isMobile:job.w<500,hasTouch:job.w<500});
+        isMobile:job.w<500,hasTouch:job.w<500,
+        ...(job.weather?{recordVideo:{dir:out,size:{width:job.w,height:job.h}}}:{})});
       const page=await context.newPage();
       // Exercise real headline UI with controlled current publisher data.
       // The production hourly RSS job is tested separately.
@@ -67,7 +71,7 @@ async function main(){
       const errors=[];
       page.on('pageerror',err=>errors.push('pageerror:'+err.message));
       page.on('console',m=>{if(m.type()==='error')errors.push('console:'+m.text().slice(0,250));});
-      await page.goto('http://127.0.0.1:'+port+'/toy-town.html?visual=1'+(job.classic?'&classic=1':''),
+      await page.goto('http://127.0.0.1:'+port+'/toy-town.html?visual=1'+(job.classic?'&classic=1':'')+'&weather='+(job.weather||'clear'),
         {waitUntil:'domcontentloaded',timeout:45000});
       await page.waitForFunction(()=>typeof ToyTown!=='undefined'&&ToyTown.buildings().length>0,
         {timeout:50000});
@@ -121,6 +125,31 @@ async function main(){
         ToyTown.zoomAt(f);
       },job.zoom);
       if(job.square)await page.evaluate(()=>ToyTown.pinchTo(3.1,innerWidth/2,innerHeight/2,{x:9,y:9.35}));
+      if(job.place){
+        await page.evaluate(place=>{
+          const q=place==='park'?ToyTown3D.lifeStats().at.play:null;
+          const p=place==='market'?ToyTown.props().find(p=>p.kind==='district-scene'&&p.role==='produce'):null;
+          if(!q&&!p)throw Error('Requested public place missing: '+place);
+          ToyTown.pinchTo(3.25,innerWidth/2,innerHeight/2,{x:q?q[0]:p.x,y:q?q[1]:p.y});
+        },job.place);
+      }
+      if(job.weather){
+        await page.waitForFunction(()=>ToyTown3D.weather().kind==='rain',null,{timeout:20000});
+        const rain=await page.evaluate(()=>{
+          ToyTown3D.stepWeather(4);
+          let drops=null;ToyTown3D.scene.traverse(o=>{if(o.userData?.kind==='rain'&&o.userData.lengths)drops=o;});
+          if(!drops)throw Error('Detailed rain stream missing');
+          const before=Array.from(drops.geometry.attributes.position.array);ToyTown3D.stepWeather(.15);
+          const moved=before.some((v,i)=>Math.abs(v-drops.geometry.attributes.position.array[i])>.01);
+          return {opacity:drops.material.opacity,moved,count:drops.userData.lengths.length,min:Math.min(...drops.userData.lengths),max:Math.max(...drops.userData.lengths),
+            varied:new Set([...drops.userData.lengths].map(v=>v.toFixed(3))).size,depthWrite:drops.material.depthWrite};
+        });
+        if(rain.varied<20||rain.min<.04||rain.max>.15||rain.depthWrite||rain.opacity<.31||!rain.moved)
+          throw Error('Rain must be short, varied and not write an opaque depth layer: '+JSON.stringify(rain));
+        console.log('RAIN_GPU '+JSON.stringify(rain));
+        await page.evaluate(()=>{for(let i=0;i<60;i++)ToyTown.update(1/60);});
+        await page.waitForTimeout(1800);
+      }
       if(job.name==='mobile-3d-close'){
         // A pretty frame is not proof of city life. Advance the REAL
         // simulation in Chromium until trading and the street concert
@@ -329,6 +358,7 @@ async function main(){
       }));
       if(!job.classic&&!data.active)throw Error('3D vanished before screenshot: '+job.name);
       if(!job.classic&&!data.stats?.frozen)throw Error('3D did not freeze the captured frame');
+      if(job.place==='park'){const overlap=await page.evaluate(()=>{const p=ToyTown3D.lifeStats().at.play;return ToyTown3D.contours().filter(([x,z])=>Math.hypot(x-p[0],z-p[1])<1.3);});if(overlap.length)throw Error('Garden contours overlap playground: '+JSON.stringify(overlap));}
       if(!job.classic){const b=await page.evaluate(()=>window.ToyTown3D?.batchStats?.()||null);if(!b||b.off||b.merged<50||b.removed<500)throw Error('static batching did not merge the town: '+JSON.stringify(b)+' '+job.name);}
       if(!job.classic){const black=await page.evaluate(()=>window.ToyTown3D?.vertexColorAudit?.()||0);if(black)throw Error(black+' meshes read vertex colours from a geometry that has none (they draw black): '+job.name);}
       const record={name:job.name,bytes:image.length,...data,errors};
@@ -344,7 +374,9 @@ async function main(){
       }else if(job.name==='desktop-social-life'){
         console.log('TOY_CITY_SOCIAL_JPEG_BEGIN '+image.toString('base64')+' TOY_CITY_SOCIAL_JPEG_END');
       }
+      const video=job.weather?page.video():null;
       await context.close();
+      if(video)await fs.rename(await video.path(),path.join(out,job.name+'.webm'));
     }
     await fs.writeFile(path.join(out,'audit.json'),JSON.stringify(records,null,2));
   } finally {

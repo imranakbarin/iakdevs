@@ -237,7 +237,7 @@ assert.match(fs.readFileSync(path.join(root, 'toy-town.html'), 'utf8'), /html\.u
 assert.match(fs.readFileSync(path.join(root, 'toy-town.html'), 'utf8'), /type==='town:ui'/, 'the host page can ask for it');
 assert.match(fs.readFileSync(path.join(root, 'index.html'), 'utf8'), /uiHooks\.push\(townUI\)/, 'hiding the toolbar hides the town overlays too');
 assert.match(fs.readFileSync(path.join(root, 'index.html'), 'utf8'), /\.town-mode\.art-ui-hidden #town-zoom\{display:none\}/, 'and the zoom buttons');
-assert.match(view, /const CUTE=\.6,HEAD_BIG=\.94;/, 'residents are small and soft with a gently big head');
+assert.match(view, /const CUTE=\.6,HEAD_BIG=\.90;/, 'residents keep their scale with a smaller head and clear shoulders');
 assert.match(view, /function createLife\(\)/); assert.match(view, /function scatterBirds\(x,z,r\)/, 'pigeons peck and scatter');
 assert.match(view, /if\(scatterBirds\(spot\.x,spot\.z,1\.1\)\)/, 'a tap on open ground can startle them');
 assert.match(view, /const ANIMAL_SCALE=\{dog:\.5/, 'animals are scaled to match the small residents (the dog was huge)');
