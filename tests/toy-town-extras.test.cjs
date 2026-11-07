@@ -131,7 +131,7 @@ assert.match(view, /const HAIRS=\[/, 'residents have a range of hair colours');
 assert.match(sim, /const rushFactor = \(\) =>/); assert.match(sim, /carsWanted = Math\.round\(CARS \* rush\)/, 'the streets fill at the rush hours and thin out at night');
 assert.match(sim, /'ducks'\);/); assert.match(sim, /feedDucks\(m\.x, 14\); feedings\+\+/, 'now and then a resident walks to the river and feeds the ducks');
 assert.match(sim, /if \(m\.type === 'person' && !m\.kind && wet\) want \*= 1\.18;/); assert.match(sim, /Math\.abs\(m\.x - 9\) < 3\.1 && Math\.abs\(m\.y - 9\) < 3\.1\) want \*= \.78/, 'walkers hurry in the rain and cars ease off in bad weather and near the plaza');
-assert.match(view, /crumbsAt\(ref\.x,ref\.y<14\?13\.25:14\.75\)/, 'the duck feeder\'s crumbs are drawn'); assert.match(view, /A small walk \/ don't-walk lamp/, 'signals have small pedestrian lamps');
+assert.match(view, /crumbsAt\(ref\.x,ref\.y<14\?13\.25:14\.75\)/, 'the duck feeder\'s crumbs are drawn'); assert.match(view.slice(view.indexOf('function createSignals('),view.indexOf('function updateSignals(')), /const ped=new THREE.Group\(\)/, 'signals construct pedestrian lamp groups');
 assert.match(soundSrc, /whistle: \(\) =>/, 'a rocket whistles as it climbs');
 assert.match(view, /function fwStep\(dt,t\)/); assert.match(view, /pattern:r<\.2\?'ring':r<\.5\?'willow':'peony'/, 'fireworks are rockets with trails that burst into peonies, willows and rings of fading, twinkling sparks');
 assert.match(view, /const deep=THREE\.MathUtils\.clamp\(\(dark-\.3\)\/\.6,0,1\)/); assert.match(view, /tint\(sky,'#0b1630',night\*\.97\)/, 'night is a deep-blue sky with cool moonlight and a lower exposure, not a tinted day');
@@ -265,7 +265,7 @@ for (const seed of [555, 42]) {
   assert.equal(wet, 0, `layout ${seed}: nobody walks on the water (first at ${where})`);
 }
 assert.match(view, /b\.scale\.setScalar\(\.62\)/, 'seagulls are small');
-assert.match(view, /const ARCH=\{y0:\.172,L:1\.3,H:\.54,T:\.09,a:\.88,yb:\.1,W:1\.34\}/, 'bridges are arches, wide enough for the pavement lanes, with an opening the river runs through');
+assert.match(view, /const ARCH=\{y0:\.172,L:1\.3,H:\.38,T:\.055,a:\.92,yb:\.1,W:1\.34\}/, 'bridges are arches, wide enough for the pavement lanes, with an opening the river runs through');
 // 360° rotation: the sim keeps a heading that every screen-to-world step honours.
 {
   const box = vm.createContext({Math, Object, Array, JSON, Date, String, Number, RegExp, Set, Map, setTimeout: () => 0, document: {getElementById: () => ({textContent: '', style: {}})}});

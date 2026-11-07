@@ -1988,21 +1988,25 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
   function createSignals(){
     const mk=(hex)=>new THREE.MeshStandardMaterial({color:hex,emissive:hex,emissiveIntensity:.1,roughness:.4});
     signal.mats={x:{r:mk('#e2463a'),a:mk('#f4b73a'),g:mk('#4fbf72')},y:{r:mk('#e2463a'),a:mk('#f4b73a'),g:mk('#4fbf72')}};
-    const first=LINES[0],last=LINES[LINES.length-1],e=.45,dark=mat('#2e343a',.6),pole=mat('#59636b',.7);
+    signal.poles=0;signal.heads=0;
+    const first=LINES[0],last=LINES[LINES.length-1],e=.45,dark=mat('#3e4847',.7),pole=mat('#64706a',.8);
     for(const jx of LINES)for(const jz of LINES){
-      if((jx===first||jx===last)&&(jz===first||jz===last))continue;   // the four corner bends have no crossing traffic
+      if((jx===first||jx===last)&&(jz===first||jz===last))continue;
       const cx=jx+.5,cz=jz+.5;
-      // [corner dx, corner dz, axis it controls, direction its face looks along the approach]
-      for(const [sx,sz,axis,fx,fz] of [[1,1,'x',-1,0],[-1,-1,'x',1,0],[-1,1,'y',0,-1],[1,-1,'y',0,1]]){
-        const g=new THREE.Group();g.position.set(cx+sx*e,GROUND.pave,cz+sz*e);world.add(g);
-        object(g,geo('cylinder',.012,.014,.52),pole,0,.26,0,false);
-        const head=new THREE.Group();head.position.set(0,.56,0);head.rotation.y=Math.atan2(fx,fz);g.add(head);
-        object(head,geo('box',.07,.17,.06),dark,0,0,0,false);
-        [['r',.055],['a',0],['g',-.055]].forEach(([c,y])=>{const l=object(head,geo('sphere',.019),signal.mats[axis][c],0,y,.034,false);l.castShadow=false;});
-        // A small walk / don't-walk lamp below it for people on foot (they cross when the light on their own axis is green).
-        const ped=new THREE.Group();ped.position.set(0,.37,0);ped.rotation.y=head.rotation.y;g.add(ped);
-        object(ped,geo('box',.05,.09,.04),dark,0,0,0,false);
-        [['r',.024],['g',-.024]].forEach(([c,y])=>{const l=object(ped,geo('sphere',.014),signal.mats[axis][c],0,y,.024,false);l.castShadow=false;});
+      // Two shared corner masts retain all four approach-facing signals.
+      for(const side of [-1,1]){
+        const g=new THREE.Group();g.position.set(cx+side*e,GROUND.pave,cz+side*e);world.add(g);
+        g.userData.signalMast=true;signal.poles++;
+        object(g,geo('cylinder',.008,.011,.43),pole,0,.215,0,false);
+        for(const [axis,fx,fz] of [['x',-side,0],['y',0,-side]]){
+          const head=new THREE.Group();head.position.set(fx*.025,.455,fz*.025);head.rotation.y=Math.atan2(fx,fz);g.add(head);
+          head.userData.signalApproach=axis;signal.heads++;
+          object(head,geo('box',.049,.125,.036),dark,0,0,0,false);
+          [['r',.039],['a',0],['g',-.039]].forEach(([c,y])=>object(head,geo('sphere',.013),signal.mats[axis][c],0,y,.022,false));
+          const ped=new THREE.Group();ped.position.set(fx*.018,.29,fz*.018);ped.rotation.y=head.rotation.y;g.add(ped);
+          object(ped,geo('box',.034,.061,.028),dark,0,0,0,false);
+          [['r',.016],['g',-.016]].forEach(([c,y])=>object(ped,geo('sphere',.009),signal.mats[axis][c],0,y,.017,false));
+        }
       }
     }
   }
@@ -2079,10 +2083,10 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
   // River bridges have pale stone shoulders, anchored to the same lanes.
   // A humpback stone arch: the deck curves up from the road at each bank, and the river runs through the opening
   // underneath, so the rowing boat and the ducks can pass under it. ARCH.y0 is the asphalt top.
-  const ARCH={y0:.172,L:1.3,H:.54,T:.09,a:.88,yb:.1,W:1.34};
-  const archTop=u=>ARCH.y0+ARCH.H*(1-(u/ARCH.L)*(u/ARCH.L));
+  const ARCH={y0:.172,L:1.3,H:.38,T:.055,a:.92,yb:.1,W:1.34};
+  const archTop=u=>ARCH.y0+ARCH.H*Math.cos(Math.min(1,Math.abs(u)/ARCH.L)*Math.PI/2)**2;
   function bridgeAt(n){
-    const A=ARCH,N=18,apex=A.y0+A.H-A.T,mk=(key,build,depth)=>{
+    const A=ARCH,N=32,apex=A.y0+A.H-A.T,mk=(key,build,depth)=>{
       if(!geometryCache.has(key)){const g=new THREE.ExtrudeGeometry(build(),{depth,bevelEnabled:false,curveSegments:14});geometryCache.set(key,g);}
       return geometryCache.get(key);};
     const band=(off0,off1)=>()=>{const sh=new THREE.Shape();sh.moveTo(-A.L,archTop(-A.L)+off0);
@@ -2090,12 +2094,15 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
       for(let i=N;i>=0;i--){const u=-A.L+2*A.L*i/N;sh.lineTo(u,archTop(u)+off1);}return sh;};
     const body=()=>{const sh=new THREE.Shape();sh.moveTo(-A.L,A.yb);sh.lineTo(-A.L,archTop(-A.L));
       for(let i=1;i<=N;i++){const u=-A.L+2*A.L*i/N;sh.lineTo(u,archTop(u));}
-      sh.lineTo(A.L,A.yb);sh.lineTo(A.a,A.yb);sh.absellipse(0,A.yb,A.a,apex-A.yb,0,Math.PI,false,0);sh.lineTo(-A.L,A.yb);return sh;};
+      sh.lineTo(A.L,A.yb);sh.lineTo(A.a,A.yb);
+      // The opening never crosses the thinner deck on the flatter shoulders.
+      for(let i=1;i<=N;i++){const u=A.a-2*A.a*i/N;sh.lineTo(u,Math.min(archTop(u)-A.T,A.yb+(apex-A.yb)*Math.sqrt(Math.max(0,1-(u/A.a)**2))));}
+      sh.lineTo(-A.L,A.yb);return sh;};
     // Extrusion runs along local z; turning the mesh a quarter turn lays the depth along world x and the profile along world z.
-    const put=(geometry,material,cx,depth)=>{const m=object(world,geometry,material,cx+depth/2,0,14);m.rotation.y=-Math.PI/2;return m;};
+    const put=(geometry,material,cx,depth)=>{const m=object(world,geometry,material,cx+depth/2,0,14);m.rotation.y=-Math.PI/2;m.userData.bridgePart=true;return m;};
     put(mk('bridge:body',body,A.W),mat('#b4a98f',.9),n+.5,A.W);
     put(mk('bridge:deck',band(0,.012),1.1),mat('#78868a',.92),n+.5,1.1).castShadow=false;
-    for(const side of [-1,1])put(mk('bridge:rail',band(.0,.2),.052),mat('#d8d1bf',.9),n+.5+side*.62-.0,.052);
+    for(const side of [-1,1])put(mk('bridge:rail',band(.0,.105),.035),mat('#d8d1bf',.9),n+.5+side*.62-.0,.035);
   }
   // KayKit road tiles on the street grid: straights, a zebra crossing by the
   // plaza, T-splits on the outer edges, corners at the four outer corners and
@@ -3248,8 +3255,23 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
       const elbow=new THREE.Group();elbow.position.y=-.084;
       limb(elbow,.022,.036,coat,0,-.038,0);
       const wrist=new THREE.Group();wrist.position.y=-.079;
-      const palm=smoothBall(wrist,.025,skin,0,-.012,.003);
-      palm.scale.set(.9,1.05,.8);
+      const palm=box(wrist,.034,.034,.021,skin,0,-.014,.003);
+      palm.userData.handPalm=true;
+      // Three scalloped fingertips share one cached mesh per hand.
+      let fingerGeo=geometryCache.get('hand:fingers');
+      if(!fingerGeo){
+        const sh=new THREE.Shape();sh.moveTo(-.016,0);sh.lineTo(-.016,-.015);
+        for(let f=0;f<3;f++){const x=-.016+f*.0107;sh.quadraticCurveTo(x+.0053,-.030,x+.0107,-.015);}
+        sh.lineTo(.016,0);sh.closePath();
+        fingerGeo=new THREE.ExtrudeGeometry(sh,{depth:.010,bevelEnabled:true,bevelSize:.0015,bevelThickness:.0015,bevelSegments:1,steps:1});
+        fingerGeo.translate(0,0,-.005);geometryCache.set('hand:fingers',fingerGeo);
+      }
+      const finger=new THREE.Group();finger.position.set(0,-.027,.003);wrist.add(finger);
+      object(finger,fingerGeo,mat(skin,.7),0,0,0,false);
+      const fingers=[finger];
+      const thumb=new THREE.Group();thumb.position.set(-side*.021,-.010,.004);wrist.add(thumb);
+      const tip=box(thumb,.012,.023,.013,skin,0,-.006,.002);tip.rotation.z=-side*.42;tip.castShadow=false;
+      wrist.userData.handRig={fingers,thumb,digits:3,curl:0};
       elbow.add(wrist);arm.add(elbow);g.add(arm);
       arms.push(arm);elbows.push(elbow);wrists.push(wrist);hands.push(wrist);
     }
@@ -4947,7 +4969,7 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
     }else if(racer){
       soft(.02,.003,Wd*.84,.002,'#fffaf0',0,.04+H+.002,0);
     }
-    g.userData.vehicleRig={wheels,brakeMaterial,indicators};
+    g.userData.vehicleRig={wheels,brakeMaterial,indicators,axleHalf:L*.31*VEHICLE_SCALE};
     g.userData.vehicleClass=kind;
     // Tiny toy vehicles: the whole machine is drawn at VEHICLE_SCALE (the simulation's bodies are sized to match).
     const outer=new THREE.Group();
@@ -5141,7 +5163,12 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
   }
   function archSlope(x,z){   // dy/dz of the deck
     const u=z-14;if(Math.abs(u)>=ARCH.L||!LINES.some(l=>Math.abs(x-(l+.5))<.66))return 0;
-    return -2*ARCH.H*u/(ARCH.L*ARCH.L);
+    return -ARCH.H*Math.PI/(2*ARCH.L)*Math.sin(Math.PI*u/ARCH.L);
+  }
+  function bridgeContact(x,z,facing,half){
+    const dx=Math.cos(facing)*half,dz=-Math.sin(facing)*half;
+    const front=archHeight(x+dx,z+dz),rear=archHeight(x-dx,z-dz);
+    return {front,rear,height:(front+rear)/2,pitch:Math.atan2(front-rear,half*2)};
   }
   // Raised pavements and the asphalt sit above the meadow, so a resident's feet follow whatever is under them.
   const GROUND={lawn:.13,road:.172,pave:.225,foot:.034};
@@ -5167,6 +5194,15 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
     return {freq:.82+rr(1)*.4,amp:.78+rr(2)*.48,arm:.5+rr(3)*.95,bounce:.45+rr(4)*1.15,lean:(rr(5)-.4)*.07,
       phone:rr(6)<.42,period:55+rr(7)*70,off:rr(8)*100,pockets:rr(9)<.22,stretch:rr(10)<.3,period2:80+rr(11)*90,off2:rr(12)*100};
   }
+  function settleHumanPose(limbs,state,dt){
+    if(!state.jointRotations){
+      state.jointRotations=[...limbs.arms,...limbs.elbows,...limbs.wrists,limbs.upperBody].map(j=>({j,x:j.rotation.x,y:j.rotation.y,z:j.rotation.z}));return;
+    }
+    for(const p of state.jointRotations)for(const axis of ['x','y','z']){
+      const k=1-Math.exp(-(limbs.elbows.includes(p.j)?28:16)*dt);
+      p[axis]+=(p.j.rotation[axis]-p[axis])*k;p.j.rotation[axis]=p[axis];
+    }
+  }
   function syncActors(){
     const live=new Set(town.movers());
     for(const [ref,item] of actors)if(!live.has(ref)){
@@ -5184,7 +5220,10 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
       // Ground-contact calibration: wheels touch the road instead of floating.
       // Wheels and feet rest on the surface under them: the asphalt top is .172, a pavement .225, the meadow .13.
       const arch=archHeight(desiredX,desiredZ);
-      const rest=item.kind==='car'?.192+arch:item.kind==='bike'?.162+arch:
+      const vehicleFacing=Number.isFinite(ref.heading)?-ref.heading:[0,Math.PI,-Math.PI/2,Math.PI/2][d];
+      const contact=(item.kind==='car'||item.kind==='bike')?bridgeContact(desiredX,desiredZ,vehicleFacing,g.userData.vehicleRig?.axleHalf||.19*BIKE_SCALE):null;
+      if(contact)g.userData.bridgeContact=contact;
+      const rest=item.kind==='car'?.192+contact.height:item.kind==='bike'?.162+contact.height:
         item.kind==='animal'?.13+arch:ref.sit?.10+arch:
         Math.max(groundLevel(desiredX,desiredZ),arch>0?ARCH.y0+arch:0)+GROUND.foot;
       if(item.kind==='person'&&ref.tossAt&&ref.tossAt!==item.tossSeen){item.tossSeen=ref.tossAt;crumbsAt(ref.x,ref.y<14?13.25:14.75);sound('pop');}
@@ -5197,7 +5236,7 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
       const travelFacing=a+(item.kind==='person'?Math.PI/2:0);
       if(item.kind!=='person'){g.rotation.y=travelFacing;
         // On the arch a car or bike tips up the slope and down the other side (it points along local +X).
-        if(item.kind==='car'||item.kind==='bike'){g.rotation.order='YXZ';g.rotation.z=Math.atan(archSlope(desiredX,desiredZ)*-Math.sin(travelFacing));}}
+        if(item.kind==='car'||item.kind==='bike'){g.rotation.order='YXZ';g.rotation.z=contact.pitch;}}
       const limbs=g.userData.limbs;
       const shopBag=g.userData.shopBag;
       if(shopBag){
@@ -5338,6 +5377,16 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
             (dominant?state.work*.25*Math.sin(worldTime*3.1+(ref.ph||0)):0)+
             (dominant?state.knock*.23*Math.sin(worldTime*14.5):0);
         }
+        for(let k=0;k<2;k++){
+          const hand=limbs.hands[k].userData.handRig;if(!hand)continue;
+          const held=k===0?(ref.bag||ref.briefcase||ref.kind==='farmer'||ref.kind==='keeper'):
+            (ref.carrying||ref.shopBag>=0||ref.shopRole==='vendor'||ref.guitar);
+          const target=held?.82:Math.min(.4,.16+state.speed*.14+state.knock*.24);
+          hand.curl=ease(hand.curl,target,10);
+          hand.fingers.forEach((f,i)=>{f.rotation.x=-hand.curl*(1+i*.08);f.rotation.z=(i-1)*state.speak*.10;});
+          hand.thumb.rotation.z=(k?1:-1)*(.18+hand.curl*.45);
+          limbs.wrists[k].rotation.y=(k?1:-1)*(state.speak*.22+state.greet*.17-state.receive*.12);
+        }
         // The whole torso shifts weight, leans into greetings and settles
         // naturally after walking. Small limits preserve miniature balance.
         const lean=state.speed*(.043+S.lean);
@@ -5399,6 +5448,7 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
             limbs.headPivot.rotation.x=-.2*u;
           }
         }
+        settleHumanPose(limbs,state,dt);
       }
       if(item.kind==='car'||item.kind==='bike'){
         const rig=g.userData.vehicleRig;
@@ -5768,7 +5818,8 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
     // Meshes whose material reads vertex colours but whose geometry has none draw pure black.
     vertexColorAudit:()=>{let bad=0;world.traverse?.(o=>{if(o.isMesh&&o.material?.vertexColors&&o.geometry?.attributes&&!o.geometry.attributes.color)bad++;});return bad;},
     batchStats:()=>({removed:batch.removed,merged:batch.merged,candidates:batch.candidates.length,off:batch.off}),staticCandidates:()=>batch.candidates,
-    signalStats:()=>({built:!!signal.mats,phase:town.lightPhase?.()||null,lit:signal.mats?['x','y'].map(a=>['r','a','g'].filter(c=>signal.mats[a][c].emissiveIntensity>1).join('')):null}),
+    bridgeProfile:(x,z,facing=0,half=.12)=>bridgeContact(x,z,facing,half),
+    signalStats:()=>({poles:signal.poles,heads:signal.heads,built:!!signal.mats,phase:town.lightPhase?.()||null,lit:signal.mats?['x','y'].map(a=>['r','a','g'].filter(c=>signal.mats[a][c].emissiveIntensity>1).join('')):null}),
     stage6Stats:()=>({season:SEASON_NAME,lite,ground:bus3.ground.filter(m=>m.visible).length,notes:notes6.pool.filter(n=>n.visible).length,spawned:notes6.spawned,mood:moodOf({ph:1,kid:false})}),setLite:v=>{setLite(v);return lite;},
     stage5Stats:()=>({built:fest.built,festival:fest.kind,decor:fest.decor,dragon:!!fest.dragon?.g.visible,maypole:!!fest.maypole,event:fest.ev?.kind||null,eventT:fest.ev?+fest.ev.t.toFixed(1):0,eventDur:fest.ev?.dur||0,events:fest.events,log:fest.log.slice(-6)}),
     startEvent:k=>startEvent(k),startDragon:()=>{if(fest.dragon){fest.dragonOn=60;fest.dragon.g.visible=true;return true;}return false;},

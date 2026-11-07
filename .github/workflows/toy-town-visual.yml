@@ -19,6 +19,7 @@ on:
       - 'tests/toy-town-3d.test.cjs'
       - 'tests/toy-town.test.cjs'
       - 'tests/toy-town-rain.test.cjs'
+      - 'tests/toy-town-bridges.test.cjs'
       - 'scripts/check-toy-town.cjs'
       - '.github/workflows/toy-town-visual.yml'
 
