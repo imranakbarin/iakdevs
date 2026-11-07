@@ -265,7 +265,7 @@ for (const seed of [555, 42]) {
   assert.equal(wet, 0, `layout ${seed}: nobody walks on the water (first at ${where})`);
 }
 assert.match(view, /b\.scale\.setScalar\(\.62\)/, 'seagulls are small');
-assert.match(view, /const ARCH=\{y0:\.172,L:1\.3,H:\.54,T:\.09,a:\.88,yb:\.1,W:1\.34\}/, 'bridges are arches, wide enough for the pavement lanes, with an opening the river runs through');
+assert.match(view, /const ARCH=\{y0:\.172,L:1\.3,H:\.38,T:\.055,a:\.92,yb:\.1,W:1\.34\}/, 'bridges are arches, wide enough for the pavement lanes, with an opening the river runs through');
 // 360° rotation: the sim keeps a heading that every screen-to-world step honours.
 {
   const box = vm.createContext({Math, Object, Array, JSON, Date, String, Number, RegExp, Set, Map, setTimeout: () => 0, document: {getElementById: () => ({textContent: '', style: {}})}});

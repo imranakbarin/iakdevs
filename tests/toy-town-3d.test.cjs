@@ -159,7 +159,7 @@ assert.match(moduleCode,/eye.scale.y=blink/,'eyelids blink without a separate an
 assert.match(html,/type="importmap"/);
 assert.match(html,/three@0\.187\.0\/build\/three\.module\.js/);
 assert.match(html,/three@0\.187\.0\/examples\/jsm\//);
-assert.match(html,/toy-town-3d\.js\?v=87/);
+assert.match(html,/toy-town-3d\.js\?v=88/);
 assert.match(moduleCode,/ref\.path&&Number\.isFinite\(ref\.walkFacing\)/, 'routed people use a real diagonal heading instead of a cardinal-only pose');
 assert.match(html,/toy-town-landmarks\.js\?v=7/,'the independent models are requested alongside Three');
 assert.match(html,/buildLandmark:landmarks\.buildLandmark/,
@@ -169,7 +169,7 @@ const classicScript=html.match(/src="assets\/toy-town\.js\?v=\d+"/);
 assert.ok(classicScript&&
   html.indexOf(classicScript[0])<html.indexOf("import('three')"),
   'the actual versioned classic script always loads before WebGL');
-assert.match(page,/toy-town\.html\?v=98&embed=1/);
+assert.match(page,/toy-town\.html\?v=99&embed=1/);
 assert.match(fs.readFileSync(path.join(root,'assets/toy-town-3d.js'),'utf8'),/sport=ref\.kind==='runner'[\s\S]*bib with a stripe/,'marathon runners are dressed in sports kit (vest, shorts, bib, headband)');
 assert.match(fs.readFileSync(path.join(root,'assets/toy-town-3d.js'),'utf8'),/town\.stageHeadline/,'the town crier makes the town act out the headline');
 assert.match(fs.readFileSync(path.join(root,'assets/toy-town.js'),'utf8'),
@@ -333,6 +333,9 @@ assert.ok(workingDesks.every(s=>s.position.x>7&&s.position.x<11&&
   s.position.z>8&&s.position.z<9),'shop counters are on the living village frontage');
 const sceneNodes=[];const collectScene=o=>{sceneNodes.push(o);for(const c of o.children||[])collectScene(c);};collectScene(api.scene);
 const planted=sceneNodes.filter(o=>o.userData?.plantedBed);
+const shapedHands=sceneNodes.filter(o=>o.userData?.handRig);
+assert.ok(shapedHands.length>=10&&shapedHands.every(o=>o.userData.handRig.digits===3&&o.userData.handRig.thumb&&o.userData.handRig.fingers[0].children[0].geometry),
+  'residents have actual grouped-finger geometry and articulated thumbs');
 assert.ok(planted.length>=4,'real low flower beds replace bulky foliage pillows');
 assert.ok(planted.every(b=>b.children.length>=22),'flower beds contain stems, leaves and blooms');
 const riverBenches=sceneNodes.filter(o=>o.userData?.riverBench);
@@ -426,7 +429,7 @@ assert.equal(api.getStats().festoonBulbs,2,'two small single lanterns light the 
     // Stage 6: seasons, the performance guard and music notes.
     const s6=api.stage6Stats();assert.ok(['spring','summer','autumn','winter'].includes(s6.season),'the season follows the calendar ('+s6.season+')');
     assert.equal(typeof api.batchStats().merged,'number','static batching reports what it merged (the headless double has no geometry data, so it merges nothing here)');
-    assert.ok(api.signalStats().built,'traffic lights stand at the junctions');assert.equal(api.signalStats().lit.length,2,'one lit lamp per axis, from the simulation light phase');
+    assert.ok(api.signalStats().built,'traffic lights stand at the junctions');assert.equal(api.signalStats().poles,24,'paired signal masts halve the former 48-pole clutter');assert.equal(api.signalStats().heads,48,'every controlled approach retains a signal head');assert.equal(api.signalStats().lit.length,2,'one lit lamp per axis, from the simulation light phase');
     assert.equal(api.vertexColorAudit(),0,'no mesh reads vertex colours from a geometry that has none (it would draw black)');
     assert.ok(s6.ground>=1,'the ground detail is drawn');assert.equal(s6.lite,false);assert.ok(Array.isArray(s6.mood)&&s6.mood.length===2&&s6.mood[1].length>2,'a resident has a mood');
     assert.equal(api.setLite(true),true);assert.equal(api.stage6Stats().ground,0,'lite mode drops the fine ground detail');api.stepTrain(3,0);assert.equal(api.stage6Stats().notes,0);
