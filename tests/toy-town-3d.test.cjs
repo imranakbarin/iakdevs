@@ -159,17 +159,17 @@ assert.match(moduleCode,/eye.scale.y=blink/,'eyelids blink without a separate an
 assert.match(html,/type="importmap"/);
 assert.match(html,/three@0\.187\.0\/build\/three\.module\.js/);
 assert.match(html,/three@0\.187\.0\/examples\/jsm\//);
-assert.match(html,/toy-town-3d\.js\?v=91/);
+assert.match(html,/toy-town-3d\.js\?v=92/);
 assert.match(moduleCode,/ref\.path&&Number\.isFinite\(ref\.walkFacing\)/, 'routed people use a real diagonal heading instead of a cardinal-only pose');
 assert.match(html,/toy-town-landmarks\.js\?v=7/,'the independent models are requested alongside Three');
 assert.match(html,/buildLandmark:landmarks\.buildLandmark/,
   'loader injects the authored model builder into the 3D simulation');
-assert.match(html,/toy-town\.js\?v=50/);
+assert.match(html,/toy-town\.js\?v=51/);
 const classicScript=html.match(/src="assets\/toy-town\.js\?v=\d+"/);
 assert.ok(classicScript&&
   html.indexOf(classicScript[0])<html.indexOf("import('three')"),
   'the actual versioned classic script always loads before WebGL');
-assert.match(page,/toy-town\.html\?v=102&embed=1/);
+assert.match(page,/toy-town\.html\?v=103&embed=1/);
 assert.match(fs.readFileSync(path.join(root,'assets/toy-town-3d.js'),'utf8'),/sport=ref\.kind==='runner'[\s\S]*bib with a stripe/,'marathon runners are dressed in sports kit (vest, shorts, bib, headband)');
 assert.match(fs.readFileSync(path.join(root,'assets/toy-town-3d.js'),'utf8'),/town\.stageHeadline/,'the town crier makes the town act out the headline');
 assert.match(fs.readFileSync(path.join(root,'assets/toy-town.js'),'utf8'),
@@ -933,6 +933,16 @@ assert.match(moduleCode,/const segments=\[\[2\.22,5\.78\]/,
   'stone shoulders stop before junctions and river bridges');
 assert.match(moduleCode,/continuous plaster pilasters/i,
   'wall accents follow facades without disconnected bricks');
+// Expanded districts are actual models and separated moving routes.
+assert.equal(api.metropolis().districts.length,6);
+assert.equal(api.metropolis().buildings,90,'six neighbourhoods add ninety modeled buildings');
+assert.equal(api.metropolis().vehicles.length,24);
+assert.equal(api.metropolis().walkers,18);
+api.previewMetropolis(0);const metroStart=api.metropolis();api.previewMetropolis(10);const metroNext=api.metropolis();
+assert.notEqual(metroStart.vehicles[0].x,metroNext.vehicles[0].x,'new district traffic travels');
+for(let t=0;t<180;t+=2){api.previewMetropolis(t);const v=api.metropolis().vehicles;for(let i=0;i<v.length;i++)for(let j=i+1;j<v.length;j++)if(v[i].district===v[j].district)assert.ok(Math.hypot(v[i].x-v[j].x,v[i].z-v[j].z)>3,'perimeter traffic keeps ample separation through corners');}
+api.previewMetropolis(10);const paused=JSON.stringify(api.metropolis());api.previewMetropolis(10);assert.equal(JSON.stringify(api.metropolis()),paused,'clock pause freezes metro routes');
+
 // Country changes replace real models without mutating the simulation or view.
 const originalBuildings=buildings,originalPeople=pedestrians.slice(),viewBefore={...api.camera.position};
 for(const id of ['india','japan','italy','netherlands','usa']){

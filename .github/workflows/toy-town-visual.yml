@@ -43,6 +43,10 @@ jobs:
 
   # Both jobs are mandatory; render checks do not depend on logic outputs.
   real-browser-screenshots:
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [0, 1]
     runs-on: ubuntu-24.04   # ubuntu-latest became 26.04, which Playwright 1.58 does not support
     timeout-minutes: 15
     steps:
@@ -55,12 +59,15 @@ jobs:
           npm install --no-save --no-package-lock playwright@1.58.2
           npx playwright install --with-deps chromium
       - name: Test real WebGL and capture close-up views
+        env:
+          TOWN_VISUAL_SHARDS: 2
+          TOWN_VISUAL_SHARD: ${{ matrix.shard }}
         run: node tests/toy-town-visual.cjs
       - name: Keep rendered screenshots
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: toy-town-visual-${{ github.run_number }}
+          name: toy-town-visual-${{ github.run_number }}-${{ matrix.shard }}
           path: visual-artifacts/
           if-no-files-found: ignore
           retention-days: 14

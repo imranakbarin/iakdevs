@@ -25,6 +25,10 @@ const ToyTown = (() => {
   let W = 0, H = 0, dpr = 1, S = 1, cam = {x: N / 2, y: N / 2, z: 1, tx: N / 2, ty: N / 2, tz: 1, yaw: 0, tyaw: 0}, base = 1;
   let grid = [], buildings = [], props = [], movers = [], events = [], parts = [], bubbles = [], ground = null, sprites = new Map();
   const MIN_ZOOM = .42, MAX_ZOOM = 3.25, PAN = .6;   // how near the board edge the view may be dragged (the station and railway sit out there)
+  let cityBounds=null;
+  const cameraX=v=>clamp(cityBounds?cityBounds.minX:PAN,v,cityBounds?cityBounds.maxX:N-PAN);
+  const cameraY=v=>clamp(cityBounds?cityBounds.minY:PAN,v,cityBounds?cityBounds.maxY:N-PAN);
+  function setCityBounds(bounds){cityBounds=bounds;cam.x=cam.tx=bounds?(bounds.minX+bounds.maxX)/2:N/2;cam.y=cam.ty=bounds?(bounds.minY+bounds.maxY)/2:N/2;cam.z=cam.tz=fitZoom;}
   let zoomAnchor = null, nextStreetMoment = 16, streetMoments = 0, fitZoom = 1;
   const PACE = .82, CARS = 7, BIKES = 4, PEOPLE = 14, LIGHT = 10;   // a calm town: few cars, a handful of cyclists, people taking their time   // the whole town runs at 60% speed: easier to follow, calmer to watch
   let separated = 0;
@@ -2681,7 +2685,7 @@ const ToyTown = (() => {
   // or the map is dragged.
   let followRef = null;
   // Glide the camera to a spot and zoom (used by Moments to watch, then to return).
-  function viewTo(x, y, z) { followRef = null; cam.tx = clamp(PAN, x, N - PAN); cam.ty = clamp(PAN, y, N - PAN); if (z) cam.tz = clamp(MIN_ZOOM, z, MAX_ZOOM); return {x: cam.tx, y: cam.ty, z: cam.tz}; }
+  function viewTo(x, y, z) { followRef = null; cam.tx = cameraX(x); cam.ty = cameraY(y); if (z) cam.tz = clamp(MIN_ZOOM, z, MAX_ZOOM); return {x: cam.tx, y: cam.ty, z: cam.tz}; }
   function follow(m, zoom = 2.6) { followRef = m && movers.includes(m) ? m : null; if (followRef && cam.tz < zoom) cam.tz = clamp(MIN_ZOOM, zoom, MAX_ZOOM); return followRef; }   // ~3 frames a person close up in 3D
   /* ---------------- a day in the life ----------------
      The town clock gives an hour of day (noon when it is brightest, midnight
@@ -2872,7 +2876,7 @@ const ToyTown = (() => {
       focusCamera(zoomAnchor.world, zoomAnchor.sx, zoomAnchor.sy);
       zoomAnchor = null;
     }
-    if (followRef) { if (!movers.includes(followRef)) followRef = null; else { cam.tx = clamp(PAN, followRef.x, N - PAN); cam.ty = clamp(PAN, followRef.y, N - PAN); } }
+    if (followRef) { if (!movers.includes(followRef)) followRef = null; else { cam.tx = cameraX(followRef.x); cam.ty = cameraY(followRef.y); } }
     if (!zoomAnchor) {
       const k = Math.min(1, dt * 4);
       cam.x += (cam.tx - cam.x) * k; cam.y += (cam.ty - cam.y) * k;
@@ -3017,8 +3021,8 @@ const ToyTown = (() => {
   function focusCamera(world, sx, sy) {
     const scale = base * cam.z || 1;
     const u = (sx - W / 2) / (TW * scale), v = (sy - H / 2) / (TH * scale), [a, b] = rotBy((u + v) / 2, (v - u) / 2);
-    cam.x = cam.tx = clamp(PAN, world.x - a, N - PAN);
-    cam.y = cam.ty = clamp(PAN, world.y - b, N - PAN);
+    cam.x = cam.tx = cameraX(world.x - a);
+    cam.y = cam.ty = cameraY(world.y - b);
   }
   function zoomAt(factor, cx = innerWidth / 2, cy = innerHeight / 2) {
     const sx = cx * dpr, sy = cy * dpr;
@@ -3028,7 +3032,7 @@ const ToyTown = (() => {
     return cam.tz;
   }
   function resetView() {
-    zoomAnchor = {world: {x: N / 2, y: N / 2}, sx: W / 2, sy: H / 2};
+    zoomAnchor = {world: {x: cityBounds?(cityBounds.minX+cityBounds.maxX)/2:N/2, y: cityBounds?(cityBounds.minY+cityBounds.maxY)/2:N/2}, sx: W / 2, sy: H / 2};
     cam.tz = fitZoom; cam.tyaw = 0;
     if (!playing) { cam.z = fitZoom; cam.yaw = 0; focusCamera(zoomAnchor.world, W / 2, H / 2); zoomAnchor = null; render(); }
   }
@@ -3091,8 +3095,8 @@ const ToyTown = (() => {
         if (Math.hypot(e.clientX - down.x, e.clientY - down.y) > 8) { down.moved = true; followRef = null; }
         if (down.turn) { cam.tyaw = cam.yaw = wrapAngle(down.yaw0 + (e.clientX - down.x) * .008); if (!playing) render(); }
         else if (down.moved) { const [pa, pb] = rotBy((dx + dy) / 2, (dy - dx) / 2);
-          cam.tx = cam.x = clamp(PAN, down.cx - pa, N - PAN);
-          cam.ty = cam.y = clamp(PAN, down.cy - pb, N - PAN);
+          cam.tx = cam.x = cameraX(down.cx - pa);
+          cam.ty = cam.y = cameraY(down.cy - pb);
           if (!playing) render(); }
       }
     });
@@ -3153,8 +3157,8 @@ const ToyTown = (() => {
           { touchStart.moved = true; followRef = null; }
         if (touchStart.moved) {
           const [pa, pb] = rotBy((dx + dy) / 2, (dy - dx) / 2);
-          cam.tx = cam.x = clamp(PAN, touchStart.cx - pa, N - PAN);
-          cam.ty = cam.y = clamp(PAN, touchStart.cy - pb, N - PAN);
+          cam.tx = cam.x = cameraX(touchStart.cx - pa);
+          cam.ty = cam.y = cameraY(touchStart.cy - pb);
           if (!playing) render();
         }
       }
@@ -3206,7 +3210,7 @@ const ToyTown = (() => {
     addEventListener('hashchange', () => location.reload());
     start();
   }
-  return {BUS_STOPS, news: () => newsFeed, setNews, programme: () => programme, stageFor, stageHeadline, gather, rotateBy, rotateTo, yaw: () => cam.yaw, viewTo, view: () => ({x: cam.tx, y: cam.ty, z: cam.tz, yaw: cam.tyaw}), follow, following: () => followRef, feedDucks, layout, render, zoomAt, resetView, fitView, pinchTo, screenWorld, streetMoment, reactToNews, hero: () => town.blocks.find(b => b.hero), TALK, nameOf, headline, dateKey, CALM, lightPhase, themeFromNews, newsThemes, VARIANTS, VARIANT_EVENTS: () => Object.keys(VARIANT_EVENTS), decorate, setToday: l => { today_ = l; }, PACE, THEMES, GRIM, build, update, events: () => events, movers: () => movers, buildings: () => buildings, props: () => props, startEvent, randomEvent, setPlaying: v => { playing = v; }, debug: () => ({separated, busStops: BUS_STOPS.length, buses: movers.filter(m => m.kind === 'bus').map(m => m.stops || 0), clock, theme, seed, greetings, whims: {...whims}, feedings, crowdTrimmed, rush: rushFactor(), unstuck: {...unstuck}, hour: hourOfDay(), daypart, routines: {...routine}, night: nightLevel(), cam: {...cam}, fitZoom, streetMoments,communityEncounters,communityVisits,streetTransactions,streetShopVisits,newsReactions,streetPerformances,
+  return {setCityBounds,BUS_STOPS, news: () => newsFeed, setNews, programme: () => programme, stageFor, stageHeadline, gather, rotateBy, rotateTo, yaw: () => cam.yaw, viewTo, view: () => ({x: cam.tx, y: cam.ty, z: cam.tz, yaw: cam.tyaw}), follow, following: () => followRef, feedDucks, layout, render, zoomAt, resetView, fitView, pinchTo, screenWorld, streetMoment, reactToNews, hero: () => town.blocks.find(b => b.hero), TALK, nameOf, headline, dateKey, CALM, lightPhase, themeFromNews, newsThemes, VARIANTS, VARIANT_EVENTS: () => Object.keys(VARIANT_EVENTS), decorate, setToday: l => { today_ = l; }, PACE, THEMES, GRIM, build, update, events: () => events, movers: () => movers, buildings: () => buildings, props: () => props, startEvent, randomEvent, setPlaying: v => { playing = v; }, debug: () => ({separated, busStops: BUS_STOPS.length, buses: movers.filter(m => m.kind === 'bus').map(m => m.stops || 0), clock, theme, seed, greetings, whims: {...whims}, feedings, crowdTrimmed, rush: rushFactor(), unstuck: {...unstuck}, hour: hourOfDay(), daypart, routines: {...routine}, night: nightLevel(), cam: {...cam}, fitZoom, streetMoments,communityEncounters,communityVisits,streetTransactions,streetShopVisits,newsReactions,streetPerformances,
     districts:{count:districts.length,visits:districtVisits,
       meetings:districtMeetings,tasks:districtTasks,
       areas:districts.map(a=>({role:a.role,block:a.block,
