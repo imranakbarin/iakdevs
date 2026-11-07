@@ -34,6 +34,12 @@ async function main(){
       {name:'mobile-3d-close',w:390,h:844,classic:false,zoom:1.7,touchCheck:true},
       {name:'mobile-landscape',w:844,h:390,classic:false,zoom:1,mobile:true,mobileCheck:true},
       {name:'mobile-reduced-motion',w:390,h:844,classic:false,zoom:1.5,reduced:true,mobileCheck:true},
+      {name:'country-india',w:1000,h:760,classic:false,zoom:2.8,country:'india'},
+      {name:'country-japan',w:844,h:390,classic:false,zoom:2.2,country:'japan',mobile:true,mobileCheck:true},
+      {name:'country-italy',w:1000,h:760,classic:false,zoom:2.8,country:'italy'},
+      {name:'country-netherlands',w:1000,h:760,classic:false,zoom:2.8,country:'netherlands'},
+      {name:'country-usa',w:1000,h:760,classic:false,zoom:2.8,country:'usa'},
+      {name:'country-classic',w:390,h:844,classic:true,zoom:2,country:'japan'},
       {name:'reading-interaction',w:1100,h:820,classic:false,zoom:3.25,reader:true},
       {name:'desktop-3d-close',w:1280,h:820,classic:false,zoom:1.8},
       {name:'desktop-open-square',w:1280,h:900,classic:false,zoom:3.1,square:true},
@@ -129,6 +135,17 @@ async function main(){
         ToyTown.setPlaying(false);
         ToyTown.zoomAt(f);
       },job.zoom);
+      if(job.country){
+        await page.evaluate(()=>{window.__countryBuildings=ToyTown.buildings();window.__countryResidents=ToyTown.movers().slice();window.ToyTown3D?.freeze?.();});
+        await page.locator('#country-select').selectOption(job.country);
+        const selected=await page.evaluate(id=>({id:ToyTownCountry.id,url:new URL(location.href).searchParams.get('country'),saved:localStorage.getItem('toy-town:country'),
+          unchanged:ToyTown.buildings()===window.__countryBuildings&&window.__countryResidents.every((m,i)=>ToyTown.movers()[i]===m),
+          models:window.ToyTown3D?.getStats().countryBuildings||0,stats:window.ToyTown3D?.getStats()||null}),job.country);
+        if(selected.id!==job.country||selected.url!==job.country||selected.saved!==job.country||!selected.unchanged||(!job.classic&&selected.models<15))throw Error('Country selection failed: '+JSON.stringify(selected));
+        console.log('COUNTRY_SELECTION '+job.country+' '+JSON.stringify(selected));
+        await page.evaluate(()=>window.ToyTown3D?.unfreeze?.());
+        beforeFrame=await page.evaluate(()=>window.ToyTown3D?.getStats().frames||0);
+      }
       if(job.touchCheck||job.mobileCheck){
         const before=await page.evaluate(()=>ToyTown.debug().cam.tz),cdp=await context.newCDPSession(page);
         const x=job.w/2,y=job.h*.52;
@@ -138,8 +155,9 @@ async function main(){
         await cdp.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});await cdp.detach();
         await page.waitForFunction(z=>ToyTown.debug().cam.tz>z+.005,before,{timeout:15000});
         const ui=await page.evaluate(()=>({width:innerWidth,overflow:document.documentElement.scrollWidth>innerWidth+1,
-          clipped:[...document.querySelectorAll('#zoom-controls button')].map(e=>e.getBoundingClientRect()).filter(r=>r.width>0).some(r=>r.left<0||r.right>innerWidth+1||r.top<0||r.bottom>innerHeight+1),
+          clipped:[...document.querySelectorAll('#zoom-controls button,#country-select')].map(e=>e.getBoundingClientRect()).filter(r=>r.width>0).some(r=>r.left<0||r.right>innerWidth+1||r.top<0||r.bottom>innerHeight+1),
           reduced:matchMedia('(prefers-reduced-motion: reduce)').matches}));
+        if(!job.classic&&!(await page.evaluate(()=>ToyTown3D.getStats().mobileBudget)))throw Error('Touch landscape lost its mobile render budget');
         if(ui.overflow||ui.clipped||!!job.reduced!==ui.reduced)throw Error('Mobile controls/layout mismatch: '+JSON.stringify(ui));
         console.log('TOUCH_LAYOUT '+job.name+' '+JSON.stringify(ui));
         await page.evaluate(z=>ToyTown.pinchTo(z,innerWidth/2,innerHeight/2,{x:9,y:9}),before);
@@ -398,6 +416,7 @@ async function main(){
       }));
       if(!job.classic&&!data.active)throw Error('3D vanished before screenshot: '+job.name);
       if(!job.classic&&!data.stats?.frozen)throw Error('3D did not freeze the captured frame');
+      if(job.country&&!job.classic){const features=await page.evaluate(()=>{const f=new Set();ToyTown3D.scene.traverse(n=>{if(n.userData?.countryFeature)f.add(n.userData.countryFeature);});return [...f];});if(!features.length)throw Error('Country architecture lacks modeled roof features');console.log('COUNTRY_FEATURES '+job.country+' '+JSON.stringify(features));}
       if(job.reader){const r=await page.evaluate(()=>{
         let reader=null;ToyTown3D.scene.traverse(o=>{if(o.userData?.shopProps?.book&&Math.abs(o.position.x-9)<.01&&Math.abs(o.position.z-9.65)<.01)reader=o;});
         if(!reader)throw Error('Rendered reader missing');

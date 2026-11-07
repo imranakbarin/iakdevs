@@ -3,7 +3,7 @@
 // together so rendering work need not wait for their combined serial runtime.
 const {spawn}=require('node:child_process');
 const path=require('node:path');
-const suites=['toy-town','toy-town-3d','toy-town-news','toy-town-lens','toy-town-extras','toy-town-rain','toy-town-bridges'];
+const suites=['toy-town','toy-town-3d','toy-town-news','toy-town-lens','toy-town-extras','toy-town-rain','toy-town-bridges','toy-town-country'];
 Promise.all(suites.map(name=>new Promise(resolve=>{
   const p=spawn(process.execPath,[path.join(__dirname,'../tests',name+'.test.cjs')],{stdio:'inherit'});
   p.on('error',e=>{console.error(name+': '+e.message);resolve({name,ok:false});});

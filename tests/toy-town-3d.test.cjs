@@ -159,17 +159,17 @@ assert.match(moduleCode,/eye.scale.y=blink/,'eyelids blink without a separate an
 assert.match(html,/type="importmap"/);
 assert.match(html,/three@0\.187\.0\/build\/three\.module\.js/);
 assert.match(html,/three@0\.187\.0\/examples\/jsm\//);
-assert.match(html,/toy-town-3d\.js\?v=89/);
+assert.match(html,/toy-town-3d\.js\?v=90/);
 assert.match(moduleCode,/ref\.path&&Number\.isFinite\(ref\.walkFacing\)/, 'routed people use a real diagonal heading instead of a cardinal-only pose');
 assert.match(html,/toy-town-landmarks\.js\?v=7/,'the independent models are requested alongside Three');
 assert.match(html,/buildLandmark:landmarks\.buildLandmark/,
   'loader injects the authored model builder into the 3D simulation');
-assert.match(html,/toy-town\.js\?v=49/);
+assert.match(html,/toy-town\.js\?v=50/);
 const classicScript=html.match(/src="assets\/toy-town\.js\?v=\d+"/);
 assert.ok(classicScript&&
   html.indexOf(classicScript[0])<html.indexOf("import('three')"),
   'the actual versioned classic script always loads before WebGL');
-assert.match(page,/toy-town\.html\?v=100&embed=1/);
+assert.match(page,/toy-town\.html\?v=101&embed=1/);
 assert.match(fs.readFileSync(path.join(root,'assets/toy-town-3d.js'),'utf8'),/sport=ref\.kind==='runner'[\s\S]*bib with a stripe/,'marathon runners are dressed in sports kit (vest, shorts, bib, headband)');
 assert.match(fs.readFileSync(path.join(root,'assets/toy-town-3d.js'),'utf8'),/town\.stageHeadline/,'the town crier makes the town act out the headline');
 assert.match(fs.readFileSync(path.join(root,'assets/toy-town.js'),'utf8'),
@@ -252,7 +252,7 @@ const THREE={
  MathUtils:{clamp:(v,min,max)=>Math.max(min,Math.min(max,v)),lerp:(a,b,t)=>a+(b-a)*t}
 };
 const win={WebGL2RenderingContext:function(){},innerWidth:390,innerHeight:844,
-  devicePixelRatio:3,matchMedia:()=>({matches:false})};
+  devicePixelRatio:3,matchMedia:q=>({matches:q==='(pointer: coarse)'})};
 const canvas2d={fillText(){},clearRect(){},beginPath(){},roundRect(){},ellipse(){},arc(){},fill(){stats.paintOperations++;},stroke(){},fillRect(){stats.paintOperations++;},moveTo(){},lineTo(){},closePath(){},bezierCurveTo(){},createLinearGradient:()=>({addColorStop(){}}),createRadialGradient:()=>({addColorStop(){}}),save(){},restore(){},clip(){},translate(){},scale(){},strokeRect(){}};
 const townCanvas={style:{opacity:'1'}};
 const host={style:{display:'none'},clientWidth:390,clientHeight:844,getBoundingClientRect(){return {left:0,top:0,width:390,height:844};},
@@ -911,6 +911,8 @@ callbacks.shift()();
 assert.equal(api.renderer.domElement.width,844,'landscape resize updates renderer');
 assert.equal(api.renderer.domElement.height,390,'landscape resize updates renderer height');
 assert.ok(api.camera.aspect>1,'landscape perspective updates its aspect ratio');
+assert.equal(api.getStats().mobileBudget,true,'rotated touch phone retains its mobile geometry and shadow budget');
+assert.ok(api.getStats().pixelRatio<=1.5,'phone starts with a bounded high-DPI fill budget');
 assert.ok(api.camera.fov>20&&api.camera.fov<45,
   'street-level photo camera uses a natural rather than extreme wide-angle lens');
 host.clientWidth=390; host.clientHeight=844; win.innerWidth=390; win.innerHeight=844;
@@ -931,6 +933,39 @@ assert.match(moduleCode,/const segments=\[\[2\.22,5\.78\]/,
   'stone shoulders stop before junctions and river bridges');
 assert.match(moduleCode,/continuous plaster pilasters/i,
   'wall accents follow facades without disconnected bricks');
+// Country changes replace real models without mutating the simulation or view.
+const originalBuildings=buildings,originalPeople=pedestrians.slice(),viewBefore={...api.camera.position};
+for(const id of ['india','japan','italy','netherlands','usa']){
+  assert.equal(api.setCountry(id),true);
+  assert.equal(api.getStats().country,id);
+  const world=api.scene.children.find(o=>o.children?.some(n=>n.userData?.countryBuilding));
+  const models=world.children.filter(n=>n.userData?.countryBuilding);
+  assert.equal(models.length,buildings.filter(b=>b.kind!=='site').length,'every occupied building lot has country architecture');
+  assert.ok(models.every(n=>n.userData.countryBuilding===id&&n.userData.roofTop>.5));
+  const features=[];const walk=n=>{if(n.userData?.countryFeature)features.push(n.userData.countryFeature);for(const c of n.children||[])walk(c);};walk(world);
+  assert.ok(features.includes({india:'chhatri',japan:'machiya-roof',italy:'terracotta-roof',netherlands:'stepped-gable',usa:'porch'}[id]),'distinct physical roof feature: '+id);
+  assert.equal(buildings,originalBuildings,'country selection retains simulation building references');
+  assert.deepEqual(pedestrians,originalPeople,'residents are not regenerated');
+  assert.equal(api.getStats().actors,pedestrians.length);
+  assert.equal(api.getStats().landmarks,5,'hero lots stay registered');
+}
+assert.equal(api.setCountry('unknown'),false);assert.equal(api.getStats().country,'usa');
+assert.equal(api.setCountry('town'),true);assert.equal(api.getStats().countryBuildings,0);
+assert.equal(api.camera.position.x,viewBefore.x,'country selection preserves the view');
+const freshWorld=api.scene.children.find(o=>o.children?.some(n=>n.userData?.bicycleRig));
+const freshBike=freshWorld.children.find(n=>n.userData?.bicycleRig).userData.bicycleRig;
+for(let i=0;i<24;i++){
+  pedestrians[2].travel=i*Math.PI/180;api.stepPoses(.05);
+  for(const leg of freshBike.legs){
+    assert.ok(Math.abs(leg.thigh.scale.y-1)<1e-6&&Math.abs(leg.shin.scale.y-1)<1e-6,'cyclist knees solve with fixed-length limbs through a complete crank rotation');
+    const pedal=freshBike.crank.children[leg.side>0?1:0];
+    const a=freshBike.crank.rotation.z,x=freshBike.crank.position.x-pedal.position.y*Math.sin(a),y=freshBike.crank.position.y+pedal.position.y*Math.cos(a);
+    assert.ok(Math.abs(leg.shoe.position.x-.015-x)<1e-6&&Math.abs(leg.shoe.position.y-.020-y)<1e-6,'shoes stay over actual pedal transforms');
+  }
+}
+const stoppedCrank=freshBike.crank.rotation.z;api.stepPoses(.5);assert.equal(freshBike.crank.rotation.z,stoppedCrank,'stationary bicycle does not pedal from elapsed pose time');
+
+
 const rendersBeforeFail=stats.renders;
 api.renderer.throwOnRender=true;callbacks.shift()();
 assert.equal(api.active,false,'render failure disables WebGL');

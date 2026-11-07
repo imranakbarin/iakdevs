@@ -4,13 +4,15 @@
  * THREE and RoundedBoxGeometry are passed in by the module loader. */
 export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = {}) {
   if (!town || !host || !window.WebGL2RenderingContext) return null;
-  const desktop = () => window.innerWidth >= 700;
+  // Touch phones keep the same geometry/shadow budget after rotating.
+  const touchDevice=!!window.matchMedia?.('(pointer: coarse)').matches;
+  const desktop = () => window.innerWidth >= 700 && !(touchDevice && Math.min(window.innerWidth,window.innerHeight)<700);
   const reducedMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches || false;
   const renderer = new THREE.WebGLRenderer({antialias: true, alpha: false, powerPreference: 'high-performance'});
   // Sharp on every screen: render at up to 2x the CSS pixels (a 3x iPhone at
   // 1.4x was upscaled and looked blurred). If a device cannot hold the frame
   // rate, the ratio steps down a notch at a time (see adaptSharpness).
-  let pixelRatio=Math.min(window.devicePixelRatio || 1, 2);
+  let pixelRatio=Math.min(window.devicePixelRatio || 1, desktop()?2:1.5);
   renderer.setPixelRatio(pixelRatio);
   renderer.outputColorSpace = THREE.SRGBColorSpace;
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
@@ -106,6 +108,9 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
   // The performance guard: when frames stay slow even at the lowest render scale, the finest ground detail and the small extras are switched off (?lite forces it).
   let lite=typeof location!=='undefined'&&/[?&]lite\b/.test(location.search||'');
   let gardenElements = 0, woodlandShapes = 0, terrainContours = 0, composedBuildings = 0, districtGardenRooms = 0;
+  const COUNTRY_IDS=['town','india','japan','italy','netherlands','usa'];
+  let country=COUNTRY_IDS.includes(options.country||window.ToyTownCountry?.id)?(options.country||window.ToyTownCountry.id):'town';
+  let countryBuildings=0;
   let worldSeed = null, worldBuildings = null, worldPropCount = 0, sceneTime = 0, landmarkCount = 0;
   let lens = null;
   let stopped = false, frozen = false, raf = 0, frames = 0, redrawCount = 0, lastSize = '', lastFrameAt = 0;
@@ -162,7 +167,7 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
       else if (kind === 'torus') shape = new THREE.TorusGeometry(...dims,7,12);
       else if (kind === 'plane') shape = new THREE.PlaneGeometry(...dims);
       else if (kind === 'clump') shape = clumpGeometry(dims[0], dims[1]);
-      else if (kind === 'soft') shape = new RoundedBoxGeometry(dims[0],dims[1],dims[2],LOWPOLY?3:4,dims[3]);
+      else if (kind === 'soft') shape = new RoundedBoxGeometry(dims[0],dims[1],dims[2],LOWPOLY?1:4,dims[3]);
       else if (kind === 'smooth') shape = LOWPOLY ? new THREE.SphereGeometry(dims[0],14,10) : new THREE.SphereGeometry(dims[0],24,18);
       else if (kind === 'capsule') shape = LOWPOLY ? new THREE.CapsuleGeometry(dims[0],dims[1],3,10) : new THREE.CapsuleGeometry(dims[0],dims[1],6,16);
       else if (kind === 'hairshell') shape = LOWPOLY ? new THREE.SphereGeometry(dims[0],14,8,0,Math.PI*2,0,Math.PI*.56) : new THREE.SphereGeometry(dims[0],24,14,0,Math.PI*2,0,Math.PI*.56);
@@ -174,7 +179,7 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
   // baked shading (darker underside and crevices, sunlit tips) instead of a
   // smooth sphere. Four seeded variants are shared by every tree.
   function clumpGeometry(radius, variant) {
-    const g = new THREE.IcosahedronGeometry(radius, 3), pos = g.attributes?.position, n = new THREE.Vector3();
+    const g = new THREE.IcosahedronGeometry(radius, LOWPOLY?2:3), pos = g.attributes?.position, n = new THREE.Vector3();
     if (!pos) return g;   // headless test doubles carry no vertex data
     const lumps = Array.from({length: 11}, (_, k) => new THREE.Vector3(Math.sin(k * 2.4 + variant) * Math.cos(k * 1.3), Math.cos(k * 1.7 + variant * .7), Math.sin(k * 1.3) * Math.sin(k * 2.4 + variant)).normalize());
     const colors = new Float32Array(pos.count * 3), soft = new Float32Array(pos.count * 3);
@@ -3128,10 +3133,116 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
       world.add(mesh);batch.geos.push(mg);batch.removed+=b.list.length;batch.merged++;
     }
   }
+  // These are selected street traditions, not a claim that one style defines
+  // an entire country. Each model replaces a building inside its existing lot.
+  function countryBuilding(b){
+    if(b.kind==='site')return false;
+    const styles={
+      india:{walls:['#d9a184','#e0b69a','#cd907b'],roof:'#b56e51',trim:'#f5dfb9',wood:'#85533e'},
+      japan:{walls:['#e8dcc2','#dfd1b7','#d1b99b'],roof:'#505b60',trim:'#d5c3a1',wood:'#694e3c'},
+      italy:{walls:['#e8c38c','#e5b3a0','#ead9b0'],roof:'#b96f4c',trim:'#eee0c4',wood:'#6b8470'},
+      netherlands:{walls:['#9d6555','#b57e62','#bba186'],roof:'#645c56',trim:'#f0e5cc',wood:'#4f6462'},
+      usa:{walls:['#b87964','#c8ac85','#d2dcd2'],roof:'#66747a',trim:'#f4eada',wood:'#4d6667'}
+    },s=styles[country];if(!s)return false;
+    const key=Math.abs(Math.round(b.x*7+b.y*11)),g=new THREE.Group();
+    g.position.set(b.x+.5,.17,b.y+.5);world.add(g);
+    g.userData.countryBuilding=country;g.userData.buildingKind=b.kind;g.userData.landmark=!!b.hero;
+    const floors=b.hero?1:b.kind==='tower'?3:country==='netherlands'?2:1+key%2;
+    const h=b.hero?.68:.38+floors*.40,w=country==='netherlands'?.76:.88,d=.82;
+    const wall=s.walls[key%s.walls.length];
+    box(g,w+.06,.075,d+.06,s.trim,0,.037,0,false);
+    box(g,w,h,d,wall,0,h/2+.06,0,false);
+    let top=h+.06;
+    const opening=(x,y,arched=false)=>{
+      const glass=box(g,.16,.22,.018,'#506d72',x,y,d/2+.013,false);glass.userData.countryWindow=true;
+      if(arched){
+        let ag=geometryCache.get('country:arch');
+        if(!ag){const sh=new THREE.Shape(),hole=new THREE.Path();
+          sh.moveTo(-.105,-.13);sh.lineTo(.105,-.13);sh.lineTo(.105,.035);sh.absarc(0,.035,.105,0,Math.PI,false);sh.closePath();
+          hole.moveTo(-.078,-.104);hole.lineTo(-.078,.035);hole.absarc(0,.035,.078,Math.PI,0,true);hole.lineTo(.078,-.104);hole.closePath();sh.holes.push(hole);
+          ag=new THREE.ExtrudeGeometry(sh,{depth:.024,bevelEnabled:false,steps:1,curveSegments:10});geometryCache.set('country:arch',ag);}
+        object(g,ag,mat(s.trim),x,y,d/2+.026,false);
+      }else{
+        for(const side of [-1,1])box(g,.026,.265,.035,s.trim,x+side*.095,y,d/2+.025,false);
+        for(const side of [-1,1])box(g,.215,.025,.035,s.trim,x,y+side*.122,d/2+.025,false);
+      }
+      box(g,.015,.23,.025,s.trim,x,y,d/2+.036,false);
+      box(g,.17,.015,.025,s.trim,x,y+.012,d/2+.036,false);
+      if(country==='italy')for(const side of [-1,1])box(g,.065,.235,.029,s.wood,x+side*.142,y,d/2+.025,false);
+    };
+    for(let row=0;row<floors;row++)for(const x of [-w*.26,w*.26])opening(x,.37+row*.40,country==='india'||country==='italy');
+    // Side windows make the buildings readable from every camera angle.
+    for(const side of [-1,1])for(let row=0;row<floors;row++){
+      box(g,.021,.22,.18,s.wood,side*(w/2+.012),.37+row*.4,.04,false);
+      box(g,.032,.024,.205,s.trim,side*(w/2+.02),.27+row*.4,.04,false);
+    }
+    box(g,b.kind==='fire'?.59:.16,.30,.030,b.kind==='fire'?'#aa5548':s.wood,0,.22,d/2+.022,false);
+    box(g,.24,.045,.12,s.trim,0,.022,d/2+.04,false);
+    const gable=(height,color=s.roof,rotate=false)=>{
+      const rg=new THREE.Group();g.add(rg);rg.position.y=top;
+      // A solid extruded triangular roof volume, shared across matching sizes.
+      const k='country:gable:'+w+':'+height;let geom=geometryCache.get(k);
+      if(!geom){const sh=new THREE.Shape();sh.moveTo(-w/2-.06,0);sh.lineTo(0,height);sh.lineTo(w/2+.06,0);sh.closePath();
+        geom=new THREE.ExtrudeGeometry(sh,{depth:d+.12,bevelEnabled:false,steps:1});geom.translate(0,0,-d/2-.06);geometryCache.set(k,geom);}
+      object(rg,geom,roofMaterial(color),0,0,0);if(rotate)rg.rotation.y=Math.PI/2;
+      return rg;
+    };
+    if(country==='india'){
+      // Flat terraces, chajja sunshades, pierced balcony rails and chhatris.
+      box(g,w+.12,.075,d+.12,s.trim,0,top,0,false);
+      for(const side of [-1,1])box(g,.045,.13,d+.04,s.trim,side*(w/2+.015),top+.07,0,false);
+      box(g,w,.10,.04,s.trim,0,top+.05,-d/2,false);
+      box(g,w*.82,.04,.16,s.trim,0,.52,d/2+.07,false);
+      for(let i=0;i<7;i++)box(g,.027,.11,.028,s.trim,(i-3)*w*.11,.59,d/2+.13,false);
+      if(b.hero||key%2===0){
+        const pavilion=new THREE.Group();pavilion.position.set(0,top+.08,0);g.add(pavilion);pavilion.userData.countryFeature='chhatri';
+        for(const x of [-.18,.18])for(const z of [-.18,.18])cylinder(pavilion,.018,.022,.25,s.trim,x,.14,z);
+        box(pavilion,.46,.045,.46,s.trim,0,.275,0,false);
+        const dome=ball(pavilion,.215,s.roof,0,.30,0);dome.scale.y=.65;
+        cylinder(pavilion,.012,.025,.075,s.trim,0,.455,0);top+=.57;
+      }else top+=.17;
+    }else if(country==='japan'){
+      const r=gable(.30);r.userData.countryFeature='machiya-roof';
+      for(const side of [-1,1])box(g,.065,h+.06,.055,s.wood,side*(w/2-.035),h/2+.06,d/2+.03,false);
+      box(g,w+.08,.055,.08,s.wood,0,top-.025,d/2+.025,false);
+      const eave=box(g,w+.16,.055,.30,s.roof,0,.53,d/2+.08,false);eave.rotation.x=.11;
+      for(let i=-4;i<=4;i++)box(g,.013,.26,.022,s.wood,i*.078,.32,d/2+.045,false);
+      box(g,.055,.075,d+.16,s.roof,0,top+.30,0,false);top+=.35;
+    }else if(country==='italy'){
+      const r=gable(.27);r.userData.countryFeature='terracotta-roof';
+      box(g,.10,.24,.12,s.trim,-.22,top+.18,-.17,false);
+      box(g,.14,.035,.16,s.roof,-.22,top+.31,-.17,false);
+      box(g,w+.05,.055,.06,s.trim,0,top-.05,d/2+.025,false);
+      if(floors>1){box(g,.68,.05,.17,s.trim,0,.59,d/2+.07,false);for(let i=-3;i<=3;i++)box(g,.014,.15,.015,s.wood,i*.095,.68,d/2+.14,false);box(g,.66,.018,.018,s.wood,0,.75,d/2+.14,false);}
+      top+=.35;
+    }else if(country==='netherlands'){
+      gable(.36);const facade=new THREE.Group();g.add(facade);facade.userData.countryFeature='stepped-gable';
+      for(let i=0;i<4;i++){
+        const sw=w*(1-i*.21);box(facade,sw,.11,.07,wall,0,top+i*.10,d/2+.008,false);
+        box(facade,sw+.025,.027,.09,s.trim,0,top+.058+i*.10,d/2+.02,false);
+      }
+      box(g,.12,.15,.025,s.wood,0,top+.14,d/2+.06,false);
+      box(g,.24,.04,.17,s.trim,0,.07,d/2+.06,false);top+=.40;
+    }else{
+      // Alternate porch cottages and compact brownstone cornices.
+      if(key%2||b.hero){const r=gable(.28);r.userData.countryFeature='porch';
+        box(g,w*.84,.06,.24,s.trim,0,.045,d/2+.08,false);
+        for(const side of [-1,1])box(g,.038,.37,.038,s.trim,side*w*.36,.26,d/2+.16,false);
+        box(g,w*.9,.06,.27,s.roof,0,.46,d/2+.09,false);top+=.30;
+      }else{box(g,w+.10,.08,d+.08,s.trim,0,top,0,false);box(g,w+.04,.065,d+.03,s.roof,0,top+.06,0,false);g.userData.countryFeature='brownstone';top+=.10;}
+    }
+    g.userData.roofStyle=country;g.userData.roofTop=top;g.userData.size={x:w,y:h,z:d};
+    if(b.kind==='shop'||b.kind==='fire')sign(g,b.kind==='fire'?'FIRE':b.name==='BAKERY'?'BAKERY':'BOOK NOOK',0,.58,d/2+.055,.48,s.wood,s.trim);
+    if(b.kind==='house')porchLamp(g,b);
+    rainRoofs.push({x:b.x+.5,z:b.y+.5,rx:w/2+.065,rz:d/2+.065,top:.17+top});
+    countryBuildings++;composedBuildings++;return true;
+  }
+
   function rebuild(){
     site.built=false;site.workers=[];timeVisit=null;round=null;papers=[];effects=[];porchLamps.length=0;precip=null;dusting=null;weatherKind='';
     ambient.length = 0; plazaLights.length = 0; festoonBulbs.length = 0;rainRoofs.length=0;rainSplashes=[];
     windowMaterials.clear();
+    countryBuildings=0;
     gardenElements = 0; woodlandShapes = 0; terrainContours = 0; composedBuildings = 0; districtGardenRooms = 0; landmarkCount = 0;
     while(world.children.length)world.remove(world.children[0]);
     for(const [ref,obj] of actors){obj.group.parent?.remove(obj.group);}
@@ -3145,6 +3256,7 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
       // The five central landmarks are *entire independent models*.
       // Avoid drawing the generic body, roof, porch or old atelier overlays
       // behind them; an authored asset replaces that complete building.
+      if(country!=='town'&&countryBuilding(b)){if(b.hero)landmarkCount++;continue;}
       if(b.hero&&kitLandmark(b)){landmarkCount++;continue;}
       if(b.hero && typeof options.buildLandmark==='function') {
         try {
@@ -3186,7 +3298,7 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
     };
     visit(world);
     worldSeed=town.debug().seed;worldBuildings=town.buildings();
-    worldPropCount=ps.length;
+    worldPropCount=ps.length;notes6.g=null;notes6.pool=[];
     redrawCount++;
   }
   // Smooth, chunky residents in the KayKit spirit: a rounded body, a big soft
@@ -3233,6 +3345,9 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
     // One rounded body, slightly pear-shaped, with a soft collar.
     const torso=object(g,geo('soft',.178,.19,.115,.035),mat(coat,.88),0,.272,0);
     torso.userData.humanShirt=true;
+    // Shoulders and a tapered waist change the silhouette, not just its colour.
+    torso.scale.set(1.02,.98,.92);
+    const hem=box(g,.147,.040,.104,coat,0,.190,0);hem.userData.humanWaist=true;
     box(g,.142,.037,.095,trousers,0,.173,0);
     box(g,.009,.13,.008,tint(coat,'#ffffff',.2),0,.27,.060,false);
     const collar=smoothBall(g,.036,tint(coat,'#ffffff',.2),0,.365,.008);collar.scale.set(1.4,.28,1.05);
@@ -3241,6 +3356,7 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
     const face=new THREE.Group();face.position.y=-.405;headPivot.add(face);
     const head=smoothBall(face,.09,skin,0,.462,0);head.scale.set(.97,1.04,.94);
     g.userData.referenceHuman={headRadius:.09,shoulderWidth:.192};
+    for(const side of [-1,1]){const ear=smoothBall(face,.017,skin,side*.087,.455,-.002);ear.scale.set(.58,1,.72);}
     const HAIRS=['#2b2a33','#49362d','#6b4a32','#8a6a3f','#c29a52','#d9b46a','#8c3b2a','#a5a5aa','#3a3040'];
     const hairTone=ref.kind||ref.hat==='beanie'?(ref.hair||'#5b4639'):HAIRS[Math.abs(Math.floor((ref.ph||0)*13+(ref.x||0)*5))%HAIRS.length];
     // A hair cap that wraps the crown and the back of the head; three styles.
@@ -5057,8 +5173,8 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
     const legs=[];
     for(const side of [-1,1]){
       const z=side*.055;
-      const thigh=cylinder(g,.024,.025,.125,'#526a72',-.05,.34,z);
-      const shin=cylinder(g,.019,.023,.113,'#586c76',.012,.245,z);
+      const thigh=cylinder(g,.024,.025,.16,'#526a72',-.05,.34,z);
+      const shin=cylinder(g,.019,.023,.16,'#586c76',.012,.245,z);
       const shoe=box(g,.078,.025,.044,'#5d5550',.038,.12,z);
       legs.push({side,z,thigh,shin,shoe});
     }
@@ -5354,8 +5470,10 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
             state.dance*.19*Math.sin(worldTime*4.2+k*Math.PI);
           limbs.shins[k].rotation.x=state.sit*.75+
             (1-state.sit)*recover*.94;
-          limbs.feet[k].rotation.x=(1-state.sit)*
-            (Math.max(0,phase)*.30-recover*.18);
+          // An ankle counter-rotates the hip/knee chain: the support sole
+          // stays level while the free foot rolls through toe-off.
+          limbs.feet[k].rotation.x=(1-state.sit)*(-limbs.legs[k].rotation.x-limbs.shins[k].rotation.x+
+            Math.max(0,phase)*.16*state.speed-recover*.12);
           // A very small independent hip rise prevents both toes from
           // scraping the ground during the recovery half of the cycle.
           limbs.legs[k].position.y=.178+
@@ -5485,6 +5603,17 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
           }
         }
         settleHumanPose(limbs,state,dt);
+        // Lift the rig by the support sole's analytic height. Motion stays
+        // distance-driven; knees and toes no longer sink through the pavement.
+        if(state.sit<.05){
+          let sole=Infinity;
+          for(let k=0;k<2;k++){
+            const a=limbs.legs[k].rotation.x,b=limbs.shins[k].rotation.x;
+            const y=limbs.legs[k].position.y-.096*Math.cos(a)-.100*Math.cos(a+b)-.024*Math.sin(a+b)-.022;
+            sole=Math.min(sole,y);
+          }
+          g.position.y-=sole*g.scale.y;g.userData.supportSole=0;
+        }
       }
       if(item.kind==='car'||item.kind==='bike'){
         const rig=g.userData.vehicleRig;
@@ -5512,13 +5641,15 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
           };
           for(const leg of bike.legs){
             const phase=angle+(leg.side>0?0:Math.PI);
-            const footX=.038+.078*Math.sin(phase);
-            const footY=.172+.078*Math.cos(phase);
-            const kneeX=(-.067+footX)*.5+.060;
-            const kneeY=(.402+footY)*.5+.036;
-            link(leg.thigh,-.067,.402,kneeX,kneeY,leg.z,.125);
-            link(leg.shin,kneeX,kneeY,footX,footY,leg.z,.113);
-            leg.shoe.position.set(footX+.015,footY-.009,leg.z);
+            const footX=.038-.068*Math.sin(phase);
+            const footY=.172+.068*Math.cos(phase);
+            const hx=-.067,hy=.385,dx=footX-hx,dy=footY-hy;
+            const span=Math.hypot(dx,dy),bend=Math.sqrt(Math.max(0,.16*.16-span*span/4));
+            const kneeX=(hx+footX)*.5-dy/span*bend;
+            const kneeY=(hy+footY)*.5+dx/span*bend;
+            link(leg.thigh,hx,hy,kneeX,kneeY,leg.z,.16);
+            link(leg.shin,kneeX,kneeY,footX,footY,leg.z,.16);
+            leg.shoe.position.set(footX+.015,footY+.020,leg.z);
             leg.shoe.rotation.z=.10*Math.sin(phase);
           }
         }
@@ -5839,9 +5970,10 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
   renderer.domElement.addEventListener('webglcontextrestored',restored,false);
   const api={
     active:false,renderer,scene,camera,
+    setCountry:id=>{if(!COUNTRY_IDS.includes(id))return false;if(id===country)return true;country=id;rebuild();syncActors();return true;},
     stepPoses:seconds=>{for(let t=0;t<seconds;t+=.05)syncActors(Math.min(.05,seconds-t));},
     renderInfo:()=>({calls:renderer.info?.render?.calls??null,triangles:renderer.info?.render?.triangles??null,geometries:renderer.info?.memory?.geometries??null,textures:renderer.info?.memory?.textures??null}),
-    getStats:()=>({frames,redrawCount,actors:actors.size,ambient:ambient.length,plazaLights:plazaLights.length,festoonBulbs:festoonBulbs.length,gardenElements,woodlandShapes,terrainContours,composedBuildings,districtGardenRooms,landmarks:landmarkCount,windowMaterials:windowMaterials.size,photographicLens:!!lens,pixelRatio,kitModels:kit?kit.size:0,cameraProjection:'perspective',lens:lens?.stats?.()||null,buildings:town.buildings().length,webgl:true,frozen}),
+    getStats:()=>({country,countryBuildings,mobileBudget:!desktop(),frames,redrawCount,actors:actors.size,ambient:ambient.length,plazaLights:plazaLights.length,festoonBulbs:festoonBulbs.length,gardenElements,woodlandShapes,terrainContours,composedBuildings,districtGardenRooms,landmarks:landmarkCount,windowMaterials:windowMaterials.size,photographicLens:!!lens,pixelRatio,kitModels:kit?kit.size:0,cameraProjection:'perspective',lens:lens?.stats?.()||null,buildings:town.buildings().length,webgl:true,frozen}),
     // A stable actual GPU-rendered frame for visual regression screenshots.
     // Unlike stop(), freeze does not switch to the Canvas fallback.
     weather:()=>({kind:weatherKind,precip:precip?precip.userData.kind:null,umbrellas:[...actors.values()].filter(i=>i.group.userData.umbrella?.visible).length}),

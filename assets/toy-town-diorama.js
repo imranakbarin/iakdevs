@@ -79,6 +79,28 @@ const ToyTownDiorama = (() => {
     c.beginPath();c.moveTo(...fl);c.lineTo(...rb);c.lineTo(...rf);c.lineTo(...fr);c.stroke();
     c.restore();
   }
+  function countryRoof(c,b,v,cx,cy,h,roof,tall){
+    const {P,box,shade,S}=v;
+    if(!b.country){gable(c,P,cx,cy,h,roof,tall,shade);return;}
+    if(b.country==='india'){
+      box(c,cx,cy,.46,.45,h,3,b.trim);box(c,cx,cy-.38,.46,.026,h+2,4,b.trim);
+      const q=P(cx,cy,h+9);c.fillStyle=roof;c.beginPath();c.ellipse(q[0],q[1],10*S,7*S,0,Math.PI,Math.PI*2);c.fill();
+      for(const x of [-.15,.15])box(c,cx+x,cy,.018,.018,h+2,7,b.trim);
+    }else if(b.country==='netherlands'){
+      gable(c,P,cx,cy,h,roof,tall,shade);
+      for(let i=0;i<4;i++)box(c,cx,cy+.42,.40-i*.085,.025,h+i*3.5,3.5,b.wall,b.trim);
+    }else{
+      gable(c,P,cx,cy,h,roof,b.country==='japan'?false:tall,shade);
+      if(b.country==='japan'){
+        box(c,cx,cy+.46,.50,.13,h*.63,2,roof);
+        for(let i=-3;i<=3;i++)box(c,cx+i*.11,cy+.416,.009,.015,5,h*.5,'#694e3c');
+      }else if(b.country==='usa'){
+        box(c,cx,cy+.52,.35,.15,0,2,b.trim);
+        for(const x of [-.29,.29])box(c,cx+x,cy+.62,.018,.018,2,17,b.trim);
+        box(c,cx,cy+.53,.37,.17,19,2,roof);
+      }else if(b.country==='italy')for(const x of [-.32,-.05])box(c,cx+x,cy+.42,.032,.02,h*.36,13,'#6b8470');
+    }
+  }
   function building(c,b,night,v){
     const {P,box,shade,S}=v;scale=S;
     const cx=b.x+.5,cy=b.y+.5,h=b.h,shop=b.kind==='shop';
@@ -114,7 +136,7 @@ const ToyTownDiorama = (() => {
       c.strokeStyle=shade(roof,.8);c.lineWidth=Math.max(1.1,1.3*S);c.stroke();
       c.fillStyle='#4b4140';c.font='800 '+fs+'px Georgia,serif';c.textAlign='center';
       c.fillText(b.name,p[0],p[1]+2.5*S);
-      gable(c,P,cx,cy,h,roof,false,shade);
+      countryRoof(c,b,v,cx,cy,h,roof,false);
       for(const side of [-1,1]){
         const x=cx+side*.36,y=cy+.505;
         box(c,x,y,.055,.075,0,4,'#c78c6b','#d9a587');
@@ -126,7 +148,7 @@ const ToyTownDiorama = (() => {
       glazing(c,P,cx,cy,h*.48,.28,12,'east',night);
       door(c,P,cx+.2,cy+.416,4,.20,16,shade(roof,.67));
       box(c,cx+.2,cy+.54,.185,.14,0,2,'#cab294','#ecd9b9');
-      gable(c,P,cx,cy,h,roof,true,shade);
+      countryRoof(c,b,v,cx,cy,h,roof,true);
       // Short chimney intersects the roof slope rather than floating.
       box(c,cx-.18,cy-.11,.078,.078,h+10,12,'#ae826d','#e7b49a');
       box(c,cx-.18,cy-.11,.096,.096,h+21,2.2,'#926557','#dba58b');
