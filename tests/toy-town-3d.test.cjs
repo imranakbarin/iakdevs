@@ -159,7 +159,7 @@ assert.match(moduleCode,/eye.scale.y=blink/,'eyelids blink without a separate an
 assert.match(html,/type="importmap"/);
 assert.match(html,/three@0\.187\.0\/build\/three\.module\.js/);
 assert.match(html,/three@0\.187\.0\/examples\/jsm\//);
-assert.match(html,/toy-town-3d\.js\?v=88/);
+assert.match(html,/toy-town-3d\.js\?v=89/);
 assert.match(moduleCode,/ref\.path&&Number\.isFinite\(ref\.walkFacing\)/, 'routed people use a real diagonal heading instead of a cardinal-only pose');
 assert.match(html,/toy-town-landmarks\.js\?v=7/,'the independent models are requested alongside Three');
 assert.match(html,/buildLandmark:landmarks\.buildLandmark/,
@@ -169,7 +169,7 @@ const classicScript=html.match(/src="assets\/toy-town\.js\?v=\d+"/);
 assert.ok(classicScript&&
   html.indexOf(classicScript[0])<html.indexOf("import('three')"),
   'the actual versioned classic script always loads before WebGL');
-assert.match(page,/toy-town\.html\?v=99&embed=1/);
+assert.match(page,/toy-town\.html\?v=100&embed=1/);
 assert.match(fs.readFileSync(path.join(root,'assets/toy-town-3d.js'),'utf8'),/sport=ref\.kind==='runner'[\s\S]*bib with a stripe/,'marathon runners are dressed in sports kit (vest, shorts, bib, headband)');
 assert.match(fs.readFileSync(path.join(root,'assets/toy-town-3d.js'),'utf8'),/town\.stageHeadline/,'the town crier makes the town act out the headline');
 assert.match(fs.readFileSync(path.join(root,'assets/toy-town.js'),'utf8'),
@@ -345,6 +345,8 @@ assert.ok(planted.every(b=>b.children.length>=22),'flower beds contain stems, le
 const riverBenches=sceneNodes.filter(o=>o.userData?.riverBench);
 assert.equal(riverBenches.length,3,'three actual grounded seats face the river');
 assert.ok(riverBenches.every(b=>b.position.z<12.8),'seats stay on dry bank, outside the water');
+const authoredTrees=sceneNodes.filter(o=>o.userData?.treeSpecies);
+assert.ok(authoredTrees.length&&authoredTrees.every(o=>['oak','birch','cypress','willow','orchard','acacia'].includes(o.userData.treeSpecies)),'tree species are grounded authored scene groups');
 assert.ok(api.getStats().woodlandShapes>=1,
   'simulation trees use the authored asymmetric crowns');
 assert.ok(api.getStats().terrainContours>=2,
@@ -582,8 +584,8 @@ assert.match(moduleCode,/function turret\(/,'one hero cottage has its own curved
 assert.match(moduleCode,/function sideCottageWing\(/,'another hero cottage has a secondary roof and wing');
 assert.match(moduleCode,/function shopExtra\(/,'bookshop and bakery have distinctive facades');
 assert.match(moduleCode,/function ivy\(/,'climbing green vines integrate facades with the landscape');
-assert.match(moduleCode,/Four authored silhouettes replace/,
-  'trees now have separate oak, cypress, willow and orchard crown models');
+assert.match(moduleCode,/g.userData.treeSpecies=family/,
+  'authored tree models expose their actual species for scene auditing');
 assert.match(moduleCode,/function createLandscapeComposition\(/,
   'clear lots gain individually sculpted raised terrain and living fringes');
 assert.match(moduleCode,/districtGardenRooms\+\+/,
@@ -738,6 +740,14 @@ assert.ok(buyerModel.userData.pose.enjoy>.05,
 shopkeeperRef.newsMood='cheer';frameClock+=1/30;callbacks.shift()();
 assert.ok(sellerModel.userData.pose.celebrate>.05,
   'verified sports headlines create a visible arms-up reaction in residents');
+buyerRef.carrying='book';buyerRef.shopAction='reading';buyerRef.ph=.3;
+api.stepPoses(2);
+const readingRig=buyerModel.userData.limbs;
+assert.ok(readingRig.hands.every(h=>h.userData.handRig.curl>.6),'reading closes both hands around the book');
+assert.ok(Math.abs(readingRig.arms[0].rotation.x-readingRig.arms[1].rotation.x)<.08,'both reading arms rise together');
+assert.ok(readingRig.headPivot.rotation.x>.18,'reader looks down at the held pages');
+assert.ok(readingRig.faceSurface.material.map&&readingRig.faceSurface.userData.faceSurface,'expressions render through a shared physical face plate');
+assert.ok(['read','blink'].includes(readingRig.faceSurface.material.userData.faceExpression),'reading or blinking expression reaches the visible face material');
 pedestrians.splice(-2,2);frameClock+=1/30;callbacks.shift()();
 const guitarist={type:'person',kind:'busker',guitar:true,
   shopAction:'performing',x:9.0,y:9.8,d:3,

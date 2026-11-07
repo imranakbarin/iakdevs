@@ -31,7 +31,10 @@ async function main(){
       '--use-angle=swiftshader','--disable-dev-shm-usage'
     ]});
     const jobs=[
-      {name:'mobile-3d-close',w:390,h:844,classic:false,zoom:1.7},
+      {name:'mobile-3d-close',w:390,h:844,classic:false,zoom:1.7,touchCheck:true},
+      {name:'mobile-landscape',w:844,h:390,classic:false,zoom:1,mobile:true,mobileCheck:true},
+      {name:'mobile-reduced-motion',w:390,h:844,classic:false,zoom:1.5,reduced:true,mobileCheck:true},
+      {name:'reading-interaction',w:1100,h:820,classic:false,zoom:3.25,reader:true},
       {name:'desktop-3d-close',w:1280,h:820,classic:false,zoom:1.8},
       {name:'desktop-open-square',w:1280,h:900,classic:false,zoom:3.1,square:true},
       {name:'market-place',w:1100,h:820,classic:false,zoom:3.25,place:'market'},
@@ -46,7 +49,7 @@ async function main(){
     const records=[];
     for(const job of jobs){
       const context=await browser.newContext({viewport:{width:job.w,height:job.h},deviceScaleFactor:1,
-        isMobile:job.w<500,hasTouch:job.w<500,
+        isMobile:!!job.mobile||job.w<500,hasTouch:!!job.mobile||job.w<500,reducedMotion:job.reduced?'reduce':'no-preference',
         ...(job.weather?{recordVideo:{dir:out,size:{width:job.w,height:job.h}}}:{})});
       const page=await context.newPage();
       // Exercise real headline UI with controlled current publisher data.
@@ -126,6 +129,30 @@ async function main(){
         ToyTown.setPlaying(false);
         ToyTown.zoomAt(f);
       },job.zoom);
+      if(job.touchCheck||job.mobileCheck){
+        const before=await page.evaluate(()=>ToyTown.debug().cam.tz),cdp=await context.newCDPSession(page);
+        const x=job.w/2,y=job.h*.52;
+        const points=d=>[{x:x-d,y,id:1,radiusX:4,radiusY:4,force:1},{x:x+d,y,id:2,radiusX:4,radiusY:4,force:1}];
+        await cdp.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:points(28)});
+        for(const d of [34,40,46,52])await cdp.send('Input.dispatchTouchEvent',{type:'touchMove',touchPoints:points(d)});
+        await cdp.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});await cdp.detach();
+        await page.waitForFunction(z=>ToyTown.debug().cam.tz>z+.005,before,{timeout:15000});
+        const ui=await page.evaluate(()=>({width:innerWidth,overflow:document.documentElement.scrollWidth>innerWidth+1,
+          clipped:[...document.querySelectorAll('#zoom-controls button')].map(e=>e.getBoundingClientRect()).filter(r=>r.width>0).some(r=>r.left<0||r.right>innerWidth+1||r.top<0||r.bottom>innerHeight+1),
+          reduced:matchMedia('(prefers-reduced-motion: reduce)').matches}));
+        if(ui.overflow||ui.clipped||!!job.reduced!==ui.reduced)throw Error('Mobile controls/layout mismatch: '+JSON.stringify(ui));
+        console.log('TOUCH_LAYOUT '+job.name+' '+JSON.stringify(ui));
+        await page.evaluate(z=>ToyTown.pinchTo(z,innerWidth/2,innerHeight/2,{x:9,y:9}),before);
+        beforeFrame=await page.evaluate(()=>ToyTown3D.getStats().frames);
+      }
+      if(job.reader){await page.evaluate(()=>{
+        const ref=ToyTown.movers().find(m=>m.shopRole==='customer');if(!ref)throw Error('Reader fixture missing');
+        const now=ToyTown.debug().clock;
+        Object.assign(ref,{x:9,y:9.65,lane:0,d:2,v:0,path:null,heading:undefined,attention:{x:9,y:10.4},
+          intent:'reading',newsMood:'',cheerUntil:0,waveUntil:0,dance:false,
+          shopPhase:'enjoying',shopAction:'reading',carrying:'book',shopNext:now+999,stopUntil:now+999,ph:(2.5-(now*.96)%6.8)/.53});
+        ToyTown3D.stepPoses(2);ToyTown.pinchTo(3.25,innerWidth/2,innerHeight/2,{x:9,y:9.65});
+      });beforeFrame=await page.evaluate(()=>ToyTown3D.getStats().frames);}
       if(job.bridge){await page.evaluate(()=>{
         const car=ToyTown.movers().find(m=>m.type==='car'&&m.kind==='bus')||ToyTown.movers().find(m=>m.type==='car');
         if(!car)throw Error('Bridge vehicle fixture missing');
@@ -354,7 +381,7 @@ async function main(){
           throw Error('Choreographed 3D scene failed to express live social interaction: '+
             JSON.stringify(animated));
       }
-      await page.addStyleTag({content:'#card,#ticker,#hint,#zoom-controls{display:none!important}'});
+      if(!job.mobileCheck)await page.addStyleTag({content:'#card,#ticker,#hint,#zoom-controls{display:none!important}'});
       await page.waitForTimeout(150);
       // A moving WebGL canvas may never satisfy Playwright's stability check.
       // Freeze an actual rendered GPU frame; don't switch to the old 2D fallback.
@@ -366,10 +393,21 @@ async function main(){
       const data=await page.evaluate(()=>({
         active:Boolean(window.ToyTown3D?.active),
         stats:window.ToyTown3D?.getStats?.()||null,
+        renderInfo:window.ToyTown3D?.renderInfo?.()||null,
         cam:ToyTown.debug().cam
       }));
       if(!job.classic&&!data.active)throw Error('3D vanished before screenshot: '+job.name);
       if(!job.classic&&!data.stats?.frozen)throw Error('3D did not freeze the captured frame');
+      if(job.reader){const r=await page.evaluate(()=>{
+        let reader=null;ToyTown3D.scene.traverse(o=>{if(o.userData?.shopProps?.book&&Math.abs(o.position.x-9)<.01&&Math.abs(o.position.z-9.65)<.01)reader=o;});
+        if(!reader)throw Error('Rendered reader missing');
+        const L=reader.userData.limbs,book=reader.userData.shopProps.book;
+        const p=L.hands[0].getWorldPosition(L.hands[0].position.clone());book.worldToLocal(p);
+        const gap=Math.hypot(Math.max(0,Math.abs(p.x)-.061),Math.max(0,Math.abs(p.y)-.0785),Math.max(0,Math.abs(p.z)-.028));
+        return {gap,curls:L.hands.map(h=>h.userData.handRig.curl),look:L.headPivot.rotation.x,
+          face:L.faceSurface.material.userData.faceExpression,attached:book.parent===L.hands[1],visible:book.visible};
+      });if(r.gap>.065||r.curls.some(c=>c<.6)||r.look<.18||r.face!=='read'||!r.attached||!r.visible)throw Error('Two-handed reader pose failed: '+JSON.stringify(r));console.log('READING_GPU '+JSON.stringify(r));}
+      if(job.name==='desktop-3d-wide'){const species=await page.evaluate(()=>{const s=new Set();ToyTown3D.scene.traverse(o=>{if(o.userData?.treeSpecies)s.add(o.userData.treeSpecies);});return [...s];});if(species.length<4)throw Error('Too few distinct tree species: '+JSON.stringify(species));console.log('TREE_SPECIES '+JSON.stringify(species));}
       if(job.bridge){
         const q=await page.evaluate(()=>{
           let vehicle=null,hands=0;ToyTown3D.scene.traverse(o=>{if(o.userData?.handRig)hands++;
