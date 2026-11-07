@@ -938,6 +938,7 @@ assert.equal(api.metropolis().districts.length,6);
 assert.equal(api.metropolis().buildings,90,'six neighbourhoods add ninety modeled buildings');
 assert.equal(api.metropolis().vehicles.length,24);
 assert.equal(api.metropolis().walkers,18);
+const moored=[];const boatsWalk=n=>{if(n.userData?.metroBoat)moored.push(n);for(const c of n.children||[])boatsWalk(c);};boatsWalk(api.scene);assert.equal(moored.length,3);assert.ok(moored.every(b=>Math.abs(b.position.y-(-.42))<.06),'harbour hulls sit at the sea surface, not street level');
 api.previewMetropolis(0);const metroStart=api.metropolis();api.previewMetropolis(10);const metroNext=api.metropolis();
 assert.notEqual(metroStart.vehicles[0].x,metroNext.vehicles[0].x,'new district traffic travels');
 for(let t=0;t<180;t+=2){api.previewMetropolis(t);const v=api.metropolis().vehicles;for(let i=0;i<v.length;i++)for(let j=i+1;j<v.length;j++)if(v[i].district===v[j].district)assert.ok(Math.hypot(v[i].x-v[j].x,v[i].z-v[j].z)>3,'perimeter traffic keeps ample separation through corners');}

@@ -52,6 +52,7 @@ async function main(){
       {name:'desktop-3d-wide',w:1280,h:820,classic:false,zoom:.65,metroOverview:true},
       {name:'metro-downtown',w:1280,h:820,classic:false,zoom:1.7,metroDistrict:true},
       {name:'metro-mobile-overview',w:390,h:844,classic:false,zoom:1,metroOverview:true},
+      {name:'metro-harbour',w:1280,h:820,classic:false,zoom:1.7,metroHarbour:true},
       {name:'mobile-classic-reference',w:390,h:844,classic:true,zoom:1.7}
     ];
     const records=[];
@@ -172,6 +173,7 @@ async function main(){
         beforeFrame=await page.evaluate(()=>ToyTown3D.getStats().frames);
       }
       if(job.metroOverview)await page.evaluate(()=>ToyTown.resetView());
+      if(job.metroHarbour)await page.evaluate(()=>ToyTown.pinchTo(2.1,innerWidth/2,innerHeight/2,{x:29,y:14}));
       if(job.metroDistrict)await page.evaluate(()=>ToyTown.pinchTo(1.7,innerWidth/2,innerHeight/2,{x:25,y:3}));
       if(job.reader){await page.evaluate(()=>{
         const ref=ToyTown.movers().find(m=>m.shopRole==='customer');if(!ref)throw Error('Reader fixture missing');

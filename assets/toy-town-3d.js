@@ -3439,8 +3439,8 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
     // Harbour piers and moored craft give the eastern district a shoreline.
     for(let i=0;i<3;i++){
       box(world,1.9,.10,.18,'#ac9572',30.65,.09,11.5+i*2.0,false);
-      const hull=box(world,.70,.18,.27,['#a97d66','#e1c893','#86a9a7'][i],30.8,.03,12+i*2,false);
-      box(world,.26,.19,.20,'#e8e0c9',30.75,.19,12+i*2,false);
+      const hull=box(world,.70,.18,.27,['#a97d66','#e1c893','#86a9a7'][i],30.8,SEA_Y+.04,12+i*2,false);hull.userData.metroBoat=true;
+      box(world,.26,.19,.20,'#e8e0c9',30.75,SEA_Y+.20,12+i*2,false);
     }
   }
   function metroLoop(distance,r){
