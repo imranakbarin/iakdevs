@@ -199,7 +199,7 @@ assert.match(sim, /function walk\(x, y, tx, ty, speed\)/); assert.match(sim, /m\
   assert.ok(samples > 50 && centre / samples < .05, `walkers on a route keep off the centre line (${centre}/${samples})`);
 }
 const index = fs.readFileSync(path.join(root, 'index.html'), 'utf8');
-assert.match(index, /keep=\['weather','fps','festival','season','lite'\]/, 'the main page passes ?weather= and ?fps into the embedded town');
+assert.match(index, /keep=\['weather','fps','festival','season','lite','country'\]/, 'the main page passes ?weather= and ?fps into the embedded town');
 // The ring railway, the cuter vehicles and the softer city (code-level checks; the behaviour is exercised in toy-town-3d.test.cjs).
 assert.match(view, /function createRailway\(\)/); assert.match(view, /'TOY TOWN',cx,/, 'the station carries its name');
 assert.match(view, /function updatePassengers\(dt,dark\)/); assert.match(view, /if\(trainHit\(clientX,clientY\)\)/, 'tapping the train toots');
@@ -322,7 +322,7 @@ assert.match(view, /function createStage4\(\)/); assert.match(view, /function up
 assert.match(view, /ToyTownWeather\?\.step\?\.\(dt\)/, 'the weather director runs on the town clock');
 assert.match(view, /sunK\+=\(tSun-sunK\)\*\.005/, 'the sun and sky ease in and out of the weather');
 assert.match(view, /function createStage5\(\)/); assert.match(view, /function startEvent\(kind\)/); assert.match(view, /function festivalKind\(\)/, 'festival days (lantern, harvest, spring) and street events (wedding, food cart, juggler)');
-assert.match(view, /\['wedding','cart','juggler'\]/); assert.match(index, /keep=\['weather','fps','festival','season','lite'\]/, 'the main page passes ?festival= into the town too');
+assert.match(view, /\['wedding','cart','juggler'\]/); assert.match(index, /keep=\['weather','fps','festival','season','lite','country'\]/, 'the main page passes ?festival= into the town too');
 assert.match(view, /function archHeight\(x,z\)/, 'vehicles, cyclists and walkers rise over the arched bridge deck'); assert.match(view, /const GROUND=\{lawn:\.13,road:\.172,pave:\.225,foot:\.034\}/, 'residents stand on the surface under them (pavement, asphalt, meadow)');
 assert.match(view, /function walkStyle\(ref\)/, 'every resident has their own walking style (stride, swing, bounce, lean, habits)');
 assert.match(view, /duck\.scale\.setScalar\(\.4\+\(i%3\)\*\.03\)/, 'ducks are small'); assert.match(view, /const visor=box\(face,\.1,\.034,\.014/, 'the robots wear small visors, not huge glasses');
