@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generated_at": "2026-11-07T10:22:38.054Z",
+  "generated_at": "2026-11-07T16:52:50.747Z",
   "status": "ok",
   "successful_sources": [
     "BBC News",
@@ -17,12 +17,12 @@
   ],
   "stories": [
     {
-      "title": "People Around the World Help Buy Royal Estate for Wildlife Conservation",
-      "url": "https://www.goodnewsnetwork.org/people-around-the-world-help-buy-royal-estate-for-wildlife-conservation/",
+      "title": "Adventurer Finally Hugs Mom After 28-Year Walk Around the World From Home in UK",
+      "url": "https://www.goodnewsnetwork.org/adventurer-finally-hugs-mom-after-28-year-walk-around-the-world-from-home-in-uk/",
       "source": "Good News Network",
       "category": "Good news",
       "tone": "light",
-      "published_at": "2026-11-06T21:16:55.000Z"
+      "published_at": "2026-11-07T14:11:37.000Z"
     },
     {
       "title": "APOD: 2026 November 7 – De Gerlache-Kocher Massif",
@@ -33,31 +33,31 @@
       "published_at": "2026-11-07T05:05:00.000Z"
     },
     {
-      "title": "Relief, tears and sadness: Married at First Sight UK cast react to show being axed",
-      "url": "https://www.bbc.co.uk/news/articles/crx233lx94n7o?at_medium=RSS&at_campaign=rss",
+      "title": "Knicks defend Taylor Swift after players name her 'fakest celebrity fan'",
+      "url": "https://www.bbc.co.uk/news/articles/c6rmyymw1zz1o?at_medium=RSS&at_campaign=rss",
       "source": "BBC Culture",
       "category": "Culture",
       "tone": "light",
-      "published_at": "2026-11-07T05:12:52.000Z"
+      "published_at": "2026-11-07T13:03:57.000Z"
     },
     {
-      "title": "New Zealand sweep aside Samoa to reach Women's World Cup final",
-      "url": "https://www.bbc.co.uk/sport/rugby-league/articles/c680zz8k3nvvo?at_medium=RSS&at_campaign=rss",
+      "title": "De Zerbi focuses on Spurs' failings - but should Bogle have seen red?",
+      "url": "https://www.bbc.co.uk/sport/football/articles/c39wz9llg255o?at_medium=RSS&at_campaign=rss",
       "source": "BBC Sport",
       "category": "Sport",
       "tone": "light",
-      "published_at": "2026-11-07T08:32:15.000Z"
+      "published_at": "2026-11-07T16:35:26.000Z"
     },
     {
-      "title": "Doctors pull knife from man's eye that went through his brain—and he's fine now",
-      "url": "https://arstechnica.com/health/2026/11/man-unexpectedly-recovers-from-a-knife-wound-through-his-eye-and-brain/",
+      "title": "The Bantu expansion changed Africa. Scientists are still tracing how.",
+      "url": "https://arstechnica.com/science/2026/11/the-migration-that-transformed-africas-languages-genes-and-cultures/",
       "source": "Ars Technica",
       "category": "Technology",
       "tone": "light",
-      "published_at": "2026-11-06T23:09:45.000Z"
+      "published_at": "2026-11-07T12:15:55.000Z"
     },
     {
-      "title": "'My mortgage is going up £200': How rising interest rates are hitting people's pockets",
+      "title": "'My mortgage is going up £200 a month': How rising interest rates are hitting people's pockets",
       "url": "https://www.bbc.co.uk/news/articles/c617kjqjvk12o?at_medium=RSS&at_campaign=rss",
       "source": "BBC Business",
       "category": "Business",
@@ -65,20 +65,20 @@
       "published_at": "2026-11-07T01:41:36.000Z"
     },
     {
-      "title": "US: Giant pandas from China make public debut at Atlanta zoo",
-      "url": "https://www.dw.com/en/us-giant-pandas-from-china-make-public-debut-at-atlanta-zoo/a-79883388?maca=en-rss-en-world-4025-xml-mrss",
-      "source": "DW",
+      "title": "No clear winner after tight New Zealand general election",
+      "url": "https://www.bbc.co.uk/news/articles/c3ewev11g1e0o?at_medium=RSS&at_campaign=rss",
+      "source": "BBC News",
       "category": "World",
       "tone": "light",
-      "published_at": "2026-11-07T07:33:00.000Z"
+      "published_at": "2026-11-07T15:56:28.000Z"
     },
     {
-      "title": "What went right this week: the good news that matters",
-      "url": "https://www.positive.news/society/good-news-stories-from-week-45-of-2026/",
-      "source": "Positive News",
+      "title": "Your Positive Weekly Horoscope: ‘Free Will Astrology’ by Rob Brezsny",
+      "url": "https://www.goodnewsnetwork.org/horoscope-from-rob-brezsnys-free-will-astrology-11-7-2026/",
+      "source": "Good News Network",
       "category": "Good news",
       "tone": "light",
-      "published_at": "2026-11-06T05:00:54.000Z"
+      "published_at": "2026-11-07T11:00:33.000Z"
     },
     {
       "title": "One of the year's most prolific meteor showers to light up the night sky this weekend",
