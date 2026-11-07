@@ -1611,7 +1611,7 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
         depth:.038,bevelEnabled:true,bevelSize:.012,bevelThickness:.009,
         bevelSegments:1,steps:1,curveSegments:8
       }),mat(paletteIndex%2?'#8e8c69':'#8b9872'),x,.219,z,false);
-      bed.rotation.x=-Math.PI/2;
+      bed.rotation.x=-Math.PI/2;bed.userData.gardenIsland=true;
       bed.receiveShadow=true;
       // Pebble edge follows the soil contour in tiny warm set stones.
       const edging=9;
@@ -1630,7 +1630,8 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
     // Smaller lawn islands soften the outer borough blocks as well, without
     // landing inside any home, river, street, or procedural event building.
     const buildings=town.buildings(),props=town.props();
-    const obstacles=[...buildings.map(b=>b.kind==='site'?[b.x+1,b.y+1,2.0]:[b.x+.5,b.y+.5,.78]),
+    const playground=freeSpots().find(s=>s.clear>.6);
+    const obstacles=[...(playground?[[playground.x,playground.z,1.15]]:[]),...buildings.map(b=>b.kind==='site'?[b.x+1,b.y+1,2.0]:[b.x+.5,b.y+.5,.78]),
       ...props.filter(p=>p.kind==='tree').map(p=>[p.x,p.y,.42])];
     for(let by of [3.2,4.7,8.1,9.8,12.4,15.2]){
       for(let bx of [2.4,4.8,8.2,9.8,12.5,15.3]){
@@ -2739,7 +2740,7 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
      storm flashes, and the sun dimmed under cloud. */
   let weatherKind='clear',precip=null,dusting=null,flashUntil=0,nextFlash=0,sunK=1,grayK=0,grayCol='#9aa3ab';
   const leavingPrecip=[],rainRoofs=[];let rainSplashes=[],splashClock=0;
-  const RAIN_OPACITY=.20;
+  const RAIN_OPACITY=.32;
   function rainSurface(x,z){
     let h=groundLevel(x,z);
     for(const r of rainRoofs)if(Math.abs(x-r.x)<r.rx&&Math.abs(z-r.z)<r.rz)h=Math.max(h,r.top);
@@ -2761,7 +2762,7 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
       for(let i=0;i<n;i++){
         const x=Math.random()*20-1,y=.25+Math.random()*6.7,z=Math.random()*20-1,len=.045+Math.random()*.095;
         lengths[i]=len;speeds[i]=4.5+Math.random()*3.0;pos.set([x,y,z,x-.012,y+len,z],i*6);
-        const v=.50+Math.random()*.32;colors.set([v,v+.04,v+.06,v*.63,v*.67,v*.72],i*6);
+        const v=.72+Math.random()*.20;colors.set([v,v+.04,v+.06,v*.63,v*.67,v*.72],i*6);
       }
       const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.BufferAttribute(pos,3));g.setAttribute('color',new THREE.BufferAttribute(colors,3));
       precip=new THREE.LineSegments(g,new THREE.LineBasicMaterial({color:'#b9cbd1',vertexColors:true,transparent:true,opacity:RAIN_OPACITY,depthWrite:false}));
@@ -5777,7 +5778,7 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
     lifeStats:()=>({built:life.built,boatX:life.boat?.x,playground:!!life.play,at:{play:life.play&&[life.play.x,life.play.z],kite:life.kite&&[life.kite.x,life.kite.z],flock:[life.flock.x,life.flock.z],fisher:life.fisher&&[life.fisher.x,life.fisher.z]},kite:!!life.kite,birds:life.birds.map(b=>b.state),scatters:life.scatters,catches:life.catches}),
     scatterBirds:(x,z,r)=>scatterBirds(x,z,r),
     groundPoint:(cx,cy)=>groundAt(cx,cy),
-    contours:()=>world.children.filter(o=>o.userData.landscapeContour).map(o=>[+o.position.x.toFixed(2),+o.position.z.toFixed(2)]),
+    contours:()=>world.children.filter(o=>o.userData.landscapeContour||o.userData.gardenIsland).map(o=>[+o.position.x.toFixed(2),+o.position.z.toFixed(2)]),
     probe:(x,z,r)=>world.children.filter(o=>Math.hypot(o.position.x-x,o.position.z-z)<r).map(o=>[o.type,o.geometry?.type,o.geometry?.parameters?.radius,+o.position.x.toFixed(2),+o.position.y.toFixed(2),+o.position.z.toFixed(2),o.material?.color?.getHexString?.(),Object.keys(o.userData||{}).join('|')]).slice(0,40),
     siteStats:()=>({built:site.built,workers:site.workers.length,jib:site.slew?.rotation.y||0,t:site.t}),
     farmStats:()=>({sheep:farm.sheep.length,sails:!!farm.sails,spin:-(farm.sails?.rotation.z||0),at:farm.sheep.map(x=>[+x.x.toFixed(2),+x.z.toFixed(2)])}),

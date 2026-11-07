@@ -144,7 +144,7 @@ async function main(){
           return {opacity:drops.material.opacity,moved,count:drops.userData.lengths.length,min:Math.min(...drops.userData.lengths),max:Math.max(...drops.userData.lengths),
             varied:new Set([...drops.userData.lengths].map(v=>v.toFixed(3))).size,depthWrite:drops.material.depthWrite};
         });
-        if(rain.varied<20||rain.min<.04||rain.max>.15||rain.depthWrite||rain.opacity<.19||!rain.moved)
+        if(rain.varied<20||rain.min<.04||rain.max>.15||rain.depthWrite||rain.opacity<.31||!rain.moved)
           throw Error('Rain must be short, varied and not write an opaque depth layer: '+JSON.stringify(rain));
         console.log('RAIN_GPU '+JSON.stringify(rain));
         await page.evaluate(()=>{for(let i=0;i<60;i++)ToyTown.update(1/60);});
