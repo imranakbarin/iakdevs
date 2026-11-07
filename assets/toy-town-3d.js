@@ -29,7 +29,7 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
   // A physical perspective lens instead of an orthographic drawing camera.
   // FOV is fixed; dolly distance preserves the existing 2D zoom scale,
   // while the foreground genuinely grows relative to the distant roofs.
-  const camera = new THREE.PerspectiveCamera(35, 1, .08, 240);
+  const camera = new THREE.PerspectiveCamera(35, 1, .08, 600);
   const hemisphere = new THREE.HemisphereLight('#fff1dc', '#6f8580', .86);
   scene.add(hemisphere);
   const sun = new THREE.DirectionalLight('#ffd7a4', 2.6);
