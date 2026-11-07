@@ -140,7 +140,14 @@ assert.match(view, /const CENTRE_TOP=\.18;/); assert.match(view, /GROUND\.lawn\+
 assert.doesNotMatch(view, /fillText\('CITY CENTER'/, 'oversized civic lettering is retired'); assert.doesNotMatch(view, /sign\(g,'CITY CENTER'/, 'the open square has no oversized civic name board');
 assert.match(view, /function arrowBoard\(/); assert.match(view, /placed\.userData\.size\.y\*\.8/, 'name boards hang on the facade (the buildings are low now), painted and ornamented');
 assert.match(view, /function moodOf\(ref\)/, 'tapping a resident shows a name and a mood');
-assert.match(fs.readFileSync(path.join(root, 'index.html'), 'utf8'), /keep=\['weather','fps','festival','season','lite'\]/, 'the main page passes ?season and ?lite through');
+{
+  const source=fs.readFileSync(path.join(root,'index.html'),'utf8').match(/function townSrc\(\)\{[^\n]+/)[0];
+  const query='?weather=rain&fps=1&festival=diwali&season=summer&lite=1&country=japan';
+  const result=vm.runInNewContext(source+';townSrc()',{URLSearchParams,location:{search:query},bar:{hidden:false}});
+  const url=new URL(result,'https://example.test/');
+  for(const [key,value] of new URLSearchParams(query))assert.equal(url.searchParams.get(key),value,'embedded town keeps '+key);
+  assert.equal(url.searchParams.get('embed'),'1');
+}
 // Nobody stays stuck, and walkers do things of their own: several layouts, six town-minutes each.
 for (const seed of [20261102, 7, 42]) {
   const box = vm.createContext({Math, Object, Array, JSON, Date, String, Number, RegExp, Set, Map, setTimeout: () => 0, document: {getElementById: () => ({textContent: '', style: {}})}});
