@@ -333,6 +333,10 @@ assert.ok(workingDesks.every(s=>s.position.x>7&&s.position.x<11&&
   s.position.z>8&&s.position.z<9),'shop counters are on the living village frontage');
 const sceneNodes=[];const collectScene=o=>{sceneNodes.push(o);for(const c of o.children||[])collectScene(c);};collectScene(api.scene);
 const planted=sceneNodes.filter(o=>o.userData?.plantedBed);
+const signalMasts=sceneNodes.filter(o=>o.userData?.signalMast);
+assert.equal(signalMasts.length,24,'the scene constructs both shared masts at every controlled junction');
+assert.ok(signalMasts.every(m=>{const peds=m.children.filter(c=>c.children.length===3);return peds.length===2&&peds.every(p=>p.children.slice(1).map(l=>l.material.color).join(',')==='#e2463a,#4fbf72');}),
+  'every mast retains two real pedestrian lamp groups with red and green lenses');
 const shapedHands=sceneNodes.filter(o=>o.userData?.handRig);
 assert.ok(shapedHands.length>=10&&shapedHands.every(o=>o.userData.handRig.digits===3&&o.userData.handRig.thumb&&o.userData.handRig.fingers[0].children[0].geometry),
   'residents have actual grouped-finger geometry and articulated thumbs');
