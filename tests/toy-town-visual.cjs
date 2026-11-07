@@ -147,6 +147,9 @@ async function main(){
         beforeFrame=await page.evaluate(()=>window.ToyTown3D?.getStats().frames||0);
       }
       if(job.touchCheck||job.mobileCheck){
+        // Begin below the camera's hard zoom limit, including close country previews.
+        const cameraBefore=await page.evaluate(()=>ToyTown.debug().cam.tz);
+        await page.evaluate(()=>ToyTown.pinchTo(1.2,innerWidth/2,innerHeight/2,{x:9,y:9}));
         const before=await page.evaluate(()=>ToyTown.debug().cam.tz),cdp=await context.newCDPSession(page);
         const x=job.w/2,y=job.h*.52;
         const points=d=>[{x:x-d,y,id:1,radiusX:4,radiusY:4,force:1},{x:x+d,y,id:2,radiusX:4,radiusY:4,force:1}];
@@ -160,7 +163,7 @@ async function main(){
         if(!job.classic&&!(await page.evaluate(()=>ToyTown3D.getStats().mobileBudget)))throw Error('Touch landscape lost its mobile render budget');
         if(ui.overflow||ui.clipped||!!job.reduced!==ui.reduced)throw Error('Mobile controls/layout mismatch: '+JSON.stringify(ui));
         console.log('TOUCH_LAYOUT '+job.name+' '+JSON.stringify(ui));
-        await page.evaluate(z=>ToyTown.pinchTo(z,innerWidth/2,innerHeight/2,{x:9,y:9}),before);
+        await page.evaluate(z=>ToyTown.pinchTo(z,innerWidth/2,innerHeight/2,{x:9,y:9}),cameraBefore);
         beforeFrame=await page.evaluate(()=>ToyTown3D.getStats().frames);
       }
       if(job.reader){await page.evaluate(()=>{
