@@ -38,6 +38,9 @@ A `START` does not prohibit parallel edits. Avoid stepping on each other's uncom
 
 ## Exchange log (newest first)
 
+### START — ChatGPT — 2026-11-08 UTC — richer neighbourhood details
+- Base 07afbd2; only newer news data, retained. Add visible district-specific public spaces, facade details, planting and dock props without obstructing transit. Renderer/cache/tests affected. Verify model and actual Chromium district views; publication authorized.
+
 ### DONE — ChatGPT — 2026-11-08 UTC — connected districts and active streets
 - PR #207 merged: https://github.com/imranakbarin/iakdevs/pull/207 . Base `6a2c9a06c796821513849c48d7e5d787a2fb1bfa`; START local `5305ec7`, remote `2c23959`; source local `de412e2`, reviewed remote `6ffb9cc0fb8424c3ddbe4567a7874c5db5810d31`; squash merge `0f923467e818d54a4e174c8c12ffd2122600bdb7`. Latest master was checked again before merge; no concurrent changes. Merged runtime/cache/test files compared identical to the reviewed branch. Local master synced.
 - All 24 metro vehicles now use a shared rounded two-way spine through the six outer districts, with leader spacing, widened connecting decks, pavement routes and terminal turning areas. Six buses stop at six shelters. Six existing commuters queue, approach a bus, ride hidden aboard, alight in a different district, stroll and return to a queue; six other walkers use the connected footway with separated starting phases. Actual district-arrival, boarding and alighting state is exposed for verification. Original central-island simulation is preserved: this is metro transit, not general pathfinding or a unified old-town/metro traffic engine.
