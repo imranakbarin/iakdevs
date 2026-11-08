@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generated_at": "2026-11-08T07:27:20.697Z",
+  "generated_at": "2026-11-08T15:19:31.896Z",
   "status": "ok",
   "successful_sources": [
     "BBC News",
@@ -17,20 +17,20 @@
   ],
   "stories": [
     {
-      "title": "Mayor Uses AirTag to Catch Capstone Thief who was Stealing 18th-Century Stones Across the Countryside",
-      "url": "https://www.goodnewsnetwork.org/mayor-uses-airtag-to-catch-capstone-thief/",
+      "title": "Good News in History, November 8",
+      "url": "https://www.goodnewsnetwork.org/events061108/",
       "source": "Good News Network",
       "category": "Good news",
       "tone": "light",
-      "published_at": "2026-11-07T21:49:37.000Z"
+      "published_at": "2026-11-08T08:00:00.000Z"
     },
     {
-      "title": "Countryside managers prepare for climate change",
-      "url": "https://www.bbc.co.uk/news/articles/c3ewe99dzdlpo?at_medium=RSS&at_campaign=rss",
+      "title": "Dormice 'thrive' at National Trust site",
+      "url": "https://www.bbc.co.uk/news/articles/c50meerl8xp1o?at_medium=RSS&at_campaign=rss",
       "source": "BBC Science",
       "category": "Science",
       "tone": "light",
-      "published_at": "2026-11-08T07:16:55.000Z"
+      "published_at": "2026-11-08T12:22:05.000Z"
     },
     {
       "title": "Knicks defend Taylor Swift after players name her 'fakest celebrity fan'",
@@ -41,20 +41,20 @@
       "published_at": "2026-11-07T13:03:57.000Z"
     },
     {
-      "title": "Who am I? Plus today's other quizzes",
-      "url": "https://www.bbc.co.uk/sport/football/articles/cr20wvgx2q27o?at_medium=RSS&at_campaign=rss",
+      "title": "Chengdu lose four in a row to blow 12-point lead & miss out on Chinese title",
+      "url": "https://www.bbc.co.uk/sport/football/articles/cq2d698j5gxgo?at_medium=RSS&at_campaign=rss",
       "source": "BBC Sport",
       "category": "Sport",
       "tone": "light",
-      "published_at": "2026-11-08T06:47:58.000Z"
+      "published_at": "2026-11-08T14:41:04.000Z"
     },
     {
-      "title": "Can the Zelda remake capture the magic of the original?",
-      "url": "https://www.bbc.co.uk/news/articles/cm8xznl0n1q4o?at_medium=RSS&at_campaign=rss",
-      "source": "BBC Technology",
+      "title": "Physicists listened to electrical noise to crack a superconductor mystery",
+      "url": "https://arstechnica.com/science/2026/11/physicists-listened-to-electrical-noise-to-crack-a-superconductor-mystery/",
+      "source": "Ars Technica",
       "category": "Technology",
       "tone": "light",
-      "published_at": "2026-11-08T00:37:45.000Z"
+      "published_at": "2026-11-08T12:15:31.000Z"
     },
     {
       "title": "Traders 'priced out' of £12,000 Christmas market pitches",
@@ -65,20 +65,20 @@
       "published_at": "2026-11-08T07:11:02.000Z"
     },
     {
-      "title": "Ebola: Why is there still no vaccine?",
-      "url": "https://www.dw.com/en/ebola-why-is-there-still-no-vaccine/a-79888134?maca=en-rss-en-world-4025-xml-mrss",
-      "source": "DW",
+      "title": "Germans wrestle with what to do with Hitler's destroyed Eagle's Nest retreat",
+      "url": "https://www.bbc.co.uk/news/articles/cm74pk1g51nko?at_medium=RSS&at_campaign=rss",
+      "source": "BBC News",
       "category": "World",
       "tone": "light",
-      "published_at": "2026-11-07T21:03:00.000Z"
+      "published_at": "2026-11-08T00:48:59.000Z"
     },
     {
-      "title": "Baby Saved After Racing Heartbeat Detected by Family Doberman",
-      "url": "https://www.goodnewsnetwork.org/baby-saved-as-racing-heartbeat-detected-by-pet/",
+      "title": "Mayor Uses AirTag to Catch Capstone Thief who was Stealing 18th-Century Stones Across the Countryside",
+      "url": "https://www.goodnewsnetwork.org/mayor-uses-airtag-to-catch-capstone-thief/",
       "source": "Good News Network",
       "category": "Good news",
       "tone": "light",
-      "published_at": "2026-11-07T16:58:40.000Z"
+      "published_at": "2026-11-07T21:49:37.000Z"
     },
     {
       "title": "APOD: 2026 November 8 – Major Fireball Meteor",
