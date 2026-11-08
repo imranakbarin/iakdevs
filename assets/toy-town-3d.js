@@ -29,7 +29,7 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
   // A physical perspective lens instead of an orthographic drawing camera.
   // FOV is fixed; dolly distance preserves the existing 2D zoom scale,
   // while the foreground genuinely grows relative to the distant roofs.
-  const camera = new THREE.PerspectiveCamera(35, 1, .08, 240);
+  const camera = new THREE.PerspectiveCamera(35, 1, .08, 600);
   const hemisphere = new THREE.HemisphereLight('#fff1dc', '#6f8580', .86);
   scene.add(hemisphere);
   const sun = new THREE.DirectionalLight('#ffd7a4', 2.6);
@@ -37,8 +37,8 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
   sun.position.set(-18, 16, 12);   // late afternoon: longer, warmer shadows
   sun.castShadow = true;
   sun.shadow.mapSize.set(desktop() ? 1024 : 512, desktop() ? 1024 : 512);
-  sun.shadow.camera.left = -20; sun.shadow.camera.right = 20;
-  sun.shadow.camera.top = 20; sun.shadow.camera.bottom = -20;
+  sun.shadow.camera.left = -32; sun.shadow.camera.right = 32;
+  sun.shadow.camera.top = 32; sun.shadow.camera.bottom = -32;
   sun.shadow.camera.near = .5; sun.shadow.camera.far = 70;
   sun.shadow.bias = -.00035;
   sun.shadow.normalBias = .028;
@@ -2061,7 +2061,7 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
     for(const sd of [-1,1]){const c=object(beam,geo('cylinder',.03,.42,3.4),beamMat,sd*1.75,0,0,false);c.rotation.z=Math.PI/2;c.castShadow=false;}
     lighthouse={beam,lampMat,beamMat,foamMat};
     // two more islets, each with a tree
-    for(const [x,z,r,k] of [[-3.3,12.8,.9,2],[21.9,5.2,.8,3]]){const I=islet(x,z,r,k);tree({x:I.x,y:I.z,s:.6},k*7+1);}
+    for(const [x,z,r,k] of [[-15.3,12.8,.9,2],[35.9,5.2,.8,3]]){const I=islet(x,z,r,k);tree({x:I.x,y:I.z,s:.6},k*7+1);}
     islet(15.6,22.6,.55,1);islet(-1.5,20.5,.45,2);
     // buoys, ripples and sailboats (animated, so the ambient pass moves them)
     for(let i=0;i<5;i++){
@@ -2079,7 +2079,7 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
     }
     const sailMat=new THREE.MeshStandardMaterial({color:'#fff7ec',roughness:.85,side:THREE.DoubleSide});
     if(!geometryCache.has('sail')){const sh=new THREE.Shape();sh.moveTo(0,0);sh.lineTo(.3,0);sh.lineTo(0,.46);geometryCache.set('sail',new THREE.ShapeGeometry(sh));}
-    for(const [R,speed,ph,col] of [[15.2,.045,0,'#e2463a'],[17.6,-.035,2.4,'#3f8fd6']]){
+    for(const [R,speed,ph,col] of [[35.2,.018,0,'#e2463a'],[38.6,-.015,2.4,'#3f8fd6']]){
       const boat=new THREE.Group();world.add(boat);
       object(boat,geo('soft',.5,.1,.2,.05),mat('#f4f0e6',.7),0,.05,0);box(boat,.3,.02,.2,col,.02,.11,0,false);
       cylinder(boat,.01,.012,.62,'#8a6d4e',0,.4,0);
@@ -2160,7 +2160,7 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
     // A generous matte studio table under the actual miniature slab.
     // Soft ambient contrast makes the scene read like a photographed model.
     // The town stands in a calm sea (see seaAndLighthouse): the sea level cuts the wooden base about a third of the way up.
-    const backdrop=box(world,140,.07,140,mat('#7dbcc4',.5),9,SEA_Y-.035,9);
+    const backdrop=box(world,400,.07,400,mat('#7dbcc4',.5),9,SEA_Y-.035,9);
     backdrop.castShadow=false;
     terrainCutaway();
     // One continuous painted meadow rests over the sculpted board. Its
@@ -3090,7 +3090,7 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
            at?.position&&at.normal&&!at.position.isInterleavedBufferAttribute&&!at.normal.isInterleavedBufferAttribute&&!o.userData?.noBatch){
           if(!m.vertexColors||at.color){
             const mw=new THREE.Matrix4().multiplyMatrices(inv,o.matrixWorld);
-            const cx=Math.min(CELLS-1,Math.max(0,Math.floor(mw.elements[12]/18*CELLS))),cz=Math.min(CELLS-1,Math.max(0,Math.floor(mw.elements[14]/18*CELLS)));
+            const cx=Math.floor(mw.elements[12]/6),cz=Math.floor(mw.elements[14]/6);
             const sig=Object.keys(at).sort().map(k=>k+at[k].itemSize+(at[k].isInterleavedBufferAttribute?'i':'')).join(',');
             const key=m.uuid+'|'+cx+','+cz+'|'+sig+'|'+(o.castShadow?1:0)+(o.receiveShadow?1:0);
             let b=buckets.get(key);if(!b){b={material:m,cast:o.castShadow,receive:o.receiveShadow,list:[],names:Object.keys(at).filter(k=>!at[k].isInterleavedBufferAttribute)};buckets.set(key,b);}
@@ -3337,6 +3337,127 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
     countryBuildings++;composedBuildings++;return true;
   }
 
+  // The historic island remains the simulation centre; six new neighbourhoods
+  // share its scene, clock and camera, with their own separated local routes.
+  const CITY_BOUNDS={minX:-12,maxX:32,minY:-12,maxY:20};
+  const METRO_DISTRICTS=[
+    {name:'Garden quarter',x:-7,z:3,type:'garden'},
+    {name:'Arts & market',x:-7,z:14,type:'market'},
+    {name:'University',x:3,z:-7,type:'campus'},
+    {name:'Civic quarter',x:14,z:-7,type:'civic'},
+    {name:'Downtown',x:25,z:3,type:'downtown'},
+    {name:'Harbour',x:25,z:14,type:'harbour'}
+  ];
+  const metro={buildings:[],vehicles:[],walkers:[],bridges:[],time:0};
+  const metroFacades=new Map();
+  function metroFacade(col,index,rows){
+    const key=col+':'+index+':'+rows;if(metroFacades.has(key))return metroFacades.get(key);
+    const c=document.createElement('canvas');c.width=128;c.height=256;const p=c.getContext('2d');
+    p.fillStyle=col;p.fillRect(0,0,128,256);
+    for(let row=0;row<rows;row++)for(let k=0;k<3;k++){
+      const y=row*256/rows+7,wh=256/rows*.65;
+      p.fillStyle='#e9ddc1';p.fillRect(12+k*37,y,22,wh+6);
+      p.fillStyle=(row*3+k+index)%7===0?'#ebca8c':'#657f86';p.fillRect(15+k*37,y+3,16,wh);
+      p.fillStyle='rgba(228,240,227,.28)';p.fillRect(16+k*37,y+4,6,wh-2);
+    }
+    const tx=new THREE.CanvasTexture(c);tx.colorSpace=THREE.SRGBColorSpace;
+    const m=new THREE.MeshStandardMaterial({map:tx,roughness:.88});metroFacades.set(key,m);return m;
+  }
+  function metroBuilding(x,z,h,w,d,index,type){
+    const palettes={town:['#ceaa90','#c7bc9d','#8caaa3'],india:['#cc957b','#dcad8f','#c69d80'],japan:['#dfcfb1','#c2b79f','#b5c3b1'],italy:['#deb78a','#e3c8a0','#d5a797'],netherlands:['#a77761','#b38c71','#c9b599'],usa:['#ac806b','#b4b8ad','#c4a78b']};
+    const col=palettes[country][index%3],g=new THREE.Group();g.position.set(x,.16,z);world.add(g);
+    g.userData.metroBuilding={district:type,height:h,country};metro.buildings.push(g);
+    box(g,w,h,d,col,0,h/2,0,false);
+    const facade=metroFacade(col,index%3,type==='downtown'?8:type==='campus'||type==='civic'?4:2);
+    for(const side of [-1,1]){
+      const f=object(g,geo('plane',1,1),facade,0,h/2,side*(d/2+.005),false);f.scale.set(w,h,1);if(side<0)f.rotation.y=Math.PI;
+      const s=object(g,geo('plane',1,1),facade,side*(w/2+.005),h/2,0,false);s.scale.set(d,h,1);s.rotation.y=side*Math.PI/2;
+    }
+    box(g,w+.08,.075,d+.08,'#e1d5bd',0,h+.035,0,false);
+    const pitched=type!=='downtown'&&type!=='harbour'&&country!=='india'&&(index%3!==0||country==='japan');
+    if(pitched){const r=new THREE.Group();g.add(r);r.position.y=h+.065;r.scale.set(w*.92,.45,d*.92);roof(r,country==='italy'?'#b6724e':country==='japan'?'#525e60':'#7e8175',0);}
+    else{box(g,w*.53,.16,d*.52,'#7b8c88',0,h+.12,-d*.09,false);if(type==='downtown')box(g,w*.30,.25,d*.29,'#9cb3b3',0,h+.30,0,false);}
+    if(country==='netherlands'&&type!=='downtown')for(let i=0;i<3;i++)box(g,w*(1-i*.25),.09,.06,'#e3d7bd',0,h+.10+i*.09,d/2+.02,false);
+    if(type==='market'){
+      for(let k=0;k<4;k++)box(g,w/4,.04,.27,k%2?'#efe0bb':'#ad755a',-w*.375+k*w/4,.43,d/2+.10,false);
+    }
+    rainRoofs.push({x,z,rx:w/2+.06,rz:d/2+.06,top:.16+h+.35});
+  }
+  function metroLink(ax,az,bx,bz,raised=false){
+    const g=new THREE.Group();world.add(g);const length=Math.hypot(bx-ax,bz-az),angle=Math.atan2(bx-ax,bz-az);
+    const height=t=>.174+(raised?Math.sin(Math.PI*t)**2*1.45:0);
+    for(let i=0;i<24;i++){
+      const t=(i+.5)/24,x=ax+(bx-ax)*t,z=az+(bz-az)*t;
+      const q=box(g,.92,.075,length/24+.012,'#a7a99d',x,height(t)-.0375,z,false);const slope=(height(Math.min(1,t+.001))-height(Math.max(0,t-.001)))/(length*.002);
+      q.rotation.order='YXZ';q.rotation.y=angle;q.rotation.x=-Math.atan(slope);q.scale.z=Math.sqrt(1+slope*slope);
+      for(const side of [-1,1]){
+        const rx=x+Math.cos(angle)*side*.49,rz=z-Math.sin(angle)*side*.49;
+        const rail=box(g,.025,.04,length/24+.02,'#e2d6bb',rx,height(t)+.13,rz,false);rail.rotation.order='YXZ';rail.rotation.y=angle;rail.rotation.x=-Math.atan(slope);rail.scale.z=Math.sqrt(1+slope*slope);
+      }
+    }
+    if(raised){
+      const p=person({col:'#a88caa',ph:1,x:ax,y:az});p.scale.setScalar(.48);metro.actorGroup.add(p);
+      metro.bridges.push({g:p,ax,az,bx,bz,height,length});
+    }
+  }
+  function createMetropolis(){
+    metro.buildings=[];metro.vehicles=[];metro.walkers=[];metro.bridges=[];metro.actorGroup=new THREE.Group();metro.actorGroup.userData.noBatch=true;world.add(metro.actorGroup);
+    for(let district=0;district<METRO_DISTRICTS.length;district++){
+      const D=METRO_DISTRICTS[district],x=D.x,z=D.z;
+      const slab=box(world,10,.50,10,'#a38e75',x,-.15,z,false);slab.userData.metroDistrict=D.name;
+      box(world,9.92,.065,9.92,D.type==='garden'?'#adc097':'#b5b99d',x,.13,z,false);
+      const road=(w,d,rx,rz)=>box(world,w,.035,d,'#919c98',rx,.157,rz,false);
+      for(const side of [-1,1]){road(.82,9.0,x+side*4.12,z);road(9.0,.82,x,z+side*4.12);}
+      road(.86,8.2,x,z);road(8.2,.86,x,z);
+      for(let a=0;a<4;a++)for(let b=0;b<4;b++){
+        const dx=[-2.8,-1.35,1.35,2.8][a],dz=[-2.8,-1.35,1.35,2.8][b],i=district*16+a*4+b;
+        if(a===0&&b===0){for(let k=0;k<3;k++){const tx=x+dx+(k-1)*.29,tz=z+dz;cylinder(world,.03,.04,.40,'#887357',tx,.36,tz);ball(world,.21,'#839f73',tx,.68,tz);}continue;}
+        const h=D.type==='downtown'?1.9+((a*7+b*3)%7)*.47:D.type==='campus'?1.15+(i%3)*.24:D.type==='civic'?1.25+(i%4)*.31:D.type==='harbour'?.65+(i%3)*.20:.70+(i%4)*.18;
+        const size=D.type==='downtown'?1.12:D.type==='campus'?1.19:1.02;
+        box(world,size+.17,.045,size+.17,'#cfc8b3',x+dx,.17,z+dz,false);
+        metroBuilding(x+dx,z+dz,h,size,size,i,D.type);
+      }
+      // A continuous inner pavement keeps walkers clear of traffic and plots.
+      for(const side of [-1,1]){box(world,.24,.025,7.36,'#d4ccb8',x+side*3.56,.17,z,false);box(world,7.36,.025,.24,'#d4ccb8',x,.17,z+side*3.56,false);}
+      sign(world,D.name.toUpperCase(),x,.55,z+4.70,1.65,'#4f655f','#e7debe');
+      // One-way perimeter circulation has fixed arc-distance spacing, no
+      // conflicting intersections or overlapping independent random paths.
+      for(let i=0;i<4;i++){
+        const g=car({kind:i===0?'bus':'car',col:['#d4bd83','#80a5af','#b88e7f','#a7b5a4'][i],ph:i});metro.actorGroup.add(g);
+        metro.vehicles.push({g,x,z,offset:i*8.24,district});
+      }
+      for(let i=0;i<3;i++){
+        const g=person({col:['#bb9687','#82a6a1','#b0a1bb'][i],ph:district*3+i,x,y:z});g.scale.setScalar(.50);metro.actorGroup.add(g);
+        metro.walkers.push({g,x,z,offset:i*10.1,district});
+      }
+    }
+    // Link the outer quarters to each other and the old island. Core links
+    // arch over its railway; the existing traffic simulation is undisturbed.
+    metroLink(-7,7.12,-7,9.88);metroLink(7.12,-7,9.88,-7);metroLink(25,7.12,25,9.88);
+    metroLink(-7,-1.12,-1.12,-7);metroLink(18.12,-7,25,-1.12);
+    metroLink(-3,6.5,1.5,6.5,true);metroLink(6.5,-3,6.5,1.5,true);metroLink(16.5,6.5,21,6.5,true);
+    // Harbour piers and moored craft give the eastern district a shoreline.
+    for(let i=0;i<3;i++){
+      box(world,1.9,.10,.18,'#ac9572',30.65,.09,11.5+i*2.0,false);
+      const hull=box(world,.70,.18,.27,['#a97d66','#e1c893','#86a9a7'][i],30.8,SEA_Y+.04,12+i*2,false);hull.userData.metroBoat=true;
+      box(world,.26,.19,.20,'#e8e0c9',30.75,SEA_Y+.20,12+i*2,false);
+    }
+  }
+  function metroLoop(distance,r){
+    const corner=.45,line=2*(r-corner),arc=corner*Math.PI/2,quarter=line+arc;
+    const s=((distance%(quarter*4))+quarter*4)%(quarter*4),k=Math.floor(s/quarter),u=s-k*quarter;
+    let x,z,angle;
+    if(u<line){x=-r+corner+u;z=-r;angle=0;}
+    else{const theta=-Math.PI/2+(u-line)/corner;x=r-corner+corner*Math.cos(theta);z=-r+corner+corner*Math.sin(theta);angle=-Math.atan2(Math.cos(theta),-Math.sin(theta));}
+    const c=Math.cos(k*Math.PI/2),q=Math.sin(k*Math.PI/2);return {x:x*c-z*q,z:x*q+z*c,angle:angle-k*Math.PI/2};
+  }
+  function updateMetropolis(time){
+    metro.time=time;
+    for(const v of metro.vehicles){const p=metroLoop(time*.45+v.offset,4.12);v.g.position.set(v.x+p.x,.192,v.z+p.z);v.g.rotation.y=p.angle;const rig=v.g.userData.vehicleRig;if(rig)for(const w of rig.wheels)w.rotation.z=-time*5;}
+    for(const v of metro.walkers){const t=(time+v.offset)%54;const distance=(Math.floor((time+v.offset)/54)*45+Math.min(t,45))*.21+v.offset,p=metroLoop(distance,3.56);v.g.position.set(v.x+p.x,.20,v.z+p.z);v.g.rotation.y=p.angle+Math.PI/2;const L=v.g.userData.limbs;for(let i=0;i<2;i++)L.legs[i].rotation.x=t<45&&!reducedMotion?Math.sin(distance*16+i*Math.PI)*.45:0;}
+    for(const v of metro.bridges){const t=(Math.sin(time*.07)+1)/2;for(let k=0;k<2;k++)v.g.userData.limbs.legs[k].rotation.x=reducedMotion?0:Math.sin(t*v.length*14+k*Math.PI)*.45;v.g.position.set(v.ax+(v.bx-v.ax)*t,v.height(t)+.035,v.az+(v.bz-v.az)*t);v.g.rotation.y=Math.atan2(v.bx-v.ax,v.bz-v.az)+(Math.cos(time*.07)<0?Math.PI:0);}
+  }
+
   function rebuild(){
     site.built=false;site.workers=[];timeVisit=null;round=null;papers=[];effects=[];porchLamps.length=0;precip=null;dusting=null;weatherKind='';
     ambient.length = 0; plazaLights.length = 0; festoonBulbs.length = 0;rainRoofs.length=0;rainSplashes=[];
@@ -3386,6 +3507,8 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
     createStorybookVillage();
     paintVillageLife();
     createWorkingShops();
+    createMetropolis();
+    for(const v of [...metro.vehicles,...metro.walkers,...metro.bridges])v.g.userData.noBatch=true;
     batchStatic(world.children.length);
     rail.train=null;life.built=false;more.built=false;live2.built=false;bus3.built=false;news7.built=false;sky4.built=false;fest.built=false;fest.ev=null;leavingPrecip.length=0;createRailway();createFarm();createLife();createMore();createStage2();createStage3();createNewsroom();createStage4();createStage5();
     // Landmark panes are pooled across the five models. Update material
@@ -5930,7 +6053,7 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
   function syncCamera(){
     const state=town.debug(),v=state.cam;
     const aspect=renderer.domElement.width/Math.max(1,renderer.domElement.height);
-    const fit=Math.min(1,Math.max(.30,aspect*28/27));
+    const fit=Math.min(1,Math.max(.30,aspect*28/27))*(desktop()?.70:.50);
     const t=THREE.MathUtils.clamp((v.z-(town.fitView?.()||.475))/.52,0,1);
     const scaled=v.z*(desktop()?1.5:1.58);
     const equivalentOrthoZoom=THREE.MathUtils.lerp(fit,scaled,t);
@@ -6037,7 +6160,7 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
       resize();
       const state=town.debug();
       if(worldBuildings!==town.buildings()||worldSeed!==state.seed)rebuild();
-      syncActors();updateCountryPlace(state.clock||0);syncCamera();light(state.night||0);nightLife(state.night||0,state.clock||0);updateFollowCard();updateMoments();updateWeather(1/45);
+      syncActors();updateCountryPlace(state.clock||0);updateMetropolis(state.clock||0);syncCamera();light(state.night||0);nightLife(state.night||0,state.clock||0);updateFollowCard();updateMoments();updateWeather(1/45);
       // Driven by the town's own clock, so they pause with the town.
       {const now=state.clock||0;const dt=lastClockAt===null?0:THREE.MathUtils.clamp(now-lastClockAt,0,.1);lastClockAt=now;sceneClock+=dt;
        try{window.ToyTownWeather?.step?.(dt);}catch(e){}
@@ -6060,7 +6183,7 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
     }
   }
   const lost=e=>{
-    e.preventDefault();stopped=true;window.ToyTown3D.active=false;
+    e.preventDefault();town.setCityBounds?.(null);stopped=true;window.ToyTown3D.active=false;
     host.style.display='none';document.getElementById('town').style.opacity='1';
     cancelAnimationFrame(raf);
   };
@@ -6070,11 +6193,13 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
   const api={
     active:false,renderer,scene,camera,
     setCountry:id=>{if(!COUNTRY_IDS.includes(id))return false;if(id===country)return true;country=id;rebuild();syncActors();return true;},
+    metropolis:()=>({bounds:{...CITY_BOUNDS},districts:METRO_DISTRICTS.map(d=>({...d})),buildings:metro.buildings.length,vehicles:metro.vehicles.map(v=>({x:v.g.position.x,z:v.g.position.z,district:v.district})),walkers:metro.walkers.length,pedestrians:metro.walkers.map(v=>({x:v.g.position.x,z:v.g.position.z})),bridges:metro.bridges.length,time:metro.time}),
+    previewMetropolis:time=>updateMetropolis(time),
     countryPlace:()=>countryPlace?({name:COUNTRY_PLACES[country][0],activity:countryPlace.activity,x:countryPlace.x,z:countryPlace.z,time:countryPlace.time,visitors:countryPlace.visitors.map(v=>({x:v.position.x,z:v.position.z,action:v.userData.countryAction})),rotor:countryPlace.rotor?.rotation.z??null}):null,
     previewCountryActivity:time=>{updateCountryPlace(time);},
     stepPoses:seconds=>{for(let t=0;t<seconds;t+=.05)syncActors(Math.min(.05,seconds-t));},
     renderInfo:()=>({calls:renderer.info?.render?.calls??null,triangles:renderer.info?.render?.triangles??null,geometries:renderer.info?.memory?.geometries??null,textures:renderer.info?.memory?.textures??null}),
-    getStats:()=>({country,countryBuildings,mobileBudget:!desktop(),frames,redrawCount,actors:actors.size,ambient:ambient.length,plazaLights:plazaLights.length,festoonBulbs:festoonBulbs.length,gardenElements,woodlandShapes,terrainContours,composedBuildings,districtGardenRooms,landmarks:landmarkCount,windowMaterials:windowMaterials.size,photographicLens:!!lens,pixelRatio,kitModels:kit?kit.size:0,cameraProjection:'perspective',lens:lens?.stats?.()||null,buildings:town.buildings().length,webgl:true,frozen}),
+    getStats:()=>({metroBuildings:metro.buildings.length,metroDistricts:METRO_DISTRICTS.length,country,countryBuildings,mobileBudget:!desktop(),frames,redrawCount,actors:actors.size,ambient:ambient.length,plazaLights:plazaLights.length,festoonBulbs:festoonBulbs.length,gardenElements,woodlandShapes,terrainContours,composedBuildings,districtGardenRooms,landmarks:landmarkCount,windowMaterials:windowMaterials.size,photographicLens:!!lens,pixelRatio,kitModels:kit?kit.size:0,cameraProjection:'perspective',lens:lens?.stats?.()||null,buildings:town.buildings().length,webgl:true,frozen}),
     // A stable actual GPU-rendered frame for visual regression screenshots.
     // Unlike stop(), freeze does not switch to the Canvas fallback.
     weather:()=>({kind:weatherKind,precip:precip?precip.userData.kind:null,umbrellas:[...actors.values()].filter(i=>i.group.userData.umbrella?.visible).length}),
@@ -6117,11 +6242,12 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
     sceneExtras:()=>({visiting:!!timeVisit,riding:!!round,papers:papers.length,history:onThisDay.length}),
     freeze(){frozen=true;cancelAnimationFrame(raf);},
     unfreeze(){if(!stopped&&frozen){frozen=false;raf=requestAnimationFrame(frame);}},
-    stop(){stopped=true;cancelAnimationFrame(raf);this.active=false;window.ToyTown3D.active=false;
+    stop(){town.setCityBounds?.(null);stopped=true;cancelAnimationFrame(raf);this.active=false;window.ToyTown3D.active=false;
       host.style.display='none';document.getElementById('town').style.opacity='1';},
     dispose(){this.stop();scene.environment?.dispose?.();renderer.dispose();}
   };
   // The photographed-miniature lens (tilt-shift, bloom, AO, grade); plain WebGL if it cannot start.
+  town.setCityBounds?.(CITY_BOUNDS);
   try{lens=options.createLens?options.createLens(renderer,scene,camera,{mobile:!desktop()}):null;}catch(error){console.warn('Toy Town lens unavailable; plain render',error);lens=null;}
   if(lens)host.classList.add('lens');
   window.ToyTown3D=api;

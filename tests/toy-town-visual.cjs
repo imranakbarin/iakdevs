@@ -49,11 +49,16 @@ async function main(){
       {name:'station-waterfront',w:1280,h:900,classic:false,zoom:2.7,waterfront:true},
       {name:'rain-mobile',w:390,h:844,classic:false,zoom:1.9,weather:'rain'},
       {name:'desktop-social-life',w:1080,h:760,classic:false,zoom:2.05,social:true},
-      {name:'desktop-3d-wide',w:1280,h:820,classic:false,zoom:.65},
+      {name:'desktop-3d-wide',w:1280,h:820,classic:false,zoom:.65,metroOverview:true},
+      {name:'metro-downtown',w:1280,h:820,classic:false,zoom:1.7,metroDistrict:true},
+      {name:'metro-mobile-overview',w:390,h:844,classic:false,zoom:1,metroOverview:true},
+      {name:'metro-harbour',w:1280,h:820,classic:false,zoom:1.7,metroHarbour:true},
       {name:'mobile-classic-reference',w:390,h:844,classic:true,zoom:1.7}
     ];
     const records=[];
-    for(const job of jobs){
+    const shards=+(process.env.TOWN_VISUAL_SHARDS||1),shard=+(process.env.TOWN_VISUAL_SHARD||0);
+    if(!Number.isInteger(shards)||shards<1||!Number.isInteger(shard)||shard<0||shard>=shards)throw Error('Invalid visual shard');
+    for(const job of jobs.filter((_,i)=>i%shards===shard)){
       const context=await browser.newContext({viewport:{width:job.w,height:job.h},deviceScaleFactor:1,
         isMobile:!!job.mobile||job.w<500,hasTouch:!!job.mobile||job.w<500,reducedMotion:job.reduced?'reduce':'no-preference',
         ...((job.weather||job.social)?{recordVideo:{dir:out,size:{width:job.w,height:job.h}}}:{})});
@@ -133,7 +138,7 @@ async function main(){
       let beforeFrame=await page.evaluate(()=>window.ToyTown3D?.getStats?.().frames||0);
       await page.evaluate(f=>{
         ToyTown.setPlaying(false);
-        ToyTown.zoomAt(f);
+        if(window.ToyTown3D?.active)ToyTown.pinchTo(f,innerWidth/2,innerHeight/2,{x:9,y:9});else ToyTown.zoomAt(f);
       },job.zoom);
       if(job.country){
         await page.evaluate(()=>{window.__countryBuildings=ToyTown.buildings();window.__countryResidents=ToyTown.movers().slice();window.ToyTown3D?.freeze?.();});
@@ -167,6 +172,9 @@ async function main(){
         await page.evaluate(z=>ToyTown.pinchTo(z,innerWidth/2,innerHeight/2,{x:9,y:9}),cameraBefore);
         beforeFrame=await page.evaluate(()=>ToyTown3D.getStats().frames);
       }
+      if(job.metroOverview)await page.evaluate(()=>ToyTown.resetView());
+      if(job.metroHarbour)await page.evaluate(()=>ToyTown.pinchTo(2.1,innerWidth/2,innerHeight/2,{x:29,y:14}));
+      if(job.metroDistrict)await page.evaluate(()=>ToyTown.pinchTo(1.7,innerWidth/2,innerHeight/2,{x:25,y:3}));
       if(job.reader){await page.evaluate(()=>{
         const ref=ToyTown.movers().find(m=>m.shopRole==='customer');if(!ref)throw Error('Reader fixture missing');
         const now=ToyTown.debug().clock;
@@ -316,6 +324,12 @@ async function main(){
         // evidence of animated gesture blending in the GPU scene.
         beforeFrame=await page.evaluate(()=>
           window.ToyTown3D?.getStats?.().frames||0);
+      }
+      if(job.metroOverview||job.metroDistrict||job.metroHarbour){
+        const metro=await page.evaluate(()=>{ToyTown3D.previewMetropolis(0);const a=ToyTown3D.metropolis();ToyTown3D.previewMetropolis(12);const b=ToyTown3D.metropolis();return {a,b};});
+        if(metro.b.buildings<90||metro.b.districts.length!==6||metro.a.vehicles[0].x===metro.b.vehicles[0].x)throw Error('Expanded city missing models or traffic');
+        console.log('METROPOLIS '+JSON.stringify(metro.b));
+        beforeFrame=await page.evaluate(()=>ToyTown3D.getStats().frames);
       }
       const actualZoom=await page.evaluate(()=>{
         const {z,tz}=ToyTown.debug().cam;

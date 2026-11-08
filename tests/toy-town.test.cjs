@@ -13,7 +13,7 @@ assert.match(dioramaSource, /function tree\(/, 'new organic tree renderer exists
 assert.match(dioramaSource, /function gable\(/, 'real pitched roof renderer exists');
 assert.match(dioramaSource, /function glazing\(/, 'framed glazing renderer exists');
 assert.match(html, /<option value="town">Toy Town<\/option>/, 'Toy Town is in the menu');
-assert.match(html, /return 'toy-town\.html\?v=102&embed=1'\+keep\+\(bar\.hidden\?'&clean=1':''\);/, 'and opens its current embedded page');
+assert.match(html, /return 'toy-town\.html\?v=103&embed=1'\+keep\+\(bar\.hidden\?'&clean=1':''\);/, 'and opens its current embedded page');
 assert.match(html, /townFrame\.src=townSrc\(\);/, 'with this page\'s weather and fps settings passed through');
 assert.match(fs.readFileSync(path.join(root, 'toy-town.html'), 'utf8'), /assets\/toy-town\.js\?v=\d+/);
 const box = vm.createContext({Math, Object, Array, JSON, Date, String, Number, RegExp, setTimeout: () => 0, document: {getElementById: () => ({textContent: ''})}});
@@ -591,7 +591,7 @@ const townPage = fs.readFileSync(path.join(root, 'toy-town.html'), 'utf8');
 for (const id of ['zoom-in', 'zoom-out', 'zoom-reset']) {
   assert.match(townPage, new RegExp('id="' + id + '"[^>]*aria-label="[^"]+"'), id + ' is accessible');
 }
-assert.match(townPage, /toy-town\.js\?v=50/, 'diorama engine is loaded');
+assert.match(townPage, /toy-town\.js\?v=51/, 'diorama engine is loaded');
 assert.match(townPage, /toy-town-news\.js\?v=2/, 'sourced news loads before the simulation');
 assert.match(townPage, /HEADLINES/, 'real reporting has a dedicated source panel');
 assert.match(townPage, /AROUND TOWN · FICTION/, 'fiction and real news are explicitly separated');
@@ -742,4 +742,10 @@ assert.ok(T.debug().night < .01, 'daylight returns after a five-minute cycle');
   for(let i=0;i<60*240;i++){T.update(1/60);for(const m of T.movers()){if(m.type!=='car'||m.path)continue;const p=last.get(m);if(p&&p.d!==m.d){if(p.turnedAt===i-1||p.turnedAt===i-2)flips++;p.turnedAt=i;}last.set(m,{d:m.d,turnedAt:(p&&p.d!==m.d)?i:(p?p.turnedAt:-9)});frames++;}}
   assert.equal(flips,0,'no vehicle turns again on the frame after turning ('+flips+')');
 }
+// Camera bounds expand independently of the original simulation grid.
+scene.setCityBounds({minX:-12,maxX:32,minY:-12,maxY:20});
+assert.equal(scene.viewTo(25,3).x,25,'camera reaches the new downtown');
+assert.equal(scene.viewTo(-8,-7).y,-7,'camera reaches the university island');
+scene.setCityBounds(null);
+assert.ok(scene.viewTo(25,25).x<18,'classic fallback restores original bounds');
 console.log(`Toy Town PASS: ${T.VARIANTS.length} news variants (cricket to Diwali to dinosaurs) each with its own event, grim stories never become themes, light ones pick ${Object.keys(T.THEMES).length - 1} kinds of day, the same day builds the same town with its theme block and fire station, and every event in every theme runs to its end with the streets kept busy.`);
