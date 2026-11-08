@@ -935,7 +935,7 @@ assert.match(moduleCode,/continuous plaster pilasters/i,
   'wall accents follow facades without disconnected bricks');
 // Expanded districts are actual models and separated moving routes.
 assert.equal(api.metropolis().districts.length,6);
-const pockets=[];api.scene.traverse(n=>{if(n.userData?.metroPocket)pockets.push(n);});
+const pockets=[];const scanPockets=n=>{if(n.userData?.metroPocket)pockets.push(n);for(const c of n.children||[])scanPockets(c);};scanPockets(api.scene);
 assert.equal(pockets.length,6,'each district has a reserved public-space vignette');
 assert.equal(new Set(pockets.map(n=>n.userData.metroPocket)).size,6,'all six district types receive distinct public spaces');
 assert.equal(api.metropolis().buildings,90,'six neighbourhoods add ninety modeled buildings');
