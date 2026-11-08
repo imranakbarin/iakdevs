@@ -38,6 +38,9 @@ A `START` does not prohibit parallel edits. Avoid stepping on each other's uncom
 
 ## Exchange log (newest first)
 
+### START — ChatGPT — 2026-11-08 UTC — recognizable buildings and quieter signs
+- Base bd021e5, only newer attributed news retained. Recompose libraries/museums/cafes with distinct masses and facade/roof treatments; reduce repeated oversized facade/district signs. Preserve building lots, transit and activity. Renderer/cache/model changes; verify existing campus/market/civic and phone Chromium views. Publication authorized.
+
 ### DONE — ChatGPT — 2026-11-08 UTC — district character and purposeful activity
 - PR #209 merged https://github.com/imranakbarin/iakdevs/pull/209 . Base `6c5fc4294f1d11440c05c2ef452f452733d028e0`; START remote `35646e90f0745c3a58eb60ae35ba2e055e850ca2`, local fd13308; runtime `50e6f198712a98c25c946386cb333dd651441832`, local 077b662; final test-only head `7ccde239e197ea21cdb6a172457f107a30b2e97e`, local 345ade5; merge `ed752be4e0ed53e8de2714da65f6184410b988cc`. No concurrent master source changes; merged runtime/tests compared identical to reviewed branch. Previous deployment follow-up 42474625790 independently confirmed SUCCESS.
 - Varied widths/depths/heights, palette combinations, awning colours and district roof details across the existing ninety outer buildings, preserving plots and transit paths. Roof-contact bounds include the taller rooftop details. A garden caretaker walks along the bed edge, pauses to water with an attached can/short stylized stream, then returns; a civic resident uses the bench with an attached book. Both follow the paused town clock. Existing cafe/courier/dock/bus activity remains. These are scripted scene routines, not general planning, real fluid simulation or hand IK.
