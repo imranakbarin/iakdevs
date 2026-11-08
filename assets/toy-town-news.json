@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generated_at": "2026-11-08T15:19:31.896Z",
+  "generated_at": "2026-11-08T20:32:07.750Z",
   "status": "ok",
   "successful_sources": [
     "BBC News",
@@ -16,6 +16,54 @@
     "NASA"
   ],
   "stories": [
+    {
+      "title": "Dogs Can Sniff-Out Invasive Plant Species With High Accuracy to Curb Their Destruction",
+      "url": "https://www.goodnewsnetwork.org/dogs-can-sniff-out-invasive-plant-species-with-75pt-accuracy/",
+      "source": "Good News Network",
+      "category": "Good news",
+      "tone": "light",
+      "published_at": "2026-11-08T18:36:02.000Z"
+    },
+    {
+      "title": "NASA Announces $1 Million to Students for Moon Base Challenge",
+      "url": "https://www.nasa.gov/news-release/nasa-announces-1-million-to-students-for-moon-base-challenge/",
+      "source": "NASA",
+      "category": "Science",
+      "tone": "light",
+      "published_at": "2026-11-08T15:26:38.000Z"
+    },
+    {
+      "title": "Who has made Troy's Premier League team of the week?",
+      "url": "https://www.bbc.co.uk/sport/football/articles/cw98z7vdg546o?at_medium=RSS&at_campaign=rss",
+      "source": "BBC Sport",
+      "category": "Sport",
+      "tone": "light",
+      "published_at": "2026-11-08T20:18:01.000Z"
+    },
+    {
+      "title": "Government 'looking seriously' at banning under-16s from Vinted and eBay",
+      "url": "https://www.bbc.co.uk/news/articles/cmzxjvpqrjxro?at_medium=RSS&at_campaign=rss",
+      "source": "BBC Technology",
+      "category": "Technology",
+      "tone": "light",
+      "published_at": "2026-11-08T15:37:25.000Z"
+    },
+    {
+      "title": "Traders 'priced out' of £12,000 Christmas market pitches",
+      "url": "https://www.bbc.co.uk/news/articles/ckn8wew92xw1o?at_medium=RSS&at_campaign=rss",
+      "source": "BBC Business",
+      "category": "Business",
+      "tone": "light",
+      "published_at": "2026-11-08T07:11:02.000Z"
+    },
+    {
+      "title": "South Africa elections: ANC marks its worst-ever performance",
+      "url": "https://www.dw.com/en/south-africa-elections-anc-marks-its-worst-ever-performance/a-79887482?maca=en-rss-en-world-4025-xml-mrss",
+      "source": "DW",
+      "category": "World",
+      "tone": "light",
+      "published_at": "2026-11-08T17:35:00.000Z"
+    },
     {
       "title": "Good News in History, November 8",
       "url": "https://www.goodnewsnetwork.org/events061108/",
@@ -33,60 +81,12 @@
       "published_at": "2026-11-08T12:22:05.000Z"
     },
     {
-      "title": "Knicks defend Taylor Swift after players name her 'fakest celebrity fan'",
-      "url": "https://www.bbc.co.uk/news/articles/c6rmyymw1zz1o?at_medium=RSS&at_campaign=rss",
-      "source": "BBC Culture",
-      "category": "Culture",
-      "tone": "light",
-      "published_at": "2026-11-07T13:03:57.000Z"
-    },
-    {
-      "title": "Chengdu lose four in a row to blow 12-point lead & miss out on Chinese title",
-      "url": "https://www.bbc.co.uk/sport/football/articles/cq2d698j5gxgo?at_medium=RSS&at_campaign=rss",
+      "title": "Man Utd score twice in stoppage time to share points in eight-goal thriller",
+      "url": "https://www.bbc.co.uk/sport/football/videos/cqj6jldpl2gyo?at_medium=RSS&at_campaign=rss",
       "source": "BBC Sport",
       "category": "Sport",
       "tone": "light",
-      "published_at": "2026-11-08T14:41:04.000Z"
-    },
-    {
-      "title": "Physicists listened to electrical noise to crack a superconductor mystery",
-      "url": "https://arstechnica.com/science/2026/11/physicists-listened-to-electrical-noise-to-crack-a-superconductor-mystery/",
-      "source": "Ars Technica",
-      "category": "Technology",
-      "tone": "light",
-      "published_at": "2026-11-08T12:15:31.000Z"
-    },
-    {
-      "title": "Traders 'priced out' of £12,000 Christmas market pitches",
-      "url": "https://www.bbc.co.uk/news/articles/ckn8wew92xw1o?at_medium=RSS&at_campaign=rss",
-      "source": "BBC Business",
-      "category": "Business",
-      "tone": "light",
-      "published_at": "2026-11-08T07:11:02.000Z"
-    },
-    {
-      "title": "Germans wrestle with what to do with Hitler's destroyed Eagle's Nest retreat",
-      "url": "https://www.bbc.co.uk/news/articles/cm74pk1g51nko?at_medium=RSS&at_campaign=rss",
-      "source": "BBC News",
-      "category": "World",
-      "tone": "light",
-      "published_at": "2026-11-08T00:48:59.000Z"
-    },
-    {
-      "title": "Mayor Uses AirTag to Catch Capstone Thief who was Stealing 18th-Century Stones Across the Countryside",
-      "url": "https://www.goodnewsnetwork.org/mayor-uses-airtag-to-catch-capstone-thief/",
-      "source": "Good News Network",
-      "category": "Good news",
-      "tone": "light",
-      "published_at": "2026-11-07T21:49:37.000Z"
-    },
-    {
-      "title": "APOD: 2026 November 8 – Major Fireball Meteor",
-      "url": "https://science.nasa.gov/image-article/apod-2026-november-8-major-fireball-meteor/",
-      "source": "NASA",
-      "category": "Science",
-      "tone": "light",
-      "published_at": "2026-11-08T05:05:00.000Z"
+      "published_at": "2026-11-08T20:01:16.000Z"
     }
   ]
 }
