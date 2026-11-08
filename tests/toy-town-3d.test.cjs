@@ -159,7 +159,7 @@ assert.match(moduleCode,/eye.scale.y=blink/,'eyelids blink without a separate an
 assert.match(html,/type="importmap"/);
 assert.match(html,/three@0\.187\.0\/build\/three\.module\.js/);
 assert.match(html,/three@0\.187\.0\/examples\/jsm\//);
-assert.match(html,/toy-town-3d\.js\?v=94/);
+assert.match(html,/toy-town-3d\.js\?v=95/);
 assert.match(moduleCode,/ref\.path&&Number\.isFinite\(ref\.walkFacing\)/, 'routed people use a real diagonal heading instead of a cardinal-only pose');
 assert.match(html,/toy-town-landmarks\.js\?v=7/,'the independent models are requested alongside Three');
 assert.match(html,/buildLandmark:landmarks\.buildLandmark/,
@@ -169,7 +169,7 @@ const classicScript=html.match(/src="assets\/toy-town\.js\?v=\d+"/);
 assert.ok(classicScript&&
   html.indexOf(classicScript[0])<html.indexOf("import('three')"),
   'the actual versioned classic script always loads before WebGL');
-assert.match(page,/toy-town\.html\?v=105&embed=1/);
+assert.match(page,/toy-town\.html\?v=106&embed=1/);
 assert.match(fs.readFileSync(path.join(root,'assets/toy-town-3d.js'),'utf8'),/sport=ref\.kind==='runner'[\s\S]*bib with a stripe/,'marathon runners are dressed in sports kit (vest, shorts, bib, headband)');
 assert.match(fs.readFileSync(path.join(root,'assets/toy-town-3d.js'),'utf8'),/town\.stageHeadline/,'the town crier makes the town act out the headline');
 assert.match(fs.readFileSync(path.join(root,'assets/toy-town.js'),'utf8'),
@@ -960,6 +960,14 @@ assert.ok(trips.arrivals>10&&trips.vehicles.some(v=>v.arrivals>1),'vehicles comp
 assert.ok(trips.boardings>0&&trips.alightings>0,'passengers actually board and alight after a bus journey');
 assert.equal(trips.stops,6);assert.ok(trips.deliveries>0&&trips.life.some(a=>a.type==='dock')&&trips.life.some(a=>a.type==='cafe'),'district workers and cafe patrons are active');
 assert.ok(trips.roles.includes('library')&&trips.roles.includes('warehouse')&&trips.roles.includes('council hall'),'building roles have distinct authored identities');
+api.previewMetropolis(8);const watering=api.metropolis().life.find(a=>a.type==='gardener');
+assert.equal(watering.action,'water');api.previewMetropolis(17);const gardening=api.metropolis().life.find(a=>a.type==='gardener');
+assert.equal(gardening.action,'walk');assert.ok(Math.abs(watering.z-gardening.z)>.05,'gardener reaches and leaves the beds');
+assert.ok(api.metropolis().life.some(a=>a.type==='reader'&&a.action==='read'),'civic bench is actually used');
+const varied=[];const scanVariety=n=>{if(n.userData?.metroBuilding)varied.push(n.userData.metroBuilding);for(const c of n.children||[])scanVariety(c);};scanVariety(api.scene);
+assert.ok(new Set(varied.map(b=>b.width.toFixed(2)+':'+b.depth.toFixed(2))).size>=4,'outer buildings have distinct footprints');
+assert.ok(varied.every(b=>b.width<=1.2&&b.depth<=1.2),'varied buildings remain within their reserved plots');
+api.previewMetropolis(360);
 console.log('METRO_TRIPS',JSON.stringify({arrivals:trips.arrivals,boardings:trips.boardings,alightings:trips.alightings}));
 api.previewMetropolis(53.99);const beforeLoop=api.metropolis().pedestrians;api.previewMetropolis(54.01);const afterLoop=api.metropolis().pedestrians;assert.ok(Math.hypot(beforeLoop[0].x-afterLoop[0].x,beforeLoop[0].z-afterLoop[0].z)<.01,'walkers continue from their stop without teleporting at the cycle boundary');
 api.previewMetropolis(10);const paused=JSON.stringify(api.metropolis());api.previewMetropolis(10);assert.equal(JSON.stringify(api.metropolis()),paused,'clock pause freezes metro routes');
