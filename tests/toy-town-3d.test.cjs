@@ -159,7 +159,7 @@ assert.match(moduleCode,/eye.scale.y=blink/,'eyelids blink without a separate an
 assert.match(html,/type="importmap"/);
 assert.match(html,/three@0\.187\.0\/build\/three\.module\.js/);
 assert.match(html,/three@0\.187\.0\/examples\/jsm\//);
-assert.match(html,/toy-town-3d\.js\?v=92/);
+assert.match(html,/toy-town-3d\.js\?v=93/);
 assert.match(moduleCode,/ref\.path&&Number\.isFinite\(ref\.walkFacing\)/, 'routed people use a real diagonal heading instead of a cardinal-only pose');
 assert.match(html,/toy-town-landmarks\.js\?v=7/,'the independent models are requested alongside Three');
 assert.match(html,/buildLandmark:landmarks\.buildLandmark/,
@@ -169,7 +169,7 @@ const classicScript=html.match(/src="assets\/toy-town\.js\?v=\d+"/);
 assert.ok(classicScript&&
   html.indexOf(classicScript[0])<html.indexOf("import('three')"),
   'the actual versioned classic script always loads before WebGL');
-assert.match(page,/toy-town\.html\?v=103&embed=1/);
+assert.match(page,/toy-town\.html\?v=104&embed=1/);
 assert.match(fs.readFileSync(path.join(root,'assets/toy-town-3d.js'),'utf8'),/sport=ref\.kind==='runner'[\s\S]*bib with a stripe/,'marathon runners are dressed in sports kit (vest, shorts, bib, headband)');
 assert.match(fs.readFileSync(path.join(root,'assets/toy-town-3d.js'),'utf8'),/town\.stageHeadline/,'the town crier makes the town act out the headline');
 assert.match(fs.readFileSync(path.join(root,'assets/toy-town.js'),'utf8'),
@@ -940,8 +940,24 @@ assert.equal(api.metropolis().vehicles.length,24);
 assert.equal(api.metropolis().walkers,18);
 const moored=[];const boatsWalk=n=>{if(n.userData?.metroBoat)moored.push(n);for(const c of n.children||[])boatsWalk(c);};boatsWalk(api.scene);assert.equal(moored.length,3);assert.ok(moored.every(b=>Math.abs(b.position.y-(-.42))<.06),'harbour hulls sit at the sea surface, not street level');
 api.previewMetropolis(0);const metroStart=api.metropolis();api.previewMetropolis(10);const metroNext=api.metropolis();
-assert.notEqual(metroStart.vehicles[0].x,metroNext.vehicles[0].x,'new district traffic travels');
-for(let t=0;t<180;t+=2){api.previewMetropolis(t);const v=api.metropolis().vehicles;for(let i=0;i<v.length;i++)for(let j=i+1;j<v.length;j++)if(v[i].district===v[j].district)assert.ok(Math.hypot(v[i].x-v[j].x,v[i].z-v[j].z)>3,'perimeter traffic keeps ample separation through corners');}
+assert.ok(Math.hypot(metroStart.vehicles[0].x-metroNext.vehicles[0].x,metroStart.vehicles[0].z-metroNext.vehicles[0].z)>.1,'new district traffic travels');
+for(let t=0;t<180;t+=2){api.previewMetropolis(t);const v=api.metropolis().vehicles;for(let i=0;i<v.length;i++)for(let j=i+1;j<v.length;j++)assert.ok(Math.hypot(v[i].x-v[j].x,v[i].z-v[j].z)>.39,'all interdistrict vehicles keep lane clearance, including opposite directions');}
+// Check full oriented vehicle footprints across the shared two-way route.
+const overlaps=(a,b)=>{
+  const A=[Math.cos(-a.angle),Math.sin(-a.angle)],B=[Math.cos(-b.angle),Math.sin(-b.angle)];
+  const dims=v=>[v.bus?.30:.195,.12],da=dims(a),db=dims(b),dx=b.x-a.x,dz=b.z-a.z;
+  for(const axis of [A,[-A[1],A[0]],B,[-B[1],B[0]]]){
+    const project=(u,h)=>Math.abs(u[0]*axis[0]+u[1]*axis[1])*h[0]+Math.abs(-u[1]*axis[0]+u[0]*axis[1])*h[1];
+    if(Math.abs(dx*axis[0]+dz*axis[1])>=project(A,da)+project(B,db))return false;
+  }return true;
+};
+for(let t=0;t<300;t+=1.5){api.previewMetropolis(t);const v=api.metropolis().vehicles;for(let i=0;i<v.length;i++)for(let j=i+1;j<v.length;j++)assert.equal(overlaps(v[i],v[j]),false,'shared street vehicle footprints remain separated');}
+api.previewMetropolis(360);const trips=api.metropolis();
+assert.ok(trips.arrivals>10&&trips.vehicles.some(v=>v.arrivals>1),'vehicles complete trips to different district stops');
+assert.ok(trips.boardings>0&&trips.alightings>0,'passengers actually board and alight after a bus journey');
+assert.equal(trips.stops,6);assert.ok(trips.deliveries>0&&trips.life.some(a=>a.type==='dock')&&trips.life.some(a=>a.type==='cafe'),'district workers and cafe patrons are active');
+assert.ok(trips.roles.includes('library')&&trips.roles.includes('warehouse')&&trips.roles.includes('council hall'),'building roles have distinct authored identities');
+console.log('METRO_TRIPS',JSON.stringify({arrivals:trips.arrivals,boardings:trips.boardings,alightings:trips.alightings}));
 api.previewMetropolis(53.99);const beforeLoop=api.metropolis().pedestrians;api.previewMetropolis(54.01);const afterLoop=api.metropolis().pedestrians;assert.ok(Math.hypot(beforeLoop[0].x-afterLoop[0].x,beforeLoop[0].z-afterLoop[0].z)<.01,'walkers continue from their stop without teleporting at the cycle boundary');
 api.previewMetropolis(10);const paused=JSON.stringify(api.metropolis());api.previewMetropolis(10);assert.equal(JSON.stringify(api.metropolis()),paused,'clock pause freezes metro routes');
 

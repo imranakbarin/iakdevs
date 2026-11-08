@@ -53,6 +53,8 @@ async function main(){
       {name:'metro-downtown',w:1280,h:820,classic:false,zoom:1.7,metroDistrict:true},
       {name:'metro-mobile-overview',w:390,h:844,classic:false,zoom:1,metroOverview:true},
       {name:'metro-harbour',w:1280,h:820,classic:false,zoom:1.7,metroHarbour:true},
+      {name:'metro-campus-transit',w:1280,h:820,classic:false,zoom:2.1,metroCampus:true},
+      {name:'metro-market-life',w:1280,h:820,classic:false,zoom:2.1,metroMarket:true},
       {name:'mobile-classic-reference',w:390,h:844,classic:true,zoom:1.7}
     ];
     const records=[];
@@ -173,6 +175,8 @@ async function main(){
         beforeFrame=await page.evaluate(()=>ToyTown3D.getStats().frames);
       }
       if(job.metroOverview)await page.evaluate(()=>ToyTown.resetView());
+      if(job.metroCampus)await page.evaluate(()=>ToyTown.pinchTo(2.1,innerWidth/2,innerHeight/2,{x:3,y:-7}));
+      if(job.metroMarket)await page.evaluate(()=>ToyTown.pinchTo(2.1,innerWidth/2,innerHeight/2,{x:-7,y:14}));
       if(job.metroHarbour)await page.evaluate(()=>ToyTown.pinchTo(2.1,innerWidth/2,innerHeight/2,{x:29,y:14}));
       if(job.metroDistrict)await page.evaluate(()=>ToyTown.pinchTo(1.7,innerWidth/2,innerHeight/2,{x:25,y:3}));
       if(job.reader){await page.evaluate(()=>{
@@ -325,10 +329,11 @@ async function main(){
         beforeFrame=await page.evaluate(()=>
           window.ToyTown3D?.getStats?.().frames||0);
       }
-      if(job.metroOverview||job.metroDistrict||job.metroHarbour){
-        const metro=await page.evaluate(()=>{ToyTown3D.previewMetropolis(0);const a=ToyTown3D.metropolis();ToyTown3D.previewMetropolis(12);const b=ToyTown3D.metropolis();return {a,b};});
-        if(metro.b.buildings<90||metro.b.districts.length!==6||metro.a.vehicles[0].x===metro.b.vehicles[0].x)throw Error('Expanded city missing models or traffic');
-        console.log('METROPOLIS '+JSON.stringify(metro.b));
+      if(job.metroDistrict||job.metroHarbour)await page.evaluate(()=>{ToyTown3D.previewMetropolis(180);});
+      if(job.metroOverview||job.metroDistrict||job.metroHarbour||job.metroCampus||job.metroMarket){
+        const metro=await page.evaluate(()=>{ToyTown3D.previewMetropolis(0);const a=ToyTown3D.metropolis();ToyTown3D.previewMetropolis(12);const b=ToyTown3D.metropolis();ToyTown3D.previewMetropolis(360);const trips=ToyTown3D.metropolis();if(trips.arrivals<10||!trips.boardings||!trips.alightings)throw Error('Connected journeys or passenger transfers missing');return {a,b,trips:{arrivals:trips.arrivals,boardings:trips.boardings,alightings:trips.alightings}};});
+        if(metro.b.buildings<90||metro.b.districts.length!==6||Math.hypot(metro.a.vehicles[0].x-metro.b.vehicles[0].x,metro.a.vehicles[0].z-metro.b.vehicles[0].z)<.05)throw Error('Expanded city missing models or traffic');
+        console.log('METROPOLIS '+JSON.stringify(metro));
         beforeFrame=await page.evaluate(()=>ToyTown3D.getStats().frames);
       }
       const actualZoom=await page.evaluate(()=>{

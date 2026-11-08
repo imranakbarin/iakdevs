@@ -3338,7 +3338,7 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
   }
 
   // The historic island remains the simulation centre; six new neighbourhoods
-  // share its scene, clock and camera, with their own separated local routes.
+  // share its scene, clock and camera, with trips along connected arterial roads.
   const CITY_BOUNDS={minX:-12,maxX:32,minY:-12,maxY:20};
   const METRO_DISTRICTS=[
     {name:'Garden quarter',x:-7,z:3,type:'garden'},
@@ -3363,6 +3363,90 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
     const tx=new THREE.CanvasTexture(c);tx.colorSpace=THREE.SRGBColorSpace;
     const m=new THREE.MeshStandardMaterial({map:tx,roughness:.88});metroFacades.set(key,m);return m;
   }
+  function metroIdentity(g,w,d,h,index,type){
+    const cream='#e6d8bd',stone='#c3ad8e',wood='#786650';
+    g.userData.metroRole=type==='campus'?['library','lecture hall','observatory'][index%3]:type==='civic'?['council hall','museum','post office'][index%3]:type==='harbour'?'warehouse':type==='market'?['cafe','gallery','bakery'][index%3]:type==='garden'?'porch house':'office';
+    if(type==='campus'||type==='civic'){
+      const porch=new THREE.Group();g.add(porch);porch.position.z=d/2+.055;
+      for(const x of [-w*.32,0,w*.32])cylinder(porch,.025,.032,.44,cream,x,.26,.07);
+      box(porch,w*.90,.055,.25,cream,0,.51,.07,false);
+      box(porch,.25,.33,.025,wood,0,.22,-.03,false);
+      for(let i=0;i<3;i++)box(porch,w*.87,.025,.06,stone,0,.04-i*.012,.18+i*.055,false);
+      if(index%3===0){
+        const tower=box(g,.30,.53,.30,stone,0,h+.29,0,false);
+        const dial=ball(g,.095,'#efe6d2',0,h+.39,.163);dial.scale.z=.12;
+        box(g,.012,.07,.02,wood,0,h+.41,.18,false);box(g,.06,.012,.02,wood,.025,h+.39,.18,false);
+      }else if(index%3===1){
+        const canopy=box(g,w*.8,.07,d*.66,'#819e9d',0,h+.13,0,false);canopy.rotation.z=.12;
+      }else if(type==='campus'){
+        const dome=ball(g,.30,'#829d9d',0,h+.13,0);dome.scale.y=.70;
+        box(g,.035,.21,.10,'#566c6a',0,h+.35,.12,false);
+      }
+      sign(porch,g.userData.metroRole.toUpperCase(),0,.62,.12,w*.84);
+    }else if(type==='harbour'){
+      box(g,w*.76,.40,.03,'#617c7c',0,.23,d/2+.02,false);
+      for(let i=0;i<5;i++)box(g,w*.75,.012,.034,'#a5b1a4',0,.07+i*.075,d/2+.04,false);
+      box(g,w*.92,.045,.28,stone,0,.035,d/2+.08,false);
+      box(g,w+.12,.045,.34,'#748681',0,.55,d/2+.05,false);
+      for(const x of [-.28,.26])box(g,.15,.15,.15,'#b5966d',x,.10,d/2+.14,false);
+      sign(g,'WAREHOUSE',0,.67,d/2+.07,w*.83);
+    }else if(type==='market'){
+      box(g,w*.64,.28,.04,'#7ba2a2',0,.22,d/2+.04,false);
+      sign(g,g.userData.metroRole.toUpperCase(),0,.60,d/2+.10,w*.78);
+    }else if(type==='garden'){
+      for(const x of [-w*.35,w*.35])box(g,.028,.35,.028,cream,x,.22,d/2+.16,false);
+      box(g,w*.83,.045,.31,'#a8a28b',0,.40,d/2+.08,false);
+      box(g,.20,.30,.03,wood,0,.19,d/2+.02,false);
+    }else if(index%3===0){
+      const wing=box(g,w*.30,h*.82,d*.9,'#7f9a9a',w*.54,h*.41,0,false);g.userData.metroRole='stepped office';
+    }
+  }
+  function createMetroStreetLife(){
+    metro.life=[];metro.deliveries=0;
+    for(const district of [1,2,4]){
+      const D=METRO_DISTRICTS[district],x=D.x-2.8,z=D.z-2.15;
+      cylinder(world,.28,.28,.045,'#af936c',x,.38,z);cylinder(world,.025,.025,.30,'#796851',x,.21,z);
+      for(const dx of [-.38,.38]){
+        box(world,.15,.025,.15,'#9b8466',x+dx,.23,z,false);
+        const p=person({col:dx<0?'#9b8dba':'#c6957b',ph:district,x,y:z});p.scale.setScalar(.50);metro.actorGroup.add(p);sitPose(p,0);p.position.set(x+dx,.21,z);p.rotation.y=dx<0?Math.PI/2:-Math.PI/2;
+        const cup=cylinder(p.userData.limbs.hands[1],.024,.024,.04,'#eee5ce',0,-.045,.02);
+        metro.life.push({g:p,type:'cafe',district});
+      }
+      const courier=person({col:'#87a7a0',ph:district+1,x:D.x,y:D.z});courier.scale.setScalar(.50);metro.actorGroup.add(courier);
+      const parcel=box(courier.userData.limbs.hands[1],.10,.10,.09,'#b89066',0,-.07,.03,false);
+      metro.life.push({g:courier,parcel,type:'delivery',district,x:D.x,z:D.z});
+    }
+    const crane=new THREE.Group();crane.position.set(30.3,.17,17.5);metro.actorGroup.add(crane);
+    box(world,1.3,.12,.90,'#b8aa8d',30.3,.10,17.5,false);
+    for(const side of [-1,1])cylinder(world,.055,.065,.75,'#8d7c64',30.3+side*.42,-.25,17.5);
+    box(crane,.20,1.4,.20,'#ac9264',0,.70,0,false);
+    const boom=new THREE.Group();boom.position.y=1.45;crane.add(boom);
+    box(boom,1.55,.09,.10,'#bd9d5f',.44,0,0,false);
+    const cable=cylinder(boom,.008,.008,.70,'#5a6663',1.12,-.39,0);
+    const load=box(boom,.18,.18,.18,'#ae8f65',1.12,-.81,0,false);
+    metro.crane={boom,cable,load};
+    const worker=person({col:'#cbab69',ph:8,x:30,y:17});worker.scale.setScalar(.50);metro.actorGroup.add(worker);
+    const parcel=box(worker.userData.limbs.hands[1],.12,.10,.10,'#b6966c',0,-.07,.04,false);
+    metro.life.push({g:worker,parcel,type:'dock',x:29.65,z:17.5,district:5});
+  }
+  function updateMetroStreetLife(time){
+    metro.deliveries=Math.floor(time/24)*4;
+    for(const a of metro.life){
+      const L=a.g.userData.limbs;
+      if(a.type==='cafe'){
+        L.arms[1].rotation.x=-1.1-Math.max(0,Math.sin(time*.55+a.district))*.35;L.elbows[1].rotation.x=-.6;L.headPivot.rotation.x=Math.sin(time*.45+a.district)*.05;
+      }else{
+        const t=(time%24)/24,travel=t<.4?t/.4:t<.6?1:(1-t)/.4;
+        a.g.position.set(a.x+(a.type==='dock'?.60:-2.8+travel*1.45),.20,a.z+(a.type==='dock'?0:-.65));
+        if(a.type==='dock')a.g.position.x=a.x+travel*.65;
+        a.g.rotation.y=t<.6?Math.PI/2:-Math.PI/2;a.parcel.visible=t<.5||t>.9;
+        for(let k=0;k<2;k++)L.legs[k].rotation.x=t<.4||t>.6?Math.sin(travel*18+k*Math.PI)*.40:0;
+        L.arms[1].rotation.x=-.8;L.elbows[1].rotation.x=-.5;
+      }
+    }
+    if(metro.crane){const lift=(Math.sin(time*.45)+1)/2;metro.crane.boom.rotation.y=Math.sin(time*.12)*.35;metro.crane.load.position.y=-.81+lift*.45;metro.crane.cable.scale.y=1-lift*.60;metro.crane.cable.position.y=-.39+lift*.22;}
+  }
+
   function metroBuilding(x,z,h,w,d,index,type){
     const palettes={town:['#ceaa90','#c7bc9d','#8caaa3'],india:['#cc957b','#dcad8f','#c69d80'],japan:['#dfcfb1','#c2b79f','#b5c3b1'],italy:['#deb78a','#e3c8a0','#d5a797'],netherlands:['#a77761','#b38c71','#c9b599'],usa:['#ac806b','#b4b8ad','#c4a78b']};
     const col=palettes[country][index%3],g=new THREE.Group();g.position.set(x,.16,z);world.add(g);
@@ -3374,24 +3458,25 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
       const s=object(g,geo('plane',1,1),facade,side*(w/2+.005),h/2,0,false);s.scale.set(d,h,1);s.rotation.y=side*Math.PI/2;
     }
     box(g,w+.08,.075,d+.08,'#e1d5bd',0,h+.035,0,false);
-    const pitched=type!=='downtown'&&type!=='harbour'&&country!=='india'&&(index%3!==0||country==='japan');
+    const pitched=!(type==='campus'&&index%3===2)&&type!=='downtown'&&type!=='harbour'&&country!=='india'&&(index%3!==0||country==='japan');
     if(pitched){const r=new THREE.Group();g.add(r);r.position.y=h+.065;r.scale.set(w*.92,.45,d*.92);roof(r,country==='italy'?'#b6724e':country==='japan'?'#525e60':'#7e8175',0);}
     else{box(g,w*.53,.16,d*.52,'#7b8c88',0,h+.12,-d*.09,false);if(type==='downtown')box(g,w*.30,.25,d*.29,'#9cb3b3',0,h+.30,0,false);}
     if(country==='netherlands'&&type!=='downtown')for(let i=0;i<3;i++)box(g,w*(1-i*.25),.09,.06,'#e3d7bd',0,h+.10+i*.09,d/2+.02,false);
     if(type==='market'){
       for(let k=0;k<4;k++)box(g,w/4,.04,.27,k%2?'#efe0bb':'#ad755a',-w*.375+k*w/4,.43,d/2+.10,false);
     }
-    rainRoofs.push({x,z,rx:w/2+.06,rz:d/2+.06,top:.16+h+.35});
+    metroIdentity(g,w,d,h,index,type);
+    rainRoofs.push({x,z,rx:w/2+.06,rz:d/2+.06,top:.16+h+(type==='campus'||type==='civic'?.60:.35)});
   }
   function metroLink(ax,az,bx,bz,raised=false){
     const g=new THREE.Group();world.add(g);const length=Math.hypot(bx-ax,bz-az),angle=Math.atan2(bx-ax,bz-az);
     const height=t=>.174+(raised?Math.sin(Math.PI*t)**2*1.45:0);
     for(let i=0;i<24;i++){
       const t=(i+.5)/24,x=ax+(bx-ax)*t,z=az+(bz-az)*t;
-      const q=box(g,.92,.075,length/24+.012,'#a7a99d',x,height(t)-.0375,z,false);const slope=(height(Math.min(1,t+.001))-height(Math.max(0,t-.001)))/(length*.002);
+      const q=box(g,raised?.92:1.50,.075,length/24+.012,'#a7a99d',x,height(t)-.0375,z,false);const slope=(height(Math.min(1,t+.001))-height(Math.max(0,t-.001)))/(length*.002);
       q.rotation.order='YXZ';q.rotation.y=angle;q.rotation.x=-Math.atan(slope);q.scale.z=Math.sqrt(1+slope*slope);
       for(const side of [-1,1]){
-        const rx=x+Math.cos(angle)*side*.49,rz=z-Math.sin(angle)*side*.49;
+        const rx=x+Math.cos(angle)*side*(raised?.49:.80),rz=z-Math.sin(angle)*side*(raised?.49:.80);
         const rail=box(g,.025,.04,length/24+.02,'#e2d6bb',rx,height(t)+.13,rz,false);rail.rotation.order='YXZ';rail.rotation.y=angle;rail.rotation.x=-Math.atan(slope);rail.scale.z=Math.sqrt(1+slope*slope);
       }
     }
@@ -3400,6 +3485,99 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
       metro.bridges.push({g:p,ax,az,bx,bz,height,length});
     }
   }
+  // A shared two-way street spine follows the actual centre roads and links.
+  // Arc-length sampling keeps lane distance continuous through rounded turns.
+  function transitPath(lane){
+    const raw=[[-7,17.2],[-7,14],[-7,3],[-7,-1.12],[-1.12,-7],[3,-7],[14,-7],[18.12,-7],[25,-1.12],[25,3],[25,14],[25,17.2]],centre=[];
+    const add=(x,z)=>centre.push({x,z});add(...raw[0]);
+    for(let i=1;i<raw.length-1;i++){
+      const a=raw[i-1],b=raw[i],c=raw[i+1],la=Math.hypot(b[0]-a[0],b[1]-a[1]),lb=Math.hypot(c[0]-b[0],c[1]-b[1]),cut=Math.min(.6,la*.25,lb*.25);
+      const p=[b[0]-(b[0]-a[0])/la*cut,b[1]-(b[1]-a[1])/la*cut],q=[b[0]+(c[0]-b[0])/lb*cut,b[1]+(c[1]-b[1])/lb*cut];
+      add(...p);for(let k=1;k<=8;k++){const t=k/8,u=1-t;add(u*u*p[0]+2*u*t*b[0]+t*t*q[0],u*u*p[1]+2*u*t*b[1]+t*t*q[1]);}
+    }
+    add(...raw[raw.length-1]);
+    const left=[],right=[];
+    for(let i=0;i<centre.length;i++){
+      const a=centre[Math.max(0,i-1)],b=centre[Math.min(centre.length-1,i+1)],len=Math.hypot(b.x-a.x,b.z-a.z),nx=-(b.z-a.z)/len,nz=(b.x-a.x)/len;
+      left.push({x:centre[i].x+nx*lane,z:centre[i].z+nz*lane});right.push({x:centre[i].x-nx*lane,z:centre[i].z-nz*lane});
+    }
+    const points=left.slice(),end=centre[centre.length-1],prev=centre[centre.length-2],len=Math.hypot(end.x-prev.x,end.z-prev.z),tx=(end.x-prev.x)/len,tz=(end.z-prev.z)/len;
+    for(let k=1;k<=12;k++){const a=k*Math.PI/12;points.push({x:end.x-tz*lane*Math.cos(a)+tx*lane*Math.sin(a),z:end.z+tx*lane*Math.cos(a)+tz*lane*Math.sin(a)});}
+    points.push(...right.slice(0,-1).reverse());
+    const start=centre[0],next=centre[1],sl=Math.hypot(next.x-start.x,next.z-start.z),sx=(next.x-start.x)/sl,sz=(next.z-start.z)/sl;
+    for(let k=1;k<=12;k++){const a=k*Math.PI/12;points.push({x:start.x+sz*lane*Math.cos(a)-sx*lane*Math.sin(a),z:start.z-sx*lane*Math.cos(a)-sz*lane*Math.sin(a)});}
+    points.push(points[0]);const lengths=[0];for(let i=1;i<points.length;i++)lengths.push(lengths[i-1]+Math.hypot(points[i].x-points[i-1].x,points[i].z-points[i-1].z));
+    return {points,lengths,length:lengths[lengths.length-1],forwardCount:left.length};
+  }
+  function transitPoint(path,distance){
+    const s=((distance%path.length)+path.length)%path.length;let lo=0,hi=path.lengths.length-1;
+    while(hi-lo>1){const m=(lo+hi)>>1;if(path.lengths[m]<=s)lo=m;else hi=m;}
+    const a=path.points[lo],b=path.points[hi],t=(s-path.lengths[lo])/(path.lengths[hi]-path.lengths[lo]||1);
+    return {x:a.x+(b.x-a.x)*t,z:a.z+(b.z-a.z)*t,angle:-Math.atan2(b.z-a.z,b.x-a.x)};
+  }
+  function initTransit(){
+    metro.road=transitPath(.23);metro.foot=transitPath(.65);metro.arrivals=0;metro.boardings=0;metro.alightings=0;metro.simTime=0;
+    metro.stops=METRO_DISTRICTS.map((D,district)=>{
+      let nearest=0,best=Infinity;for(let i=0;i<metro.road.forwardCount;i++){const p=metro.road.points[i],q=Math.hypot(D.x-p.x,D.z-p.z);if(q<best){best=q;nearest=i;}}
+      const p=transitPoint(metro.road,metro.road.lengths[nearest]),dx=Math.cos(-p.angle),dz=Math.sin(-p.angle);
+      return {district,s:metro.road.lengths[nearest],x:D.x-dz*.67,z:D.z+dx*.67,nx:-dz,nz:dx,dx,dz};
+    }).sort((a,b)=>a.s-b.s);
+    metro.vehicles.forEach((v,i)=>{v.s=i*metro.road.length/metro.vehicles.length;v.wait=0;v.arrivals=0;v.passengers=[];v.next=metro.stops.findIndex(s=>s.s>v.s);if(v.next<0)v.next=0;v.bus=i%4===0;});
+    metro.commuters=metro.walkers.filter((_,i)=>i%3===0);
+    metro.commuters.forEach((v,i)=>{v.stop=metro.stops.findIndex(s=>s.district===i);v.state='waiting';v.until=0;v.bus=null;});
+    for(const stop of metro.stops){
+      const g=new THREE.Group();g.position.set(stop.x,.18,stop.z);g.rotation.y=Math.atan2(stop.dx,stop.dz);world.add(g);
+      box(g,.30,.025,.70,'#d8cfb8',0,0,0,false);
+      for(const z of [-.27,.27])box(g,.025,.38,.025,'#6c8680',-.10,.20,z,false);
+      box(g,.40,.035,.76,'#739b93',0,.41,0,false);
+      box(g,.16,.025,.43,'#a38563',.02,.17,0,false);
+      sign(g,'BUS',.0,.37,.35,.20);
+    }
+    for(const end of [[-7,17.2],[25,17.2]])cylinder(world,.65,.65,.022,'#919c98',end[0],.168,end[1]);
+  }
+  function resetTransit(){
+    metro.simTime=0;metro.arrivals=0;metro.boardings=0;metro.alightings=0;
+    metro.vehicles.forEach((v,i)=>{v.s=i*metro.road.length/metro.vehicles.length;v.wait=0;v.arrivals=0;v.passengers=[];v.next=metro.stops.findIndex(s=>s.s>v.s);if(v.next<0)v.next=0;});
+    metro.commuters.forEach((v,i)=>{v.stop=metro.stops.findIndex(s=>s.district===i);v.state='waiting';v.until=0;v.bus=null;});
+  }
+  function advanceTransit(time){
+    if(time<metro.simTime)resetTransit();
+    while(metro.simTime<time-1e-8){
+      const dt=Math.min(.1,time-metro.simTime),positions=metro.vehicles.map(v=>v.s);metro.simTime+=dt;
+      for(let i=0;i<metro.vehicles.length;i++){
+        const v=metro.vehicles[i];v.wait=Math.max(0,v.wait-dt);if(v.wait>0)continue;
+        const gap=(positions[(i+1)%positions.length]-positions[i]+metro.road.length)%metro.road.length;
+        let step=Math.min((v.bus?.49:.58)*dt,Math.max(0,gap-3.2));
+        const stop=metro.stops[v.next],distance=(stop.s-v.s+metro.road.length)%metro.road.length;
+        if(distance<=step+1e-7){
+          step=distance;v.arrivals++;metro.arrivals++;v.current=stop.district;v.next=(v.next+1)%metro.stops.length;
+          if(v.bus){
+            v.wait=4;
+            for(const p of v.passengers){p.state='alighting';p.stop=metro.stops.indexOf(stop);p.until=metro.simTime+2;p.bus=null;metro.alightings++;}
+            v.passengers=[];
+            const p=metro.commuters.find(p=>p.stop===metro.stops.indexOf(stop)&&p.state==='waiting');
+            if(p){p.state='boarding';p.until=metro.simTime+1.4;p.bus=i;v.passengers.push(p);metro.boardings++;}
+          }
+        }
+        v.s=(v.s+step)%metro.road.length;
+      }
+      for(const p of metro.commuters){
+        if(p.state==='boarding'&&metro.simTime>=p.until)p.state='aboard';
+        if(p.state==='alighting'&&metro.simTime>=p.until){p.state='strolling';p.until=metro.simTime+12;}
+        if(p.state==='strolling'&&metro.simTime>=p.until)p.state='waiting';
+      }
+    }
+    for(const v of metro.vehicles){const p=transitPoint(metro.road,v.s);v.g.position.set(p.x,.192,p.z);v.g.rotation.y=p.angle;const rig=v.g.userData.vehicleRig;if(rig)for(const w of rig.wheels)w.rotation.z=-v.s*15;}
+    for(const p of metro.commuters){
+      const stop=metro.stops[p.stop];p.g.visible=p.state!=='aboard';
+      const queue=metro.commuters.filter(q=>q.stop===p.stop&&q.state==='waiting').indexOf(p);
+      const boarding=p.state==='boarding'?1-Math.max(0,p.until-metro.simTime)/1.4:0;
+      const stroll=p.state==='strolling'?Math.sin((12-(p.until-metro.simTime))/12*Math.PI)*1.05:0;
+      p.g.position.set(stop.x-stop.nx*boarding*.32+stop.dx*(stroll+Math.max(0,queue)*.22),.20,stop.z-stop.nz*boarding*.32+stop.dz*(stroll+Math.max(0,queue)*.22));p.g.rotation.y=Math.atan2(-stop.nx,-stop.nz);
+      const L=p.g.userData.limbs;for(let k=0;k<2;k++)L.legs[k].rotation.x=(boarding||stroll)&&!reducedMotion?Math.sin(metro.simTime*4+k*Math.PI)*.4:0;
+    }
+  }
+
   function createMetropolis(){
     metro.buildings=[];metro.vehicles=[];metro.walkers=[];metro.bridges=[];metro.actorGroup=new THREE.Group();metro.actorGroup.userData.noBatch=true;world.add(metro.actorGroup);
     for(let district=0;district<METRO_DISTRICTS.length;district++){
@@ -3409,6 +3587,7 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
       const road=(w,d,rx,rz)=>box(world,w,.035,d,'#919c98',rx,.157,rz,false);
       for(const side of [-1,1]){road(.82,9.0,x+side*4.12,z);road(9.0,.82,x,z+side*4.12);}
       road(.86,8.2,x,z);road(8.2,.86,x,z);
+      for(const side of [-1,1]){box(world,.23,.025,8.2,'#d4ccb8',x+side*.65,.17,z,false);box(world,8.2,.025,.23,'#d4ccb8',x,.17,z+side*.65,false);}
       for(let a=0;a<4;a++)for(let b=0;b<4;b++){
         const dx=[-2.8,-1.35,1.35,2.8][a],dz=[-2.8,-1.35,1.35,2.8][b],i=district*16+a*4+b;
         if(a===0&&b===0){for(let k=0;k<3;k++){const tx=x+dx+(k-1)*.29,tz=z+dz;cylinder(world,.03,.04,.40,'#887357',tx,.36,tz);ball(world,.21,'#839f73',tx,.68,tz);}continue;}
@@ -3420,8 +3599,7 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
       // A continuous inner pavement keeps walkers clear of traffic and plots.
       for(const side of [-1,1]){box(world,.24,.025,7.36,'#d4ccb8',x+side*3.56,.17,z,false);box(world,7.36,.025,.24,'#d4ccb8',x,.17,z+side*3.56,false);}
       sign(world,D.name.toUpperCase(),x,.55,z+4.70,1.65,'#4f655f','#e7debe');
-      // One-way perimeter circulation has fixed arc-distance spacing, no
-      // conflicting intersections or overlapping independent random paths.
+      // These vehicles join the shared interdistrict street spine below.
       for(let i=0;i<4;i++){
         const g=car({kind:i===0?'bus':'car',col:['#d4bd83','#80a5af','#b88e7f','#a7b5a4'][i],ph:i});metro.actorGroup.add(g);
         metro.vehicles.push({g,x,z,offset:i*8.24,district});
@@ -3436,6 +3614,7 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
     metroLink(-7,7.12,-7,9.88);metroLink(7.12,-7,9.88,-7);metroLink(25,7.12,25,9.88);
     metroLink(-7,-1.12,-1.12,-7);metroLink(18.12,-7,25,-1.12);
     metroLink(-3,6.5,1.5,6.5,true);metroLink(6.5,-3,6.5,1.5,true);metroLink(16.5,6.5,21,6.5,true);
+    initTransit();createMetroStreetLife();
     // Harbour piers and moored craft give the eastern district a shoreline.
     for(let i=0;i<3;i++){
       box(world,1.9,.10,.18,'#ac9572',30.65,.09,11.5+i*2.0,false);
@@ -3453,8 +3632,8 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
   }
   function updateMetropolis(time){
     metro.time=time;
-    for(const v of metro.vehicles){const p=metroLoop(time*.45+v.offset,4.12);v.g.position.set(v.x+p.x,.192,v.z+p.z);v.g.rotation.y=p.angle;const rig=v.g.userData.vehicleRig;if(rig)for(const w of rig.wheels)w.rotation.z=-time*5;}
-    for(const v of metro.walkers){const t=(time+v.offset)%54;const distance=(Math.floor((time+v.offset)/54)*45+Math.min(t,45))*.21+v.offset,p=metroLoop(distance,3.56);v.g.position.set(v.x+p.x,.20,v.z+p.z);v.g.rotation.y=p.angle+Math.PI/2;const L=v.g.userData.limbs;for(let i=0;i<2;i++)L.legs[i].rotation.x=t<45&&!reducedMotion?Math.sin(distance*16+i*Math.PI)*.45:0;}
+    advanceTransit(time);updateMetroStreetLife(time);
+    for(const v of metro.walkers){if(metro.commuters.includes(v))continue;if(metro.walkers.indexOf(v)%3===2){const p=transitPoint(metro.foot,time*.19+v.offset*4+v.district*metro.foot.length/6);v.g.position.set(p.x,.20,p.z);v.g.rotation.y=p.angle+Math.PI/2;const L=v.g.userData.limbs;for(let k=0;k<2;k++)L.legs[k].rotation.x=reducedMotion?0:Math.sin(time*3+k*Math.PI)*.4;continue;}const t=(time+v.offset)%54;const distance=(Math.floor((time+v.offset)/54)*45+Math.min(t,45))*.21+v.offset,p=metroLoop(distance,3.56);v.g.position.set(v.x+p.x,.20,v.z+p.z);v.g.rotation.y=p.angle+Math.PI/2;const L=v.g.userData.limbs;for(let i=0;i<2;i++)L.legs[i].rotation.x=t<45&&!reducedMotion?Math.sin(distance*16+i*Math.PI)*.45:0;}
     for(const v of metro.bridges){const t=(Math.sin(time*.07)+1)/2;for(let k=0;k<2;k++)v.g.userData.limbs.legs[k].rotation.x=reducedMotion?0:Math.sin(t*v.length*14+k*Math.PI)*.45;v.g.position.set(v.ax+(v.bx-v.ax)*t,v.height(t)+.035,v.az+(v.bz-v.az)*t);v.g.rotation.y=Math.atan2(v.bx-v.ax,v.bz-v.az)+(Math.cos(time*.07)<0?Math.PI:0);}
   }
 
@@ -6193,7 +6372,7 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
   const api={
     active:false,renderer,scene,camera,
     setCountry:id=>{if(!COUNTRY_IDS.includes(id))return false;if(id===country)return true;country=id;rebuild();syncActors();return true;},
-    metropolis:()=>({bounds:{...CITY_BOUNDS},districts:METRO_DISTRICTS.map(d=>({...d})),buildings:metro.buildings.length,vehicles:metro.vehicles.map(v=>({x:v.g.position.x,z:v.g.position.z,district:v.district})),walkers:metro.walkers.length,pedestrians:metro.walkers.map(v=>({x:v.g.position.x,z:v.g.position.z})),bridges:metro.bridges.length,time:metro.time}),
+    metropolis:()=>({bounds:{...CITY_BOUNDS},districts:METRO_DISTRICTS.map(d=>({...d})),buildings:metro.buildings.length,vehicles:metro.vehicles.map(v=>({x:v.g.position.x,z:v.g.position.z,district:v.district,angle:v.g.rotation.y,bus:v.bus,distance:v.s,arrivals:v.arrivals})),life:metro.life?.map(a=>({type:a.type,district:a.district,x:a.g.position.x,z:a.g.position.z}))||[],deliveries:metro.deliveries,roles:[...new Set(metro.buildings.map(b=>b.userData.metroRole))],arrivals:metro.arrivals,boardings:metro.boardings,alightings:metro.alightings,passengers:metro.commuters?.map(p=>({state:p.state,stop:p.stop,bus:p.bus}))||[],stops:metro.stops?.length||0,walkers:metro.walkers.length,pedestrians:metro.walkers.map(v=>({x:v.g.position.x,z:v.g.position.z})),bridges:metro.bridges.length,time:metro.time}),
     previewMetropolis:time=>updateMetropolis(time),
     countryPlace:()=>countryPlace?({name:COUNTRY_PLACES[country][0],activity:countryPlace.activity,x:countryPlace.x,z:countryPlace.z,time:countryPlace.time,visitors:countryPlace.visitors.map(v=>({x:v.position.x,z:v.position.z,action:v.userData.countryAction})),rotor:countryPlace.rotor?.rotation.z??null}):null,
     previewCountryActivity:time=>{updateCountryPlace(time);},
