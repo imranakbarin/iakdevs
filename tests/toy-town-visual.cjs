@@ -334,7 +334,7 @@ async function main(){
           window.ToyTown3D?.getStats?.().frames||0);
       }
       if(job.metroDistrict||job.metroHarbour)await page.evaluate(()=>{ToyTown3D.previewMetropolis(180);});
-      if(job.metroOverview||job.metroDistrict||job.metroHarbour||job.metroCampus||job.metroMarket){
+      if(job.metroOverview||job.metroDistrict||job.metroHarbour||job.metroCampus||job.metroMarket||job.metroGarden||job.metroCivic){
         const metro=await page.evaluate(()=>{ToyTown3D.previewMetropolis(0);const a=ToyTown3D.metropolis();ToyTown3D.previewMetropolis(12);const b=ToyTown3D.metropolis();ToyTown3D.previewMetropolis(360);const trips=ToyTown3D.metropolis();if(trips.arrivals<10||!trips.boardings||!trips.alightings)throw Error('Connected journeys or passenger transfers missing');return {a,b,trips:{arrivals:trips.arrivals,boardings:trips.boardings,alightings:trips.alightings}};});
         if(metro.b.buildings<90||metro.b.districts.length!==6||Math.hypot(metro.a.vehicles[0].x-metro.b.vehicles[0].x,metro.a.vehicles[0].z-metro.b.vehicles[0].z)<.05)throw Error('Expanded city missing models or traffic');
         console.log('METROPOLIS '+JSON.stringify(metro));
