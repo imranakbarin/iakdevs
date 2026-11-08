@@ -3459,6 +3459,22 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
       const parcel=box(courier.userData.limbs.hands[1],.10,.10,.09,'#b89066',0,-.07,.03,false);
       metro.life.push({g:courier,parcel,type:'delivery',district,x:D.x,z:D.z});
     }
+    for(const district of [0,3]){
+      const D=METRO_DISTRICTS[district],p=person({col:district===0?'#8ba47b':'#a391af',ph:district,x:D.x,y:D.z});
+      p.scale.setScalar(.50);metro.actorGroup.add(p);
+      const a={g:p,type:district===0?'gardener':'reader',district,x:D.x-2.8,z:D.z+2.8};
+      if(district===0){
+        const hand=p.userData.limbs.hands[1];
+        cylinder(hand,.07,.06,.10,'#8ea9a2',0,-.07,.04);
+        const spout=box(hand,.12,.025,.025,'#8ea9a2',-.09,-.06,.04,false);spout.rotation.z=-.30;
+        a.water=box(hand,.012,.15,.012,'#a3ceca',-.16,-.15,.04,false);a.water.rotation.z=-.25;
+      }else{
+        sitPose(p,0);p.position.set(a.x,.26,a.z+.43);p.rotation.y=Math.PI;
+        const book=box(p.userData.limbs.hands[1],.17,.025,.12,'#b89a78',-.05,-.05,.04,false);
+        box(book,.15,.008,.105,'#ede2c5',0,.017,0,false);
+      }
+      metro.life.push(a);
+    }
     const crane=new THREE.Group();crane.position.set(30.3,.17,17.5);metro.actorGroup.add(crane);
     box(world,1.3,.12,.90,'#b8aa8d',30.3,.10,17.5,false);
     for(const side of [-1,1])cylinder(world,.055,.065,.75,'#8d7c64',30.3+side*.42,-.25,17.5);
@@ -3476,7 +3492,18 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
     metro.deliveries=Math.floor(time/24)*4;
     for(const a of metro.life){
       const L=a.g.userData.limbs;
-      if(a.type==='cafe'){
+      if(a.type==='gardener'){
+        const phase=time%20,walk=phase<6||phase>=14;
+        const u=phase<6?phase/6:phase<14?1:(20-phase)/6;
+        a.g.position.set(a.x+.50,.20,a.z-.12+u*.32);a.g.rotation.y=walk?(phase<6?0:Math.PI):-Math.PI/2;
+        for(let k=0;k<2;k++)L.legs[k].rotation.x=walk&&!reducedMotion?Math.sin(u*10+k*Math.PI)*.35:0;
+        L.arms[1].rotation.x=walk?-.4:-.9;L.elbows[1].rotation.x=-.6;
+        a.water.visible=!walk;a.water.scale.y=.8+Math.sin(time*8)*.15;a.action=walk?'walk':'water';
+      }else if(a.type==='reader'){
+        L.arms[1].rotation.x=-1.0;L.elbows[1].rotation.x=-.9;
+        L.arms[0].rotation.x=-.8;L.elbows[0].rotation.x=-.8;
+        L.headPivot.rotation.x=.20+Math.sin(time*.35)*.025;a.action='read';
+      }else if(a.type==='cafe'){
         L.arms[1].rotation.x=-1.1-Math.max(0,Math.sin(time*.55+a.district))*.35;L.elbows[1].rotation.x=-.6;L.headPivot.rotation.x=Math.sin(time*.45+a.district)*.05;
       }else{
         const t=(time%24)/24,travel=t<.4?t/.4:t<.6?1:(1-t)/.4;
@@ -3492,8 +3519,8 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
 
   function metroBuilding(x,z,h,w,d,index,type){
     const palettes={town:['#ceaa90','#c7bc9d','#8caaa3'],india:['#cc957b','#dcad8f','#c69d80'],japan:['#dfcfb1','#c2b79f','#b5c3b1'],italy:['#deb78a','#e3c8a0','#d5a797'],netherlands:['#a77761','#b38c71','#c9b599'],usa:['#ac806b','#b4b8ad','#c4a78b']};
-    const col=palettes[country][index%3],g=new THREE.Group();g.position.set(x,.16,z);world.add(g);
-    g.userData.metroBuilding={district:type,height:h,country};metro.buildings.push(g);
+    const col=palettes[country][(index+Math.floor(index/4))%3],g=new THREE.Group();g.position.set(x,.16,z);world.add(g);
+    g.userData.metroBuilding={district:type,height:h,width:w,depth:d,country};metro.buildings.push(g);
     box(g,w,h,d,col,0,h/2,0,false);
     const facade=metroFacade(col,index%3,type==='downtown'?8:type==='campus'||type==='civic'?4:2);
     for(const side of [-1,1]){
@@ -3506,11 +3533,20 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
     else{box(g,w*.53,.16,d*.52,'#7b8c88',0,h+.12,-d*.09,false);if(type==='downtown')box(g,w*.30,.25,d*.29,'#9cb3b3',0,h+.30,0,false);}
     if(country==='netherlands'&&type!=='downtown')for(let i=0;i<3;i++)box(g,w*(1-i*.25),.09,.06,'#e3d7bd',0,h+.10+i*.09,d/2+.02,false);
     if(type==='market'){
-      for(let k=0;k<4;k++)box(g,w/4,.04,.27,k%2?'#efe0bb':'#ad755a',-w*.375+k*w/4,.43,d/2+.10,false);
+      for(let k=0;k<4;k++)box(g,w/4,.04,.27,k%2?'#efe0bb':['#759a8b','#ac7e68','#9298ae'][index%3],-w*.375+k*w/4,.43,d/2+.10,false);
     }
     metroIdentity(g,w,d,h,index,type);
     metroFacadeDetails(g,w,d,h,index,type);
-    rainRoofs.push({x,z,rx:w/2+.06,rz:d/2+.06,top:.16+h+(type==='campus'||type==='civic'?.60:.35)});
+    if(type==='harbour'&&index%2===0){
+      for(let k=0;k<3;k++){const light=box(g,w*.65,.035,.12,'#9db7b1',0,h+.22,(k-1)*d*.22,false);light.rotation.x=-.16;}
+    }else if(type==='garden'&&index%2===1){
+      box(g,.12,.27,.14,'#a68c75',w*.25,h+.23,-d*.22,false);
+    }else if(type==='downtown'&&index%2===0){
+      box(g,w*.72,.04,d*.30,'#668f8c',0,h+.47,0,false);
+      for(let k=0;k<3;k++)box(g,.012,.012,d*.30,'#b5c6ba',(-.24+k*.24)*w,h+.495,0,false);
+    }
+
+    rainRoofs.push({x,z,rx:w/2+.06,rz:d/2+.06,top:.16+h+(type==='campus'||type==='civic'?.60:type==='downtown'?.55:.40)});
   }
   function metroLink(ax,az,bx,bz,raised=false){
     const g=new THREE.Group();world.add(g);const length=Math.hypot(bx-ax,bz-az),angle=Math.atan2(bx-ax,bz-az);
@@ -3636,9 +3672,11 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
         const dx=[-2.8,-1.35,1.35,2.8][a],dz=[-2.8,-1.35,1.35,2.8][b],i=district*16+a*4+b;
         if(a===0&&b===3){metroPocket(D);continue;}
         const h=D.type==='downtown'?1.9+((a*7+b*3)%7)*.47:D.type==='campus'?1.15+(i%3)*.24:D.type==='civic'?1.25+(i%4)*.31:D.type==='harbour'?.65+(i%3)*.20:.70+(i%4)*.18;
-        const size=D.type==='downtown'?1.12:D.type==='campus'?1.19:1.02;
-        box(world,size+.17,.045,size+.17,'#cfc8b3',x+dx,.17,z+dz,false);
-        metroBuilding(x+dx,z+dz,h,size,size,i,D.type);
+        const baseSize=D.type==='downtown'?1.10:D.type==='campus'?1.16:1.02;
+        const size=baseSize-[0,.16,.06,.23][(a+b*3)%4],depth=baseSize-[.12,0,.19,.06][(a*3+b)%4];
+        const height=h*(.82+((a*3+b*5)%4)*.085);
+        box(world,size+.17,.045,depth+.17,'#cfc8b3',x+dx,.17,z+dz,false);
+        metroBuilding(x+dx,z+dz,height,size,depth,i,D.type);
       }
       // A continuous inner pavement keeps walkers clear of traffic and plots.
       for(const side of [-1,1]){box(world,.24,.025,7.36,'#d4ccb8',x+side*3.56,.17,z,false);box(world,7.36,.025,.24,'#d4ccb8',x,.17,z+side*3.56,false);}
@@ -6416,7 +6454,7 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
   const api={
     active:false,renderer,scene,camera,
     setCountry:id=>{if(!COUNTRY_IDS.includes(id))return false;if(id===country)return true;country=id;rebuild();syncActors();return true;},
-    metropolis:()=>({bounds:{...CITY_BOUNDS},districts:METRO_DISTRICTS.map(d=>({...d})),buildings:metro.buildings.length,vehicles:metro.vehicles.map(v=>({x:v.g.position.x,z:v.g.position.z,district:v.district,angle:v.g.rotation.y,bus:v.bus,distance:v.s,arrivals:v.arrivals})),life:metro.life?.map(a=>({type:a.type,district:a.district,x:a.g.position.x,z:a.g.position.z}))||[],deliveries:metro.deliveries,roles:[...new Set(metro.buildings.map(b=>b.userData.metroRole))],arrivals:metro.arrivals,boardings:metro.boardings,alightings:metro.alightings,passengers:metro.commuters?.map(p=>({state:p.state,stop:p.stop,bus:p.bus}))||[],stops:metro.stops?.length||0,walkers:metro.walkers.length,pedestrians:metro.walkers.map(v=>({x:v.g.position.x,z:v.g.position.z})),bridges:metro.bridges.length,time:metro.time}),
+    metropolis:()=>({bounds:{...CITY_BOUNDS},districts:METRO_DISTRICTS.map(d=>({...d})),buildings:metro.buildings.length,vehicles:metro.vehicles.map(v=>({x:v.g.position.x,z:v.g.position.z,district:v.district,angle:v.g.rotation.y,bus:v.bus,distance:v.s,arrivals:v.arrivals})),life:metro.life?.map(a=>({type:a.type,district:a.district,action:a.action||a.type,x:a.g.position.x,z:a.g.position.z}))||[],deliveries:metro.deliveries,roles:[...new Set(metro.buildings.map(b=>b.userData.metroRole))],arrivals:metro.arrivals,boardings:metro.boardings,alightings:metro.alightings,passengers:metro.commuters?.map(p=>({state:p.state,stop:p.stop,bus:p.bus}))||[],stops:metro.stops?.length||0,walkers:metro.walkers.length,pedestrians:metro.walkers.map(v=>({x:v.g.position.x,z:v.g.position.z})),bridges:metro.bridges.length,time:metro.time}),
     previewMetropolis:time=>updateMetropolis(time),
     countryPlace:()=>countryPlace?({name:COUNTRY_PLACES[country][0],activity:countryPlace.activity,x:countryPlace.x,z:countryPlace.z,time:countryPlace.time,visitors:countryPlace.visitors.map(v=>({x:v.position.x,z:v.position.z,action:v.userData.countryAction})),rotor:countryPlace.rotor?.rotation.z??null}):null,
     previewCountryActivity:time=>{updateCountryPlace(time);},

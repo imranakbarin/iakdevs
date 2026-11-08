@@ -55,6 +55,8 @@ async function main(){
       {name:'metro-harbour',w:1280,h:820,classic:false,zoom:1.7,metroHarbour:true},
       {name:'metro-campus-transit',w:1280,h:820,classic:false,zoom:2.1,metroCampus:true},
       {name:'metro-market-life',w:1280,h:820,classic:false,zoom:2.1,metroMarket:true},
+      {name:'metro-garden-work',w:1100,h:820,classic:false,zoom:3.25,metroGarden:true},
+      {name:'metro-civic-reader',w:1100,h:820,classic:false,zoom:3.25,metroCivic:true},
       {name:'mobile-classic-reference',w:390,h:844,classic:true,zoom:1.7}
     ];
     const records=[];
@@ -175,6 +177,8 @@ async function main(){
         beforeFrame=await page.evaluate(()=>ToyTown3D.getStats().frames);
       }
       if(job.metroOverview)await page.evaluate(()=>ToyTown.resetView());
+      if(job.metroGarden)await page.evaluate(()=>ToyTown.pinchTo(3.25,innerWidth/2,innerHeight/2,{x:-9.8,y:5.8}));
+      if(job.metroCivic)await page.evaluate(()=>ToyTown.pinchTo(3.25,innerWidth/2,innerHeight/2,{x:11.2,y:-4.2}));
       if(job.metroCampus)await page.evaluate(()=>ToyTown.pinchTo(2.1,innerWidth/2,innerHeight/2,{x:3,y:-7}));
       if(job.metroMarket)await page.evaluate(()=>ToyTown.pinchTo(2.1,innerWidth/2,innerHeight/2,{x:-7,y:14}));
       if(job.metroHarbour)await page.evaluate(()=>ToyTown.pinchTo(2.1,innerWidth/2,innerHeight/2,{x:29,y:14}));
@@ -330,7 +334,7 @@ async function main(){
           window.ToyTown3D?.getStats?.().frames||0);
       }
       if(job.metroDistrict||job.metroHarbour)await page.evaluate(()=>{ToyTown3D.previewMetropolis(180);});
-      if(job.metroOverview||job.metroDistrict||job.metroHarbour||job.metroCampus||job.metroMarket){
+      if(job.metroOverview||job.metroDistrict||job.metroHarbour||job.metroCampus||job.metroMarket||job.metroGarden||job.metroCivic){
         const metro=await page.evaluate(()=>{ToyTown3D.previewMetropolis(0);const a=ToyTown3D.metropolis();ToyTown3D.previewMetropolis(12);const b=ToyTown3D.metropolis();ToyTown3D.previewMetropolis(360);const trips=ToyTown3D.metropolis();if(trips.arrivals<10||!trips.boardings||!trips.alightings)throw Error('Connected journeys or passenger transfers missing');return {a,b,trips:{arrivals:trips.arrivals,boardings:trips.boardings,alightings:trips.alightings}};});
         if(metro.b.buildings<90||metro.b.districts.length!==6||Math.hypot(metro.a.vehicles[0].x-metro.b.vehicles[0].x,metro.a.vehicles[0].z-metro.b.vehicles[0].z)<.05)throw Error('Expanded city missing models or traffic');
         console.log('METROPOLIS '+JSON.stringify(metro));
@@ -441,6 +445,7 @@ async function main(){
       // A moving WebGL canvas may never satisfy Playwright's stability check.
       // Freeze an actual rendered GPU frame; don't switch to the old 2D fallback.
       await page.evaluate(()=>window.ToyTown3D?.freeze?.());
+      if(job.metroGarden||job.metroCivic)await page.evaluate(()=>{ToyTown3D.previewMetropolis(8);const life=ToyTown3D.metropolis().life;if(!life.some(a=>a.type==='gardener'&&a.action==='water')||!life.some(a=>a.type==='reader'&&a.action==='read'))throw Error('Public-space activities missing');ToyTown3D.renderer.render(ToyTown3D.scene,ToyTown3D.camera);});
       await page.waitForTimeout(100);
       const image=await page.screenshot({type:'jpeg',quality:58,timeout:90000,
         animations:'disabled'});
