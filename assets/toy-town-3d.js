@@ -3403,7 +3403,7 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
   }
   // Public-space details stay inside the reserved, unbuilt corner plot.
   function metroPocket(D){
-    const g=new THREE.Group();g.position.set(D.x-2.8,.18,D.z-2.8);g.userData.metroPocket=D.type;world.add(g);
+    const g=new THREE.Group();g.position.set(D.x-2.8,.18,D.z+2.8);g.userData.metroPocket=D.type;world.add(g);
     box(g,1.18,.025,1.18,'#d7cbb1',0,0,0,false);
     const planter=(x,z)=>{box(g,.24,.13,.22,'#b08468',x,.08,z,false);box(g,.20,.02,.18,'#695e48',x,.15,z,false);for(let k=0;k<3;k++)ball(g,.065,['#8eaa78','#e5b276','#bca1be'][k],x+(k-1)*.055,.20,z);};
     planter(-.43,-.43);planter(.43,-.43);
@@ -3447,7 +3447,7 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
   function createMetroStreetLife(){
     metro.life=[];metro.deliveries=0;
     for(const district of [1,2,4]){
-      const D=METRO_DISTRICTS[district],x=D.x-2.8,z=D.z-2.8;
+      const D=METRO_DISTRICTS[district],x=D.x-2.8,z=D.z+2.8;
       cylinder(world,.28,.28,.045,'#af936c',x,.38,z);cylinder(world,.025,.025,.30,'#796851',x,.21,z);
       for(const dx of [-.38,.38]){
         box(world,.15,.025,.15,'#9b8466',x+dx,.23,z,false);
@@ -3634,7 +3634,7 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
       for(const side of [-1,1]){box(world,.23,.025,8.2,'#d4ccb8',x+side*.65,.17,z,false);box(world,8.2,.025,.23,'#d4ccb8',x,.17,z+side*.65,false);}
       for(let a=0;a<4;a++)for(let b=0;b<4;b++){
         const dx=[-2.8,-1.35,1.35,2.8][a],dz=[-2.8,-1.35,1.35,2.8][b],i=district*16+a*4+b;
-        if(a===0&&b===0){metroPocket(D);continue;}
+        if(a===0&&b===3){metroPocket(D);continue;}
         const h=D.type==='downtown'?1.9+((a*7+b*3)%7)*.47:D.type==='campus'?1.15+(i%3)*.24:D.type==='civic'?1.25+(i%4)*.31:D.type==='harbour'?.65+(i%3)*.20:.70+(i%4)*.18;
         const size=D.type==='downtown'?1.12:D.type==='campus'?1.19:1.02;
         box(world,size+.17,.045,size+.17,'#cfc8b3',x+dx,.17,z+dz,false);
