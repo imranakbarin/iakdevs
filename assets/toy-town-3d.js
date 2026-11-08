@@ -3401,10 +3401,53 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
       const wing=box(g,w*.30,h*.82,d*.9,'#7f9a9a',w*.54,h*.41,0,false);g.userData.metroRole='stepped office';
     }
   }
+  // Public-space details stay inside the reserved, unbuilt corner plot.
+  function metroPocket(D){
+    const g=new THREE.Group();g.position.set(D.x-2.8,.18,D.z-2.8);g.userData.metroPocket=D.type;world.add(g);
+    box(g,1.18,.025,1.18,'#d7cbb1',0,0,0,false);
+    const planter=(x,z)=>{box(g,.24,.13,.22,'#b08468',x,.08,z,false);box(g,.20,.02,.18,'#695e48',x,.15,z,false);for(let k=0;k<3;k++)ball(g,.065,['#8eaa78','#e5b276','#bca1be'][k],x+(k-1)*.055,.20,z);};
+    planter(-.43,-.43);planter(.43,-.43);
+    const bench=(x,z)=>{box(g,.40,.04,.14,'#9b805d',x,.17,z,false);box(g,.40,.15,.025,'#9b805d',x,.25,z-.075,false);for(const dx of [-.14,.14])box(g,.025,.16,.10,'#687b72',x+dx,.08,z,false);};
+    if(D.type==='garden'){
+      for(let k=0;k<3;k++){box(g,.85,.10,.18,'#a78e6d',0,.07,-.22+k*.25,false);for(let j=0;j<5;j++){const x=-.33+j*.16,z=-.22+k*.25;cylinder(g,.008,.008,.13,'#7f986c',x,.17,z);ball(g,.045,k%2?'#d5a16f':'#b5a2bf',x,.25,z);}}
+      sign(g,'COMMUNITY GARDEN',0,.42,.52,.75);
+    }else if(D.type==='civic'){
+      cylinder(g,.27,.30,.10,'#b9ad91',0,.07,0);cylinder(g,.23,.23,.015,'#88b6b3',0,.13,0);cylinder(g,.045,.07,.33,'#d2c4a5',0,.27,0);ball(g,.09,'#c6b99d',0,.47,0);bench(0,.43);
+    }else if(D.type==='harbour'){
+      for(let k=0;k<3;k++){box(g,.26,.20,.28,['#7d9d9a','#b17f66','#c4ac78'][k],-.31+k*.30,.13,0,false);for(let j=0;j<3;j++)box(g,.015,.17,.29,'#d4c4a4',-.40+k*.30+j*.07,.14,0,false);}
+      sign(g,'DOCK SUPPLIES',0,.43,.42,.78);
+    }else{
+      // Pergola over the existing cafe; the posts frame rather than hide patrons.
+      for(const x of [-.52,.52])for(const z of [-.48,.48])box(g,.025,.74,.025,'#9c8868',x,.37,z,false);
+      for(let k=0;k<5;k++)box(g,1.13,.035,.055,'#b8a27c',0,.76,-.48+k*.24,false);
+      if(D.type==='campus'){box(g,.35,.36,.10,'#85775f',0,.20,-.48,false);for(let k=0;k<4;k++)box(g,.05,.12,.035,['#aa8173','#8eaaa2','#c8ad79','#9b92aa'][k],-.12+k*.08,.23,-.42,false);}
+    }
+  }
+  function metroFacadeDetails(g,w,d,h,index,type){
+    // Repeated detail uses shared geometries/materials and remains static-batchable.
+    for(const side of [-1,1]){
+      cylinder(g,.012,.012,h,'#8c9687',side*(w/2-.025),h/2,d/2+.025);
+      if(type!=='harbour'&&index%2===0){
+        box(g,.30,.07,.12,'#ad876e',side*w*.27,h*.66,d/2+.065,false);
+        for(let k=0;k<3;k++)ball(g,.045,['#91a67a','#d3a3a0','#d4b77b'][(index+k)%3],side*w*.27+(k-1)*.075,h*.66+.06,d/2+.085);
+      }
+    }
+    if(type==='market'){
+      const colour=['#9baba3','#c5a47d','#b09393'][index%3];
+      box(g,.20,.26,.035,colour,-w*.32,.20,d/2+.04,false);
+      for(let k=0;k<3;k++)box(g,.065,.055,.05,['#d7b379','#b38c77','#c9bea0'][k],-.10+k*.10,.17,d/2+.07,false);
+      box(g,.24,.035,.17,'#8d775a',w*.32,.11,d/2+.12,false);
+    }
+    if(type==='downtown'){
+      box(g,w*.75,.045,.14,'#a2b4ad',0,h*.45,d/2+.04,false);
+      for(let k=0;k<4;k++)box(g,.018,.14,.02,'#d5cbb3',(-.3+k*.2)*w,h*.45+.08,d/2+.10,false);
+    }
+    if(type==='harbour'){cylinder(g,.035,.035,.21,'#788d87',w*.32,h+.17,-d*.30);box(g,.14,.035,.14,'#aeae95',w*.32,h+.29,-d*.30,false);}
+  }
   function createMetroStreetLife(){
     metro.life=[];metro.deliveries=0;
     for(const district of [1,2,4]){
-      const D=METRO_DISTRICTS[district],x=D.x-2.8,z=D.z-2.15;
+      const D=METRO_DISTRICTS[district],x=D.x-2.8,z=D.z-2.8;
       cylinder(world,.28,.28,.045,'#af936c',x,.38,z);cylinder(world,.025,.025,.30,'#796851',x,.21,z);
       for(const dx of [-.38,.38]){
         box(world,.15,.025,.15,'#9b8466',x+dx,.23,z,false);
@@ -3466,6 +3509,7 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
       for(let k=0;k<4;k++)box(g,w/4,.04,.27,k%2?'#efe0bb':'#ad755a',-w*.375+k*w/4,.43,d/2+.10,false);
     }
     metroIdentity(g,w,d,h,index,type);
+    metroFacadeDetails(g,w,d,h,index,type);
     rainRoofs.push({x,z,rx:w/2+.06,rz:d/2+.06,top:.16+h+(type==='campus'||type==='civic'?.60:.35)});
   }
   function metroLink(ax,az,bx,bz,raised=false){
@@ -3590,7 +3634,7 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
       for(const side of [-1,1]){box(world,.23,.025,8.2,'#d4ccb8',x+side*.65,.17,z,false);box(world,8.2,.025,.23,'#d4ccb8',x,.17,z+side*.65,false);}
       for(let a=0;a<4;a++)for(let b=0;b<4;b++){
         const dx=[-2.8,-1.35,1.35,2.8][a],dz=[-2.8,-1.35,1.35,2.8][b],i=district*16+a*4+b;
-        if(a===0&&b===0){for(let k=0;k<3;k++){const tx=x+dx+(k-1)*.29,tz=z+dz;cylinder(world,.03,.04,.40,'#887357',tx,.36,tz);ball(world,.21,'#839f73',tx,.68,tz);}continue;}
+        if(a===0&&b===0){metroPocket(D);continue;}
         const h=D.type==='downtown'?1.9+((a*7+b*3)%7)*.47:D.type==='campus'?1.15+(i%3)*.24:D.type==='civic'?1.25+(i%4)*.31:D.type==='harbour'?.65+(i%3)*.20:.70+(i%4)*.18;
         const size=D.type==='downtown'?1.12:D.type==='campus'?1.19:1.02;
         box(world,size+.17,.045,size+.17,'#cfc8b3',x+dx,.17,z+dz,false);
