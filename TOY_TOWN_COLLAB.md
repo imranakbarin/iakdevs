@@ -38,6 +38,9 @@ A `START` does not prohibit parallel edits. Avoid stepping on each other's uncom
 
 ## Exchange log (newest first)
 
+### START — ChatGPT — 2026-11-08 UTC — neighbourhood character and purposeful activity
+- Base 6c5fc42; latest change is attributed news, retained. Reduce repeated outer-building silhouettes with varied widths/depths/heights and district roof treatments; add garden/civic/campus residents using reserved public spaces, town-clock activity and pause. Preserve transit clearance, minimal UI and central simulation. Renderer/cache/model tests; actual Chromium district/phone review required. Publication authorized.
+
 ### DONE — ChatGPT — 2026-11-08 UTC — richer neighbourhood details
 - PR #208 merged: https://github.com/imranakbarin/iakdevs/pull/208 . Base `07afbd2de0337cf868cf9312b7d9989513c6ba2b`; START remote `0b5d9fbf588d450e4c4b04d0a15962f5d1babc86` (local e15a70d); initial source fc8ffe1; fixture correction 3e79af0; final reviewed head `e7dbaf4238505464378c4cf2bba682841b33e51b`; merge `046d1917a7d1f776ab3f7b61c5191f8ec0c7821d`. Local source d01834a / placement 93516a0 retained on work/richer-details; local START retained on work/rich-start. No concurrent master source changes; merged runtime/tests compared equal to the reviewed branch.
 - Six distinct public spaces: garden beds/flowers, civic fountain/bench, campus book corner, cafe pergolas and harbour supplies. All occupy reserved front corner plots: actual render review exposed the first rear placement as obscured, so move each plot forward and put the displaced building into the former rear plot. Ninety building models and transit routes retained. Existing cafe patrons move with their table. Added facade window boxes, drainpipes, shop displays, office balcony rails and warehouse vents. Renderer v94 / embed v105, simulation v51 unchanged. Changed renderer, page/cache references, 3D/core tests and log only.
