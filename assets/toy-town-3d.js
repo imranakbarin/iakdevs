@@ -3363,10 +3363,54 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
     const tx=new THREE.CanvasTexture(c);tx.colorSpace=THREE.SRGBColorSpace;
     const m=new THREE.MeshStandardMaterial({map:tx,roughness:.88});metroFacades.set(key,m);return m;
   }
+  const metroRole=(type,index)=>type==='campus'?['library','lecture hall','observatory'][index%3]:type==='civic'?['council hall','museum','post office'][index%3]:type==='harbour'?'warehouse':type==='market'?['cafe','gallery','bakery'][index%3]:type==='garden'?'porch house':'office';
+  function metroPlaque(g,text,x,y,z,w){
+    const plaque=sign(g,text,x,y,z,w*.68,'#435c57','#e5ddc7');plaque.scale.y=.60;plaque.userData.metroPlaque=true;return plaque;
+  }
+  function metroSignature(g,w,d,h,role,col){
+    if(!['library','museum','cafe'].includes(role))return false;
+    g.userData.metroSignature=role;
+    const mass=(width,height,depth,x,y,z,c=col)=>{const m=box(g,width,height,depth,c,x,y,z,false);m.userData.metroMass=role;return m;};
+    if(role==='library'){
+      // Low reading wings flank a tall glazed central book hall.
+      for(const side of [-1,1]){
+        mass(w*.28,h*.58,d,side*w*.36,h*.29,0);
+        box(g,w*.30,.045,d+.03,'#d9ceb3',side*w*.36,h*.58,0,false);
+        box(g,w*.20,h*.34,.025,'#7eaaa8',side*w*.36,h*.31,d/2+.015,false);
+        for(let k=0;k<3;k++)box(g,.012,h*.34,.03,'#dbd4bc',side*w*.36+(k-1)*w*.067,h*.31,d/2+.035,false);
+      }
+      mass(w*.43,h,d*.84,0,h/2,-d*.05);
+      box(g,w*.35,h*.78,.025,'#739f9e',0,h*.52,d*.38,false);
+      for(let k=0;k<4;k++)box(g,.014,h*.78,.03,'#ddd2b7',(-1.5+k)*w*.085,h*.52,d*.40,false);
+      for(let k=0;k<3;k++)box(g,w*.35,.018,.04,'#d3c6a8',0,h*(.25+k*.25),d*.41,false);
+      box(g,w*.49,.055,d*.93,'#d9ceb3',0,h+.025,-d*.05,false);
+    }else if(role==='museum'){
+      // Single-storey stone gallery with a broad, supported colonnaded porch.
+      mass(w,h*.78,d,0,h*.39,0,'#c9b89a');
+      mass(w*.47,h*.20,d*.67,0,h*.88,-d*.08,'#d9cbb0');
+      for(const x of [-.36,-.12,.12,.36])cylinder(g,.025,.035,h*.70,'#e5dac0',x*w,h*.35,d/2+.08);
+      box(g,w*1.02,.06,.24,'#e1d4b7',0,h*.73,d/2+.045,false);
+      for(const side of [-1,1])box(g,w*.20,h*.35,.025,'#6f8d88',side*w*.28,h*.35,d/2+.015,false);
+      box(g,w*.55,.04,d*.76,'#a8977c',0,h+.015,-d*.08,false);
+    }else{
+      // A compact corner cafe has wraparound glazing and a sheltering roof.
+      mass(w,h,d,0,h/2,0);
+      box(g,w*.84,h*.58,.025,'#80aaa2',0,h*.43,d/2+.018,false);
+      box(g,.025,h*.58,d*.66,'#80aaa2',-w/2-.018,h*.43,d*.05,false);
+      for(const x of [-.28,0,.28])box(g,.022,h*.61,.045,'#e8d8b6',x*w,h*.43,d/2+.04,false);
+      const r=new THREE.Group();g.add(r);r.position.y=h+.03;r.scale.set(w*1.04,.30,d*1.04);roof(r,country==='japan'?'#566663':'#ad7e5e',0);
+      box(g,w*1.04,.04,.27,'#78988a',0,h*.80,d/2+.09,false);
+    }
+    return true;
+  }
   function metroIdentity(g,w,d,h,index,type){
     const cream='#e6d8bd',stone='#c3ad8e',wood='#786650';
-    g.userData.metroRole=type==='campus'?['library','lecture hall','observatory'][index%3]:type==='civic'?['council hall','museum','post office'][index%3]:type==='harbour'?'warehouse':type==='market'?['cafe','gallery','bakery'][index%3]:type==='garden'?'porch house':'office';
-    if(type==='campus'||type==='civic'){
+    g.userData.metroRole=metroRole(type,index);
+    const role=g.userData.metroRole;
+    if(['library','museum','cafe'].includes(role)){
+      box(g,.15,.27,.035,'#6a796b',0,.15,role==='library'?d*.41+.02:d/2+.04,false);
+      metroPlaque(g,role.toUpperCase(),0,role==='library'?h*.82:role==='museum'?h*.73:h*.80,role==='library'?d*.41+.02:role==='museum'?d/2+.17:d/2+.23,w*.80);
+    }else if(type==='campus'||type==='civic'){
       const porch=new THREE.Group();g.add(porch);porch.position.z=d/2+.055;
       for(const x of [-w*.32,0,w*.32])cylinder(porch,.025,.032,.44,cream,x,.26,.07);
       box(porch,w*.90,.055,.25,cream,0,.51,.07,false);
@@ -3382,17 +3426,17 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
         const dome=ball(g,.30,'#829d9d',0,h+.13,0);dome.scale.y=.70;
         box(g,.035,.21,.10,'#566c6a',0,h+.35,.12,false);
       }
-      sign(porch,g.userData.metroRole.toUpperCase(),0,.62,.12,w*.84);
+      metroPlaque(porch,g.userData.metroRole.toUpperCase(),0,.60,.12,w*.78);
     }else if(type==='harbour'){
       box(g,w*.76,.40,.03,'#617c7c',0,.23,d/2+.02,false);
       for(let i=0;i<5;i++)box(g,w*.75,.012,.034,'#a5b1a4',0,.07+i*.075,d/2+.04,false);
       box(g,w*.92,.045,.28,stone,0,.035,d/2+.08,false);
       box(g,w+.12,.045,.34,'#748681',0,.55,d/2+.05,false);
       for(const x of [-.28,.26])box(g,.15,.15,.15,'#b5966d',x,.10,d/2+.14,false);
-      sign(g,'WAREHOUSE',0,.67,d/2+.07,w*.83);
+      metroPlaque(g,'WAREHOUSE',0,.62,d/2+.07,w*.70);
     }else if(type==='market'){
       box(g,w*.64,.28,.04,'#7ba2a2',0,.22,d/2+.04,false);
-      sign(g,g.userData.metroRole.toUpperCase(),0,.60,d/2+.10,w*.78);
+      metroPlaque(g,g.userData.metroRole.toUpperCase(),0,.56,d/2+.10,w*.72);
     }else if(type==='garden'){
       for(const x of [-w*.35,w*.35])box(g,.028,.35,.028,cream,x,.22,d/2+.16,false);
       box(g,w*.83,.045,.31,'#a8a28b',0,.40,d/2+.08,false);
@@ -3410,12 +3454,12 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
     const bench=(x,z)=>{box(g,.40,.04,.14,'#9b805d',x,.17,z,false);box(g,.40,.15,.025,'#9b805d',x,.25,z-.075,false);for(const dx of [-.14,.14])box(g,.025,.16,.10,'#687b72',x+dx,.08,z,false);};
     if(D.type==='garden'){
       for(let k=0;k<3;k++){box(g,.85,.10,.18,'#a78e6d',0,.07,-.22+k*.25,false);for(let j=0;j<5;j++){const x=-.33+j*.16,z=-.22+k*.25;cylinder(g,.008,.008,.13,'#7f986c',x,.17,z);ball(g,.045,k%2?'#d5a16f':'#b5a2bf',x,.25,z);}}
-      sign(g,'COMMUNITY GARDEN',0,.42,.52,.75);
+      metroPlaque(g,'COMMUNITY GARDEN',0,.42,.52,.75);
     }else if(D.type==='civic'){
       cylinder(g,.27,.30,.10,'#b9ad91',0,.07,0);cylinder(g,.23,.23,.015,'#88b6b3',0,.13,0);cylinder(g,.045,.07,.33,'#d2c4a5',0,.27,0);ball(g,.09,'#c6b99d',0,.47,0);bench(0,.43);
     }else if(D.type==='harbour'){
       for(let k=0;k<3;k++){box(g,.26,.20,.28,['#7d9d9a','#b17f66','#c4ac78'][k],-.31+k*.30,.13,0,false);for(let j=0;j<3;j++)box(g,.015,.17,.29,'#d4c4a4',-.40+k*.30+j*.07,.14,0,false);}
-      sign(g,'DOCK SUPPLIES',0,.43,.42,.78);
+      metroPlaque(g,'DOCK SUPPLIES',0,.43,.42,.78);
     }else{
       // Pergola over the existing cafe; the posts frame rather than hide patrons.
       for(const x of [-.52,.52])for(const z of [-.48,.48])box(g,.025,.74,.025,'#9c8868',x,.37,z,false);
@@ -3518,25 +3562,31 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
   }
 
   function metroBuilding(x,z,h,w,d,index,type){
+    const role=metroRole(type,index);
+    if(role==='museum')h=Math.min(.95,h*.65);
+    if(role==='cafe')h=Math.max(.50,Math.min(.72,h*.65));
     const palettes={town:['#ceaa90','#c7bc9d','#8caaa3'],india:['#cc957b','#dcad8f','#c69d80'],japan:['#dfcfb1','#c2b79f','#b5c3b1'],italy:['#deb78a','#e3c8a0','#d5a797'],netherlands:['#a77761','#b38c71','#c9b599'],usa:['#ac806b','#b4b8ad','#c4a78b']};
     const col=palettes[country][(index+Math.floor(index/4))%3],g=new THREE.Group();g.position.set(x,.16,z);world.add(g);
     g.userData.metroBuilding={district:type,height:h,width:w,depth:d,country};metro.buildings.push(g);
-    box(g,w,h,d,col,0,h/2,0,false);
-    const facade=metroFacade(col,index%3,type==='downtown'?8:type==='campus'||type==='civic'?4:2);
-    for(const side of [-1,1]){
-      const f=object(g,geo('plane',1,1),facade,0,h/2,side*(d/2+.005),false);f.scale.set(w,h,1);if(side<0)f.rotation.y=Math.PI;
-      const s=object(g,geo('plane',1,1),facade,side*(w/2+.005),h/2,0,false);s.scale.set(d,h,1);s.rotation.y=side*Math.PI/2;
-    }
-    box(g,w+.08,.075,d+.08,'#e1d5bd',0,h+.035,0,false);
-    const pitched=!(type==='campus'&&index%3===2)&&type!=='downtown'&&type!=='harbour'&&country!=='india'&&(index%3!==0||country==='japan');
-    if(pitched){const r=new THREE.Group();g.add(r);r.position.y=h+.065;r.scale.set(w*.92,.45,d*.92);roof(r,country==='italy'?'#b6724e':country==='japan'?'#525e60':'#7e8175',0);}
-    else{box(g,w*.53,.16,d*.52,'#7b8c88',0,h+.12,-d*.09,false);if(type==='downtown')box(g,w*.30,.25,d*.29,'#9cb3b3',0,h+.30,0,false);}
-    if(country==='netherlands'&&type!=='downtown')for(let i=0;i<3;i++)box(g,w*(1-i*.25),.09,.06,'#e3d7bd',0,h+.10+i*.09,d/2+.02,false);
-    if(type==='market'){
-      for(let k=0;k<4;k++)box(g,w/4,.04,.27,k%2?'#efe0bb':['#759a8b','#ac7e68','#9298ae'][index%3],-w*.375+k*w/4,.43,d/2+.10,false);
+    const signature=metroSignature(g,w,d,h,role,col);
+    if(!signature){
+      box(g,w,h,d,col,0,h/2,0,false);
+      const facade=metroFacade(col,index%3,type==='downtown'?8:type==='campus'||type==='civic'?4:2);
+      for(const side of [-1,1]){
+        const f=object(g,geo('plane',1,1),facade,0,h/2,side*(d/2+.005),false);f.scale.set(w,h,1);if(side<0)f.rotation.y=Math.PI;
+        const s=object(g,geo('plane',1,1),facade,side*(w/2+.005),h/2,0,false);s.scale.set(d,h,1);s.rotation.y=side*Math.PI/2;
+      }
+      box(g,w+.08,.075,d+.08,'#e1d5bd',0,h+.035,0,false);
+      const pitched=!(type==='campus'&&index%3===2)&&type!=='downtown'&&type!=='harbour'&&country!=='india'&&(index%3!==0||country==='japan');
+      if(pitched){const r=new THREE.Group();g.add(r);r.position.y=h+.065;r.scale.set(w*.92,.45,d*.92);roof(r,country==='italy'?'#b6724e':country==='japan'?'#525e60':'#7e8175',0);}
+      else{box(g,w*.53,.16,d*.52,'#7b8c88',0,h+.12,-d*.09,false);if(type==='downtown')box(g,w*.30,.25,d*.29,'#9cb3b3',0,h+.30,0,false);}
+      if(country==='netherlands'&&type!=='downtown')for(let i=0;i<3;i++)box(g,w*(1-i*.25),.09,.06,'#e3d7bd',0,h+.10+i*.09,d/2+.02,false);
+      if(type==='market'){
+        for(let k=0;k<4;k++)box(g,w/4,.04,.27,k%2?'#efe0bb':['#759a8b','#ac7e68','#9298ae'][index%3],-w*.375+k*w/4,.43,d/2+.10,false);
+      }
     }
     metroIdentity(g,w,d,h,index,type);
-    metroFacadeDetails(g,w,d,h,index,type);
+    if(!signature)metroFacadeDetails(g,w,d,h,index,type);
     if(type==='harbour'&&index%2===0){
       for(let k=0;k<3;k++){const light=box(g,w*.65,.035,.12,'#9db7b1',0,h+.22,(k-1)*d*.22,false);light.rotation.x=-.16;}
     }else if(type==='garden'&&index%2===1){
@@ -3546,7 +3596,14 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
       for(let k=0;k<3;k++)box(g,.012,.012,d*.30,'#b5c6ba',(-.24+k*.24)*w,h+.495,0,false);
     }
 
-    rainRoofs.push({x,z,rx:w/2+.06,rz:d/2+.06,top:.16+h+(type==='campus'||type==='civic'?.60:type==='downtown'?.55:.40)});
+    if(role==='library'){
+      for(const side of [-1,1])rainRoofs.push({x:x+side*w*.36,z,rx:w*.15,rz:d/2+.03,top:.16+h*.58+.03});
+      rainRoofs.push({x,z:z-d*.05,rx:w*.25,rz:d*.47,top:.16+h+.055});
+    }else if(role==='museum'){
+      rainRoofs.push({x,z,rx:w/2,rz:d/2,top:.16+h*.78});
+      rainRoofs.push({x,z:z-d*.08,rx:w*.28,rz:d*.38,top:.16+h+.035});
+      rainRoofs.push({x,z:z+d/2+.045,rx:w*.51,rz:.12,top:.16+h*.73+.03});
+    }else rainRoofs.push({x,z,rx:w/2+.06,rz:d/2+.06,top:.16+h+(type==='campus'||type==='civic'?.60:type==='downtown'?.55:.40)});
   }
   function metroLink(ax,az,bx,bz,raised=false){
     const g=new THREE.Group();world.add(g);const length=Math.hypot(bx-ax,bz-az),angle=Math.atan2(bx-ax,bz-az);
@@ -3680,7 +3737,8 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
       }
       // A continuous inner pavement keeps walkers clear of traffic and plots.
       for(const side of [-1,1]){box(world,.24,.025,7.36,'#d4ccb8',x+side*3.56,.17,z,false);box(world,7.36,.025,.24,'#d4ccb8',x,.17,z+side*3.56,false);}
-      sign(world,D.name.toUpperCase(),x,.55,z+4.70,1.65,'#4f655f','#e7debe');
+      const districtPlaque=metroPlaque(world,D.name.toUpperCase(),x,.34,z+4.70,1.55);
+      box(world,1.12,.12,.10,'#aa987b',x,.22,z+4.69,false);
       // These vehicles join the shared interdistrict street spine below.
       for(let i=0;i<4;i++){
         const g=car({kind:i===0?'bus':'car',col:['#d4bd83','#80a5af','#b88e7f','#a7b5a4'][i],ph:i});metro.actorGroup.add(g);
