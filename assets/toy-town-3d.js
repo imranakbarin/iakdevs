@@ -119,10 +119,12 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
   const mat = (hex, rough = .82, emissive = null) => {
     const key = String(hex) + ':' + rough + ':' + (emissive || '');
     if (!materialCache.has(key)) {
-      materialCache.set(key, new THREE.MeshStandardMaterial({
+      const made = new THREE.MeshStandardMaterial({
         color: hex, roughness: rough, metalness: 0.025,
         ...(emissive ? {emissive, emissiveIntensity: .45} : {})
-      }));
+      });
+      if (made.userData) made.userData.plain = true;   // a painted colour and nothing else: the batcher may bake it into vertex colours
+      materialCache.set(key, made);
     }
     return materialCache.get(key);
   };
@@ -161,16 +163,16 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
       let shape;
       if (kind === 'round') shape = new RoundedBoxGeometry(dims[0],dims[1],dims[2],2,Math.min(dims[0],dims[1],dims[2])*.14);
       else if (kind === 'box') shape = new THREE.BoxGeometry(...dims);
-      else if (kind === 'sphere') shape = LOWPOLY ? new THREE.SphereGeometry(dims[0],12,8) : new THREE.SphereGeometry(dims[0],16,12);
+      else if (kind === 'sphere') shape = LOWPOLY ? new THREE.SphereGeometry(dims[0],12,8) : new THREE.SphereGeometry(dims[0],14,10);
       else if (kind === 'ball') shape = new THREE.IcosahedronGeometry(dims[0],1);
       else if (kind === 'cylinder') shape = new THREE.CylinderGeometry(...dims,14);
       else if (kind === 'torus') shape = new THREE.TorusGeometry(...dims,7,12);
       else if (kind === 'plane') shape = new THREE.PlaneGeometry(...dims);
       else if (kind === 'clump') shape = clumpGeometry(dims[0], dims[1]);
       else if (kind === 'soft') shape = new RoundedBoxGeometry(dims[0],dims[1],dims[2],LOWPOLY?1:4,dims[3]);
-      else if (kind === 'smooth') shape = LOWPOLY ? new THREE.SphereGeometry(dims[0],14,10) : new THREE.SphereGeometry(dims[0],24,18);
-      else if (kind === 'capsule') shape = LOWPOLY ? new THREE.CapsuleGeometry(dims[0],dims[1],3,10) : new THREE.CapsuleGeometry(dims[0],dims[1],6,16);
-      else if (kind === 'hairshell') shape = LOWPOLY ? new THREE.SphereGeometry(dims[0],14,8,0,Math.PI*2,0,Math.PI*.56) : new THREE.SphereGeometry(dims[0],24,14,0,Math.PI*2,0,Math.PI*.56);
+      else if (kind === 'smooth') shape = LOWPOLY ? new THREE.SphereGeometry(dims[0],14,10) : new THREE.SphereGeometry(dims[0],18,13);
+      else if (kind === 'capsule') shape = LOWPOLY ? new THREE.CapsuleGeometry(dims[0],dims[1],3,10) : new THREE.CapsuleGeometry(dims[0],dims[1],5,14);
+      else if (kind === 'hairshell') shape = LOWPOLY ? new THREE.SphereGeometry(dims[0],14,8,0,Math.PI*2,0,Math.PI*.56) : new THREE.SphereGeometry(dims[0],20,11,0,Math.PI*2,0,Math.PI*.56);
       geometryCache.set(key,shape);
     }
     return geometryCache.get(key);
@@ -3070,6 +3072,68 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
      everything translucent and everything invisible stays as it was. ?nobatch switches it off. ---- */
   const batch={geos:[],removed:0,merged:0,off:typeof location!=='undefined'&&/[?&]nobatch\b/.test(location.search||''),candidates:[]};
   const CELLS=3;
+  // Plain painted materials differ only in colour. Baking that colour into vertex colours lets everything with the same
+  // finish share one material, so the static batcher (and the rig merger below) can fold hundreds of draw calls into a few.
+  const bakedFinishes=new Map();
+  const bakeableMaterial=m=>!!m&&!!m.userData&&m.userData.plain===true&&m.type==='MeshStandardMaterial'&&!m.map&&!m.vertexColors&&!m.normalMap&&!m.roughnessMap&&!m.bumpMap&&!m.alphaMap&&!m.envMap&&!m.userData.noBake&&m.opacity===1&&!m.transparent&&!!m.emissive&&m.emissive.r+m.emissive.g+m.emissive.b===0;
+  const bakedFinish=m=>{
+    const k=[m.roughness,m.metalness,m.flatShading?1:0,m.side,m.envMapIntensity].join('|');let f=bakedFinishes.get(k);
+    if(!f){f=new THREE.MeshStandardMaterial({color:'#ffffff',vertexColors:true,roughness:m.roughness,metalness:m.metalness,flatShading:m.flatShading,side:m.side});f.userData.bakedFinish=true;bakedFinishes.set(k,f);}
+    return {k,f};
+  };
+  // A resident is ~35 little meshes. Inside each rigid node (the head pivot, a leg, an arm…) the static, plainly painted ones
+  // become one mesh with vertex colours; anything the animation or the simulation holds on to (eyelids, brows, the shop bag,
+  // anything with userData) stays separate. This is where over half of all draw calls used to go.
+  let rigMerged=0,rigRemoved=0;
+  function bakeRig(root){
+    if(!THREE.Matrix4||!THREE.BufferGeometry||!THREE.BufferAttribute||!THREE.Vector3||!THREE.Matrix3||!root.traverse)return;
+    const protect=new Set(),grab=(v,depth)=>{
+      if(!v||typeof v!=='object'||depth>6)return;
+      if(v.isObject3D){protect.add(v);return;}
+      if(Array.isArray(v)){for(const x of v)grab(x,depth+1);return;}
+      for(const k in v)grab(v[k],depth+1);
+    };
+    grab(root.userData,0);
+    root.traverse(n=>{if(n!==root&&n.userData&&Object.keys(n.userData).length)protect.add(n);});
+    const nodes=[];root.traverse(n=>{if(n===root||n.isGroup)nodes.push(n);});
+    const nm=new THREE.Matrix3(),v=new THREE.Vector3();
+    for(const node of nodes){
+      const buckets=new Map();
+      for(const c of node.children){
+        if(!c.isMesh||c.isInstancedMesh||c.isSkinnedMesh||!c.visible||protect.has(c)||c.onBeforeRender!==THREE.Object3D.prototype.onBeforeRender)continue;
+        const m=c.material,at=c.geometry&&c.geometry.attributes;
+        if(Array.isArray(m)||!bakeableMaterial(m)||!at||!at.position||!at.normal||at.position.isInterleavedBufferAttribute||at.normal.isInterleavedBufferAttribute)continue;
+        const fin=bakedFinish(m),key=fin.k+'|'+(c.castShadow?1:0)+(c.receiveShadow?1:0);
+        let b=buckets.get(key);if(!b){b={f:fin.f,cast:c.castShadow,receive:c.receiveShadow,list:[]};buckets.set(key,b);}
+        b.list.push(c);
+      }
+      for(const b of buckets.values()){
+        if(b.list.length<2)continue;
+        let nv=0,ni=0;for(const c of b.list){nv+=c.geometry.attributes.position.count;ni+=c.geometry.index?c.geometry.index.count:c.geometry.attributes.position.count;}
+        const pos=new Float32Array(nv*3),nor=new Float32Array(nv*3),col=new Float32Array(nv*3),idx=nv>65535?new Uint32Array(ni):new Uint16Array(ni);
+        let vo=0,io=0;
+        for(const c of b.list){
+          c.updateMatrix();const mw=c.matrix,g=c.geometry,pa=g.attributes.position,na=g.attributes.normal,count=pa.count,flip=mw.determinant()<0,mc=c.material.color;
+          nm.getNormalMatrix(mw);
+          for(let i=0;i<count;i++){
+            v.set(pa.array[i*3],pa.array[i*3+1],pa.array[i*3+2]).applyMatrix4(mw);pos[(vo+i)*3]=v.x;pos[(vo+i)*3+1]=v.y;pos[(vo+i)*3+2]=v.z;
+            v.set(na.array[i*3],na.array[i*3+1],na.array[i*3+2]).applyMatrix3(nm).normalize();nor[(vo+i)*3]=v.x;nor[(vo+i)*3+1]=v.y;nor[(vo+i)*3+2]=v.z;
+            col[(vo+i)*3]=mc.r;col[(vo+i)*3+1]=mc.g;col[(vo+i)*3+2]=mc.b;
+          }
+          const ix=g.index;
+          if(ix){for(let i=0;i<ix.count;i+=3){const a=ix.array[i]+vo,b2=ix.array[i+1]+vo,d=ix.array[i+2]+vo;if(flip){idx[io++]=a;idx[io++]=d;idx[io++]=b2;}else{idx[io++]=a;idx[io++]=b2;idx[io++]=d;}}}
+          else for(let i=0;i<count;i+=3){if(flip){idx[io++]=i+vo;idx[io++]=i+2+vo;idx[io++]=i+1+vo;}else{idx[io++]=i+vo;idx[io++]=i+1+vo;idx[io++]=i+2+vo;}}
+          vo+=count;
+        }
+        const mg=new THREE.BufferGeometry();
+        mg.setAttribute('position',new THREE.BufferAttribute(pos,3));mg.setAttribute('normal',new THREE.BufferAttribute(nor,3));mg.setAttribute('color',new THREE.BufferAttribute(col,3));
+        mg.setIndex(new THREE.BufferAttribute(idx,1));mg.computeBoundingSphere();
+        const mesh=new THREE.Mesh(mg,b.f);mesh.castShadow=b.cast;mesh.receiveShadow=b.receive;
+        for(const c of b.list)node.remove(c);
+        node.add(mesh);rigMerged++;rigRemoved+=b.list.length;
+      }
+    }
+  }
   function batchStatic(end){
     for(const g of batch.geos)g.dispose?.();
     batch.geos=[];batch.removed=0;batch.merged=0;batch.candidates=[];
@@ -3082,6 +3146,10 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
     mark(cinemaBeam);mark(cinemaScreen);mark(shootingStar);mark(fireflies);
     world.updateMatrixWorld(true);
     const inv=new THREE.Matrix4().copy(world.matrixWorld).invert(),buckets=new Map(),plainBefore=THREE.Object3D.prototype.onBeforeRender;
+    // Plain painted materials (from mat(): a colour, a roughness, nothing else) differ only in colour, which kept 1200 materials
+    // from merging. Their colour is baked into vertex colours and they share one material per surface finish, so every
+    // plain mesh in a 6x6 cell becomes one draw call. Lit/animated/textured/transparent materials are left alone.
+    const bakeable=bakeableMaterial,finish=bakedFinish;
     const walk=o=>{
       if(!o.visible||skip.has(o)||o.userData?.noBatch||o.userData?.limbs)return;   // hidden, animated, or a person rig
       if(o.isMesh&&!o.isInstancedMesh&&!o.isSkinnedMesh&&!o.isPoints&&!o.isLine){
@@ -3091,9 +3159,11 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
           if(!m.vertexColors||at.color){
             const mw=new THREE.Matrix4().multiplyMatrices(inv,o.matrixWorld);
             const cx=Math.floor(mw.elements[12]/6),cz=Math.floor(mw.elements[14]/6);
-            const sig=Object.keys(at).sort().map(k=>k+at[k].itemSize+(at[k].isInterleavedBufferAttribute?'i':'')).join(',');
-            const key=m.uuid+'|'+cx+','+cz+'|'+sig+'|'+(o.castShadow?1:0)+(o.receiveShadow?1:0);
-            let b=buckets.get(key);if(!b){b={material:m,cast:o.castShadow,receive:o.receiveShadow,list:[],names:Object.keys(at).filter(k=>!at[k].isInterleavedBufferAttribute)};buckets.set(key,b);}
+            const bake=!at.color&&bakeable(m);
+            const fin=bake?finish(m):null;
+            const sig=bake?'baked':Object.keys(at).sort().map(k=>k+at[k].itemSize+(at[k].isInterleavedBufferAttribute?'i':'')).join(',');
+            const key=(bake?'vc:'+fin.k:m.uuid)+'|'+cx+','+cz+'|'+sig+'|'+(o.castShadow?1:0)+(o.receiveShadow?1:0);
+            let b=buckets.get(key);if(!b){b={material:bake?fin.f:m,baked:bake,cast:o.castShadow,receive:o.receiveShadow,list:[],names:bake?['position','normal','color']:Object.keys(at).filter(k=>!at[k].isInterleavedBufferAttribute)};buckets.set(key,b);}
             b.list.push({o,mw});
           }
         }
@@ -3108,13 +3178,14 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
       if(b.list.length<2)continue;   // a lone mesh gains nothing
       let nv=0,ni=0;
       for(const {o} of b.list){nv+=o.geometry.attributes.position.count;ni+=o.geometry.index?o.geometry.index.count:o.geometry.attributes.position.count;}
-      const out={};for(const n of b.names){const a=b.list[0].o.geometry.attributes[n];out[n]=new Float32Array(nv*a.itemSize);}
+      const out={};for(const n of b.names){const a=b.list[0].o.geometry.attributes[n];out[n]=new Float32Array(nv*(a?a.itemSize:3));}
       const idx=nv>65535?new Uint32Array(ni):new Uint16Array(ni);
       let vo=0,io=0;
       for(const {o,mw} of b.list){
         const g=o.geometry,pos=g.attributes.position,count=pos.count,flip=mw.determinant()<0;
         nm.getNormalMatrix(mw);
         for(const n of b.names){
+          if(b.baked&&n==='color'){const c=o.material.color,dst=out.color;for(let i=0;i<count;i++){dst[(vo+i)*3]=c.r;dst[(vo+i)*3+1]=c.g;dst[(vo+i)*3+2]=c.b;}continue;}
           const a=g.attributes[n],sz=a.itemSize,src=a.array,dst=out[n];
           if(n==='position'){for(let i=0;i<count;i++){v.set(src[i*3],src[i*3+1],src[i*3+2]).applyMatrix4(mw);dst[(vo+i)*3]=v.x;dst[(vo+i)*3+1]=v.y;dst[(vo+i)*3+2]=v.z;}}
           else if(n==='normal'){for(let i=0;i<count;i++){v.set(src[i*3],src[i*3+1],src[i*3+2]).applyMatrix3(nm).normalize();dst[(vo+i)*3]=v.x;dst[(vo+i)*3+1]=v.y;dst[(vo+i)*3+2]=v.z;}}
@@ -3126,7 +3197,7 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
         vo+=count;
       }
       const mg=new THREE.BufferGeometry();
-      for(const n of b.names)mg.setAttribute(n,new THREE.BufferAttribute(out[n],b.list[0].o.geometry.attributes[n].itemSize));
+      for(const n of b.names)mg.setAttribute(n,new THREE.BufferAttribute(out[n],n==='color'&&b.baked?3:b.list[0].o.geometry.attributes[n].itemSize));
       mg.setIndex(new THREE.BufferAttribute(idx,1));mg.computeBoundingSphere();
       const mesh=new THREE.Mesh(mg,b.material);mesh.castShadow=b.cast;mesh.receiveShadow=b.receive;mesh.matrixAutoUpdate=false;mesh.userData.staticBatch=true;
       for(const {o} of b.list)o.parent?.remove(o);
@@ -4190,6 +4261,7 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
       CUTE*scale*(1.04+.07*Math.cos(characterPhase*.9)),
       CUTE*scale*(.88+.045*Math.sin(characterPhase+1)));
     headPivot.scale.setScalar(HEAD_BIG);
+    try{bakeRig(g);}catch(e){}   // fewer draw calls per resident; the unmerged rig is the fallback
     return g;
   }
   /* ---- The ring railway. A little round-faced steam train loops the town on a
@@ -5719,6 +5791,7 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
     }
     g.userData.vehicleRig={wheels,brakeMaterial,indicators,axleHalf:L*.31*VEHICLE_SCALE};
     g.userData.vehicleClass=kind;
+    try{bakeRig(g);}catch(e){}
     // Tiny toy vehicles: the whole machine is drawn at VEHICLE_SCALE (the simulation's bodies are sized to match).
     const outer=new THREE.Group();
     g.scale.setScalar(VEHICLE_SCALE);outer.add(g);
@@ -5791,6 +5864,7 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
     }
     g.userData.bicycleRig={wheels,crank,legs};
     g.userData.vehicleClass='bike';
+    try{bakeRig(g);}catch(e){}
     return g;
   }
   function creature(ref){
@@ -6596,7 +6670,7 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
     stepTrain:(seconds,dark=0)=>{for(let t=0;t<seconds;t+=.05){updateTrain(.05,dark);updateFarm(.05);updateSite(.05);updateLife(.05);updateMore(.05,dark);updateStage2(.05,dark);updateStage3(.05,dark);updateNewsroom(.05,dark);updateStage4(.05,dark);updateStage5(.05,dark);updateStage6(.05);}},
     // Meshes whose material reads vertex colours but whose geometry has none draw pure black.
     vertexColorAudit:()=>{let bad=0;world.traverse?.(o=>{if(o.isMesh&&o.material?.vertexColors&&o.geometry?.attributes&&!o.geometry.attributes.color)bad++;});return bad;},
-    batchStats:()=>({removed:batch.removed,merged:batch.merged,candidates:batch.candidates.length,off:batch.off}),staticCandidates:()=>batch.candidates,
+    batchStats:()=>({rigMerged,rigRemoved,removed:batch.removed,merged:batch.merged,candidates:batch.candidates.length,off:batch.off}),staticCandidates:()=>batch.candidates,
     bridgeProfile:(x,z,facing=0,half=.12)=>bridgeContact(x,z,facing,half),
     signalStats:()=>({poles:signal.poles,heads:signal.heads,built:!!signal.mats,phase:town.lightPhase?.()||null,lit:signal.mats?['x','y'].map(a=>['r','a','g'].filter(c=>signal.mats[a][c].emissiveIntensity>1).join('')):null}),
     stage6Stats:()=>({season:SEASON_NAME,lite,ground:bus3.ground.filter(m=>m.visible).length,notes:notes6.pool.filter(n=>n.visible).length,spawned:notes6.spawned,mood:moodOf({ph:1,kid:false})}),setLite:v=>{setLite(v);return lite;},
