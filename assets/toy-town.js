@@ -2794,6 +2794,40 @@ const ToyTown = (() => {
     }
     separated+=rolled?dt:0;
   }
+  // One duck's behaviour: wander between spread-out spots in the river, idle there a while, keep clear of the other ducks,
+  // swim away from walkers on the bank and gather at crumbs. Heading (p.hd) eases towards the way it is swimming.
+  function duckStep(p,ducks,dt){
+    const W=[.8,17.2],Y=[13.3,14.7];
+    if(p.tx===undefined){p.tx=p.x;p.ty=p.y;p.waitUntil=clock+Math.random()*4;p.sp=.08;p.hd=p.vx<0?Math.PI:0;p.vy=0;}
+    const pick=()=>{   // the best of several candidate spots: far from every other duck, and not too far from here
+      let best=null,bs=-1;
+      for(let k=0;k<7;k++){
+        const x=clamp(W[0],p.x+(Math.random()-.5)*9,W[1]),y=Y[0]+Math.random()*(Y[1]-Y[0]);
+        let md=9;for(const o of ducks){if(o===p)continue;md=Math.min(md,Math.hypot(o.x-x,o.y-y),Math.hypot(o.tx-x,o.ty-y));}
+        if(md>bs){bs=md;best={x,y};}
+      }
+      p.tx=best.x;p.ty=best.y;p.sp=.06+Math.random()*.07;p.waitUntil=0;
+    };
+    let near=null;for(const m of movers){if(m.type==='person'&&Math.abs(m.x-p.x)<1.12&&Math.abs(m.y-p.y)<1.12&&Math.hypot(m.x-p.x,m.y-p.y)<1.12){near=m;break;}}
+    if(crumbs&&clock<crumbs.until){
+      p.jx=p.jx===undefined?(Math.random()-.5)*.9:p.jx;p.jy=p.jy===undefined?(Math.random()-.5)*.6:p.jy;
+      p.tx=clamp(W[0],crumbs.x+p.jx,W[1]);p.ty=clamp(Y[0],crumbs.y+p.jy,Y[1]);p.sp=Math.min(.42,.16+Math.hypot(crumbs.x-p.x,crumbs.y-p.y)*.12);p.waitUntil=0;
+      if(Math.hypot(p.tx-p.x,p.ty-p.y)<.2)p.nibble=clock;
+    }else{
+      p.jx=p.jy=undefined;
+      if(near){p.tx=clamp(W[0],p.x+(Math.sign(p.x-near.x)||1)*2.2,W[1]);p.ty=clamp(Y[0],p.y+(Math.random()-.5)*.4,Y[1]);p.sp=.17;p.waitUntil=0;p.alertUntil=clock+1.5;}
+      else if(Math.hypot(p.tx-p.x,p.ty-p.y)<.12){if(!p.waitUntil)p.waitUntil=clock+2.5+Math.random()*6;else if(clock>p.waitUntil)pick();}
+    }
+    let vx=0,vy=0;const dx=p.tx-p.x,dy=p.ty-p.y,d=Math.hypot(dx,dy);
+    if(d>.1&&(!p.waitUntil||clock>p.waitUntil)){const sp=p.sp*Math.min(1,.35+d*1.2);vx=dx/d*sp;vy=dy/d*sp;}
+    for(const o of ducks){   // personal space
+      if(o===p)continue;const ox=p.x-o.x,oy=p.y-o.y,od=Math.hypot(ox,oy);
+      if(od<.42&&od>.001){const push=(.42-od)*.5;vx+=ox/od*push;vy+=oy/od*push;}
+    }
+    p.vx=vx||((Math.sign(p.vx)||1)*.001);p.vy=vy;
+    p.x=clamp(.3,p.x+vx*dt,17.5);p.y=clamp(Y[0]-.1,p.y+vy*dt,Y[1]+.1);   // the bridges are arches: ducks swim underneath
+    if(Math.hypot(vx,vy)>.01){const want=Math.atan2(vy,vx);let df=want-p.hd;df=Math.atan2(Math.sin(df),Math.cos(df));p.hd+=df*Math.min(1,dt*3);}
+  }
   function update(dt) {
     clock += dt;
     updateNeighborhoodLife(dt);
@@ -2815,29 +2849,9 @@ const ToyTown = (() => {
       if (!Number.isFinite(m.x) || !Number.isFinite(m.y)) { remove(m); continue; }
       m.x=clamp(.08,m.x,17.92);m.y=clamp(.08,m.y,17.92);
     }
-    for(const p of props)if(p.kind==='duck'&&crumbs&&clock<crumbs.until){
-      // Crumbs on the water: every duck paddles over, quickest first, and nibbles.
-      const dx=crumbs.x-p.x,dy=crumbs.y-p.y,d=Math.hypot(dx,dy);
-      if(d>.22){const sp=Math.min(.42,.16+d*.12);p.vx=dx/d*sp;const nx=p.x+dx/d*sp*dt;if(!onBridge(nx)||onBridge(p.x))p.x=nx;else p.vx=0;p.y=clamp(13.12,p.y+dy/d*sp*dt,14.88);}
-      else{p.vx=(Math.sign(p.vx)||1)*.001;p.nibble=clock;}
-      continue;
-    }
-    for(const p of props)if(p.kind==='duck'){
-      // Water birds notice activity near the bank and swim away gradually.
-      // They stay on their existing water line, never across the paving.
-      const near=movers.find(m=>m.type==='person'&&
-        Math.hypot(m.x-p.x,m.y-p.y)<1.12);
-      if(near){
-        const away=Math.sign(p.x-near.x)||1;
-        p.vx=away*Math.min(.18,Math.max(.065,Math.abs(p.vx||0)));
-        p.alertUntil=clock+1.5;
-      }else if(clock>(p.alertUntil||0)){
-        p.vx+=(Math.sign(p.vx||1)*.065-p.vx)*Math.min(1,dt*.5);
-      }
-      const nx=p.x+p.vx*dt;
-      p.x=nx;   // the bridges are arches now: ducks swim underneath
-      if(p.x<.3||p.x>17.5)p.vx*=-1;
-      p.x=clamp(.3,p.x,17.5);
+    {   // Ducks: each one wanders on its own, spreads out from the others, pauses to preen, and still swims to crumbs or away from people.
+      const ducks=props.filter(p=>p.kind==='duck');
+      for(const p of ducks)duckStep(p,ducks,dt);
     }
     for (const p of props) if (p.kind === 'rover') { if (clock > p.t) { p.tx = p.x + (Math.random() - .5) * 2; p.ty = p.y + (Math.random() - .5) * 2; p.t = clock + 4; } p.x += (p.tx - p.x) * dt * .15; p.y += (p.ty - p.y) * dt * .15; }
     for (const p of props) if (p.kind === 'animal' && !p.out) { if (!p.t || clock > p.t) { const z = props.find(q => q.kind === 'zoo'); if (z) { p.tx = z.x + (Math.random() - .5) * 2.8; p.ty = z.y + (Math.random() - .5) * 2.8; } p.t = clock + 3 + Math.random() * 4; } p.x += (p.tx - p.x) * dt * .3; p.y += (p.ty - p.y) * dt * .3; }
