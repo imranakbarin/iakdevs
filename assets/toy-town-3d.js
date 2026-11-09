@@ -3445,9 +3445,9 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
     const m=new THREE.MeshStandardMaterial({map:tx,roughness:.88});metroFacades.set(key,m);return m;
   }
   const metroRole=(type,index)=>type==='campus'?['library','lecture hall','observatory'][index%3]:type==='civic'?['council hall','museum','post office'][index%3]:type==='harbour'?'warehouse':type==='market'?['cafe','gallery','bakery'][index%3]:type==='garden'?'porch house':'office';
-  function metroPlaque(g,text,x,y,z,w){
-    const plaque=sign(g,text,x,y,z,w*.68,'#435c57','#e5ddc7');plaque.scale.y=.60;plaque.userData.metroPlaque=true;return plaque;
-  }
+  // The flat text boards ("LIBRARY", "WAREHOUSE", district names) read as pale slabs stuck on the buildings: removed. The
+  // buildings carry their role in their architecture now (porches, towers, canopies, stalls, crates).
+  function metroPlaque(){return new THREE.Group();}
   function metroSignature(g,w,d,h,role,col){
     if(!['library','museum','cafe','gallery','bakery'].includes(role))return false;
     g.userData.metroSignature=role;
@@ -3592,8 +3592,10 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
       box(g,.24,.035,.17,'#8d775a',w*.32,.11,d/2+.12,false);
     }
     if(type==='downtown'){
-      box(g,w*.75,.045,.14,'#a2b4ad',0,h*.45,d/2+.04,false);
-      for(let k=0;k<4;k++)box(g,.018,.14,.02,'#d5cbb3',(-.3+k*.2)*w,h*.45+.08,d/2+.10,false);
+      // Slim pilasters up the front instead of a floating slab, and a stepped crown with a water tank on every other tower.
+      for(let k=0;k<5;k++)box(g,.045,h*.96,.03,'#d9cfb7',(-.4+k*.2)*w,h*.48,d/2+.018,false);
+      box(g,w*.78,.09,d*.78,'#d9cfb7',0,h+.12,0,false);
+      if(index%2===0){cylinder(g,.11,.11,.20,'#8e7c66',w*.16,h+.28,-d*.12);cylinder(g,.012,.012,.18,'#6f6a5e',w*.16,h+.47,-d*.12);}
     }
     if(type==='harbour'){cylinder(g,.035,.035,.21,'#788d87',w*.32,h+.17,-d*.30);box(g,.14,.035,.14,'#aeae95',w*.32,h+.29,-d*.30,false);}
   }
@@ -3736,17 +3738,49 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
       rainRoofs.push({x,z,rx:w/2,rz:d/2,top:.16+h*.78+.10});
     }else rainRoofs.push({x,z,rx:w/2+.06,rz:d/2+.06,top:.16+h+(type==='campus'||type==='civic'?.60:type==='downtown'?.55:.40)});
   }
+  // A raised link is one solid stone footbridge: parapets, a deck that rises on a smooth ramp, an open span over the canal and
+  // the railway (clear of the train) and a solid embankment under each ramp. One mesh, vertex-coloured, flat shaded.
+  function footbridgeGeometry(ax,az,bx,bz,ground,rise,hw=.40){
+    const L=Math.hypot(bx-ax,bz-az),ux=(bx-ax)/L,uz=(bz-az)/L,nx=-uz,nz=ux,N=40,pw=.07,ph=.15;
+    const pos=[],nor=[],col=[],C=new THREE.Color();
+    const w=t=>{const s=Math.min(1,Math.min(t,1-t)/.30);return s*s*(3-2*s);};
+    const bot=t=>{const k=Math.min(1,Math.max(0,(w(t)-.82)/.18));return ground-.02+(ground+rise*w(t)-.11-(ground-.02))*k;};
+    const pt=(t,off,y)=>[ax+(bx-ax)*t+nx*off,y,az+(bz-az)*t+nz*off];
+    const quad=(p0,p1,p2,p3,color,hint)=>{
+      const e1=[p1[0]-p0[0],p1[1]-p0[1],p1[2]-p0[2]],e2=[p2[0]-p0[0],p2[1]-p0[1],p2[2]-p0[2]];
+      let n=[e1[1]*e2[2]-e1[2]*e2[1],e1[2]*e2[0]-e1[0]*e2[2],e1[0]*e2[1]-e1[1]*e2[0]];
+      const m=Math.hypot(...n)||1;n=n.map(v=>v/m);
+      const flip=n[0]*hint[0]+n[1]*hint[1]+n[2]*hint[2]<0,order=flip?[p0,p3,p2,p0,p2,p1]:[p0,p1,p2,p0,p2,p3];
+      if(flip)n=n.map(v=>-v);C.set(color);
+      for(const q of order){pos.push(...q);nor.push(...n);col.push(C.r,C.g,C.b);}
+    };
+    for(let i=0;i<N;i++){
+      const t0=i/N,t1=(i+1)/N,y0=ground+rise*w(t0),y1=ground+rise*w(t1),b0=bot(t0),b1=bot(t1),shade=i%2?'#b9b4a2':'#c0bba9';
+      quad(pt(t0,-hw,y0),pt(t0,hw,y0),pt(t1,hw,y1),pt(t1,-hw,y1),shade,[0,1,0]);                       // deck
+      for(const sd of [-1,1]){
+        quad(pt(t0,sd*hw,y0),pt(t1,sd*hw,y1),pt(t1,sd*hw,y1+ph),pt(t0,sd*hw,y0+ph),'#cfc6ae',[-nx*sd,0,-nz*sd]);                 // parapet, inside
+        quad(pt(t0,sd*hw,y0+ph),pt(t1,sd*hw,y1+ph),pt(t1,sd*(hw+pw),y1+ph),pt(t0,sd*(hw+pw),y0+ph),'#e0d7c0',[0,1,0]);          // coping
+        quad(pt(t0,sd*(hw+pw),y0+ph),pt(t1,sd*(hw+pw),y1+ph),pt(t1,sd*(hw+pw),b1),pt(t0,sd*(hw+pw),b0),'#aea892',[nx*sd,0,nz*sd]); // outside wall down to the ground or the arch
+      }
+      quad(pt(t0,-(hw+pw),b0),pt(t1,-(hw+pw),b1),pt(t1,hw+pw,b1),pt(t0,hw+pw,b0),'#8f8b7a',[0,-1,0]);               // underside
+    }
+    for(const sd of [-1,1])for(const [t,dir] of [[0,-1],[1,1]]){   // parapet end caps
+      const y=ground+rise*w(t);quad(pt(t,sd*hw,y),pt(t,sd*(hw+pw),y),pt(t,sd*(hw+pw),y+ph),pt(t,sd*hw,y+ph),'#d9d0b9',[ux*dir,0,uz*dir]);
+    }
+    const g=new THREE.BufferGeometry();
+    g.setAttribute('position',new THREE.BufferAttribute(new Float32Array(pos),3));g.setAttribute('normal',new THREE.BufferAttribute(new Float32Array(nor),3));g.setAttribute('color',new THREE.BufferAttribute(new Float32Array(col),3));
+    g.computeBoundingSphere();return g;
+  }
   function metroLink(ax,az,bx,bz,raised=false){
     const g=new THREE.Group();world.add(g);const length=Math.hypot(bx-ax,bz-az),angle=Math.atan2(bx-ax,bz-az);
-    const height=t=>.174+(raised?Math.sin(Math.PI*t)**2*1.45:0);
-    for(let i=0;i<24;i++){
+    const RISE=.62,ground=.174,w=t=>{const s=Math.min(1,Math.min(t,1-t)/.30);return s*s*(3-2*s);};
+    const height=t=>ground+(raised?RISE*w(t):0);
+    if(THREE.BufferGeometry&&THREE.BufferAttribute&&THREE.Color){
+      const mesh=new THREE.Mesh(footbridgeGeometry(ax,az,bx,bz,ground,raised?RISE:0,raised?.40:.75),bakedFinish({roughness:.92,metalness:.02,flatShading:false,side:0}).f);
+      mesh.castShadow=true;mesh.receiveShadow=true;mesh.userData.metroFootbridge=raised;g.add(mesh);
+    }else for(let i=0;i<24;i++){
       const t=(i+.5)/24,x=ax+(bx-ax)*t,z=az+(bz-az)*t;
-      const q=box(g,raised?.92:1.50,.075,length/24+.012,'#a7a99d',x,height(t)-.0375,z,false);const slope=(height(Math.min(1,t+.001))-height(Math.max(0,t-.001)))/(length*.002);
-      q.rotation.order='YXZ';q.rotation.y=angle;q.rotation.x=-Math.atan(slope);q.scale.z=Math.sqrt(1+slope*slope);
-      for(const side of [-1,1]){
-        const rx=x+Math.cos(angle)*side*(raised?.49:.80),rz=z-Math.sin(angle)*side*(raised?.49:.80);
-        const rail=box(g,.025,.04,length/24+.02,'#e2d6bb',rx,height(t)+.13,rz,false);rail.rotation.order='YXZ';rail.rotation.y=angle;rail.rotation.x=-Math.atan(slope);rail.scale.z=Math.sqrt(1+slope*slope);
-      }
+      const q=box(g,raised?.92:1.50,.075,length/24+.012,'#a7a99d',x,height(t)-.0375,z,false);q.rotation.y=angle;
     }
     if(raised){
       const p=person({col:'#a88caa',ph:1,x:ax,y:az});p.scale.setScalar(.48);metro.actorGroup.add(p);
@@ -3846,6 +3880,26 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
     }
   }
 
+  // Street trees on the outer verge of each quarter and a lamp at each corner of the inner pavement (no extra lights: the
+  // lantern glow is an emissive material). Trees keep clear of the district's four street mouths and of the bridge landings.
+  const METRO_LANDINGS=[[-3,6.5],[1.5,6.5],[6.5,-3],[6.5,1.5],[16.5,6.5],[21,6.5]];
+  function metroGreenery(D,district){
+    for(const side of [-1,1])for(const along of [-3.4,-1.7,1.7,3.4]){
+      for(const horizontal of [true,false]){
+        const x=D.x+(horizontal?along:side*4.80),z=D.z+(horizontal?side*4.80:along);
+        if(METRO_LANDINGS.some(([lx,lz])=>Math.hypot(lx-x,lz-z)<1.3))continue;
+        if(((district*7+Math.round(along*10)+side*3+(horizontal?1:0))%3)===0)continue;   // not every slot: an irregular line
+        const before=world.children.length;tree({x,y:z,s:.62+((district+Math.abs(Math.round(along*3)))%3)*.07},district*16+Math.round(along*3));
+        for(let k=before;k<world.children.length;k++)world.children[k].position.y+=.15;
+      }
+    }
+    for(const sx of [-1,1])for(const sz of [-1,1]){
+      const x=D.x+sx*3.56,z=D.z+sz*3.56;
+      cylinder(world,.022,.032,.62,'#5c7274',x,.48,z);
+      ball(world,.065,mat('#fff1cf',.34,'#ffdb9a'),x,.82,z).userData.lamp=true;
+      cylinder(world,.085,.07,.04,'#526d6d',x,.89,z);
+    }
+  }
   function createMetropolis(){
     metro.buildings=[];metro.vehicles=[];metro.walkers=[];metro.bridges=[];metro.actorGroup=new THREE.Group();metro.actorGroup.userData.noBatch=true;world.add(metro.actorGroup);
     for(let district=0;district<METRO_DISTRICTS.length;district++){
@@ -3868,8 +3922,7 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
       }
       // A continuous inner pavement keeps walkers clear of traffic and plots.
       for(const side of [-1,1]){box(world,.24,.025,7.36,'#d4ccb8',x+side*3.56,.17,z,false);box(world,7.36,.025,.24,'#d4ccb8',x,.17,z+side*3.56,false);}
-      const districtPlaque=metroPlaque(world,D.name.toUpperCase(),x,.34,z+4.70,1.55);
-      box(world,1.12,.12,.10,'#aa987b',x,.22,z+4.69,false);
+      metroGreenery(D,district);
       // These vehicles join the shared interdistrict street spine below.
       for(let i=0;i<4;i++){
         const g=car({kind:i===0?'bus':'car',col:['#d4bd83','#80a5af','#b88e7f','#a7b5a4'][i],ph:i});metro.actorGroup.add(g);
