@@ -13,7 +13,7 @@ assert.match(dioramaSource, /function tree\(/, 'new organic tree renderer exists
 assert.match(dioramaSource, /function gable\(/, 'real pitched roof renderer exists');
 assert.match(dioramaSource, /function glazing\(/, 'framed glazing renderer exists');
 assert.match(html, /<option value="town">Toy Town<\/option>/, 'Toy Town is in the menu');
-assert.match(html, /return 'toy-town\.html\?v=113&embed=1'\+keep\+\(bar\.hidden\?'&clean=1':''\);/, 'and opens its current embedded page');
+assert.match(html, /return 'toy-town\.html\?v=114&embed=1'\+keep\+\(bar\.hidden\?'&clean=1':''\);/, 'and opens its current embedded page');
 assert.match(html, /townFrame\.src=townSrc\(\);/, 'with this page\'s weather and fps settings passed through');
 assert.match(fs.readFileSync(path.join(root, 'toy-town.html'), 'utf8'), /assets\/toy-town\.js\?v=\d+/);
 const box = vm.createContext({Math, Object, Array, JSON, Date, String, Number, RegExp, setTimeout: () => 0, document: {getElementById: () => ({textContent: ''})}});
@@ -591,7 +591,7 @@ const townPage = fs.readFileSync(path.join(root, 'toy-town.html'), 'utf8');
 for (const id of ['zoom-in', 'zoom-out', 'zoom-reset']) {
   assert.match(townPage, new RegExp('id="' + id + '"[^>]*aria-label="[^"]+"'), id + ' is accessible');
 }
-assert.match(townPage, /toy-town\.js\?v=52/, 'diorama engine is loaded');
+assert.match(townPage, /toy-town\.js\?v=53/, 'diorama engine is loaded');
 assert.match(townPage, /toy-town-news\.js\?v=2/, 'sourced news loads before the simulation');
 assert.match(townPage, /HEADLINES/, 'real reporting has a dedicated source panel');
 assert.match(townPage, /AROUND TOWN · FICTION/, 'fiction and real news are explicitly separated');
@@ -749,4 +749,16 @@ assert.equal(scene.viewTo(25,3).x,25,'camera reaches the new downtown');
 assert.equal(scene.viewTo(-8,-7).y,-7,'camera reaches the university island');
 scene.setCityBounds(null);
 assert.ok(scene.viewTo(25,25).x<18,'classic fallback restores original bounds');
+
+// Ducks wander on their own and keep apart (they used to bunch into one clump: min pair distance .27, clumped ~75 % of the time).
+{
+  T.build(52045,'market');T.events().splice(0);
+  let samples=0,sumMin=0,clumped=0;const xs=new Set();
+  for(let i=0;i<60*300;i++){T.update(1/60);if(i%120)continue;const d=T.props().filter(p=>p.kind==='duck');samples++;
+    let mn=9;for(let a=0;a<d.length;a++)for(let b=a+1;b<d.length;b++)mn=Math.min(mn,Math.hypot(d[a].x-d[b].x,d[a].y-d[b].y));sumMin+=mn;if(mn<.3)clumped++;d.forEach(p=>xs.add(Math.floor(p.x/3)));
+    for(const p of d)assert.ok(p.y>=13.1&&p.y<=14.9&&p.x>=.3&&p.x<=17.5,'ducks stay on the river');}
+  assert.ok(sumMin/samples>.7,'ducks keep their distance from each other ('+(sumMin/samples).toFixed(2)+')');
+  assert.ok(clumped/samples<.25,'and are rarely bunched ('+(clumped/samples).toFixed(2)+')');
+  assert.ok(xs.size>=5,'and use the whole river ('+xs.size+' stretches)');
+}
 console.log(`Toy Town PASS: ${T.VARIANTS.length} news variants (cricket to Diwali to dinosaurs) each with its own event, grim stories never become themes, light ones pick ${Object.keys(T.THEMES).length - 1} kinds of day, the same day builds the same town with its theme block and fire station, and every event in every theme runs to its end with the streets kept busy.`);

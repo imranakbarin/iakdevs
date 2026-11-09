@@ -2778,10 +2778,13 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
   }
   function umbrellaFor(group,ref){
     const limbs=group.userData.limbs;if(!limbs)return null;
-    const u=new THREE.Group();u.position.set(.06,.62,0);limbs.upperBody.add(u);
-    cylinder(u,.006,.006,.3,'#4a4f5a',0,-.08,0);
-    const canopy=object(u,geo('hairshell',.155),mat(['#e2463a','#3f78c9','#ffb020','#5aa469','#c97fc0'][Math.abs(Math.round((ref.ph||0)*10))%5],.7),0,.07,0,false);
-    canopy.scale.y=.55;group.userData.umbrella=u;return u;
+    // Held beside the head: a pole from the shoulder up to a dome that sits just over the head (not floating above it).
+    const u=new THREE.Group();u.position.set(0,0,0);limbs.upperBody.add(u);
+    const pole=cylinder(u,.007,.007,.31,'#4a4f5a',.09,.46,0);pole.rotation.z=-.16;pole.castShadow=false;
+    const hand=ball(u,.02,'#d8a77c',.108,.31,0);hand.castShadow=false;
+    const canopy=object(u,geo('hairshell',.17),mat(['#e2463a','#3f78c9','#ffb020','#5aa469','#c97fc0'][Math.abs(Math.round((ref.ph||0)*10))%5],.7),.04,.6,0,false);
+    canopy.scale.y=.6;canopy.rotation.z=-.16;
+    group.userData.umbrella=u;return u;
   }
   function updateWeather(dt){
     const w=weatherState(),kind=w.kind||'clear';
@@ -2797,8 +2800,15 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
     for(const [ref,item] of actors){
       if(item.kind!=='person')continue;
       let u=item.group.userData.umbrella;
-      if(wet&&!u&&!ref.shopRole&&!ref.guitar)u=umbrellaFor(item.group,ref);
+      if(wet&&!u&&!ref.shopRole&&!ref.guitar&&(!ref.kind||ref.kind==='neighbor'||ref.kind==='shopper'))u=umbrellaFor(item.group,ref);   // everyone who strolls carries one
       if(u)u.visible=wet;
+    }
+    // the same for the plain residents the actors list does not drive (ambient walkers, the city's people): one rule for everybody
+    if(typeof lodRegistry!=='undefined')for(const g of lodRegistry){
+      if(!g.parent||g.userData.isActorRig)continue;
+      let u=g.userData.umbrella;
+      if(wet&&!u)u=umbrellaFor(g,{ph:g.userData.lod.ph});
+      if(u&&u.visible!==wet)u.visible=wet;
     }
     if(precip){
       const pos=precip.geometry.attributes.position,a=pos.array,isRain=precip.userData.kind==='rain',step=isRain?6:3;
@@ -4056,7 +4066,7 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
       for(let p=o.parent;p&&p!==g;p=p.parent)if(p.userData&&(p.userData.carriedProp||p.userData.heldProduct))return;
       detail.push({o,vis:o.visible});
     });
-    g.userData.lod={far,detail,isFar:false,seen:false};lodRegistry.add(g);
+    g.userData.lod={far,detail,isFar:false,seen:false,ph:look.ph};lodRegistry.add(g);
   }
   function setResidentLod(g,far){
     const lod=g.userData.lod;if(!lod||lod.isFar===far)return;lod.isFar=far;
@@ -4341,7 +4351,7 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
       CUTE*scale*(.88+.045*Math.sin(characterPhase+1)));
     headPivot.scale.setScalar(HEAD_BIG);
     try{bakeRig(g);}catch(e){}   // fewer draw calls per resident; the unmerged rig is the fallback
-    if(!ref.kind&&!ref.shopRole&&!ref.heroResident&&!ref.briefcase)try{buildFarResident(g,{coat,skin,trousers,shoes,hair:hairTone,hat:ref.hat,backpack:ref.backpack});}catch(e){}
+    if(!ref.kind&&!ref.shopRole&&!ref.heroResident&&!ref.briefcase)try{buildFarResident(g,{coat,skin,trousers,shoes,hair:hairTone,hat:ref.hat,backpack:ref.backpack,ph:ref.ph});}catch(e){}
     return g;
   }
   /* ---- The ring railway. A little round-faced steam train loops the town on a
@@ -6055,6 +6065,7 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
       kind==='bike'?[1.55,.06,.9]:kind==='animal'?[1.35,.05,1.05]:[.85,.045,.60];
     pad.scale.set(...spread);
     world.add(g);
+    g.userData.isActorRig=true;
     actors.set(ref,{group:g,kind});
   }
   // The bridge decks stand above the road: anything crossing rises onto the deck (a smooth ramp at each end).
@@ -6470,7 +6481,7 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
       if(reducedMotion&&a.kind!=='marketCounter')continue;
       if(a.kind==='duck'){
         a.mesh.position.set(a.ref.x,.21+Math.sin(time*1.75+a.phase)*.025,a.ref.y);
-        a.mesh.rotation.y=(a.ref.vx<0?Math.PI:0)+Math.sin(time*.58+a.phase)*.14;
+        a.mesh.rotation.y=(a.ref.hd!==undefined?-a.ref.hd:(a.ref.vx<0?Math.PI:0))+Math.sin(time*.58+a.phase)*.08;   // faces the way it swims
         for(let k=0;k<(a.mesh.userData.duckWings||[]).length;k++){
           a.mesh.userData.duckWings[k].rotation.x=
             (k===0?1:-1)*Math.sin(time*2.7+a.phase)*.22;

@@ -153,8 +153,8 @@ for (const seed of [20261102, 7, 42]) {
   const box = vm.createContext({Math, Object, Array, JSON, Date, String, Number, RegExp, Set, Map, setTimeout: () => 0, document: {getElementById: () => ({textContent: '', style: {}})}});
   vm.runInContext(town + ';this.T=ToyTown;', box); const T = box.T; T.build(seed, 'market');
   const last = new Map(), still = new Map(); let worst = 0, overlaps = 0, overlapSample = '', merged = new Map();
-  // The 3D toy vehicles' real footprints (half length x half width, see car() in toy-town-3d.js): stopped cars must never merge.
-  const HALF = {car: [.22, .125], taxi: [.22, .125], police: [.22, .125], racer: [.23, .125], bus: [.35, .135], fire: [.30, .125], icecream: [.22, .125]};
+  // The 3D toy vehicles' real footprints (half length x half width, see car() in toy-town-3d.js and VEHICLE_SCALE): stopped cars must never merge.
+  const HALF = {car: [.18, .10], taxi: [.18, .10], police: [.18, .10], racer: [.19, .10], bus: [.28, .108], fire: [.24, .10], icecream: [.18, .10]};   // drawn size since the vehicles were scaled by .8 (match BODY_HALF in the sim)
   const spot = m => { const l = m.lane || 0, o = m.path ? [0, 0] : m.d < 2 ? [0, (m.d === 0 ? 1 : -1) * l] : [(m.d === 2 ? -1 : 1) * l, 0]; return [m.x + o[0], m.y + o[1]]; };
   for (let i = 0; i < 20 * 360; i++) { T.update(1 / 20); if (i % 20) continue; const clock = T.debug().clock;
     const cars = T.movers().filter(m => m.type === 'car' && HALF[m.kind]), live = new Set();

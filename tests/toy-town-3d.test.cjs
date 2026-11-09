@@ -159,17 +159,20 @@ assert.match(moduleCode,/eye.scale.y=blink/,'eyelids blink without a separate an
 assert.match(html,/type="importmap"/);
 assert.match(html,/three@0\.187\.0\/build\/three\.module\.js/);
 assert.match(html,/three@0\.187\.0\/examples\/jsm\//);
-assert.match(html,/toy-town-3d\.js\?v=102/);
+assert.match(html,/toy-town-3d\.js\?v=103/);
 assert.match(moduleCode,/ref\.path&&Number\.isFinite\(ref\.walkFacing\)/, 'routed people use a real diagonal heading instead of a cardinal-only pose');
 assert.match(html,/toy-town-landmarks\.js\?v=7/,'the independent models are requested alongside Three');
 assert.match(html,/buildLandmark:landmarks\.buildLandmark/,
   'loader injects the authored model builder into the 3D simulation');
-assert.match(html,/toy-town\.js\?v=52/);
+assert.match(html,/toy-town\.js\?v=53/);
 const classicScript=html.match(/src="assets\/toy-town\.js\?v=\d+"/);
 assert.ok(classicScript&&
   html.indexOf(classicScript[0])<html.indexOf("import('three')"),
   'the actual versioned classic script always loads before WebGL');
-assert.match(page,/toy-town\.html\?v=113&embed=1/);
+assert.match(page,/toy-town\.html\?v=114&embed=1/);
+{const src3d=fs.readFileSync(path.join(root,'assets/toy-town-3d.js'),'utf8');
+  assert.match(src3d,/for\(const g of lodRegistry\)\{\s*if\(!g\.parent\|\|g\.userData\.isActorRig\)continue;/,'every plain resident (not just the actors list) gets an umbrella in rain');
+  assert.match(src3d,/a\.ref\.hd!==undefined\?-a\.ref\.hd/,'ducks face the way they swim');}
 {const src3d=fs.readFileSync(path.join(root,'assets/toy-town-3d.js'),'utf8');
   assert.match(src3d,/function buildFarResident\(/,'plain residents get a far figure (three small meshes)');
   assert.match(src3d,/LOD_FAR_PX=46,LOD_NEAR_PX=62/,'switched by projected pixel height with hysteresis');
