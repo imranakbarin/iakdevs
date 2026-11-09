@@ -164,7 +164,7 @@ assert.match(moduleCode,/ref\.path&&Number\.isFinite\(ref\.walkFacing\)/, 'route
 assert.match(html,/toy-town-landmarks\.js\?v=7/,'the independent models are requested alongside Three');
 assert.match(html,/buildLandmark:landmarks\.buildLandmark/,
   'loader injects the authored model builder into the 3D simulation');
-assert.match(html,/toy-town\.js\?v=54/);
+assert.match(html,/toy-town\.js\?v=55/);
 const classicScript=html.match(/src="assets\/toy-town\.js\?v=\d+"/);
 assert.ok(classicScript&&
   html.indexOf(classicScript[0])<html.indexOf("import('three')"),

@@ -178,7 +178,7 @@ assert.equal(following.braking,true,
   T.build(61001,'market');
   const cars=T.movers().filter(m=>m.type==='car'&&m.kind!=='bike');
   const park=cars.slice(1);park.forEach((c,i)=>Object.assign(c,{x:3+i*.5,y:16.5,d:0,v:0,max:0,stopUntil:1e9,path:null}));
-  const lone=cars[0];let side=0,round=0;
+  const lone=cars[0];lone.keep=true;let side=0,round=0;   // (the clock may be at night here, when the town trims spare cars at the edge: keep this one)
   for(let trial=0;trial<16;trial++){
     Object.assign(lone,{x:15.6,y:6.5,d:0,v:.8,max:1,lane:.16,path:null,stopUntil:0,patienceUntil:0,turnSignal:null});
     let turnedTo=null;
@@ -592,7 +592,7 @@ const townPage = fs.readFileSync(path.join(root, 'toy-town.html'), 'utf8');
 for (const id of ['zoom-in', 'zoom-out', 'zoom-reset']) {
   assert.match(townPage, new RegExp('id="' + id + '"[^>]*aria-label="[^"]+"'), id + ' is accessible');
 }
-assert.match(townPage, /toy-town\.js\?v=54/, 'diorama engine is loaded');
+assert.match(townPage, /toy-town\.js\?v=55/, 'diorama engine is loaded');
 assert.match(townPage, /toy-town-news\.js\?v=2/, 'sourced news loads before the simulation');
 assert.match(townPage, /HEADLINES/, 'real reporting has a dedicated source panel');
 assert.match(townPage, /AROUND TOWN · FICTION/, 'fiction and real news are explicitly separated');

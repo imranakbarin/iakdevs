@@ -2932,7 +2932,7 @@ const ToyTown = (() => {
     }
     if (clock >= (update.trim || 0)) {   // when the town is over-full, one car or walker leaves at the edge now and then
       update.trim = clock + 2;
-      const extraCar = carsNow() > carsWanted && movers.find(m => m.type === 'car' && !m.path && m.kind === 'car' && ((m.d === 0 && m.x >= 15.9) || (m.d === 1 && m.x <= 2.1) || (m.d === 2 && m.y >= 15.9) || (m.d === 3 && m.y <= 2.1)));
+      const extraCar = carsNow() > carsWanted && movers.find(m => m.type === 'car' && !m.path && !m.keep && m.kind === 'car' && ((m.d === 0 && m.x >= 15.9) || (m.d === 1 && m.x <= 2.1) || (m.d === 2 && m.y >= 15.9) || (m.d === 3 && m.y <= 2.1)));
       if (extraCar) { remove(extraCar); crowdTrimmed++; }
       const extraBike = movers.filter(m => m.kind === 'bike').length > bikesWanted && movers.find(m => m.kind === 'bike' && !m.path && ((m.d === 0 && m.x >= 15.9) || (m.d === 1 && m.x <= 2.1) || (m.d === 2 && m.y >= 15.9) || (m.d === 3 && m.y <= 2.1)));
       if (extraBike) { remove(extraBike); crowdTrimmed++; }
