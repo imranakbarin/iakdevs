@@ -203,7 +203,7 @@ const ToyTown = (() => {
     for (let x = 0; x < N; x++) for (let y = 0; y < N; y++) if (tile(x, y).kind === 'edge' && r() < .55) props.push({kind: 'tree', x: x + .5, y: y + .5, s: .8 + r() * .4, c: r() < .5 ? '#5cb85c' : '#7cc65a'});
     for (let k = 0; k < CARS; k++) spawnCar(r, k === 0 ? 'bus' : undefined);   // one bus is always on the line
     for (let k = 0; k < BIKES; k++) spawnBike(r);
-    for (let k = 0; k < PEOPLE; k++) spawnPerson(r);
+    for (let k = 0; k < PEOPLE; k++) spawnResident(r, {}, true);   // the starting population is already out on its own street
     spawnHeroResidents(hero, r);
     spawnNeighborhoodLife(hero, r);
     spawnStreetTrade(hero, r);
@@ -1540,11 +1540,13 @@ const ToyTown = (() => {
     e.name = name; e.t = 0; events.push(e); feature(e, name in VARIANT_EVENTS || name in THEME_EVENTS ? 11 : 7); return e;
   }
   function randomEvent(x, y) {
-    const names = CALM;
+    const names = CALM, night = quiet() > .5;
+    const NIGHT_CALM = ['chat', 'catnap', 'duck', 'busker'], NIGHT_VARIANT = ['comet', 'launch', 'moon', 'fest', 'diwali', 'christmas', 'halloween', 'newyear', 'eid', 'holi', 'music', 'film', 'goodnews', 'nobel'];
     // The headline programme: each light headline in turn gets its scene (the lead one first), most of the time.
-    if (programme.length && Math.random() < .45) {
+    if (programme.length && Math.random() < (night ? .3 : .45)) {
       for (let k = 0; k < programme.length; k++) {
         const item = programme[(progIx + k) % programme.length];
+        if (night && !NIGHT_VARIANT.includes(item.variant)) continue;   // a marathon or a kite day waits for daylight
         if (!events.some(e => e.name === item.variant)) { progIx = (progIx + k + 1) % programme.length; return startEvent(item.variant, x, y, item); }
       }
     }
@@ -1553,10 +1555,10 @@ const ToyTown = (() => {
     const news = today_.length ? (Math.random() < .55 ? today_[0] : today_[Math.random() * today_.length | 0]).variant : theme;
     // Variety: not what is already on, not what just happened (the last six), and only what suits the hour of the day.
     const hr = hourOfDay(), suits = n => { const w = CALM_HOURS[n]; return !w || (hr >= w[0] && hr < w[1]); };
-    let free = names.filter(n => !events.some(e => e.name === n) && !recentCalm.includes(n) && suits(n));
-    if (!free.length) free = names.filter(n => !events.some(e => e.name === n) && suits(n));
-    if (!free.length) free = names.filter(n => !events.some(e => e.name === n));
-    const pick = Math.random() < .2 && !events.some(e => e.name === news) && !recentCalm.slice(-2).includes(news) ? news : free[Math.random() * free.length | 0];
+    let free = names.filter(n => !events.some(e => e.name === n) && !recentCalm.includes(n) && suits(n) && (!night || NIGHT_CALM.includes(n)));
+    if (!free.length) free = names.filter(n => !events.some(e => e.name === n) && suits(n) && (!night || NIGHT_CALM.includes(n)));
+    if (!free.length) return null;   // nothing suits this hour: a quiet moment
+    const pick = Math.random() < .2 && !events.some(e => e.name === news) && !recentCalm.slice(-2).includes(news) && (!night || NIGHT_VARIANT.includes(news)) ? news : free[Math.random() * free.length | 0];
     recentCalm.push(pick); if (recentCalm.length > 6) recentCalm.shift();
     return startEvent(pick, x, y);
   }
@@ -1637,7 +1639,7 @@ const ToyTown = (() => {
 
   /* ---------------- gentle moments ---------------- */
   const parkSpot = () => { const t = []; for (let y = 2; y < 16; y++) for (let x = 2; x < 16; x++) if (tile(x, y).kind === 'park' || tile(x, y).kind === 'plaza') t.push([x + .5, y + .5]); return t[Math.random() * t.length | 0] || [9, 9]; };
-  const walker = () => movers.find(o => o.type === 'person' && !o.kind && !o.path && !o.busy) || spawnPerson();
+  const walker = () => movers.find(o => o.type === 'person' && !o.kind && !o.path && !o.busy) || spawnResident();
   function sendTo(m, x, y, then) { m.busy = true; m.path = walkFrom(m, x, y, .45).concat([{x, y, speed: .4, then}]); }
   Object.assign(EVENTS, {
     kite() {
@@ -2630,7 +2632,8 @@ const ToyTown = (() => {
     for (const m of movers) if (m.shopBag >= 0 && clock > (m.bagUntil || 0)) m.shopBag = -1;
     for (const m of movers) if (m.jogUntil && clock > m.jogUntil) { m.max = m.walkMax || m.max; m.gait = m.walkGait || m.gait; m.jogUntil = 0; }
     if (clock < (updateWhims.next || 0)) return;
-    updateWhims.next = clock + 1.5 + Math.random() * 2.5;
+    updateWhims.next = (clock + 1.5 + Math.random() * 2.5) + quiet() * 8;   // few errands and dawdles at night
+    if (quiet() > .7 && Math.random() < .8) return;
     const free = movers.filter(freeWalker); if (!free.length || movers.filter(m => m.whim).length >= 5) return;
     const m = free[Math.random() * free.length | 0], roll = Math.random();
     const benches = props.filter(p => p.kind === 'bench' || p.kind === 'hero-bench').filter(p => Math.hypot(p.x - m.x, p.y - m.y) < 5);
@@ -2713,11 +2716,39 @@ const ToyTown = (() => {
      residents walk home and go in, and their house counts as lit after dusk.
      Each routine sends new walkers; nobody already busy is taken. */
   let crowdTrimmed = 0;
-  const rushFactor = () => { const h = hourOfDay(); return h >= 7 && h < 9.5 ? 1.5 : h >= 16.5 && h < 19 ? 1.5 : h >= 11.5 && h < 14 ? 1.2 : (h >= 22 || h < 5.5) ? .55 : 1; };
+  // 0 by day, 1 in the dead of night: the town winds down, so night does not look like a copy of the day.
+  const quiet = () => clamp(0, (nightLevel() - .3) / .5, 1);
+  const rushFactor = () => { const h = hourOfDay(); return (h >= 7 && h < 9.5 ? 1.5 : h >= 16.5 && h < 19 ? 1.5 : h >= 11.5 && h < 14 ? 1.2 : 1) * (1 - .8 * quiet()); };   // few cars and walkers late at night
   const hourOfDay = () => (12 + (clock / (300 * PACE)) % 1 * 24) % 24;
   const DAYPART = h => h >= 6 && h < 9.5 ? 'morning' : h >= 11.5 && h < 14 ? 'lunch' : h >= 17 && h < 21 ? 'evening' : null;
   const homes = () => buildings.filter(b => b.kind === 'house');
   const doorOf = b => ({x: b.x + .5, y: b.y + 1.08});
+  // Residents only ever appear from, and disappear into, a front door: a house, shop or fire station whose south face is on a
+  // street (that is where the 3D buildings have a door onto the pavement). No walker pops in or out anywhere else.
+  const frontDoors = () => buildings.filter(b => (b.kind === 'house' || b.kind === 'shop' || b.kind === 'fire') && LINES.includes(b.y + 1));
+  const frontHomes = () => frontDoors().filter(b => b.kind === 'house');
+  // Steps out of the building's door onto the pavement in front of it and wanders off along the street.
+  function emergeAt(m, b, instant) {
+    const door = doorOf(b), L = b.y + 1 + .5, dir = Math.random() < .5 ? 1 : -1, tx = clamp(1.7, door.x + dir * (instant ? .8 + Math.random() * 4 : .6 + Math.random() * 1.2), 16.3);
+    m.d = dir > 0 ? 0 : 1; m.lane = -PAVE; m.v = 0;
+    if (instant) { m.x = tx; m.y = L; return m; }   // the town's starting population: already out and about on their own street
+    m.x = door.x; m.y = door.y;
+    m.path = [{x: door.x, y: L - PAVE, speed: .45}, {x: tx, y: L - PAVE, speed: .45, then: q => { q.x = tx; q.y = L; q.lane = -PAVE; }}];
+    return m;
+  }
+  function spawnResident(r = Math.random, opts = {}, instant = false) {
+    const m = spawnPerson(r, opts), doors = frontDoors();
+    if (doors.length) emergeAt(m, doors[r() * doors.length | 0], instant);
+    return m;
+  }
+  // Heads for the nearest front door and goes in (removed there by finishRoutines).
+  function goHome(m) {
+    const doors = frontDoors(); if (!doors.length) return false;
+    let best = doors[0], bd = 1e9; for (const b of doors) { const d = Math.hypot(doorOf(b).x - m.x, doorOf(b).y - m.y); if (d < bd) { bd = d; best = b; } }
+    const door = doorOf(best); m.busy = true; m.homeBound = true;
+    m.path = walkFrom(m, door.x, door.y, .55).concat([{x: door.x, y: door.y, speed: .4, then: q => { q.entered = true; best.home = true; best.homeAt = clock; }}]);
+    return true;
+  }
   const edgeOf = r => [{x: 1.07, y: LINES[1 + (r * 2 | 0)] + .5 + .43}, {x: 16.93, y: LINES[1 + (r * 2 | 0)] + .5 + .43}, {x: LINES[1 + (r * 2 | 0)] + .5 + .43, y: 1.07}][r * 3 | 0];   // the outer pavement where a street leaves town
   const CAFE = [{x: 7.74, y: 8.75}, {x: 10.25, y: 9.95}];
   let daypart = null, routineNext = 0, routine = {morning: 0, lunch: 0, evening: 0};
@@ -2736,9 +2767,9 @@ const ToyTown = (() => {
     const active = movers.filter(m => m.routine).length;
     if (active >= 8) return;                                                      // a lively street, never a crowd
     if (part === 'morning') {
-      const house = homes().filter(b => b.home !== false)[Math.random() * homes().length | 0];
+      const fh = frontHomes(), house = fh.filter(b => b.home !== false)[Math.random() * fh.length | 0];
       if (!house) return;
-      const door = doorOf(house), out = edgeOf(Math.random());
+      const door = doorOf(house), workDoors = frontDoors().filter(b => b !== house), out = workDoors.length ? doorOf(workDoors[Math.random() * workDoors.length | 0]) : edgeOf(Math.random());   // off to a neighbour's door, not out of town
       if (active <= 6 && Math.random() < .4) {   // two children set off together (room for both under the cap)
         for (let k = 0; k < 2; k++) { const kid = routineWalker({routine: 'school', kid: true, backpack: PASTEL[Math.random() * 8 | 0], gait: 'skip', max: .66}, {x: door.x + k * .2, y: door.y}); kid.path = walk(kid.x, kid.y, out.x, out.y, .62).concat([{x: out.x, y: out.y, speed: .6, then: q => { q.home = true; }}]); }
       } else {
@@ -2748,14 +2779,14 @@ const ToyTown = (() => {
     } else if (part === 'lunch') {
       const spot = CAFE[Math.random() * 2 | 0], k = movers.filter(m => m.routine === 'lunch').length;
       if (k >= 4) return;
-      const a = (k % 4) * Math.PI / 2 + .4, sx = spot.x + Math.cos(a) * .42, sy = spot.y + Math.sin(a) * .42, from = edgeOf(Math.random());
+      const a = (k % 4) * Math.PI / 2 + .4, sx = spot.x + Math.cos(a) * .42, sy = spot.y + Math.sin(a) * .42, fd = frontDoors(), from = fd.length ? doorOf(fd[Math.random() * fd.length | 0]) : edgeOf(Math.random());
       const d = routineWalker({routine: 'lunch'}, from);
       d.path = walk(d.x, d.y, sx, sy, .5).concat([{x: sx, y: sy, speed: .35, then: q => { q.stopUntil = clock + 14; q.attention = {x: spot.x, y: spot.y}; q.shopAction = 'eating'; q.lunchUntil = clock + 14; }}]);
       routine.lunch++;
     } else if (part === 'evening') {
-      const house = homes().filter(b => !b.home)[0] || homes()[Math.random() * homes().length | 0];
+      const fh = frontHomes(), house = fh.filter(b => !b.home)[0] || fh[Math.random() * fh.length | 0];
       if (!house) return;
-      const door = doorOf(house), from = edgeOf(Math.random());
+      const doorsNow = frontDoors().filter(b => b !== house), door = doorOf(house), from = doorsNow.length ? doorOf(doorsNow[Math.random() * doorsNow.length | 0]) : edgeOf(Math.random());   // comes out of another door
       const w = routineWalker({routine: 'home', briefcase: Math.random() < .5}, from);
       w.path = walk(w.x, w.y, door.x, door.y, .55).concat([{x: door.x, y: door.y, speed: .4, then: q => { q.home = true; house.home = true; house.homeAt = clock; }}]);
       routine.evening++;
@@ -2765,8 +2796,8 @@ const ToyTown = (() => {
     // Walkers who reached the edge of town or their front door go inside / out of sight;
     // diners finish their lunch and drift off.
     for (const m of movers.slice()) {
-      if (m.routine && m.home && !m.path) remove(m);
-      else if (m.routine === 'lunch' && m.lunchUntil && clock > m.lunchUntil) { m.shopAction = null; m.attention = null; m.lunchUntil = 0; const out = edgeOf(Math.random()); m.path = walk(m.x, m.y, out.x, out.y, .5).concat([{x: out.x, y: out.y, speed: .5, then: q => { q.home = true; }}]); }
+      if (((m.routine && m.home) || m.entered) && !m.path) remove(m);   // through the door and gone
+      else if (m.routine === 'lunch' && m.lunchUntil && clock > m.lunchUntil) { m.shopAction = null; m.attention = null; m.lunchUntil = 0; const fd = frontDoors(), out = fd.length ? doorOf(fd[Math.random() * fd.length | 0]) : edgeOf(Math.random()); m.path = walk(m.x, m.y, out.x, out.y, .5).concat([{x: out.x, y: out.y, speed: .5, then: q => { q.home = true; }}]); }
     }
   }
   // Two stopped cars whose drawn bodies overlap (they came to rest nose to flank in a junction, or one
@@ -2875,30 +2906,38 @@ const ToyTown = (() => {
       else tick('The village is open: neighbors meet, shops trade and bicycles pass.');
       nextHeadline=26;
     }
-    if ((nextEvent -= dt) <= 0) { if (events.length < 3) randomEvent(); nextEvent = 7 + Math.random() * 6; }
-    if (clock >= nextStreetMoment) { streetMoment(); nextStreetMoment = clock + 20 + Math.random() * 8; }   // an unhurried rhythm
+    if ((nextEvent -= dt) <= 0) { if (events.length < (quiet() > .5 ? 1 : 3)) randomEvent(); nextEvent = (7 + Math.random() * 6) * (1 + 3.5 * quiet()); }   // at night: one thing at a time, a quarter as often
+    if (clock >= nextStreetMoment) { if (quiet() < .6) streetMoment(); nextStreetMoment = clock + (20 + Math.random() * 8) * (1 + 2 * quiet()); }   // an unhurried rhythm
     if(clock>=nextPerformance){
       // One scheduled live performance roughly every two miniature minutes,
       // only when there is room in the event budget. This is visible civic
       // life, not a burst of extra permanent residents.
-      if(events.length<5&&!events.some(e=>e.streetConcert)){
+      if(quiet()<.5&&events.length<5&&!events.some(e=>e.streetConcert)){
         startEvent('busker');
       }
       nextPerformance=clock+88;
     }
     // Traffic: keep the streets busy as cars leave and events come and go.
     // The streets breathe with the day: fuller at the morning and evening rush, thinner late at night.
-    const rush = rushFactor(), carsWanted = Math.round(CARS * rush), walkersWanted = Math.round(PEOPLE * rush);
+    const rush = rushFactor(), carsWanted = Math.max(quiet() > .6 ? 2 : 0, Math.round(CARS * rush)), walkersWanted = Math.max(quiet() > .6 ? 3 : 0, Math.round(PEOPLE * rush));   // a few night owls and one or two taxis
     const carsNow = () => movers.filter(m => m.type === 'car' && (m.kind === 'car' || m.kind === 'bus' || m.kind === 'taxi')).length;
     while (carsNow() < Math.min(carsWanted, 11)) spawnCar(Math.random, movers.some(m => m.kind === 'bus') ? undefined : 'bus');
-    while (movers.filter(m => m.kind === 'bike').length < BIKES) spawnBike();
-    while (movers.filter(m => m.type === 'person' && !m.kind).length < Math.min(walkersWanted, 22)) spawnPerson();
+    const bikesWanted = quiet() > .4 ? 0 : BIKES;   // nobody cycles in the middle of the night
+    while (movers.filter(m => m.kind === 'bike').length < bikesWanted) spawnBike();
+    const outNow = movers.filter(m => m.type === 'person' && !m.kind).length;
+    if (clock >= (update.nextOut || 0) && outNow < Math.min(walkersWanted, 22)) {   // somebody steps out of a front door now and then (quicker when the street is empty)
+      update.nextOut = clock + (outNow + 3 <= walkersWanted ? .35 + Math.random() * .5 : .8 + Math.random() * 1.8);
+      const doors = frontDoors(), free = doors.filter(b => !movers.some(o => o.type === 'person' && Math.hypot(o.x - b.x - .5, o.y - b.y - 1.08) < .6));
+      if (doors.length) { if (free.length) emergeAt(spawnPerson(Math.random), free[Math.random() * free.length | 0]); } else spawnPerson();
+    }
     if (clock >= (update.trim || 0)) {   // when the town is over-full, one car or walker leaves at the edge now and then
       update.trim = clock + 2;
       const extraCar = carsNow() > carsWanted && movers.find(m => m.type === 'car' && !m.path && m.kind === 'car' && ((m.d === 0 && m.x >= 15.9) || (m.d === 1 && m.x <= 2.1) || (m.d === 2 && m.y >= 15.9) || (m.d === 3 && m.y <= 2.1)));
       if (extraCar) { remove(extraCar); crowdTrimmed++; }
-      const extraWalker = movers.filter(m => m.type === 'person' && !m.kind).length > walkersWanted && movers.find(m => freeWalker(m) && (m.x < 1.4 || m.x > 16.6 || m.y < 1.4 || m.y > 16.6));
-      if (extraWalker) { remove(extraWalker); crowdTrimmed++; }
+      const extraBike = movers.filter(m => m.kind === 'bike').length > bikesWanted && movers.find(m => m.kind === 'bike' && !m.path && ((m.d === 0 && m.x >= 15.9) || (m.d === 1 && m.x <= 2.1) || (m.d === 2 && m.y >= 15.9) || (m.d === 3 && m.y <= 2.1)));
+      if (extraBike) { remove(extraBike); crowdTrimmed++; }
+      const extraWalker = movers.filter(m => m.type === 'person' && !m.kind).length > walkersWanted && movers.find(m => freeWalker(m) && !m.homeBound);
+      if (extraWalker && goHome(extraWalker)) crowdTrimmed++;   // over-full: someone heads home and goes in (never out of town)
     }
     // Preserve the pointed-at block while easing wheel/button zoom.
     if (Math.abs(cam.tz - cam.z) > .0002) {

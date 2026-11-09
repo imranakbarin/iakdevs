@@ -13,7 +13,7 @@ assert.match(dioramaSource, /function tree\(/, 'new organic tree renderer exists
 assert.match(dioramaSource, /function gable\(/, 'real pitched roof renderer exists');
 assert.match(dioramaSource, /function glazing\(/, 'framed glazing renderer exists');
 assert.match(html, /<option value="town">Toy Town<\/option>/, 'Toy Town is in the menu');
-assert.match(html, /return 'toy-town\.html\?v=115&embed=1'\+keep\+\(bar\.hidden\?'&clean=1':''\);/, 'and opens its current embedded page');
+assert.match(html, /return 'toy-town\.html\?v=116&embed=1'\+keep\+\(bar\.hidden\?'&clean=1':''\);/, 'and opens its current embedded page');
 assert.match(html, /townFrame\.src=townSrc\(\);/, 'with this page\'s weather and fps settings passed through');
 assert.match(fs.readFileSync(path.join(root, 'toy-town.html'), 'utf8'), /assets\/toy-town\.js\?v=\d+/);
 const box = vm.createContext({Math, Object, Array, JSON, Date, String, Number, RegExp, setTimeout: () => 0, document: {getElementById: () => ({textContent: ''})}});
@@ -83,7 +83,8 @@ for (const key of Object.keys(T.THEMES)) {
   T.build(4242, key);
   for (const name of ['hydrant', 'cart', 'dog', 'balloons', 'cat', 'pigeons', 'banana', 'ufo', 'icecream', 'duck', 'jam', 'chickens', key]) T.startEvent(name);
   for (let i = 0; i < 60 * 30; i++) T.update(1 / 60);
-  assert.ok(T.movers().filter(m => m.kind === 'car' || m.kind === 'bus' || m.kind === 'taxi').length >= 7 && T.movers().filter(m => m.kind === 'bike').length >= 4 && T.movers().filter(m => m.type === 'person').length >= 14, `${key}: cars, cyclists and walkers keep the streets alive`);
+  assert.ok((() => { const nt = T.debug().night, deep = nt > .6; return T.movers().filter(m => m.kind === 'car' || m.kind === 'bus' || m.kind === 'taxi').length >= (deep ? 2 : 7) && T.movers().filter(m => m.kind === 'bike').length >= (nt > .4 ? 0 : 4) && T.movers().filter(m => m.type === 'person').length >= (deep ? 3 : 14); })(),   // (the clock carries on from one theme to the next, so some of these run at night, when the town is much quieter)
+   `${key}: cars, cyclists and walkers keep the streets alive`);
   assert.ok(T.movers().every(m => m.x > 0 && m.x < 18 && m.y > 0 && m.y < 18 && Number.isFinite(m.x + m.y)), `${key}: everyone stays in town`);
   assert.ok(T.events().length <= 6, `${key}: events end (${T.events().length} running)`);
 }
@@ -591,7 +592,7 @@ const townPage = fs.readFileSync(path.join(root, 'toy-town.html'), 'utf8');
 for (const id of ['zoom-in', 'zoom-out', 'zoom-reset']) {
   assert.match(townPage, new RegExp('id="' + id + '"[^>]*aria-label="[^"]+"'), id + ' is accessible');
 }
-assert.match(townPage, /toy-town\.js\?v=53/, 'diorama engine is loaded');
+assert.match(townPage, /toy-town\.js\?v=54/, 'diorama engine is loaded');
 assert.match(townPage, /toy-town-news\.js\?v=2/, 'sourced news loads before the simulation');
 assert.match(townPage, /HEADLINES/, 'real reporting has a dedicated source panel');
 assert.match(townPage, /AROUND TOWN · FICTION/, 'fiction and real news are explicitly separated');
@@ -760,5 +761,27 @@ assert.ok(scene.viewTo(25,25).x<18,'classic fallback restores original bounds');
   assert.ok(sumMin/samples>.7,'ducks keep their distance from each other ('+(sumMin/samples).toFixed(2)+')');
   assert.ok(clumped/samples<.25,'and are rarely bunched ('+(clumped/samples).toFixed(2)+')');
   assert.ok(xs.size>=5,'and use the whole river ('+xs.size+' stretches)');
+}
+
+// Follow-up 21: residents only appear from and vanish into front doors, and the night is quieter than the day.
+{
+  T.build(52045,'market');
+  const L=[6,11,16],doors=T.buildings().filter(b=>(b.kind==='house'||b.kind==='shop'||b.kind==='fire')&&L.includes(b.y+1)).map(b=>[b.x+.5,b.y+1.08]);
+  assert.ok(doors.length>=3,'there are street-facing front doors ('+doors.length+')');
+  const nearDoor=(x,y)=>Math.min(...doors.map(d=>Math.hypot(d[0]-x,d[1]-y)),9);
+  let prev=new Map(),spawned=0,spawnAtDoor=0,removed=0,removeAtDoor=0,dayPpl=0,dayN=0,nightPpl=0,nightN=0,evDay=0,evNight=0;const seenEv=new Set();
+  for(let i=0;i<20*740;i++){T.update(1/20);
+    const night=T.debug().night>.6;
+    for(const e of T.events())if(!seenEv.has(e)){seenEv.add(e);if(night)evNight++;else evDay++;}
+    const cur=new Map();for(const m of T.movers())if(m.type==='person'&&!m.kind)cur.set(m,{x:m.x,y:m.y});
+    if(i>20){for(const [m,v] of cur)if(!prev.has(m)){spawned++;if(nearDoor(v.x,v.y)<.3)spawnAtDoor++;}
+      for(const [m,v] of prev)if(!cur.has(m)){removed++;if(nearDoor(v.x,v.y)<.35)removeAtDoor++;}}
+    prev=cur;
+    if(i%20===0){if(night){nightPpl+=cur.size;nightN++;}else{dayPpl+=cur.size;dayN++;}}}
+  assert.ok(spawned>=20&&spawnAtDoor/spawned>=.7,'residents step out of front doors ('+spawnAtDoor+' of '+spawned+')');
+  assert.ok(removed>=20&&removeAtDoor/removed>=.7,'and go back in through them ('+removeAtDoor+' of '+removed+')');
+  assert.ok(nightN>30&&dayN>30,'the run covered day and night');
+  assert.ok(nightPpl/nightN<=.7*dayPpl/dayN,'far fewer people are out at night ('+(nightPpl/nightN).toFixed(1)+' vs '+(dayPpl/dayN).toFixed(1)+')');
+  assert.ok(evNight/nightN<=.5*evDay/dayN,'and fewer things happen ('+evNight+' in '+nightN+' s vs '+evDay+' in '+dayN+' s)');
 }
 console.log(`Toy Town PASS: ${T.VARIANTS.length} news variants (cricket to Diwali to dinosaurs) each with its own event, grim stories never become themes, light ones pick ${Object.keys(T.THEMES).length - 1} kinds of day, the same day builds the same town with its theme block and fire station, and every event in every theme runs to its end with the streets kept busy.`);

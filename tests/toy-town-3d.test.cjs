@@ -159,17 +159,21 @@ assert.match(moduleCode,/eye.scale.y=blink/,'eyelids blink without a separate an
 assert.match(html,/type="importmap"/);
 assert.match(html,/three@0\.187\.0\/build\/three\.module\.js/);
 assert.match(html,/three@0\.187\.0\/examples\/jsm\//);
-assert.match(html,/toy-town-3d\.js\?v=104/);
+assert.match(html,/toy-town-3d\.js\?v=105/);
 assert.match(moduleCode,/ref\.path&&Number\.isFinite\(ref\.walkFacing\)/, 'routed people use a real diagonal heading instead of a cardinal-only pose');
 assert.match(html,/toy-town-landmarks\.js\?v=7/,'the independent models are requested alongside Three');
 assert.match(html,/buildLandmark:landmarks\.buildLandmark/,
   'loader injects the authored model builder into the 3D simulation');
-assert.match(html,/toy-town\.js\?v=53/);
+assert.match(html,/toy-town\.js\?v=54/);
 const classicScript=html.match(/src="assets\/toy-town\.js\?v=\d+"/);
 assert.ok(classicScript&&
   html.indexOf(classicScript[0])<html.indexOf("import('three')"),
   'the actual versioned classic script always loads before WebGL');
-assert.match(page,/toy-town\.html\?v=115&embed=1/);
+assert.match(page,/toy-town\.html\?v=116&embed=1/);
+{const src3d=fs.readFileSync(path.join(root,'assets/toy-town-3d.js'),'utf8');
+  assert.match(src3d,/trim=raised\?\.62:\.5/,'a bridge meets the streets it joins at their near edge, not in the middle of the road');
+  assert.match(src3d,/function metroRichness\(/,'the quarters\' buildings have plinths, doors with canopies, cornices, balconies and chimneys');
+  assert.match(src3d,/const deep=\(town\.debug\(\)\.night\|\|0\)>\.55;/,'the quarters wind down at night');}
 {const src3d=fs.readFileSync(path.join(root,'assets/toy-town-3d.js'),'utf8');
   assert.match(src3d,/function footbridgeGeometry\(/,'the links between quarters are solid arched stone footbridges (one mesh, parapets, an open span over the rail)');
   assert.match(src3d,/function metroPlaque\(\)\{return new THREE\.Group\(\);\}/,'the flat text boards in the outer quarters are gone');

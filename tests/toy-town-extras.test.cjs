@@ -128,7 +128,7 @@ assert.match(view, /lighthouse\.beam\.rotation\.y=time\*\.3/, 'the lighthouse be
 assert.match(view, /function createSignals\(\)/); assert.match(view, /town\.lightPhase\?\.\(\)/, 'the 3D traffic lights read the simulation light phase, so they match what the cars do');
 assert.match(view, /E\.walkers=\[\{q:bride,off:0,dz:-\.04\}/, 'the wedding procession walks in pairs on the pavement, not in single file');
 assert.match(view, /const HAIRS=\[/, 'residents have a range of hair colours');
-assert.match(sim, /const rushFactor = \(\) =>/); assert.match(sim, /carsWanted = Math\.round\(CARS \* rush\)/, 'the streets fill at the rush hours and thin out at night');
+assert.match(sim, /const rushFactor = \(\) =>/); assert.match(sim, /carsWanted = Math\.max\(quiet\(\) > \.6 \? 2 : 0, Math\.round\(CARS \* rush\)\)/, 'the streets fill at the rush hours and thin out at night (a few night owls and taxis remain)');
 assert.match(sim, /'ducks'\);/); assert.match(sim, /feedDucks\(m\.x, 14\); feedings\+\+/, 'now and then a resident walks to the river and feeds the ducks');
 assert.match(sim, /if \(m\.type === 'person' && !m\.kind && wet\) want \*= 1\.18;/); assert.match(sim, /Math\.abs\(m\.x - 9\) < 3\.1 && Math\.abs\(m\.y - 9\) < 3\.1\) want \*= \.78/, 'walkers hurry in the rain and cars ease off in bad weather and near the plaza');
 assert.match(view, /crumbsAt\(ref\.x,ref\.y<14\?13\.25:14\.75\)/, 'the duck feeder\'s crumbs are drawn'); assert.match(view.slice(view.indexOf('function createSignals('),view.indexOf('function updateSignals(')), /const ped=new THREE.Group\(\)/, 'signals construct pedestrian lamp groups');
