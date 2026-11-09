@@ -159,7 +159,7 @@ assert.match(moduleCode,/eye.scale.y=blink/,'eyelids blink without a separate an
 assert.match(html,/type="importmap"/);
 assert.match(html,/three@0\.187\.0\/build\/three\.module\.js/);
 assert.match(html,/three@0\.187\.0\/examples\/jsm\//);
-assert.match(html,/toy-town-3d\.js\?v=105/);
+assert.match(html,/toy-town-3d\.js\?v=106/);
 assert.match(moduleCode,/ref\.path&&Number\.isFinite\(ref\.walkFacing\)/, 'routed people use a real diagonal heading instead of a cardinal-only pose');
 assert.match(html,/toy-town-landmarks\.js\?v=7/,'the independent models are requested alongside Three');
 assert.match(html,/buildLandmark:landmarks\.buildLandmark/,
@@ -169,7 +169,10 @@ const classicScript=html.match(/src="assets\/toy-town\.js\?v=\d+"/);
 assert.ok(classicScript&&
   html.indexOf(classicScript[0])<html.indexOf("import('three')"),
   'the actual versioned classic script always loads before WebGL');
-assert.match(page,/toy-town\.html\?v=116&embed=1/);
+assert.match(page,/toy-town\.html\?v=117&embed=1/);
+{const src3d=fs.readFileSync(path.join(root,'assets/toy-town-3d.js'),'utf8');
+  assert.match(src3d,/function createMetroNeighbours\(\)/,'the quarters have neighbours who run door-to-door errands');
+  assert.match(src3d,/function houseDetails\(placed,b\)/,'the main island\'s houses have flower tubs and roof extras');}
 {const src3d=fs.readFileSync(path.join(root,'assets/toy-town-3d.js'),'utf8');
   assert.match(src3d,/trim=raised\?\.62:\.5/,'a bridge meets the streets it joins at their near edge, not in the middle of the road');
   assert.match(src3d,/function metroRichness\(/,'the quarters\' buildings have plinths, doors with canopies, cornices, balconies and chimneys');
@@ -1010,6 +1013,26 @@ for(let t=0;t<48;t+=.5){api.previewMetropolis(t);const life=api.metropolis().lif
 api.previewMetropolis(360);
 console.log('METRO_TRIPS',JSON.stringify({arrivals:trips.arrivals,boardings:trips.boardings,alightings:trips.alightings}));
 api.previewMetropolis(53.99);const beforeLoop=api.metropolis().pedestrians;api.previewMetropolis(54.01);const afterLoop=api.metropolis().pedestrians;assert.ok(Math.hypot(beforeLoop[0].x-afterLoop[0].x,beforeLoop[0].z-afterLoop[0].z)<.01,'walkers continue from their stop without teleporting at the cycle boundary');
+{   // The quarters' neighbours run errands door to door: they appear and vanish only at a door, never jump, and spend the night indoors.
+  api.previewMetropolis(0);const m0=api.metropolis(),doors=m0.neighbourDoors;
+  assert.ok(m0.neighbours.length>=8&&doors.length>=20,'there are neighbours with front doors to use ('+m0.neighbours.length+' neighbours, '+doors.length+' doors)');
+  const atDoor=(x,z,tol=.2)=>doors.some(d=>Math.hypot(d.x-x,d.z-z)<tol);
+  let prev=null,visibleSamples=0,appear=0,vanish=0,jump=0;const dayOut=[],nightOut=[];
+  const PACE=api.metropolis().neighbours?1:1;
+  for(let t=0;t<1500;t+=.5){
+    api.previewMetropolis(t);const cur=api.metropolis().neighbours,vis=cur.filter(n=>n.visible).length;
+    const night=Math.min(1,Math.max(0,-Math.cos(t/(300*.82)*Math.PI*2)*2-1));(night>.6?nightOut:dayOut).push(vis);
+    if(prev)cur.forEach((n,i)=>{const q=prev[i];
+      if(n.visible&&!q.visible){appear++;assert.ok(atDoor(n.x,n.z),'a neighbour steps out only at a door');}
+      if(!n.visible&&q.visible){vanish++;assert.ok(atDoor(q.x,q.z,.3),'and goes in only at a door');}
+      if(n.visible&&q.visible&&Math.hypot(n.x-q.x,n.z-q.z)>.25)jump++;});
+    prev=cur;visibleSamples+=vis;
+  }
+  assert.ok(appear>=20&&vanish>=20,'they keep coming and going ('+appear+' outings)');
+  assert.equal(jump,0,'nobody teleports');
+  const avg=a=>a.reduce((x,y)=>x+y,0)/Math.max(1,a.length);
+  assert.ok(avg(nightOut)<=.2*avg(dayOut),'the night is spent indoors ('+avg(nightOut).toFixed(2)+' out at night vs '+avg(dayOut).toFixed(2)+' by day)');
+}
 api.previewMetropolis(10);const paused=JSON.stringify(api.metropolis());api.previewMetropolis(10);assert.equal(JSON.stringify(api.metropolis()),paused,'clock pause freezes metro routes');
 
 // Country changes replace real models without mutating the simulation or view.
