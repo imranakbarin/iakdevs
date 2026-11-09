@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generated_at": "2026-11-09T08:03:49.559Z",
+  "generated_at": "2026-11-09T18:52:43.879Z",
   "status": "ok",
   "successful_sources": [
     "BBC News",
@@ -17,76 +17,76 @@
   ],
   "stories": [
     {
-      "title": "Good News in History, November 9",
-      "url": "https://www.goodnewsnetwork.org/events061109/",
+      "title": "Interpreting Autistic Cues Is Difficult, a Teen Built an App That’s Helping Hundreds of Families",
+      "url": "https://www.goodnewsnetwork.org/15-yo-teaches-himself-machine-learning-to-build-app-that-interprets-autistic-communication/",
       "source": "Good News Network",
       "category": "Good news",
       "tone": "light",
-      "published_at": "2026-11-09T08:00:00.000Z"
+      "published_at": "2026-11-09T16:30:23.000Z"
     },
     {
-      "title": "Scientists predict 2026 hottest year on record as climate talks begin",
-      "url": "https://www.bbc.co.uk/news/articles/c6pvgg7mdvdvo?at_medium=RSS&at_campaign=rss",
-      "source": "BBC Science",
-      "category": "Science",
-      "tone": "light",
-      "published_at": "2026-11-09T07:30:12.000Z"
-    },
-    {
-      "title": "James Bond: What we know so far about the next 007 film",
-      "url": "https://www.bbc.co.uk/news/articles/ck79p0lev47po?at_medium=RSS&at_campaign=rss",
-      "source": "BBC Culture",
-      "category": "Culture",
-      "tone": "light",
-      "published_at": "2026-11-09T06:47:09.000Z"
-    },
-    {
-      "title": "Sports Personality of the Year returns - with five awards decided by public",
-      "url": "https://www.bbc.co.uk/sport/articles/cqj9kd00y0wko?at_medium=RSS&at_campaign=rss",
-      "source": "BBC Sport",
-      "category": "Sport",
-      "tone": "light",
-      "published_at": "2026-11-09T07:30:05.000Z"
-    },
-    {
-      "title": "Government 'looking seriously' at banning under-16s from Vinted and eBay",
-      "url": "https://www.bbc.co.uk/news/articles/cmzxjvpqrjxro?at_medium=RSS&at_campaign=rss",
-      "source": "BBC Technology",
-      "category": "Technology",
-      "tone": "light",
-      "published_at": "2026-11-08T15:37:25.000Z"
-    },
-    {
-      "title": "Government's EV targets expected to be reduced this week",
-      "url": "https://www.bbc.co.uk/news/articles/cqkg5g2970epo?at_medium=RSS&at_campaign=rss",
-      "source": "BBC Business",
-      "category": "Business",
-      "tone": "light",
-      "published_at": "2026-11-09T07:20:17.000Z"
-    },
-    {
-      "title": "Pope delivers veiled rebuke of Milei's austerity measures",
-      "url": "https://www.bbc.co.uk/news/articles/ckj0l082jqzvo?at_medium=RSS&at_campaign=rss",
-      "source": "BBC News",
-      "category": "World",
-      "tone": "light",
-      "published_at": "2026-11-09T05:30:37.000Z"
-    },
-    {
-      "title": "Dogs Can Sniff-Out Invasive Plant Species With High Accuracy to Curb Their Destruction",
-      "url": "https://www.goodnewsnetwork.org/dogs-can-sniff-out-invasive-plant-species-with-75pt-accuracy/",
-      "source": "Good News Network",
-      "category": "Good news",
-      "tone": "light",
-      "published_at": "2026-11-08T18:36:02.000Z"
-    },
-    {
-      "title": "APOD: 2026 November 9 – Rigel and the Witch Head Nebula",
-      "url": "https://science.nasa.gov/image-article/apod-2026-november-9-rigel-and-the-witch-head-nebula/",
+      "title": "NASA Advanced Mid-Power Electric Rocket Challenge",
+      "url": "https://www.nasa.gov/directorates/stmd/prizes-challenges-crowdsourcing-program/center-of-excellence-for-collaborative-innovation-coeci/nasa-advanced-mid-power-electric-rocket-challenge/",
       "source": "NASA",
       "category": "Science",
       "tone": "light",
-      "published_at": "2026-11-09T05:05:00.000Z"
+      "published_at": "2026-11-09T17:42:42.000Z"
+    },
+    {
+      "title": "Find out who's in the running for this year's Booker Prize",
+      "url": "https://www.bbc.co.uk/news/articles/cqzjz8dk4wddo?at_medium=RSS&at_campaign=rss",
+      "source": "BBC Culture",
+      "category": "Culture",
+      "tone": "light",
+      "published_at": "2026-11-09T11:30:13.000Z"
+    },
+    {
+      "title": "England wing Feyi-Waboso out of Nations Championship",
+      "url": "https://www.bbc.co.uk/sport/rugby-union/articles/cw5yny20m7jzo?at_medium=RSS&at_campaign=rss",
+      "source": "BBC Sport",
+      "category": "Sport",
+      "tone": "light",
+      "published_at": "2026-11-09T18:33:37.000Z"
+    },
+    {
+      "title": "Claude Code is accidentally exposing secrets all over GitHub",
+      "url": "https://arstechnica.com/ai/2026/11/claude-code-settings-files-expose-thousands-of-secrets-on-github/",
+      "source": "Ars Technica",
+      "category": "Technology",
+      "tone": "light",
+      "published_at": "2026-11-09T17:24:26.000Z"
+    },
+    {
+      "title": "How a civil servant got away with juggling five jobs for so long",
+      "url": "https://www.bbc.co.uk/news/articles/cw1m4d8vjvppo?at_medium=RSS&at_campaign=rss",
+      "source": "BBC Business",
+      "category": "Business",
+      "tone": "light",
+      "published_at": "2026-11-09T18:40:31.000Z"
+    },
+    {
+      "title": "Republican congressman to force impeachment vote on Defence Secretary Hegseth",
+      "url": "https://www.bbc.co.uk/news/articles/cwr5y58jjp8ro?at_medium=RSS&at_campaign=rss",
+      "source": "BBC News",
+      "category": "World",
+      "tone": "light",
+      "published_at": "2026-11-09T18:19:19.000Z"
+    },
+    {
+      "title": "‘Digital advances are reshaping nature conservation’ say experts",
+      "url": "https://www.positive.news/environment/digital-advances-are-reshaping-nature-conservation-say-experts/",
+      "source": "Positive News",
+      "category": "Good news",
+      "tone": "light",
+      "published_at": "2026-11-09T13:44:06.000Z"
+    },
+    {
+      "title": "Birds return to waterfowl park after oil vandalism",
+      "url": "https://www.bbc.co.uk/news/articles/c6gqwq1x85e0o?at_medium=RSS&at_campaign=rss",
+      "source": "BBC Science",
+      "category": "Science",
+      "tone": "light",
+      "published_at": "2026-11-09T14:52:07.000Z"
     }
   ]
 }
