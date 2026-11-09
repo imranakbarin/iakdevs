@@ -208,7 +208,7 @@ async function main(){
         await page.evaluate(place=>{
           const q=place==='park'?ToyTown3D.lifeStats().at.play:null;
           const p=place==='market'?ToyTown.props().find(p=>p.kind==='district-scene'&&p.role==='produce'):null;
-          if(!q&&!p)throw Error('Requested public place missing: '+place);
+          if(!q&&!p)throw Error('Requested public place missing: '+place+' '+JSON.stringify({seed:ToyTown.debug().seed,theme:ToyTown.debug().theme,life:ToyTown3D.lifeStats()}));
           ToyTown.pinchTo(3.25,innerWidth/2,innerHeight/2,{x:q?q[0]:p.x,y:q?q[1]:p.y});
         },job.place);
       }

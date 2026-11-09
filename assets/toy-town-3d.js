@@ -4666,7 +4666,16 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
     const score=c=>{let m=9;for(const b of bs)m=Math.min(m,Math.hypot(b.x+(b.kind==='site'?1:.5)-c[0],b.y+(b.kind==='site'?1:.5)-c[1])-(b.kind==='site'?2:.75));
       for(const p of ps)m=Math.min(m,Math.hypot(p.x-c[0],p.y-c[1])-({stadium:1.65,stage:1.4,market:1.4,lab:1.2,zoo:1.4,launchpad:1.0}[p.kind]||.5));
       if(c[0]>6.7&&c[0]<11.3&&c[1]>6.7&&c[1]<11.3)m=-9;return m;};
-    return cands.map(c=>({x:c[0],z:c[1],clear:score(c)})).sort((a,b)=>b.clear-a.clear);   // river row excluded: only lawns north of it
+    const ranked=cands.map(c=>({x:c[0],z:c[1],clear:score(c)})).sort((a,b)=>b.clear-a.clear);
+    if(ranked.some(s=>s.clear>.6))return ranked;
+    // Daily layouts can leave an open lawn between the five old sample points.
+    // Search the same block interiors more closely without relaxing clearance,
+    // entering the river row, or moving an already valid playground.
+    for(const bx of [2,7,12])for(const by of [2,7])
+      for(let ox=1;ox<=3;ox+=.25)for(let oy=1;oy<=3;oy+=.25){
+        const x=bx+ox,z=by+oy;ranked.push({x,z,clear:score([x,z])});
+      }
+    return ranked.sort((a,b)=>b.clear-a.clear);
   }
   const sitPose=(p,y=-.05)=>{const L=p.userData.limbs;if(L){L.legs.forEach(l=>{l.rotation.x=-1.35;});}p.position.y+=y;};
   const kidOf=(i,col)=>{const p=person({col,skin:['#f1c9a5','#d8a77c','#a8754f','#7a4e33'][i%4],hair:i%2?'#49362d':'#333947',ph:i*1.9+.3,x:i+3,y:i*5});

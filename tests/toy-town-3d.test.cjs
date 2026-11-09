@@ -159,7 +159,7 @@ assert.match(moduleCode,/eye.scale.y=blink/,'eyelids blink without a separate an
 assert.match(html,/type="importmap"/);
 assert.match(html,/three@0\.187\.0\/build\/three\.module\.js/);
 assert.match(html,/three@0\.187\.0\/examples\/jsm\//);
-assert.match(html,/toy-town-3d\.js\?v=97/);
+assert.match(html,/toy-town-3d\.js\?v=98/);
 assert.match(moduleCode,/ref\.path&&Number\.isFinite\(ref\.walkFacing\)/, 'routed people use a real diagonal heading instead of a cardinal-only pose');
 assert.match(html,/toy-town-landmarks\.js\?v=7/,'the independent models are requested alongside Three');
 assert.match(html,/buildLandmark:landmarks\.buildLandmark/,
@@ -169,7 +169,7 @@ const classicScript=html.match(/src="assets\/toy-town\.js\?v=\d+"/);
 assert.ok(classicScript&&
   html.indexOf(classicScript[0])<html.indexOf("import('three')"),
   'the actual versioned classic script always loads before WebGL');
-assert.match(page,/toy-town\.html\?v=108&embed=1/);
+assert.match(page,/toy-town\.html\?v=109&embed=1/);
 assert.match(fs.readFileSync(path.join(root,'assets/toy-town-3d.js'),'utf8'),/sport=ref\.kind==='runner'[\s\S]*bib with a stripe/,'marathon runners are dressed in sports kit (vest, shorts, bib, headband)');
 assert.match(fs.readFileSync(path.join(root,'assets/toy-town-3d.js'),'utf8'),/town\.stageHeadline/,'the town crier makes the town act out the headline');
 assert.match(fs.readFileSync(path.join(root,'assets/toy-town.js'),'utf8'),
@@ -933,6 +933,21 @@ assert.match(moduleCode,/const segments=\[\[2\.22,5\.78\]/,
   'stone shoulders stop before junctions and river bridges');
 assert.match(moduleCode,/continuous plaster pilasters/i,
   'wall accents follow facades without disconnected bricks');
+// A real daily layout that exhausted the old five-point lawn search still
+// has a safe playground site; keep its original clearance and road margins.
+{
+  const lawnDoc={getElementById:()=>({textContent:''})};
+  const lawnCtx={Math,Object,Array,JSON,Date,String,Number,RegExp,setTimeout:()=>0,document:lawnDoc};
+  vm.createContext(lawnCtx);
+  vm.runInContext(fs.readFileSync(path.join(root,'assets/toy-town-diorama.js'),'utf8')+'\n'+fs.readFileSync(path.join(root,'assets/toy-town.js'),'utf8')+';this.T=ToyTown;',lawnCtx);
+  const choose=moduleCode.slice(moduleCode.indexOf('  function freeSpots(){'),moduleCode.indexOf('  const sitPose='));
+  for(const seed of [17,36,38,45]){
+    lawnCtx.T.build(seed,'sports');lawnCtx.T.decorate(lawnCtx.T.newsThemes(['India wins international cricket championship final','Robot engineers announce a new research breakthrough','Museum celebrates a global art exhibition opening']));
+    const site=vm.runInNewContext(choose+';freeSpots().find(s=>s.clear>.6)',{town:lawnCtx.T,Math});
+    assert.ok(site,'daily lawn layout '+seed+' has a safely cleared playground');
+    assert.ok(site.z<13&&[1,6,11,16].every(n=>Math.abs(site.x-(n+.5))>=1.5&&Math.abs(site.z-(n+.5))>=1.5),'playground remains off roads and the river');
+  }
+}
 // Expanded districts are actual models and separated moving routes.
 assert.equal(api.metropolis().districts.length,6);
 const pockets=[];const scanPockets=n=>{if(n.userData?.metroPocket)pockets.push(n);for(const c of n.children||[])scanPockets(c);};scanPockets(api.scene);
