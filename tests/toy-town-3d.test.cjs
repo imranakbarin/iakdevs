@@ -159,7 +159,7 @@ assert.match(moduleCode,/eye.scale.y=blink/,'eyelids blink without a separate an
 assert.match(html,/type="importmap"/);
 assert.match(html,/three@0\.187\.0\/build\/three\.module\.js/);
 assert.match(html,/three@0\.187\.0\/examples\/jsm\//);
-assert.match(html,/toy-town-3d\.js\?v=96/);
+assert.match(html,/toy-town-3d\.js\?v=97/);
 assert.match(moduleCode,/ref\.path&&Number\.isFinite\(ref\.walkFacing\)/, 'routed people use a real diagonal heading instead of a cardinal-only pose');
 assert.match(html,/toy-town-landmarks\.js\?v=7/,'the independent models are requested alongside Three');
 assert.match(html,/buildLandmark:landmarks\.buildLandmark/,
@@ -169,7 +169,7 @@ const classicScript=html.match(/src="assets\/toy-town\.js\?v=\d+"/);
 assert.ok(classicScript&&
   html.indexOf(classicScript[0])<html.indexOf("import('three')"),
   'the actual versioned classic script always loads before WebGL');
-assert.match(page,/toy-town\.html\?v=107&embed=1/);
+assert.match(page,/toy-town\.html\?v=108&embed=1/);
 assert.match(fs.readFileSync(path.join(root,'assets/toy-town-3d.js'),'utf8'),/sport=ref\.kind==='runner'[\s\S]*bib with a stripe/,'marathon runners are dressed in sports kit (vest, shorts, bib, headband)');
 assert.match(fs.readFileSync(path.join(root,'assets/toy-town-3d.js'),'utf8'),/town\.stageHeadline/,'the town crier makes the town act out the headline');
 assert.match(fs.readFileSync(path.join(root,'assets/toy-town.js'),'utf8'),
@@ -968,7 +968,14 @@ const varied=[];const scanVariety=n=>{if(n.userData?.metroBuilding)varied.push(n
 assert.ok(new Set(varied.map(b=>b.width.toFixed(2)+':'+b.depth.toFixed(2))).size>=4,'outer buildings have distinct footprints');
 assert.ok(varied.every(b=>b.width<=1.2&&b.depth<=1.2),'varied buildings remain within their reserved plots');
 const signatureRoles=new Set();let masses=0;const scanIdentity=n=>{if(n.userData?.metroSignature)signatureRoles.add(n.userData.metroSignature);if(n.userData?.metroMass)masses++;for(const c of n.children||[])scanIdentity(c);};scanIdentity(api.scene);
-assert.deepEqual([...signatureRoles].sort(),['cafe','library','museum']);assert.ok(masses>signatureRoles.size,'recognizable roles use composed building geometry');
+assert.deepEqual([...signatureRoles].sort(),['bakery','cafe','gallery','library','museum']);assert.ok(masses>signatureRoles.size,'recognizable roles use composed building geometry');
+api.previewMetropolis(6);const browsing=api.metropolis().life.find(a=>a.type==='shopper');
+assert.equal(browsing.action,'choose');
+api.previewMetropolis(12);const collecting=api.metropolis().life.find(a=>a.type==='shopper');
+assert.equal(collecting.action,'collect');
+api.previewMetropolis(21);const departing=api.metropolis().life.find(a=>a.type==='shopper');
+assert.equal(departing.action,'walk');assert.ok(Math.hypot(departing.x-collecting.x,departing.z-collecting.z)>.1,'shopper leaves after collecting produce');
+for(let t=0;t<48;t+=.5){api.previewMetropolis(t);const life=api.metropolis().life,v=life.find(a=>a.type==='vendor'),c=life.find(a=>a.type==='shopper');assert.ok(Math.hypot(v.x-c.x,v.z-c.z)>.65,'seller and shopper remain on opposite sides of the counter');}
 api.previewMetropolis(360);
 console.log('METRO_TRIPS',JSON.stringify({arrivals:trips.arrivals,boardings:trips.boardings,alightings:trips.alightings}));
 api.previewMetropolis(53.99);const beforeLoop=api.metropolis().pedestrians;api.previewMetropolis(54.01);const afterLoop=api.metropolis().pedestrians;assert.ok(Math.hypot(beforeLoop[0].x-afterLoop[0].x,beforeLoop[0].z-afterLoop[0].z)<.01,'walkers continue from their stop without teleporting at the cycle boundary');
