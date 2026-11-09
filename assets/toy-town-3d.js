@@ -4006,6 +4006,85 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
     const m=new THREE.MeshStandardMaterial({map:tx,transparent:true,alphaTest:.04,depthWrite:false,roughness:.9});
     m.userData={faceExpression:expression,direction};faceFrames.set(key,m);return m;
   }
+  // Level of detail for residents. A resident is ~24 meshes and ~10 k triangles, but at the default view they are 25-45 px
+  // tall. Plain residents also get a far figure of three small meshes (body, two legs: ~350 triangles) built from the same
+  // colours; syncActors swaps the two by the resident's size on screen, with hysteresis. The far legs still swing at the
+  // hip and the body still sways with the upper-body pivot; what is lost (arm swing, a turning head, hands) is invisible at
+  // that size. Residents carrying something, or with a trade or a kind of their own, keep the full rig always.
+  const FAR_GEO={};
+  const farGeo=(key,make)=>FAR_GEO[key]||(FAR_GEO[key]=make());
+  function mergeColoured(parts){
+    const M4=THREE.Matrix4,V3=THREE.Vector3,M3=THREE.Matrix3;let nv=0,ni=0;
+    for(const p of parts){nv+=p.geo.attributes.position.count;ni+=p.geo.index.count;}
+    const pos=new Float32Array(nv*3),nor=new Float32Array(nv*3),col=new Float32Array(nv*3),idx=new Uint16Array(ni),v=new V3(),nm=new M3(),tint=new THREE.Color();
+    let vo=0,io=0;
+    for(const p of parts){
+      const g=p.geo,pa=g.attributes.position,na=g.attributes.normal,mw=p.matrix,flip=mw.determinant()<0;nm.getNormalMatrix(mw);tint.set(p.color);
+      for(let i=0;i<pa.count;i++){
+        v.set(pa.array[i*3],pa.array[i*3+1],pa.array[i*3+2]).applyMatrix4(mw);pos[(vo+i)*3]=v.x;pos[(vo+i)*3+1]=v.y;pos[(vo+i)*3+2]=v.z;
+        v.set(na.array[i*3],na.array[i*3+1],na.array[i*3+2]).applyMatrix3(nm).normalize();nor[(vo+i)*3]=v.x;nor[(vo+i)*3+1]=v.y;nor[(vo+i)*3+2]=v.z;
+        col[(vo+i)*3]=tint.r;col[(vo+i)*3+1]=tint.g;col[(vo+i)*3+2]=tint.b;
+      }
+      for(let i=0;i<g.index.count;i+=3){const a=g.index.array[i]+vo,b=g.index.array[i+1]+vo,c=g.index.array[i+2]+vo;if(flip){idx[io++]=a;idx[io++]=c;idx[io++]=b;}else{idx[io++]=a;idx[io++]=b;idx[io++]=c;}}
+      vo+=pa.count;
+    }
+    const out=new THREE.BufferGeometry();
+    out.setAttribute('position',new THREE.BufferAttribute(pos,3));out.setAttribute('normal',new THREE.BufferAttribute(nor,3));out.setAttribute('color',new THREE.BufferAttribute(col,3));
+    out.setIndex(new THREE.BufferAttribute(idx,1));out.computeBoundingSphere();return out;
+  }
+  function buildFarResident(g,look){
+    if(!THREE.Matrix4||!THREE.SphereGeometry||!THREE.CylinderGeometry||!THREE.BoxGeometry||!THREE.BufferGeometry||!THREE.Euler||!THREE.Quaternion||!THREE.Vector3||!THREE.Matrix3)return;
+    const lm=g.userData.limbs;if(!lm||!lm.upperBody||!lm.legs||lm.legs.length!==2)return;
+    const sph=farGeo('s',()=>new THREE.SphereGeometry(1,8,6)),cyl=farGeo('c',()=>new THREE.CylinderGeometry(1,1,1,6,1)),box=farGeo('b',()=>new THREE.BoxGeometry(1,1,1)),cap=farGeo('h',()=>new THREE.SphereGeometry(1,8,4,0,Math.PI*2,0,Math.PI*.56));
+    const mat4=(x,y,z,sx,sy,sz,rx=0)=>new THREE.Matrix4().compose(new THREE.Vector3(x,y,z),new THREE.Quaternion().setFromEuler(new THREE.Euler(rx,0,0)),new THREE.Vector3(sx,sy,sz));
+    const upper=[
+      {geo:sph,matrix:mat4(0,.262,0,.093,.125,.07),color:look.coat},                       // torso
+      {geo:sph,matrix:mat4(0,.462,0,.1,.098,.096),color:look.skin},                        // head
+      look.hat?{geo:cap,matrix:mat4(0,.48,0,.108,.108,.108),color:look.hat==='beanie'?'#b18cbd':'#588f9e'}:{geo:cap,matrix:mat4(0,.468,-.01,.106,.106,.106,-.32),color:look.hair},
+      {geo:cyl,matrix:mat4(-.096,.235,0,.025,.17,.025),color:look.coat},{geo:cyl,matrix:mat4(.096,.235,0,.025,.17,.025),color:look.coat}   // arms
+    ];
+    if(look.backpack)upper.push({geo:box,matrix:mat4(0,.27,-.085,.13,.15,.07),color:look.backpack});
+    const first=lm.upperBody.children.find(c=>c.isMesh)||null;
+    const fin=bakedFinish({roughness:.8,metalness:.025,flatShading:false,side:0});
+    const mk=(parent,parts)=>{const m=new THREE.Mesh(mergeColoured(parts),fin.f);m.castShadow=!first||first.castShadow!==false;m.receiveShadow=false;m.visible=false;parent.add(m);return m;};
+    const far=[mk(lm.upperBody,upper)];
+    for(const leg of lm.legs)far.push(mk(leg,[{geo:cyl,matrix:mat4(0,-.088,0,.03,.176,.03),color:look.trousers},{geo:box,matrix:mat4(0,-.188,.02,.052,.03,.085),color:look.shoes}]));
+    // everything else on the rig is detail, except what the simulation shows and hides itself (a shopping bag, a loaf, a handbag)
+    const keep=new Set([g.userData.shopBag]);const detail=[];
+    g.traverse(o=>{
+      if(!o.isMesh||far.includes(o)||keep.has(o))return;
+      for(let p=o.parent;p&&p!==g;p=p.parent)if(p.userData&&(p.userData.carriedProp||p.userData.heldProduct))return;
+      detail.push({o,vis:o.visible});
+    });
+    g.userData.lod={far,detail,isFar:false,seen:false};lodRegistry.add(g);
+  }
+  function setResidentLod(g,far){
+    const lod=g.userData.lod;if(!lod||lod.isFar===far)return;lod.isFar=far;
+    for(const f of lod.far)f.visible=far;
+    for(const d of lod.detail)d.o.visible=far?false:d.vis;
+  }
+  // Size on screen (rendered pixels) of a resident: project the feet and the top of the head (right for any camera).
+  const LOD_FAR_PX=46,LOD_NEAR_PX=62,lodFeet=THREE.Vector3?new THREE.Vector3():null,lodHead=THREE.Vector3?new THREE.Vector3():null,lodRegistry=new Set();
+  function residentPixels(g){
+    lodFeet.setFromMatrixPosition(g.matrixWorld);lodHead.copy(lodFeet);lodHead.y+=.62*(g.scale.y||1);
+    lodFeet.project(camera);lodHead.project(camera);
+    return Math.abs(lodHead.y-lodFeet.y)*.5*renderer.domElement.height;
+  }
+  // Called each frame: every resident that has a far figure, wherever it is driven from (actors, ambient walkers, the city).
+  let lodTick=0,lodForce=null;
+  function updateResidentLods(){
+    if(++lodTick%3||!lodFeet)return;   // a few times a second is plenty
+    for(const g of lodRegistry){
+      if(!g.parent){if(g.userData.lod.seen)lodRegistry.delete(g);continue;}
+      g.userData.lod.seen=true;
+      let vis=true;for(let p=g;p;p=p.parent)if(!p.visible){vis=false;break;}
+      if(!vis)continue;
+      const lod=g.userData.lod;
+      if(lodForce){setResidentLod(g,lodForce==='far');continue;}
+      const px=residentPixels(g);
+      if(lod.isFar?px>LOD_NEAR_PX:px<LOD_FAR_PX)setResidentLod(g,!lod.isFar);
+    }
+  }
   function person(ref){
     const g=new THREE.Group();
     const skin=ref.skin||'#dbab86',coat=ref.col||'#d6a3a0',trousers=ref.trousers||'#5e6f7c',sport=ref.kind==='runner',shoes=sport?'#f4f4f4':'#4f4741';
@@ -4262,6 +4341,7 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
       CUTE*scale*(.88+.045*Math.sin(characterPhase+1)));
     headPivot.scale.setScalar(HEAD_BIG);
     try{bakeRig(g);}catch(e){}   // fewer draw calls per resident; the unmerged rig is the fallback
+    if(!ref.kind&&!ref.shopRole&&!ref.heroResident&&!ref.briefcase)try{buildFarResident(g,{coat,skin,trousers,shoes,hair:hairTone,hat:ref.hat,backpack:ref.backpack});}catch(e){}
     return g;
   }
   /* ---- The ring railway. A little round-faced steam train loops the town on a
@@ -6617,7 +6697,7 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
       resize();
       const state=town.debug();
       if(worldBuildings!==town.buildings()||worldSeed!==state.seed)rebuild();
-      syncActors();updateCountryPlace(state.clock||0);updateMetropolis(state.clock||0);syncCamera();light(state.night||0);nightLife(state.night||0,state.clock||0);updateFollowCard();updateMoments();updateWeather(1/45);
+      syncActors();updateResidentLods();updateCountryPlace(state.clock||0);updateMetropolis(state.clock||0);syncCamera();light(state.night||0);nightLife(state.night||0,state.clock||0);updateFollowCard();updateMoments();updateWeather(1/45);
       // Driven by the town's own clock, so they pause with the town.
       {const now=state.clock||0;const dt=lastClockAt===null?0:THREE.MathUtils.clamp(now-lastClockAt,0,.1);lastClockAt=now;sceneClock+=dt;
        try{window.ToyTownWeather?.step?.(dt);}catch(e){}
@@ -6655,6 +6735,7 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
     countryPlace:()=>countryPlace?({name:COUNTRY_PLACES[country][0],activity:countryPlace.activity,x:countryPlace.x,z:countryPlace.z,time:countryPlace.time,visitors:countryPlace.visitors.map(v=>({x:v.position.x,z:v.position.z,action:v.userData.countryAction})),rotor:countryPlace.rotor?.rotation.z??null}):null,
     previewCountryActivity:time=>{updateCountryPlace(time);},
     stepPoses:seconds=>{for(let t=0;t<seconds;t+=.05)syncActors(Math.min(.05,seconds-t));},
+    lodStats:()=>{let far=0,near=0;for(const g of lodRegistry)if(g.parent)(g.userData.lod.isFar?far++:near++);return {far,near,total:lodRegistry.size};},forceLod:mode=>{lodForce=mode||null;lodTick=2;},
     renderInfo:()=>({calls:renderer.info?.render?.calls??null,triangles:renderer.info?.render?.triangles??null,geometries:renderer.info?.memory?.geometries??null,textures:renderer.info?.memory?.textures??null}),
     getStats:()=>({metroBuildings:metro.buildings.length,metroDistricts:METRO_DISTRICTS.length,country,countryBuildings,mobileBudget:!desktop(),frames,redrawCount,actors:actors.size,ambient:ambient.length,plazaLights:plazaLights.length,festoonBulbs:festoonBulbs.length,gardenElements,woodlandShapes,terrainContours,composedBuildings,districtGardenRooms,landmarks:landmarkCount,windowMaterials:windowMaterials.size,photographicLens:!!lens,pixelRatio,kitModels:kit?kit.size:0,cameraProjection:'perspective',lens:lens?.stats?.()||null,buildings:town.buildings().length,webgl:true,frozen}),
     // A stable actual GPU-rendered frame for visual regression screenshots.
