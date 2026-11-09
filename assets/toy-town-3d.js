@@ -3478,12 +3478,13 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
       cylinder(g,.27,.30,.10,'#b9ad91',0,.07,0);cylinder(g,.23,.23,.015,'#88b6b3',0,.13,0);cylinder(g,.045,.07,.33,'#d2c4a5',0,.27,0);ball(g,.09,'#c6b99d',0,.47,0);bench(0,.43);
     }else if(D.type==='market'){
       g.userData.marketStall=true;
-      for(const side of [-1,1])box(g,.035,.78,.035,'#847458',side*.48,.39,-.14,false);
-      for(let k=0;k<7;k++)box(g,.15,.045,.60,k%2?'#e9dab8':'#7d9d86',(k-3)*.15,.79,-.14,false);
-      box(g,.98,.08,.28,'#ab8860',0,.36,.05,false);
-      for(let k=0;k<3;k++){box(g,.27,.08,.22,'#b89a70',(k-1)*.30,.42,.05,false);for(let j=0;j<4;j++)ball(g,.042,['#b67b61','#b7b66a','#cfa868'][k],(k-1)*.30+(j%2-.5)*.09,.48,.05+(Math.floor(j/2)-.5)*.09);}
-      metroPlaque(g,'FRESH PRODUCE',0,.70,.18,.87);
-      rainRoofs.push({x:g.position.x,z:g.position.z-.14,rx:.53,rz:.30,top:.18+.79+.023});
+      for(const side of [-1,1])box(g,.035,.61,.035,'#847458',side*.48,.305,-.14,false);
+      for(let k=0;k<7;k++)box(g,.15,.045,.60,k%2?'#e9dab8':'#7d9d86',(k-3)*.15,.62,-.14,false);
+      box(g,.98,.06,.36,'#ab8860',0,.11,.02,false);
+      for(const side of [-1,1])box(g,.035,.11,.035,'#847458',side*.43,.055,.15,false);
+      for(let k=0;k<3;k++){box(g,.27,.06,.22,'#b89a70',(k-1)*.30,.17,.05,false);for(let j=0;j<4;j++)ball(g,.042,['#b67b61','#b7b66a','#cfa868'][k],(k-1)*.30+(j%2-.5)*.09,.22,.05+(Math.floor(j/2)-.5)*.09);}
+      metroPlaque(g,'FRESH PRODUCE',0,.52,.18,.87);
+      rainRoofs.push({x:g.position.x,z:g.position.z-.14,rx:.53,rz:.30,top:.18+.62+.023});
     }else if(D.type==='harbour'){
       for(let k=0;k<3;k++){box(g,.26,.20,.28,['#7d9d9a','#b17f66','#c4ac78'][k],-.31+k*.30,.13,0,false);for(let j=0;j<3;j++)box(g,.015,.17,.29,'#d4c4a4',-.40+k*.30+j*.07,.14,0,false);}
       metroPlaque(g,'DOCK SUPPLIES',0,.43,.42,.78);
@@ -3574,11 +3575,11 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
         const phase=time%24,walk=phase<5||phase>=17;
         const u=phase<5?phase/5:phase<17?1:(24-phase)/7;
         if(a.type==='vendor'){
-          a.g.position.set(a.x,.20,a.z-.28);a.g.rotation.y=0;
+          a.g.position.set(a.x,.20,a.z-.20);a.g.rotation.y=0;
           L.arms[1].rotation.x=phase>=8&&phase<12?-.95:-.35;L.elbows[1].rotation.x=-.55;
           a.parcel.visible=phase>=5&&phase<10;a.action=phase>=8&&phase<12?'serve':'tend';
         }else{
-          a.g.position.set(a.x+.48-u*.30,.20,a.z+.66-u*.25);a.g.rotation.y=walk?(phase<5?Math.PI+.45:.45):Math.PI;
+          a.g.position.set(a.x+.48-u*.30,.20,a.z+.66-u*.36);a.g.rotation.y=walk?(phase<5?Math.PI+.45:.45):Math.PI;
           for(let k=0;k<2;k++)L.legs[k].rotation.x=walk&&!reducedMotion?Math.sin(u*8+k*Math.PI)*.35:0;
           a.parcel.visible=phase>=10;L.arms[1].rotation.x=phase>=8&&phase<12?-.80:-.2;L.elbows[1].rotation.x=-.5;
           a.action=walk?'walk':phase<10?'choose':'collect';
