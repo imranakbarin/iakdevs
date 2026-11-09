@@ -131,16 +131,23 @@ assert.match(view, /const HAIRS=\[/, 'residents have a range of hair colours');
 assert.match(sim, /const rushFactor = \(\) =>/); assert.match(sim, /carsWanted = Math\.round\(CARS \* rush\)/, 'the streets fill at the rush hours and thin out at night');
 assert.match(sim, /'ducks'\);/); assert.match(sim, /feedDucks\(m\.x, 14\); feedings\+\+/, 'now and then a resident walks to the river and feeds the ducks');
 assert.match(sim, /if \(m\.type === 'person' && !m\.kind && wet\) want \*= 1\.18;/); assert.match(sim, /Math\.abs\(m\.x - 9\) < 3\.1 && Math\.abs\(m\.y - 9\) < 3\.1\) want \*= \.78/, 'walkers hurry in the rain and cars ease off in bad weather and near the plaza');
-assert.match(view, /crumbsAt\(ref\.x,ref\.y<14\?13\.25:14\.75\)/, 'the duck feeder\'s crumbs are drawn'); assert.match(view, /A small walk \/ don't-walk lamp/, 'signals have small pedestrian lamps');
+assert.match(view, /crumbsAt\(ref\.x,ref\.y<14\?13\.25:14\.75\)/, 'the duck feeder\'s crumbs are drawn'); assert.match(view.slice(view.indexOf('function createSignals('),view.indexOf('function updateSignals(')), /const ped=new THREE.Group\(\)/, 'signals construct pedestrian lamp groups');
 assert.match(soundSrc, /whistle: \(\) =>/, 'a rocket whistles as it climbs');
 assert.match(view, /function fwStep\(dt,t\)/); assert.match(view, /pattern:r<\.2\?'ring':r<\.5\?'willow':'peony'/, 'fireworks are rockets with trails that burst into peonies, willows and rings of fading, twinkling sparks');
 assert.match(view, /const deep=THREE\.MathUtils\.clamp\(\(dark-\.3\)\/\.6,0,1\)/); assert.match(view, /tint\(sky,'#0b1630',night\*\.97\)/, 'night is a deep-blue sky with cool moonlight and a lower exposure, not a tinted day');
 assert.match(view, /function cityCentre\(\)/); assert.match(view, /squash:CENTRE_SQUASH/, 'the city-centre buildings are squashed low');
 assert.match(view, /const CENTRE_TOP=\.18;/); assert.match(view, /GROUND\.lawn\+\(CENTRE_TOP-GROUND\.lawn\)\*centreAmount\(x,z\)/, 'people in the city centre stand on the paving, not in the lawn under it');
-assert.match(view, /c2\.fillText\('CITY CENTER',512,65\)/); assert.doesNotMatch(view, /sign\(g,'CITY CENTER'/, '"CITY CENTER" is carved into the fountain basin, not shown on a board');
+assert.doesNotMatch(view, /fillText\('CITY CENTER'/, 'oversized civic lettering is retired'); assert.doesNotMatch(view, /sign\(g,'CITY CENTER'/, 'the open square has no oversized civic name board');
 assert.match(view, /function arrowBoard\(/); assert.match(view, /placed\.userData\.size\.y\*\.8/, 'name boards hang on the facade (the buildings are low now), painted and ornamented');
 assert.match(view, /function moodOf\(ref\)/, 'tapping a resident shows a name and a mood');
-assert.match(fs.readFileSync(path.join(root, 'index.html'), 'utf8'), /keep=\['weather','fps','festival','season','lite'\]/, 'the main page passes ?season and ?lite through');
+{
+  const source=fs.readFileSync(path.join(root,'index.html'),'utf8').match(/function townSrc\(\)\{[^\n]+/)[0];
+  const query='?weather=rain&fps=1&festival=diwali&season=summer&lite=1&country=japan';
+  const result=vm.runInNewContext(source+';townSrc()',{URLSearchParams,location:{search:query},bar:{hidden:false}});
+  const url=new URL(result,'https://example.test/');
+  for(const [key,value] of new URLSearchParams(query))assert.equal(url.searchParams.get(key),value,'embedded town keeps '+key);
+  assert.equal(url.searchParams.get('embed'),'1');
+}
 // Nobody stays stuck, and walkers do things of their own: several layouts, six town-minutes each.
 for (const seed of [20261102, 7, 42]) {
   const box = vm.createContext({Math, Object, Array, JSON, Date, String, Number, RegExp, Set, Map, setTimeout: () => 0, document: {getElementById: () => ({textContent: '', style: {}})}});
@@ -192,7 +199,7 @@ assert.match(sim, /function walk\(x, y, tx, ty, speed\)/); assert.match(sim, /m\
   assert.ok(samples > 50 && centre / samples < .05, `walkers on a route keep off the centre line (${centre}/${samples})`);
 }
 const index = fs.readFileSync(path.join(root, 'index.html'), 'utf8');
-assert.match(index, /keep=\['weather','fps','festival','season','lite'\]/, 'the main page passes ?weather= and ?fps into the embedded town');
+assert.match(index, /keep=\['weather','fps','festival','season','lite','country'\]/, 'the main page passes ?weather= and ?fps into the embedded town');
 // The ring railway, the cuter vehicles and the softer city (code-level checks; the behaviour is exercised in toy-town-3d.test.cjs).
 assert.match(view, /function createRailway\(\)/); assert.match(view, /'TOY TOWN',cx,/, 'the station carries its name');
 assert.match(view, /function updatePassengers\(dt,dark\)/); assert.match(view, /if\(trainHit\(clientX,clientY\)\)/, 'tapping the train toots');
@@ -237,7 +244,7 @@ assert.match(fs.readFileSync(path.join(root, 'toy-town.html'), 'utf8'), /html\.u
 assert.match(fs.readFileSync(path.join(root, 'toy-town.html'), 'utf8'), /type==='town:ui'/, 'the host page can ask for it');
 assert.match(fs.readFileSync(path.join(root, 'index.html'), 'utf8'), /uiHooks\.push\(townUI\)/, 'hiding the toolbar hides the town overlays too');
 assert.match(fs.readFileSync(path.join(root, 'index.html'), 'utf8'), /\.town-mode\.art-ui-hidden #town-zoom\{display:none\}/, 'and the zoom buttons');
-assert.match(view, /const CUTE=\.6,HEAD_BIG=\.94;/, 'residents are small and soft with a gently big head');
+assert.match(view, /const CUTE=\.6,HEAD_BIG=\.90;/, 'residents keep their scale with a smaller head and clear shoulders');
 assert.match(view, /function createLife\(\)/); assert.match(view, /function scatterBirds\(x,z,r\)/, 'pigeons peck and scatter');
 assert.match(view, /if\(scatterBirds\(spot\.x,spot\.z,1\.1\)\)/, 'a tap on open ground can startle them');
 assert.match(view, /const ANIMAL_SCALE=\{dog:\.5/, 'animals are scaled to match the small residents (the dog was huge)');
@@ -265,7 +272,7 @@ for (const seed of [555, 42]) {
   assert.equal(wet, 0, `layout ${seed}: nobody walks on the water (first at ${where})`);
 }
 assert.match(view, /b\.scale\.setScalar\(\.62\)/, 'seagulls are small');
-assert.match(view, /const ARCH=\{y0:\.172,L:1\.3,H:\.54,T:\.09,a:\.88,yb:\.1,W:1\.34\}/, 'bridges are arches, wide enough for the pavement lanes, with an opening the river runs through');
+assert.match(view, /const ARCH=\{y0:\.172,L:1\.3,H:\.38,T:\.055,a:\.92,yb:\.1,W:1\.34\}/, 'bridges are arches, wide enough for the pavement lanes, with an opening the river runs through');
 // 360° rotation: the sim keeps a heading that every screen-to-world step honours.
 {
   const box = vm.createContext({Math, Object, Array, JSON, Date, String, Number, RegExp, Set, Map, setTimeout: () => 0, document: {getElementById: () => ({textContent: '', style: {}})}});
@@ -315,7 +322,7 @@ assert.match(view, /function createStage4\(\)/); assert.match(view, /function up
 assert.match(view, /ToyTownWeather\?\.step\?\.\(dt\)/, 'the weather director runs on the town clock');
 assert.match(view, /sunK\+=\(tSun-sunK\)\*\.005/, 'the sun and sky ease in and out of the weather');
 assert.match(view, /function createStage5\(\)/); assert.match(view, /function startEvent\(kind\)/); assert.match(view, /function festivalKind\(\)/, 'festival days (lantern, harvest, spring) and street events (wedding, food cart, juggler)');
-assert.match(view, /\['wedding','cart','juggler'\]/); assert.match(index, /keep=\['weather','fps','festival','season','lite'\]/, 'the main page passes ?festival= into the town too');
+assert.match(view, /\['wedding','cart','juggler'\]/); assert.match(index, /keep=\['weather','fps','festival','season','lite','country'\]/, 'the main page passes ?festival= into the town too');
 assert.match(view, /function archHeight\(x,z\)/, 'vehicles, cyclists and walkers rise over the arched bridge deck'); assert.match(view, /const GROUND=\{lawn:\.13,road:\.172,pave:\.225,foot:\.034\}/, 'residents stand on the surface under them (pavement, asphalt, meadow)');
 assert.match(view, /function walkStyle\(ref\)/, 'every resident has their own walking style (stride, swing, bounce, lean, habits)');
 assert.match(view, /duck\.scale\.setScalar\(\.4\+\(i%3\)\*\.03\)/, 'ducks are small'); assert.match(view, /const visor=box\(face,\.1,\.034,\.014/, 'the robots wear small visors, not huge glasses');

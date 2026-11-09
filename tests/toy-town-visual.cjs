@@ -31,16 +31,42 @@ async function main(){
       '--use-angle=swiftshader','--disable-dev-shm-usage'
     ]});
     const jobs=[
-      {name:'mobile-3d-close',w:390,h:844,classic:false,zoom:1.7},
+      {name:'mobile-3d-close',w:390,h:844,classic:false,zoom:1.7,touchCheck:true},
+      {name:'mobile-landscape',w:844,h:390,classic:false,zoom:1,mobile:true,mobileCheck:true},
+      {name:'mobile-reduced-motion',w:390,h:844,classic:false,zoom:1.5,reduced:true,mobileCheck:true},
+      {name:'country-india',w:1000,h:760,classic:false,zoom:2.8,country:'india'},
+      {name:'country-japan',w:844,h:390,classic:false,zoom:2.2,country:'japan',mobile:true,mobileCheck:true},
+      {name:'country-italy',w:1000,h:760,classic:false,zoom:2.8,country:'italy'},
+      {name:'country-netherlands',w:1000,h:760,classic:false,zoom:2.8,country:'netherlands'},
+      {name:'country-usa',w:1000,h:760,classic:false,zoom:2.8,country:'usa'},
+      {name:'country-classic',w:390,h:844,classic:true,zoom:2,country:'japan'},
+      {name:'reading-interaction',w:1100,h:820,classic:false,zoom:3.25,reader:true},
       {name:'desktop-3d-close',w:1280,h:820,classic:false,zoom:1.8},
+      {name:'desktop-open-square',w:1280,h:900,classic:false,zoom:3.1,square:true},
+      {name:'market-place',w:1100,h:820,classic:false,zoom:3.25,place:'market'},
+      {name:'park-playground',w:1100,h:820,classic:false,zoom:3.25,place:'park'},
+      {name:'bridge-crossing',w:1100,h:820,classic:false,zoom:3.2,bridge:true},
+      {name:'station-waterfront',w:1280,h:900,classic:false,zoom:2.7,waterfront:true},
+      {name:'rain-mobile',w:390,h:844,classic:false,zoom:1.9,weather:'rain'},
       {name:'desktop-social-life',w:1080,h:760,classic:false,zoom:2.05,social:true},
-      {name:'desktop-3d-wide',w:1280,h:820,classic:false,zoom:.65},
+      {name:'desktop-3d-wide',w:1280,h:820,classic:false,zoom:.65,metroOverview:true},
+      {name:'metro-downtown',w:1280,h:820,classic:false,zoom:1.7,metroDistrict:true},
+      {name:'metro-mobile-overview',w:390,h:844,classic:false,zoom:1,metroOverview:true},
+      {name:'metro-harbour',w:1280,h:820,classic:false,zoom:1.7,metroHarbour:true},
+      {name:'metro-campus-transit',w:1280,h:820,classic:false,zoom:2.1,metroCampus:true},
+      {name:'metro-market-life',w:1280,h:820,classic:false,zoom:2.1,metroMarket:true},
+      {name:'metro-produce-trade',w:1100,h:820,classic:false,zoom:3.25,metroTrade:true},
+      {name:'metro-garden-work',w:1100,h:820,classic:false,zoom:3.25,metroGarden:true},
+      {name:'metro-civic-reader',w:1100,h:820,classic:false,zoom:3.25,metroCivic:true},
       {name:'mobile-classic-reference',w:390,h:844,classic:true,zoom:1.7}
     ];
     const records=[];
-    for(const job of jobs){
+    const shards=+(process.env.TOWN_VISUAL_SHARDS||1),shard=+(process.env.TOWN_VISUAL_SHARD||0);
+    if(!Number.isInteger(shards)||shards<1||!Number.isInteger(shard)||shard<0||shard>=shards)throw Error('Invalid visual shard');
+    for(const job of jobs.filter((_,i)=>i%shards===shard)){
       const context=await browser.newContext({viewport:{width:job.w,height:job.h},deviceScaleFactor:1,
-        isMobile:job.w<500,hasTouch:job.w<500});
+        isMobile:!!job.mobile||job.w<500,hasTouch:!!job.mobile||job.w<500,reducedMotion:job.reduced?'reduce':'no-preference',
+        ...((job.weather||job.social)?{recordVideo:{dir:out,size:{width:job.w,height:job.h}}}:{})});
       const page=await context.newPage();
       // Exercise real headline UI with controlled current publisher data.
       // The production hourly RSS job is tested separately.
@@ -66,7 +92,7 @@ async function main(){
       const errors=[];
       page.on('pageerror',err=>errors.push('pageerror:'+err.message));
       page.on('console',m=>{if(m.type()==='error')errors.push('console:'+m.text().slice(0,250));});
-      await page.goto('http://127.0.0.1:'+port+'/toy-town.html?visual=1'+(job.classic?'&classic=1':''),
+      await page.goto('http://127.0.0.1:'+port+'/toy-town.html?visual=1'+(job.classic?'&classic=1':'')+'&weather='+(job.weather||'clear'),
         {waitUntil:'domcontentloaded',timeout:45000});
       await page.waitForFunction(()=>typeof ToyTown!=='undefined'&&ToyTown.buildings().length>0,
         {timeout:50000});
@@ -117,8 +143,93 @@ async function main(){
       let beforeFrame=await page.evaluate(()=>window.ToyTown3D?.getStats?.().frames||0);
       await page.evaluate(f=>{
         ToyTown.setPlaying(false);
-        ToyTown.zoomAt(f);
+        if(window.ToyTown3D?.active)ToyTown.pinchTo(f,innerWidth/2,innerHeight/2,{x:9,y:9});else ToyTown.zoomAt(f);
       },job.zoom);
+      if(job.country){
+        await page.evaluate(()=>{window.__countryBuildings=ToyTown.buildings();window.__countryResidents=ToyTown.movers().slice();window.ToyTown3D?.freeze?.();});
+        await page.locator('#country-select').selectOption(job.country);
+        const selected=await page.evaluate(id=>({id:ToyTownCountry.id,url:new URL(location.href).searchParams.get('country'),saved:localStorage.getItem('toy-town:country'),
+          unchanged:ToyTown.buildings()===window.__countryBuildings&&window.__countryResidents.every((m,i)=>ToyTown.movers()[i]===m),
+          models:window.ToyTown3D?.getStats().countryBuildings||0,stats:window.ToyTown3D?.getStats()||null}),job.country);
+        if(selected.id!==job.country||selected.url!==job.country||selected.saved!==job.country||!selected.unchanged||(!job.classic&&selected.models<15))throw Error('Country selection failed: '+JSON.stringify(selected));
+        console.log('COUNTRY_SELECTION '+job.country+' '+JSON.stringify(selected));
+        if(!job.classic)await page.evaluate(()=>{const p=ToyTown3D.countryPlace();if(!p)throw Error('Country landmark missing');ToyTown3D.previewCountryActivity(7);ToyTown.pinchTo(3.25,innerWidth/2,innerHeight/2,{x:p.x,y:p.z});});
+        await page.evaluate(()=>window.ToyTown3D?.unfreeze?.());
+        beforeFrame=await page.evaluate(()=>window.ToyTown3D?.getStats().frames||0);
+      }
+      if(job.touchCheck||job.mobileCheck){
+        // Begin below the camera's hard zoom limit, including close country previews.
+        const cameraBefore=await page.evaluate(()=>ToyTown.debug().cam.tz);
+        await page.evaluate(()=>ToyTown.pinchTo(1.2,innerWidth/2,innerHeight/2,{x:9,y:9}));
+        const before=await page.evaluate(()=>ToyTown.debug().cam.tz),cdp=await context.newCDPSession(page);
+        const x=job.w/2,y=job.h*.52;
+        const points=d=>[{x:x-d,y,id:1,radiusX:4,radiusY:4,force:1},{x:x+d,y,id:2,radiusX:4,radiusY:4,force:1}];
+        await cdp.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:points(28)});
+        for(const d of [34,40,46,52])await cdp.send('Input.dispatchTouchEvent',{type:'touchMove',touchPoints:points(d)});
+        await cdp.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});await cdp.detach();
+        await page.waitForFunction(z=>ToyTown.debug().cam.tz>z+.005,before,{timeout:15000});
+        const ui=await page.evaluate(()=>({width:innerWidth,overflow:document.documentElement.scrollWidth>innerWidth+1,
+          clipped:[...document.querySelectorAll('#zoom-controls button,#country-select')].map(e=>e.getBoundingClientRect()).filter(r=>r.width>0).some(r=>r.left<0||r.right>innerWidth+1||r.top<0||r.bottom>innerHeight+1),
+          reduced:matchMedia('(prefers-reduced-motion: reduce)').matches}));
+        if(!job.classic&&!(await page.evaluate(()=>ToyTown3D.getStats().mobileBudget)))throw Error('Touch landscape lost its mobile render budget');
+        if(ui.overflow||ui.clipped||!!job.reduced!==ui.reduced)throw Error('Mobile controls/layout mismatch: '+JSON.stringify(ui));
+        console.log('TOUCH_LAYOUT '+job.name+' '+JSON.stringify(ui));
+        await page.evaluate(z=>ToyTown.pinchTo(z,innerWidth/2,innerHeight/2,{x:9,y:9}),cameraBefore);
+        beforeFrame=await page.evaluate(()=>ToyTown3D.getStats().frames);
+      }
+      if(job.metroOverview)await page.evaluate(()=>ToyTown.resetView());
+      if(job.metroTrade)await page.evaluate(()=>ToyTown.pinchTo(3.25,innerWidth/2,innerHeight/2,{x:-9.8,y:16.8}));
+      if(job.metroGarden)await page.evaluate(()=>ToyTown.pinchTo(3.25,innerWidth/2,innerHeight/2,{x:-9.8,y:5.8}));
+      if(job.metroCivic)await page.evaluate(()=>ToyTown.pinchTo(3.25,innerWidth/2,innerHeight/2,{x:11.2,y:-4.2}));
+      if(job.metroCampus)await page.evaluate(()=>ToyTown.pinchTo(2.1,innerWidth/2,innerHeight/2,{x:3,y:-7}));
+      if(job.metroMarket)await page.evaluate(()=>ToyTown.pinchTo(2.1,innerWidth/2,innerHeight/2,{x:-7,y:14}));
+      if(job.metroHarbour)await page.evaluate(()=>ToyTown.pinchTo(2.1,innerWidth/2,innerHeight/2,{x:29,y:14}));
+      if(job.metroDistrict)await page.evaluate(()=>ToyTown.pinchTo(1.7,innerWidth/2,innerHeight/2,{x:25,y:3}));
+      if(job.reader){await page.evaluate(()=>{
+        const ref=ToyTown.movers().find(m=>m.shopRole==='customer');if(!ref)throw Error('Reader fixture missing');
+        const now=ToyTown.debug().clock;
+        Object.assign(ref,{x:9,y:9.65,lane:0,d:2,v:0,path:null,heading:undefined,attention:{x:9,y:10.4},
+          intent:'reading',newsMood:'',cheerUntil:0,waveUntil:0,dance:false,
+          shopPhase:'enjoying',shopAction:'reading',carrying:'book',shopNext:now+999,stopUntil:now+999,ph:(2.5-(now*.96)%6.8)/.53});
+        ToyTown3D.stepPoses(2);ToyTown.pinchTo(3.25,innerWidth/2,innerHeight/2,{x:9,y:9.65});
+      });beforeFrame=await page.evaluate(()=>ToyTown3D.getStats().frames);}
+      if(job.bridge){await page.evaluate(()=>{
+        const car=ToyTown.movers().find(m=>m.type==='car'&&m.kind==='bus')||ToyTown.movers().find(m=>m.type==='car');
+        if(!car)throw Error('Bridge vehicle fixture missing');
+        Object.assign(car,{x:6.5,y:13.48,d:2,lane:.2,v:.4,path:null,heading:undefined,hopUntil:0});
+        ToyTown.pinchTo(3.2,innerWidth/2,innerHeight/2,{x:6.5,y:14});
+      });
+      beforeFrame=await page.evaluate(()=>ToyTown3D.getStats().frames);
+      await page.waitForFunction(()=>{let found=false;ToyTown3D.scene.traverse(o=>{if(o.userData?.bridgeContact&&Math.abs(o.position.z-13.48)<.03&&Math.abs(o.position.x-6.3)<.03)found=true;});return found;},null,{timeout:45000,polling:100});}
+
+      if(job.waterfront)await page.evaluate(()=>ToyTown.pinchTo(2.7,innerWidth/2,innerHeight/2,{x:9,y:16.2}));
+      if(job.square)await page.evaluate(()=>ToyTown.pinchTo(3.1,innerWidth/2,innerHeight/2,{x:9,y:9.35}));
+      if(job.place){
+        await page.evaluate(place=>{
+          const q=place==='park'?ToyTown3D.lifeStats().at.play:null;
+          const p=place==='market'?ToyTown.props().find(p=>p.kind==='district-scene'&&p.role==='produce'):null;
+          if(!q&&!p)throw Error('Requested public place missing: '+place+' '+JSON.stringify({seed:ToyTown.debug().seed,theme:ToyTown.debug().theme,life:ToyTown3D.lifeStats()}));
+          ToyTown.pinchTo(3.25,innerWidth/2,innerHeight/2,{x:q?q[0]:p.x,y:q?q[1]:p.y});
+        },job.place);
+        beforeFrame=await page.evaluate(()=>ToyTown3D.getStats().frames);
+      }
+      if(job.weather){
+        await page.waitForFunction(()=>ToyTown3D.weather().kind==='rain',null,{timeout:20000});
+        const rain=await page.evaluate(()=>{
+          ToyTown3D.stepWeather(4);
+          let drops=null;ToyTown3D.scene.traverse(o=>{if(o.userData?.kind==='rain'&&o.userData.lengths)drops=o;});
+          if(!drops)throw Error('Detailed rain stream missing');
+          const before=Array.from(drops.geometry.attributes.position.array);ToyTown3D.stepWeather(.15);
+          const moved=before.some((v,i)=>Math.abs(v-drops.geometry.attributes.position.array[i])>.01);
+          return {opacity:drops.material.opacity,moved,count:drops.userData.lengths.length,min:Math.min(...drops.userData.lengths),max:Math.max(...drops.userData.lengths),
+            varied:new Set([...drops.userData.lengths].map(v=>v.toFixed(3))).size,depthWrite:drops.material.depthWrite};
+        });
+        if(rain.varied<20||rain.min<.04||rain.max>.15||rain.depthWrite||rain.opacity<.31||!rain.moved)
+          throw Error('Rain must be short, varied and not write an opaque depth layer: '+JSON.stringify(rain));
+        console.log('RAIN_GPU '+JSON.stringify(rain));
+        await page.evaluate(()=>{for(let i=0;i<60;i++)ToyTown.update(1/60);});
+        await page.waitForTimeout(1800);
+      }
       if(job.name==='mobile-3d-close'){
         // A pretty frame is not proof of city life. Advance the REAL
         // simulation in Chromium until trading and the street concert
@@ -166,6 +277,24 @@ async function main(){
         beforeFrame=await page.evaluate(()=>
           window.ToyTown3D?.getStats?.().frames||0);
       }
+      if(job.square){
+        const square=await page.evaluate(()=>{
+          let civic=null,fronts=[];
+          ToyTown3D.scene.traverse(o=>{
+            if(o.userData?.citySquare)civic=o;
+            if(o.userData?.workingShop)fronts.push(o);
+          });
+          const fixtures=civic?.children.filter(o=>o.userData?.squareFixture)||[];
+          return {fixtures:fixtures.map(o=>({kind:o.userData.squareFixture,x:o.position.x,z:o.position.z})),
+            attached:fronts.filter(o=>o.userData.facadeAttached&&o.position.z===8.25).length,
+            lamps:ToyTown3D.getStats().plazaLights};
+        });
+        if(square.attached!==2||square.lamps!==2||square.fixtures.length!==7)
+          throw Error('Civic layout missing in the real render: '+JSON.stringify(square));
+        if(square.fixtures.some(o=>[8.5,9.5].some(x=>Math.abs(x-o.x)<.3)))
+          throw Error('Civic furniture obstructs a shop walking aisle');
+        console.log('OPEN_SQUARE_GPU '+JSON.stringify(square));
+      }
       if(job.name==='desktop-3d-wide'){
         const local=await page.evaluate(()=>{
           const actors=ToyTown.movers().filter(m=>m.districtResident);
@@ -206,6 +335,13 @@ async function main(){
         // evidence of animated gesture blending in the GPU scene.
         beforeFrame=await page.evaluate(()=>
           window.ToyTown3D?.getStats?.().frames||0);
+      }
+      if(job.metroDistrict||job.metroHarbour)await page.evaluate(()=>{ToyTown3D.previewMetropolis(180);});
+      if(job.metroOverview||job.metroDistrict||job.metroHarbour||job.metroCampus||job.metroMarket||job.metroTrade||job.metroGarden||job.metroCivic){
+        const metro=await page.evaluate(()=>{ToyTown3D.previewMetropolis(0);const a=ToyTown3D.metropolis();ToyTown3D.previewMetropolis(12);const b=ToyTown3D.metropolis();ToyTown3D.previewMetropolis(360);const trips=ToyTown3D.metropolis();if(trips.arrivals<10||!trips.boardings||!trips.alightings)throw Error('Connected journeys or passenger transfers missing');return {a,b,trips:{arrivals:trips.arrivals,boardings:trips.boardings,alightings:trips.alightings}};});
+        if(metro.b.buildings<90||metro.b.districts.length!==6||Math.hypot(metro.a.vehicles[0].x-metro.b.vehicles[0].x,metro.a.vehicles[0].z-metro.b.vehicles[0].z)<.05)throw Error('Expanded city missing models or traffic');
+        console.log('METROPOLIS '+JSON.stringify(metro));
+        beforeFrame=await page.evaluate(()=>ToyTown3D.getStats().frames);
       }
       const actualZoom=await page.evaluate(()=>{
         const {z,tz}=ToyTown.debug().cam;
@@ -293,11 +429,27 @@ async function main(){
           throw Error('Choreographed 3D scene failed to express live social interaction: '+
             JSON.stringify(animated));
       }
-      await page.addStyleTag({content:'#card,#ticker,#hint,#zoom-controls{display:none!important}'});
+      if(job.social){
+        // Capture moving frames as well as stills. Real simulation displacement
+        // must advance; elapsed time alone cannot make a parked cycle pedal.
+        await page.evaluate(()=>{window.__motionBefore=ToyTown.movers().map(m=>({m,x:m.x,y:m.y,travel:m.travel||0}));});
+        for(let frame=0;frame<15;frame++){
+          await page.evaluate(()=>{for(let f=0;f<6;f++){ToyTown.update(1/30);ToyTown3D.stepPoses(1/30);}ToyTown3D.renderer.render(ToyTown3D.scene,ToyTown3D.camera);});
+          await page.waitForTimeout(80);
+        }
+        const motion=await page.evaluate(()=>({rendered:15,
+          people:window.__motionBefore.filter(q=>q.m.type==='person'&&Math.hypot(q.m.x-q.x,q.m.y-q.y)>.03).length,
+          cycles:window.__motionBefore.filter(q=>q.m.kind==='bike'&&(q.m.travel||0)>q.travel+.03).length}));
+        if(motion.people<1||motion.cycles<1)throw Error('Motion capture has no real walking/cycling: '+JSON.stringify(motion));
+        console.log('MOTION_GPU '+JSON.stringify(motion));
+      }
+      if(!job.mobileCheck)await page.addStyleTag({content:'#card,#ticker,#hint,#zoom-controls{display:none!important}'});
       await page.waitForTimeout(150);
       // A moving WebGL canvas may never satisfy Playwright's stability check.
       // Freeze an actual rendered GPU frame; don't switch to the old 2D fallback.
       await page.evaluate(()=>window.ToyTown3D?.freeze?.());
+      if(job.metroTrade)await page.evaluate(()=>{ToyTown3D.previewMetropolis(12);const life=ToyTown3D.metropolis().life;if(!life.some(a=>a.type==='shopper'&&a.action==='collect')||!life.some(a=>a.type==='vendor'))throw Error('Produce exchange missing');ToyTown3D.renderer.render(ToyTown3D.scene,ToyTown3D.camera);});
+      if(job.metroGarden||job.metroCivic)await page.evaluate(()=>{ToyTown3D.previewMetropolis(8);const life=ToyTown3D.metropolis().life;if(!life.some(a=>a.type==='gardener'&&a.action==='water')||!life.some(a=>a.type==='reader'&&a.action==='read'))throw Error('Public-space activities missing');ToyTown3D.renderer.render(ToyTown3D.scene,ToyTown3D.camera);});
       await page.waitForTimeout(100);
       const image=await page.screenshot({type:'jpeg',quality:58,timeout:90000,
         animations:'disabled'});
@@ -305,11 +457,37 @@ async function main(){
       const data=await page.evaluate(()=>({
         active:Boolean(window.ToyTown3D?.active),
         stats:window.ToyTown3D?.getStats?.()||null,
+        renderInfo:window.ToyTown3D?.renderInfo?.()||null,
         cam:ToyTown.debug().cam
       }));
       if(!job.classic&&!data.active)throw Error('3D vanished before screenshot: '+job.name);
       if(!job.classic&&!data.stats?.frozen)throw Error('3D did not freeze the captured frame');
+      if(job.country&&!job.classic){const features=await page.evaluate(()=>{const f=new Set();ToyTown3D.scene.traverse(n=>{if(n.userData?.countryFeature)f.add(n.userData.countryFeature);});return [...f];});if(!features.length)throw Error('Country architecture lacks modeled roof features');const activity=await page.evaluate(()=>{ToyTown3D.previewCountryActivity(2);const a=ToyTown3D.countryPlace();ToyTown3D.previewCountryActivity(7);const b=ToyTown3D.countryPlace();return {a,b};});if(activity.a.visitors[0].x===activity.b.visitors[0].x||activity.b.visitors[0].action!==activity.b.activity)throw Error('Country activity did not reach its destination');console.log('COUNTRY_ACTIVITY '+JSON.stringify(activity));console.log('COUNTRY_FEATURES '+job.country+' '+JSON.stringify(features));}
+      if(job.reader){const r=await page.evaluate(()=>{
+        let reader=null;ToyTown3D.scene.traverse(o=>{if(o.userData?.shopProps?.book&&Math.abs(o.position.x-9)<.01&&Math.abs(o.position.z-9.65)<.01)reader=o;});
+        if(!reader)throw Error('Rendered reader missing');
+        const L=reader.userData.limbs,book=reader.userData.shopProps.book;
+        const p=L.hands[0].getWorldPosition(L.hands[0].position.clone());book.worldToLocal(p);
+        const gap=Math.hypot(Math.max(0,Math.abs(p.x)-.061),Math.max(0,Math.abs(p.y)-.0785),Math.max(0,Math.abs(p.z)-.028));
+        return {gap,curls:L.hands.map(h=>h.userData.handRig.curl),look:L.headPivot.rotation.x,
+          face:L.faceSurface.material.userData.faceExpression,attached:book.parent===L.hands[1],visible:book.visible};
+      });if(r.gap>.065||r.curls.some(c=>c<.6)||r.look<.18||r.face!=='read'||!r.attached||!r.visible)throw Error('Two-handed reader pose failed: '+JSON.stringify(r));console.log('READING_GPU '+JSON.stringify(r));}
+      if(job.name==='desktop-3d-wide'){const species=await page.evaluate(()=>{const s=new Set();ToyTown3D.scene.traverse(o=>{if(o.userData?.treeSpecies)s.add(o.userData.treeSpecies);});return [...s];});if(species.length<4)throw Error('Too few distinct tree species: '+JSON.stringify(species));console.log('TREE_SPECIES '+JSON.stringify(species));}
+      if(job.bridge){
+        const q=await page.evaluate(()=>{
+          let vehicle=null,hands=0;ToyTown3D.scene.traverse(o=>{if(o.userData?.handRig)hands++;
+            if(o.userData?.vehicleRig&&Math.abs(o.position.z-13.48)<.03&&Math.abs(o.position.x-6.3)<.03)vehicle=o;});
+          if(!vehicle)throw Error('Staged bridge vehicle not rendered');
+          const c=vehicle.userData.bridgeContact;
+          return {contact:c,pitch:vehicle.rotation.z,height:vehicle.position.y-.192,signals:ToyTown3D.signalStats(),hands};
+        });
+        if(q.pitch<=0||Math.abs(q.height-q.contact.height)>1e-6||Math.abs(q.pitch-q.contact.pitch)>1e-6||q.signals.poles!==24||q.signals.heads!==48||q.hands<20)
+          throw Error('Bridge/signal/hand GPU scene mismatch: '+JSON.stringify(q));
+        console.log('BRIDGE_CONTACT_GPU '+JSON.stringify(q));
+      }
+      if(job.place==='park'){const overlap=await page.evaluate(()=>{const p=ToyTown3D.lifeStats().at.play;return ToyTown3D.contours().filter(([x,z])=>Math.hypot(x-p[0],z-p[1])<1.3);});if(overlap.length)throw Error('Garden contours overlap playground: '+JSON.stringify(overlap));}
       if(!job.classic){const b=await page.evaluate(()=>window.ToyTown3D?.batchStats?.()||null);if(!b||b.off||b.merged<50||b.removed<500)throw Error('static batching did not merge the town: '+JSON.stringify(b)+' '+job.name);}
+      if(job.name==='desktop-3d-wide'){const roofs=await page.evaluate(()=>{const styles=new Set();ToyTown3D.scene.traverse(o=>{if(o.userData?.roofStyle)styles.add(o.userData.roofStyle);});return [...styles];});if(!roofs.includes('gable')||!roofs.includes('terrace'))throw Error('Roof silhouettes missing: '+JSON.stringify(roofs));console.log('ROOF_STYLES '+JSON.stringify(roofs));}
       if(!job.classic){const black=await page.evaluate(()=>window.ToyTown3D?.vertexColorAudit?.()||0);if(black)throw Error(black+' meshes read vertex colours from a geometry that has none (they draw black): '+job.name);}
       const record={name:job.name,bytes:image.length,...data,errors};
       records.push(record);
@@ -317,12 +495,16 @@ async function main(){
       if(job.name==='mobile-3d-close'){
         // Image can be recovered without binary artifact download permissions.
         console.log('TOY_CITY_JPEG_BEGIN '+image.toString('base64')+' TOY_CITY_JPEG_END');
+      }else if(job.square){
+        console.log('TOY_CITY_SQUARE_JPEG_BEGIN '+image.toString('base64')+' TOY_CITY_SQUARE_JPEG_END');
       }else if(job.name==='desktop-3d-wide'){
         console.log('TOY_CITY_WIDE_JPEG_BEGIN '+image.toString('base64')+' TOY_CITY_WIDE_JPEG_END');
       }else if(job.name==='desktop-social-life'){
         console.log('TOY_CITY_SOCIAL_JPEG_BEGIN '+image.toString('base64')+' TOY_CITY_SOCIAL_JPEG_END');
       }
+      const video=job.weather||job.social?page.video():null;
       await context.close();
+      if(video)await fs.rename(await video.path(),path.join(out,job.name+'.webm'));
     }
     await fs.writeFile(path.join(out,'audit.json'),JSON.stringify(records,null,2));
   } finally {

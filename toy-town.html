@@ -16,11 +16,11 @@ html,body{margin:0;height:100%;overflow:hidden;background:#bfe6f7;font-family:Nu
 /* Lens finishing stays behind the UI and never intercepts phone gestures. */
 #town-3d::after{content:"";position:absolute;inset:0;pointer-events:none;z-index:2;background:radial-gradient(ellipse at 46% 34%,rgba(255,239,211,.04),transparent 66%),radial-gradient(ellipse at 50% 48%,transparent 43%,rgba(40,54,59,.075) 100%);}
 
-#card,#ticker,#hint,#zoom-controls{z-index:3}
+#card,#ticker,#hint,#zoom-controls,#country-picker{z-index:3}
 html.embedded #zoom-controls{display:none}
 /* Clean view: only the city. Every overlay (news card, ticker, hint, buttons, moment chip, follow card, bubbles) goes;
    a faint dot in the corner (standalone) or the host page's own dot (embedded) brings them back. */
-html.ui-off #card,html.ui-off #ticker,html.ui-off #hint,html.ui-off #zoom-controls,html.ui-off .moment-chip,html.ui-off .follow-card,html.ui-off .resident-bubble{display:none!important}
+html.ui-off #country-picker,html.ui-off #card,html.ui-off #ticker,html.ui-off #hint,html.ui-off #zoom-controls,html.ui-off .moment-chip,html.ui-off .follow-card,html.ui-off .resident-bubble{display:none!important}
 #ui-show{display:none;position:fixed;left:calc(10px + env(safe-area-inset-left,0px));bottom:calc(10px + env(safe-area-inset-bottom,0px));z-index:4;width:30px;height:30px;padding:0;border:0;border-radius:50%;background:rgba(30,36,44,.35);color:#fff;font:600 15px/1 Nunito,system-ui;opacity:.22;cursor:pointer;touch-action:manipulation;transition:opacity .2s}
 #ui-show:hover,#ui-show:focus-visible,#ui-show:active{opacity:1}
 html.ui-off:not(.embedded) #ui-show{display:block}
@@ -78,6 +78,11 @@ html.ui-off:not(.embedded) #ui-show{display:block}
 #ticker{left:12px;right:auto;bottom:calc(10px + env(safe-area-inset-bottom,0px));max-width:min(60vw,440px);padding:3px 11px;border-radius:999px;background:rgba(255,253,245,.55);color:#5d6571;font:400 11.5px/1.3 Nunito,system-ui;box-shadow:none}
 #ticker b{background:transparent;color:#b98a7b;padding:0;margin-right:7px;font-size:9px;letter-spacing:.1em;font-weight:500}
 @media (max-width:700px){#ticker{max-width:46vw}}
+#country-picker{position:fixed;right:calc(14px + env(safe-area-inset-right,0px));top:calc(14px + env(safe-area-inset-top,0px));max-width:calc(100vw - 28px)}
+#country-select{width:145px;max-width:100%;height:38px;padding:0 9px;border:1px solid rgba(63,80,76,.18);border-radius:14px;background:rgba(255,253,245,.85);color:#405c59;font:500 12px Nunito,system-ui;touch-action:manipulation}
+#country-select:focus-visible{outline:2px solid #476f70;outline-offset:3px}
+#country-status{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%)}
+@media(max-height:460px){#card{top:calc(58px + env(safe-area-inset-top,0px))}#hint{display:none}}
 </style>
 <script type="importmap">
 {"imports":{
@@ -89,6 +94,7 @@ html.ui-off:not(.embedded) #ui-show{display:block}
 <body>
 <canvas id="town" aria-label="Toy Town: a busy little isometric town"></canvas>
 <div id="town-3d" aria-hidden="true"></div>
+<div id="country-picker"><select id="country-select" aria-label="Country architecture" aria-describedby="country-status"><option value="town">Toy Town</option><option value="india">India</option><option value="japan">Japan</option><option value="italy">Italy</option><option value="netherlands">Netherlands</option><option value="usa">USA</option></select><span id="country-status" role="status"></span></div>
 <div id="card"><button id="card-min" type="button" aria-controls="card" aria-expanded="true" aria-label="Minimise news" title="Minimise news">−</button><div class="k">Toy Town · <span id="date"></span><span id="weather"></span></div><div class="t" id="theme">Opening the town…</div><div class="n" id="news"></div>
   <button id="news-toggle" type="button" aria-controls="news-panel" aria-expanded="false"><span id="news-status">CHECKING HEADLINES</span><span aria-hidden="true">↗</span></button>
   <div id="news-headline" role="status">Checking publisher updates…</div>
@@ -135,11 +141,12 @@ html.ui-off:not(.embedded) #ui-show{display:block}
   card.addEventListener('click',()=>{if(card.classList.contains('min'))set(false,true);});
 })();
 </script>
-<script src="assets/toy-town-diorama.js?v=1"></script>
+<script src="assets/toy-town-country.js?v=1"></script>
+<script src="assets/toy-town-diorama.js?v=2"></script>
 <script src="assets/toy-town-news.js?v=2"></script>
 <script src="assets/toy-town-sound.js?v=6"></script>
 <script src="assets/toy-town-weather.js?v=2"></script>
-<script src="assets/toy-town.js?v=48"></script>
+<script src="assets/toy-town.js?v=51"></script>
 <script type="module">
   // Opt out with ?classic=1 for the original Canvas experience.
   // Loading errors are deliberately isolated from the existing town engine.
@@ -147,7 +154,7 @@ html.ui-off:not(.embedded) #ui-show{display:block}
     Promise.all([
       import('three'),
       import('three/addons/geometries/RoundedBoxGeometry.js'),
-      import('./assets/toy-town-3d.js?v=84'),
+      import('./assets/toy-town-3d.js?v=100'),
       import('./assets/toy-town-landmarks.js?v=7'),
       // The photographed-miniature lens. Any failure here leaves plain 3D running.
       Promise.all(['EffectComposer','RenderPass','ShaderPass','UnrealBloomPass','OutputPass']

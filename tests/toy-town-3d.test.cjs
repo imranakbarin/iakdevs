@@ -120,7 +120,7 @@ assert.doesNotMatch(moduleCode,/ambient\.push\(\{kind:'bunting'/,'the flags and 
 assert.match(moduleCode,/function cityCentre\(\)/,'the plaza is a paved city centre');
 assert.doesNotMatch(moduleCode,/ambient\.push\(\{kind:'pinwheel'/,'the pinwheels that crowded the square are retired');
 assert.doesNotMatch(moduleCode,/ambient\.push\(\{kind:'balloon'/,'and so are the tethered balloons');
-assert.match(moduleCode,/plazaInlay=true/,'colorful authored art grounds the central plaza');
+assert.match(moduleCode,/plazaInlay=true/,'subtle stone joints ground the square');
 assert.doesNotMatch(moduleCode,/ambient\.push\(\{kind:'butterfly'/,'the butterflies that hovered over bare paving are retired');
 assert.match(moduleCode,/function boardTexture\(label,ink,paper\)/,'name boards are painted plates with borders, studs and ornaments');
 assert.match(html,/saturate\(1\.42\) contrast\(1\.11\)/,
@@ -159,17 +159,17 @@ assert.match(moduleCode,/eye.scale.y=blink/,'eyelids blink without a separate an
 assert.match(html,/type="importmap"/);
 assert.match(html,/three@0\.187\.0\/build\/three\.module\.js/);
 assert.match(html,/three@0\.187\.0\/examples\/jsm\//);
-assert.match(html,/toy-town-3d\.js\?v=84/);
+assert.match(html,/toy-town-3d\.js\?v=100/);
 assert.match(moduleCode,/ref\.path&&Number\.isFinite\(ref\.walkFacing\)/, 'routed people use a real diagonal heading instead of a cardinal-only pose');
 assert.match(html,/toy-town-landmarks\.js\?v=7/,'the independent models are requested alongside Three');
 assert.match(html,/buildLandmark:landmarks\.buildLandmark/,
   'loader injects the authored model builder into the 3D simulation');
-assert.match(html,/toy-town\.js\?v=48/);
+assert.match(html,/toy-town\.js\?v=51/);
 const classicScript=html.match(/src="assets\/toy-town\.js\?v=\d+"/);
 assert.ok(classicScript&&
   html.indexOf(classicScript[0])<html.indexOf("import('three')"),
   'the actual versioned classic script always loads before WebGL');
-assert.match(page,/toy-town\.html\?v=95&embed=1/);
+assert.match(page,/toy-town\.html\?v=111&embed=1/);
 assert.match(fs.readFileSync(path.join(root,'assets/toy-town-3d.js'),'utf8'),/sport=ref\.kind==='runner'[\s\S]*bib with a stripe/,'marathon runners are dressed in sports kit (vest, shorts, bib, headband)');
 assert.match(fs.readFileSync(path.join(root,'assets/toy-town-3d.js'),'utf8'),/town\.stageHeadline/,'the town crier makes the town act out the headline');
 assert.match(fs.readFileSync(path.join(root,'assets/toy-town.js'),'utf8'),
@@ -252,7 +252,7 @@ const THREE={
  MathUtils:{clamp:(v,min,max)=>Math.max(min,Math.min(max,v)),lerp:(a,b,t)=>a+(b-a)*t}
 };
 const win={WebGL2RenderingContext:function(){},innerWidth:390,innerHeight:844,
-  devicePixelRatio:3,matchMedia:()=>({matches:false})};
+  devicePixelRatio:3,matchMedia:q=>({matches:q==='(pointer: coarse)'})};
 const canvas2d={fillText(){},clearRect(){},beginPath(){},roundRect(){},ellipse(){},arc(){},fill(){stats.paintOperations++;},stroke(){},fillRect(){stats.paintOperations++;},moveTo(){},lineTo(){},closePath(){},bezierCurveTo(){},createLinearGradient:()=>({addColorStop(){}}),createRadialGradient:()=>({addColorStop(){}}),save(){},restore(){},clip(){},translate(){},scale(){},strokeRect(){}};
 const townCanvas={style:{opacity:'1'}};
 const host={style:{display:'none'},clientWidth:390,clientHeight:844,getBoundingClientRect(){return {left:0,top:0,width:390,height:844};},
@@ -331,6 +331,22 @@ assert.ok(workingDesks.every(s=>s.children.length>30),
   'supported awnings and dimensional merchandise actually exist in the 3D scene');
 assert.ok(workingDesks.every(s=>s.position.x>7&&s.position.x<11&&
   s.position.z>8&&s.position.z<9),'shop counters are on the living village frontage');
+const sceneNodes=[];const collectScene=o=>{sceneNodes.push(o);for(const c of o.children||[])collectScene(c);};collectScene(api.scene);
+const planted=sceneNodes.filter(o=>o.userData?.plantedBed);
+const signalMasts=sceneNodes.filter(o=>o.userData?.signalMast);
+assert.equal(signalMasts.length,24,'the scene constructs both shared masts at every controlled junction');
+assert.ok(signalMasts.every(m=>{const peds=m.children.filter(c=>c.children.length===3);return peds.length===2&&peds.every(p=>p.children.slice(1).map(l=>l.material.color).join(',')==='#e2463a,#4fbf72');}),
+  'every mast retains two real pedestrian lamp groups with red and green lenses');
+const shapedHands=sceneNodes.filter(o=>o.userData?.handRig);
+assert.ok(shapedHands.length>=10&&shapedHands.every(o=>o.userData.handRig.digits===3&&o.userData.handRig.thumb&&o.userData.handRig.fingers[0].children[0].geometry),
+  'residents have actual grouped-finger geometry and articulated thumbs');
+assert.ok(planted.length>=4,'real low flower beds replace bulky foliage pillows');
+assert.ok(planted.every(b=>b.children.length>=22),'flower beds contain stems, leaves and blooms');
+const riverBenches=sceneNodes.filter(o=>o.userData?.riverBench);
+assert.equal(riverBenches.length,3,'three actual grounded seats face the river');
+assert.ok(riverBenches.every(b=>b.position.z<12.8),'seats stay on dry bank, outside the water');
+const authoredTrees=sceneNodes.filter(o=>o.userData?.treeSpecies);
+assert.ok(authoredTrees.length&&authoredTrees.every(o=>['oak','birch','cypress','willow','orchard','acacia'].includes(o.userData.treeSpecies)),'tree species are grounded authored scene groups');
 assert.ok(api.getStats().woodlandShapes>=1,
   'simulation trees use the authored asymmetric crowns');
 assert.ok(api.getStats().terrainContours>=2,
@@ -339,9 +355,12 @@ assert.ok(api.getStats().districtGardenRooms>=1,
   'empty outer lots receive at least one low landscaped courtyard');
 const gardenRooms=api.scene.children.flatMap(node=>node.children||[])
   .filter(node=>node.userData?.districtGarden);
+const playSite=api.lifeStats().at.play;
+if(playSite)assert.ok(api.contours().every(([x,z])=>Math.hypot(x-playSite[0],z-playSite[1])>1.3),
+  'landscape contours reserve the playground footprint');
 assert.equal(gardenRooms.length,api.getStats().districtGardenRooms,
   'all planted courts are real grounded scene geometry');
-assert.equal(api.getStats().festoonBulbs,14,'four lamp posts (three bulbs each) and the fountain (two) hold 14 warm bulbs');
+assert.equal(api.getStats().festoonBulbs,2,'two small single lanterns light the square');
 // The ring railway: a station, a round-faced steam train with three carriages, a tunnel, passengers who board and get off.
 {
   api.setFreight(0);   // keep the passenger train running for the stop/passenger checks below
@@ -416,7 +435,7 @@ assert.equal(api.getStats().festoonBulbs,14,'four lamp posts (three bulbs each) 
     // Stage 6: seasons, the performance guard and music notes.
     const s6=api.stage6Stats();assert.ok(['spring','summer','autumn','winter'].includes(s6.season),'the season follows the calendar ('+s6.season+')');
     assert.equal(typeof api.batchStats().merged,'number','static batching reports what it merged (the headless double has no geometry data, so it merges nothing here)');
-    assert.ok(api.signalStats().built,'traffic lights stand at the junctions');assert.equal(api.signalStats().lit.length,2,'one lit lamp per axis, from the simulation light phase');
+    assert.ok(api.signalStats().built,'traffic lights stand at the junctions');assert.equal(api.signalStats().poles,24,'paired signal masts halve the former 48-pole clutter');assert.equal(api.signalStats().heads,48,'every controlled approach retains a signal head');assert.equal(api.signalStats().lit.length,2,'one lit lamp per axis, from the simulation light phase');
     assert.equal(api.vertexColorAudit(),0,'no mesh reads vertex colours from a geometry that has none (it would draw black)');
     assert.ok(s6.ground>=1,'the ground detail is drawn');assert.equal(s6.lite,false);assert.ok(Array.isArray(s6.mood)&&s6.mood.length===2&&s6.mood[1].length>2,'a resident has a mood');
     assert.equal(api.setLite(true),true);assert.equal(api.stage6Stats().ground,0,'lite mode drops the fine ground detail');api.stepTrain(3,0);assert.equal(api.stage6Stats().notes,0);
@@ -458,8 +477,31 @@ assert.ok(workingLocal?.userData?.pose,
   'a local worker holds a physical tool with an articulated pose');
 const contours=sceneWorld.children.filter(o=>o.userData?.landscapeContour);
 assert.ok(contours.length>=2,'real geometric lawn contours join several lots');
+// A square is an edited composition: the old furniture layer must not
+// survive underneath the new one, and the north/south aisles stay clear.
+const referencePeople=sceneWorld.children.filter(o=>o.userData?.referenceHuman);
+assert.ok(referencePeople.length>=1,'reference-style people are built in the actual scene');
+assert.ok(referencePeople.every(o=>o.userData.referenceHuman.headRadius*2<o.userData.referenceHuman.shoulderWidth),
+  'adult heads are narrower than their shoulders, with the existing articulated rig');
+assert.ok(sceneWorld.children.some(o=>o.userData?.playingField),'the old blank green ring is a marked playing field');
+const producePlace=sceneWorld.children.find(o=>o.userData?.districtSceneRole==='produce');
+assert.ok(producePlace?.children.some(o=>o.userData?.marketStall),'the produce workplace uses a real crate-and-awning stall');
+const civic=sceneWorld.children.find(o=>o.userData?.citySquare);
+assert.ok(civic,'one civic furniture layer owns the square');
+const fixtures=civic.children.filter(o=>o.userData?.squareFixture);
+assert.equal(fixtures.filter(o=>o.userData.squareFixture==='lantern').length,2);
+assert.equal(fixtures.filter(o=>o.userData.squareFixture==='fountain').length,1);
+assert.equal(fixtures.filter(o=>o.userData.squareFixture==='bench').length,1);
+assert.equal(fixtures.filter(o=>o.userData.squareFixture==='planter').length,3);
+assert.ok(fixtures.every(o=>[8.5,9.5].every(x=>Math.abs(o.position.x-x)>.3)),
+  'furniture leaves the two customer and pedestrian aisles open');
+assert.ok(workingDesks.every(o=>o.userData.facadeAttached&&
+  (o.position.x===8.5||o.position.x===9.5)&&o.position.z===8.25),
+  'both active counters sit against their actual north-side shop facade');
+assert.ok(fixtures.filter(o=>o.userData.squareFixture==='lantern').every(o=>
+  o.children.every(c=>c.position.y<.8)), 'lanterns no longer dwarf the residents');
 const piazza=sceneWorld.children.find(o=>o.userData?.villagePiazza);
-assert.ok(piazza && piazza.position.x===9 && piazza.position.z===9,
+assert.ok(piazza && piazza.position.x===8.52 && piazza.position.z===9.5,
   'rounded central stone piazza is placed at the heart of the village');
 assert.ok(contours.every(o=>o.position.x>2 && o.position.x<16 &&
   o.position.z>2 && o.position.z<13),
@@ -519,7 +561,7 @@ assert.match(moduleCode,/storybook-roof:/,'the sculpted roof is cached for repea
 assert.match(moduleCode,/rounded suspended scallops/i,'shop awnings use dimensional fabric rather than bars');
 assert.match(moduleCode,/roots taper out into the lawn/i,'tree trunks have naturally grounded roots');
 assert.match(moduleCode,/grassMaterial\('#b9cba7',10\)/,'cutaway meadow has textured, continuous grass');
-assert.match(moduleCode,/terracotta=mat\('#d9a276'/,'the retired paver ring is replaced by one flat paved square with a framed inlay');
+assert.match(moduleCode,/pen.strokeStyle='rgba\(139,119,90,\.17\)'/,'the square has restrained flush stone joints');
 assert.match(moduleCode,/23-closeness\*11\.5/,'close zoom lowers the eye to show character faces');
 assert.match(moduleCode,/new THREE\.PerspectiveCamera\(35/,
   'the photographic city camera has real depth and vanishing lines');
@@ -535,15 +577,15 @@ assert.match(moduleCode,/const focusWeight=THREE\.MathUtils\.clamp/,
   'compositional framing is removed smoothly as the user pans away');
 assert.match(moduleCode,/function composeSecondaryBuilding\(/,
   'secondary houses receive bounded, deterministic street variation');
-assert.match(moduleCode,/for\(const \[lx,lz\] of \[\[7\.22,8\.30\]/,
-  'the city-centre lamp posts stand at the square\'s edges, away from the walking corridors and the storefront signage');
+assert.match(moduleCode,/\[\[7\.25,8\.22\],\[9\.88,10\.72\]\]/,
+  'only two slim lanterns stand at the square edges');
 assert.match(moduleCode,/function archedInset\(/,'doors/windows have dimensional arches');
 assert.match(moduleCode,/function turret\(/,'one hero cottage has its own curved tower');
 assert.match(moduleCode,/function sideCottageWing\(/,'another hero cottage has a secondary roof and wing');
 assert.match(moduleCode,/function shopExtra\(/,'bookshop and bakery have distinctive facades');
 assert.match(moduleCode,/function ivy\(/,'climbing green vines integrate facades with the landscape');
-assert.match(moduleCode,/Four authored silhouettes replace/,
-  'trees now have separate oak, cypress, willow and orchard crown models');
+assert.match(moduleCode,/g.userData.treeSpecies=family/,
+  'authored tree models expose their actual species for scene auditing');
 assert.match(moduleCode,/function createLandscapeComposition\(/,
   'clear lots gain individually sculpted raised terrain and living fringes');
 assert.match(moduleCode,/districtGardenRooms\+\+/,
@@ -575,7 +617,7 @@ assert.doesNotMatch(moduleCode,/for\(let t=2;t<16;t\+=1\.28\)/,
   'modern repeating highway dashed lines have been removed');
 
 
-assert.equal(api.getStats().plazaLights,1,'modeled plaza lamps have physical warm light');
+assert.equal(api.getStats().plazaLights,2,'two perimeter lanterns have physical warm light');
 const lantern=api.scene.children.find(o=>o.children?.some(x=>x.isPointLight))?.children.find(x=>x.isPointLight);
 assert.ok(lantern && lantern.intensity>0, 'dusk physically illuminates the courtyard');
 const lampAtDusk=lantern.intensity;
@@ -635,18 +677,18 @@ assert.ok(Math.abs(cycle.userData.bicycleRig.crank.rotation.z)>1,
   'pedals and bicycle wheels rotate with physical distance');
 // A vendor offers actual stock, a purchaser only carries it once purchased.
 const shopkeeperRef={type:'person',kind:'shopkeeper',shopRole:'vendor',
-  shopVenue:'bakery',shopAction:'offering',x:8.07,y:8.42,d:2,
+  shopVenue:'bakery',shopAction:'offering',x:8.5,y:8.12,d:2,
   max:0,v:0,travel:0,ph:2,col:'#de8f69',skin:'#d8ac8e'};
 const buyerRef={type:'person',kind:'shopper',shopRole:'customer',
   shopAt:'bakery',shopPhase:'ordering',
-  shopAction:'ordering',x:8.32,y:8.78,d:3,max:.4,
+  shopAction:'ordering',x:8.5,y:8.66,d:3,max:.4,
   v:0,travel:0,ph:1.5,col:'#a28bce',skin:'#d4b295'};
 pedestrians.push(shopkeeperRef,buyerRef);
 frameClock+=1/30;callbacks.shift()();
 const sellerModel=sceneWorld.children.find(o=>o.userData?.shopProps?.bread&&
-  o.position.x===shopkeeperRef.x);
+  o.position.x===shopkeeperRef.x&&o.position.z===shopkeeperRef.y);
 const buyerModel=sceneWorld.children.find(o=>o.userData?.shopProps?.book&&
-  o.position.x===buyerRef.x);
+  o.position.x===buyerRef.x&&o.position.z===buyerRef.y);
 assert.ok(sellerModel&&buyerModel,'both roles have real connected merchandise rigs');
 assert.equal(sellerModel.userData.shopProps.bread.visible,true,
   'the baker visibly offers bread in an articulated hand');
@@ -698,6 +740,14 @@ assert.ok(buyerModel.userData.pose.enjoy>.05,
 shopkeeperRef.newsMood='cheer';frameClock+=1/30;callbacks.shift()();
 assert.ok(sellerModel.userData.pose.celebrate>.05,
   'verified sports headlines create a visible arms-up reaction in residents');
+buyerRef.carrying='book';buyerRef.shopAction='reading';buyerRef.ph=.3;
+api.stepPoses(2);
+const readingRig=buyerModel.userData.limbs;
+assert.ok(readingRig.hands.every(h=>h.userData.handRig.curl>.6),'reading closes both hands around the book');
+assert.ok(Math.abs(readingRig.arms[0].rotation.x-readingRig.arms[1].rotation.x)<.08,'both reading arms rise together');
+assert.ok(readingRig.headPivot.rotation.x>.18,'reader looks down at the held pages');
+assert.ok(readingRig.faceSurface.material.map&&readingRig.faceSurface.userData.faceSurface,'expressions render through a shared physical face plate');
+assert.ok(['read','blink'].includes(readingRig.faceSurface.material.userData.faceExpression),'reading or blinking expression reaches the visible face material');
 pedestrians.splice(-2,2);frameClock+=1/30;callbacks.shift()();
 const guitarist={type:'person',kind:'busker',guitar:true,
   shopAction:'performing',x:9.0,y:9.8,d:3,
@@ -851,7 +901,7 @@ assert.equal(api.getStats().actors,3,'departing residents are removed');
 assert.ok(stats.renders>oldCount);
 seed++;buildings=buildings.slice();callbacks.shift()();
 assert.equal(api.getStats().redrawCount,2,'new daily town triggers a full rebuild');
-assert.equal(api.getStats().festoonBulbs,14,'garden lighting is recreated, never duplicated');
+assert.equal(api.getStats().festoonBulbs,2,'garden lighting is recreated, never duplicated');
 assert.equal(api.getStats().gardenElements,initialGardenCount,
   'curated surroundings are deterministic across world rebuilds');
 const cameraZoom=api.camera.zoom;
@@ -861,6 +911,8 @@ callbacks.shift()();
 assert.equal(api.renderer.domElement.width,844,'landscape resize updates renderer');
 assert.equal(api.renderer.domElement.height,390,'landscape resize updates renderer height');
 assert.ok(api.camera.aspect>1,'landscape perspective updates its aspect ratio');
+assert.equal(api.getStats().mobileBudget,true,'rotated touch phone retains its mobile geometry and shadow budget');
+assert.ok(api.getStats().pixelRatio<=1.5,'phone starts with a bounded high-DPI fill budget');
 assert.ok(api.camera.fov>20&&api.camera.fov<45,
   'street-level photo camera uses a natural rather than extreme wide-angle lens');
 host.clientWidth=390; host.clientHeight=844; win.innerWidth=390; win.innerHeight=844;
@@ -881,6 +933,107 @@ assert.match(moduleCode,/const segments=\[\[2\.22,5\.78\]/,
   'stone shoulders stop before junctions and river bridges');
 assert.match(moduleCode,/continuous plaster pilasters/i,
   'wall accents follow facades without disconnected bricks');
+// A real daily layout that exhausted the old five-point lawn search still
+// has a safe playground site; keep its original clearance and road margins.
+{
+  const lawnDoc={getElementById:()=>({textContent:''})};
+  const lawnCtx={Math,Object,Array,JSON,Date,String,Number,RegExp,setTimeout:()=>0,document:lawnDoc};
+  vm.createContext(lawnCtx);
+  vm.runInContext(fs.readFileSync(path.join(root,'assets/toy-town-diorama.js'),'utf8')+'\n'+fs.readFileSync(path.join(root,'assets/toy-town.js'),'utf8')+';this.T=ToyTown;',lawnCtx);
+  const choose=moduleCode.slice(moduleCode.indexOf('  function freeSpots(){'),moduleCode.indexOf('  const sitPose='));
+  for(const seed of [17,36,38,45]){
+    lawnCtx.T.build(seed,'sports');lawnCtx.T.decorate(lawnCtx.T.newsThemes(['India wins international cricket championship final','Robot engineers announce a new research breakthrough','Museum celebrates a global art exhibition opening']));
+    const site=vm.runInNewContext(choose+';freeSpots().find(s=>s.clear>.6)',{town:lawnCtx.T,Math});
+    assert.ok(site,'daily lawn layout '+seed+' has a safely cleared playground');
+    assert.ok(site.z<13&&[1,6,11,16].every(n=>Math.abs(site.x-(n+.5))>=1.5&&Math.abs(site.z-(n+.5))>=1.5),'playground remains off roads and the river');
+  }
+}
+// Expanded districts are actual models and separated moving routes.
+assert.equal(api.metropolis().districts.length,6);
+const pockets=[];const scanPockets=n=>{if(n.userData?.metroPocket)pockets.push(n);for(const c of n.children||[])scanPockets(c);};scanPockets(api.scene);
+assert.equal(pockets.length,6,'each district has a reserved public-space vignette');
+assert.equal(new Set(pockets.map(n=>n.userData.metroPocket)).size,6,'all six district types receive distinct public spaces');
+assert.equal(api.metropolis().buildings,90,'six neighbourhoods add ninety modeled buildings');
+assert.equal(api.metropolis().vehicles.length,24);
+assert.equal(api.metropolis().walkers,18);
+const moored=[];const boatsWalk=n=>{if(n.userData?.metroBoat)moored.push(n);for(const c of n.children||[])boatsWalk(c);};boatsWalk(api.scene);assert.equal(moored.length,3);assert.ok(moored.every(b=>Math.abs(b.position.y-(-.42))<.06),'harbour hulls sit at the sea surface, not street level');
+api.previewMetropolis(0);const metroStart=api.metropolis();api.previewMetropolis(10);const metroNext=api.metropolis();
+assert.ok(Math.hypot(metroStart.vehicles[0].x-metroNext.vehicles[0].x,metroStart.vehicles[0].z-metroNext.vehicles[0].z)>.1,'new district traffic travels');
+for(let t=0;t<180;t+=2){api.previewMetropolis(t);const v=api.metropolis().vehicles;for(let i=0;i<v.length;i++)for(let j=i+1;j<v.length;j++)assert.ok(Math.hypot(v[i].x-v[j].x,v[i].z-v[j].z)>.39,'all interdistrict vehicles keep lane clearance, including opposite directions');}
+// Check full oriented vehicle footprints across the shared two-way route.
+const overlaps=(a,b)=>{
+  const A=[Math.cos(-a.angle),Math.sin(-a.angle)],B=[Math.cos(-b.angle),Math.sin(-b.angle)];
+  const dims=v=>[v.bus?.30:.195,.12],da=dims(a),db=dims(b),dx=b.x-a.x,dz=b.z-a.z;
+  for(const axis of [A,[-A[1],A[0]],B,[-B[1],B[0]]]){
+    const project=(u,h)=>Math.abs(u[0]*axis[0]+u[1]*axis[1])*h[0]+Math.abs(-u[1]*axis[0]+u[0]*axis[1])*h[1];
+    if(Math.abs(dx*axis[0]+dz*axis[1])>=project(A,da)+project(B,db))return false;
+  }return true;
+};
+for(let t=0;t<300;t+=1.5){api.previewMetropolis(t);const v=api.metropolis().vehicles;for(let i=0;i<v.length;i++)for(let j=i+1;j<v.length;j++)assert.equal(overlaps(v[i],v[j]),false,'shared street vehicle footprints remain separated');}
+api.previewMetropolis(360);const trips=api.metropolis();
+assert.ok(trips.arrivals>10&&trips.vehicles.some(v=>v.arrivals>1),'vehicles complete trips to different district stops');
+assert.ok(trips.boardings>0&&trips.alightings>0,'passengers actually board and alight after a bus journey');
+assert.equal(trips.stops,6);assert.ok(trips.deliveries>0&&trips.life.some(a=>a.type==='dock')&&trips.life.some(a=>a.type==='cafe'),'district workers and cafe patrons are active');
+assert.ok(trips.roles.includes('library')&&trips.roles.includes('warehouse')&&trips.roles.includes('council hall'),'building roles have distinct authored identities');
+api.previewMetropolis(8);const watering=api.metropolis().life.find(a=>a.type==='gardener');
+assert.equal(watering.action,'water');api.previewMetropolis(17);const gardening=api.metropolis().life.find(a=>a.type==='gardener');
+assert.equal(gardening.action,'walk');assert.ok(Math.abs(watering.z-gardening.z)>.05,'gardener reaches and leaves the beds');
+assert.ok(api.metropolis().life.some(a=>a.type==='reader'&&a.action==='read'),'civic bench is actually used');
+const varied=[];const scanVariety=n=>{if(n.userData?.metroBuilding)varied.push(n.userData.metroBuilding);for(const c of n.children||[])scanVariety(c);};scanVariety(api.scene);
+assert.ok(new Set(varied.map(b=>b.width.toFixed(2)+':'+b.depth.toFixed(2))).size>=4,'outer buildings have distinct footprints');
+assert.ok(varied.every(b=>b.width<=1.2&&b.depth<=1.2),'varied buildings remain within their reserved plots');
+const signatureRoles=new Set();let masses=0;const scanIdentity=n=>{if(n.userData?.metroSignature)signatureRoles.add(n.userData.metroSignature);if(n.userData?.metroMass)masses++;for(const c of n.children||[])scanIdentity(c);};scanIdentity(api.scene);
+assert.deepEqual([...signatureRoles].sort(),['bakery','cafe','gallery','library','museum']);assert.ok(masses>signatureRoles.size,'recognizable roles use composed building geometry');
+api.previewMetropolis(6);const browsing=api.metropolis().life.find(a=>a.type==='shopper');
+assert.equal(browsing.action,'choose');
+api.previewMetropolis(12);const collecting=api.metropolis().life.find(a=>a.type==='shopper');
+assert.equal(collecting.action,'collect');
+api.previewMetropolis(21);const departing=api.metropolis().life.find(a=>a.type==='shopper');
+assert.equal(departing.action,'walk');assert.ok(Math.hypot(departing.x-collecting.x,departing.z-collecting.z)>.1,'shopper leaves after collecting produce');
+for(let t=0;t<48;t+=.5){api.previewMetropolis(t);const life=api.metropolis().life,v=life.find(a=>a.type==='vendor'),c=life.find(a=>a.type==='shopper');assert.ok(Math.hypot(v.x-c.x,v.z-c.z)>.48,'seller and shopper remain on opposite sides of the counter');}
+api.previewMetropolis(360);
+console.log('METRO_TRIPS',JSON.stringify({arrivals:trips.arrivals,boardings:trips.boardings,alightings:trips.alightings}));
+api.previewMetropolis(53.99);const beforeLoop=api.metropolis().pedestrians;api.previewMetropolis(54.01);const afterLoop=api.metropolis().pedestrians;assert.ok(Math.hypot(beforeLoop[0].x-afterLoop[0].x,beforeLoop[0].z-afterLoop[0].z)<.01,'walkers continue from their stop without teleporting at the cycle boundary');
+api.previewMetropolis(10);const paused=JSON.stringify(api.metropolis());api.previewMetropolis(10);assert.equal(JSON.stringify(api.metropolis()),paused,'clock pause freezes metro routes');
+
+// Country changes replace real models without mutating the simulation or view.
+const originalBuildings=buildings,originalPeople=pedestrians.slice(),viewBefore={...api.camera.position};
+for(const id of ['india','japan','italy','netherlands','usa']){
+  assert.equal(api.setCountry(id),true);
+  assert.equal(api.getStats().country,id);
+  const feature=api.countryPlace();assert.ok(feature&&feature.activity,'country landmark has a purposeful activity');
+  api.previewCountryActivity(2);const at2=api.countryPlace();api.previewCountryActivity(7);const at7=api.countryPlace();
+  assert.notEqual(at2.visitors[0].x,at7.visitors[0].x,'visitors reach their activity instead of walking in place');
+  assert.equal(at7.visitors[0].action,at7.activity);
+  if(id==='netherlands')assert.notEqual(at2.rotor,at7.rotor,'windmill sails turn');
+  const world=api.scene.children.find(o=>o.children?.some(n=>n.userData?.countryBuilding));
+  const models=world.children.filter(n=>n.userData?.countryBuilding);
+  assert.equal(models.length,buildings.filter(b=>b.kind!=='site').length,'every occupied building lot has country architecture');
+  assert.ok(models.every(n=>n.userData.countryBuilding===id&&n.userData.roofTop>.5));
+  const features=[];const walk=n=>{if(n.userData?.countryFeature)features.push(n.userData.countryFeature);for(const c of n.children||[])walk(c);};walk(world);
+  assert.ok(features.includes({india:'chhatri',japan:'machiya-roof',italy:'terracotta-roof',netherlands:'stepped-gable',usa:'porch'}[id]),'distinct physical roof feature: '+id);
+  assert.equal(buildings,originalBuildings,'country selection retains simulation building references');
+  assert.deepEqual(pedestrians,originalPeople,'residents are not regenerated');
+  assert.equal(api.getStats().actors,pedestrians.length);
+  assert.equal(api.getStats().landmarks,5,'hero lots stay registered');
+}
+assert.equal(api.setCountry('unknown'),false);assert.equal(api.getStats().country,'usa');
+assert.equal(api.setCountry('town'),true);assert.equal(api.getStats().countryBuildings,0);
+assert.equal(api.camera.position.x,viewBefore.x,'country selection preserves the view');
+const freshWorld=api.scene.children.find(o=>o.children?.some(n=>n.userData?.bicycleRig));
+const freshBike=freshWorld.children.find(n=>n.userData?.bicycleRig).userData.bicycleRig;
+for(let i=0;i<24;i++){
+  pedestrians[2].travel=i*Math.PI/180;api.stepPoses(.05);
+  for(const leg of freshBike.legs){
+    assert.ok(Math.abs(leg.thigh.scale.y-1)<1e-6&&Math.abs(leg.shin.scale.y-1)<1e-6,'cyclist knees solve with fixed-length limbs through a complete crank rotation');
+    const pedal=freshBike.crank.children[leg.side>0?1:0];
+    const a=freshBike.crank.rotation.z,x=freshBike.crank.position.x-pedal.position.y*Math.sin(a),y=freshBike.crank.position.y+pedal.position.y*Math.cos(a);
+    assert.ok(Math.abs(leg.shoe.position.x-.015-x)<1e-6&&Math.abs(leg.shoe.position.y-.020-y)<1e-6,'shoes stay over actual pedal transforms');
+  }
+}
+const stoppedCrank=freshBike.crank.rotation.z;api.stepPoses(.5);assert.equal(freshBike.crank.rotation.z,stoppedCrank,'stationary bicycle does not pedal from elapsed pose time');
+
+
 const rendersBeforeFail=stats.renders;
 api.renderer.throwOnRender=true;callbacks.shift()();
 assert.equal(api.active,false,'render failure disables WebGL');

@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generated_at": "2026-11-06T14:04:33.322Z",
+  "generated_at": "2026-11-09T08:03:49.559Z",
   "status": "ok",
   "successful_sources": [
     "BBC News",
@@ -17,76 +17,76 @@
   ],
   "stories": [
     {
-      "title": "Geothermal Utilities Power Wave of US Affordable Housing with 40% Energy Savings",
-      "url": "https://www.goodnewsnetwork.org/geothermal-utilities-power-wave-of-us-affordable-housing-with-40-energy-savings/",
+      "title": "Good News in History, November 9",
+      "url": "https://www.goodnewsnetwork.org/events061109/",
       "source": "Good News Network",
       "category": "Good news",
       "tone": "light",
-      "published_at": "2026-11-06T12:30:16.000Z"
+      "published_at": "2026-11-09T08:00:00.000Z"
     },
     {
-      "title": "Wales scraps controversial Uganda tree-planting scheme",
-      "url": "https://www.bbc.co.uk/news/articles/cqm26m2l4p7eo?at_medium=RSS&at_campaign=rss",
+      "title": "Scientists predict 2026 hottest year on record as climate talks begin",
+      "url": "https://www.bbc.co.uk/news/articles/c6pvgg7mdvdvo?at_medium=RSS&at_campaign=rss",
       "source": "BBC Science",
       "category": "Science",
       "tone": "light",
-      "published_at": "2026-11-06T13:14:24.000Z"
+      "published_at": "2026-11-09T07:30:12.000Z"
     },
     {
-      "title": "'We have our own fair playing field': 1Xtra launches first ever UK rap chart",
-      "url": "https://www.bbc.co.uk/news/articles/cqrkyymd3533o?at_medium=RSS&at_campaign=rss",
+      "title": "James Bond: What we know so far about the next 007 film",
+      "url": "https://www.bbc.co.uk/news/articles/ck79p0lev47po?at_medium=RSS&at_campaign=rss",
       "source": "BBC Culture",
       "category": "Culture",
       "tone": "light",
-      "published_at": "2026-11-06T12:37:58.000Z"
+      "published_at": "2026-11-09T06:47:09.000Z"
     },
     {
-      "title": "England secure group top spot with Ireland win",
-      "url": "https://www.bbc.co.uk/sport/rugby-league/videos/cxly441nej84o?at_medium=RSS&at_campaign=rss",
+      "title": "Sports Personality of the Year returns - with five awards decided by public",
+      "url": "https://www.bbc.co.uk/sport/articles/cqj9kd00y0wko?at_medium=RSS&at_campaign=rss",
       "source": "BBC Sport",
       "category": "Sport",
       "tone": "light",
-      "published_at": "2026-11-06T13:42:25.000Z"
+      "published_at": "2026-11-09T07:30:05.000Z"
     },
     {
-      "title": "Elon Musk appears to signal the end of the road for Cybertruck",
-      "url": "https://www.bbc.co.uk/news/articles/cq1j33w7d232o?at_medium=RSS&at_campaign=rss",
+      "title": "Government 'looking seriously' at banning under-16s from Vinted and eBay",
+      "url": "https://www.bbc.co.uk/news/articles/cmzxjvpqrjxro?at_medium=RSS&at_campaign=rss",
       "source": "BBC Technology",
       "category": "Technology",
       "tone": "light",
-      "published_at": "2026-11-06T09:57:04.000Z"
+      "published_at": "2026-11-08T15:37:25.000Z"
     },
     {
-      "title": "PM tells firms to publish salaries in job adverts ahead of new law",
-      "url": "https://www.bbc.co.uk/news/articles/cmd9343z3zw2o?at_medium=RSS&at_campaign=rss",
+      "title": "Government's EV targets expected to be reduced this week",
+      "url": "https://www.bbc.co.uk/news/articles/cqkg5g2970epo?at_medium=RSS&at_campaign=rss",
       "source": "BBC Business",
       "category": "Business",
       "tone": "light",
-      "published_at": "2026-11-06T13:19:07.000Z"
+      "published_at": "2026-11-09T07:20:17.000Z"
     },
     {
-      "title": "Zambia's civil service overhaul raises questions",
-      "url": "https://www.dw.com/en/zambia-s-civil-service-overhaul-raises-questions/a-79875892?maca=en-rss-en-world-4025-xml-mrss",
-      "source": "DW",
+      "title": "Pope delivers veiled rebuke of Milei's austerity measures",
+      "url": "https://www.bbc.co.uk/news/articles/ckj0l082jqzvo?at_medium=RSS&at_campaign=rss",
+      "source": "BBC News",
       "category": "World",
       "tone": "light",
-      "published_at": "2026-11-06T13:28:00.000Z"
+      "published_at": "2026-11-09T05:30:37.000Z"
     },
     {
-      "title": "What went right this week: the good news that matters",
-      "url": "https://www.positive.news/society/good-news-stories-from-week-45-of-2026/",
-      "source": "Positive News",
+      "title": "Dogs Can Sniff-Out Invasive Plant Species With High Accuracy to Curb Their Destruction",
+      "url": "https://www.goodnewsnetwork.org/dogs-can-sniff-out-invasive-plant-species-with-75pt-accuracy/",
+      "source": "Good News Network",
       "category": "Good news",
       "tone": "light",
-      "published_at": "2026-11-06T05:00:54.000Z"
+      "published_at": "2026-11-08T18:36:02.000Z"
     },
     {
-      "title": "APOD: 2026 November 6 – A Farewell to Swift",
-      "url": "https://science.nasa.gov/image-article/apod-2026-november-6-a-farewell-to-swift/",
+      "title": "APOD: 2026 November 9 – Rigel and the Witch Head Nebula",
+      "url": "https://science.nasa.gov/image-article/apod-2026-november-9-rigel-and-the-witch-head-nebula/",
       "source": "NASA",
       "category": "Science",
       "tone": "light",
-      "published_at": "2026-11-06T05:05:00.000Z"
+      "published_at": "2026-11-09T05:05:00.000Z"
     }
   ]
 }
