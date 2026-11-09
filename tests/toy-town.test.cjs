@@ -13,7 +13,7 @@ assert.match(dioramaSource, /function tree\(/, 'new organic tree renderer exists
 assert.match(dioramaSource, /function gable\(/, 'real pitched roof renderer exists');
 assert.match(dioramaSource, /function glazing\(/, 'framed glazing renderer exists');
 assert.match(html, /<option value="town">Toy Town<\/option>/, 'Toy Town is in the menu');
-assert.match(html, /return 'toy-town\.html\?v=111&embed=1'\+keep\+\(bar\.hidden\?'&clean=1':''\);/, 'and opens its current embedded page');
+assert.match(html, /return 'toy-town\.html\?v=112&embed=1'\+keep\+\(bar\.hidden\?'&clean=1':''\);/, 'and opens its current embedded page');
 assert.match(html, /townFrame\.src=townSrc\(\);/, 'with this page\'s weather and fps settings passed through');
 assert.match(fs.readFileSync(path.join(root, 'toy-town.html'), 'utf8'), /assets\/toy-town\.js\?v=\d+/);
 const box = vm.createContext({Math, Object, Array, JSON, Date, String, Number, RegExp, setTimeout: () => 0, document: {getElementById: () => ({textContent: ''})}});
@@ -591,7 +591,7 @@ const townPage = fs.readFileSync(path.join(root, 'toy-town.html'), 'utf8');
 for (const id of ['zoom-in', 'zoom-out', 'zoom-reset']) {
   assert.match(townPage, new RegExp('id="' + id + '"[^>]*aria-label="[^"]+"'), id + ' is accessible');
 }
-assert.match(townPage, /toy-town\.js\?v=51/, 'diorama engine is loaded');
+assert.match(townPage, /toy-town\.js\?v=52/, 'diorama engine is loaded');
 assert.match(townPage, /toy-town-news\.js\?v=2/, 'sourced news loads before the simulation');
 assert.match(townPage, /HEADLINES/, 'real reporting has a dedicated source panel');
 assert.match(townPage, /AROUND TOWN · FICTION/, 'fiction and real news are explicitly separated');
@@ -733,6 +733,7 @@ assert.ok(T.debug().night < .01, 'daylight returns after a five-minute cycle');
   const run=T.startEvent('marathon');assert.ok(run);
   const kit=T.movers().filter(m=>m.kind==='runner');assert.ok(kit.length>=7&&kit.every(m=>m.sports&&!m.hat&&!m.bag&&m.trousers),'marathon runners wear running kit');
   assert.ok(new Set(kit.map(m=>m.col)).size>=4,'in different colours');
+  T.events().splice(0);   // one scene of a kind at a time: make sure the rotation has not left a football match running
   const staged=T.stageHeadline(heads[3]);assert.ok(staged&&staged.name==='football','the crier reading a headline stages that headline');
 }
 {

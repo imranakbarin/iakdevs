@@ -889,25 +889,44 @@ const ToyTown = (() => {
     return {front:length*along+width*across,
       side:length*across+width*along};
   }
+  // The two gap helpers run for every car pair every frame, so they work on numbers and reuse one result object.
+  const GAP={front:0,side:0};
   function vehicleClearance(m,o,ux,uy){
-    const a=bodyExtent(m,ux,uy),b=bodyExtent(o,ux,uy);
-    return {front:a.front+b.front+.027,side:a.side+b.side+.018};
+    const dm=DIRS[m.d],do_=DIRS[o.d],am=Math.abs(dm[0]*ux+dm[1]*uy),cm=Math.abs(dm[0]*uy-dm[1]*ux),ao=Math.abs(do_[0]*ux+do_[1]*uy),co=Math.abs(do_[0]*uy-do_[1]*ux);
+    const lm=m.kind==='bus'?.325:m.kind==='bike'?.19:.23,wm=m.kind==='bike'?.085:.14,lo=o.kind==='bus'?.325:o.kind==='bike'?.19:.23,wo=o.kind==='bike'?.085:.14;
+    GAP.front=lm*am+wm*cm+lo*ao+wo*co+.027;GAP.side=lm*cm+wm*am+lo*co+wo*ao+.018;return GAP;
   }
   // The drawn size of each vehicle (half length, half width): what must never overlap on screen.
   const BODY_HALF = {bus: [.28, .108], fire: [.24, .10], bike: [.14, .05]};   // drawn half length / half width
+  const BODY_HALF_DEFAULT=[.18,.10];
   function tightExtent(m,ux,uy){
-    const h=BODY_HALF[m.kind]||[.18,.10],d=DIRS[m.d],along=Math.abs(d[0]*ux+d[1]*uy),across=Math.abs(d[0]*uy-d[1]*ux);
+    const h=BODY_HALF[m.kind]||BODY_HALF_DEFAULT,d=DIRS[m.d],along=Math.abs(d[0]*ux+d[1]*uy),across=Math.abs(d[0]*uy-d[1]*ux);
     return {front:h[0]*along+h[1]*across,side:h[0]*across+h[1]*along};
   }
   function tightGap(m,o,ux,uy){
-    const a=tightExtent(m,ux,uy),b=tightExtent(o,ux,uy);
-    return {front:a.front+b.front+.012,side:a.side+b.side+.012};
+    const hm=BODY_HALF[m.kind]||BODY_HALF_DEFAULT,ho=BODY_HALF[o.kind]||BODY_HALF_DEFAULT,dm=DIRS[m.d],do_=DIRS[o.d];
+    const am=Math.abs(dm[0]*ux+dm[1]*uy),cm=Math.abs(dm[0]*uy-dm[1]*ux),ao=Math.abs(do_[0]*ux+do_[1]*uy),co=Math.abs(do_[0]*uy-do_[1]*ux);
+    GAP.front=hm[0]*am+hm[1]*cm+ho[0]*ao+ho[1]*co+.012;GAP.side=hm[0]*cm+hm[1]*am+ho[0]*co+ho[1]*ao+.012;return GAP;
+  }
+  // Distance from v to the nearest street centre line (a loop: this runs for every walker, every car, every frame).
+  function lineGap(v){let b=9;for(let i=0;i<LINES.length;i++){const d=Math.abs(LINES[i]+.5-v);if(d<b)b=d;}return b;}
+  // What the traffic logic needs to know about everyone else is gathered once per frame, not once per car per mover:
+  // the cars, and the few walkers who are actually standing in a carriageway.
+  let trafficCars=[],trafficWalkers=[];
+  function refreshTraffic(){
+    trafficCars=[];trafficWalkers=[];
+    for(const o of movers){
+      if(o.type==='car'){
+        trafficCars.push(o);
+        const q=vehiclePoint(o),e1=tightExtent(o,1,0),e2=tightExtent(o,0,1);   // what a walker checks against: this frame's body box
+        o.bx=q.x;o.by=q.y;o.bhx=e1.front+.02;o.bhy=e2.front+.02;
+      }else if(o.type==='person'&&personInRoad(o))trafficWalkers.push(o);
+    }
   }
   // A walker standing in the carriageway (the lanes, not the pavement): cars stop for them.
   function personInRoad(o){
     if(o.sit||o.shopRole||o.inside||o.hidden)return false;
-    const off=v=>LINES.reduce((a,l)=>Math.min(a,Math.abs(l+.5-v)),9);
-    const p=vehiclePoint(o),ox=off(p.x),oy=off(p.y);
+    const p=vehiclePoint(o),ox=lineGap(p.x),oy=lineGap(p.y);
     // on a street's carriageway (within .33 of an axis), not on a bridge deck
     return (ox<.33&&p.y>1.2&&p.y<16.8&&!(p.y>12.9&&p.y<15.1))||(oy<.33&&p.x>1.2&&p.x<16.8);
   }
@@ -921,16 +940,15 @@ const ToyTown = (() => {
     // front" and would wait forever. One that has run out of patience may edge
     // out past crossing traffic; it never closes on traffic going its own way.
     const pushing=clock<(m.patienceUntil||0);
-    for(const o of movers){
-      if(o===m)continue;
-      if(o.type==='person'){   // a walker in the carriageway ahead stops the car, whatever its light says
-        if(!personInRoad(o))continue;
+    for(const o of trafficWalkers){   // a walker in the carriageway ahead stops the car, whatever its light says
+      {
         const op=vehiclePoint(o),rx=op.x-here.x,ry=op.y-here.y,front=rx*ux+ry*uy,side=Math.abs(rx*uy-ry*ux);
         const hw=tightExtent(m,uy,ux).front,hl=tightExtent(m,ux,uy).front;
         if(front>0&&side<hw+.07&&front<request+hl+.2)allowed=Math.min(allowed,Math.max(0,front-hl-.07));
-        continue;
       }
-      if(o.type!=='car')continue;
+    }
+    for(const o of trafficCars){
+      if(o===m)continue;
       const other=vehiclePoint(o);
       const rx=other.x-here.x,ry=other.y-here.y;
       const front=rx*ux+ry*uy,side=Math.abs(rx*uy-ry*ux);
@@ -969,11 +987,11 @@ const ToyTown = (() => {
     if(m.type!=='person'||(m.kind&&m.kind!=='chef'&&m.kind!=='farmer'&&m.kind!=='keeper')||m.heroResident||m.shopRole)return false;
     if(clock<(m.carGoUntil||0))return false;
     const p=vehiclePoint(m,nx,ny),c=vehiclePoint(m);
-    for(const o of movers){
-      if(o.type!=='car'||o.kind==='icecream'||o.lift)continue;
-      const q=vehiclePoint(o),hx=tightExtent(o,1,0).front+.02,hy=tightExtent(o,0,1).front+.02;
-      if(Math.abs(c.x-q.x)<hx&&Math.abs(c.y-q.y)<hy)continue;   // already beside/inside it: let them leave
-      if(Math.abs(p.x-q.x)<hx&&Math.abs(p.y-q.y)<hy){
+    for(const o of trafficCars){
+      if(o.kind==='icecream'||o.lift)continue;
+      const hx=o.bhx,hy=o.bhy;
+      if(Math.abs(c.x-o.bx)<hx&&Math.abs(c.y-o.by)<hy)continue;   // already beside/inside it: let them leave
+      if(Math.abs(p.x-o.bx)<hx&&Math.abs(p.y-o.by)<hy){
         if(m.carWaitSince===undefined)m.carWaitSince=clock;
         if(clock-m.carWaitSince>4){m.carGoUntil=clock+3;m.carWaitSince=undefined;return false;}
         return true;
@@ -2781,6 +2799,7 @@ const ToyTown = (() => {
     updateNeighborhoodLife(dt);
     updateStreetTrade();
     updateDistrictLife();
+    refreshTraffic();
     for (const m of movers.slice()) { step(m, dt); easeHeading(m, dt); updateHeroResident(m); }
     passingGreetings();
     updateWhims();
