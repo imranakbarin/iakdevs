@@ -3480,9 +3480,9 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
       g.userData.marketStall=true;
       for(const side of [-1,1])box(g,.035,.61,.035,'#847458',side*.48,.305,-.14,false);
       for(let k=0;k<7;k++)box(g,.15,.045,.60,k%2?'#e9dab8':'#7d9d86',(k-3)*.15,.62,-.14,false);
-      box(g,.98,.06,.36,'#ab8860',0,.11,.02,false);
-      for(const side of [-1,1])box(g,.035,.11,.035,'#847458',side*.43,.055,.15,false);
-      for(let k=0;k<3;k++){box(g,.27,.06,.22,'#b89a70',(k-1)*.30,.17,.05,false);for(let j=0;j<4;j++)ball(g,.042,['#b67b61','#b7b66a','#cfa868'][k],(k-1)*.30+(j%2-.5)*.09,.22,.05+(Math.floor(j/2)-.5)*.09);}
+      box(g,.98,.05,.36,'#ab8860',0,.08,.02,false);
+      for(const side of [-1,1])box(g,.035,.08,.035,'#847458',side*.43,.04,.15,false);
+      for(let k=0;k<3;k++){box(g,.27,.06,.22,'#b89a70',(k-1)*.30,.13,.05,false);for(let j=0;j<4;j++)ball(g,.042,['#b67b61','#b7b66a','#cfa868'][k],(k-1)*.30+(j%2-.5)*.09,.18,.05+(Math.floor(j/2)-.5)*.09);}
       metroPlaque(g,'FRESH PRODUCE',0,.52,.18,.87);
       rainRoofs.push({x:g.position.x,z:g.position.z-.14,rx:.53,rz:.30,top:.18+.62+.023});
     }else if(D.type==='harbour'){

@@ -211,6 +211,7 @@ async function main(){
           if(!q&&!p)throw Error('Requested public place missing: '+place+' '+JSON.stringify({seed:ToyTown.debug().seed,theme:ToyTown.debug().theme,life:ToyTown3D.lifeStats()}));
           ToyTown.pinchTo(3.25,innerWidth/2,innerHeight/2,{x:q?q[0]:p.x,y:q?q[1]:p.y});
         },job.place);
+        beforeFrame=await page.evaluate(()=>ToyTown3D.getStats().frames);
       }
       if(job.weather){
         await page.waitForFunction(()=>ToyTown3D.weather().kind==='rain',null,{timeout:20000});
