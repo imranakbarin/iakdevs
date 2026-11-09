@@ -655,6 +655,7 @@ const ToyTown = (() => {
         m.newsMood=null;
     }
   }
+  let forcePerformance=false;
   function reactToNews(variant){
     if(!streetTrade||!variant||!variant.story)return false;
     const mood=variant.key==='sports'?'cheer':
@@ -665,8 +666,9 @@ const ToyTown = (() => {
     streetTrade.reactionUntil=clock+7;
     // Cultural and sporting stories bring a neighborhood performance
     // forward; the factual headline stays in the attributed news panel.
-    if(mood==='celebrate'||mood==='cheer')
-      nextPerformance=Math.min(nextPerformance,clock+4);
+    if(mood==='celebrate'||mood==='cheer'){
+      nextPerformance=Math.min(nextPerformance,clock+4);forcePerformance=true;
+    }
     for(const area of districts)for(const m of area.participants){
       m.newsMood=mood;
       if(mood==='cheer'||mood==='celebrate')m.waveUntil=clock+1.6;
@@ -2912,8 +2914,8 @@ const ToyTown = (() => {
       // One scheduled live performance roughly every two miniature minutes,
       // only when there is room in the event budget. This is visible civic
       // life, not a burst of extra permanent residents.
-      if(quiet()<.5&&events.length<5&&!events.some(e=>e.streetConcert)){
-        startEvent('busker');
+      if((quiet()<.85||forcePerformance)&&events.length<5&&!events.some(e=>e.streetConcert)){   // evening concerts yes, the dead of night no (a headline can still bring one forward)
+        startEvent('busker');forcePerformance=false;
       }
       nextPerformance=clock+88;
     }
