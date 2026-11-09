@@ -180,7 +180,7 @@ assert.equal(following.braking,true,
   const park=cars.slice(1);park.forEach((c,i)=>Object.assign(c,{x:3+i*.5,y:16.5,d:0,v:0,max:0,stopUntil:1e9,path:null}));
   const lone=cars[0];lone.keep=true;let side=0,round=0;   // (the clock may be at night here, when the town trims spare cars at the edge: keep this one)
   for(let trial=0;trial<16;trial++){
-    Object.assign(lone,{x:15.6,y:6.5,d:0,v:.8,max:1,lane:.16,path:null,stopUntil:0,patienceUntil:0,turnSignal:null});
+    Object.assign(lone,{x:15.6,y:6.5,d:0,v:.8,max:1,lane:.16,path:null,stopUntil:0,patienceUntil:0,turnSignal:null,unstickCount:0,stuckT:0,anchorT:undefined});   // (each trial starts fresh: a car stuck three times in 30 s is taken off the road)
     let turnedTo=null;
     for(let i=0;i<60*16&&turnedTo===null;i++){   // a red light may hold it first
       T.update(1/60);
