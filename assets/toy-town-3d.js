@@ -3042,8 +3042,23 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
     placed.userData.buildingKind=b.kind;composedBuildings++;
     const roofTop=finishRoof(placed,b);
     rainRoofs.push({x:b.x+.5,z:b.y+.5,rx:placed.userData.size.x/2,rz:placed.userData.size.z/2,top:.17+roofTop});
-    if(b.kind==='house')porchLamp(placed,b);
+    if(b.kind==='house'){porchLamp(placed,b);houseDetails(placed,b);}
     return true;
+  }
+  // Everyday detail for the main island's houses. The kit model paints its door and windows into its texture and the door sits
+  // in a different place on each model, so nothing here is hung on the door: flower tubs at the two front corners, a little
+  // planting along one side, and on the roofs a skylight and solar panel (terrace) or a dormer (gable). Plain boxes: they bake.
+  function houseDetails(placed,b){
+    const size=placed.userData.size,key=Math.abs(Math.round(b.x*5+b.y*9)),front=size.z/2+.02;
+    for(const sx of [-1,1]){
+      const x=sx*(size.x/2-.07),c=['#e58aa5','#f0c85a','#b39ae0','#ffffff'][(key+(sx>0?1:0))%4];
+      box(placed,.08,.06,.07,'#a6684f',x,.04,front,false);
+      ball(placed,.048,mat(c,.7),x,.105,front);ball(placed,.032,mat('#7fae6e',.8),x+sx*.02,.10,front+.02);
+    }
+    if(placed.userData.roofStyle==='terrace'){
+      box(placed,.16,.05,.12,'#9fc0c4',-size.x*.12,size.y+.01,-size.z*.1,false);
+      const panel=box(placed,.22,.012,.14,'#3d4f66',size.x*.14,size.y+.05,-size.z*.12,false);panel.rotation.x=-.35;
+    }
   }
   function finishRoof(placed,b){
     const size=placed.userData.size,key=Math.abs(b.x*7+b.y*13);
@@ -3628,6 +3643,63 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
     }
     if(type==='harbour'){cylinder(g,.035,.035,.21,'#788d87',w*.32,h+.17,-d*.30);box(g,.14,.035,.14,'#aeae95',w*.32,h+.29,-d*.30,false);}
   }
+  /* ---- Neighbours of the outer quarters: each has errands. They live behind a front door, step out, walk the lanes between the
+     buildings to another door, knock and go in; a while later they come out again. Everything is a pure function of the clock
+     (so a paused or rewound clock freezes or rewinds them), nobody appears or vanishes anywhere but at a door, and cycles that
+     would start at night are spent indoors. */
+  const NEIGHBOUR_LANES={north:[-2.075,-.65],south:[2.075,3.56]},NEIGHBOUR_CORRIDORS={north:[-3.56,-2.075,-.65,.65,2.075,3.56],south:[-3.56,-2.075,-.65,.65,2.075,3.56]};
+  const laneOfRow=dz=>dz<-2?-2.075:dz<0?-.65:dz<2?2.075:3.56;
+  function metroDoorsFor(D){
+    const out={north:[],south:[]};
+    for(const g of metro.buildings){
+      const b=g.userData.metroBuilding,dx=g.position.x-D.x,dz=g.position.z-D.z;
+      if(!b||Math.abs(dx)>4||Math.abs(dz)>4)continue;
+      out[dz<0?'north':'south'].push({x:g.position.x,z:g.position.z+b.depth/2+.10,lane:D.z+laneOfRow(dz),dz});
+    }
+    for(const k of ['north','south'])out[k].sort((a,b)=>a.x-b.x||a.z-b.z);
+    return out;
+  }
+  function neighbourRoute(a,b,half){
+    const cs=NEIGHBOUR_CORRIDORS[half],pts=[[a.x,a.z],[a.x,a.lane]];
+    if(Math.abs(a.lane-b.lane)>.01){
+      const mid=(a.x+b.x)/2,cx=cs.map(c=>c+a.D.x).reduce((best,c)=>Math.abs(c-mid)<Math.abs(best-mid)?c:best);
+      pts.push([cx,a.lane],[cx,b.lane]);
+    }
+    pts.push([b.x,b.lane],[b.x,b.z]);
+    const segs=[];let len=0;for(let i=1;i<pts.length;i++){const l=Math.hypot(pts[i][0]-pts[i-1][0],pts[i][1]-pts[i-1][1]);if(l>1e-6){segs.push({a:pts[i-1],b:pts[i],l,at:len});len+=l;}}
+    return {segs,len};
+  }
+  const nightAt=t=>Math.min(1,Math.max(0,-Math.cos(t/(300*(town.PACE||.82))*Math.PI*2)*2-1));
+  function createMetroNeighbours(){
+    metro.neighbours=[];
+    METRO_DISTRICTS.forEach((D,district)=>{
+      const doors=metroDoorsFor(D);
+      for(const half of ['north','south'])for(const d of doors[half])d.D=D;
+      for(let k=0;k<2;k++){
+        const half=k?'south':'north';if(doors[half].length<3)continue;
+        const g=person({col:['#a99be0','#e0a39b','#8fc7b9','#e6c27a','#9db4e6','#e29fc0'][(district+k*3)%6],skin:['#f1c9a5','#d8a77c','#a8754f','#7a4e33'][(district*2+k)%4],hair:k?'#49362d':'#333947',ph:district*2+k+.3,x:D.x,y:D.z});
+        g.scale.setScalar(.50);g.visible=false;metro.actorGroup.add(g);
+        metro.neighbours.push({g,district,half,doors:doors[half],P:58+((district*2+k)%4)*7,offset:(district*2+k)*13.7,id:district*2+k+1,state:'inside'});
+      }
+    });
+  }
+  function updateMetroNeighbours(time){
+    if(!metro.neighbours)return;
+    const hash=n=>{let h=(n*2654435761)>>>0;h^=h>>>15;h=Math.imul(h,2246822519)>>>0;h^=h>>>13;return h>>>0;};
+    for(const n of metro.neighbours){
+      const t=time+n.offset,c=Math.floor(t/n.P),u=t-c*n.P,list=n.doors;
+      const pick=cy=>hash(n.id*7919+cy*104729)%list.length;
+      let ia=pick(c),ib=pick(c+1);if(ib===ia)ib=(ib+1)%list.length;
+      const a=list[ia],b=list[ib],route=neighbourRoute(a,b,n.half),W=Math.min(n.P-8,route.len/.2);
+      const rests=nightAt(c*n.P-n.offset)>.25||nightAt((c+1)*n.P-n.offset)>.25;   // a cycle that starts or ends in the dusk or the dark is spent indoors
+      if(rests||u<n.P-W){n.g.visible=false;n.state='inside';continue;}
+      const s=(u-(n.P-W))/W*route.len;let seg=route.segs[route.segs.length-1];for(const sg of route.segs)if(s<=sg.at+sg.l){seg=sg;break;}
+      const f=Math.min(1,Math.max(0,(s-seg.at)/seg.l)),x=seg.a[0]+(seg.b[0]-seg.a[0])*f,z=seg.a[1]+(seg.b[1]-seg.a[1])*f;
+      n.g.visible=true;n.g.position.set(x,.20,z);n.state='walking';
+      n.g.rotation.y=Math.atan2(seg.b[0]-seg.a[0],seg.b[1]-seg.a[1])+Math.PI/2;
+      const L=n.g.userData.limbs;for(let i=0;i<2;i++)L.legs[i].rotation.x=reducedMotion?0:Math.sin(s*16+i*Math.PI)*.45;
+    }
+  }
   function createMetroStreetLife(){
     metro.life=[];metro.deliveries=0;
     for(const district of [2,4]){
@@ -3971,7 +4043,7 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
     metroLink(-7,7.12,-7,9.88);metroLink(7.12,-7,9.88,-7);metroLink(25,7.12,25,9.88);
     metroLink(-7,-1.12,-1.12,-7);metroLink(18.12,-7,25,-1.12);
     metroLink(-3,6.5,1.5,6.5,true);metroLink(6.5,-3,6.5,1.5,true);metroLink(16.5,6.5,21,6.5,true);
-    initTransit();createMetroStreetLife();
+    initTransit();createMetroStreetLife();createMetroNeighbours();
     // Harbour piers and moored craft give the eastern district a shoreline.
     for(let i=0;i<3;i++){
       box(world,1.9,.10,.18,'#ac9572',30.65,.09,11.5+i*2.0,false);
@@ -3994,11 +4066,11 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
   }
   function updateMetropolis(time){
     metro.time=time;
-    advanceTransit(time);updateMetroStreetLife(time);
-    for(const v of metro.walkers){if(metro.commuters.includes(v))continue;if(metro.walkers.indexOf(v)%3===2){const p=transitPoint(metro.foot,time*.19+v.offset*4+v.district*metro.foot.length/6);v.g.position.set(p.x,.20,p.z);v.g.rotation.y=p.angle+Math.PI/2;const L=v.g.userData.limbs;for(let k=0;k<2;k++)L.legs[k].rotation.x=reducedMotion?0:Math.sin(time*3+k*Math.PI)*.4;continue;}const t=(time+v.offset)%54;const distance=(Math.floor((time+v.offset)/54)*45+Math.min(t,45))*.21+v.offset,p=metroLoop(distance,3.56);v.g.position.set(v.x+p.x,.20,v.z+p.z);v.g.rotation.y=p.angle+Math.PI/2;const L=v.g.userData.limbs;for(let i=0;i<2;i++)L.legs[i].rotation.x=t<45&&!reducedMotion?Math.sin(distance*16+i*Math.PI)*.45:0;}
+    advanceTransit(time);updateMetroStreetLife(time);updateMetroNeighbours(time);
+    for(const v of metro.walkers){if(metro.commuters.includes(v))continue;if(metro.walkers.indexOf(v)%3===1){v.g.visible=false;continue;}if(metro.walkers.indexOf(v)%3===2){const p=transitPoint(metro.foot,time*.19+v.offset*4+v.district*metro.foot.length/6);v.g.position.set(p.x,.20,p.z);v.g.rotation.y=p.angle+Math.PI/2;const L=v.g.userData.limbs;for(let k=0;k<2;k++)L.legs[k].rotation.x=reducedMotion?0:Math.sin(time*3+k*Math.PI)*.4;continue;}const t=(time+v.offset)%54;const distance=(Math.floor((time+v.offset)/54)*45+Math.min(t,45))*.21+v.offset,p=metroLoop(distance,3.56);v.g.position.set(v.x+p.x,.20,v.z+p.z);v.g.rotation.y=p.angle+Math.PI/2;const L=v.g.userData.limbs;for(let i=0;i<2;i++)L.legs[i].rotation.x=t<45&&!reducedMotion?Math.sin(distance*16+i*Math.PI)*.45:0;}
     {   // The quarters wind down after dark like the old town: most walkers and half the traffic are home, cafe tables and benches empty.
       const deep=(town.debug().night||0)>.55;
-      metro.walkers.forEach((v,i)=>{if(!metro.commuters.includes(v))v.g.visible=!deep||i%4===0;});
+      metro.walkers.forEach((v,i)=>{if(!metro.commuters.includes(v)&&i%3!==1)v.g.visible=!deep||i%4===0;});   // (the neighbours decide for themselves: they go in before dark)
       metro.vehicles.forEach((v,i)=>{v.g.visible=!deep||i%3===0;});
       for(const a of metro.life||[])if(a.g)a.g.visible=!deep;
     }
@@ -6833,7 +6905,7 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
   const api={
     active:false,renderer,scene,camera,
     setCountry:id=>{if(!COUNTRY_IDS.includes(id))return false;if(id===country)return true;country=id;rebuild();syncActors();return true;},
-    metropolis:()=>({bounds:{...CITY_BOUNDS},districts:METRO_DISTRICTS.map(d=>({...d})),buildings:metro.buildings.length,vehicles:metro.vehicles.map(v=>({x:v.g.position.x,z:v.g.position.z,district:v.district,angle:v.g.rotation.y,bus:v.bus,distance:v.s,arrivals:v.arrivals})),life:metro.life?.map(a=>({type:a.type,district:a.district,action:a.action||a.type,x:a.g.position.x,z:a.g.position.z}))||[],deliveries:metro.deliveries,roles:[...new Set(metro.buildings.map(b=>b.userData.metroRole))],arrivals:metro.arrivals,boardings:metro.boardings,alightings:metro.alightings,passengers:metro.commuters?.map(p=>({state:p.state,stop:p.stop,bus:p.bus}))||[],stops:metro.stops?.length||0,walkers:metro.walkers.length,pedestrians:metro.walkers.map(v=>({x:v.g.position.x,z:v.g.position.z})),bridges:metro.bridges.length,time:metro.time}),
+    metropolis:()=>({neighbours:(metro.neighbours||[]).map(n=>({x:n.g.position.x,z:n.g.position.z,visible:n.g.visible,state:n.state,district:n.district})),neighbourDoors:(metro.neighbours||[]).flatMap(n=>n.doors.map(d=>({x:d.x,z:d.z}))),bounds:{...CITY_BOUNDS},districts:METRO_DISTRICTS.map(d=>({...d})),buildings:metro.buildings.length,vehicles:metro.vehicles.map(v=>({x:v.g.position.x,z:v.g.position.z,district:v.district,angle:v.g.rotation.y,bus:v.bus,distance:v.s,arrivals:v.arrivals})),life:metro.life?.map(a=>({type:a.type,district:a.district,action:a.action||a.type,x:a.g.position.x,z:a.g.position.z}))||[],deliveries:metro.deliveries,roles:[...new Set(metro.buildings.map(b=>b.userData.metroRole))],arrivals:metro.arrivals,boardings:metro.boardings,alightings:metro.alightings,passengers:metro.commuters?.map(p=>({state:p.state,stop:p.stop,bus:p.bus}))||[],stops:metro.stops?.length||0,walkers:metro.walkers.length,pedestrians:metro.walkers.map(v=>({x:v.g.position.x,z:v.g.position.z})),bridges:metro.bridges.length,time:metro.time}),
     previewMetropolis:time=>updateMetropolis(time),
     countryPlace:()=>countryPlace?({name:COUNTRY_PLACES[country][0],activity:countryPlace.activity,x:countryPlace.x,z:countryPlace.z,time:countryPlace.time,visitors:countryPlace.visitors.map(v=>({x:v.position.x,z:v.position.z,action:v.userData.countryAction})),rotor:countryPlace.rotor?.rotation.z??null}):null,
     previewCountryActivity:time=>{updateCountryPlace(time);},
