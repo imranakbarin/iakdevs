@@ -1085,3 +1085,11 @@ A `START` does not prohibit parallel edits. Avoid stepping on each other's uncom
 - **Main island houses** (`houseDetails`): flower tubs at the two front corners, a skylight and solar panel on terrace roofs. A first version with a door canopy, steps, a number plate and a climbing plant was drawn and removed: the kit model paints its door and windows into its texture and the door is at a different place on each model (in model A it is at the left, not the centre), so anything hung on the door sits on a window. Making the island's houses really richer needs either per-model door offsets or procedural houses like the quarters'; not done.
 - Not verified: the neighbours in a real render (logic test only; the page camera would not settle on a quarter when I tried); the house tubs at other models' corners; phone.
 - Cache keys 3D v106, embed v117 (sim unchanged at v55).
+
+### 2026-11-09 · Claude · START + DONE (follow-up 23: the main island's houses, both ways)
+- Request: "both" (hang the details from each model's door, and add procedural houses like the quarters').
+- **Measured doors**: rendered one of each kit house model (A, B, C) at high zoom: the door is at the left of the front face, about .37 of the width left of centre, ~.34 tall (a first guess of .23 was wrong: the camera foreshortens vertical distances). `houseDetails` now hangs a canopy (three colours), two steps, a number plate and a flower tub there, a second tub at the other front corner, and a skylight and solar panel on terrace roofs.
+- **Procedural houses**: `proceduralHouse(b)` builds about a third of the island's houses (by position and the world seed; never the hero block) like the quarters': a facade of windows, a plinth, a centred door with canopy and steps (`metroRichness`), a pitched roof and chimney (`finishRoof`), a porch lamp and rain roof, in six warm colours, same footprint, 0.78–0.98 high. They sit between the tall kit houses and break up the repetition.
+- Seen in a high-resolution render of the island: the mix reads well and the canopies sit over the doors.
+- Draw calls at the default view 3,215, triangles 2.15 M (3,387 / 2.18 M before the neighbours and houses: unchanged within noise).
+- Not verified: the canopy height on every model and at every zoom (measured on A and C; B's door was cropped out of my render), phone. Cache keys 3D v107, embed v118.

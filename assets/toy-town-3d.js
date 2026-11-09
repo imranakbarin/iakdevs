@@ -3045,20 +3045,41 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
     if(b.kind==='house'){porchLamp(placed,b);houseDetails(placed,b);}
     return true;
   }
-  // Everyday detail for the main island's houses. The kit model paints its door and windows into its texture and the door sits
-  // in a different place on each model, so nothing here is hung on the door: flower tubs at the two front corners, a little
-  // planting along one side, and on the roofs a skylight and solar panel (terrace) or a dormer (gable). Plain boxes: they bake.
+  // Everyday detail for the main island's kit houses. The kit models paint the door and windows into their texture, with the door
+  // at the left of the front face (measured on the three models: about .37 of the width left of centre, .23 tall), so a canopy,
+  // steps, a number plate and a tub sit there; the other front corner gets a tub too, and terrace roofs a skylight and panel.
   function houseDetails(placed,b){
-    const size=placed.userData.size,key=Math.abs(Math.round(b.x*5+b.y*9)),front=size.z/2+.02;
-    for(const sx of [-1,1]){
-      const x=sx*(size.x/2-.07),c=['#e58aa5','#f0c85a','#b39ae0','#ffffff'][(key+(sx>0?1:0))%4];
-      box(placed,.08,.06,.07,'#a6684f',x,.04,front,false);
-      ball(placed,.048,mat(c,.7),x,.105,front);ball(placed,.032,mat('#7fae6e',.8),x+sx*.02,.10,front+.02);
-    }
+    const size=placed.userData.size,key=Math.abs(Math.round(b.x*5+b.y*9)),front=size.z/2+.02,dx=-size.x*.37,trim='#eadfc7',stone='#bdb09a',iron='#7d8782';
+    box(placed,.25,.024,.10,['#c9705a','#6f9a8f','#d9b25e'][key%3],dx,.375,front+.04,false);                        // door canopy (the door is ~.34 tall)
+    box(placed,.022,.045,.022,iron,dx-.11,.345,front+.07,false);box(placed,.022,.045,.022,iron,dx+.11,.345,front+.07,false);
+    box(placed,.22,.02,.06,stone,dx,.012,front+.035,false);box(placed,.17,.02,.04,stone,dx,.032,front+.025,false);      // steps
+    box(placed,.05,.035,.01,trim,dx+.20,.40,front-.005,false);                                                         // number plate
+    const tubs=[size.x/2-.07,dx+.19];
+    tubs.forEach((x,i)=>{const c=['#e58aa5','#f0c85a','#b39ae0','#ffffff'][(key+i)%4];
+      box(placed,.08,.06,.07,'#a6684f',x,.04,front+.02,false);ball(placed,.048,mat(c,.7),x,.105,front+.02);ball(placed,.032,mat('#7fae6e',.8),x-.02,.10,front+.04);});
     if(placed.userData.roofStyle==='terrace'){
       box(placed,.16,.05,.12,'#9fc0c4',-size.x*.12,size.y+.01,-size.z*.1,false);
       const panel=box(placed,.22,.012,.14,'#3d4f66',size.x*.14,size.y+.05,-size.z*.12,false);panel.rotation.x=-.35;
     }
+  }
+  // About a third of the island's houses are built like the quarters' (a facade of windows, a plinth, a centred door with a
+  // canopy, a pitched roof and a chimney), so the island is not one repeated kit model. They keep the same footprint.
+  function proceduralHouse(b){
+    const key=Math.abs(Math.round(b.x*3+b.y*5+(worldSeed||0)));if(key%3!==0)return false;
+    const w=.84,d=.84,h=.78+((key>>2)%3)*.10,pal=['#d9b99b','#c9c3a2','#a9c2b3','#d4a99a','#b7bfd0','#e0c68f'],col=pal[key%pal.length];
+    const g=new THREE.Group();g.position.set(b.x+.5,.17,b.y+.5);world.add(g);
+    g.userData.size={x:w,y:h,z:d};g.userData.buildingKind='house';composedBuildings++;
+    box(g,w,h,d,col,0,h/2,0,false);
+    const facade=metroFacade(col,key%3,3);
+    for(const side of [-1,1]){
+      const f=object(g,geo('plane',1,1),facade,0,h/2,side*(d/2+.004),false);f.scale.set(w,h,1);if(side<0)f.rotation.y=Math.PI;
+      const sd=object(g,geo('plane',1,1),facade,side*(w/2+.004),h/2,0,false);sd.scale.set(d,h,1);sd.rotation.y=side*Math.PI/2;
+    }
+    metroRichness(g,w,d,h,key,'garden',col);
+    const roofTop=finishRoof(g,b);
+    rainRoofs.push({x:b.x+.5,z:b.y+.5,rx:w/2,rz:d/2,top:.17+roofTop});
+    porchLamp(g,b);
+    return true;
   }
   function finishRoof(placed,b){
     const size=placed.userData.size,key=Math.abs(b.x*7+b.y*13);
@@ -4110,6 +4131,7 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
           console.warn('Hero landmark model failed; using classic geometry',error);
         }
       }
+      if(b.kind==='house'&&!b.hero&&proceduralHouse(b))continue;
       if(kitBuilding(b))continue;
       if(b.kind==='house')composeSecondaryBuilding(b,home(b));
       else if(b.kind==='shop')composeSecondaryBuilding(b,shop(b));

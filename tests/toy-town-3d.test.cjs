@@ -159,7 +159,7 @@ assert.match(moduleCode,/eye.scale.y=blink/,'eyelids blink without a separate an
 assert.match(html,/type="importmap"/);
 assert.match(html,/three@0\.187\.0\/build\/three\.module\.js/);
 assert.match(html,/three@0\.187\.0\/examples\/jsm\//);
-assert.match(html,/toy-town-3d\.js\?v=106/);
+assert.match(html,/toy-town-3d\.js\?v=107/);
 assert.match(moduleCode,/ref\.path&&Number\.isFinite\(ref\.walkFacing\)/, 'routed people use a real diagonal heading instead of a cardinal-only pose');
 assert.match(html,/toy-town-landmarks\.js\?v=7/,'the independent models are requested alongside Three');
 assert.match(html,/buildLandmark:landmarks\.buildLandmark/,
@@ -169,7 +169,10 @@ const classicScript=html.match(/src="assets\/toy-town\.js\?v=\d+"/);
 assert.ok(classicScript&&
   html.indexOf(classicScript[0])<html.indexOf("import('three')"),
   'the actual versioned classic script always loads before WebGL');
-assert.match(page,/toy-town\.html\?v=117&embed=1/);
+assert.match(page,/toy-town\.html\?v=118&embed=1/);
+{const src3d=fs.readFileSync(path.join(root,'assets/toy-town-3d.js'),'utf8');
+  assert.match(src3d,/dx=-size\.x\*\.37/,'the kit houses\' door canopy, steps and number plate hang from the measured door position');
+  assert.match(src3d,/function proceduralHouse\(b\)/,'about a third of the island\'s houses are procedural, like the quarters\'');}
 {const src3d=fs.readFileSync(path.join(root,'assets/toy-town-3d.js'),'utf8');
   assert.match(src3d,/function createMetroNeighbours\(\)/,'the quarters have neighbours who run door-to-door errands');
   assert.match(src3d,/function houseDetails\(placed,b\)/,'the main island\'s houses have flower tubs and roof extras');}
