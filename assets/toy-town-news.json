@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generated_at": "2026-11-09T00:57:50.333Z",
+  "generated_at": "2026-11-09T08:03:49.559Z",
   "status": "ok",
   "successful_sources": [
     "BBC News",
@@ -17,28 +17,36 @@
   ],
   "stories": [
     {
-      "title": "Dogs Can Sniff-Out Invasive Plant Species With High Accuracy to Curb Their Destruction",
-      "url": "https://www.goodnewsnetwork.org/dogs-can-sniff-out-invasive-plant-species-with-75pt-accuracy/",
+      "title": "Good News in History, November 9",
+      "url": "https://www.goodnewsnetwork.org/events061109/",
       "source": "Good News Network",
       "category": "Good news",
       "tone": "light",
-      "published_at": "2026-11-08T18:36:02.000Z"
+      "published_at": "2026-11-09T08:00:00.000Z"
     },
     {
-      "title": "A glimmer of good news for Britain's sleepy dormouse",
-      "url": "https://www.bbc.co.uk/news/articles/c85ynn0p5k71o?at_medium=RSS&at_campaign=rss",
+      "title": "Scientists predict 2026 hottest year on record as climate talks begin",
+      "url": "https://www.bbc.co.uk/news/articles/c6pvgg7mdvdvo?at_medium=RSS&at_campaign=rss",
       "source": "BBC Science",
       "category": "Science",
       "tone": "light",
-      "published_at": "2026-11-09T00:56:43.000Z"
+      "published_at": "2026-11-09T07:30:12.000Z"
     },
     {
-      "title": "Four 'huge mistakes' that show Man Utd's defensive problems",
-      "url": "https://www.bbc.co.uk/sport/football/videos/c64g1n1wezvyo?at_medium=RSS&at_campaign=rss",
+      "title": "James Bond: What we know so far about the next 007 film",
+      "url": "https://www.bbc.co.uk/news/articles/ck79p0lev47po?at_medium=RSS&at_campaign=rss",
+      "source": "BBC Culture",
+      "category": "Culture",
+      "tone": "light",
+      "published_at": "2026-11-09T06:47:09.000Z"
+    },
+    {
+      "title": "Sports Personality of the Year returns - with five awards decided by public",
+      "url": "https://www.bbc.co.uk/sport/articles/cqj9kd00y0wko?at_medium=RSS&at_campaign=rss",
       "source": "BBC Sport",
       "category": "Sport",
       "tone": "light",
-      "published_at": "2026-11-08T23:53:20.000Z"
+      "published_at": "2026-11-09T07:30:05.000Z"
     },
     {
       "title": "Government 'looking seriously' at banning under-16s from Vinted and eBay",
@@ -49,44 +57,36 @@
       "published_at": "2026-11-08T15:37:25.000Z"
     },
     {
-      "title": "Nvidia launches investigation into CEO's affair with suspected Chinese spy",
-      "url": "https://www.bbc.co.uk/news/articles/c3dxw10rjn9no?at_medium=RSS&at_campaign=rss",
+      "title": "Government's EV targets expected to be reduced this week",
+      "url": "https://www.bbc.co.uk/news/articles/cqkg5g2970epo?at_medium=RSS&at_campaign=rss",
       "source": "BBC Business",
       "category": "Business",
       "tone": "light",
-      "published_at": "2026-11-09T00:50:06.000Z"
+      "published_at": "2026-11-09T07:20:17.000Z"
     },
     {
-      "title": "South Africa elections: ANC marks its worst-ever performance",
-      "url": "https://www.dw.com/en/south-africa-elections-anc-marks-its-worst-ever-performance/a-79887482?maca=en-rss-en-world-4025-xml-mrss",
-      "source": "DW",
+      "title": "Pope delivers veiled rebuke of Milei's austerity measures",
+      "url": "https://www.bbc.co.uk/news/articles/ckj0l082jqzvo?at_medium=RSS&at_campaign=rss",
+      "source": "BBC News",
       "category": "World",
       "tone": "light",
-      "published_at": "2026-11-08T17:35:00.000Z"
+      "published_at": "2026-11-09T05:30:37.000Z"
     },
     {
-      "title": "Good News in History, November 8",
-      "url": "https://www.goodnewsnetwork.org/events061108/",
+      "title": "Dogs Can Sniff-Out Invasive Plant Species With High Accuracy to Curb Their Destruction",
+      "url": "https://www.goodnewsnetwork.org/dogs-can-sniff-out-invasive-plant-species-with-75pt-accuracy/",
       "source": "Good News Network",
       "category": "Good news",
       "tone": "light",
-      "published_at": "2026-11-08T08:00:00.000Z"
+      "published_at": "2026-11-08T18:36:02.000Z"
     },
     {
-      "title": "NASA Announces $1 Million to Students for Moon Base Challenge",
-      "url": "https://www.nasa.gov/news-release/nasa-announces-1-million-to-students-for-moon-base-challenge/",
+      "title": "APOD: 2026 November 9 – Rigel and the Witch Head Nebula",
+      "url": "https://science.nasa.gov/image-article/apod-2026-november-9-rigel-and-the-witch-head-nebula/",
       "source": "NASA",
       "category": "Science",
       "tone": "light",
-      "published_at": "2026-11-08T15:26:38.000Z"
-    },
-    {
-      "title": "'A horrible place to be' - What's gone wrong for Palace?",
-      "url": "https://www.bbc.co.uk/sport/football/videos/cm62ypyydqg4o?at_medium=RSS&at_campaign=rss",
-      "source": "BBC Sport",
-      "category": "Sport",
-      "tone": "light",
-      "published_at": "2026-11-08T23:53:08.000Z"
+      "published_at": "2026-11-09T05:05:00.000Z"
     }
   ]
 }
