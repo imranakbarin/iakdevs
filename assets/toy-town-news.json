@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generated_at": "2026-11-08T20:32:07.750Z",
+  "generated_at": "2026-11-09T00:57:50.333Z",
   "status": "ok",
   "successful_sources": [
     "BBC News",
@@ -25,20 +25,20 @@
       "published_at": "2026-11-08T18:36:02.000Z"
     },
     {
-      "title": "NASA Announces $1 Million to Students for Moon Base Challenge",
-      "url": "https://www.nasa.gov/news-release/nasa-announces-1-million-to-students-for-moon-base-challenge/",
-      "source": "NASA",
+      "title": "A glimmer of good news for Britain's sleepy dormouse",
+      "url": "https://www.bbc.co.uk/news/articles/c85ynn0p5k71o?at_medium=RSS&at_campaign=rss",
+      "source": "BBC Science",
       "category": "Science",
       "tone": "light",
-      "published_at": "2026-11-08T15:26:38.000Z"
+      "published_at": "2026-11-09T00:56:43.000Z"
     },
     {
-      "title": "Who has made Troy's Premier League team of the week?",
-      "url": "https://www.bbc.co.uk/sport/football/articles/cw98z7vdg546o?at_medium=RSS&at_campaign=rss",
+      "title": "Four 'huge mistakes' that show Man Utd's defensive problems",
+      "url": "https://www.bbc.co.uk/sport/football/videos/c64g1n1wezvyo?at_medium=RSS&at_campaign=rss",
       "source": "BBC Sport",
       "category": "Sport",
       "tone": "light",
-      "published_at": "2026-11-08T20:18:01.000Z"
+      "published_at": "2026-11-08T23:53:20.000Z"
     },
     {
       "title": "Government 'looking seriously' at banning under-16s from Vinted and eBay",
@@ -49,12 +49,12 @@
       "published_at": "2026-11-08T15:37:25.000Z"
     },
     {
-      "title": "Traders 'priced out' of £12,000 Christmas market pitches",
-      "url": "https://www.bbc.co.uk/news/articles/ckn8wew92xw1o?at_medium=RSS&at_campaign=rss",
+      "title": "Nvidia launches investigation into CEO's affair with suspected Chinese spy",
+      "url": "https://www.bbc.co.uk/news/articles/c3dxw10rjn9no?at_medium=RSS&at_campaign=rss",
       "source": "BBC Business",
       "category": "Business",
       "tone": "light",
-      "published_at": "2026-11-08T07:11:02.000Z"
+      "published_at": "2026-11-09T00:50:06.000Z"
     },
     {
       "title": "South Africa elections: ANC marks its worst-ever performance",
@@ -73,20 +73,20 @@
       "published_at": "2026-11-08T08:00:00.000Z"
     },
     {
-      "title": "Dormice 'thrive' at National Trust site",
-      "url": "https://www.bbc.co.uk/news/articles/c50meerl8xp1o?at_medium=RSS&at_campaign=rss",
-      "source": "BBC Science",
+      "title": "NASA Announces $1 Million to Students for Moon Base Challenge",
+      "url": "https://www.nasa.gov/news-release/nasa-announces-1-million-to-students-for-moon-base-challenge/",
+      "source": "NASA",
       "category": "Science",
       "tone": "light",
-      "published_at": "2026-11-08T12:22:05.000Z"
+      "published_at": "2026-11-08T15:26:38.000Z"
     },
     {
-      "title": "Man Utd score twice in stoppage time to share points in eight-goal thriller",
-      "url": "https://www.bbc.co.uk/sport/football/videos/cqj6jldpl2gyo?at_medium=RSS&at_campaign=rss",
+      "title": "'A horrible place to be' - What's gone wrong for Palace?",
+      "url": "https://www.bbc.co.uk/sport/football/videos/cm62ypyydqg4o?at_medium=RSS&at_campaign=rss",
       "source": "BBC Sport",
       "category": "Sport",
       "tone": "light",
-      "published_at": "2026-11-08T20:01:16.000Z"
+      "published_at": "2026-11-08T23:53:08.000Z"
     }
   ]
 }
