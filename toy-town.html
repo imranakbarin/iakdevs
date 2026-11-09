@@ -146,7 +146,7 @@ html.ui-off:not(.embedded) #ui-show{display:block}
 <script src="assets/toy-town-news.js?v=2"></script>
 <script src="assets/toy-town-sound.js?v=6"></script>
 <script src="assets/toy-town-weather.js?v=2"></script>
-<script src="assets/toy-town.js?v=53"></script>
+<script src="assets/toy-town.js?v=55"></script>
 <script type="module">
   // Opt out with ?classic=1 for the original Canvas experience.
   // Loading errors are deliberately isolated from the existing town engine.
@@ -154,7 +154,7 @@ html.ui-off:not(.embedded) #ui-show{display:block}
     Promise.all([
       import('three'),
       import('three/addons/geometries/RoundedBoxGeometry.js'),
-      import('./assets/toy-town-3d.js?v=104'),
+      import('./assets/toy-town-3d.js?v=105'),
       import('./assets/toy-town-landmarks.js?v=7'),
       // The photographed-miniature lens. Any failure here leaves plain 3D running.
       Promise.all(['EffectComposer','RenderPass','ShaderPass','UnrealBloomPass','OutputPass']

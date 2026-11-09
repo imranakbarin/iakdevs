@@ -3576,6 +3576,35 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
       if(D.type==='campus'){box(g,.35,.36,.10,'#85775f',0,.20,-.48,false);for(let k=0;k<4;k++)box(g,.05,.12,.035,['#aa8173','#8eaaa2','#c8ad79','#9b92aa'][k],-.12+k*.08,.23,-.42,false);}
     }
   }
+  // Everyday richness for the quarters' buildings (all plain boxes, so they bake and batch): a stone plinth, a real front door with
+  // a canopy and steps, a cornice, balconies with railings on the tall ones, chimneys on the pitched ones and a coloured band at
+  // the ground floor that differs from street to street.
+  function metroRichness(g,w,d,h,index,type,col){
+    const stone='#b8a98c',trim='#eadfc7',wood='#7a5a45',iron='#9aa39e';
+    box(g,w+.05,.07,d+.05,stone,0,.035,0,false);                                           // plinth
+    box(g,w+.045,.045,d+.045,trim,0,h-.02,0,false);                                         // cornice under the roof slab
+    const bands=['#c9b79a','#b9c4b0','#d2b59f','#b7c3cc','#d6c79a'],band=bands[(index*3+Math.floor(index/5))%bands.length];
+    box(g,w+.02,.20,d+.02,band,0,.17,0,false);                                              // ground-floor band
+    // front door: frame, leaf, canopy, two steps and a lamp
+    box(g,.17,.25,.025,trim,0,.19,d/2+.022,false);box(g,.12,.21,.03,wood,0,.185,d/2+.03,false);
+    box(g,.26,.03,.12,iron,0,.34,d/2+.07,false);
+    box(g,.22,.025,.07,stone,0,.04,d/2+.065,false);box(g,.19,.025,.05,stone,0,.065,d/2+.045,false);
+    ball(g,.018,mat('#fff1cf',.34,'#ffdb9a'),.12,.27,d/2+.04);
+    // little ground-floor windows either side of the door
+    for(const sx of [-1,1]){box(g,.13,.11,.02,'#7fa0a4',sx*w*.30,.20,d/2+.015,false);box(g,.15,.025,.03,trim,sx*w*.30,.145,d/2+.025,false);}
+    // balconies on the tall ones: slab and railing, every other floor, on the front and side faces
+    if(h>1.1){
+      for(let y=.62,k=0;y<h-.25;y+=.56,k++){
+        if((k+index)%2)continue;
+        box(g,w*.42,.025,.13,trim,0,y,d/2+.075,false);box(g,w*.42,.05,.014,iron,0,y+.04,d/2+.135,false);
+        for(const sx of [-1,1])box(g,.014,.05,.12,iron,sx*w*.21,y+.04,d/2+.075,false);
+      }
+    }
+    // chimneys and a dormer on pitched roofs (houses and low buildings)
+    if(type!=='downtown'&&h<1.0&&index%2===0){box(g,.075,.20,.075,'#a58a72',w*.24,h+.38,-d*.18,false);box(g,.095,.025,.095,stone,w*.24,h+.49,-d*.18,false);}
+    // a flat-roof parapet with a skylight on the mid-rise ones
+    if(type!=='downtown'&&h>=1.0&&index%3===0){box(g,w*.9,.05,.025,trim,0,h+.115,d*.46,false);box(g,w*.9,.05,.025,trim,0,h+.115,-d*.46,false);box(g,.14,.07,.14,'#9fc0c4',-w*.18,h+.13,0,false);}
+  }
   function metroFacadeDetails(g,w,d,h,index,type){
     // Repeated detail uses shared geometries/materials and remains static-batchable.
     for(const side of [-1,1]){
@@ -3717,7 +3746,7 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
       }
     }
     metroIdentity(g,w,d,h,index,type);
-    if(!signature)metroFacadeDetails(g,w,d,h,index,type);
+    if(!signature){metroFacadeDetails(g,w,d,h,index,type);metroRichness(g,w,d,h,index,type,col);}
     if(type==='harbour'&&index%2===0){
       for(let k=0;k<3;k++){const light=box(g,w*.65,.035,.12,'#9db7b1',0,h+.22,(k-1)*d*.22,false);light.rotation.x=-.16;}
     }else if(type==='garden'&&index%2===1){
@@ -3771,7 +3800,11 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
     g.setAttribute('position',new THREE.BufferAttribute(new Float32Array(pos),3));g.setAttribute('normal',new THREE.BufferAttribute(new Float32Array(nor),3));g.setAttribute('color',new THREE.BufferAttribute(new Float32Array(col),3));
     g.computeBoundingSphere();return g;
   }
-  function metroLink(ax,az,bx,bz,raised=false){
+  function metroLink(ax0,az0,bx0,bz0,raised=false){
+    // The nominal ends are the centre lines of the streets it joins: a bridge that stops there lands in the middle of the road.
+    // It meets each street at its near edge (a T-junction), like a real bridge approach.
+    const full=Math.hypot(bx0-ax0,bz0-az0),ux=(bx0-ax0)/full,uz=(bz0-az0)/full,trim=raised?.62:.5;
+    const ax=ax0+ux*trim,az=az0+uz*trim,bx=bx0-ux*trim,bz=bz0-uz*trim;
     const g=new THREE.Group();world.add(g);const length=Math.hypot(bx-ax,bz-az),angle=Math.atan2(bx-ax,bz-az);
     const RISE=.62,ground=.174,w=t=>{const s=Math.min(1,Math.min(t,1-t)/.30);return s*s*(3-2*s);};
     const height=t=>ground+(raised?RISE*w(t):0);
@@ -3963,6 +3996,12 @@ export function mountToyTown3D(THREE, RoundedBoxGeometry, town, host, options = 
     metro.time=time;
     advanceTransit(time);updateMetroStreetLife(time);
     for(const v of metro.walkers){if(metro.commuters.includes(v))continue;if(metro.walkers.indexOf(v)%3===2){const p=transitPoint(metro.foot,time*.19+v.offset*4+v.district*metro.foot.length/6);v.g.position.set(p.x,.20,p.z);v.g.rotation.y=p.angle+Math.PI/2;const L=v.g.userData.limbs;for(let k=0;k<2;k++)L.legs[k].rotation.x=reducedMotion?0:Math.sin(time*3+k*Math.PI)*.4;continue;}const t=(time+v.offset)%54;const distance=(Math.floor((time+v.offset)/54)*45+Math.min(t,45))*.21+v.offset,p=metroLoop(distance,3.56);v.g.position.set(v.x+p.x,.20,v.z+p.z);v.g.rotation.y=p.angle+Math.PI/2;const L=v.g.userData.limbs;for(let i=0;i<2;i++)L.legs[i].rotation.x=t<45&&!reducedMotion?Math.sin(distance*16+i*Math.PI)*.45:0;}
+    {   // The quarters wind down after dark like the old town: most walkers and half the traffic are home, cafe tables and benches empty.
+      const deep=(town.debug().night||0)>.55;
+      metro.walkers.forEach((v,i)=>{if(!metro.commuters.includes(v))v.g.visible=!deep||i%4===0;});
+      metro.vehicles.forEach((v,i)=>{v.g.visible=!deep||i%3===0;});
+      for(const a of metro.life||[])if(a.g)a.g.visible=!deep;
+    }
     for(const v of metro.bridges){const t=(Math.sin(time*.07)+1)/2;for(let k=0;k<2;k++)v.g.userData.limbs.legs[k].rotation.x=reducedMotion?0:Math.sin(t*v.length*14+k*Math.PI)*.45;v.g.position.set(v.ax+(v.bx-v.ax)*t,v.height(t)+.035,v.az+(v.bz-v.az)*t);v.g.rotation.y=Math.atan2(v.bx-v.ax,v.bz-v.az)+(Math.cos(time*.07)<0?Math.PI:0);}
   }
 
