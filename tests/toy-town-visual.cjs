@@ -55,6 +55,7 @@ async function main(){
       {name:'metro-harbour',w:1280,h:820,classic:false,zoom:1.7,metroHarbour:true},
       {name:'metro-campus-transit',w:1280,h:820,classic:false,zoom:2.1,metroCampus:true},
       {name:'metro-market-life',w:1280,h:820,classic:false,zoom:2.1,metroMarket:true},
+      {name:'metro-produce-trade',w:1100,h:820,classic:false,zoom:3.25,metroTrade:true},
       {name:'metro-garden-work',w:1100,h:820,classic:false,zoom:3.25,metroGarden:true},
       {name:'metro-civic-reader',w:1100,h:820,classic:false,zoom:3.25,metroCivic:true},
       {name:'mobile-classic-reference',w:390,h:844,classic:true,zoom:1.7}
@@ -177,6 +178,7 @@ async function main(){
         beforeFrame=await page.evaluate(()=>ToyTown3D.getStats().frames);
       }
       if(job.metroOverview)await page.evaluate(()=>ToyTown.resetView());
+      if(job.metroTrade)await page.evaluate(()=>ToyTown.pinchTo(3.25,innerWidth/2,innerHeight/2,{x:-9.8,y:16.8}));
       if(job.metroGarden)await page.evaluate(()=>ToyTown.pinchTo(3.25,innerWidth/2,innerHeight/2,{x:-9.8,y:5.8}));
       if(job.metroCivic)await page.evaluate(()=>ToyTown.pinchTo(3.25,innerWidth/2,innerHeight/2,{x:11.2,y:-4.2}));
       if(job.metroCampus)await page.evaluate(()=>ToyTown.pinchTo(2.1,innerWidth/2,innerHeight/2,{x:3,y:-7}));
@@ -206,9 +208,10 @@ async function main(){
         await page.evaluate(place=>{
           const q=place==='park'?ToyTown3D.lifeStats().at.play:null;
           const p=place==='market'?ToyTown.props().find(p=>p.kind==='district-scene'&&p.role==='produce'):null;
-          if(!q&&!p)throw Error('Requested public place missing: '+place);
+          if(!q&&!p)throw Error('Requested public place missing: '+place+' '+JSON.stringify({seed:ToyTown.debug().seed,theme:ToyTown.debug().theme,life:ToyTown3D.lifeStats()}));
           ToyTown.pinchTo(3.25,innerWidth/2,innerHeight/2,{x:q?q[0]:p.x,y:q?q[1]:p.y});
         },job.place);
+        beforeFrame=await page.evaluate(()=>ToyTown3D.getStats().frames);
       }
       if(job.weather){
         await page.waitForFunction(()=>ToyTown3D.weather().kind==='rain',null,{timeout:20000});
@@ -334,7 +337,7 @@ async function main(){
           window.ToyTown3D?.getStats?.().frames||0);
       }
       if(job.metroDistrict||job.metroHarbour)await page.evaluate(()=>{ToyTown3D.previewMetropolis(180);});
-      if(job.metroOverview||job.metroDistrict||job.metroHarbour||job.metroCampus||job.metroMarket||job.metroGarden||job.metroCivic){
+      if(job.metroOverview||job.metroDistrict||job.metroHarbour||job.metroCampus||job.metroMarket||job.metroTrade||job.metroGarden||job.metroCivic){
         const metro=await page.evaluate(()=>{ToyTown3D.previewMetropolis(0);const a=ToyTown3D.metropolis();ToyTown3D.previewMetropolis(12);const b=ToyTown3D.metropolis();ToyTown3D.previewMetropolis(360);const trips=ToyTown3D.metropolis();if(trips.arrivals<10||!trips.boardings||!trips.alightings)throw Error('Connected journeys or passenger transfers missing');return {a,b,trips:{arrivals:trips.arrivals,boardings:trips.boardings,alightings:trips.alightings}};});
         if(metro.b.buildings<90||metro.b.districts.length!==6||Math.hypot(metro.a.vehicles[0].x-metro.b.vehicles[0].x,metro.a.vehicles[0].z-metro.b.vehicles[0].z)<.05)throw Error('Expanded city missing models or traffic');
         console.log('METROPOLIS '+JSON.stringify(metro));
@@ -445,6 +448,7 @@ async function main(){
       // A moving WebGL canvas may never satisfy Playwright's stability check.
       // Freeze an actual rendered GPU frame; don't switch to the old 2D fallback.
       await page.evaluate(()=>window.ToyTown3D?.freeze?.());
+      if(job.metroTrade)await page.evaluate(()=>{ToyTown3D.previewMetropolis(12);const life=ToyTown3D.metropolis().life;if(!life.some(a=>a.type==='shopper'&&a.action==='collect')||!life.some(a=>a.type==='vendor'))throw Error('Produce exchange missing');ToyTown3D.renderer.render(ToyTown3D.scene,ToyTown3D.camera);});
       if(job.metroGarden||job.metroCivic)await page.evaluate(()=>{ToyTown3D.previewMetropolis(8);const life=ToyTown3D.metropolis().life;if(!life.some(a=>a.type==='gardener'&&a.action==='water')||!life.some(a=>a.type==='reader'&&a.action==='read'))throw Error('Public-space activities missing');ToyTown3D.renderer.render(ToyTown3D.scene,ToyTown3D.camera);});
       await page.waitForTimeout(100);
       const image=await page.screenshot({type:'jpeg',quality:58,timeout:90000,
