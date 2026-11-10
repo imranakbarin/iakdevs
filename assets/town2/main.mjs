@@ -1,8 +1,8 @@
 // New Toy Town: the page. Renderer, camera and controls, lights, and the loop that moves the cast and vehicles.
 import * as THREE from 'three';
-import {PALETTE as P, ISLAND, CAST, VEHICLES, heightAt} from './def.mjs';
+import {PALETTE as P, ISLAND, CAST, VEHICLES, TRACK, PADDOCK, POND, JETTY, heightAt, rand} from './def.mjs';
 import {createSim} from './sim.mjs';
-import {buildTown, buildResident, buildVehicle, buildClouds} from './build.mjs';
+import {buildTown, buildResident, buildVehicle, buildClouds, buildTrain, buildBoat, buildAnimal} from './build.mjs';
 
 const canvas = document.getElementById('town'), q = new URLSearchParams(location.search);
 const renderer = new THREE.WebGLRenderer({canvas, antialias: true, powerPreference: 'high-performance'});
@@ -22,6 +22,25 @@ const clouds = buildClouds(); scene.add(clouds);
 const people = new Map(), cars = new Map();
 sim.residents.forEach((r, i) => { const g = buildResident(r.def, i, built.material); scene.add(g); people.set(r.id, g); });
 sim.vehicles.forEach(v => { const g = buildVehicle(v.def, built.material); scene.add(g); cars.set(v.id, g); });
+
+// Things that live on their own: the train, the boat at the jetty, the farm animals and the ducks on the pond.
+const train = buildTrain(built.material); scene.add(train);
+const boat = buildBoat(built.material); boat.position.set(JETTY.x1 + .15, -.02, JETTY.z + .78); boat.rotation.y = Math.PI / 2 - .15; scene.add(boat);
+const critters = [];
+for (let k = 0; k < 6; k++) { const kind = k < 3 ? 'cow' : 'sheep', g = buildAnimal(kind, built.material); scene.add(g); critters.push({g, k, x: PADDOCK.x0 + .6 + rand(k + 5) * (PADDOCK.x1 - PADDOCK.x0 - 1.2), z: PADDOCK.z0 + .6 + rand(k + 9) * (PADDOCK.z1 - PADDOCK.z0 - 1.2), tx: 0, tz: 0, wait: rand(k + 30) * 4, hd: rand(k) * 6, bounds: PADDOCK, step: kind === 'cow' ? .1 : .13}); }
+for (let k = 0; k < 3; k++) { const g = buildAnimal('duck', built.material); scene.add(g); critters.push({g, k: 10 + k, x: POND.x + (rand(k + 40) - .5) * 1.4, z: POND.z + (rand(k + 50) - .5) * .8, tx: 0, tz: 0, wait: rand(k + 60) * 3, hd: rand(k + 70) * 6, bounds: {x0: POND.x - 1.1, x1: POND.x + 1.1, z0: POND.z - .65, z1: POND.z + .65}, step: .12, water: true}); }
+function moveCritters(dt) {
+  for (const c of critters) {
+    if (c.wait > 0) c.wait -= dt;
+    else {
+      const dx = c.tx - c.x, dz = c.tz - c.z, d = Math.hypot(dx, dz);
+      if (d < .08 || !c.tx) { const B = c.bounds; c.tx = B.x0 + .25 + Math.random() * (B.x1 - B.x0 - .5); c.tz = B.z0 + .25 + Math.random() * (B.z1 - B.z0 - .5); c.wait = Math.random() * 4; }
+      else { c.x += dx / d * c.step * dt; c.z += dz / d * c.step * dt; const want = Math.atan2(dx, dz); let df = want - c.hd; df = Math.atan2(Math.sin(df), Math.cos(df)); c.hd += df * Math.min(1, dt * 3); }
+    }
+    const y = heightAt(c.x, c.z) + (c.water ? .08 + Math.sin(time * 1.6 + c.k) * .012 : 0);
+    c.g.position.set(c.x, y, c.z); c.g.rotation.y = c.hd;
+  }
+}
 
 /* ---- camera: look down at a point on the ground from a fixed tilt; drag to pan, pinch or wheel to zoom, twist to turn ---- */
 const view = {x: 0, z: .4, yaw: 0, dist: 30, tx: 0, tz: .4, tyaw: 0, tdist: 30};
@@ -65,6 +84,8 @@ function sync(dt) {
     const g = cars.get(v.id), y = heightAt(v.x, v.z), ahead = heightAt(v.x + v.tx * .3, v.z + v.tz * .3);
     g.position.set(v.x, y + .035 + (v.v > .05 ? Math.abs(Math.sin(time * 14 + v.s)) * .008 : 0), v.z); g.rotation.set(-Math.atan2(ahead - y, .3), Math.atan2(v.tx, v.tz), 0, 'YXZ');
   }
+  { const t = sim.train, y = heightAt(TRACK.x, t.z) + .06; train.position.set(TRACK.x, y, t.z); train.rotation.y = Math.PI; }
+  moveCritters(dt); boat.position.y = -.02 + Math.sin(time * 1.3) * .022; boat.rotation.z = Math.sin(time * 1.1) * .03;
   built.moving.top.inner.rotation.y = time * 2.2; built.moving.sails.inner.rotation.z = -time * .55;
   built.moving.minute.inner.rotation.z = -time * .1; built.moving.hour.inner.rotation.z = -time * .1 / 12;
   clouds.rotation.y = time * .012;

@@ -13,7 +13,7 @@ log a START entry before touching code, a DONE entry after, no force pushes).
 |---|---|---|
 | 1 | Town definition, road graph, terrain, camera, page | **Done** |
 | 2 | The Square and first landmarks (14 buildings), a cast of 10, 3 vehicles | **Done** |
-| 3 | Remaining districts: station, farm, harbour, school, garage, pond and stream, ~10 more cottages | Not started |
+| 3 | Remaining districts: station and shuttle train, school with playground, farm with animals, garage, harbour hut with a jetty and boat, pond with ducks, a fifth cottage | **Done** (no stream, no extra cottages) |
 | 4 | Full cast life: timetables by hour, named vehicles (milk float, tractor, fire engine, ice-cream van), a train | Not started |
 | 5 | Day and night, weather, small stories, the daily-news staging | Not started |
 | 6 | Phone performance pass, then make it the default town | Not started |
@@ -93,8 +93,8 @@ Rule: `def`, `graph` and `sim` are pure (no THREE, no DOM), so they run in Node.
 
 | | Now | Limit |
 |---|---|---|
-| Draw calls, default view | 33 | 80 |
-| Triangles, default view | 462 k | 800 k |
+| Draw calls, default view | 58 | 80 |
+| Triangles, default view | 600 k | 800 k |
 | Residents out at once | ~4–7 | — |
 
 The limits are asserted in `tests/toy-town-new-visual.cjs`. Rounded boxes use 1 or 2 segments and small

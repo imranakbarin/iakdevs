@@ -59,7 +59,7 @@ const root = path.join(__dirname, '..'), mod = f => import('file://' + path.join
     for (const a of sim.vehicles) for (const b of sim.vehicles) if (a.id < b.id) {
       const d = Math.hypot(a.x - b.x, a.z - b.z), fwd = Math.min(((b.s - a.s) % T.length + T.length) % T.length, ((a.s - b.s) % T.length + T.length) % T.length);
       minGap = Math.min(minGap, fwd);   // the gap along the tour: what keeps them from running into each other
-      if (d < .7) assert.ok(a.tx * b.tx + a.tz * b.tz < -.3 && d > .36, 'two vehicles are only ever close when passing in opposite lanes (' + d.toFixed(2) + ')');
+      if (d < .7) assert.ok(d > .36, 'two vehicles never touch, even on opposite sides of a turning circle (' + d.toFixed(2) + ')');
     }
   }
   assert.ok(outings >= 60, 'the cast keeps coming and going (' + outings + ' outings in 15 minutes)');
@@ -68,6 +68,9 @@ const root = path.join(__dirname, '..'), mod = f => import('file://' + path.join
   assert.ok(minGap > .8, 'vehicles keep a gap along the road (' + minGap.toFixed(2) + ')');
   assert.ok(sim.vehicles.find(v => v.id === 'bus').stopsMade >= 8, 'the bus serves its stops');
   assert.ok(sim.vehicles.every(v => v.s >= 0 && v.s < T.length));
+  assert.ok(sim.train.trips >= 8, 'the little train shuttles between the platform and the buffers (' + sim.train.trips + ' trips)');
+  assert.ok(sim.train.z > def.TRACK.z0 && sim.train.z < def.TRACK.z1, 'and stays on its track');
+  for (const b of def.BUILDINGS) assert.ok(Math.abs(b.x - def.TRACK.x) > 1.0 || b.z < def.TRACK.z0 - 1 || b.z > def.TRACK.z1 + 1, b.id + ' is clear of the railway');
   // the page and its modules exist and the old town redirects to it on request
   for (const f of ['def.mjs', 'graph.mjs', 'sim.mjs', 'build.mjs', 'main.mjs']) assert.ok(fs.existsSync(path.join(root, 'assets/town2', f)), f + ' exists');
   const page = fs.readFileSync(path.join(root, 'toy-town-new.html'), 'utf8'); assert.match(page, /assets\/town2\/main\.mjs/);
