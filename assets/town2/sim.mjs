@@ -3,7 +3,7 @@
 //    doors while walking, and they appear and disappear exactly on a doorstep.
 //  - Vehicles follow the one closed tour of the road network, keep a gap from the one in front, wait for anyone
 //    crossing in front of them, and the bus pulls up at its stops.
-import {CAST, VEHICLES, BUS_STOPS, BUILDINGS, rand} from './def.mjs';
+import {CAST, VEHICLES, BUS_STOPS, BUILDINGS, TRACK, rand} from './def.mjs';
 import {buildGraph, along, nearest} from './graph.mjs';
 
 export function createSim(seed = 7) {
@@ -14,6 +14,15 @@ export function createSim(seed = 7) {
     speed: (def.small ? .66 : .52) * (.92 + rand(seed + i * 31) * .2), target: null, outings: 0}));
   const stops = BUS_STOPS.map(b => ({...b, s: nearest(tour, b.x, b.z).s}));
   const vehicles = VEHICLES.map((def, i) => ({id: def.id, def, s: tour.length * i / VEHICLES.length, v: def.speed, wait: 0, lastStop: null, x: 0, z: 0, tx: 1, tz: 0, stopsMade: 0}));
+  // The little train shuttles along its track: in to the platform, wait, up to the far buffer, wait, and back.
+  const platformZ = (TRACK.platform.z0 + TRACK.platform.z1) / 2, stopsAt = [platformZ + .55, TRACK.z0 + 1.55];
+  const train = {z: stopsAt[1], v: 0, target: 0, wait: 4, trips: 0, boardedAtPlatform: 0};
+  function stepTrain(dt) {
+    if (train.wait > 0) { train.wait -= dt; train.v = 0; return; }
+    const goal = stopsAt[train.target], d = goal - train.z, want = Math.sign(d) * Math.min(.7, Math.abs(d) * 1.1 + .06);
+    train.v += Math.max(-1.2 * dt, Math.min(.8 * dt, want - train.v)); train.z += train.v * dt;
+    if (Math.abs(d) < .03 && Math.abs(train.v) < .15) { train.z = goal; train.v = 0; train.wait = train.target === 0 ? 9 : 6; train.target ^= 1; train.trips++; }
+  }
   const ahead = (from, to) => ((to - from) % tour.length + tour.length) % tour.length;   // distance along the tour from one point forward to another
   function place(v) { const p = along(tour, v.s); v.x = p.x; v.z = p.z; v.tx = p.tx; v.tz = p.tz; }
   vehicles.forEach(place);
@@ -51,6 +60,7 @@ export function createSim(seed = 7) {
     dt = Math.min(dt, .1); clock += dt;
     for (const r of residents) stepResident(r, dt);
     for (const v of vehicles) stepVehicle(v, dt);
+    stepTrain(dt);
   }
-  return {graph, residents, vehicles, stops, update, get clock() { return clock; }, doorIds: BUILDINGS.filter(b => b.door).map(b => b.id)};
+  return {graph, residents, vehicles, stops, train, update, get clock() { return clock; }, doorIds: BUILDINGS.filter(b => b.door).map(b => b.id)};
 }

@@ -5,7 +5,7 @@
 import * as THREE from 'three';
 import {RoundedBoxGeometry} from 'three/addons/geometries/RoundedBoxGeometry.js';
 import {mergeGeometries} from 'three/addons/utils/BufferGeometryUtils.js';
-import {PALETTE as P, ISLAND, SQUARE, ROAD, SPOKES, BUILDINGS, TREES, BUS_STOPS, heightAt, shore, rand, doorOf} from './def.mjs';
+import {PALETTE as P, ISLAND, SQUARE, ROAD, SPOKES, BUILDINGS, TREES, BUS_STOPS, TRACK, PADDOCK, POND, JETTY, heightAt, shore, rand, doorOf} from './def.mjs';
 import {along, leftOf} from './graph.mjs';
 
 const TAU = Math.PI * 2, col = c => new THREE.Color(P[c] || c);
@@ -182,6 +182,57 @@ const BUILD = {
     tub(b, -.62, .85, 'red'); tub(b, .62, .85, 'yellow');
     b.cyl(.02, .02, .34, 'wood', {x: .42, z: 1.3, seg: 6}); b.box(.16, .11, .1, 'red', {x: .42, y: .32, z: 1.3, r: .03});
   },
+  station(b, def, anim) {
+    b.box(2.3, 1.0, 1.3, 'cream', {r: .1}); b.box(2.46, .12, 1.46, 'teal', {y: .98, r: .05}); b.gable(2.2, .5, 1.3, 'red', {y: 1.1});
+    b.box(.6, 1.7, .6, 'cream', {x: -.78, z: -.1, r: .08}); b.cone(.46, .5, 'teal', {x: -.78, y: 1.72, z: -.1, seg: 4, ry: Math.PI / 4}); b.sph(.07, 'gold', {x: -.78, y: 2.28, z: -.1, seg: 8});
+    b.cyl(.2, .2, .05, 'gold', {x: -.78, y: 1.2, z: .22, rx: Math.PI / 2, centre: true, seg: 22}); b.cyl(.17, .17, .055, 'white', {x: -.78, y: 1.2, z: .225, rx: Math.PI / 2, centre: true, seg: 22}); b.box(.02, .13, .02, 'black', {x: -.78, y: 1.2, z: .26}); b.box(.1, .02, .02, 'black', {x: -.73, y: 1.2, z: .26});
+    for (const x of [-.2, .3]) { b.box(.34, .46, .06, 'white', {x, y: .34, z: .67, r: .04}); b.box(.26, .38, .07, '#bfe6f7', {x, y: .38, z: .675, r: .03}); }
+    door(b, .85, .66, 'red', .38, .64); b.box(2.2, .06, .5, 'blue', {y: .9, z: .85, r: .02});
+    for (let k = 0; k < 9; k++) b.box(.246, .05, .52, k % 2 ? 'white' : 'red', {x: -1.0 + k * .25, y: .9, z: .9, rx: .28, r: .015});
+    for (const x of [-.9, .9]) b.cyl(.045, .05, .9, 'white', {x, z: 1.1, seg: 8});
+    b.box(1.0, .22, .04, 'white', {x: .35, y: .75, z: .686, r: .02}); b.box(.9, .15, .045, 'blue', {x: .35, y: .78, z: .69, r: .015});
+    bench(b, -.5, 1.28, 0); b.cyl(.14, .14, .5, 'slate', {x: 1.15, z: 1.2, seg: 12}); b.cyl(.14, .14, .06, 'red', {x: 1.15, y: .5, z: 1.2, seg: 12});
+  },
+  school(b) {
+    b.box(2.4, .95, 1.35, 'red', {r: .1}); b.box(2.54, .1, 1.5, 'cream', {y: .93, r: .05}); b.gable(2.2, .5, 1.3, 'slate', {y: 1.03});
+    b.box(.9, 1.2, .5, 'red', {z: .74, r: .09}); b.box(1.0, .1, .6, 'cream', {y: 1.18, z: .74, r: .04});
+    b.cyl(.15, .15, .05, 'white', {y: .98, z: 1.0, rx: Math.PI / 2, centre: true, seg: 20}); b.box(.02, .1, .02, 'black', {y: .98, z: 1.03}); b.box(.07, .02, .02, 'black', {x: .03, y: .98, z: 1.03});
+    b.box(.3, .36, .3, 'cream', {y: 1.28, z: .74, r: .06}); b.cone(.26, .34, 'red', {y: 1.62, z: .74, seg: 4, ry: Math.PI / 4}); b.sph(.06, 'gold', {y: 1.98, z: .74, seg: 8});
+    door(b, 0, .99, 'blue', .4, .66);
+    for (const x of [-.95, -.55, .55, .95]) win(b, x, .78, .68, .26, .34, {shutters: 'yellow'});
+    // playground: a slide, a seesaw and a sand pit with a little fence
+    b.push(1.9, 0, .2); b.box(.4, .5, .34, 'yellow', {z: -.3, r: .04}); b.box(.26, .06, .8, 'red', {y: .22, z: .3, rx: .5, r: .02}); b.box(.4, .04, .36, 'yellow', {y: .5, z: -.3, r: .02}); b.box(.1, .18, .1, 'wood', {x: -.9}); b.box(.12, .05, .9, 'blue', {x: -.9, y: .2, rx: .15, r: .02}); b.cyl(.28, .3, .04, 'sand', {x: -.1, z: 1.0, seg: 18}); b.pop();
+    for (const dx of [-.5, .5]) lampSmall(b, dx, 1.3);
+  },
+  barn(b) {
+    b.box(1.9, .95, 1.5, 'red', {r: .1}); b.box(.06, .95, 1.5, 'white', {x: -.95, r: .02}); b.box(.06, .95, 1.5, 'white', {x: .95, r: .02});
+    b.gable(2.0, .78, 1.7, 'brown', {y: .92}); b.box(2.1, .05, .12, 'cream', {y: 1.68, r: .02});
+    b.box(.9, .75, .07, 'cream', {z: .76, r: .04}); for (const s of [-1, 1]) { b.box(.4, .72, .08, 'white', {x: s * .22, z: .765, r: .03}); b.box(.034, .74, .09, 'red', {x: s * .22, z: .765, rz: .0}); } b.box(.034, .74, .09, 'red', {z: .77});
+    b.box(.9, .06, .09, 'red', {x: 0, y: .38, z: .78, rz: .0}); b.sph(.05, 'gold', {y: 1.0, z: .78, seg: 8}); roundWin(b, 0, 1.28, .84, .14);
+    b.cyl(.34, .34, 1.5, 'cream', {x: 1.45, z: -.2, seg: 20}); b.dome(.34, 'slate', {x: 1.45, y: 1.5, z: -.2}); b.cyl(.36, .36, .04, 'red', {x: 1.45, y: .3, z: -.2, seg: 20}); b.cyl(.36, .36, .04, 'red', {x: 1.45, y: .8, z: -.2, seg: 20});
+    for (let k = 0; k < 4; k++) b.cyl(.2, .2, .26, 'yellow', {x: -.3 + k * .0, y: .02, z: 1.35, rz: Math.PI / 2, ry: 0, centre: false, seg: 14, sx: 1, sz: 1}); b.cyl(.2, .2, .26, 'gold', {x: .6, z: 1.2, seg: 14}); b.cyl(.2, .2, .26, 'gold', {x: .6, y: .26, z: 1.2, seg: 14});
+    tub(b, -1.1, 1.0, 'yellow');
+  },
+  garage(b) {
+    b.box(2.0, .9, 1.4, 'sky', {r: .1}); b.box(2.14, .12, 1.54, 'white', {y: .88, r: .05}); b.box(2.0, .08, 1.4, 'red', {y: 1.0, r: .03});
+    for (const x of [-.5, .5]) { b.box(.82, .62, .08, 'white', {x, z: .72, r: .05}); for (let k = 0; k < 4; k++) b.box(.74, .03, .09, 'stone', {x, y: .12 + k * .14, z: .73}); }
+    door(b, 0, .0, 'white', .01, .01); b.box(1.9, .24, .06, 'red', {y: .98, z: .74, r: .03}); b.box(1.7, .16, .07, 'white', {y: 1.02, z: .76, r: .03});
+    for (let k = 0; k < 6; k++) b.box(.2, .12, .075, k % 2 ? 'black' : 'white', {x: -.85 + k * .34, y: 1.04, z: .78, r: .01});
+    // petrol pumps, a sign and a stack of tyres
+    for (const x of [-.4, .4]) { b.box(.24, .55, .22, 'red', {x, z: 1.45, r: .05}); b.box(.2, .13, .02, 'cream', {x, y: .38, z: 1.57, r: .01}); b.cyl(.02, .02, .3, 'black', {x: x + .14, y: .25, z: 1.5, seg: 6}); b.sph(.05, 'gold', {x, y: .58, z: 1.45, seg: 8}); }
+    b.box(1.5, .05, .7, 'red', {y: 1.22, z: 1.45, r: .02}); for (const x of [-.7, .7]) b.cyl(.03, .03, 1.2, 'white', {x, z: 1.7, seg: 8});
+    for (let k = 0; k < 3; k++) b.torus(.1, .045, 'black', {x: 1.25, y: .06 + k * .09, z: .3, rx: Math.PI / 2});
+    b.cyl(.02, .02, .8, 'slate', {x: -1.2, z: 1.2, seg: 6}); b.box(.34, .22, .03, 'yellow', {x: -1.2, y: .9, z: 1.2, r: .02}); b.sph(.05, 'red', {x: -1.2, y: .9, z: 1.22, seg: 8});
+  },
+  harbourHut(b) {
+    b.box(1.5, .8, 1.15, 'blue', {r: .1}); for (let k = 0; k < 4; k++) b.box(1.52, .02, 1.17, 'white', {y: .15 + k * .17});
+    b.gable(1.6, .5, 1.3, 'white', {y: .78}); b.box(1.7, .07, .09, 'red', {y: 1.25, r: .02});
+    door(b, -.35, .58, 'red', .36, .62); roundWin(b, .3, .55, .6, .17); b.push(0, 0, 0, Math.PI / 2); roundWin(b, 0, .5, .78, .15); b.pop();
+    b.cyl(.025, .025, 1.5, 'wood', {x: .75, z: .75, seg: 6}); b.box(.4, .26, .02, 'red', {x: .96, y: 1.34, z: .75}); b.box(.4, .09, .025, 'white', {x: .96, y: 1.34, z: .75});
+    b.cyl(.13, .14, .3, 'wood', {x: .55, z: .9, seg: 12}); b.torus(.12, .035, 'white', {x: -1.0, y: .5, z: .6}); b.torus(.12, .035, 'red', {x: -1.0, y: .5, z: .61, s: .72});
+    for (let k = 0; k < 3; k++) b.box(.34, .22, .24, 'wood', {x: -.95, y: k * .2, z: .95 + (k % 2) * .06, ry: k * .4, r: .03});
+    tub(b, 1.0, .75, 'white');
+  },
   windmill(b, def, anim) {
     b.cyl(.92, .98, .12, 'stone', {seg: 24}); b.cyl(.5, .84, 2.1, 'white', {y: .1, seg: 24}); b.torus(.74, .05, 'red', {y: .78, rx: Math.PI / 2}); b.cyl(.86, .86, .05, 'wood', {y: 1.0, seg: 24});
     for (let k = 0; k < 12; k++) { const a = k / 12 * TAU; b.cyl(.016, .016, .22, 'white', {x: Math.cos(a) * .83, y: 1.04, z: Math.sin(a) * .83, seg: 6}); } b.torus(.83, .02, 'white', {y: 1.27, rx: Math.PI / 2});
@@ -254,7 +305,7 @@ function tree(b, kind, seed) {
 function scenery(bag, graph) {
   const onGround = (x, z, f, ry = 0, s = 1) => { bag.push(x, heightAt(x, z), z, ry, s); f(bag); bag.pop(); };
   const nearRoad = (x, z) => { let d = Infinity; for (const e of graph.edges) for (const p of e.line.pts) d = Math.min(d, Math.hypot(p[0] - x, p[1] - z)); return d; };
-  const nearBuilding = (x, z) => Math.min(...BUILDINGS.map(b => Math.hypot(b.x - x, b.z - z)));
+  const nearBuilding = (x, z) => Math.min(...BUILDINGS.map(b => Math.hypot(b.x - x, b.z - z)), Math.abs(x - TRACK.x) < 1.3 && z > TRACK.z0 - .8 && z < TRACK.z1 + .8 ? 0 : 9, x > PADDOCK.x0 - .8 && x < PADDOCK.x1 + .8 && z > PADDOCK.z0 - .8 && z < PADDOCK.z1 + .8 ? 0 : 9, Math.hypot((x - POND.x) / 1.4, z - POND.z) < 2 ? 0 : 9, x > JETTY.x0 - 1.5 && Math.abs(z - JETTY.z) < 1.2 ? 0 : 9);
   TREES.forEach(([x, z, kind, s], i) => { if (nearRoad(x, z) > .9 && nearBuilding(x, z) > 1.5) onGround(x, z, b => tree(b, kind, i + 1), rand(i) * TAU, s); });
   // lamp posts and benches round the square, bunting strung between the lamps
   const lamps = []; for (let k = 0; k < 8; k++) { const a = (k + .5) / 8 * TAU, x = Math.cos(a) * 3.35, z = Math.sin(a) * 3.35; if (k % 2 === 0) continue; lamps.push([x, z]); }
@@ -275,10 +326,46 @@ function scenery(bag, graph) {
   for (const st of BUS_STOPS) { const d = graph.attach(st.x, st.z), e = graph.edge(d.edge), q = along(e.line, d.s), [lx, lz] = leftOf(q.tx, q.tz), side = e.kind === 'ring' ? 1 : d.side, x = q.x + lx * side * (ROAD.pave + .3), z = q.z + lz * side * (ROAD.pave + .3); onGround(x, z, b => { b.cyl(.02, .025, .78, 'slate', {seg: 6}); b.cyl(.13, .13, .03, 'red', {y: .78, rx: Math.PI / 2, seg: 16}); b.cyl(.09, .09, .035, 'white', {y: .795, rx: Math.PI / 2, seg: 16, centre: false}); }, Math.atan2(q.tx, q.tz)); }
 }
 
+function railway(bag) {
+  const {x, z0, z1, platform: pf} = TRACK, y = k => heightAt(x, k) + 0;
+  const along = (z) => heightAt(x, z);
+  const n = Math.round((z1 - z0) / .16);
+  for (let k = 0; k <= n; k++) { const z = z0 + (z1 - z0) * k / n; bag.box(.62, .045, .08, 'wood', {x, y: along(z) + .02, z, r: .012}); }
+  for (const dx of [-.17, .17]) { const steps = 24; for (let k = 0; k < steps; k++) { const za = z0 + (z1 - z0) * k / steps, zb = z0 + (z1 - z0) * (k + 1) / steps; bag.box(.05, .05, zb - za + .01, 'slate', {x: x + dx, y: Math.max(along(za), along(zb)) + .065, z: (za + zb) / 2, r: .01}); } }
+  for (const dz of [z0 - .1, z1 + .1]) { bag.box(.5, .2, .1, 'red', {x, y: along(dz) + .02, z: dz, r: .04}); bag.box(.54, .05, .12, 'yellow', {x, y: along(dz) + .2, z: dz, r: .02}); }   // buffers
+  for (let zz = pf.z0; zz < pf.z1; zz += .3) bag.box(.5, .02, .31, zz % .6 < .3 ? '#e3d0a8' : '#efe0be', {x: pf.x, y: heightAt(pf.x, zz) + .17, z: zz + .15});
+  bag.box(.52, .17, pf.z1 - pf.z0, 'stone', {x: pf.x, y: heightAt(pf.x, (pf.z0 + pf.z1) / 2), z: (pf.z0 + pf.z1) / 2, r: .02});
+  bag.box(.52, .04, pf.z1 - pf.z0, 'yellow', {x: pf.x + .24, y: heightAt(pf.x, (pf.z0 + pf.z1) / 2) + .165, z: (pf.z0 + pf.z1) / 2});
+  for (const zz of [pf.z0 + .3, pf.z1 - .3]) { bag.cyl(.025, .03, .9, 'slate', {x: pf.x - .1, y: heightAt(pf.x, zz) + .17, z: zz, seg: 6}); bag.box(.3, .26, .05, 'blue', {x: pf.x - .1, y: heightAt(pf.x, zz) + .9, z: zz, r: .02}); }
+  bag.box(.34, .05, 1.2, 'red', {x: pf.x - .2, y: heightAt(pf.x, (pf.z0 + pf.z1) / 2) + .95, z: (pf.z0 + pf.z1) / 2, r: .02});
+  for (const zz of [pf.z0 + .4, pf.z1 - .4]) bag.cyl(.025, .025, .78, 'white', {x: pf.x - .2, y: heightAt(pf.x, zz) + .17, z: zz, seg: 6});
+}
+function paddock(bag) {
+  const {x0, z0, x1, z1} = PADDOCK, fence = (xa, za, xb, zb) => { const n = Math.max(2, Math.round(Math.hypot(xb - xa, zb - za) / .32)); for (let k = 0; k <= n; k++) { const xx = xa + (xb - xa) * k / n, zz = za + (zb - za) * k / n; bag.cyl(.025, .03, .34, 'wood', {x: xx, y: heightAt(xx, zz), z: zz, seg: 6}); } const a = Math.atan2(xb - xa, zb - za), L = Math.hypot(xb - xa, zb - za), mx = (xa + xb) / 2, mz = (za + zb) / 2, my = heightAt(mx, mz); for (const h of [.14, .27]) bag.box(.025, .03, L, 'wood', {x: mx, y: my + h, z: mz, ry: a, r: .01}); };
+  fence(x0, z0, x1, z0); fence(x1, z0, x1, z1); fence(x1, z1, x0, z1); fence(x0, z1, x0, z0);
+  bag.box(.5, .1, .3, 'sand', {x: (x0 + x1) / 2, y: heightAt((x0 + x1) / 2, z1), z: z1 + .1, r: .04}); // a gate mat
+  for (let k = 0; k < 14; k++) { const x = x0 + .25 + rand(k + 77) * (x1 - x0 - .5), z = z0 + .25 + rand(k + 91) * (z1 - z0 - .5); bag.sph(.04, ['white', 'yellow'][k % 2], {x, y: heightAt(x, z) + .06, z, seg: 6}); }
+  bag.box(.6, .22, .22, 'wood', {x: x0 + .5, y: heightAt(x0 + .5, z0 + .5), z: z0 + .5, r: .05}); bag.box(.5, .12, .16, 'gold', {x: x0 + .5, y: heightAt(x0 + .5, z0 + .5) + .21, z: z0 + .5, r: .04});   // a trough and some hay
+}
+function pond(bag) {
+  const {x, z, r} = POND, y = heightAt(x, z);
+  bag.cyl(r + .2, r + .24, .05, 'stone', {x, y: y - .01, z, seg: 28, sx: 1.25}); bag.cyl(r, r, .07, '#6fcdea', {x, y: y + .0, z, seg: 28, sx: 1.25});
+  for (let k = 0; k < 6; k++) { const a = k / 6 * TAU + .3, px = x + Math.cos(a) * (r * 1.25 + .3), pz = z + Math.sin(a) * (r + .3); bag.sph(.2, k % 2 ? 'leaf' : 'green', {x: px, y: heightAt(px, pz) + .1, z: pz, sy: .7, seg: 8}); bag.cyl(.014, .014, .5, 'leaf', {x: px + .15, y: heightAt(px, pz), z: pz, seg: 4}); bag.cyl(.055, .055, .16, 'brown', {x: px + .15, y: heightAt(px, pz) + .5, z: pz, seg: 6}); }
+  for (let k = 0; k < 4; k++) bag.cyl(.14, .14, .015, 'lime', {x: x - .5 + k * .35, y: y + .075, z: z + (k % 2 ? .25 : -.2), seg: 12});
+  for (let k = 0; k < 4; k++) bag.sph(.05, 'pink', {x: x - .5 + k * .35, y: y + .1, z: z + (k % 2 ? .25 : -.2), seg: 6});
+}
+function jetty(bag) {
+  const {x0, x1, z} = JETTY, n = Math.round((x1 - x0) / .2);
+  for (let k = 0; k < n; k++) bag.box(.2, .04, .5, k % 2 ? '#b98a58' : '#c89a64', {x: x0 + (k + .5) * .2, y: .2, z, r: .01});
+  for (const k of [0, Math.round(n / 3), Math.round(2 * n / 3), n]) for (const dz of [-.22, .22]) bag.cyl(.04, .04, .55, 'wood', {x: x0 + k * .2, y: -.1, z: z + dz, seg: 6});
+  for (const dz of [-.26, .26]) bag.box((x1 - x0), .03, .03, 'white', {x: (x0 + x1) / 2, y: .42, z: z + dz});
+  bag.cyl(.07, .08, .1, 'red', {x: x1 - .05, y: .22, z: z + .2, seg: 10}); bag.cyl(.02, .02, .55, 'slate', {x: x1 - .05, y: .3, z: z - .3, seg: 6}); bag.box(.14, .12, .14, '#fff4c4', {x: x1 - .05, y: .86, z: z - .3, r: .03});
+}
+
 /* ---------------- the whole static town ---------------- */
 export function buildTown(graph) {
   const bag = new Bag(), anim = {}, material = toyMaterial();
-  roads(bag, graph); scenery(bag, graph);
+  roads(bag, graph); scenery(bag, graph); railway(bag); paddock(bag); pond(bag); jetty(bag);
   for (const def of BUILDINGS) { const local = {}; bag.push(def.x, heightAt(def.x, def.z), def.z, def.ry); BUILD[def.type](bag, def, local); bag.pop(); for (const k in local) anim[k] = {...local[k], def}; }
   const town = bag.mesh(material); town.castShadow = true; town.receiveShadow = true;
   const ground = terrain();
@@ -320,6 +407,32 @@ export function buildVehicle(def, material) {
   else if (def.kind === 'van') { b.box(.36, .3, .5, c, {y: .09, z: -.12, r: .07}); b.box(.34, .22, .26, c, {y: .09, z: .25, r: .07}); b.box(.3, .1, .02, '#bfe6f7', {y: .2, z: .375, r: .02}); for (const s of [-1, 1]) { b.box(.02, .14, .24, 'white', {x: s * .182, y: .2, z: -.12, r: .01}); b.box(.022, .012, .14, 'red', {x: s * .184, y: .27, z: -.12, rx: .5}); b.box(.022, .012, .14, 'red', {x: s * .184, y: .27, z: -.12, rx: -.5}); } wheels([-.17, .17], [-.24, .24], .08); face(.14, .375, .1); }
   else { b.box(.36, .17, .62, c, {y: .09, r: .07}); b.box(.3, .15, .3, c, {y: .24, z: -.04, r: .06}); b.box(.31, .09, .26, '#bfe6f7', {y: .27, z: -.04, r: .03}); b.box(.26, .09, .31, '#bfe6f7', {y: .27, z: -.04, r: .03}); if (def.id === 'taxi') { b.box(.14, .06, .08, 'white', {y: .39, z: -.04, r: .02}); for (let k = 0; k < 5; k++) for (const s of [-1, 1]) b.box(.01, .035, .06, k % 2 ? 'black' : 'white', {x: s * .181, y: .16, z: -.24 + k * .12}); } wheels([-.17, .17], [-.2, .2], .08); face(.15, .31, .1); for (const s of [-1, 1]) b.sph(.03, 'red', {x: s * .11, y: .17, z: -.31, seg: 8}); }
   const m = b.mesh(material); m.castShadow = true; const g = new THREE.Group(); g.add(m); g.scale.setScalar(1.25); return g;
+}
+/* ---------------- more moving things: train, boat, farm animals, ducks ---------------- */
+// The little train: an engine with a funnel and two coaches, facing +z, length about 1.9.
+export function buildTrain(material) {
+  const b = new Bag();
+  b.box(.4, .3, .62, 'red', {y: .08, z: .5, r: .08}); b.cyl(.2, .2, .55, 'red', {y: .14, z: .55, rx: Math.PI / 2, centre: false, seg: 18}); b.box(.42, .34, .3, 'red', {y: .1, z: .1, r: .06}); b.box(.46, .04, .34, 'yellow', {y: .44, z: .1, r: .02});
+  b.cyl(.06, .08, .22, 'black', {y: .36, z: .78, seg: 10}); b.cyl(.1, .06, .05, 'gold', {y: .58, z: .78, seg: 10}); b.sph(.075, 'gold', {y: .46, z: .6, seg: 8});
+  for (const s of [-1, 1]) { for (const z of [.0, .3, .72]) { b.cyl(.09, .09, .06, 'black', {x: s * .2, y: .09, z, rz: Math.PI / 2, centre: true, seg: 14}); b.cyl(.045, .045, .065, 'cream', {x: s * .2, y: .09, z, rz: Math.PI / 2, centre: true, seg: 10}); } b.box(.025, .03, .8, 'slate', {x: s * .2, y: .09, z: .35, r: .01}); }
+  b.sph(.05, '#fff4c4', {y: .24, z: .83, seg: 8}); b.box(.2, .03, .03, 'white', {y: .13, z: .84, r: .01});
+  const coach = (z, c) => { b.box(.44, .32, .8, c, {y: .1, z, r: .08}); b.box(.46, .05, .82, 'cream', {y: .42, z, r: .02}); for (const s of [-1, 1]) for (const k of [-1, 0, 1]) b.box(.02, .13, .17, '#bfe6f7', {x: s * .222, y: .27, z: z + k * .24, r: .01}); for (const s of [-1, 1]) for (const zz of [-.28, .28]) { b.cyl(.08, .08, .05, 'black', {x: s * .21, y: .08, z: z + zz, rz: Math.PI / 2, centre: true, seg: 12}); } b.box(.2, .06, .1, 'slate', {y: .22, z: z + .42, r: .02}); };
+  coach(-.4, 'yellow'); coach(-1.3, 'blue');
+  const m = b.mesh(material); m.castShadow = true; const g = new THREE.Group(); g.add(m); g.scale.setScalar(1.15); return g;
+}
+export function buildBoat(material) {
+  const b = new Bag();
+  b.box(.5, .2, 1.05, 'red', {y: -.05, r: .1}); b.box(.54, .05, 1.08, 'white', {y: .14, r: .02}); b.cone(.26, .4, 'red', {y: -.05, z: .62, rx: Math.PI / 2 * 0 + 0, seg: 4, ry: Math.PI / 4, sx: .8, sy: .01});
+  b.box(.32, .26, .34, 'white', {y: .18, z: -.12, r: .05}); b.box(.26, .1, .02, '#bfe6f7', {y: .3, z: .06, r: .01}); b.box(.36, .04, .38, 'blue', {y: .43, z: -.12, r: .02});
+  b.cyl(.02, .02, .8, 'wood', {y: .18, z: .3, seg: 6}); b.box(.3, .4, .02, 'white', {x: .0, y: .55, z: .3, r: .01}); b.sph(.035, 'gold', {y: .98, z: .3, seg: 6});
+  const m = b.mesh(material); m.castShadow = true; const g = new THREE.Group(); g.add(m); g.scale.setScalar(1.1); return g;
+}
+export function buildAnimal(kind, material) {
+  const b = new Bag();
+  if (kind === 'cow') { b.sph(.17, 'white', {y: .27, sx: 1.15, sz: 1.75, seg: 12}); for (const [x, z, r] of [[.1, .06, .09], [-.08, -.12, .08]]) b.sph(r, '#4a3f3a', {x, y: .3, z, sx: 1.2, sz: 1.2, seg: 8}); b.sph(.1, 'white', {y: .33, z: .3, seg: 10}); b.sph(.055, '#f0a9a9', {y: .3, z: .38, sx: 1.1, seg: 8}); for (const s of [-1, 1]) { b.sph(.02, 'black', {x: s * .05, y: .37, z: .37, seg: 5}); b.cone(.02, .07, 'cream', {x: s * .08, y: .4, z: .28, seg: 5}); for (const z of [-.18, .16]) b.cyl(.022, .026, .17, 'white', {x: s * .09, z, seg: 6}); } b.cyl(.01, .01, .13, 'white', {y: .28, z: -.32, rx: .5, seg: 4}); }
+  else if (kind === 'sheep') { b.sph(.16, 'cream', {y: .22, sx: 1.05, sz: 1.35, seg: 10}); for (let k = 0; k < 6; k++) b.sph(.08, 'white', {x: Math.cos(k) * .09, y: .3 + (k % 2) * .03, z: Math.sin(k) * .13, seg: 8}); b.sph(.07, '#4a4a4a', {y: .27, z: .22, seg: 8}); for (const s of [-1, 1]) { b.sph(.015, 'white', {x: s * .03, y: .3, z: .27, seg: 5}); for (const z of [-.1, .1]) b.cyl(.016, .018, .12, '#4a4a4a', {x: s * .07, z, seg: 5}); } }
+  else { b.sph(.09, 'yellow', {y: .12, sx: 1, sz: 1.3, seg: 10}); b.sph(.055, 'yellow', {y: .22, z: .1, seg: 8}); b.cone(.025, .05, 'orange', {y: .21, z: .17, rx: Math.PI / 2, seg: 5}); b.sph(.012, 'black', {x: .03, y: .24, z: .13, seg: 4}); b.sph(.012, 'black', {x: -.03, y: .24, z: .13, seg: 4}); b.sph(.05, 'gold', {y: .14, z: -.1, sy: .6, sz: 1.2, seg: 8}); }
+  const m = b.mesh(material); m.castShadow = true; const g = new THREE.Group(); g.add(m); g.scale.setScalar(kind === 'duck' ? 1.2 : 1.25); return g;
 }
 export function buildClouds() {
   // a few small puffy clouds low over the sea, beyond the shore, so they never sit between the camera and the town

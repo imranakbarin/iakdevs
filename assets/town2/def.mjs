@@ -31,15 +31,18 @@ export function heightAt(x, z) {
 // Roads. The ring goes clockwise round the square (seen from above); each spoke leaves it at an exit angle and is a
 // smooth curve through its control points, ending in a turning circle. Angles are measured from east towards south.
 export const SPOKES = [
-  {id: 'high', name: 'High Street', angle: 0, points: [[2.4, 0], [5, .6], [8, -.2], [10.6, -1.6]]},
-  {id: 'station', name: 'Station Road', angle: Math.PI / 2, points: [[0, 2.4], [.5, 5], [-.4, 7.4]]},
-  {id: 'cottage', name: 'Cottage Lane', angle: Math.PI, points: [[-2.4, 0], [-5, -.9], [-8, -.2], [-10.6, 1.2]]},
-  {id: 'hill', name: 'Windmill Lane', angle: Math.PI * 1.5, points: [[0, -2.4], [-.9, -4.8], [.6, -7.0]]}
+  {id: 'high', name: 'High Street', angle: 0, points: [[2.4, 0], [5, .6], [8, -.2], [10.3, -1.3], [11.5, .6]]},
+  {id: 'station', name: 'Station Road', angle: Math.PI / 2, points: [[0, 2.4], [.5, 5], [-.4, 7.0], [1.5, 8.1]]},
+  {id: 'cottage', name: 'Cottage Lane', angle: Math.PI, points: [[-2.4, 0], [-5, -.9], [-8, -.2], [-9.9, 1.5], [-9.4, 4.1]]},
+  {id: 'hill', name: 'Windmill Lane', angle: Math.PI * 1.5, points: [[0, -2.4], [-.9, -4.8], [.6, -7.0], [-1.2, -8.6]]}
 ];
 
+const Q = Math.PI / 4;
 // Buildings. `ry` turns the building so its front (local +z, where the door is) faces that way: 0 faces south.
 // `door` is how far in front of the centre the doorstep is. Landmarks have a builder of the same name in build.mjs.
-const Q = Math.PI / 4;
+// `at` places a building and turns its front towards a point on the road, so the door always faces the lane.
+const face = (x, z, tx, tz) => Math.atan2(tx - x, tz - z);
+const at = (id, type, name, x, z, to, door, extra = {}) => ({id, type, name, x, z, ry: face(x, z, to[0], to[1]), door, ...extra});
 export const BUILDINGS = [
   {id: 'clock', type: 'clockTower', name: 'the Clock Tower', x: 0, z: 0, ry: 0, door: 0},
   {id: 'cafe', type: 'teapotCafe', name: 'the Teapot Café', x: -3.25, z: -3.25, ry: Q, door: 1.25},
@@ -50,25 +53,36 @@ export const BUILDINGS = [
   {id: 'fire', type: 'fireStation', name: 'the Fire Station', x: 8.5, z: -2.1, ry: -.12, door: 1.05},
   {id: 'police', type: 'policeBox', name: 'the Police Box', x: 6.9, z: 1.75, ry: Math.PI, door: .6},
   {id: 'mushroom', type: 'mushroomCottage', name: 'Mushroom Cottage', x: -5.75, z: -3.05, ry: .1, door: .95},
-  {id: 'c1', type: 'cottage', name: 'Bluebell Cottage', x: -8.2, z: -2.2, ry: -.08, door: .85, colour: 'sky', roof: 'red'},
-  {id: 'c2', type: 'cottage', name: 'Buttercup Cottage', x: -6.3, z: 1.25, ry: Math.PI + .1, door: .85, colour: 'yellow', roof: 'teal'},
-  {id: 'c3', type: 'cottage', name: 'Rose Cottage', x: -8.9, z: 1.9, ry: Math.PI - .12, door: .85, colour: 'pink', roof: 'purple'},
-  {id: 'c4', type: 'cottage', name: 'Apple Cottage', x: -10.5, z: -.85, ry: .45, door: .85, colour: 'lime', roof: 'orange'},
-  {id: 'mill', type: 'windmill', name: 'the Windmill', x: 1.9, z: -8.3, ry: -Math.PI / 4, door: .95}
+  at('c1', 'cottage', 'Bluebell Cottage', -8.2, -2.2, [-8, -.6], .85, {colour: 'sky', roof: 'red'}),
+  at('c2', 'cottage', 'Buttercup Cottage', -5.6, 1.9, [-5, -.4], .85, {colour: 'yellow', roof: 'teal'}),
+  at('c3', 'cottage', 'Rose Cottage', -7.6, 1.55, [-9.6, 1.5], .85, {colour: 'pink', roof: 'purple'}),
+  at('c4', 'cottage', 'Apple Cottage', -11.0, -.2, [-9.7, .4], .85, {colour: 'lime', roof: 'orange'}),
+  at('c5', 'cottage', 'Daisy Cottage', -2.6, 5.9, [-.2, 5.6], .85, {colour: 'cream', roof: 'blue'}),
+  at('school', 'school', 'the School', -7.0, 5.6, [-9.3, 4.2], 1.25),
+  at('station', 'station', 'the Station', 3.5, 6.2, [.2, 6.3], 1.25),
+  at('barn', 'barn', 'the Barn', -3.6, -7.7, [-1.4, -8.2], 1.1),
+  at('farm', 'cottage', 'Hay Farm', -2.4, -5.5, [-.9, -5.0], .85, {colour: 'cream', roof: 'orange'}),
+  at('garage', 'garage', 'the Garage', 9.0, 2.6, [10.5, 1.0], 1.0),
+  at('hut', 'harbourHut', 'the Harbour Hut', 9.4, .6, [11.0, .6], .95),
+  {id: 'mill', type: 'windmill', name: 'the Windmill', x: 2.2, z: -8.2, ry: -Math.PI / 4, door: .95}
 ];
 
 // The cast. Each lives behind one door and has a round of places to go; `stay` is seconds spent at each.
 export const CAST = [
   {id: 'crumb', name: 'Mr Crumb the baker', home: 'c2', coat: 'cream', hat: 'chef', round: [['bakery', 70], ['cafe', 18], ['bakery', 55], ['c2', 40]]},
   {id: 'pott', name: 'Mrs Pott', home: 'c1', coat: 'pink', hat: 'bun', round: [['cafe', 80], ['bakery', 14], ['cafe', 60], ['c1', 45]]},
-  {id: 'bell', name: 'Constable Bell', home: 'c3', coat: 'blue', hat: 'helmet', round: [['police', 30], ['toys', 8], ['post', 8], ['cafe', 12], ['police', 25], ['c3', 40]]},
-  {id: 'pip', name: 'Postie Pip', home: 'c4', coat: 'red', hat: 'cap', round: [['post', 25], ['mushroom', 6], ['c1', 6], ['c3', 6], ['c2', 6], ['mill', 6], ['post', 20], ['c4', 45]]},
-  {id: 'tilly', name: 'Tilly from the toy shop', home: 'c1', coat: 'purple', hat: 'bow', round: [['toys', 85], ['cafe', 16], ['toys', 50], ['c1', 40]]},
+  {id: 'bell', name: 'Constable Bell', home: 'c3', coat: 'blue', hat: 'helmet', round: [['police', 30], ['toys', 8], ['post', 8], ['cafe', 12], ['garage', 8], ['police', 25], ['c3', 40]]},
+  {id: 'pip', name: 'Postie Pip', home: 'c4', coat: 'red', hat: 'cap', round: [['post', 25], ['mushroom', 6], ['c1', 6], ['c3', 6], ['c2', 6], ['school', 6], ['mill', 6], ['post', 20], ['c4', 45]]},
+  {id: 'tilly', name: 'Tilly from the toy shop', home: 'c5', coat: 'purple', hat: 'bow', round: [['toys', 85], ['cafe', 16], ['toys', 50], ['c5', 40]]},
   {id: 'embers', name: 'Chief Embers', home: 'c3', coat: 'orange', hat: 'fire', round: [['fire', 75], ['bakery', 12], ['fire', 60], ['c3', 40]]},
-  {id: 'moss', name: 'Granny Moss', home: 'mushroom', coat: 'green', hat: 'bonnet', round: [['cafe', 30], ['bakery', 12], ['post', 10], ['mushroom', 60]]},
-  {id: 'sprocket', name: 'Mr Sprocket the miller', home: 'mill', coat: 'teal', hat: 'flat', round: [['bakery', 15], ['cafe', 20], ['mill', 80]]},
-  {id: 'dot', name: 'Dot', home: 'c4', coat: 'yellow', hat: 'bobble', small: true, round: [['toys', 25], ['cafe', 14], ['c2', 10], ['c4', 35]]},
-  {id: 'dash', name: 'Dash', home: 'c2', coat: 'sky', hat: 'bobble', small: true, round: [['toys', 20], ['mushroom', 12], ['bakery', 10], ['c2', 35]]}
+  {id: 'moss', name: 'Granny Moss', home: 'mushroom', coat: 'green', hat: 'bonnet', round: [['cafe', 30], ['bakery', 12], ['post', 10], ['station', 14], ['mushroom', 60]]},
+  {id: 'sprocket', name: 'Mr Sprocket the miller', home: 'mill', coat: 'teal', hat: 'flat', round: [['bakery', 15], ['cafe', 20], ['barn', 14], ['mill', 80]]},
+  {id: 'hay', name: 'Farmer Hay', home: 'farm', coat: 'brown', hat: 'flat', round: [['barn', 70], ['bakery', 10], ['barn', 50], ['cafe', 12], ['farm', 45]]},
+  {id: 'chalk', name: 'Miss Chalk the teacher', home: 'c5', coat: 'sky', hat: 'bun', round: [['school', 95], ['cafe', 16], ['school', 55], ['c5', 40]]},
+  {id: 'sparky', name: 'Sparky the mechanic', home: 'c4', coat: 'orange', hat: 'cap', round: [['garage', 80], ['cafe', 14], ['garage', 55], ['c4', 40]]},
+  {id: 'salt', name: 'Captain Salt', home: 'hut', coat: 'blue', hat: 'flat', round: [['hut', 60], ['bakery', 12], ['hut', 50], ['station', 10], ['hut', 40]]},
+  {id: 'dot', name: 'Dot', home: 'c4', coat: 'yellow', hat: 'bobble', small: true, round: [['school', 60], ['toys', 25], ['cafe', 14], ['c2', 10], ['c4', 35]]},
+  {id: 'dash', name: 'Dash', home: 'c2', coat: 'sky', hat: 'bobble', small: true, round: [['school', 55], ['toys', 20], ['mushroom', 12], ['bakery', 10], ['c2', 35]]}
 ];
 
 // Vehicles drive one closed tour of the whole road network (see graph.mjs) at their own pace.
@@ -78,7 +92,14 @@ export const VEHICLES = [
   {id: 'van', kind: 'van', name: 'the post van', colour: 'red', speed: .95}
 ];
 // Where the bus pulls up (it waits a few seconds at each).
-export const BUS_STOPS = [{id: 'square', x: 2.9, z: .9}, {id: 'highEnd', x: 9.6, z: -.7}, {id: 'lane', x: -8.3, z: .2}, {id: 'hill', x: -.3, z: -6.0}, {id: 'station', x: .1, z: 6.4}];
+export const BUS_STOPS = [{id: 'square', x: 2.9, z: .9}, {id: 'highEnd', x: 9.6, z: -.7}, {id: 'lane', x: -8.3, z: .2}, {id: 'hill', x: -.4, z: -6.0}, {id: 'station', x: .1, z: 6.4}];
+
+// Railway: one short straight track beside the station with a platform; the little train shuttles along it.
+export const TRACK = {x: 5.35, z0: 3.4, z1: 7.7, platform: {x: 4.55, z0: 5.0, z1: 7.2}};
+export const PADDOCK = {x0: -7.2, z0: -7.0, x1: -5.0, z1: -4.9};
+export const POND = {x: 6.2, z: -5.5, r: 1.25};
+export const JETTY = {x0: 12.0, x1: 13.7, z: .55};
+export const GREEN = {x: 0, z: 0, r: 1.5};
 
 // Scenery that is not a building: tree clusters [x, z, kind, scale], kinds 'round' | 'tall' | 'apple' | 'bush'.
 export const TREES = [
