@@ -10,7 +10,8 @@ export function describeResident(sim, r) {
   const lines = [];
   if (r.state === 'walking') {
     const err = r.stay !== null && r.stay !== undefined;
-    lines.push((err ? 'Off on an errand to ' : 'On the way to ') + nameOf(r.target));
+    if (r.def.lamplighter && r.lampJob) lines.push(r.lampJob === 'light' ? 'Lighting the street lamps' : 'Putting out the street lamps');
+    else lines.push(r.pause > 0 && r.look ? 'Stopping to say hello to ' + r.look.def.name : (err ? 'Off on an errand to ' : 'On the way to ') + nameOf(r.target));
     const st = sim.story.current && STORIES.find(s => s.id === sim.story.current.id);
     if (st && st.go.some(([who]) => who === r.id)) lines.push('Part of today\'s story: ' + st.title);
   } else lines.push('Indoors at ' + nameOf(r.at));

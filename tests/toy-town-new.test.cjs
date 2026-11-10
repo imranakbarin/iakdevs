@@ -20,6 +20,12 @@ const root = path.join(__dirname, '..'), mod = f => import('file://' + path.join
   // no building stands on a road, and no two buildings overlap
   for (const b of def.BUILDINGS) if (b.id !== 'clock') for (const e of g.edges) for (const p of e.line.pts) assert.ok(Math.hypot(p[0] - b.x, p[1] - b.z) > .95, b.id + ' is clear of ' + e.id);
   for (const a of def.BUILDINGS) for (const b of def.BUILDINGS) if (a.id < b.id) assert.ok(Math.hypot(a.x - b.x, a.z - b.z) > 1.9, a.id + ' and ' + b.id + ' do not overlap');
+  // the layout: houses stand along the streets, squared to them, with their doorsteps on the pavement
+  { const onStreet = def.BUILDINGS.filter(b => b.street); assert.ok(onStreet.length >= 15, 'most buildings stand on a street (' + onStreet.length + ')');
+    for (const b of onStreet) { assert.ok(Math.abs(b.ry / (Math.PI / 2) - Math.round(b.ry / (Math.PI / 2))) < 1e-9, b.id + ' is squared to the grid'); assert.ok(g.doors[b.id].dist < 1.15, b.id + ' has its doorstep by the pavement (' + g.doors[b.id].dist.toFixed(2) + ')'); }
+    const sides = {}; for (const b of onStreet) { const k = b.street + ':' + b.side; (sides[k] = sides[k] || []).push(b.s); }
+    for (const [k, ss] of Object.entries(sides)) { ss.sort((x, y) => x - y); for (let i = 1; i < ss.length; i++) assert.ok(ss[i] - ss[i - 1] >= 2.0, k + ' houses are evenly spaced, not crowded (' + ss.join(',') + ')'); }
+    for (const t of def.TREES) for (const b of def.BUILDINGS) assert.ok(Math.hypot(t[0] - b.x, t[1] - b.z) > 1.3, 'a tree is not on a building'); }
   // door-to-door walks: start and end on the doorsteps, stay on the pavements, never jump
   let walks = 0;
   for (const a of doorIds) for (const b of doorIds) if (a !== b) {
@@ -54,7 +60,7 @@ const root = path.join(__dirname, '..'), mod = f => import('file://' + path.join
       const q = prev[k];
       if (r.state === 'walking' && q.state === 'inside') { outings++; assert.ok(atDoor(r.x, r.z), sim.residents[k].id + ' steps out on a doorstep'); }
       if (r.state === 'inside' && q.state === 'walking') assert.ok(atDoor(r.x, r.z), sim.residents[k].id + ' goes in on a doorstep');
-      if (r.state === 'walking' && q.state === 'walking') assert.ok(Math.hypot(r.x - q.x, r.z - q.z) < .08, 'nobody jumps');
+      if (r.state === 'walking' && q.state === 'walking') assert.ok(Math.hypot(r.x - q.x, r.z - q.z) < .11, 'nobody jumps (the lamplighter on his round is the quickest, about .06 a tick)');
       if (r.state === 'walking') assert.ok(def.shore(r.x, r.z) < .95, 'walkers stay on land');
     });
     prev = cur; const walking = cur.filter(r => r.state === 'walking').length; out += walking; samples++;
@@ -127,6 +133,26 @@ const root = path.join(__dirname, '..'), mod = f => import('file://' + path.join
     const b2 = made.osc; snd.update({...day, hour: 12.95}, .1); snd.update({...day, hour: 13.05}, .1); assert.ok(made.osc - b2 >= 3, 'the clock strikes one at 13:00'); const b3 = made.osc; snd.update({...day, hour: 13.1, trainMoving: true}, .1); assert.ok(made.osc - b3 >= 2, 'the train whistles when it sets off');
     snd.toggle(false); assert.equal(snd.enabled, false); const b4 = made.osc; for (let i = 0; i < 50; i++) snd.update({...day, hour: 14}, .1); assert.equal(made.osc, b4, 'silent when off');
     assert.equal(Snd.createSound({AudioContext: null}).supported, false, 'no AudioContext, no sound and no crash'); }
+  // the lamplighter and the lamps
+  { assert.ok(def.LAMPS.length >= 14, 'a lamp post at the square and along every street (' + def.LAMPS.length + ')');
+    for (const l of def.LAMPS) { const d = g.doors[l.id]; assert.ok(d && d.dist < .8, l.id + ' has a place on the pavement to be tended'); for (const b of def.BUILDINGS) if (b.door) { const dr = def.doorOf(b); assert.ok(Math.hypot(dr.x - l.x, dr.z - l.z) > .45, l.id + ' is not in front of a door (' + b.id + ')'); } }
+    const s5 = S.createSim(7), snaps = {}, wick = s5.residents.find(r => r.id === 'wick'); assert.ok(wick && wick.def.lamplighter, 'there is a lamplighter');
+    let steps = 0, lastLampChange = 0, changes = 0, prevOn = s5.lamps.filter(l => l.on).length;
+    for (let i = 0; i < 20 * 480 * 2; i++) { s5.update(.05); const h = s5.hour, on = s5.lamps.filter(l => l.on).length; if (on !== prevOn) { changes++; if (h > 7.6 && h < 17.1) assert.fail('lamps change by day'); prevOn = on; } snaps[Math.floor(h)] = on; steps++; }
+    assert.equal(snaps[12], 0, 'no lamp is lit at noon'); assert.equal(snaps[22], def.LAMPS.length, 'every lamp is lit at night'); assert.equal(snaps[2], def.LAMPS.length, 'and still at 2 am');
+    assert.ok(s5.lampsTended >= 24, 'the lamplighter tended the lamps himself (' + s5.lampsTended + ' in two days)'); assert.ok(changes >= 20, 'they came on and went out one by one (' + changes + ' changes)');
+    // after a jump in time he is part-way through his round
+    s5.setHour(19); const lit = s5.lamps.filter(l => l.on).length; assert.ok(lit > 2 && lit < def.LAMPS.length - 2, 'at 19:00 the round is under way (' + lit + ' lit)');
+    const I2 = await mod('inspect.mjs'); wick.state = 'walking'; wick.target = 'lamp3'; wick.lampJob = 'light'; assert.match(I2.describeResident(s5, wick).lines[0], /Lighting the street lamps/); }
+  // puddles: the ground gets wet in rain and dries after
+  { const W2 = await mod('weather.mjs'), w = W2.createWeather(3); w.force('rain', 100); let peak = 0; for (let i = 0; i < 20 * 100; i++) { w.update(.05); peak = Math.max(peak, w.wet); }
+    assert.ok(peak > .6, 'rain soaks the ground (' + peak.toFixed(2) + ')'); w.force('clear', 600); for (let i = 0; i < 20 * 130; i++) w.update(.05); assert.ok(w.wet < .1, 'and it dries again (' + w.wet.toFixed(2) + ')'); }
+  // pedestrian manners: people stagger out, keep their sides, greet each other, and rarely stand inside one another
+  { const s6 = S.createSim(7), N = 20 * 480 * 2; let pairs = 0, stacked = 0, maxOut = 0, chats = 0, outSum = 0, daySamples = 0;
+    for (let i = 0; i < N; i++) { s6.update(.05); if (i % 10) continue; const w = s6.residents.filter(r => r.state === 'walking'); if (s6.hour > 8 && s6.hour < 17) { maxOut = Math.max(maxOut, w.length); outSum += w.length; daySamples++; }   // (at curfew everybody heads home together, and that is fine)
+      for (const r of w) if (r.pause > 0 && r.look && !r.def.lamplighter) chats++;
+      for (let a = 0; a < w.length; a++) for (let b = a + 1; b < w.length; b++) { if (w[a].def.lamplighter || w[b].def.lamplighter) continue; pairs++; if (Math.hypot(w[a].x - w[b].x, w[a].z - w[b].z) < .15) stacked++; } }
+    assert.ok(maxOut <= 8, 'by day never a crowd of everybody at once (' + maxOut + ')'); assert.ok(chats > 20, 'people stop to say hello (' + chats + ' sampled moments)'); assert.ok(stacked / Math.max(1, pairs) < .02, 'nobody walks through anybody (' + stacked + ' of ' + pairs + ' close pairs)'); assert.ok(outSum / daySamples > 3, 'the streets are alive by day (' + (outSum / daySamples).toFixed(1) + ' out on average)'); }
   sim.setHour(12); sim.dispatchFire(); for (let i = 0; i < 20 * 120; i++) sim.update(1 / 20);
   assert.ok(sim.vehicles.find(v => v.id === 'fire').trips >= 1, 'the fire engine goes out when called and comes back to the station');
   assert.ok(sim.vehicles.every(v => v.s >= 0 && v.s < T.length));

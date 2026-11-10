@@ -2,7 +2,7 @@
 import * as THREE from 'three';
 import {PALETTE as P, ISLAND, CAST, VEHICLES, BUILDINGS, TRACK, PADDOCK, POND, JETTY, heightAt, rand} from './def.mjs';
 import {createSim} from './sim.mjs';
-import {buildTown, buildResident, buildVehicle, buildClouds, buildTrain, buildBoat, buildAnimal, buildSky, buildUmbrella, buildRain, buildFall} from './build.mjs';
+import {buildTown, buildResident, buildVehicle, buildClouds, buildTrain, buildBoat, buildAnimal, buildSky, buildUmbrella, buildRain, buildFall, buildPuddles} from './build.mjs';
 import {skyAt, seasonOf, SEASONS} from './sky.mjs';
 import {createSound} from './sound.mjs';
 import {newsStory} from './stories.mjs';
@@ -22,7 +22,7 @@ scene.add(sun, sun.target);
 
 const season = SEASONS.includes(q.get('season')) ? q.get('season') : seasonOf(), sim = createSim(7, {season}), built = buildTown(sim.graph, season);
 const sound = createSound();
-scene.add(built.ground, built.sea, built.town, built.glow); for (const m of Object.values(built.moving)) scene.add(m.group);
+scene.add(built.ground, built.sea, built.town, built.glow, built.lampGlow); for (const m of Object.values(built.moving)) scene.add(m.group);
 const clouds = buildClouds(); scene.add(clouds);
 const sky = buildSky(); scene.add(sky);
 const hemi = scene.children.find(o => o.isHemisphereLight), seaMat = built.sea.material, tmp = new THREE.Color();
@@ -32,6 +32,8 @@ const brollies = new Map(), BROLLY = ['red', 'yellow', 'pink', 'blue', 'purple',
 sim.residents.forEach((r, i) => { const g = buildResident(r.def, i, built.material), u = buildUmbrella(built.material, BROLLY[i % BROLLY.length]); g.add(u); brollies.set(r.id, u); scene.add(g); people.set(r.id, g); });
 const rain = buildRain(); scene.add(rain);
 const fall = buildFall(season); scene.add(fall);
+const puddles = buildPuddles(sim.graph); if (season !== 'winter') scene.add(puddles);   // (in winter the rain is snow)
+const lampDrawn = sim.lamps.map(() => -1);
 sim.vehicles.forEach(v => { const g = buildVehicle(v.def, built.material); scene.add(g); cars.set(v.id, g); });
 
 // Things that live on their own: the train, the boat at the jetty, the farm animals and the ducks on the pond.
@@ -175,6 +177,10 @@ function weatherLight() {
     const day = 1 - L.night, amount = season === 'winter' ? Math.max(.25, r) : season === 'summer' ? (L.night > .5 ? .7 * (1 - r) : 0) : (season === 'autumn' ? .5 : .4) * day * (1 - r * .7);
     fall.position.set(view.x, 0, view.z); fall.userData.update(time, amount);
     sound.update({dark: L.night, rain: r, season, hour: sim.hour, trainMoving: Math.abs(sim.train.v) > .1, zoom: 1 - clamp(0, (view.dist - 7) / 50, 1)}, 0.0001 + lastDt); }
+  // the street lamps, one by one as the lamplighter reaches them (faint in daylight, bright after dark), and the puddles
+  built.lampGlow.material.opacity = .4 + .55 * L.night;
+  sim.lamps.forEach((l, i) => { const v = Math.round(l.lit * 20) / 20; if (v !== lampDrawn[i]) { lampDrawn[i] = v; built.lampGlow.userData.set(i, v); } });
+  puddles.userData.set(sim.weather.wet);
   sky.position.copy(camera.position); document.body.style.background = L.sky; return L;
 }
 let lastDt = 0;
@@ -182,8 +188,8 @@ function sync(dt) {
   time += dt; lastDt = dt;
   for (const r of sim.residents) {
     const g = people.get(r.id); g.visible = r.state === 'walking'; if (!g.visible) continue;
-    const step = time * 9 + r.speed * 40, y = heightAt(r.x, r.z);
-    g.position.set(r.x, y + .02 + Math.abs(Math.sin(step)) * .035, r.z); g.rotation.set(0, Math.atan2(r.tx, r.tz), Math.sin(step) * .09);
+    const step = time * (r.lampJob ? 16 : 9) + r.speed * 40, y = heightAt(r.x, r.z);
+    const chat = r.pause > 0 && r.look; g.position.set(r.x, y + .02 + (chat ? Math.abs(Math.sin(time * 7)) * .025 : Math.abs(Math.sin(step)) * .035), r.z); g.rotation.set(0, chat ? Math.atan2(r.look.x - r.x, r.look.z - r.z) : Math.atan2(r.tx, r.tz), chat ? 0 : Math.sin(step) * .09);
   }
   for (const v of sim.vehicles) {
     const g = cars.get(v.id); g.visible = v.state !== 'parked'; if (!g.visible) continue;
@@ -231,7 +237,7 @@ document.addEventListener('visibilitychange', () => sound.pause(document.hidden)
 window.ToyTownNew = {
   sim, scene, camera, renderer, view, season, sound,
   hour: () => sim.hour, setHour(h) { sim.setHour(h); sync(0); renderer.render(scene, camera); },
-  info: () => ({season, pixelRatio: renderer.getPixelRatio(), story: sim.story.current && sim.story.current.id, rain: +sim.weather.rain.toFixed(2), calls: renderer.info.render.calls, triangles: renderer.info.render.triangles, residentsOut: sim.residents.filter(r => r.state === 'walking').length, clock: sim.clock}),
+  info: () => ({lampsLit: sim.lamps.filter(l => l.on).length, wet: +sim.weather.wet.toFixed(2), season, pixelRatio: renderer.getPixelRatio(), story: sim.story.current && sim.story.current.id, rain: +sim.weather.rain.toFixed(2), calls: renderer.info.render.calls, triangles: renderer.info.render.triangles, residentsOut: sim.residents.filter(r => r.state === 'walking').length, clock: sim.clock}),
   look(x, z, dist, yaw = 0) { Object.assign(view, {x, z, dist, yaw, tx: x, tz: z, tdist: dist, tyaw: yaw}); placeCamera(); renderer.render(scene, camera); },
   advance(seconds) { for (let t = 0; t < seconds; t += .05) sim.update(.05); sync(0); renderer.render(scene, camera); },
   selected: () => sel, tapAt: (cx, cy) => tap(cx, cy), select,

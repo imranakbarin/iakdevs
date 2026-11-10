@@ -28,10 +28,13 @@ const ready = async () => { for (let n = 0; n < 60; n++) { try { await new Promi
     const night = await page.evaluate(() => ({...ToyTownNew.info(), glow: ToyTownNew.scene.children.some(o => o.isMesh && o.material.isMeshBasicMaterial && o.material.opacity > .9 && o.visible), sky: ToyTownNew.scene.background.getHexString()}));
     await page.evaluate(() => { ToyTownNew.setHour(11); ToyTownNew.setWeather('rain', 600); ToyTownNew.advance(40); ToyTownNew.look(0, .4, 18, 0); }); await shot('rain');
     const wet = await page.evaluate(() => ToyTownNew.info());
+    assert.ok(wet.wet > .3, 'the ground is wet in the rain (' + wet.wet + ')');
+    await page.evaluate(() => { ToyTownNew.setWeather('clear', 5); ToyTownNew.setHour(19); ToyTownNew.advance(3); ToyTownNew.look(0, .4, 22, .3); }); await shot('dusk');   // the lamplighter is part-way round: some lanterns lit, some not
+    const dusk = await page.evaluate(() => ToyTownNew.info()); assert.ok(dusk.lampsLit > 2 && dusk.lampsLit < 15 && dusk.calls <= 80, 'at dusk the lamps are being lit one by one (' + JSON.stringify(dusk) + ')');
     await page.evaluate(() => { ToyTownNew.setWeather('clear', 5); ToyTownNew.setHour(12); ToyTownNew.look(0, .4, 30, 0); });
     // tap to inspect: a real click on a walking resident selects them, a click on a building selects it
-    await page.evaluate(() => { ToyTownNew.setHour(11); ToyTownNew.advance(60); });
-    const walker = await page.evaluate(() => { const r = ToyTownNew.sim.residents.find(r => r.state === 'walking'); if (!r) return null; ToyTownNew.look(r.x, r.z, 13, .3); return {id: r.id, p: ToyTownNew.project(r.x, r.z, .35)}; });
+    await page.evaluate(() => { ToyTownNew.setHour(11); for (let i = 0; i < 80 && !ToyTownNew.sim.residents.some(r => r.state === 'walking' && !r.def.lamplighter); i++) ToyTownNew.advance(5); });   // (a jump in time leaves people waiting on old timers: let somebody come out)
+    const walker = await page.evaluate(() => { const r = ToyTownNew.sim.residents.find(r => r.state === 'walking' && !r.def.lamplighter); if (!r) return null; ToyTownNew.look(r.x, r.z, 13, .3); return {id: r.id, p: ToyTownNew.project(r.x, r.z, .35)}; });
     assert.ok(walker, 'somebody is walking at 11:00');
     await page.mouse.click(walker.p[0] + 5, walker.p[1] + 3); await page.evaluate(() => ToyTownNew.advance(.05));
     const picked = await page.evaluate(() => ({sel: ToyTownNew.selected(), card: document.getElementById('card').innerText})); await shot('tap');
