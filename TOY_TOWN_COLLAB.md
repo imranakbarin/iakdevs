@@ -1109,3 +1109,6 @@ A `START` does not prohibit parallel edits. Avoid stepping on each other's uncom
 - **Seen** (real WebGL, software GL): wide, the square close up, High Street, Cottage Lane, Windmill Hill, and from behind. Fixed along the way: road ribbons faced down (invisible), clouds sat between the camera and the town, benches stood in the flower ring.
 - **Not verified**: a real phone or a hardware GPU (frame rate unknown); the touch controls (written, not exercised); walkers crossing in front of vehicles in a long watch.
 - **Next**: `TOY_TOWN_NEW_SPEC.md` (phases 3–6, rules, budgets, how to test).
+
+### 2026-11-10 · Claude · START (new storybook town, phases 3–6: districts, life, then day/night/weather/news)
+- Request: "let's make the other things" (the remaining phases of `TOY_TOWN_NEW_SPEC.md`). Shipping in three merges, each tested and screenshotted: (A) phase 3, the districts: roads extended, station with a shuttle track, school, farm with animals, garage, harbour with a jetty and boat, pond, more cottages; (B) phase 4, hour-by-hour timetables, more named vehicles and the train; (C) phase 5–6, day and night, weather, small stories, the daily-news staging, a phone pass. The current town is not touched; the new one stays behind `?town=new` until the owner approves the switch.
