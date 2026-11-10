@@ -18,6 +18,7 @@ log a START entry before touching code, a DONE entry after, no force pushes).
 | 5 | Day and night, weather, small stories, the daily-news staging | **Done** (no sound, no tapping on things, no lamplighter figure: lanterns just glow) |
 | 6 | Phone performance pass, then make it the default town | Adaptive resolution **done**; measuring on a real phone and the switch are **open** (the owner decides the switch) |
 | 7 | A bigger city: 8 spokes and an outer ring road, a railway loop round the whole town with a four-car train and stations, buildings at 0.8 scale, 30 buildings and 26 residents, vehicles on a lane network | **Done** |
+| 8 | The train gets work: commuters ride between stations, a goods wagon carries mail, milk and bread (picked up, walked to a platform, carried, collected, delivered), and the owner can send a parcel and watch a work board | **Done** |
 
 It is live at `toy-town-new.html` (or `toy-town.html?town=new`, or `index.html?town=new#toy-town`). The current
 town is untouched and stays the default until the owner approves the switch.
@@ -135,6 +136,13 @@ the stamp is stale. If the page cannot start, its panel now shows the real error
    verges as one `InstancedMesh`; each appears at its own wetness and grows as the ground gets wetter. There are none in winter (the rain is snow).
 14. **Determinism.** `createSim(seed)` gives the same town life for the same seed and step sequence.
 
+### Freight and passengers (sim.mjs, tested)
+
+- **Cargo** `{id, kind: mail|milk|bread|parcel, from, to, originStation, destStation, state: ready|carried|station|train, holder, direct}`. Templates live in `def.FREIGHT` (what, from where, to where, which hours). `stationOf(id)` is the platform nearest by walking. If two buildings share a station, or are under 12 units apart on foot, the carrier just walks it over (`direct`).
+- **Chain**: the nearest idle resident picks it up (errand `pickup:ID`), walks to the origin platform (`station:ID`: it waits there), the train takes it when it stops (wagon holds `train.wagon`), unloads at the destination station, the nearest idle resident collects it (`pickup:ID` at the platform) and `deliver:ID` at the door. Carriers hurry (x1.8) and are exempt from the walker cap; anybody going to bed with work in hand calls the job off (counted in `freightStats.cancelled`; the goal is 0). Anything older than 900 s is dropped.
+- **Passengers**: round entries `['platform:central', 0, 'ride:harbour']` (and stories such as `harbourtrip`, `milltrip`, `schooltrip`) wait on the platform (`onPlatform`, standing, not on the road), board when the train stops there (also while it stands there), ride on the coaches (`state: 'riding'`, at most `train.seats`) and step off at their stop. Platform spots are `'platform:<stationId>'` in `graph.doors`. Nobody waiting on a platform is given other errands.
+- **Owner**: `sendParcel(from, to)` makes a parcel job (button on a building's card, then tap the destination); `freightStats` and `freightLog` feed the work board.
+
 ## 5. Art rules
 
 - Fat, rounded, slightly wonky. No sharp corners: `bag.box` is a rounded box; roofs overhang.
@@ -165,6 +173,7 @@ spheres 8; keep that discipline (the first version was 1.05 M triangles from 3-s
 - `sim`, `scene`, `camera`, `renderer`, `view`
 - `info()` → `{calls, triangles, residentsOut, clock, pixelRatio, story, rain, wet, lampsLit, season}`
 - `tapAt(clientX, clientY)`, `selected()`, `select(obj|null)`, `project(x, z, y)` → client coordinates of a ground point
+- `trainPos()` (head of the train), `sendParcel(from, to)`, `jobsText()` (the work board text); `info()` also has `delivered, cargoNow, riders`
 - `season`, `sound` (`enabled`, `started`, `toggle()`); `?season=spring|summer|autumn|winter`
 - `setHour(h)`, `setWeather('rain'|'clear'|..., seconds)`; `?h=<hour>` starts at an hour, `?news=0` turns the news staging off, `?tune=0` turns the adaptive resolution off
 - `look(x, z, dist, yaw)` puts the camera there and renders
@@ -196,7 +205,7 @@ visual step uploads `new-town-*.png` (wide, square, high street, cottage lane, w
 
 ## 9. Known gaps
 
-- Nobody boards the train yet (it is empty), and pedestrians do not sit on the benches. Sound has not been heard by a person yet: the levels are my guesses and only the code path was exercised.
+- Passengers and goods ride, but nobody is drawn inside the coaches in detail (riders are small figures on the seats), parcels are only from building to building, and pedestrians do not sit on the benches. Sound has not been heard by a person yet: the levels are my guesses and only the code path was exercised.
 - Adaptive resolution (steps the pixel ratio down after 2 s under ~24 fps, and drops the shadow when already at 1.0) has not been measured on a real phone.
 - Vehicles cannot overtake, so a late one can queue behind a slow tractor.
 - Story captions are English text from a data file; the headline text is only ever shown with `textContent`.

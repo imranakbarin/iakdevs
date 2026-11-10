@@ -4,7 +4,7 @@
 //  - vehicles drive on lanes: each two-way road has a lane each way (keeping left), the inner ring one lane clockwise. A vehicle plans a route as a
 //    list of lanes (shortest way by Dijkstra) which `routeLine` turns into one smooth line to follow;
 //  - the railway is a closed loop (`loop`) round the whole town.
-import {SQUARE, ROADS, NODES, ROAD, BUILDINGS, LAMPS, trackPts, doorOf} from './def.mjs';
+import {SQUARE, ROADS, NODES, ROAD, BUILDINGS, LAMPS, STATIONS, trackPts, loopPt, doorOf} from './def.mjs';
 import {curve, STEP} from './curve.mjs';
 
 export {curve};
@@ -32,6 +32,8 @@ export function buildGraph() {
   const edges = ROADS.map(r => ({id: r.id, kind: r.kind, name: r.name, a: r.a, b: r.b, oneway: !!r.oneway, line: line(curve(r.points))}));
   for (const e of edges) { nodes[e.a].edges.push(e.id); nodes[e.b].edges.push(e.id); }
   const edge = id => edges.find(e => e.id === id);
+  const loop = line(trackPts(), true);
+  const loopS = (x, z) => { let best = 0, bd = Infinity; for (let i = 0; i < loop.pts.length; i++) { const d = Math.hypot(loop.pts[i][0] - x, loop.pts[i][1] - z); if (d < bd) { bd = d; best = loop.at[i]; } } return best; };
   // Which side of an edge the pavement is on at a point: +1 is the left of the edge's own direction.
   const pavement = (e, s, side) => { const q = along(e.line, s), [lx, lz] = leftOf(q.tx, q.tz), d = ROAD.pave * side; return [q.x + lx * d, q.z + lz * d]; };
   // The nearest point of the network to a door: {edge, s, side, dist}. Pavements round the square are always the outer side.
@@ -66,6 +68,8 @@ export function buildGraph() {
   const doors = {};
   for (const b of BUILDINGS) if (b.door) { const d = doorOf(b); doors[b.id] = {x: d.x, z: d.z, ...attach(d.x, d.z)}; }
   for (const l of LAMPS) doors[l.id] = {x: l.spot[0], z: l.spot[1], ...attach(l.spot[0], l.spot[1])};   // the lamplighter's stops walk like doorsteps
+  // each station's platform is a place people walk to and stand at: 'platform:<station id>'
+  for (const st of STATIONS) { const p = loopPt(st.t), q = along(loop, loopS(p[0], p[1])), x = q.x - q.tz * 1.05, z = q.z + q.tx * 1.05; doors['platform:' + st.id] = {x, z, ...attach(x, z)}; }
   function walk(fromId, toId) {
     const A = doors[fromId], B = doors[toId]; if (!A || !B) return null;
     const pts = [[A.x, A.z]], legs = centreRoute(A, B);
@@ -123,9 +127,6 @@ export function buildGraph() {
     return {line: L, bounds, lanes: laneIds.slice()};
   }
 
-  // ---- The railway: a closed loop round the whole town.
-  const loop = line(trackPts(), true);
-  const loopS = (x, z) => { let best = 0, bd = Infinity; for (let i = 0; i < loop.pts.length; i++) { const d = Math.hypot(loop.pts[i][0] - x, loop.pts[i][1] - z); if (d < bd) { bd = d; best = loop.at[i]; } } return best; };
   return {nodes, edges, edge, attach, doors, walk, lanes, lane, nextLanes, laneRoute, lanePoint, routeLine, loop, loopS};
 }
 // The distance along a line of its point nearest to (x, z).

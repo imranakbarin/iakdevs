@@ -5,7 +5,7 @@
 import * as THREE from 'three';
 import {RoundedBoxGeometry} from 'three/addons/geometries/RoundedBoxGeometry.js';
 import {mergeGeometries} from 'three/addons/utils/BufferGeometryUtils.js';
-import {PALETTE as P, ISLAND, SQUARE, ROAD, ROADS, OUTER, LOOP, BUILDINGS, LAMPS, TREES, BUS_LINES, STATIONS, PADDOCK, POND, PIER, HILL, BUILD_SCALE, heightAt, shore, rand, doorOf, building, loopPt} from './def.mjs';
+import {PALETTE as P, ISLAND, SQUARE, ROAD, ROADS, OUTER, LOOP, BUILDINGS, LAMPS, TREES, BUS_LINES, STATIONS, PADDOCK, POND, PIER, HILL, BUILD_SCALE, CARGO_COLOURS, heightAt, shore, rand, doorOf, building, loopPt} from './def.mjs';
 import {along, leftOf} from './graph.mjs';
 
 // Seasons recolour the foliage and the grass (and nothing else) when the town is built.
@@ -466,7 +466,13 @@ export function buildTrain(material) {
     b.pop();
   });
   const coach = c => car(b => { const z = 0; b.box(.44, .32, .8, c, {y: .1, z, r: .08}); b.box(.46, .05, .82, 'cream', {y: .42, z, r: .02}); for (const s of [-1, 1]) for (const k of [-1, 0, 1]) b.box(.02, .13, .17, '#bfe6f7', {x: s * .222, y: .27, z: z + k * .24, r: .01}); for (const s of [-1, 1]) for (const zz of [-.28, .28]) { b.cyl(.08, .08, .05, 'black', {x: s * .21, y: .08, z: z + zz, rz: Math.PI / 2, centre: true, seg: 12}); } b.box(.2, .06, .1, 'slate', {y: .22, z: z + .42, r: .02}); });
-  return [engine, coach('yellow'), coach('blue'), coach('green')];
+  const wagon = car(b => {   // an open goods wagon: a flat bed with low wooden sides, so the cargo in it shows
+    b.box(.46, .08, .86, 'slate', {y: .1, r: .02}); b.box(.44, .05, .84, '#8a5a3c', {y: .17, r: .01});
+    for (const s of [-1, 1]) { b.box(.03, .14, .86, '#b07a4a', {x: s * .22, y: .2, r: .01}); }
+    for (const z of [-.43, .43]) b.box(.46, .14, .03, '#b07a4a', {y: .2, z, r: .01});
+    for (const s of [-1, 1]) for (const zz of [-.28, .28]) b.cyl(.08, .08, .05, 'black', {x: s * .21, y: .08, z: zz, rz: Math.PI / 2, centre: true, seg: 12});
+  });
+  return [engine, coach('yellow'), coach('blue'), wagon];
 }
 export function buildBoat(material) {
   const b = new Bag();
@@ -506,6 +512,22 @@ export function buildPuddles(graph) {
     spots.forEach((p, i) => { const f = Math.max(0, Math.min(1, (wet - p.thr) / .3)); q.setFromAxisAngle(up, p.a); pos.set(p.x, heightAt(p.x, p.z) + .05, p.z); sc.set(Math.max(.001, p.w * f), 1, Math.max(.001, p.d * f)); m.compose(pos, q, sc); mesh.setMatrixAt(i, m); });
     mesh.instanceMatrix.needsUpdate = true;
   };
+  return mesh;
+}
+// Cargo (mail sacks, milk churns, loaves, parcels) as one instanced mesh of little crates: the sim says where each is, `set(i, x, y, z, kind)` puts one there and
+// `show(n)` shows the first n. Passengers are one instanced mesh of heads (`set(i, x, y, z, colour)`) seen through the coach windows.
+export function buildCargo(max = 48) {
+  const mesh = new THREE.InstancedMesh(new THREE.BoxGeometry(.15, .12, .15), new THREE.MeshLambertMaterial({color: '#ffffff'}), max), m = new THREE.Matrix4(), c = new THREE.Color();
+  mesh.frustumCulled = false; mesh.castShadow = true; mesh.count = 0;
+  mesh.userData.set = (i, x, y, z, kind, ry = 0) => { m.makeRotationY(ry).setPosition(x, y, z); mesh.setMatrixAt(i, m); mesh.setColorAt(i, c.set(CARGO_COLOURS[kind] || '#ffffff')); };
+  mesh.userData.show = n => { mesh.count = Math.min(max, n); mesh.instanceMatrix.needsUpdate = true; if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true; };
+  return mesh;
+}
+export function buildPassengers(max = 16) {
+  const mesh = new THREE.InstancedMesh(new THREE.SphereGeometry(.07, 8, 6), new THREE.MeshLambertMaterial({color: '#ffffff'}), max), m = new THREE.Matrix4(), c = new THREE.Color();
+  mesh.frustumCulled = false; mesh.count = 0;
+  mesh.userData.set = (i, x, y, z, colour) => { m.makeTranslation(x, y, z); mesh.setMatrixAt(i, m); mesh.setColorAt(i, c.set(P[colour] || colour || '#f4c9a0')); };
+  mesh.userData.show = n => { mesh.count = Math.min(max, n); mesh.instanceMatrix.needsUpdate = true; if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true; };
   return mesh;
 }
 // An umbrella to hold over a resident's head (shown only in the rain).

@@ -43,6 +43,18 @@ const ready = async () => { for (let n = 0; n < 60; n++) { try { await new Promi
     await page.mouse.click(...(await page.evaluate(() => { const d = ToyTownNew.sim.graph.doors.cafe; return ToyTownNew.project(d.x, d.z, .5); })));
     assert.equal(await page.evaluate(() => ToyTownNew.selected() && ToyTownNew.selected().id), 'cafe', 'tapping a building selects it');
     await page.evaluate(() => { ToyTownNew.select(null); ToyTownNew.look(0, .4, 46, 0); });
+    // the train has work: it carries mail, milk and bread (and people), the work board says so, and a parcel can be sent by tapping
+    await page.evaluate(() => { ToyTownNew.setWeather('clear', 5); ToyTownNew.setHour(9); });
+    const load = await page.evaluate(() => { let seen = null; for (let i = 0; i < 120 && !seen; i++) { ToyTownNew.advance(4); if (ToyTownNew.sim.cargo.some(c => c.state === 'train') || ToyTownNew.sim.riders.length) seen = {cargo: ToyTownNew.sim.cargo.filter(c => c.state === 'train').length, riders: ToyTownNew.sim.riders.length}; }
+      if (seen) { const p = ToyTownNew.trainPos(); ToyTownNew.look(p.x, p.z, 11, .5); } return seen; });
+    assert.ok(load, 'within a few minutes the train carries goods or people'); await shot('train-work');
+    await page.evaluate(() => ToyTownNew.advance(240)); const work = await page.evaluate(() => ({...ToyTownNew.info(), board: ToyTownNew.jobsText()}));
+    assert.ok(work.delivered >= 1 && /Work board/.test(work.board), 'goods get delivered and the work board shows it (' + JSON.stringify(work) + ')');
+    await page.evaluate(() => { ToyTownNew.setHour(8); ToyTownNew.advance(5); const a = ToyTownNew.sim.graph.doors.cafe, b = ToyTownNew.sim.graph.doors.bakery; ToyTownNew.look((a.x + b.x) / 2, (a.z + b.z) / 2, 16, .2); ToyTownNew.select({kind: 'building', id: 'cafe'}); });
+    await page.evaluate(() => document.documentElement.classList.remove('ui-off')); await page.click('#send'); await page.mouse.click(...(await page.evaluate(() => { const d = ToyTownNew.sim.graph.doors.bakery; return ToyTownNew.project(d.x, d.z, .5); }))); await page.waitForFunction(() => /parcel/.test(document.getElementById('toast').textContent), null, {timeout: 5000}).catch(() => {});
+    const sent = await page.evaluate(() => ({toast: document.getElementById('toast').textContent, parcels: ToyTownNew.sim.cargo.filter(c => c.kind === 'parcel').length, stats: ToyTownNew.sim.freightStats})); await shot('parcel');
+    assert.ok(/takes a parcel/.test(sent.toast) && sent.parcels === 1, 'tapping send then a building sends a parcel (' + JSON.stringify(sent) + ')');
+    await page.evaluate(() => { document.documentElement.classList.add('ui-off'); ToyTownNew.select(null); ToyTownNew.setHour(12); ToyTownNew.look(0, .4, 46, 0); });
     // seasons: each page load is a season; and the sound button starts audio without errors
     const seasonInfo = {};
     for (const name of ['winter', 'autumn']) { const sp = await browser.newPage({viewport: {width: 1100, height: 700}}); sp.on('pageerror', e => errors.push(name + ': ' + e.message));
