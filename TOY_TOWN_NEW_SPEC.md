@@ -143,6 +143,13 @@ the stamp is stale. If the page cannot start, its panel now shows the real error
 - **Passengers**: round entries `['platform:central', 0, 'ride:harbour']` (and stories such as `harbourtrip`, `milltrip`, `schooltrip`) wait on the platform (`onPlatform`, standing, not on the road), board when the train stops there (also while it stands there), ride on the coaches (`state: 'riding'`, at most `train.seats`) and step off at their stop. Platform spots are `'platform:<stationId>'` in `graph.doors`. Nobody waiting on a platform is given other errands.
 - **Owner**: `sendParcel(from, to)` makes a parcel job (button on a building's card, then tap the destination); `freightStats` and `freightLog` feed the work board.
 
+### Market, signals, settings, needs (sim.mjs, needs.mjs, settings.mjs, smoke.mjs, tested)
+
+- **Market** (`the Market`, a building with a doorstep, three stalls on a cobbled patch): open every third day (`def.MARKET`, day 0 is the first morning) from 9 to 15. `sim.market = {open, visits, opens}`. On opening a story caption says so, then every 9 to 19 s the nearest free resident goes to stand at the stalls (at most 7 there or on the way); people at the market are `onPlatform` (standing, visible) with `at === 'market'`. Goods and sellers are one small mesh shown only while open. Milk and bread jobs may be delivered to the market, only while it is open.
+- **Station signals**: `sim.signalFor(stationId)` is `'red'` while the train stands at the station or is within 2.4 units of stopping there, else `'green'`. Posts are in the railway mesh, the lamps are one instanced mesh. The bell (`sound.stationBell`) rings once when the train pulls in; the engine's smoke is `smoke.mjs` (a ring of puffs, more when moving).
+- **Settings** (gear button, `settings.mjs`, remembered in `localStorage`, bad or blocked storage falls back to defaults): speed of the day (0.5, 1, 2, 4; a frame takes up to 10 steps of at most 50 ms), work for the train (`sim.setBusy`: quiet 0.4, normal 1, busy 2 times as many jobs) and whether the news stages stories.
+- **Needs and moods** (`needs.mjs`): hunger, tiredness and loneliness run 0 to 1. Hunger rises over 12 waking hours, tiredness over 15, loneliness over 10 when alone; sleep rests; a bite at the bakery, cafe or market and company at the cafe, market, school, bandstand, toy shop or post office bring them down; a hello on the pavement eases loneliness. A need above its threshold (hunger over .75, loneliness over .85) sends an idle resident to the nearest food or company (`sim.needsStats`); hunger over .9 breaks a wait. `r.mood = {score, label, why}` (cheerful, content, grumpy, hungry, tired, lonely) shows in the card; the work board shows the town's mood.
+
 ## 5. Art rules
 
 - Fat, rounded, slightly wonky. No sharp corners: `bag.box` is a rounded box; roofs overhang.
@@ -173,6 +180,7 @@ spheres 8; keep that discipline (the first version was 1.05 M triangles from 3-s
 - `sim`, `scene`, `camera`, `renderer`, `view`
 - `info()` → `{calls, triangles, residentsOut, clock, pixelRatio, story, rain, wet, lampsLit, season}`
 - `tapAt(clientX, clientY)`, `selected()`, `select(obj|null)`, `project(x, z, y)` → client coordinates of a ground point
+- `settings`, `applySettings()`; `info()` also has `market, marketVisits`
 - `trainPos()` (head of the train), `sendParcel(from, to)`, `jobsText()` (the work board text); `info()` also has `delivered, cargoNow, riders`
 - `season`, `sound` (`enabled`, `started`, `toggle()`); `?season=spring|summer|autumn|winter`
 - `setHour(h)`, `setWeather('rain'|'clear'|..., seconds)`; `?h=<hour>` starts at an hour, `?news=0` turns the news staging off, `?tune=0` turns the adaptive resolution off

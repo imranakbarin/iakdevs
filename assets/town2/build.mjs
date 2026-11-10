@@ -101,6 +101,16 @@ const BUILD = {
     for (let k = 0; k < 4; k++) { b.push(0, 0, 0, k * Math.PI / 2); roundWin(b, 0, 2.26, .47, .16); b.pop(); }
     anim.clock = {y: 3.34};
   },
+  market(b) {   // three stalls in a row on a cobbled patch: counters, posts and striped awnings (the goods and sellers come on market days)
+    b.box(3.5, .05, 1.5, 'stone', {y: 0, r: .02, z: .05});
+    [['red', 'white'], ['blue', 'white'], ['yellow', 'white']].forEach(([c1, c2], i) => {
+      const x = (i - 1) * 1.12;
+      b.box(.98, .4, .46, 'wood', {x, y: .05, z: .12, r: .03}); b.box(1.02, .04, .52, 'cream', {x, y: .45, z: .12, r: .015});
+      for (const sx of [-.46, .46]) b.cyl(.03, .03, 1.0, 'wood', {x: x + sx, y: .05, z: -.14, seg: 6});
+      for (let k = 0; k < 4; k++) b.box(.26, .05, .8, k % 2 ? c2 : c1, {x: x - .39 + k * .26, y: 1.0, z: .08, rx: .3, r: .015});
+      b.box(1.0, .03, .06, c1, {x, y: .96, z: .5, r: .01});
+    });
+  },
   bandstand(b) {
     b.cyl(1.3, 1.36, .12, 'red', {seg: 8}); b.cyl(1.22, 1.22, .16, 'cream', {y: .12, seg: 8}); b.cyl(1.16, 1.16, .03, 'wood', {y: .28, seg: 8});
     for (let k = 0; k < 8; k++) { const a = k / 8 * TAU + TAU / 16, x = Math.cos(a) * 1.08, z = Math.sin(a) * 1.08; b.cyl(.05, .055, 1.25, 'white', {x, y: .28, z, seg: 10}); b.sph(.07, 'gold', {x, y: 1.5, z, seg: 8}); if (k !== 1) { const a2 = (k + 1) / 8 * TAU + TAU / 16, x2 = Math.cos(a2) * 1.08, z2 = Math.sin(a2) * 1.08; b.box(.03, .04, Math.hypot(x2 - x, z2 - z), 'white', {x: (x + x2) / 2, y: .66, z: (z + z2) / 2, ry: Math.atan2(x2 - x, z2 - z), r: .01}); for (let m = 1; m < 4; m++) b.cyl(.016, .016, .36, 'white', {x: x + (x2 - x) * m / 4, y: .3, z: z + (z2 - z) * m / 4, seg: 6}); } }
@@ -350,6 +360,18 @@ function scenery(bag, graph) {
   for (const id of new Set(Object.values(BUS_LINES).flat())) { const d0 = graph.doors[id], d = graph.attach(d0.x, d0.z), e = graph.edge(d.edge), q = along(e.line, d.s), [lx, lz] = leftOf(q.tx, q.tz), side = e.kind === 'ring' ? 1 : d.side, x = q.x + lx * side * (ROAD.pave + .3), z = q.z + lz * side * (ROAD.pave + .3); onGround(x, z, b => { b.cyl(.02, .025, .78, 'slate', {seg: 6}); b.cyl(.13, .13, .03, 'red', {y: .78, rx: Math.PI / 2, seg: 16}); b.cyl(.09, .09, .035, 'white', {y: .795, rx: Math.PI / 2, seg: 16, centre: false}); }, Math.atan2(q.tx, q.tz)); }
 }
 
+// The signal for each station stands just before the platform, on the far side of the track (so it faces the driver): its post is part of the railway,
+// its lamp (red while the train is standing at or coming into the station, green otherwise) is one instanced mesh.
+export function signalSpot(graph, st) {
+  const p = loopPt(st.t), s0 = graph.loopS(p[0], p[1]), q = along(graph.loop, s0 - 1.9);
+  return {x: q.x + q.tz * .62, z: q.z - q.tx * .62, ry: Math.atan2(q.tx, q.tz)};
+}
+export function buildSignals(graph) {
+  const mesh = new THREE.InstancedMesh(new THREE.SphereGeometry(.07, 10, 8), new THREE.MeshBasicMaterial({color: '#ffffff', fog: false}), STATIONS.length), m = new THREE.Matrix4(), c = new THREE.Color();
+  STATIONS.forEach((st, i) => { const q = signalSpot(graph, st); mesh.setMatrixAt(i, m.makeTranslation(q.x, heightAt(q.x, q.z) + .82, q.z)); mesh.setColorAt(i, c.set('#46d36a')); });
+  mesh.frustumCulled = false; mesh.userData.set = (i, red) => { mesh.setColorAt(i, c.set(red ? '#ff4a3d' : '#46d36a')); mesh.instanceColor.needsUpdate = true; };
+  return mesh;
+}
 // The railway loop: ballast, sleepers and two rails all the way round the town, with a platform, shelter and sign at each station.
 function railway(bag, graph) {
   const loop = graph.loop, parts = bag.parts, L = loop.length;
@@ -357,6 +379,7 @@ function railway(bag, graph) {
   for (let s = 0; s < L - .2; s += .36) ribbon(parts, loop, -.34, .34, '#8a5a3c', .032, s, s + .13, .13);
   for (const o of [-.19, .19]) { ribbon(parts, loop, o - .035, o + .035, '#4a525e', .05, 0, L, .25); ribbon(parts, loop, o - .012, o + .012, '#aab4c0', .058, 0, L, .25); }
   const colours = ['red', 'blue', 'green', 'yellow'];
+  for (const st of STATIONS) { const q = signalSpot(graph, st); bag.push(q.x, heightAt(q.x, q.z), q.z, q.ry); bag.cyl(.032, .04, .72, 'slate', {seg: 8}); bag.box(.13, .2, .1, 'black', {y: .66, r: .03}); bag.box(.05, .05, .06, 'white', {y: .54, z: .0, r: .01}); bag.pop(); }
   STATIONS.forEach((st, i) => {
     const p = loopPt(st.t), s0 = graph.loopS(p[0], p[1]), q = along(loop, s0), x = q.x, z = q.z, y = heightAt(x, z), ry = Math.atan2(q.tx, q.tz), c = colours[i % 4];
     bag.push(x, y, z, ry);   // local +z runs along the track the way the train goes, local +x is outwards, -x towards the town
@@ -600,3 +623,16 @@ export function buildFall(season = 'summer') {
   return pts;
 }
 export {doorOf};
+
+// Market day: the goods on the counters and the sellers behind them. One small mesh, shown only while the market is open.
+export function buildMarketGoods(def, material) {
+  const b = new Bag(); b.push(def.x, heightAt(def.x, def.z), def.z, def.ry, def.scale || 1);
+  const stalls = [{x: -1.12, coat: 'red', goods: ['milk', 'milk', 'milk']}, {x: 0, coat: 'blue', goods: ['bread', 'bread', 'bread', 'bread']}, {x: 1.12, coat: 'green', goods: ['apple', 'apple', 'apple', 'apple', 'apple']}];
+  for (const st of stalls) {
+    st.goods.forEach((g, k) => { const gx = st.x - .34 + k * (.68 / Math.max(1, st.goods.length - 1)), c = g === 'milk' ? 'white' : g === 'bread' ? 'crust' : 'red';
+      if (g === 'milk') b.cyl(.07, .08, .2, c, {x: gx, y: .49, z: .1, seg: 8}); else if (g === 'bread') b.sph(.09, c, {x: gx, y: .56, z: .1, sx: 1.3, sy: .7, seg: 8}); else b.sph(.06, c, {x: gx, y: .54, z: .12, seg: 8}); });
+    b.cyl(.1, .13, .38, st.coat, {x: st.x, y: .05, z: -.2, seg: 10}); b.sph(.11, '#f3c9a0', {x: st.x, y: .5, z: -.2, seg: 10}); b.cone(.12, .14, 'cream', {x: st.x, y: .58, z: -.2, seg: 10});
+  }
+  for (let i = 0; i < 11; i++) { const t = i / 10; b.sph(.05, ['red', 'yellow', 'sky', 'pink', 'green'][i % 5], {x: -1.75 + t * 3.5, y: 1.35 - Math.sin(t * Math.PI) * -.08 - .1, z: .62, seg: 6}); }
+  b.pop(); const m = b.mesh(material); m.castShadow = true; m.visible = false; return m;
+}

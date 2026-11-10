@@ -4,6 +4,7 @@
 const {chromium} = require('playwright'), {spawn} = require('node:child_process'), fs = require('node:fs/promises'), path = require('node:path'), http = require('node:http'), assert = require('node:assert/strict');
 const port = 8771, out = path.join(__dirname, '../visual-artifacts');
 const ready = async () => { for (let n = 0; n < 60; n++) { try { await new Promise((ok, no) => http.get(`http://127.0.0.1:${port}/toy-town-new.html`, r => { r.resume(); r.statusCode === 200 ? ok() : no(new Error('HTTP ' + r.statusCode)); }).on('error', no)); return; } catch (e) { await new Promise(r => setTimeout(r, 250)); } } throw Error('Local site did not start'); };
+const shot2 = (pg, name) => pg.screenshot({path: path.join(out, `new-town-${name}.png`)});
 (async () => {
   await fs.mkdir(out, {recursive: true});
   const server = spawn('python3', ['-m', 'http.server', String(port), '--bind', '127.0.0.1'], {cwd: path.join(__dirname, '..'), stdio: 'ignore'});
@@ -66,6 +67,34 @@ const ready = async () => { for (let n = 0; n < 60; n++) { try { await new Promi
       await sp.close(); }
     assert.ok(seasonInfo.winter.season === 'winter' && seasonInfo.autumn.season === 'autumn' && seasonInfo.winter.calls <= 120 && seasonInfo.autumn.calls <= 120, 'the seasons draw within budget (' + JSON.stringify(seasonInfo) + ')');
     assert.ok(seasonInfo.sound.on && seasonInfo.sound.started === 1 && seasonInfo.sound.pressed === 'true', 'the sound button turns sound on (' + JSON.stringify(seasonInfo.sound) + ')');
+    // phone (emulated, not a real device): touch input, no horizontal scroll, nothing overlapping, finger-sized buttons, the settings panel, a parcel sent by finger
+    { const {devices} = require('playwright'), ctx = await browser.newContext({...devices['iPhone 13']}), mp = await ctx.newPage(); mp.on('pageerror', e => errors.push('phone: ' + e.message));
+      if (process.env.THREE_LOCAL) await mp.route('https://cdn.jsdelivr.net/npm/three@0.187.0/**', r => r.fulfill({path: path.join(process.env.THREE_LOCAL, r.request().url().split('three@0.187.0/')[1]), contentType: 'text/javascript'}));
+      await mp.goto(`http://127.0.0.1:${port}/toy-town-new.html?news=0`); await mp.waitForFunction(() => !!window.ToyTownNew, null, {timeout: 60000});
+      await mp.evaluate(() => { ToyTownNew.freeze(); ToyTownNew.setHour(10); ToyTownNew.advance(30); const a = ToyTownNew.sim.graph.doors.cafe, b = ToyTownNew.sim.graph.doors.bakery; ToyTownNew.look((a.x + b.x) / 2, (a.z + b.z) / 2, 27, .2); });
+      const proj = id => mp.evaluate(id => { const d = ToyTownNew.sim.graph.doors[id]; return ToyTownNew.project(d.x, d.z, .5); }, id);
+      for (const id of ['cafe', 'bakery']) { const [px, py] = await proj(id); assert.ok(px > 0 && px < 390 && py > 0 && py < 664, id + ' is on the phone screen (' + px + ',' + py + ')'); }
+      await mp.touchscreen.tap(...(await proj('cafe'))); await mp.waitForFunction(() => !!ToyTownNew.selected(), null, {timeout: 3000}); await mp.waitForTimeout(400);
+      await mp.touchscreen.tap(...(await mp.evaluate(() => { const r = document.getElementById('set').getBoundingClientRect(); return [r.x + r.width / 2, r.y + r.height / 2]; }))); await mp.waitForTimeout(400);
+      const geo = await mp.evaluate(() => { const o = {}, vis = e => e && getComputedStyle(e).display !== 'none' && +getComputedStyle(e).opacity > .5;
+        for (const s of ['#chip', '#jobs', '#snd', '#set', '#panel', '#card', '#send', '#hint']) { const e = document.querySelector(s); if (vis(e)) { const r = e.getBoundingClientRect(); o[s] = [r.left, r.top, r.right, r.bottom]; } }
+        const small = []; for (const e of document.querySelectorAll('#snd, #set, #card button, #panel button, #seasons a')) { const r = e.getBoundingClientRect(); if (r.width && (r.width < 30 || r.height < 30 || (e.id && r.width < 44))) small.push(e.id || e.textContent.trim() || e.tagName); }
+        return {rects: o, small, scrollW: document.documentElement.scrollWidth, innerW: innerWidth, coarse: matchMedia('(pointer:coarse)').matches}; });
+      const names = Object.keys(geo.rects), clash = []; for (let i = 0; i < names.length; i++) for (let j = i + 1; j < names.length; j++) { const a = geo.rects[names[i]], b = geo.rects[names[j]]; if (a[0] < b[2] - 1 && b[0] < a[2] - 1 && a[1] < b[3] - 1 && b[1] < a[3] - 1 && !((names[i] === '#card' && names[j] === '#send') || (names[i] === '#panel' && names[j] === '#jobs'))) clash.push(names[i] + ' x ' + names[j]); }
+      await shot2(mp, 'phone'); assert.ok(geo.coarse, 'the phone emulation is a coarse pointer'); assert.ok(geo.scrollW <= geo.innerW, 'no sideways scroll on a phone (' + geo.scrollW + ' > ' + geo.innerW + ')'); assert.deepEqual(clash, [], 'nothing overlaps on a phone: ' + JSON.stringify(geo.rects)); assert.deepEqual(geo.small, [], 'every button is finger-sized');
+      assert.ok(await mp.evaluate(() => document.getElementById('panel').classList.contains('on')), 'a finger opens the settings');
+      await mp.touchscreen.tap(...(await mp.evaluate(() => { const b = document.querySelector('#panel [data-key=speed] [data-v="4"]').getBoundingClientRect(); return [b.x + b.width / 2, b.y + b.height / 2]; }))); await mp.waitForTimeout(300);
+      assert.equal(await mp.evaluate(() => ToyTownNew.settings.speed), 4, 'and picks a faster day');
+      await mp.evaluate(() => document.getElementById('panel').classList.remove('on')); await mp.waitForTimeout(300);
+      await mp.touchscreen.tap(...(await mp.evaluate(() => { const b = document.getElementById('send').getBoundingClientRect(); return [b.x + b.width / 2, b.y + b.height / 2]; }))); await mp.waitForTimeout(200);
+      await mp.touchscreen.tap(...(await proj('bakery'))); await mp.waitForFunction(() => /parcel/.test(document.getElementById('toast').textContent), null, {timeout: 4000}).catch(() => {});
+      const phoneSent = await mp.evaluate(() => ({toast: document.getElementById('toast').textContent, parcels: ToyTownNew.sim.cargo.filter(c => c.kind === 'parcel').length}));
+      assert.ok(/takes a parcel/.test(phoneSent.toast) && phoneSent.parcels === 1, 'a parcel can be sent with a finger (' + JSON.stringify(phoneSent) + ')');
+      // speed under a throttled CPU (software GL, so this says little about a real phone): it must keep going and settle its resolution
+      const cdp = await ctx.newCDPSession(mp); await cdp.send('Emulation.setCPUThrottlingRate', {rate: 4}); await mp.evaluate(() => { ToyTownNew.settings.speed = 1; ToyTownNew.settings.speed = 1; ToyTownNew.freeze(false); });
+      const fps = await mp.evaluate(() => new Promise(ok => { let n = 0; const t0 = performance.now(); const f = () => { n++; if (performance.now() - t0 > 3000) ok(n / 3); else requestAnimationFrame(f); }; requestAnimationFrame(f); }));
+      const pr = await mp.evaluate(() => ToyTownNew.renderer.getPixelRatio()); console.log('PHONE (emulated, 4x slower CPU):', fps.toFixed(1), 'fps, pixel ratio', pr); assert.ok(fps > 1, 'it keeps running when slow (' + fps.toFixed(1) + ' fps)');
+      await ctx.close(); }
     console.log('NEW TOWN night', JSON.stringify(night), 'rain', JSON.stringify(wet));
     assert.ok(night.glow && night.calls <= 120 && night.sky !== 'bfe9fb', 'at night the windows glow and the sky is dark (' + night.calls + ' calls)');
     assert.ok(wet.rain > .5 && wet.calls <= 120 && wet.triangles <= 800000, 'in the rain it still draws within budget (' + wet.calls + ' calls, rain ' + wet.rain + ')');

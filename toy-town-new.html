@@ -34,38 +34,72 @@ canvas:active{cursor:grabbing}
 #card #send{position:static;width:auto;height:auto;margin-top:6px;padding:5px 10px;border-radius:10px;background:#ffd54a;color:#3c4654;font:700 12px/1.2 Nunito,system-ui,sans-serif}
 #fail{position:fixed;inset:0;display:none;align-items:center;justify-content:center;padding:24px;text-align:center;background:#bfe9fb;line-height:1.6}
 #fail small{opacity:.75}
+#set{position:fixed;right:calc(12px + env(safe-area-inset-right,0px));top:calc(54px + env(safe-area-inset-top,0px));width:34px;height:34px;border:0;border-radius:50%;background:var(--paper);font-size:17px;line-height:1;cursor:pointer;padding:0}
+#panel{position:fixed;right:calc(12px + env(safe-area-inset-right,0px));top:calc(96px + env(safe-area-inset-top,0px));width:min(290px,calc(100vw - 24px));padding:10px 12px 12px;border-radius:14px;background:var(--paper);font:400 13px/1.35 Nunito,system-ui,sans-serif;color:#3c4654;opacity:0;pointer-events:none;transition:opacity .2s}
+#panel.on{opacity:1;pointer-events:auto}
+#panel{z-index:5}
+#panel b{display:block;margin:8px 0 4px;font-weight:700;font-size:13px}#panel b:first-child{margin-top:0}
+#panel .seg{display:flex;gap:4px}
+#panel .seg button{flex:1;min-height:36px;border:0;border-radius:9px;background:#e9edf2;color:#3c4654;font:700 12px/1 Nunito,system-ui,sans-serif;cursor:pointer}
+#panel .seg button.on{background:#ffd54a}
+html.ui-off #set,html.ui-off #panel{display:none}
+@media (max-width:560px){
+#chip,#jobs{box-sizing:border-box;max-width:calc(100vw - 80px)}
+#chip{border-radius:16px}
+#chip .long,#hint .long{display:none}
+#jobs{top:calc(66px + env(safe-area-inset-top,0px))}
+#story{top:calc(118px + env(safe-area-inset-top,0px))}
+#card{bottom:calc(60px + env(safe-area-inset-bottom,0px))}
+#toast{bottom:calc(156px + env(safe-area-inset-bottom,0px))}
+#panel{top:calc(118px + env(safe-area-inset-top,0px))}
+}
+@media (min-width:561px){#hint .short{display:none}}
+#card.on ~ #hint{opacity:0}
+@media (pointer:coarse){
+#snd,#set{width:44px;height:44px;font-size:20px}
+#set{top:calc(64px + env(safe-area-inset-top,0px))}
+#card button{width:44px;height:44px;right:0;top:0}
+#card #send{min-height:44px;padding:10px 14px}
+#panel .seg button{min-height:44px}
+#seasons a{display:inline-block;min-width:30px;min-height:30px;line-height:30px;text-align:center;margin-left:2px}
+}
 html.ui-off #jobs,html.ui-off #toast,html.ui-off #snd,html.ui-off #chip,html.ui-off #hint,html.ui-off #story,html.ui-off #card{display:none}
 </style>
-<script type="importmap" data-stamp="7016c53ad8">
+<script type="importmap" data-stamp="f2690f2891">
 {"imports":{
   "three":"https://cdn.jsdelivr.net/npm/three@0.187.0/build/three.module.js",
   "three/addons/":"https://cdn.jsdelivr.net/npm/three@0.187.0/examples/jsm/",
-  "./assets/town2/build.mjs":"./assets/town2/build.mjs?v=7016c53ad8",
-  "./assets/town2/curve.mjs":"./assets/town2/curve.mjs?v=7016c53ad8",
-  "./assets/town2/def.mjs":"./assets/town2/def.mjs?v=7016c53ad8",
-  "./assets/town2/graph.mjs":"./assets/town2/graph.mjs?v=7016c53ad8",
-  "./assets/town2/inspect.mjs":"./assets/town2/inspect.mjs?v=7016c53ad8",
-  "./assets/town2/sim.mjs":"./assets/town2/sim.mjs?v=7016c53ad8",
-  "./assets/town2/sky.mjs":"./assets/town2/sky.mjs?v=7016c53ad8",
-  "./assets/town2/sound.mjs":"./assets/town2/sound.mjs?v=7016c53ad8",
-  "./assets/town2/stories.mjs":"./assets/town2/stories.mjs?v=7016c53ad8",
-  "./assets/town2/weather.mjs":"./assets/town2/weather.mjs?v=7016c53ad8"
+  "./assets/town2/build.mjs":"./assets/town2/build.mjs?v=f2690f2891",
+  "./assets/town2/curve.mjs":"./assets/town2/curve.mjs?v=f2690f2891",
+  "./assets/town2/def.mjs":"./assets/town2/def.mjs?v=f2690f2891",
+  "./assets/town2/graph.mjs":"./assets/town2/graph.mjs?v=f2690f2891",
+  "./assets/town2/inspect.mjs":"./assets/town2/inspect.mjs?v=f2690f2891",
+  "./assets/town2/needs.mjs":"./assets/town2/needs.mjs?v=f2690f2891",
+  "./assets/town2/settings.mjs":"./assets/town2/settings.mjs?v=f2690f2891",
+  "./assets/town2/sim.mjs":"./assets/town2/sim.mjs?v=f2690f2891",
+  "./assets/town2/sky.mjs":"./assets/town2/sky.mjs?v=f2690f2891",
+  "./assets/town2/smoke.mjs":"./assets/town2/smoke.mjs?v=f2690f2891",
+  "./assets/town2/sound.mjs":"./assets/town2/sound.mjs?v=f2690f2891",
+  "./assets/town2/stories.mjs":"./assets/town2/stories.mjs?v=f2690f2891",
+  "./assets/town2/weather.mjs":"./assets/town2/weather.mjs?v=f2690f2891"
 }}
 </script>
 </head>
 <body>
 <canvas id="town" aria-label="Toy Town: a little storybook town with a clock tower, a teapot café and a windmill"></canvas>
-<div id="chip">Toy Town · new build preview<a href="toy-town.html">current town</a><span id="seasons"></span></div>
+<div id="chip">Toy Town<span class="long"> · new build preview</span><a href="toy-town.html">current town</a><span id="seasons"></span></div>
 <button id="snd" aria-label="Sound" aria-pressed="false" title="Sound off">🔇</button>
+<button id="set" aria-label="Settings" aria-expanded="false" title="Pace and balance">⚙️</button>
+<div id="panel" role="group" aria-label="Pace and balance"><b>Speed of the day</b><div class="seg" data-key="speed"><button data-v="0.5">½×</button><button data-v="1">1×</button><button data-v="2">2×</button><button data-v="4">4×</button></div><b>How much work for the train</b><div class="seg" data-key="busy"><button data-v="quiet">Quiet</button><button data-v="normal">Normal</button><button data-v="busy">Busy</button></div><b>Stories from today's news</b><div class="seg" data-key="news"><button data-v="true">On</button><button data-v="false">Off</button></div></div>
 <div id="story" aria-live="polite"></div>
 <div id="card" aria-live="polite"><button aria-label="Close">×</button><b></b><div></div><button id="send" hidden>Send a parcel from here…</button></div>
 <div id="jobs" title="Tap to open or close"></div>
 <div id="toast" aria-live="polite"></div>
-<div id="hint">Tap anyone or anything · drag to explore · pinch or scroll to zoom · twist (or right-drag, Q/E) to turn</div>
+<div id="hint"><span class="long">Tap anyone or anything · drag to explore · pinch or scroll to zoom · twist (or right-drag, Q/E) to turn</span><span class="short">Tap anyone or anything · drag · pinch to zoom · twist to turn</span></div>
 <div id="fail"><div>The new town could not start.<br><a href="toy-town.html">Open the current town</a>, or try a hard refresh (Ctrl+F5).<br><small id="why"></small><br><small>If it mentions WebGL, turn on hardware acceleration in the browser's settings (in Edge: edge://settings/system).</small></div></div>
 <script>if(/[?&]clean=1\b/.test(location.search))document.documentElement.classList.add('ui-off');</script>
 <script type="module">
-  import('./assets/town2/main.mjs?v=7016c53ad8').catch(e => { console.error(e); document.getElementById('why').textContent = (e && (e.name + ': ' + e.message)) || String(e); document.getElementById('fail').style.display = 'flex'; });
+  import('./assets/town2/main.mjs?v=f2690f2891').catch(e => { console.error(e); document.getElementById('why').textContent = (e && (e.name + ': ' + e.message)) || String(e); document.getElementById('fail').style.display = 'flex'; });
 </script>
 </body>
 </html>

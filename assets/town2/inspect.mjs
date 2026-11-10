@@ -1,5 +1,5 @@
 // New Toy Town: what to say about a thing that was tapped. Pure (no THREE, no DOM): takes the sim and returns {title, lines}.
-import {BUILDINGS, CAST, STATIONS, building} from './def.mjs';
+import {BUILDINGS, CAST, STATIONS, DAY, MARKET, building} from './def.mjs';
 import {STORIES} from './stories.mjs';
 
 const nameOf = id => (BUILDINGS.find(b => b.id === id) || {}).name || id;
@@ -17,8 +17,9 @@ export function describeResident(sim, r) {
     else lines.push(r.pause > 0 && r.look ? 'Stopping to say hello to ' + r.look.def.name : (err ? 'Off on an errand to ' : 'On the way to ') + nameOf(r.target));
     const st = sim.story.current && STORIES.find(s => s.id === sim.story.current.id);
     if (st && st.go.some(([who]) => who === r.id)) lines.push('Part of today\'s story: ' + st.title);
-  } else lines.push(r.onPlatform ? 'On the platform at ' + stationName(sim, r.at.replace('platform:', '')) : 'Indoors at ' + nameOf(r.at));
+  } else lines.push(r.at === 'market' ? 'Browsing the stalls at the market' : r.onPlatform ? 'On the platform at ' + stationName(sim, r.at.replace('platform:', '')) : 'Indoors at ' + nameOf(r.at));
   if (load) lines.splice(1, 0, 'Carrying ' + load.label + ' to ' + nameOf(load.to));
+  if (r.mood) lines.splice(Math.min(lines.length, load ? 2 : 1), 0, 'Feeling ' + r.mood.label + (r.mood.why ? ': ' + r.mood.why : ''));
   lines.push('Lives at ' + nameOf(r.def.home));
   return {title: r.def.name, lines};
 }
@@ -27,7 +28,8 @@ export function describeBuilding(sim, b) {
   const inside = sim.residents.filter(r => r.state === 'inside' && r.at === b.id).map(r => r.def.name);
   const lives = CAST.filter(c => c.home === b.id).map(c => c.name);
   const lines = [];
-  if (b.door > 0) lines.push(inside.length ? 'Inside now: ' + list(inside) : 'Nobody in right now');
+  if (b.id === 'market') { const m = sim.market, day = Math.floor(sim.clock / DAY), wait = (MARKET.every - day % MARKET.every) % MARKET.every; lines.push(m.open ? 'Market day! Open until ' + MARKET.to + ':00, ' + m.visits + ' visits so far' : wait === 0 && sim.hour < MARKET.from ? 'Opens at ' + MARKET.from + ':00 today' : 'Market day is ' + (wait === 0 ? MARKET.every : wait) + ' day' + ((wait === 0 ? MARKET.every : wait) > 1 ? 's' : '') + ' away (every ' + MARKET.every + ' days)'); }
+  if (b.door > 0 && b.id !== 'market') lines.push(inside.length ? 'Inside now: ' + list(inside) : 'Nobody in right now');
   if (lives.length) lines.push('Home of ' + list(lives));
   const garaged = sim.vehicles.filter(v => v.def.home === b.id && v.state === 'parked').map(v => v.def.name);
   if (garaged.length) lines.push('In the garage: ' + list(garaged));

@@ -78,8 +78,8 @@ export const allRoadPoints = () => ROADS.flatMap(r => roadLine(r.id).pts);
 // or right, -1, of the way the street runs out from the square) where it fits: clear of the other buildings, every road, the railway, the
 // pond and the paddock, facing its street, with its doorstep on the pavement.
 const S = BUILD_SCALE, STEPOUT = .9;
-const WIDTH = {cottage: 2.0, mushroomCottage: 3.0, school: 3.5, station: 3.6, barn: 3.1, garage: 2.5, fireStation: 3.0, postOffice: 2.4, policeBox: 1.3, harbourHut: 2.0, windmill: 2.4, teapotCafe: 2.8, toyShop: 2.5, bakery: 2.8, bandstand: 3.0, clockTower: 2.4};
-const DOOR = {cottage: .85, mushroomCottage: .95, school: 1.25, station: 1.25, barn: 1.1, garage: 1.0, fireStation: 1.05, postOffice: .95, policeBox: .6, harbourHut: .95, windmill: .95, teapotCafe: 1.25, toyShop: 1.05, bakery: 1.0, bandstand: 0, clockTower: 0};
+const WIDTH = {cottage: 2.0, mushroomCottage: 3.0, school: 3.5, station: 3.6, barn: 3.1, garage: 2.5, fireStation: 3.0, postOffice: 2.4, policeBox: 1.3, harbourHut: 2.0, windmill: 2.4, teapotCafe: 2.8, toyShop: 2.5, bakery: 2.8, bandstand: 3.0, market: 3.4, clockTower: 2.4};
+const DOOR = {cottage: .85, mushroomCottage: .95, school: 1.25, station: 1.25, barn: 1.1, garage: 1.0, fireStation: 1.05, postOffice: .95, policeBox: .6, harbourHut: .95, windmill: .95, teapotCafe: 1.25, toyShop: 1.05, bakery: 1.0, bandstand: 0, market: 1.1, clockTower: 0};
 export const POND = {x: 3.7, z: -6.4, r: 1.0};
 export const PADDOCK = {x0: -6.0, z0: -7.2, x1: -3.8, z1: -5.2};
 const make = (id, type, name, x, z, ry, extra = {}) => ({id, type, name, x, z, ry, door: DOOR[type] * S, w: WIDTH[type] * S, scale: S, ...extra});
@@ -125,6 +125,7 @@ export const BUILDINGS = [
   put('school', 'school', 'the School', [[spokes(SW), 1], [spokes(SW), -1], [outer(SW), -1]]);
   put('barn', 'barn', 'the Barn', [...both(spokes(N)), [outer(NW), -1]]);
   put('farm', 'cottage', 'Hay Farm', [...both(spokes(NW), -1), [outer(NW), -1]], cot('cream', 'orange'));
+  put('market', 'market', 'the Market', [...both(spokes(SO)), ...both(spokes(SE)), ...both(spokes(NE)), ...both(spokes(SW)), ...both(spokes(W)), ...both(outer(SO)), ...both(outer(SE))], {}, 2.6);
   put('mushroom', 'mushroomCottage', 'Mushroom Cottage', [...both(spokes(W), -1), ...both(spokes(W), 1)]);
   // the cottages, each looking along the streets near the place it belongs
   const houses = [
@@ -204,10 +205,12 @@ export const VEHICLES = [
 ];
 // Freight: things that need moving across town, made automatically by day. Each is picked up at `from` by one of `pick` (who walks it to the platform of the
 // nearest station), carried by the train to the station nearest `to`, and taken on from there by one of `drop`. `to` is only chosen when it is served by another station.
+// Market day: every third day (counting from the first morning) the stalls open from 9 until 15.
+export const MARKET = {every: 3, from: 9, to: 15};
 export const FREIGHT = [
   {kind: 'mail', label: 'a mail sack', from: ['post'], to: ['c1', 'c3', 'c5', 'c9', 'c11', 'c13', 'school', 'hut', 'mill', 'farm', 'c14'], pick: ['pip'], drop: ['rudy', 'otto', 'finn', 'ivy', 'ted'], hours: [6.5, 11.5]},
-  {kind: 'milk', label: 'milk churns', from: ['barn'], to: ['bakery', 'cafe', 'hut', 'school', 'toys', 'station'], pick: ['hay'], drop: ['ivy', 'finn', 'nell', 'bea', 'otto'], hours: [6, 11]},
-  {kind: 'bread', label: 'a basket of loaves', from: ['bakery'], to: ['hut', 'school', 'mill', 'farm', 'c1', 'c9', 'c13', 'c14'], pick: ['crumb', 'june'], drop: ['otto', 'finn', 'ivy', 'rudy', 'nell', 'ted'], hours: [6.5, 11.5]}
+  {kind: 'milk', label: 'milk churns', from: ['barn'], to: ['bakery', 'cafe', 'hut', 'school', 'toys', 'station', 'market'], pick: ['hay'], drop: ['ivy', 'finn', 'nell', 'bea', 'otto'], hours: [6, 11]},
+  {kind: 'bread', label: 'a basket of loaves', from: ['bakery'], to: ['hut', 'school', 'mill', 'farm', 'c1', 'c9', 'c13', 'c14', 'market'], pick: ['crumb', 'june'], drop: ['otto', 'finn', 'ivy', 'rudy', 'nell', 'ted'], hours: [6.5, 11.5]}
 ];
 export const CARGO_COLOURS = {mail: '#efe6cc', milk: '#ffffff', bread: '#d99a55', parcel: '#f2c14e'};
 // The bus lines: each stops (waits a few seconds) at the doorstep of these buildings, one after another, round and round.
