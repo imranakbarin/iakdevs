@@ -9,6 +9,7 @@ import {createSound} from './sound.mjs';
 import {createSmoke} from './smoke.mjs';
 import {PROFILE, createGovernor, startTier, isTier} from './quality.mjs';
 import {wind} from './nature.mjs';
+import {stageOf, dots} from './track.mjs';
 import {load as loadSettings, save as saveSettings, stepsFor, BUSY_FACTOR} from './settings.mjs';
 import {newsStory} from './stories.mjs';
 import {describeResident, describeBuilding, describeVehicle, describeAnimal, describeTrain} from './inspect.mjs';
@@ -26,7 +27,9 @@ const sun = new THREE.DirectionalLight('#fff4dc', 2.1); sun.position.set(-14, 22
 sun.shadow.mapSize.set(phone ? 1024 : 2048, phone ? 1024 : 2048); Object.assign(sun.shadow.camera, {left: -25, right: 25, top: 20, bottom: -20, near: 1, far: 90}); sun.shadow.bias = -.0006; sun.shadow.normalBias = .03;
 scene.add(sun, sun.target);
 
-const season = SEASONS.includes(q.get('season')) ? q.get('season') : seasonOf(), sim = createSim(7, {season}), built = buildTown(sim.graph, season);
+// the day of the week: today's, unless ?day=mon..sun (or 0..6) says otherwise
+function dayFromQuery() { const d = (q.get('day') || '').toLowerCase().slice(0, 3), i = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'].indexOf(d); return i >= 0 ? i : /^[0-6]$/.test(q.get('day') || '') ? +q.get('day') : (new Date().getDay() + 6) % 7; }
+const season = SEASONS.includes(q.get('season')) ? q.get('season') : seasonOf(), sim = createSim(7, {season, weekday: dayFromQuery()}), built = buildTown(sim.graph, season);
 const sound = createSound();
 scene.add(built.ground, built.sea, built.shallows, built.town, built.glow, built.lampGlow); for (const m of Object.values(built.moving)) scene.add(m.group);
 const tufts = buildTufts(sim.graph); scene.add(tufts);
@@ -174,7 +177,7 @@ function tap(cx, cy) {
   const o = pick(cx, cy);
   if (assigning) {
     const from = assigning; assigning = null;
-    if (o && o.kind === 'building') { const r = sim.sendParcel(from, o.id); toast(r.ok ? r.carrier + ' takes a parcel from ' + BUILDINGS.find(b => b.id === from).name + ' to ' + BUILDINGS.find(b => b.id === o.id).name + (r.cargo.direct ? ' on foot.' : ' by train, from ' + sim.train.stations.find(x => x.id === r.cargo.originStation).name + '.') : r.reason, 5); }
+    if (o && o.kind === 'building') { const r = sim.sendParcel(from, o.id); if (r.ok) tracked = {id: r.cargo.id, from, to: o.id, done: null, at: sim.clock}; toast(r.ok ? r.carrier + ' takes a parcel from ' + BUILDINGS.find(b => b.id === from).name + ' to ' + BUILDINGS.find(b => b.id === o.id).name + (r.cargo.direct ? ' on foot.' : ' by train, from ' + sim.train.stations.find(x => x.id === r.cargo.originStation).name + '.') : r.reason, 5); }
     else toast('No parcel sent.', 2);
     return;
   }
@@ -182,6 +185,16 @@ function tap(cx, cy) {
 }
 if (sendBtn) sendBtn.addEventListener('click', () => { if (sel && sel.kind === 'building') { assigning = sel.id; toast('Now tap the building the parcel should go to (or tap anywhere else to cancel).', 8); } });
 addEventListener('keydown', e => { if (e.key === 'Escape' && assigning) { assigning = null; toast('No parcel sent.', 2); } });
+// Tracking a parcel you sent: where it is now, and a note when it arrives.
+const trackEl = document.getElementById('track'); let tracked = null, trackAt = -1e9;
+function refreshTrack() {
+  if (!trackEl || Math.abs(sim.clock - trackAt) < .5) return; trackAt = sim.clock;   // (abs: the clock can jump back when the hour is set)
+  if (!tracked) { trackEl.classList.remove('on'); return; }
+  const name = id => BUILDINGS.find(b => b.id === id).name, c = sim.cargo.find(x => x.id === tracked.id);
+  if (c) { const st = stageOf(c); trackEl.textContent = 'Your parcel, ' + name(tracked.from) + ' to ' + name(tracked.to) + ': ' + st.label + '  ' + dots(st.step, st.steps); trackEl.classList.add('on'); return; }
+  if (!tracked.done) { const l = sim.freightLog.find(x => x.id === tracked.id); tracked.done = l ? l.how : 'lost'; tracked.doneAt = sim.clock; if (tracked.done === 'delivered') toast('Your parcel arrived at ' + name(tracked.to) + '.', 5); else toast('Your parcel to ' + name(tracked.to) + ' was called off.', 5); trackEl.textContent = tracked.done === 'delivered' ? 'Your parcel arrived at ' + name(tracked.to) + '  \u25CF\u25CF\u25CF' : 'Your parcel was called off'; }
+  if (sim.clock - tracked.doneAt > 20) { tracked = null; trackEl.classList.remove('on'); }
+}
 // The work board: what is being carried and where, and how much has been done.
 const jobsEl = document.getElementById('jobs'); let jobsText = '', jobsAt = 0;
 const KIND = {mail: 'Mail', milk: 'Milk', bread: 'Bread', parcel: 'Parcel'};
@@ -191,7 +204,7 @@ function refreshJobs() {
     const where = c.state === 'carried' ? 'carried by ' + (who || 'somebody') : c.state === 'ready' ? 'waiting for ' + (who || 'a carrier') : c.state === 'train' ? 'on the train' : c.state === 'station' ? 'waiting at ' + stn(c.at) : '';
     return KIND[c.kind] + ': ' + BUILDINGS.find(b => b.id === c.from).name + ' to ' + BUILDINGS.find(b => b.id === c.to).name + ' (' + where + ')';
   });
-  const text = 'Work board | delivered ' + sim.freightStats.delivered + ' | ' + sim.riders.length + ' on the train | town ' + (sim.townMood > .8 ? 'cheerful' : sim.townMood > .62 ? 'content' : 'grumpy') + '\n' + (lines.join('\n') || 'Nothing to carry just now.');
+  const text = 'Work board | ' + sim.dayName.slice(0, 3) + ' | delivered ' + sim.freightStats.delivered + ' | ' + sim.riders.length + ' on the train | town ' + (sim.townMood > .8 ? 'cheerful' : sim.townMood > .62 ? 'content' : 'grumpy') + '\n' + (lines.join('\n') || 'Nothing to carry just now.');
   if (text === jobsText) return; jobsText = text; jobsEl.textContent = ''; const [head, ...rest] = text.split('\n'); const h = document.createElement('b'); h.textContent = head; jobsEl.append(h); for (const l of rest) { const e = document.createElement('span'); e.textContent = l; jobsEl.append(e); }
 }
 if (jobsEl) jobsEl.addEventListener('click', () => jobsEl.classList.toggle('open'));
@@ -275,7 +288,7 @@ function sync(dt) {
     g.position.set(v.x, y + .035 + (v.v > .05 ? Math.abs(Math.sin(time * 14 + v.s)) * .008 : 0), v.z); g.rotation.set(-Math.atan2(ahead - y, .3), Math.atan2(v.tx, v.tz), 0, 'YXZ');
   }
   trainCars.forEach((c, k) => { const q = along(loop, sim.train.s - k * sim.train.gap), y = heightAt(q.x, q.z) + .06; c.position.set(q.x, y, q.z); c.rotation.y = Math.atan2(q.tx, q.tz); c.updateMatrixWorld(true); });   // the cars follow the head round the loop
-  updateFreight();
+  updateFreight(); refreshTrack();
   { trainCars[0].localToWorld(v3b.set(0, .66, .36)); const moving = Math.abs(sim.train.v) > .1;   // the engine's smoke: more when it is working
     smoke.update(dt, {x: v3b.x, y: v3b.y, z: v3b.z, vx: windNow.x * .14, vz: windNow.z * .14}, moving ? 5 : 1.2);
     smoke.puffs.forEach((p, i) => { const z = smoke.size(p); smokeM.makeScale(z, z, z).setPosition(p.x, p.y, p.z); smokeMesh.setMatrixAt(i, smokeM); }); smokeMesh.instanceMatrix.needsUpdate = true; }
@@ -343,7 +356,7 @@ window.ToyTownNew = {
   info: () => ({market: sim.market.open, marketVisits: sim.market.visits, delivered: sim.freightStats.delivered, cargoNow: sim.cargo.length, riders: sim.riders.length, trainLaps: sim.train.laps, trainStops: sim.train.stopsMade, lampsLit: sim.lamps.filter(l => l.on).length, wet: +sim.weather.wet.toFixed(2), season, pixelRatio: renderer.getPixelRatio(), story: sim.story.current && sim.story.current.id, rain: +sim.weather.rain.toFixed(2), calls: renderer.info.render.calls, triangles: renderer.info.render.triangles, residentsOut: sim.residents.filter(r => r.state === 'walking').length, clock: sim.clock}),
   look(x, z, dist, yaw = 0) { Object.assign(view, {x, z, dist, yaw, tx: x, tz: z, tdist: dist, tyaw: yaw}); placeCamera(); renderer.render(scene, camera); },
   advance(seconds) { for (let t = 0; t < seconds; t += .05) sim.update(.05); sync(0); renderer.render(scene, camera); },
-  trainPos: () => trainCars[0].position, selected: () => sel, tapAt: (cx, cy) => tap(cx, cy), select, sendParcel: (a, b) => sim.sendParcel(a, b), jobsText: () => jobsText,
+  trainPos: () => trainCars[0].position, selected: () => sel, tapAt: (cx, cy) => tap(cx, cy), select, sendParcel: (a, b) => sim.sendParcel(a, b), jobsText: () => jobsText, trackText: () => (trackEl ? trackEl.textContent : ''), trackState: () => ({tracked, trackAt, el: !!trackEl}),
   project(x, z, y = .4) { const r = canvas.getBoundingClientRect(); camera.updateMatrixWorld(); v3.set(x, heightAt(x, z) + y, z).project(camera); return [(v3.x * .5 + .5) * r.width + r.left, (-v3.y * .5 + .5) * r.height + r.top]; },
   setWeather(kind, seconds = 600) { sim.weather.force(kind, seconds); },
   highlight: () => ({pin: pin.visible, ring: ring.visible, mode: settings.highlight}), settings, applySettings, setQuality, tier: () => tier, gov, tufts, U, freeze(on = true) { frozen = on; }
