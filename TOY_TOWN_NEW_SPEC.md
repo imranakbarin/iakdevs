@@ -30,6 +30,7 @@ town is untouched and stays the default until the owner approves the switch.
 | `assets/town2/weather.mjs` | Spells of clear, cloud, rain, drizzle; `rain` eases 0..1 | `def` |
 | `assets/town2/stories.mjs` | The small stories (data) and `newsStory(title, category)` | nothing |
 | `assets/town2/sky.mjs` | `skyAt(hour, rain)`: sky, fog, sea, sun/moon, window glow, stars (hex strings) | nothing |
+| `assets/town2/inspect.mjs` | What to say about a tapped resident, vehicle, animal, train or building | `def`, `stories` |
 | `assets/town2/sim.mjs` | Who is where and when (residents, vehicles, weather, stories) | `def`, `graph`, `weather`, `stories` |
 | `assets/town2/build.mjs` | Geometry builders (THREE) | `def`, `graph`, `three` |
 | `assets/town2/main.mjs` | Renderer, camera, controls, loop, test hooks | all |
@@ -37,7 +38,7 @@ town is untouched and stays the default until the owner approves the switch.
 | `tests/toy-town-new.test.cjs` | Logic test, no browser | |
 | `tests/toy-town-new-visual.cjs` | Real-WebGL check and screenshots | |
 
-Rule: `def`, `graph`, `weather`, `stories`, `sky` and `sim` are pure (no THREE, no DOM), so they run in Node. Keep it that way.
+Rule: `def`, `graph`, `weather`, `stories`, `sky`, `inspect` and `sim` are pure (no THREE, no DOM), so they run in Node. Keep it that way.
 
 ## 3. World model
 
@@ -88,7 +89,11 @@ Rule: `def`, `graph`, `weather`, `stories`, `sky` and `sim` are pure (no THREE, 
    `newsStory(title, category)` and calls `sim.stage(id, headline)`; it waits for half the cast to be up, then the caption shows "In the news: ...".
 7. **Light.** `sky.mjs` gives dawn about 06:00, day, dusk about 18:30 and a dark blue night; at night every window pane and lantern glows
    (one extra draw call: the `glow` mesh, collected by `Bag` pieces made with `glow: true`) and stars and a moon appear.
-8. **Determinism.** `createSim(seed)` gives the same town life for the same seed and step sequence.
+8. **Tapping.** A tap (under 10 px of movement, under 600 ms, one finger) picks the nearest mover on screen (residents 34 px, vehicles 40,
+   animals 26, the train 44), else the building nearest the ground point under the finger (within 1.5 units). It puts a ring on it and shows a
+   card (name and what it is doing, refreshed every 0.4 s); the camera follows anything that moves until the next drag; the x or a second tap
+   on a building closes it. Wording lives in `inspect.mjs` so it can be tested without a browser.
+9. **Determinism.** `createSim(seed)` gives the same town life for the same seed and step sequence.
 
 ## 5. Art rules
 
@@ -119,6 +124,7 @@ spheres 8; keep that discipline (the first version was 1.05 M triangles from 3-s
 
 - `sim`, `scene`, `camera`, `renderer`, `view`
 - `info()` → `{calls, triangles, residentsOut, clock, pixelRatio, story, rain}`
+- `tapAt(clientX, clientY)`, `selected()`, `select(obj|null)`, `project(x, z, y)` → client coordinates of a ground point
 - `setHour(h)`, `setWeather('rain'|'clear'|..., seconds)`; `?h=<hour>` starts at an hour, `?news=0` turns the news staging off, `?tune=0` turns the adaptive resolution off
 - `look(x, z, dist, yaw)` puts the camera there and renders
 - `advance(seconds)` steps the simulation and renders
@@ -149,7 +155,7 @@ visual step uploads `new-town-*.png` (wide, square, high street, cottage lane, w
 
 ## 9. Known gaps
 
-- No sound, tapping on things, puddles, snow or seasons. No lamplighter figure (lanterns simply glow).
+- No sound, puddles, snow or seasons. No lamplighter figure (lanterns simply glow).
 - Adaptive resolution (steps the pixel ratio down after 2 s under ~24 fps, and drops the shadow when already at 1.0) has not been measured on a real phone.
 - Vehicles cannot overtake, so a late one can queue behind a slow tractor.
 - Story captions are English text from a data file; the headline text is only ever shown with `textContent`.

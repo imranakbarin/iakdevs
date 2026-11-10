@@ -17,8 +17,13 @@ canvas:active{cursor:grabbing}
 #story{position:fixed;left:50%;transform:translateX(-50%);top:calc(52px + env(safe-area-inset-top,0px));max-width:min(86vw,560px);padding:6px 14px;border-radius:14px;background:var(--paper);font:600 13px/1.35 Nunito,system-ui,sans-serif;text-align:center;opacity:0;transition:opacity .6s;pointer-events:none}
 #story small{display:block;font-weight:400;opacity:.8}
 #story.on{opacity:1}
+#card{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(46px + env(safe-area-inset-bottom,0px));min-width:200px;max-width:min(88vw,420px);padding:8px 34px 8px 14px;border-radius:14px;background:var(--paper);font:400 13px/1.4 Nunito,system-ui,sans-serif;opacity:0;pointer-events:none;transition:opacity .25s}
+#card.on{opacity:1;pointer-events:auto}
+#card b{display:block;font-weight:700;font-size:14px}
+#card span{display:block}
+#card button{position:absolute;right:6px;top:4px;width:26px;height:26px;border:0;border-radius:50%;background:transparent;color:inherit;font:700 18px/1 Nunito,system-ui,sans-serif;cursor:pointer}
 #fail{position:fixed;inset:0;display:none;align-items:center;justify-content:center;padding:24px;text-align:center;background:#bfe9fb}
-html.ui-off #chip,html.ui-off #hint,html.ui-off #story{display:none}
+html.ui-off #chip,html.ui-off #hint,html.ui-off #story,html.ui-off #card{display:none}
 </style>
 <script type="importmap">
 {"imports":{
@@ -31,11 +36,12 @@ html.ui-off #chip,html.ui-off #hint,html.ui-off #story{display:none}
 <canvas id="town" aria-label="Toy Town: a little storybook town with a clock tower, a teapot café and a windmill"></canvas>
 <div id="chip">Toy Town · new build preview<a href="toy-town.html">current town</a></div>
 <div id="story" aria-live="polite"></div>
-<div id="hint">Drag to explore · pinch or scroll to zoom · twist (or right-drag, Q/E) to turn</div>
+<div id="card" aria-live="polite"><button aria-label="Close">×</button><b></b><div></div></div>
+<div id="hint">Tap anyone or anything · drag to explore · pinch or scroll to zoom · twist (or right-drag, Q/E) to turn</div>
 <div id="fail">The new town needs WebGL, which this browser could not start. <a href="toy-town.html">Open the current town</a>.</div>
 <script>if(/[?&]clean=1\b/.test(location.search))document.documentElement.classList.add('ui-off');</script>
 <script type="module">
-  import('./assets/town2/main.mjs?v=2').catch(e => { console.error(e); document.getElementById('fail').style.display = 'flex'; });
+  import('./assets/town2/main.mjs?v=3').catch(e => { console.error(e); document.getElementById('fail').style.display = 'flex'; });
 </script>
 </body>
 </html>

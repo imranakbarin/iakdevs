@@ -29,6 +29,17 @@ const ready = async () => { for (let n = 0; n < 60; n++) { try { await new Promi
     await page.evaluate(() => { ToyTownNew.setHour(11); ToyTownNew.setWeather('rain', 600); ToyTownNew.advance(40); ToyTownNew.look(0, .4, 18, 0); }); await shot('rain');
     const wet = await page.evaluate(() => ToyTownNew.info());
     await page.evaluate(() => { ToyTownNew.setWeather('clear', 5); ToyTownNew.setHour(12); ToyTownNew.look(0, .4, 30, 0); });
+    // tap to inspect: a real click on a walking resident selects them, a click on a building selects it
+    await page.evaluate(() => { ToyTownNew.setHour(11); ToyTownNew.advance(60); });
+    const walker = await page.evaluate(() => { const r = ToyTownNew.sim.residents.find(r => r.state === 'walking'); if (!r) return null; ToyTownNew.look(r.x, r.z, 13, .3); return {id: r.id, p: ToyTownNew.project(r.x, r.z, .35)}; });
+    assert.ok(walker, 'somebody is walking at 11:00');
+    await page.mouse.click(walker.p[0] + 5, walker.p[1] + 3); await page.evaluate(() => ToyTownNew.advance(.05));
+    const picked = await page.evaluate(() => ({sel: ToyTownNew.selected(), card: document.getElementById('card').innerText})); await shot('tap');
+    assert.ok(picked.sel && picked.sel.kind === 'resident' && picked.sel.id === walker.id && /On the way|errand/.test(picked.card), 'tapping a resident shows who and where (' + JSON.stringify(picked) + ')');
+    await page.evaluate(() => { ToyTownNew.select(null); ToyTownNew.look(-3.25, -3.25, 13, .2); });
+    await page.mouse.click(...(await page.evaluate(() => ToyTownNew.project(-3.25, -3.25, .6)))); 
+    assert.equal(await page.evaluate(() => ToyTownNew.selected() && ToyTownNew.selected().id), 'cafe', 'tapping a building selects it');
+    await page.evaluate(() => { ToyTownNew.select(null); ToyTownNew.look(0, .4, 30, 0); });
     console.log('NEW TOWN night', JSON.stringify(night), 'rain', JSON.stringify(wet));
     assert.ok(night.glow && night.calls <= 80 && night.sky !== 'bfe9fb', 'at night the windows glow and the sky is dark (' + night.calls + ' calls)');
     assert.ok(wet.rain > .5 && wet.calls <= 80 && wet.triangles <= 800000, 'in the rain it still draws within budget (' + wet.calls + ' calls, rain ' + wet.rain + ')');
