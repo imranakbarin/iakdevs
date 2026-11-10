@@ -1093,3 +1093,8 @@ A `START` does not prohibit parallel edits. Avoid stepping on each other's uncom
 - Seen in a high-resolution render of the island: the mix reads well and the canopies sit over the doors.
 - Draw calls at the default view 3,215, triangles 2.15 M (3,387 / 2.18 M before the neighbours and houses: unchanged within noise).
 - Not verified: the canopy height on every model and at every zoom (measured on A and C; B's door was cropped out of my render), phone. Cache keys 3D v107, embed v118.
+
+### 2026-11-10 · Claude · START (new storybook town, phases 1–2: foundation and the Square, behind `?town=new`)
+- Request: "give me a plan to build this city differently … a town like Make Way for Noddy; the current city looks basic", then "go ahead and you build it, then a spec, and we can ask another model to test".
+- Plan agreed in chat: a hand-authored toy-box town (curved spline roads, a roundabout square, rolling hills, about 25 character landmarks, a named cast with homes and jobs) in our own designs (the style only, no copied characters or buildings). Built as a **separate page and module set**, so the current town is untouched until the owner approves the switch: `toy-town-new.html` + `assets/town2/{def,graph,sim,build,main}.mjs`; `toy-town.html?town=new` redirects to it.
+- This entry covers phase 1 (town definition, road graph, terrain, camera) and phase 2 (the Square and the first landmarks, a small cast and three vehicles so it is alive). Then `TOY_TOWN_NEW_SPEC.md` for the next model. Nothing in `assets/toy-town*.js` changes.
