@@ -4,7 +4,7 @@ import {PALETTE as P, ISLAND, CAST, VEHICLES, BUILDINGS, PADDOCK, POND, PIER, he
 import {along} from './graph.mjs';
 import {createSim} from './sim.mjs';
 import {buildTown, buildResident, buildVehicle, buildClouds, buildTrain, buildBoat, buildAnimal, buildSky, buildUmbrella, buildRain, buildFall, buildPuddles, buildCargo, buildPassengers} from './build.mjs';
-import {skyAt, seasonOf, SEASONS} from './sky.mjs';
+import {skyAt, seasonOf, SEASONS, mix} from './sky.mjs';
 import {createSound} from './sound.mjs';
 import {newsStory} from './stories.mjs';
 import {describeResident, describeBuilding, describeVehicle, describeAnimal, describeTrain} from './inspect.mjs';
@@ -24,7 +24,7 @@ scene.add(sun, sun.target);
 
 const season = SEASONS.includes(q.get('season')) ? q.get('season') : seasonOf(), sim = createSim(7, {season}), built = buildTown(sim.graph, season);
 const sound = createSound();
-scene.add(built.ground, built.sea, built.town, built.glow, built.lampGlow); for (const m of Object.values(built.moving)) scene.add(m.group);
+scene.add(built.ground, built.sea, built.shallows, built.town, built.glow, built.lampGlow); for (const m of Object.values(built.moving)) scene.add(m.group);
 const clouds = buildClouds(); scene.add(clouds);
 const sky = buildSky(); scene.add(sky);
 const hemi = scene.children.find(o => o.isHemisphereLight), seaMat = built.sea.material, tmp = new THREE.Color();
@@ -214,7 +214,8 @@ let last = 0, frozen = false, time = 0;
 // The light follows the hour: sky, fog, sea, sun or moon, lit windows and lanterns, stars.
 function weatherLight() {
   const L = skyAt(sim.hour, sim.weather.rain, season);
-  scene.background.set(L.sky); scene.fog.color.set(L.fog); seaMat.color.set(L.sea);
+  scene.background.set(L.sky); scene.fog.color.set(L.fog); seaMat.color.set(L.sea); { const k = (.05 + clamp(0, (1.55 - L.hemiI) / .55, 1) * .28) * (1 - .4 * L.night);   // water holds its colour when the light is low
+    seaMat.emissive.set(L.sea).multiplyScalar(k); built.shallows.material.color.set(mix(L.sea, '#d8fff6', .5)); built.shallows.material.emissive.set(L.sea).multiplyScalar(k * 1.3); }
   hemi.color.set(L.hemiSky); hemi.groundColor.set(L.hemiGround); hemi.intensity = L.hemiI;
   sun.color.set(L.sunColor); sun.intensity = L.sunI; sun.position.set(...L.sunPos);
   const gm = built.glow.material; gm.opacity = L.glow; built.glow.visible = L.glow > .02;

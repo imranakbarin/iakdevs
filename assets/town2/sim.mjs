@@ -54,7 +54,7 @@ export function createSim(seed = 7, opts = {}) {
   function snapLamps() {   // after a jump in time: a lamplighter part-way through his round
     const N = lamps.length;
     lamps.forEach((l, i) => { l.on = evening(hour) ? (hour - E0) / (E1 - E0) > i / N : morning(hour) ? (hour - M0) / (M1 - M0) < i / N : !(hour >= M1 && hour < E0); l.lit = l.on ? 1 : 0; });
-    for (const r of residents) if (r.def.lamplighter) { r.lampJob = null; r.lampQueue = []; r.lampWait = 0; }
+    for (const r of residents) if (r.def.lamplighter) { r.lampJob = null; r.lampQueue = []; r.lampWait = 0; r.state = 'inside'; r.at = r.def.home; r.route = null; r.target = null; r.pause = 0; r.look = null; r.stay = null; r.until = clock; }   // (he was somewhere on his round: he goes back indoors and starts afresh, so nobody is left walking on no route)
   }
   function stepLamps(dt) {
     if (hour >= E1 || hour < M0) lamps.forEach(l => { l.on = true; }); else if (hour >= M1 && hour < E0) lamps.forEach(l => { l.on = false; });
