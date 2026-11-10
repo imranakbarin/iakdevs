@@ -119,6 +119,9 @@ addEventListener('resize', () => { resize(); });
 /* ---- tap to inspect: a resident, vehicle, animal, the train or a building: a ring, a card, and the camera follows what moves ---- */
 const cardEl = document.getElementById('card'), ring = new THREE.Mesh(new THREE.TorusGeometry(.3, .035, 8, 28).rotateX(Math.PI / 2), new THREE.MeshBasicMaterial({color: '#ffd54a', transparent: true, opacity: .95, depthTest: false}));
 ring.renderOrder = 4; ring.visible = false; scene.add(ring);
+// The default highlight is a small bobbing pin above what you tapped (the ring on the ground is still there as an option, or none at all).
+const pin = new THREE.Group(); { const m = new THREE.MeshBasicMaterial({color: '#ffd54a'}), tip = new THREE.Mesh(new THREE.ConeGeometry(.1, .24, 12).rotateX(Math.PI), m), top = new THREE.Mesh(new THREE.SphereGeometry(.085, 12, 8), new THREE.MeshBasicMaterial({color: '#ffffff'})); tip.position.y = .12; top.position.y = .3; pin.add(tip, top); pin.visible = false; pin.traverse(o => { o.renderOrder = 4; }); scene.add(pin); }
+const PIN_UP = {resident: .78, vehicle: .62, animal: .6, train: .9, building: 2.3}, TALL = {clockTower: 4.9, windmill: 3.7, school: 2.9, bandstand: 2.7, station: 2.5, market: 1.7, policeBox: 1.8, harbourHut: 1.9};
 const RING = {resident: .8, vehicle: 1.3, animal: .8, train: 1.7, building: 3.4};
 let sel = null, cardAt = 0, cardText = '';
 const critterKind = c => c.k >= 10 ? 'duck' : c.k < 3 ? 'cow' : 'sheep';
@@ -141,7 +144,7 @@ function describe(o) {
 function select(o) {
   sel = o; follow = o && o.kind !== 'building' ? o : null; cardAt = 0; cardText = '';
   const h = document.getElementById('hint'); if (h && o) h.style.opacity = '0'; if (o) sound.blip();
-  if (!o) { ring.visible = false; if (cardEl) cardEl.classList.remove('on'); if (sendBtn) sendBtn.hidden = true; return; }
+  if (!o) { ring.visible = false; pin.visible = false; if (cardEl) cardEl.classList.remove('on'); if (sendBtn) sendBtn.hidden = true; return; }
   ring.scale.setScalar(RING[o.kind]); refreshCard(); if (sendBtn) sendBtn.hidden = !(o.kind === 'building' && BUILDINGS.find(b => b.id === o.id).door > 0);
 }
 function refreshCard() {
@@ -195,8 +198,11 @@ if (jobsEl) jobsEl.addEventListener('click', () => jobsEl.classList.toggle('open
 if (cardEl) cardEl.querySelector('button').addEventListener('click', () => select(null));
 function trackSelection(dt) {
   if (!sel) return; const p = posOf(sel);
-  if (p) { ring.visible = true; ring.position.set(p.x, (p.y || heightAt(p.x, p.z)) + .06, p.z); ring.rotation.y += dt * 1.2; if (follow) { view.tx = clamp(-22, p.x, 22); view.tz = clamp(-17, p.z, 17); } }
-  else { ring.visible = false; follow = null; }
+  if (p) { const gy = p.y || heightAt(p.x, p.z), mode = settings.highlight;
+    ring.visible = mode === 'ring'; ring.position.set(p.x, gy + .06, p.z); ring.rotation.y += dt * 1.2;
+    pin.visible = mode === 'pin'; if (pin.visible) { const b = sel.kind === 'building' ? BUILDINGS.find(x => x.id === sel.id) : null, up = b ? (TALL[b.type] || PIN_UP.building) : PIN_UP[sel.kind] || .7, sc = clamp(.7, view.dist / 20, 2.4); pin.scale.setScalar(sc); pin.position.set(p.x, gy + up + Math.sin(time * 3.2) * .05 * sc, p.z); pin.rotation.y += dt * 1.6; }
+    if (follow) { view.tx = clamp(-22, p.x, 22); view.tz = clamp(-17, p.z, 17); } }
+  else { ring.visible = false; pin.visible = false; follow = null; }
   if ((cardAt -= dt) <= 0) { cardAt = .4; refreshCard(); }
 }
 
@@ -340,5 +346,5 @@ window.ToyTownNew = {
   trainPos: () => trainCars[0].position, selected: () => sel, tapAt: (cx, cy) => tap(cx, cy), select, sendParcel: (a, b) => sim.sendParcel(a, b), jobsText: () => jobsText,
   project(x, z, y = .4) { const r = canvas.getBoundingClientRect(); camera.updateMatrixWorld(); v3.set(x, heightAt(x, z) + y, z).project(camera); return [(v3.x * .5 + .5) * r.width + r.left, (-v3.y * .5 + .5) * r.height + r.top]; },
   setWeather(kind, seconds = 600) { sim.weather.force(kind, seconds); },
-  settings, applySettings, setQuality, tier: () => tier, gov, tufts, U, freeze(on = true) { frozen = on; }
+  highlight: () => ({pin: pin.visible, ring: ring.visible, mode: settings.highlight}), settings, applySettings, setQuality, tier: () => tier, gov, tufts, U, freeze(on = true) { frozen = on; }
 };

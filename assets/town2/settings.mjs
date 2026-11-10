@@ -2,10 +2,11 @@
 export const KEY = 'toytown-new-settings';
 export const SPEEDS = [.5, 1, 2, 4], BUSY = ['quiet', 'normal', 'busy'], BUSY_FACTOR = {quiet: .4, normal: 1, busy: 2};
 export const QUALITY = ['auto', 'low', 'medium', 'high'];
-export const DEFAULTS = {speed: 1, busy: 'normal', news: true, quality: 'auto'};
+export const HIGHLIGHT = ['pin', 'ring', 'off'];
+export const DEFAULTS = {speed: 1, busy: 'normal', news: true, quality: 'auto', highlight: 'pin'};
 export function normalise(o) {
   const s = {...DEFAULTS};
-  if (o && typeof o === 'object') { if (SPEEDS.includes(o.speed)) s.speed = o.speed; if (BUSY.includes(o.busy)) s.busy = o.busy; if (typeof o.news === 'boolean') s.news = o.news; if (QUALITY.includes(o.quality)) s.quality = o.quality; }
+  if (o && typeof o === 'object') { if (SPEEDS.includes(o.speed)) s.speed = o.speed; if (BUSY.includes(o.busy)) s.busy = o.busy; if (typeof o.news === 'boolean') s.news = o.news; if (QUALITY.includes(o.quality)) s.quality = o.quality; if (HIGHLIGHT.includes(o.highlight)) s.highlight = o.highlight; }
   return s;
 }
 export function load(storage) { try { return normalise(JSON.parse(storage.getItem(KEY))); } catch (e) { return {...DEFAULTS}; } }

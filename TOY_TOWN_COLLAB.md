@@ -1216,3 +1216,8 @@ A `START` does not prohibit parallel edits. Avoid stepping on each other's uncom
 - **Tests**: tier profile ordering and start tiers, the governor (down after two slow samples, up after five fast, cap and its decay, no up while the resolution is held down, a fixed tier stays), the wind (swells, never dead, never roars), settings quality key; visual: low has no tufts, wind or waves, high has them, the debug readout, a phone starts on medium, draw calls in budget.
 - **Not verified**: real devices (all numbers are headless software GL); the look of sway in motion (I judged still frames; the shader is simple); tuning of the foam and tuft density by the owner's eye.
 
+### 2026-11-10 · Claude · DONE (new storybook town, follow-up 9: a different highlight than the ring)
+- **Request (owner)**: the yellow ring on the ground under everything you tap is annoying; use another highlighting mechanism.
+- **Change**: tapping now shows a small bobbing pin (a yellow cone with a white ball) above what you tapped, scaled with the zoom, at a height for the kind of thing (people, vehicles, animals, the train, and per building type so it clears roofs, the clock tower and the windmill). A "Highlight what I tap" row in the settings offers Pin (default), Ring (the old one) and None; it is remembered. The card and the camera follow are unchanged.
+- **Tests**: the default is the pin, bad values fall back to it, and the visual test checks that a tap shows the pin and not the ring. **Not verified**: how the pin looks to the owner on a phone (size and height are my guesses).
+
