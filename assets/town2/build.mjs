@@ -11,7 +11,7 @@ import {along, leftOf} from './graph.mjs';
 // Seasons recolour the foliage and the grass (and nothing else) when the town is built.
 const SEASONAL = {}, SEASON_COLOURS = {
   summer: {},
-  spring: {leaf: '#4fbf70', leafLight: '#f4b3cc', grass: '#9ad96e', grassDark: '#82c862'},
+  spring: {leaf: '#4fbf70', leafLight: '#f6bdd2', blossom: '#e98fb0', grass: '#9ad96e', grassDark: '#82c862'},
   autumn: {leaf: '#d9822b', leafLight: '#e8b83a', grass: '#b9c45c', grassDark: '#a5b04e'},
   winter: {leaf: '#3d7a5a', leafLight: '#e4eef5', grass: '#eef4f8', grassDark: '#d6e4ee'}
 };
@@ -319,8 +319,9 @@ function roads(bag, graph) {
 function tree(b, kind, seed) {
   const r = k => rand(seed * 13 + k);
   if (kind === 'bush') { for (let k = 0; k < 3; k++) b.sph(.3 - k * .04, k % 2 ? 'leaf' : 'leafLight', {x: (r(k) - .5) * .4, y: .2 + k * .05, z: (r(k + 5) - .5) * .4, sy: .8, seg: 10}); for (let k = 0; k < 4; k++) b.sph(.05, ['pink', 'white', 'yellow', 'red'][k], {x: (r(k + 9) - .5) * .5, y: .38 + r(k) * .1, z: (r(k + 12) - .5) * .5, seg: 6}); return; }
-  if (kind === 'tall') { b.cyl(.08, .11, .5, 'brown', {seg: 8}); [[.42, .62, 'leaf'], [.34, 1.08, 'leafLight'], [.24, 1.46, 'leaf']].forEach(([s, y, c]) => b.sph(s, c, {y, sy: 1.15, seg: 12})); return; }
-  b.cyl(.1, .14, .62, 'brown', {seg: 8}); b.sph(.62, 'leafLight', {y: 1.0, seg: 18}); b.sph(.45, 'leaf', {x: .34, y: .84, z: .12, seg: 16}); b.sph(.42, lighten('leafLight', .12), {x: -.3, y: 1.1, z: -.1, seg: 16}); b.sph(.36, 'leaf', {x: .05, y: 1.4, z: .1, seg: 14});
+  if (kind === 'tall') { b.cyl(.08, .11, .5, 'brown', {seg: 8}); [[.42, .62, 'leaf'], [.34, 1.08, SEASONAL.blossom ? lighten('leaf', .14) : 'leafLight'], [.24, 1.46, 'leaf']].forEach(([s, y, c]) => b.sph(s, c, {y, sy: 1.15, seg: 12})); return; }
+  b.cyl(.1, .14, .62, 'brown', {seg: 8}); const deep = SEASONAL.blossom ? 'blossom' : 'leaf';   // (in spring the whole crown is blossom, not pink with a green cap)
+  b.sph(.62, 'leafLight', {y: 1.0, seg: 18}); b.sph(.45, deep, {x: .34, y: .84, z: .12, seg: 16}); b.sph(.42, lighten('leafLight', .12), {x: -.3, y: 1.1, z: -.1, seg: 16}); b.sph(.36, deep, {x: .05, y: 1.4, z: .1, seg: 14});
   if (kind === 'apple') for (let k = 0; k < 9; k++) { const a = r(k) * TAU, v = r(k + 20) * 1.1 - .2; b.sph(.065, 'red', {x: Math.cos(a) * Math.cos(v) * .6, y: 1.0 + Math.sin(v) * .6, z: Math.sin(a) * Math.cos(v) * .6, seg: 8}); }
 }
 function scenery(bag, graph) {
@@ -400,6 +401,15 @@ export function buildTown(graph, season = 'summer') {
   const town = bag.mesh(material); town.castShadow = true; town.receiveShadow = true;
   const glow = bag.glowMesh(new THREE.MeshBasicMaterial({vertexColors: true, transparent: true, opacity: 0, depthWrite: false, fog: false})); glow.visible = false; glow.renderOrder = 2;
   const ground = terrain();
+  // shallows: a band of lighter water that fades out from the coast, so the island does not sit on a flat plane
+  const shallows = (() => {
+    const A = 96, R = [0.0, 1.0, 1.07, 1.2, 1.4], alpha = [0, .9, .7, .32, 0], pos = [], colr = [], idx = [];
+    const radiusFor = (a, target) => { let lo = .3, hi = 2.2; for (let i = 0; i < 28; i++) { const m = (lo + hi) / 2; if (shore(Math.cos(a) * ISLAND.rx * m, Math.sin(a) * ISLAND.rz * m) < target) lo = m; else hi = m; } return (lo + hi) / 2; };
+    for (let i = 0; i <= A; i++) { const a = i / A * TAU; for (let j = 1; j < R.length; j++) { const m = radiusFor(a, R[j] + (j === 1 ? .0 : 0)); pos.push(Math.cos(a) * ISLAND.rx * m, 0, Math.sin(a) * ISLAND.rz * m); colr.push(1, 1, 1, alpha[j]); } }
+    const n = R.length - 1; for (let i = 0; i < A; i++) for (let j = 0; j < n - 1; j++) { const a = i * n + j, b2 = a + 1, c = a + n, d = c + 1; idx.push(a, b2, c, b2, d, c); }
+    const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); g.setAttribute('color', new THREE.Float32BufferAttribute(colr, 4)); g.setIndex(idx);
+    const m = new THREE.Mesh(g, new THREE.MeshLambertMaterial({vertexColors: true, transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -1, color: '#9fe6e6'})); m.position.y = ISLAND.sea + .02; m.renderOrder = 1; return m;
+  })();
   const sea = new THREE.Mesh(new THREE.PlaneGeometry(240, 240).rotateX(-Math.PI / 2), new THREE.MeshLambertMaterial({color: P.sea})); sea.position.y = ISLAND.sea;
   // moving parts
   const place = (mesh, a, x = 0, y = 0, z = 0) => { const d = a.def, m = new THREE.Matrix4().compose(new THREE.Vector3(d.x, heightAt(d.x, d.z), d.z), new THREE.Quaternion().setFromEuler(new THREE.Euler(0, d.ry, 0)), new THREE.Vector3(d.scale || 1, d.scale || 1, d.scale || 1)); const g = new THREE.Group(); g.applyMatrix4(m); const inner = new THREE.Group(); inner.position.set(x, y, z); inner.add(mesh); g.add(inner); mesh.castShadow = true; return {group: g, inner}; };
@@ -411,7 +421,7 @@ export function buildTown(graph, season = 'summer') {
   const lampGlow = new THREE.InstancedMesh(new THREE.SphereGeometry(.13, 8, 6), new THREE.MeshBasicMaterial({color: WARM, transparent: true, opacity: .95, depthWrite: false, fog: false}), LAMPS.length);
   lampGlow.frustumCulled = false; lampGlow.renderOrder = 2; lampGlow.userData.set = (i, scale) => { const l = LAMPS[i], m = new THREE.Matrix4().compose(new THREE.Vector3(l.x, heightAt(l.x, l.z) + 1.16, l.z), new THREE.Quaternion(), new THREE.Vector3(scale, scale, scale)); lampGlow.setMatrixAt(i, m); lampGlow.instanceMatrix.needsUpdate = true; };
   for (let i = 0; i < LAMPS.length; i++) lampGlow.userData.set(i, 0);
-  return {town, glow, lampGlow, ground, sea, moving, material};
+  return {town, glow, lampGlow, ground, sea, shallows, moving, material};
 }
 
 /* ---------------- residents and vehicles ---------------- */
@@ -565,10 +575,18 @@ const FALL = {
   autumn: {colour: '#e58a2c', size: 5, fall: 1.1, sway: 1.1, op: .95},
   winter: {colour: '#ffffff', size: 4, fall: 1.6, sway: .35, op: .95}
 };
+// a soft round dot, so petals, snow and fireflies are round and not square pixels
+let dotTex = null;
+function softDot() {
+  if (dotTex || typeof document === 'undefined') return dotTex;
+  const c = document.createElement('canvas'); c.width = c.height = 32; const g = c.getContext('2d'), gr = g.createRadialGradient(16, 16, 0, 16, 16, 15);
+  gr.addColorStop(0, 'rgba(255,255,255,1)'); gr.addColorStop(.55, 'rgba(255,255,255,.95)'); gr.addColorStop(1, 'rgba(255,255,255,0)'); g.fillStyle = gr; g.fillRect(0, 0, 32, 32);
+  dotTex = new THREE.CanvasTexture(c); return dotTex;
+}
 export function buildFall(season = 'summer') {
   const cfg = FALL[season] || FALL.summer, N = 320, X = 38, Z = 28, Y = 12, pos = new Float32Array(N * 3), seeds = Array.from({length: N}, (_, k) => [(rand(k * 4 + 1) - .5) * X, rand(k * 4 + 2) * Y, (rand(k * 4 + 3) - .5) * Z, rand(k * 4 + 4) * TAU]);
   const geo = new THREE.BufferGeometry(); geo.setAttribute('position', new THREE.BufferAttribute(pos, 3).setUsage(THREE.DynamicDrawUsage));
-  const mat = new THREE.PointsMaterial({color: cfg.colour, size: cfg.size, sizeAttenuation: false, transparent: true, opacity: 0, depthWrite: false, fog: false});
+  const mat = new THREE.PointsMaterial({color: cfg.colour, size: cfg.size, sizeAttenuation: false, transparent: true, opacity: 0, depthWrite: false, fog: false, map: softDot(), alphaTest: .02});
   const pts = new THREE.Points(geo, mat); pts.frustumCulled = false; pts.visible = false;
   pts.userData.update = (time, amount) => {
     const n = Math.floor(N * amount); geo.setDrawRange(0, n); pts.visible = n > 2; if (!pts.visible) return;

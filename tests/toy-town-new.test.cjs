@@ -167,6 +167,9 @@ const root = path.join(__dirname, '..'), mod = f => import('file://' + path.join
   assert.ok(sim.vehicles.find(v => v.id === 'fire').trips >= 1, 'the fire engine goes out when called and comes back to the station');
   assert.ok(sim.vehicles.every(v => v.state === "parked" || (v.s >= 0 && v.s <= v.route.line.length + 1e-6)), "every vehicle is somewhere on its route");
   for (const c of [0, 1, 2, 3]) { const q = G.along(sim.graph.loop, sim.train.s - c * sim.train.gap); let d = Infinity; for (const p of sim.graph.loop.pts) d = Math.min(d, Math.hypot(p[0] - q.x, p[1] - q.z)); assert.ok(d < .15, 'every car stands on the rails'); }
+  // a jump in time never strands anybody: whatever the lamplighter was doing, the sim keeps running and he starts afresh
+  { for (const h0 of [6, 12, 19.6]) for (const h of [9, 19, 23, 5]) { const sj = S.createSim(7); for (let i = 0; i < 40; i++) sj.update(.05); sj.setHour(h0); for (let i = 0; i < 100; i++) sj.update(.05); sj.setHour(h);
+      for (let i = 0; i < 20 * 30; i++) { sj.update(.05); for (const r of sj.residents) if (r.state === 'walking') assert.ok(r.route || r.lampWait > 0, r.id + ' walking without a route after a jump to ' + h); } } }
   // freight and passengers: the train has work
   { const s7 = S.createSim(7); let cargoMax = 0, wagonMax = 0, ridersMax = 0; const kinds = new Set(), seenRiding = new Set();
     for (let i = 0; i < 20 * 960; i++) { s7.update(.05); cargoMax = Math.max(cargoMax, s7.cargo.length); wagonMax = Math.max(wagonMax, s7.cargo.filter(c => c.state === 'train').length); ridersMax = Math.max(ridersMax, s7.riders.length); for (const c of s7.cargo) kinds.add(c.kind);
