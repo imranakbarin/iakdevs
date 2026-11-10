@@ -170,17 +170,17 @@ export const CAST = [
   {id: 'moss', wake: 7.5, sleep: 19.5, name: 'Granny Moss', home: 'mushroom', coat: 'green', hat: 'bonnet', round: [['cafe', 30], ['bakery', 12], ['post', 10], ['station', 14], ['platform:central', 0, 'ride:harbour'], ['hut', 14], ['platform:harbour', 0, 'ride:central'], ['mushroom', 60]]},
   {id: 'sprocket', wake: 6, sleep: 19, name: 'Mr Sprocket the miller', home: 'mill', coat: 'teal', hat: 'flat', round: [['bakery', 15], ['cafe', 20], ['barn', 14], ['mill', 80]]},
   {id: 'hay', wake: 5.5, sleep: 19, name: 'Farmer Hay', home: 'farm', coat: 'brown', hat: 'flat', round: [['barn', 70], ['bakery', 10], ['barn', 50], ['cafe', 12], ['farm', 45]]},
-  {id: 'chalk', wake: 7, sleep: 19.5, name: 'Miss Chalk the teacher', home: 'c5', coat: 'sky', hat: 'bun', round: [['school', 95], ['cafe', 16], ['school', 55], ['c5', 40]]},
+  {id: 'chalk', wake: 7, sleep: 19.5, name: 'Miss Chalk the teacher', home: 'c5', coat: 'sky', hat: 'bun', round: [['school', 95], ['cafe', 16], ['school', 55], ['c5', 40]], weekend: [['cafe', 40], ['mill', 25], ['c5', 70]]},
   {id: 'sparky', wake: 7.5, sleep: 19.5, name: 'Sparky the mechanic', home: 'c4', coat: 'orange', hat: 'cap', round: [['garage', 80], ['cafe', 14], ['garage', 55], ['c4', 40]]},
   {id: 'salt', wake: 6, sleep: 20, name: 'Captain Salt', home: 'hut', coat: 'blue', hat: 'flat', round: [['hut', 60], ['platform:harbour', 0, 'ride:central'], ['bakery', 12], ['station', 10], ['platform:central', 0, 'ride:harbour'], ['hut', 50], ['hut', 40]]},
   {id: 'wick', wake: 4.0, sleep: 21.4, name: 'Mr Wick the lamplighter', home: 'c6', coat: 'teal', hat: 'flat', lamplighter: true, zone: 0, round: [['c6', 60], ['cafe', 20], ['c6', 60], ['bakery', 10]]},
-  {id: 'dot', wake: 7.5, sleep: 18, name: 'Dot', home: 'c4', coat: 'yellow', hat: 'bobble', small: true, round: [['school', 60], ['toys', 25], ['cafe', 14], ['c2', 10], ['c4', 35]]},
-  {id: 'dash', wake: 7.5, sleep: 18, name: 'Dash', home: 'c2', coat: 'sky', hat: 'bobble', small: true, round: [['school', 55], ['toys', 20], ['mushroom', 12], ['bakery', 10], ['c2', 35]]},
+  {id: 'dot', wake: 7.5, sleep: 18, name: 'Dot', home: 'c4', coat: 'yellow', hat: 'bobble', small: true, round: [['school', 60], ['toys', 25], ['cafe', 14], ['c2', 10], ['c4', 35]], weekend: [['toys', 30], ['cafe', 20], ['farm', 25], ['c4', 45]]},
+  {id: 'dash', wake: 7.5, sleep: 18, name: 'Dash', home: 'c2', coat: 'sky', hat: 'bobble', small: true, round: [['school', 55], ['toys', 20], ['mushroom', 12], ['bakery', 10], ['c2', 35]], weekend: [['mushroom', 20], ['toys', 25], ['bakery', 12], ['c2', 55]]},
   {id: 'ada', wake: 4.0, sleep: 21.4, name: 'Ada the lamp-girl', home: 'c9', coat: 'pink', hat: 'bow', lamplighter: true, zone: 1, round: [['c9', 60], ['bakery', 14], ['c9', 60], ['cafe', 10]]},
   {id: 'lew', wake: 4.0, sleep: 21.4, name: 'Lew the lamp-boy', home: 'c15', coat: 'brown', hat: 'cap', lamplighter: true, zone: 2, round: [['c15', 60], ['post', 12], ['c15', 60], ['cafe', 10]]},
   {id: 'ivy', wake: 6.5, sleep: 19.5, name: 'Ivy the gardener', home: 'c9', coat: 'green', hat: 'flat', round: [['platform:central', 0, 'ride:mill'], ['mill', 20], ['platform:mill', 0, 'ride:central'], ['cafe', 18], ['farm', 14], ['bakery', 10], ['c9', 50]]},
   {id: 'rudy', wake: 6.5, sleep: 18.5, name: 'Rudy the paper boy', home: 'c10', coat: 'orange', hat: 'cap', round: [['post', 20], ['c1', 5], ['c3', 5], ['c12', 5], ['c13', 5], ['c15', 5], ['c10', 45]]},
-  {id: 'nell', wake: 7, sleep: 19.5, name: 'Nurse Nell', home: 'c11', coat: 'white', hat: 'bonnet', round: [['school', 22], ['cafe', 18], ['c4', 10], ['c11', 50]]},
+  {id: 'nell', wake: 7, sleep: 19.5, name: 'Nurse Nell', home: 'c11', coat: 'white', hat: 'bonnet', round: [['school', 22], ['cafe', 18], ['c4', 10], ['c11', 50]], weekend: [['cafe', 30], ['c4', 10], ['c11', 70]]},
   {id: 'otto', wake: 6, sleep: 19.5, name: 'Otto the stationmaster', home: 'c12', coat: 'blue', hat: 'cap', round: [['station', 90], ['cafe', 14], ['station', 60], ['c12', 40]]},
   {id: 'bea', wake: 8, sleep: 20, name: 'Bea the bandleader', home: 'c13', coat: 'yellow', hat: 'bow', round: [['toys', 20], ['cafe', 20], ['bakery', 12], ['c13', 50]]},
   {id: 'finn', wake: 6, sleep: 20, name: 'Finn the fisherman', home: 'c14', coat: 'sky', hat: 'flat', round: [['hut', 60], ['platform:harbour', 0, 'ride:school'], ['school', 12], ['platform:school', 0, 'ride:harbour'], ['bakery', 10], ['hut', 50], ['c14', 45]]},
@@ -205,8 +205,9 @@ export const VEHICLES = [
 ];
 // Freight: things that need moving across town, made automatically by day. Each is picked up at `from` by one of `pick` (who walks it to the platform of the
 // nearest station), carried by the train to the station nearest `to`, and taken on from there by one of `drop`. `to` is only chosen when it is served by another station.
-// Market day: every third day (counting from the first morning) the stalls open from 9 until 15.
-export const MARKET = {every: 3, from: 9, to: 15};
+// Market days: a small market on Wednesdays (9 to 15) and a big one on Sundays (9 to 16).
+export const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+export const MARKET = {days: {2: {from: 9, to: 15, cap: 5, gap: [12, 22], name: 'Wednesday market'}, 6: {from: 9, to: 16, cap: 9, gap: [5, 11], name: 'Sunday market'}}};
 export const FREIGHT = [
   {kind: 'mail', label: 'a mail sack', from: ['post'], to: ['c1', 'c3', 'c5', 'c9', 'c11', 'c13', 'school', 'hut', 'mill', 'farm', 'c14'], pick: ['pip'], drop: ['rudy', 'otto', 'finn', 'ivy', 'ted'], hours: [6.5, 11.5]},
   {kind: 'milk', label: 'milk churns', from: ['barn'], to: ['bakery', 'cafe', 'hut', 'school', 'toys', 'station', 'market'], pick: ['hay'], drop: ['ivy', 'finn', 'nell', 'bea', 'otto'], hours: [6, 11]},
@@ -222,7 +223,9 @@ export const STATIONS = [
   {id: 'central', name: 'Central Station', t: null, building: 'station'},   // beside the station building
   {id: 'harbour', name: 'Harbour Halt', t: .55},
   {id: 'mill', name: 'Mill Halt', t: TAU * .75 + .3},
-  {id: 'school', name: 'School Halt', t: TAU * .5 + .5}
+  {id: 'school', name: 'School Halt', t: TAU * .5 + .5},
+  {id: 'farm', name: 'Farm Halt', t: 4.33},
+  {id: 'east', name: 'East Halt', t: 5.92}
 ];
 { const b = BUILDINGS.find(x => x.id === 'station'); STATIONS[0].t = (Math.atan2(b.z / LOOP.rz, b.x / LOOP.rx) + TAU) % TAU; }
 // The harbour pier starts behind the harbour hut, crosses the railway on a little trestle and runs out into the sea.

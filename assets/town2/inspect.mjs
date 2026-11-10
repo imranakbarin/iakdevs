@@ -1,6 +1,9 @@
 // New Toy Town: what to say about a thing that was tapped. Pure (no THREE, no DOM): takes the sim and returns {title, lines}.
-import {BUILDINGS, CAST, STATIONS, DAY, MARKET, building} from './def.mjs';
+import {BUILDINGS, CAST, STATIONS, DAY, DAYS, MARKET, building} from './def.mjs';
 import {STORIES} from './stories.mjs';
+import {top, bond} from './memory.mjs';
+import {stageOf} from './track.mjs';
+export const clockText = h => { const m = Math.round(((h % 24) + 24) % 24 * 60) % 1440; return String(Math.floor(m / 60)).padStart(2, '0') + ':' + String(m % 60).padStart(2, '0'); };
 
 const nameOf = id => (BUILDINGS.find(b => b.id === id) || {}).name || id;
 const upper = s => s.charAt(0).toUpperCase() + s.slice(1);
@@ -20,6 +23,8 @@ export function describeResident(sim, r) {
   } else lines.push(r.at === 'market' ? 'Browsing the stalls at the market' : r.onPlatform ? 'On the platform at ' + stationName(sim, r.at.replace('platform:', '')) : 'Indoors at ' + nameOf(r.at));
   if (load) lines.splice(1, 0, 'Carrying ' + load.label + ' to ' + nameOf(load.to));
   if (r.mood) lines.splice(Math.min(lines.length, load ? 2 : 1), 0, 'Feeling ' + r.mood.label + (r.mood.why ? ': ' + r.mood.why : ''));
+  if (r.friends) { const fr = top(r.friends, 2, 2).map(id => { const o = sim.residents.find(x => x.id === id); return o ? o.def.name + ' (' + bond(r.friends[id]) + ')' : null; }).filter(Boolean); if (fr.length) lines.push('Friends with ' + fr.join(' and ')); }
+  if (r.visits) { const fav = top(r.visits, 1, 2)[0]; if (fav && nameOf(fav)) lines.push('Often at ' + nameOf(fav)); }
   lines.push('Lives at ' + nameOf(r.def.home));
   return {title: r.def.name, lines};
 }
@@ -28,7 +33,8 @@ export function describeBuilding(sim, b) {
   const inside = sim.residents.filter(r => r.state === 'inside' && r.at === b.id).map(r => r.def.name);
   const lives = CAST.filter(c => c.home === b.id).map(c => c.name);
   const lines = [];
-  if (b.id === 'market') { const m = sim.market, day = Math.floor(sim.clock / DAY), wait = (MARKET.every - day % MARKET.every) % MARKET.every; lines.push(m.open ? 'Market day! Open until ' + MARKET.to + ':00, ' + m.visits + ' visits so far' : wait === 0 && sim.hour < MARKET.from ? 'Opens at ' + MARKET.from + ':00 today' : 'Market day is ' + (wait === 0 ? MARKET.every : wait) + ' day' + ((wait === 0 ? MARKET.every : wait) > 1 ? 's' : '') + ' away (every ' + MARKET.every + ' days)'); }
+  if (b.id === 'station') { const tt = sim.timetable().sort((a, c) => a.eta - c.eta); lines.push('Timetable: ' + tt.map(t => (t.name.replace(' Station', '').replace(' Halt', '')) + ' ' + (t.eta < 1 ? 'now' : clockText(t.hour))).join(' · ')); }
+  if (b.id === 'market') { const m = sim.market; lines.push(m.open ? m.cfg.name + '! Open until ' + m.cfg.to + ':00, ' + m.visits + ' visits so far' : 'Open on ' + Object.keys(MARKET.days).map(k => DAYS[k] + 's (' + MARKET.days[k].from + ' to ' + MARKET.days[k].to + ')').join(' and ')); }
   if (b.door > 0 && b.id !== 'market') lines.push(inside.length ? 'Inside now: ' + list(inside) : 'Nobody in right now');
   if (lives.length) lines.push('Home of ' + list(lives));
   const garaged = sim.vehicles.filter(v => v.def.home === b.id && v.state === 'parked').map(v => v.def.name);
@@ -54,6 +60,6 @@ export const describeAnimal = kind => ({title: ANIMALS[kind][0], lines: [ANIMALS
 export const describeTrain = sim => {
   const st = sim.train.at && (sim.train.stations || []).find(x => x.id === sim.train.at), next = sim.train.stations[sim.train.next], n = k => sim.cargo.filter(c => c.state === 'train' && c.kind === k).length;
   const load = [['mail', 'mail sack'], ['milk', 'milk churn'], ['bread', 'basket of loaves'], ['parcel', 'parcel']].map(([k, w]) => n(k) ? n(k) + ' ' + w + (n(k) > 1 && k !== 'bread' ? 's' : '') : null).filter(Boolean);
-  return {title: 'The little train', lines: [st ? 'Standing at ' + st.name + ' while the passengers hop on and off' : 'Chugging round the town on the railway loop', 'Carrying ' + (sim.riders.length ? sim.riders.length + ' passenger' + (sim.riders.length > 1 ? 's' : '') : 'no passengers') + (load.length ? ' and ' + load.join(', ') : ''), next ? 'Next stop: ' + next.name : 'Runs all the way round the town']};
+  return {title: 'The little train', lines: [st ? 'Standing at ' + st.name + ' while the passengers hop on and off' : 'Chugging round the town on the railway loop', 'Carrying ' + (sim.riders.length ? sim.riders.length + ' passenger' + (sim.riders.length > 1 ? 's' : '') : 'no passengers') + (load.length ? ' and ' + load.join(', ') : ''), next ? 'Next stop: ' + next.name + (() => { const t = sim.timetable().find(x => x.id === next.id); return t && t.eta >= 1 ? ' at ' + clockText(t.hour) : ''; })() : 'Runs all the way round the town']};
 };
 export const buildingAt = id => building(id);

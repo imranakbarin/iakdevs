@@ -157,6 +157,13 @@ the stamp is stale. If the page cannot start, its panel now shows the real error
 - **Water**: the sea plane has slow swells and soft glints in the fragment shader (`waterify`); the shallows band (a ring from the waterline out to 1.35 of the island radius, alpha fading) carries the shore foam, a second pulsing ring and the wave tint.
 - **Ground and light**: lawn colour has big soft patches (lighter, darker, dry yellowish) and bare soil beside the pavements (a grid of road points answers "how far to a road"); walls and undersides are shaded darker near the ground when the mesh is built (no run-time cost); the sky is a gradient dome (haze colour at the horizon, deeper blue above) with a glow round a low sun; a CSS overlay gives the vignette and a warm dawn and dusk or cool night tint (high tier only).
 
+### The week, memory, timetable and parcel tracking (tested)
+
+- **The week**: `sim.weekday` (0 Monday to 6 Sunday; the page starts on today's real day, `?day=mon..sun` overrides, tests pass `{weekday}`) moves on every 480 s. Saturday and Sunday: `def.weekend` rounds for Dot, Dash, Miss Chalk and Nurse Nell (no school), stories flagged `days: 'week'` do not run, `days: 'weekend'` ones do and are favoured, and set pieces per season (harvest fair, blossom picnic, day by the harbour, snow day) plus Sunday lunch run with only half their cast needed (`relaxed`). Markets: Wednesday small (9 to 15, up to 5 shoppers) and Sunday big (9 to 16, up to 9), `def.MARKET.days`.
+- **Memory** (`memory.mjs`): `r.friends` counts meetings (a hello counts 1, being in the same public place 0.5; 2 is a friend, 5 a close friend), `r.visits` counts visits per public place. A lonely resident joins the closest friend who is in a public place (`friendSpot`) before going to the café; cards say who they are friends with and where they are often found.
+- **Train**: six stations (Central, Harbour, School, Farm, East, Mill), so a lap is about 108 s. `sim.timetable()` guesses arrival times (`track.etas`, median error under 12 s in the test); the station building's card lists them and the train's card gives the next stop with its time. Cargo put down while the train is standing at the station is loaded at once.
+- **Parcel tracking** (`track.mjs`): `stageOf(cargo)` gives the step (six by train: waiting, to the station, at the station, on the train, at the far station, to the door; three if walked), shown in a yellow strip under the work board with dots, with a toast when it arrives; `freightLog` entries carry the cargo id.
+
 ## 5. Art rules
 
 - Fat, rounded, slightly wonky. No sharp corners: `bag.box` is a rounded box; roofs overhang.
@@ -187,6 +194,7 @@ spheres 8; keep that discipline (the first version was 1.05 M triangles from 3-s
 - `sim`, `scene`, `camera`, `renderer`, `view`
 - `info()` → `{calls, triangles, residentsOut, clock, pixelRatio, story, rain, wet, lampsLit, season}`
 - `tapAt(clientX, clientY)`, `selected()`, `select(obj|null)`, `project(x, z, y)` → client coordinates of a ground point
+- `trackText()`, `trackState()`; `?day=`
 - `tier()`, `gov` (the governor), `setQuality(tier|'auto')`, `tufts`, `U` (shader inputs); `?quality=` and `?debug=1`
 - `settings`, `applySettings()`; `info()` also has `market, marketVisits`
 - `trainPos()` (head of the train), `sendParcel(from, to)`, `jobsText()` (the work board text); `info()` also has `delivered, cargoNow, riders`

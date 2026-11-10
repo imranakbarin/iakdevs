@@ -25,7 +25,10 @@ canvas:active{cursor:grabbing}
 #snd{position:fixed;right:calc(12px + env(safe-area-inset-right,0px));top:calc(12px + env(safe-area-inset-top,0px));width:34px;height:34px;border:0;border-radius:50%;background:var(--paper);font-size:17px;line-height:1;cursor:pointer;padding:0}
 #seasons a{margin-left:6px;text-decoration:none;filter:grayscale(.6)}
 #seasons a.on{filter:none}
-#jobs{position:fixed;left:calc(12px + env(safe-area-inset-left,0px));top:calc(48px + env(safe-area-inset-top,0px));max-width:min(78vw,360px);padding:5px 10px;border-radius:12px;background:var(--paper);font:400 12px/1.35 Nunito,system-ui,sans-serif;cursor:pointer}
+#stack{position:fixed;left:calc(12px + env(safe-area-inset-left,0px));top:calc(48px + env(safe-area-inset-top,0px));display:flex;flex-direction:column;align-items:flex-start;gap:6px;max-width:min(78vw,360px)}
+#track{display:none;padding:5px 10px;border-radius:12px;background:#fff0b8;font:600 12px/1.35 Nunito,system-ui,sans-serif;color:#3c4654}
+#track.on{display:block}
+#jobs{max-width:100%;padding:5px 10px;border-radius:12px;background:var(--paper);font:400 12px/1.35 Nunito,system-ui,sans-serif;cursor:pointer}
 #jobs b{display:block;font-weight:700}
 #jobs span{display:none}
 #jobs.open span{display:block}
@@ -44,11 +47,11 @@ canvas:active{cursor:grabbing}
 #panel .seg button.on{background:#ffd54a}
 html.ui-off #set,html.ui-off #panel{display:none}
 @media (max-width:560px){
-#chip,#jobs{box-sizing:border-box;max-width:calc(100vw - 80px)}
+#chip,#stack{box-sizing:border-box;max-width:calc(100vw - 80px)}
 #chip{border-radius:16px}
 #chip .long,#hint .long{display:none}
-#jobs{top:calc(66px + env(safe-area-inset-top,0px))}
-#story{top:calc(118px + env(safe-area-inset-top,0px))}
+#stack{top:calc(66px + env(safe-area-inset-top,0px))}
+#story{top:calc(170px + env(safe-area-inset-top,0px))}
 #card{bottom:calc(60px + env(safe-area-inset-bottom,0px))}
 #toast{bottom:calc(156px + env(safe-area-inset-bottom,0px))}
 #panel{top:calc(118px + env(safe-area-inset-top,0px))}
@@ -65,27 +68,29 @@ html.ui-off #set,html.ui-off #panel{display:none}
 }
 #grade{position:fixed;inset:0;pointer-events:none;opacity:0;transition:opacity .6s;background:radial-gradient(ellipse at 50% 46%,rgba(0,0,0,0) 58%,rgba(20,24,44,.2) 100%),linear-gradient(var(--tint,transparent),var(--tint,transparent))}
 #dbg{position:fixed;left:calc(8px + env(safe-area-inset-left,0px));bottom:calc(8px + env(safe-area-inset-bottom,0px));padding:3px 8px;border-radius:8px;background:rgba(0,0,0,.6);color:#fff;font:600 11px/1.3 ui-monospace,Menlo,Consolas,monospace;pointer-events:none;z-index:9}
-html.ui-off #jobs,html.ui-off #toast,html.ui-off #snd,html.ui-off #chip,html.ui-off #hint,html.ui-off #story,html.ui-off #card{display:none}
+html.ui-off #stack,html.ui-off #jobs,html.ui-off #toast,html.ui-off #snd,html.ui-off #chip,html.ui-off #hint,html.ui-off #story,html.ui-off #card{display:none}
 </style>
-<script type="importmap" data-stamp="53e463f300">
+<script type="importmap" data-stamp="ae3d6b8222">
 {"imports":{
   "three":"https://cdn.jsdelivr.net/npm/three@0.187.0/build/three.module.js",
   "three/addons/":"https://cdn.jsdelivr.net/npm/three@0.187.0/examples/jsm/",
-  "./assets/town2/build.mjs":"./assets/town2/build.mjs?v=53e463f300",
-  "./assets/town2/curve.mjs":"./assets/town2/curve.mjs?v=53e463f300",
-  "./assets/town2/def.mjs":"./assets/town2/def.mjs?v=53e463f300",
-  "./assets/town2/graph.mjs":"./assets/town2/graph.mjs?v=53e463f300",
-  "./assets/town2/inspect.mjs":"./assets/town2/inspect.mjs?v=53e463f300",
-  "./assets/town2/nature.mjs":"./assets/town2/nature.mjs?v=53e463f300",
-  "./assets/town2/needs.mjs":"./assets/town2/needs.mjs?v=53e463f300",
-  "./assets/town2/quality.mjs":"./assets/town2/quality.mjs?v=53e463f300",
-  "./assets/town2/settings.mjs":"./assets/town2/settings.mjs?v=53e463f300",
-  "./assets/town2/sim.mjs":"./assets/town2/sim.mjs?v=53e463f300",
-  "./assets/town2/sky.mjs":"./assets/town2/sky.mjs?v=53e463f300",
-  "./assets/town2/smoke.mjs":"./assets/town2/smoke.mjs?v=53e463f300",
-  "./assets/town2/sound.mjs":"./assets/town2/sound.mjs?v=53e463f300",
-  "./assets/town2/stories.mjs":"./assets/town2/stories.mjs?v=53e463f300",
-  "./assets/town2/weather.mjs":"./assets/town2/weather.mjs?v=53e463f300"
+  "./assets/town2/build.mjs":"./assets/town2/build.mjs?v=ae3d6b8222",
+  "./assets/town2/curve.mjs":"./assets/town2/curve.mjs?v=ae3d6b8222",
+  "./assets/town2/def.mjs":"./assets/town2/def.mjs?v=ae3d6b8222",
+  "./assets/town2/graph.mjs":"./assets/town2/graph.mjs?v=ae3d6b8222",
+  "./assets/town2/inspect.mjs":"./assets/town2/inspect.mjs?v=ae3d6b8222",
+  "./assets/town2/memory.mjs":"./assets/town2/memory.mjs?v=ae3d6b8222",
+  "./assets/town2/nature.mjs":"./assets/town2/nature.mjs?v=ae3d6b8222",
+  "./assets/town2/needs.mjs":"./assets/town2/needs.mjs?v=ae3d6b8222",
+  "./assets/town2/quality.mjs":"./assets/town2/quality.mjs?v=ae3d6b8222",
+  "./assets/town2/settings.mjs":"./assets/town2/settings.mjs?v=ae3d6b8222",
+  "./assets/town2/sim.mjs":"./assets/town2/sim.mjs?v=ae3d6b8222",
+  "./assets/town2/sky.mjs":"./assets/town2/sky.mjs?v=ae3d6b8222",
+  "./assets/town2/smoke.mjs":"./assets/town2/smoke.mjs?v=ae3d6b8222",
+  "./assets/town2/sound.mjs":"./assets/town2/sound.mjs?v=ae3d6b8222",
+  "./assets/town2/stories.mjs":"./assets/town2/stories.mjs?v=ae3d6b8222",
+  "./assets/town2/track.mjs":"./assets/town2/track.mjs?v=ae3d6b8222",
+  "./assets/town2/weather.mjs":"./assets/town2/weather.mjs?v=ae3d6b8222"
 }}
 </script>
 </head>
@@ -98,13 +103,13 @@ html.ui-off #jobs,html.ui-off #toast,html.ui-off #snd,html.ui-off #chip,html.ui-
 <div id="grade" aria-hidden="true"></div>
 <div id="story" aria-live="polite"></div>
 <div id="card" aria-live="polite"><button aria-label="Close">×</button><b></b><div></div><button id="send" hidden>Send a parcel from here…</button></div>
-<div id="jobs" title="Tap to open or close"></div>
+<div id="stack"><div id="jobs" title="Tap to open or close"></div><div id="track" aria-live="polite"></div></div>
 <div id="toast" aria-live="polite"></div>
 <div id="hint"><span class="long">Tap anyone or anything · drag to explore · pinch or scroll to zoom · twist (or right-drag, Q/E) to turn</span><span class="short">Tap anyone or anything · drag · pinch to zoom · twist to turn</span></div>
 <div id="fail"><div>The new town could not start.<br><a href="toy-town.html">Open the current town</a>, or try a hard refresh (Ctrl+F5).<br><small id="why"></small><br><small>If it mentions WebGL, turn on hardware acceleration in the browser's settings (in Edge: edge://settings/system).</small></div></div>
 <script>if(/[?&]clean=1\b/.test(location.search))document.documentElement.classList.add('ui-off');</script>
 <script type="module">
-  import('./assets/town2/main.mjs?v=53e463f300').catch(e => { console.error(e); document.getElementById('why').textContent = (e && (e.name + ': ' + e.message)) || String(e); document.getElementById('fail').style.display = 'flex'; });
+  import('./assets/town2/main.mjs?v=ae3d6b8222').catch(e => { console.error(e); document.getElementById('why').textContent = (e && (e.name + ': ' + e.message)) || String(e); document.getElementById('fail').style.display = 'flex'; });
 </script>
 </body>
 </html>
