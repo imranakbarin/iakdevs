@@ -1093,3 +1093,19 @@ A `START` does not prohibit parallel edits. Avoid stepping on each other's uncom
 - Seen in a high-resolution render of the island: the mix reads well and the canopies sit over the doors.
 - Draw calls at the default view 3,215, triangles 2.15 M (3,387 / 2.18 M before the neighbours and houses: unchanged within noise).
 - Not verified: the canopy height on every model and at every zoom (measured on A and C; B's door was cropped out of my render), phone. Cache keys 3D v107, embed v118.
+
+### 2026-11-10 · Claude · START (new storybook town, phases 1–2: foundation and the Square, behind `?town=new`)
+- Request: "give me a plan to build this city differently … a town like Make Way for Noddy; the current city looks basic", then "go ahead and you build it, then a spec, and we can ask another model to test".
+- Plan agreed in chat: a hand-authored toy-box town (curved spline roads, a roundabout square, rolling hills, about 25 character landmarks, a named cast with homes and jobs) in our own designs (the style only, no copied characters or buildings). Built as a **separate page and module set**, so the current town is untouched until the owner approves the switch: `toy-town-new.html` + `assets/town2/{def,graph,sim,build,main}.mjs`; `toy-town.html?town=new` redirects to it.
+- This entry covers phase 1 (town definition, road graph, terrain, camera) and phase 2 (the Square and the first landmarks, a small cast and three vehicles so it is alive). Then `TOY_TOWN_NEW_SPEC.md` for the next model. Nothing in `assets/toy-town*.js` changes.
+
+### 2026-11-10 · Claude · DONE (new storybook town, phases 1–2)
+- **What exists**: `toy-town-new.html` + `assets/town2/{def,graph,sim,build,main}.mjs`. `toy-town.html?town=new` redirects to it; `index.html` passes `town` through to the embed. The current town's code is unchanged apart from that redirect line and the embed parameter list.
+- **World**: a wobbly island with `heightAt` (flat square, rolling country, Windmill Hill), a ring road round the square and four curved spokes ending in turning circles, zebra crossings, kerbs, pavements, a paved square with a green, lamp posts with bunting, benches, a signpost, hedges, 33 trees, wild flowers.
+- **Landmarks (14)**: clock tower (moving hands), bandstand, teapot café, toy shop (spinning top, balloons, alphabet blocks), loaf bakery, post office (envelope, pillar box), fire station (bell tower, ladder), police box, mushroom cottage, four cottages, windmill (turning sails).
+- **Life**: 10 named residents who appear and vanish only on doorsteps and walk the pavements door to door (177 outings in 15 simulated minutes); a bus (5 stops), a taxi and a post van on one closed, non-crossing tour, stopping for anyone on the road ahead.
+- **Cost**: 33 draw calls, 462 k triangles at the default view (the first build was 1.05 M: 3-segment rounded boxes).
+- **Tests**: `tests/toy-town-new.test.cjs` (definition, graph, 132 door-to-door walks on the pavements, tour never touches itself, 15 minutes of life) is in `scripts/check-toy-town.cjs`; `tests/toy-town-new-visual.cjs` (real WebGL, budgets, screenshots) is a step in the visual workflow. An old assertion on the embed parameter list was updated for `town`.
+- **Seen** (real WebGL, software GL): wide, the square close up, High Street, Cottage Lane, Windmill Hill, and from behind. Fixed along the way: road ribbons faced down (invisible), clouds sat between the camera and the town, benches stood in the flower ring.
+- **Not verified**: a real phone or a hardware GPU (frame rate unknown); the touch controls (written, not exercised); walkers crossing in front of vehicles in a long watch.
+- **Next**: `TOY_TOWN_NEW_SPEC.md` (phases 3–6, rules, budgets, how to test).

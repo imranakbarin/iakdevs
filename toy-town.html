@@ -84,6 +84,7 @@ html.ui-off:not(.embedded) #ui-show{display:block}
 #country-status{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%)}
 @media(max-height:460px){#card{top:calc(58px + env(safe-area-inset-top,0px))}#hint{display:none}}
 </style>
+<script>if(/[?&]town=new\b/.test(location.search))location.replace('toy-town-new.html'+location.search);   // the storybook rebuild lives on its own page until it replaces this one</script>
 <script type="importmap">
 {"imports":{
   "three":"https://cdn.jsdelivr.net/npm/three@0.187.0/build/three.module.js",

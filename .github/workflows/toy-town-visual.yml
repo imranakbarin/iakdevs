@@ -24,6 +24,10 @@ on:
       - 'tests/toy-town-rain.test.cjs'
       - 'tests/toy-town-bridges.test.cjs'
       - 'scripts/check-toy-town.cjs'
+      - 'assets/town2/**'
+      - 'toy-town-new.html'
+      - 'tests/toy-town-new.test.cjs'
+      - 'tests/toy-town-new-visual.cjs'
       - '.github/workflows/toy-town-visual.yml'
 
 permissions:
@@ -63,6 +67,9 @@ jobs:
           TOWN_VISUAL_SHARDS: 2
           TOWN_VISUAL_SHARD: ${{ matrix.shard }}
         run: node tests/toy-town-visual.cjs
+      - name: Render the new storybook town (real WebGL)
+        if: matrix.shard == 0
+        run: node tests/toy-town-new-visual.cjs
       - name: Keep rendered screenshots
         if: always()
         uses: actions/upload-artifact@v4
