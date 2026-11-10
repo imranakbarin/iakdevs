@@ -172,7 +172,7 @@ export const CAST = [
   {id: 'hay', wake: 5.5, sleep: 19, name: 'Farmer Hay', home: 'farm', coat: 'brown', hat: 'flat', round: [['barn', 70], ['bakery', 10], ['barn', 50], ['cafe', 12], ['farm', 45]]},
   {id: 'chalk', wake: 7, sleep: 19.5, name: 'Miss Chalk the teacher', home: 'c5', coat: 'sky', hat: 'bun', round: [['school', 95], ['cafe', 16], ['school', 55], ['c5', 40]], weekend: [['cafe', 40], ['mill', 25], ['c5', 70]]},
   {id: 'sparky', wake: 7.5, sleep: 19.5, name: 'Sparky the mechanic', home: 'c4', coat: 'orange', hat: 'cap', round: [['garage', 80], ['cafe', 14], ['garage', 55], ['c4', 40]]},
-  {id: 'salt', wake: 6, sleep: 20, name: 'Captain Salt', home: 'hut', coat: 'blue', hat: 'flat', round: [['hut', 60], ['platform:harbour', 0, 'ride:central'], ['bakery', 12], ['station', 10], ['platform:central', 0, 'ride:harbour'], ['hut', 50], ['hut', 40]]},
+  {id: 'salt', wake: 6, sleep: 20, name: 'Captain Salt', home: 'hut', coat: 'blue', hat: 'flat', round: [['hut', 25], ['pier', 60], ['platform:harbour', 0, 'ride:central'], ['bakery', 12], ['station', 10], ['platform:central', 0, 'ride:harbour'], ['hut', 40], ['hut', 30]]},
   {id: 'wick', wake: 4.0, sleep: 21.4, name: 'Mr Wick the lamplighter', home: 'c6', coat: 'teal', hat: 'flat', lamplighter: true, zone: 0, round: [['c6', 60], ['cafe', 20], ['c6', 60], ['bakery', 10]]},
   {id: 'dot', wake: 7.5, sleep: 18, name: 'Dot', home: 'c4', coat: 'yellow', hat: 'bobble', small: true, round: [['school', 60], ['toys', 25], ['cafe', 14], ['c2', 10], ['c4', 35]], weekend: [['toys', 30], ['cafe', 20], ['farm', 25], ['c4', 45]]},
   {id: 'dash', wake: 7.5, sleep: 18, name: 'Dash', home: 'c2', coat: 'sky', hat: 'bobble', small: true, round: [['school', 55], ['toys', 20], ['mushroom', 12], ['bakery', 10], ['c2', 35]], weekend: [['mushroom', 20], ['toys', 25], ['bakery', 12], ['c2', 55]]},
@@ -183,10 +183,16 @@ export const CAST = [
   {id: 'nell', wake: 7, sleep: 19.5, name: 'Nurse Nell', home: 'c11', coat: 'white', hat: 'bonnet', round: [['school', 22], ['cafe', 18], ['c4', 10], ['c11', 50]], weekend: [['cafe', 30], ['c4', 10], ['c11', 70]]},
   {id: 'otto', wake: 6, sleep: 19.5, name: 'Otto the stationmaster', home: 'c12', coat: 'blue', hat: 'cap', round: [['station', 90], ['cafe', 14], ['station', 60], ['c12', 40]]},
   {id: 'bea', wake: 8, sleep: 20, name: 'Bea the bandleader', home: 'c13', coat: 'yellow', hat: 'bow', round: [['toys', 20], ['cafe', 20], ['bakery', 12], ['c13', 50]]},
-  {id: 'finn', wake: 6, sleep: 20, name: 'Finn the fisherman', home: 'c14', coat: 'sky', hat: 'flat', round: [['hut', 60], ['platform:harbour', 0, 'ride:school'], ['school', 12], ['platform:school', 0, 'ride:harbour'], ['bakery', 10], ['hut', 50], ['c14', 45]]},
+  {id: 'finn', wake: 6, sleep: 20, name: 'Finn the fisherman', home: 'c14', coat: 'sky', hat: 'flat', round: [['hut', 15], ['pier', 80], ['hut', 20], ['bakery', 10], ['pier', 60], ['hut', 20], ['c14', 45]]},
   {id: 'june', wake: 8, sleep: 20, name: 'Auntie June', home: 'c15', coat: 'purple', hat: 'bun', round: [['bakery', 14], ['cafe', 30], ['post', 10], ['c15', 60]]},
+  {id: 'gill', wake: 6.5, sleep: 19.5, name: 'Mrs Gill the fishmonger', home: 'c14', coat: 'teal', hat: 'bun', round: [['hut', 25], ['cafe', 18], ['bakery', 10], ['hut', 30], ['c14', 45]]},
+  {id: 'apple', wake: 6.5, sleep: 19.5, name: 'Mr Apple the greengrocer', home: 'c11', coat: 'green', hat: 'cap', round: [['farm', 15], ['platform:farm', 0, 'ride:central'], ['bakery', 10], ['cafe', 16], ['platform:central', 0, 'ride:farm'], ['farm', 30], ['c11', 45]]},
+  {id: 'mint', wake: 7, sleep: 19.5, name: 'Dr Mint', home: 'c13', coat: 'white', hat: 'flat', round: [['c1', 8], ['mushroom', 10], ['platform:central', 0, 'ride:school'], ['school', 14], ['platform:school', 0, 'ride:central'], ['cafe', 16], ['c9', 8], ['c13', 45]]},
   {id: 'ted', wake: 6, sleep: 20, name: 'Ted the train driver', home: 'c8', coat: 'red', hat: 'cap', round: [['station', 100], ['cafe', 16], ['station', 70], ['c8', 40]]}
 ];
+
+import {JOBS} from './lives.mjs';
+for (const c of CAST) c.job = JOBS[c.id] || '';
 
 // Vehicles drive over the lane network (see graph.mjs): each one has a plan for where to go next and a garage (a building) it leaves and returns to.
 export const DAY = 480;   // seconds of simulation per day: 06:00 is the start of the morning, so a day is 8 minutes (a walk takes about an hour)
@@ -209,11 +215,16 @@ export const VEHICLES = [
 export const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 export const MARKET = {days: {2: {from: 9, to: 15, cap: 5, gap: [12, 22], name: 'Wednesday market'}, 6: {from: 9, to: 16, cap: 9, gap: [5, 11], name: 'Sunday market'}}};
 export const FREIGHT = [
-  {kind: 'mail', label: 'a mail sack', from: ['post'], to: ['c1', 'c3', 'c5', 'c9', 'c11', 'c13', 'school', 'hut', 'mill', 'farm', 'c14'], pick: ['pip'], drop: ['rudy', 'otto', 'finn', 'ivy', 'ted'], hours: [6.5, 11.5]},
-  {kind: 'milk', label: 'milk churns', from: ['barn'], to: ['bakery', 'cafe', 'hut', 'school', 'toys', 'station', 'market'], pick: ['hay'], drop: ['ivy', 'finn', 'nell', 'bea', 'otto'], hours: [6, 11]},
-  {kind: 'bread', label: 'a basket of loaves', from: ['bakery'], to: ['hut', 'school', 'mill', 'farm', 'c1', 'c9', 'c13', 'c14', 'market'], pick: ['crumb', 'june'], drop: ['otto', 'finn', 'ivy', 'rudy', 'nell', 'ted'], hours: [6.5, 11.5]}
+  {kind: 'fish', label: 'a basket of fresh fish', from: ['hut'], to: ['cafe', 'market', 'bakery', 'school', 'c1', 'c9', 'c13', 'c15'], pick: ['gill', 'finn', 'salt'], drop: ['ivy', 'nell', 'otto', 'rudy', 'ted'], hours: [8, 17], fish: true},
+  {kind: 'mail', label: 'a mail sack', from: ['post'], to: ['c1', 'c3', 'c5', 'c9', 'c11', 'c13', 'school', 'hut', 'mill', 'farm', 'c14'], pick: ['pip'], drop: ['rudy', 'otto', 'ivy', 'ted'], hours: [6.5, 11.5]},
+  {kind: 'milk', label: 'milk churns', from: ['barn'], to: ['bakery', 'cafe', 'hut', 'school', 'toys', 'station', 'market'], pick: ['hay'], drop: ['ivy', 'nell', 'bea', 'otto'], hours: [6, 11]},
+  {kind: 'bread', label: 'a basket of loaves', from: ['bakery'], to: ['hut', 'school', 'mill', 'farm', 'c1', 'c9', 'c13', 'c14', 'market'], pick: ['crumb', 'june'], drop: ['otto', 'ivy', 'rudy', 'nell', 'ted'], hours: [6.5, 11.5]}
 ];
-export const CARGO_COLOURS = {mail: '#efe6cc', milk: '#ffffff', bread: '#d99a55', parcel: '#f2c14e'};
+export const CARGO_COLOURS = {mail: '#efe6cc', milk: '#ffffff', bread: '#d99a55', parcel: '#f2c14e', fish: '#7fb5d6'};
+// Fishing: the fishermen stand at the end of the pier; baskets of fish go to the café, the market and the shops, and the town pays for them.
+export const FISH = {price: 2, every: 11, perBasket: 3};
+// On market days these three stand at their stalls from the opening to the closing.
+export const VENDORS = ['gill', 'apple', 'hay'];
 // The bus lines: each stops (waits a few seconds) at the doorstep of these buildings, one after another, round and round.
 export const BUS_LINES = {a: ['cafe', 'fire', 'hut', 'station', 'school', 'c1', 'farm', 'mill'], b: ['mill', 'farm', 'c1', 'school', 'station', 'hut', 'fire', 'cafe']};
 

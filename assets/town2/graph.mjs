@@ -4,7 +4,7 @@
 //  - vehicles drive on lanes: each two-way road has a lane each way (keeping left), the inner ring one lane clockwise. A vehicle plans a route as a
 //    list of lanes (shortest way by Dijkstra) which `routeLine` turns into one smooth line to follow;
 //  - the railway is a closed loop (`loop`) round the whole town.
-import {SQUARE, ROADS, NODES, ROAD, BUILDINGS, LAMPS, STATIONS, trackPts, loopPt, doorOf} from './def.mjs';
+import {SQUARE, ROADS, NODES, ROAD, BUILDINGS, LAMPS, STATIONS, trackPts, loopPt, doorOf, PIER} from './def.mjs';
 import {curve, STEP} from './curve.mjs';
 
 export {curve};
@@ -68,6 +68,8 @@ export function buildGraph() {
   const doors = {};
   for (const b of BUILDINGS) if (b.door) { const d = doorOf(b); doors[b.id] = {x: d.x, z: d.z, ...attach(d.x, d.z)}; }
   for (const l of LAMPS) doors[l.id] = {x: l.spot[0], z: l.spot[1], ...attach(l.spot[0], l.spot[1])};   // the lamplighter's stops walk like doorsteps
+  // the end of the pier is a place too: fishermen stand there
+  doors.pier = {x: PIER.x1 - .55, z: PIER.z, ...attach(PIER.x1 - .55, PIER.z)};
   // each station's platform is a place people walk to and stand at: 'platform:<station id>'
   for (const st of STATIONS) { const p = loopPt(st.t), q = along(loop, loopS(p[0], p[1])), x = q.x - q.tz * 1.05, z = q.z + q.tx * 1.05; doors['platform:' + st.id] = {x, z, ...attach(x, z)}; }
   function walk(fromId, toId) {

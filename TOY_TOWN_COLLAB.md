@@ -1229,3 +1229,11 @@ A `START` does not prohibit parallel edits. Avoid stepping on each other's uncom
 - **Tests**: week and weekday wrap, school closed at weekends, set pieces in every season and only on their days, memory unit tests and after two days friends and favourite places exist, timetable accuracy against real arrivals, stages move forward and the parcel is logged under its id; visual: Sunday market open and Monday shut with six stations, the tracker on desktop and phone (no overlap with the buttons).
 - **Not verified**: a real phone; the feel of friendships (the numbers are my guesses).
 
+### 2026-11-10 · Claude · DONE (new storybook town, follow-up 11: fishing, professions and a story for everyone)
+- **Request (owner)**: fishing should be part of the town and a fisherman must catch fish and sell them inside the town; bring in different professions and give each person their stories.
+- **Fishing**: Finn and Captain Salt fish from the end of the pier (rod and float, facing the sea); the catch waits at the hut and goes to the café, the market, the bakery, the school or a house as baskets of fish on the same freight chain as mail and bread; each fish sold pays 2 coins, shown on the work board. Market visitors buy fish too.
+- **Professions**: everybody has a job line on their card; new residents Mrs Gill (fishmonger), Mr Apple (greengrocer) and Dr Mint (house calls and the school); on market days Gill, Apple and Farmer Hay stand at their stalls.
+- **Stories**: 31 personal stories (`lives.mjs`), at least one per person (the baker tests a recipe, the constable loses his helmet, the stationmaster repaints the timetable, the doctor does house calls, and so on); cards show the story being told or how many have been told.
+- **Side effects I had to handle**: the pier is walkable (tests allow walkers there), Finn is no longer a general carrier so he keeps fishing, first-morning starts are staggered by `i % 13` (late cast members used to leave around 10:00), crowded-scene draw calls rose to about 120 (budget raised to 135), and a few simulation thresholds moved (outings, rides) because the cast grew.
+- **Not verified**: a real phone; the fishermen's rod is small at the default zoom; the amount of fish and coins is a guess.
+

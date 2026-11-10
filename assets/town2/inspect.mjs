@@ -1,5 +1,5 @@
 // New Toy Town: what to say about a thing that was tapped. Pure (no THREE, no DOM): takes the sim and returns {title, lines}.
-import {BUILDINGS, CAST, STATIONS, DAY, DAYS, MARKET, building} from './def.mjs';
+import {BUILDINGS, CAST, STATIONS, DAY, DAYS, MARKET, VENDORS, building} from './def.mjs';
 import {STORIES} from './stories.mjs';
 import {top, bond} from './memory.mjs';
 import {stageOf} from './track.mjs';
@@ -20,9 +20,13 @@ export function describeResident(sim, r) {
     else lines.push(r.pause > 0 && r.look ? 'Stopping to say hello to ' + r.look.def.name : (err ? 'Off on an errand to ' : 'On the way to ') + nameOf(r.target));
     const st = sim.story.current && STORIES.find(s => s.id === sim.story.current.id);
     if (st && st.go.some(([who]) => who === r.id)) lines.push('Part of today\'s story: ' + st.title);
-  } else lines.push(r.at === 'market' ? 'Browsing the stalls at the market' : r.onPlatform ? 'On the platform at ' + stationName(sim, r.at.replace('platform:', '')) : 'Indoors at ' + nameOf(r.at));
+  } else lines.push(r.at === 'market' ? (VENDORS.includes(r.id) && sim.market.open ? 'Selling at the market' : 'Browsing the stalls at the market') : r.onPlatform ? 'On the platform at ' + stationName(sim, r.at.replace('platform:', '')) : 'Indoors at ' + nameOf(r.at));
   if (load) lines.splice(1, 0, 'Carrying ' + load.label + ' to ' + nameOf(load.to));
   if (r.mood) lines.splice(Math.min(lines.length, load ? 2 : 1), 0, 'Feeling ' + r.mood.label + (r.mood.why ? ': ' + r.mood.why : ''));
+  if (r.def.job) lines.push('Job: ' + r.def.job);
+  if (r.caught) lines.push('Has caught ' + r.caught + ' fish so far');
+  if (r.at === 'pier' && r.state === 'inside') lines.splice(0, 1, 'Fishing from the end of the pier');
+  { const mine = STORIES.filter(x => x.star === r.id); if (mine.length) { const told = mine.filter(x => (sim.story.count[x.id] || 0) > 0).length, cur = sim.story.current && mine.find(x => x.id === sim.story.current.id); lines.push((cur ? 'Their story right now: ' + cur.title : 'Stories told: ' + told + ' of ' + mine.length)); } }
   if (r.friends) { const fr = top(r.friends, 2, 2).map(id => { const o = sim.residents.find(x => x.id === id); return o ? o.def.name + ' (' + bond(r.friends[id]) + ')' : null; }).filter(Boolean); if (fr.length) lines.push('Friends with ' + fr.join(' and ')); }
   if (r.visits) { const fav = top(r.visits, 1, 2)[0]; if (fav && nameOf(fav)) lines.push('Often at ' + nameOf(fav)); }
   lines.push('Lives at ' + nameOf(r.def.home));
