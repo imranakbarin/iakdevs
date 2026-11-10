@@ -14,9 +14,9 @@ log a START entry before touching code, a DONE entry after, no force pushes).
 | 1 | Town definition, road graph, terrain, camera, page | **Done** |
 | 2 | The Square and first landmarks (14 buildings), a cast of 10, 3 vehicles | **Done** |
 | 3 | Remaining districts: station and shuttle train, school with playground, farm with animals, garage, harbour hut with a jetty and boat, pond with ducks, a fifth cottage | **Done** (no stream, no extra cottages) |
-| 4 | Full cast life: timetables by hour, named vehicles (milk float, tractor, fire engine, ice-cream van), a train | Not started |
-| 5 | Day and night, weather, small stories, the daily-news staging | Not started |
-| 6 | Phone performance pass, then make it the default town | Not started |
+| 4 | Full cast life: timetables by hour, named vehicles (milk float, tractor, fire engine, ice-cream van), a train | **Done** |
+| 5 | Day and night, weather, small stories, the daily-news staging | **Done** (no sound, no tapping on things, no lamplighter figure: lanterns just glow) |
+| 6 | Phone performance pass, then make it the default town | Adaptive resolution **done**; measuring on a real phone and the switch are **open** (the owner decides the switch) |
 
 It is live at `toy-town-new.html` (or `toy-town.html?town=new`, or `index.html?town=new#toy-town`). The current
 town is untouched and stays the default until the owner approves the switch.
@@ -27,14 +27,17 @@ town is untouched and stays the default until the owner approves the switch.
 |---|---|---|
 | `assets/town2/def.mjs` | The town as data: palette, island, roads, buildings, cast, vehicles, trees, `heightAt` | nothing |
 | `assets/town2/graph.mjs` | Road graph, door-to-door walks, the vehicles' tour | `def` |
-| `assets/town2/sim.mjs` | Who is where and when (residents, vehicles) | `def`, `graph` |
+| `assets/town2/weather.mjs` | Spells of clear, cloud, rain, drizzle; `rain` eases 0..1 | `def` |
+| `assets/town2/stories.mjs` | The small stories (data) and `newsStory(title, category)` | nothing |
+| `assets/town2/sky.mjs` | `skyAt(hour, rain)`: sky, fog, sea, sun/moon, window glow, stars (hex strings) | nothing |
+| `assets/town2/sim.mjs` | Who is where and when (residents, vehicles, weather, stories) | `def`, `graph`, `weather`, `stories` |
 | `assets/town2/build.mjs` | Geometry builders (THREE) | `def`, `graph`, `three` |
 | `assets/town2/main.mjs` | Renderer, camera, controls, loop, test hooks | all |
 | `toy-town-new.html` | The page (import map for three 0.187 from the CDN) | |
 | `tests/toy-town-new.test.cjs` | Logic test, no browser | |
 | `tests/toy-town-new-visual.cjs` | Real-WebGL check and screenshots | |
 
-Rule: `def`, `graph` and `sim` are pure (no THREE, no DOM), so they run in Node. Keep it that way.
+Rule: `def`, `graph`, `weather`, `stories`, `sky` and `sim` are pure (no THREE, no DOM), so they run in Node. Keep it that way.
 
 ## 3. World model
 
@@ -59,9 +62,9 @@ Rule: `def`, `graph` and `sim` are pure (no THREE, no DOM), so they run in Node.
   spokes needs `buildGraph` and `tour()` extending (the tour assumes a tree of spokes on one ring).
 - **A building:** add to `BUILDINGS` and write `BUILD.<type>(bag, def, anim)` in `build.mjs`. It must be
   ≥ 1.9 from other buildings and ≥ 0.95 from every road sample (the logic test checks both).
-- **A resident:** add to `CAST` with a `home` and a `round` of `[buildingId, secondsToStay]`. Every place in
+- **A resident:** add to `CAST` with a `home`, optional `wake`/`sleep` hours and a `round` of `[buildingId, secondsToStay]`. Every place in
   a round must have a door.
-- **A vehicle:** add to `VEHICLES` (`kind`: `car`, `van`, `bus`); new kinds need a branch in `buildVehicle`.
+- **A vehicle:** add to `VEHICLES` (`kind`: `car`, `van`, `bus`, `float`, `tractor`, `icecream`, `fire`; new kinds need a branch in `buildVehicle`) with a `home` building (its garage), the hours it works (`from`, `to`) or `onCall: true`. Vehicles are parked (invisible) in their garage outside their hours, leave and return only by their own garage, and an `onCall` one (the fire engine, `sim.dispatchFire()`) goes out for a run round the town and comes back.
 
 ## 4. Behaviour rules (tested)
 
@@ -73,7 +76,19 @@ Rule: `def`, `graph` and `sim` are pure (no THREE, no DOM), so they run in Node.
    ring to an exit, out along the spoke on the left, round the turning circle, back on the other side, on
    round the ring. It never crosses itself, so a gap along the tour is all the collision avoidance needed.
    Vehicles also stop for anyone on the road just ahead, and the bus waits 4 s at each of `BUS_STOPS`.
-4. **Determinism.** `createSim(seed)` gives the same town life for the same seed and step sequence.
+4. **The day.** One day is `DAY` = 480 s of simulation, starting at 06:00 (`sim.hour`, `sim.setHour(h)`). Residents wake and
+   sleep by their own hours and everybody heads home after hours, so the town is nearly empty at night. Vehicles
+   work their hours, then drive on to their own garage (never any other) and park out of sight.
+5. **Weather.** `sim.weather` (`kind`, `rain`, `cloud`) runs in the sim. In rain vehicles slow by up to 18 %, walkers speed up by 15 %,
+   every resident puts up an umbrella (a small hidden mesh each, shown when `rain > .25`), streaks fall round the view,
+   and the sky and sun dull. `sim.weather.force('rain', seconds)` makes it rain.
+6. **Small stories.** `sim.story` runs one story at a time from `STORIES`: when its hours, weather and cast fit, each resident in it gets
+   a queue of `errands` (`[place, seconds]`) that they walk door to door before resuming their round. The least-seen stories are favoured and
+   each has a 180 s cooldown. The news stages the same stories: `main.mjs` reads `assets/toy-town-news.json` (light headlines), maps each with
+   `newsStory(title, category)` and calls `sim.stage(id, headline)`; it waits for half the cast to be up, then the caption shows "In the news: ...".
+7. **Light.** `sky.mjs` gives dawn about 06:00, day, dusk about 18:30 and a dark blue night; at night every window pane and lantern glows
+   (one extra draw call: the `glow` mesh, collected by `Bag` pieces made with `glow: true`) and stars and a moon appear.
+8. **Determinism.** `createSim(seed)` gives the same town life for the same seed and step sequence.
 
 ## 5. Art rules
 
@@ -93,8 +108,8 @@ Rule: `def`, `graph` and `sim` are pure (no THREE, no DOM), so they run in Node.
 
 | | Now | Limit |
 |---|---|---|
-| Draw calls, default view | 58 | 80 |
-| Triangles, default view | 600 k | 800 k |
+| Draw calls, default view | 64–66 | 80 (night 62, rain 69) |
+| Triangles, default view | 608 k | 800 k |
 | Residents out at once | ~4–7 | — |
 
 The limits are asserted in `tests/toy-town-new-visual.cjs`. Rounded boxes use 1 or 2 segments and small
@@ -103,7 +118,8 @@ spheres 8; keep that discipline (the first version was 1.05 M triangles from 3-s
 ## 7. Test hooks (`window.ToyTownNew`)
 
 - `sim`, `scene`, `camera`, `renderer`, `view`
-- `info()` → `{calls, triangles, residentsOut, clock}`
+- `info()` → `{calls, triangles, residentsOut, clock, pixelRatio, story, rain}`
+- `setHour(h)`, `setWeather('rain'|'clear'|..., seconds)`; `?h=<hour>` starts at an hour, `?news=0` turns the news staging off, `?tune=0` turns the adaptive resolution off
 - `look(x, z, dist, yaw)` puts the camera there and renders
 - `advance(seconds)` steps the simulation and renders
 - `freeze(on)` stops the animation loop (use before `look`/`advance` in screenshots)
@@ -133,7 +149,10 @@ visual step uploads `new-town-*.png` (wide, square, high street, cottage lane, w
 
 ## 9. Known gaps
 
-- No day and night, weather, sound, news staging, or tapping on things yet (phases 4–5).
+- No sound, tapping on things, puddles, snow or seasons. No lamplighter figure (lanterns simply glow).
+- Adaptive resolution (steps the pixel ratio down after 2 s under ~24 fps, and drops the shadow when already at 1.0) has not been measured on a real phone.
+- Vehicles cannot overtake, so a late one can queue behind a slow tractor.
+- Story captions are English text from a data file; the headline text is only ever shown with `textContent`.
 - Vehicles do not give way to each other at the ring (they do not need to: one tour), so it never looks like
   a junction negotiation.
 - Walkers do not avoid each other.

@@ -2,7 +2,9 @@
 import * as THREE from 'three';
 import {PALETTE as P, ISLAND, CAST, VEHICLES, TRACK, PADDOCK, POND, JETTY, heightAt, rand} from './def.mjs';
 import {createSim} from './sim.mjs';
-import {buildTown, buildResident, buildVehicle, buildClouds, buildTrain, buildBoat, buildAnimal} from './build.mjs';
+import {buildTown, buildResident, buildVehicle, buildClouds, buildTrain, buildBoat, buildAnimal, buildSky, buildUmbrella, buildRain} from './build.mjs';
+import {skyAt} from './sky.mjs';
+import {newsStory} from './stories.mjs';
 
 const canvas = document.getElementById('town'), q = new URLSearchParams(location.search);
 const renderer = new THREE.WebGLRenderer({canvas, antialias: true, powerPreference: 'high-performance'});
@@ -17,10 +19,15 @@ sun.shadow.mapSize.set(phone ? 1024 : 2048, phone ? 1024 : 2048); Object.assign(
 scene.add(sun, sun.target);
 
 const sim = createSim(7), built = buildTown(sim.graph);
-scene.add(built.ground, built.sea, built.town); for (const m of Object.values(built.moving)) scene.add(m.group);
+scene.add(built.ground, built.sea, built.town, built.glow); for (const m of Object.values(built.moving)) scene.add(m.group);
 const clouds = buildClouds(); scene.add(clouds);
+const sky = buildSky(); scene.add(sky);
+const hemi = scene.children.find(o => o.isHemisphereLight), seaMat = built.sea.material, tmp = new THREE.Color();
+if (q.get('h')) sim.setHour(+q.get('h'));
 const people = new Map(), cars = new Map();
-sim.residents.forEach((r, i) => { const g = buildResident(r.def, i, built.material); scene.add(g); people.set(r.id, g); });
+const brollies = new Map(), BROLLY = ['red', 'yellow', 'pink', 'blue', 'purple', 'orange', 'teal'];
+sim.residents.forEach((r, i) => { const g = buildResident(r.def, i, built.material), u = buildUmbrella(built.material, BROLLY[i % BROLLY.length]); g.add(u); brollies.set(r.id, u); scene.add(g); people.set(r.id, g); });
+const rain = buildRain(); scene.add(rain);
 sim.vehicles.forEach(v => { const g = buildVehicle(v.def, built.material); scene.add(g); cars.set(v.id, g); });
 
 // Things that live on their own: the train, the boat at the jetty, the farm animals and the ducks on the pond.
@@ -71,8 +78,37 @@ canvas.addEventListener('contextmenu', e => e.preventDefault());
 addEventListener('keydown', e => { const k = e.key.toLowerCase(); if (k === 'q') view.tyaw += .3; if (k === 'e') view.tyaw -= .3; if (k === '+' || k === '=') view.tdist = clamp(7, view.tdist * .85, 64); if (k === '-') view.tdist = clamp(7, view.tdist / .85, 64); if (k === '0') { view.tx = 0; view.tz = .4; view.tyaw = 0; fit(); } });
 addEventListener('resize', () => { resize(); });
 
+/* ---- the day's news: each light headline stages one of the small stories, one after another ---- */
+const storyEl = document.getElementById('story'); let headlines = [], newsAt = 40, newsIdx = 0, shown = '';
+if (q.get('news') !== '0') fetch(new URL('../toy-town-news.json', import.meta.url)).then(r => r.ok ? r.json() : null).then(d => { headlines = ((d && d.stories) || []).filter(s => s.tone === 'light' && s.title).slice(0, 12); }).catch(() => {});
+function news() {
+  if (sim.story.current || sim.story.pending || sim.clock < newsAt || !headlines.length) return;
+  const h = headlines[newsIdx++ % headlines.length], m = newsStory(h.title, h.category || '');
+  if (m.weather) sim.weather.force(m.weather, 70);
+  sim.stage(m.story, h.title); newsAt = sim.clock + 90;
+}
+function caption() {
+  const c = sim.story.current, text = c ? (c.headline || '') + '|' + c.title : '';
+  if (text === shown) return; shown = text; if (!storyEl) return;
+  if (!c) { storyEl.classList.remove('on'); return; }
+  storyEl.textContent = ''; storyEl.append(c.title);
+  if (c.headline) { const sm = document.createElement('small'); sm.textContent = 'In the news: ' + c.headline; storyEl.append(sm); }
+  storyEl.classList.add('on');
+}
+
 /* ---- the loop ---- */
 let last = 0, frozen = false, time = 0;
+// The light follows the hour: sky, fog, sea, sun or moon, lit windows and lanterns, stars.
+function weatherLight() {
+  const L = skyAt(sim.hour, sim.weather.rain);
+  scene.background.set(L.sky); scene.fog.color.set(L.fog); seaMat.color.set(L.sea);
+  hemi.color.set(L.hemiSky); hemi.groundColor.set(L.hemiGround); hemi.intensity = L.hemiI;
+  sun.color.set(L.sunColor); sun.intensity = L.sunI; sun.position.set(...L.sunPos);
+  const gm = built.glow.material; gm.opacity = L.glow; built.glow.visible = L.glow > .02;
+  sky.visible = L.stars > .02; sky.userData.stars.material.opacity = L.stars; sky.userData.moon.material.opacity = L.stars * .95;
+  { const r = sim.weather.rain; for (const u of brollies.values()) u.visible = r > .25; rain.position.set(view.x, 0, view.z); rain.userData.update(time, r > .02 ? r : 0); }
+  sky.position.copy(camera.position); document.body.style.background = L.sky; return L;
+}
 function sync(dt) {
   time += dt;
   for (const r of sim.residents) {
@@ -81,7 +117,8 @@ function sync(dt) {
     g.position.set(r.x, y + .02 + Math.abs(Math.sin(step)) * .035, r.z); g.rotation.set(0, Math.atan2(r.tx, r.tz), Math.sin(step) * .09);
   }
   for (const v of sim.vehicles) {
-    const g = cars.get(v.id), y = heightAt(v.x, v.z), ahead = heightAt(v.x + v.tx * .3, v.z + v.tz * .3);
+    const g = cars.get(v.id); g.visible = v.state !== 'parked'; if (!g.visible) continue;
+    const y = heightAt(v.x, v.z), ahead = heightAt(v.x + v.tx * .3, v.z + v.tz * .3);
     g.position.set(v.x, y + .035 + (v.v > .05 ? Math.abs(Math.sin(time * 14 + v.s)) * .008 : 0), v.z); g.rotation.set(-Math.atan2(ahead - y, .3), Math.atan2(v.tx, v.tz), 0, 'YXZ');
   }
   { const t = sim.train, y = heightAt(TRACK.x, t.z) + .06; train.position.set(TRACK.x, y, t.z); train.rotation.y = Math.PI; }
@@ -90,13 +127,22 @@ function sync(dt) {
   built.moving.minute.inner.rotation.z = -time * .1; built.moving.hour.inner.rotation.z = -time * .1 / 12;
   clouds.rotation.y = time * .012;
   const k = Math.min(1, dt * 6); view.x += (view.tx - view.x) * k; view.z += (view.tz - view.z) * k; view.yaw += (view.tyaw - view.yaw) * k; view.dist += (view.tdist - view.dist) * k;
-  placeCamera();
+  placeCamera(); weatherLight(); news(); caption();
+}
+// A phone pass: if frames run slow (under ~24 fps for two seconds) the render resolution steps down, and creeps back up when there is room.
+const maxPR = Math.min(devicePixelRatio || 1, phone ? 1.5 : 2); let slow = 0, fast = 0, spent = 0, frames = 0;
+function tune(dt) {
+  if (q.get('tune') === '0') return; spent += dt; frames++; if (spent < 2) return;
+  const avg = spent / frames; spent = 0; frames = 0;
+  const pr = renderer.getPixelRatio();
+  if (avg > .042 && pr > .75) { renderer.setPixelRatio(Math.max(.75, pr - .25)); renderer.setSize(innerWidth, innerHeight, false); slow++; fast = 0; if (pr <= 1 && sun.castShadow) { sun.castShadow = false; } }
+  else if (avg < .022 && pr < maxPR && ++fast >= 3) { renderer.setPixelRatio(Math.min(maxPR, pr + .25)); renderer.setSize(innerWidth, innerHeight, false); fast = 0; }
 }
 function frame(t) {
   requestAnimationFrame(frame);
   const dt = Math.min(.05, last ? (t - last) / 1000 : 0); last = t;
   if (frozen || document.hidden) return;
-  sim.update(dt); sync(dt); renderer.render(scene, camera);
+  sim.update(dt); sync(dt); renderer.render(scene, camera); tune(dt);
 }
 resize(); fit(); placeCamera(); requestAnimationFrame(frame);
 const hint = document.getElementById('hint'); if (hint) setTimeout(() => { hint.style.opacity = '0'; }, 6000);
@@ -104,8 +150,10 @@ const hint = document.getElementById('hint'); if (hint) setTimeout(() => { hint.
 // Hooks for tests and screenshots.
 window.ToyTownNew = {
   sim, scene, camera, renderer, view,
-  info: () => ({calls: renderer.info.render.calls, triangles: renderer.info.render.triangles, residentsOut: sim.residents.filter(r => r.state === 'walking').length, clock: sim.clock}),
+  hour: () => sim.hour, setHour(h) { sim.setHour(h); sync(0); renderer.render(scene, camera); },
+  info: () => ({pixelRatio: renderer.getPixelRatio(), story: sim.story.current && sim.story.current.id, rain: +sim.weather.rain.toFixed(2), calls: renderer.info.render.calls, triangles: renderer.info.render.triangles, residentsOut: sim.residents.filter(r => r.state === 'walking').length, clock: sim.clock}),
   look(x, z, dist, yaw = 0) { Object.assign(view, {x, z, dist, yaw, tx: x, tz: z, tdist: dist, tyaw: yaw}); placeCamera(); renderer.render(scene, camera); },
   advance(seconds) { for (let t = 0; t < seconds; t += .05) sim.update(.05); sync(0); renderer.render(scene, camera); },
+  setWeather(kind, seconds = 600) { sim.weather.force(kind, seconds); },
   freeze(on = true) { frozen = on; }
 };

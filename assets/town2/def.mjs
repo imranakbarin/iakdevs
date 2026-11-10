@@ -51,7 +51,7 @@ export const BUILDINGS = [
   {id: 'bandstand', type: 'bandstand', name: 'the Bandstand', x: -3.3, z: 3.3, ry: 3 * Q, door: 0},
   {id: 'post', type: 'postOffice', name: 'the Post Office', x: 5.7, z: -1.25, ry: 0, door: .95},
   {id: 'fire', type: 'fireStation', name: 'the Fire Station', x: 8.5, z: -2.1, ry: -.12, door: 1.05},
-  {id: 'police', type: 'policeBox', name: 'the Police Box', x: 6.9, z: 1.75, ry: Math.PI, door: .6},
+  {id: 'police', type: 'policeBox', name: "the Constable's Kiosk", x: 6.9, z: 1.75, ry: Math.PI, door: .6},
   {id: 'mushroom', type: 'mushroomCottage', name: 'Mushroom Cottage', x: -5.75, z: -3.05, ry: .1, door: .95},
   at('c1', 'cottage', 'Bluebell Cottage', -8.2, -2.2, [-8, -.6], .85, {colour: 'sky', roof: 'red'}),
   at('c2', 'cottage', 'Buttercup Cottage', -5.6, 1.9, [-5, -.4], .85, {colour: 'yellow', roof: 'teal'}),
@@ -68,28 +68,35 @@ export const BUILDINGS = [
 ];
 
 // The cast. Each lives behind one door and has a round of places to go; `stay` is seconds spent at each.
+// `wake`/`sleep` are the hours they are about; before and after they are indoors (the defaults are 6.5 and 20.5).
 export const CAST = [
-  {id: 'crumb', name: 'Mr Crumb the baker', home: 'c2', coat: 'cream', hat: 'chef', round: [['bakery', 70], ['cafe', 18], ['bakery', 55], ['c2', 40]]},
-  {id: 'pott', name: 'Mrs Pott', home: 'c1', coat: 'pink', hat: 'bun', round: [['cafe', 80], ['bakery', 14], ['cafe', 60], ['c1', 45]]},
-  {id: 'bell', name: 'Constable Bell', home: 'c3', coat: 'blue', hat: 'helmet', round: [['police', 30], ['toys', 8], ['post', 8], ['cafe', 12], ['garage', 8], ['police', 25], ['c3', 40]]},
-  {id: 'pip', name: 'Postie Pip', home: 'c4', coat: 'red', hat: 'cap', round: [['post', 25], ['mushroom', 6], ['c1', 6], ['c3', 6], ['c2', 6], ['school', 6], ['mill', 6], ['post', 20], ['c4', 45]]},
-  {id: 'tilly', name: 'Tilly from the toy shop', home: 'c5', coat: 'purple', hat: 'bow', round: [['toys', 85], ['cafe', 16], ['toys', 50], ['c5', 40]]},
-  {id: 'embers', name: 'Chief Embers', home: 'c3', coat: 'orange', hat: 'fire', round: [['fire', 75], ['bakery', 12], ['fire', 60], ['c3', 40]]},
-  {id: 'moss', name: 'Granny Moss', home: 'mushroom', coat: 'green', hat: 'bonnet', round: [['cafe', 30], ['bakery', 12], ['post', 10], ['station', 14], ['mushroom', 60]]},
-  {id: 'sprocket', name: 'Mr Sprocket the miller', home: 'mill', coat: 'teal', hat: 'flat', round: [['bakery', 15], ['cafe', 20], ['barn', 14], ['mill', 80]]},
-  {id: 'hay', name: 'Farmer Hay', home: 'farm', coat: 'brown', hat: 'flat', round: [['barn', 70], ['bakery', 10], ['barn', 50], ['cafe', 12], ['farm', 45]]},
-  {id: 'chalk', name: 'Miss Chalk the teacher', home: 'c5', coat: 'sky', hat: 'bun', round: [['school', 95], ['cafe', 16], ['school', 55], ['c5', 40]]},
-  {id: 'sparky', name: 'Sparky the mechanic', home: 'c4', coat: 'orange', hat: 'cap', round: [['garage', 80], ['cafe', 14], ['garage', 55], ['c4', 40]]},
-  {id: 'salt', name: 'Captain Salt', home: 'hut', coat: 'blue', hat: 'flat', round: [['hut', 60], ['bakery', 12], ['hut', 50], ['station', 10], ['hut', 40]]},
-  {id: 'dot', name: 'Dot', home: 'c4', coat: 'yellow', hat: 'bobble', small: true, round: [['school', 60], ['toys', 25], ['cafe', 14], ['c2', 10], ['c4', 35]]},
-  {id: 'dash', name: 'Dash', home: 'c2', coat: 'sky', hat: 'bobble', small: true, round: [['school', 55], ['toys', 20], ['mushroom', 12], ['bakery', 10], ['c2', 35]]}
+  {id: 'crumb', wake: 5.5, sleep: 18.5, name: 'Mr Crumb the baker', home: 'c2', coat: 'cream', hat: 'chef', round: [['bakery', 70], ['cafe', 18], ['bakery', 55], ['c2', 40]]},
+  {id: 'pott', wake: 7.5, sleep: 20, name: 'Mrs Pott', home: 'c1', coat: 'pink', hat: 'bun', round: [['cafe', 80], ['bakery', 14], ['cafe', 60], ['c1', 45]]},
+  {id: 'bell', wake: 6.5, sleep: 21, name: 'Constable Bell', home: 'c3', coat: 'blue', hat: 'helmet', round: [['police', 30], ['toys', 8], ['post', 8], ['cafe', 12], ['garage', 8], ['police', 25], ['c3', 40]]},
+  {id: 'pip', wake: 6.5, sleep: 18.5, name: 'Postie Pip', home: 'c4', coat: 'red', hat: 'cap', round: [['post', 25], ['mushroom', 6], ['c1', 6], ['c3', 6], ['c2', 6], ['school', 6], ['mill', 6], ['post', 20], ['c4', 45]]},
+  {id: 'tilly', wake: 8, sleep: 19.5, name: 'Tilly from the toy shop', home: 'c5', coat: 'purple', hat: 'bow', round: [['toys', 85], ['cafe', 16], ['toys', 50], ['c5', 40]]},
+  {id: 'embers', wake: 6.5, sleep: 20, name: 'Chief Embers', home: 'c3', coat: 'orange', hat: 'fire', round: [['fire', 75], ['bakery', 12], ['fire', 60], ['c3', 40]]},
+  {id: 'moss', wake: 7.5, sleep: 19.5, name: 'Granny Moss', home: 'mushroom', coat: 'green', hat: 'bonnet', round: [['cafe', 30], ['bakery', 12], ['post', 10], ['station', 14], ['mushroom', 60]]},
+  {id: 'sprocket', wake: 6, sleep: 19, name: 'Mr Sprocket the miller', home: 'mill', coat: 'teal', hat: 'flat', round: [['bakery', 15], ['cafe', 20], ['barn', 14], ['mill', 80]]},
+  {id: 'hay', wake: 5.5, sleep: 19, name: 'Farmer Hay', home: 'farm', coat: 'brown', hat: 'flat', round: [['barn', 70], ['bakery', 10], ['barn', 50], ['cafe', 12], ['farm', 45]]},
+  {id: 'chalk', wake: 7, sleep: 19.5, name: 'Miss Chalk the teacher', home: 'c5', coat: 'sky', hat: 'bun', round: [['school', 95], ['cafe', 16], ['school', 55], ['c5', 40]]},
+  {id: 'sparky', wake: 7.5, sleep: 19.5, name: 'Sparky the mechanic', home: 'c4', coat: 'orange', hat: 'cap', round: [['garage', 80], ['cafe', 14], ['garage', 55], ['c4', 40]]},
+  {id: 'salt', wake: 6, sleep: 20, name: 'Captain Salt', home: 'hut', coat: 'blue', hat: 'flat', round: [['hut', 60], ['bakery', 12], ['hut', 50], ['station', 10], ['hut', 40]]},
+  {id: 'dot', wake: 7.5, sleep: 18, name: 'Dot', home: 'c4', coat: 'yellow', hat: 'bobble', small: true, round: [['school', 60], ['toys', 25], ['cafe', 14], ['c2', 10], ['c4', 35]]},
+  {id: 'dash', wake: 7.5, sleep: 18, name: 'Dash', home: 'c2', coat: 'sky', hat: 'bobble', small: true, round: [['school', 55], ['toys', 20], ['mushroom', 12], ['bakery', 10], ['c2', 35]]}
 ];
 
 // Vehicles drive one closed tour of the whole road network (see graph.mjs) at their own pace.
+export const DAY = 480;   // seconds of simulation per day: 06:00 is the start of the morning, so a day is 8 minutes (a walk takes about an hour)
+// Each vehicle lives in a building (its garage), leaves it at `from` o'clock and drives the tour until `to`, then goes back in.
 export const VEHICLES = [
-  {id: 'bus', kind: 'bus', name: 'the Toy Town bus', colour: 'red', speed: .85, stops: true},
-  {id: 'taxi', kind: 'car', name: 'the taxi', colour: 'yellow', speed: 1.1},
-  {id: 'van', kind: 'van', name: 'the post van', colour: 'red', speed: .95}
+  {id: 'bus', kind: 'bus', name: 'the Toy Town bus', colour: 'red', speed: .85, stops: true, home: 'garage', from: 6.5, to: 21.5},
+  {id: 'taxi', kind: 'car', name: 'the taxi', colour: 'yellow', speed: 1.1, home: 'garage', from: 6, to: 23},
+  {id: 'van', kind: 'van', name: 'the post van', colour: 'red', speed: .95, home: 'post', from: 8, to: 16},
+  {id: 'milk', kind: 'float', name: 'the milk float', colour: 'white', speed: .7, home: 'barn', from: 5.5, to: 10.5},
+  {id: 'tractor', kind: 'tractor', name: 'the tractor', colour: 'green', speed: .55, home: 'barn', from: 9.5, to: 17},
+  {id: 'icecream', kind: 'icecream', name: 'the ice-cream van', colour: 'pink', speed: .8, home: 'garage', from: 13, to: 18.5},
+  {id: 'fire', kind: 'fire', name: 'the fire engine', colour: 'red', speed: 1.35, home: 'fire', from: -1, to: -1, onCall: true}
 ];
 // Where the bus pulls up (it waits a few seconds at each).
 export const BUS_STOPS = [{id: 'square', x: 2.9, z: .9}, {id: 'highEnd', x: 9.6, z: -.7}, {id: 'lane', x: -8.3, z: .2}, {id: 'hill', x: -.4, z: -6.0}, {id: 'station', x: .1, z: 6.4}];

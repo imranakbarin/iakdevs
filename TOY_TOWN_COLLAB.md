@@ -1119,3 +1119,17 @@ A `START` does not prohibit parallel edits. Avoid stepping on each other's uncom
 - **Tests**: the logic test adds the train (≥ 8 trips, on its track) and that no building stands on the railway; walks 342, outings 220. The visual check's budgets still hold: 58 draw calls, 600 k triangles (the animals, boat, train and residents are separate small meshes).
 - Seen in real WebGL: the whole island, the station with the train at the platform, the farm with cows in the paddock, the harbour with the boat, the school and the cottages.
 - Not verified: phone; touch controls.
+
+### 2026-11-10 · Claude · DONE (new storybook town, merge B: phase 4, life by the hour)
+- **Time**: a day is 480 s from 06:00; each resident has `wake`/`sleep` hours and heads home when they pass, so nights are empty. Each vehicle has a home garage (garage, barn, post office, fire station) and hours; outside them it is parked (hidden), it leaves and returns only by its own garage, and a late one drives on to its door at 1.4x speed.
+- **Vehicles**: milk float, tractor, ice-cream van and a fire engine (on call, `sim.dispatchFire()`, one run round the town) join the bus, taxi and post van. The Police Box became the round teal Constable's Kiosk (the old shape read as one particular famous blue box, against the own-designs rule).
+- **Tests**: logic test now also checks vehicles only keep to their hours (or are on their way home), leave/enter only at their own garage, get home within 150 s, the fire engine goes out and comes back, nobody is about at night. All logic suites pass; real-WebGL screenshots of the tractor, ice-cream van and kiosk checked.
+- Not verified: phone; touch controls. Vehicles cannot overtake, so a late one can queue behind a slow tractor.
+
+### 2026-11-10 · Claude · DONE (new storybook town, merge C: phases 5–6, day and night, weather, stories, the news, a phone pass)
+- **Light** (`sky.mjs`): dawn, day, dusk and a dark blue night driven by the sim hour (a day is 480 s from 06:00); sun and moon move; every window and lantern glows at night through one extra transparent mesh; stars and a moon. **Weather** (`weather.mjs`, in the sim): clear, cloudy, rain and drizzle spells; in rain vehicles slow, walkers hurry, everyone has an umbrella, streaks fall, the sky dulls.
+- **Stories** (`stories.mjs`): 24 small stories (milk round, post round, school run, sports day, book club, tea for two, boat repair, fire drill, rainy-day café and so on) with hours, weather and cast; residents take errands door to door before resuming their round. The news (`assets/toy-town-news.json`, light headlines) stages them: category and keywords pick the story (rain headlines make it rain, fire headlines send the engine out), a pill at the top shows the story and "In the news: ...".
+- **Phone pass**: the resolution steps down automatically when frames are slow. **Not measured on a real phone.**
+- **Tests**: the logic test checks that stories happen and vary, every errand is by name to a place with a door, headline mapping, forced staging, weather spells, and the sky (night is dim with glow and stars, rain dulls the day). The visual test adds night and rain views inside the budgets (night 62 calls, rain 69, default 64–66; 608 k triangles) and screenshots `new-town-night.png` and `new-town-rain.png`. All Toy Town suites pass.
+- Not verified: phone, touch controls, long-run behaviour of the adaptive resolution. The default town is unchanged; switching is the owner's call.
+

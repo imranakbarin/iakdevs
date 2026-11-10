@@ -15,7 +15,7 @@ const lighten = (c, k) => '#' + col(c).lerp(new THREE.Color('#ffffff'), k).getHe
 const cache = new Map();
 function prim(key, make) { if (!cache.has(key)) { let g = make(); if (g.index) g = g.toNonIndexed(); g.deleteAttribute('uv'); if (!g.attributes.normal) g.computeVertexNormals(); cache.set(key, g); } return cache.get(key); }
 export class Bag {
-  constructor() { this.parts = []; this.stack = [new THREE.Matrix4()]; }
+  constructor() { this.parts = []; this.glowParts = []; this.stack = [new THREE.Matrix4()]; }
   get top() { return this.stack[this.stack.length - 1]; }
   // enter a local frame: position, turn about y, uniform scale
   push(x = 0, y = 0, z = 0, ry = 0, s = 1) { const m = new THREE.Matrix4().compose(new THREE.Vector3(x, y, z), new THREE.Quaternion().setFromEuler(new THREE.Euler(0, ry, 0)), new THREE.Vector3(s, s, s)); this.stack.push(this.top.clone().multiply(m)); return this; }
@@ -25,7 +25,7 @@ export class Bag {
     g.applyMatrix4(this.top.clone().multiply(m));
     const c = col(colour), n = g.attributes.position.count, a = new Float32Array(n * 3);
     for (let i = 0; i < n; i++) { a[i * 3] = c.r; a[i * 3 + 1] = c.g; a[i * 3 + 2] = c.b; }
-    g.setAttribute('color', new THREE.BufferAttribute(a, 3)); this.parts.push(g); return this;
+    g.setAttribute('color', new THREE.BufferAttribute(a, 3)); (o.glow ? this.glowParts : this.parts).push(g); return this;
   }
   // a rounded box standing on y (its base at o.y unless o.centre)
   box(w, h, d, colour, o = {}) { const r = Math.min(o.r ?? .06, w / 2 - .001, h / 2 - .001, d / 2 - .001); const seg = Math.max(w, h, d) > .7 ? 2 : 1; return this.add(prim(`box:${w}:${h}:${d}:${r}`, () => new RoundedBoxGeometry(w, h, d, seg, r)), colour, {...o, y: (o.y || 0) + (o.centre ? 0 : h / 2)}); }
@@ -40,8 +40,11 @@ export class Bag {
       const g = new THREE.ExtrudeGeometry(s, {depth: w, bevelEnabled: true, bevelSize: .05, bevelThickness: .05, bevelSegments: 3, curveSegments: 4}); g.translate(0, 0, -w / 2); g.rotateY(Math.PI / 2); return g; }), colour, o);
   }
   tube(points, r, colour, o = {}) { const curve = new THREE.CatmullRomCurve3(points.map(p => new THREE.Vector3(...p))); let g = new THREE.TubeGeometry(curve, 24, r, 10, false); g = g.toNonIndexed(); g.deleteAttribute('uv'); return this.add(g, colour, o); }
+  // the lit panes and lanterns, gathered apart so they can be switched on at dusk
+  glowMesh(material) { if (!this.glowParts.length) return null; const g = mergeGeometries(this.glowParts, false); g.computeBoundingSphere(); this.glowParts = []; return new THREE.Mesh(g, material); }
   mesh(material) { const g = mergeGeometries(this.parts, false); g.computeBoundingSphere(); const m = new THREE.Mesh(g, material); this.parts = []; return m; }
 }
+const WARM = '#ffcf70';
 export const toyMaterial = () => new THREE.MeshLambertMaterial({vertexColors: true});
 
 /* ---------------- common pieces ---------------- */
@@ -57,18 +60,19 @@ function win(b, x, y, z, w = .34, h = .36, o = {}) {
   b.box(w + .08, h + .08, .05, 'white', {x, y: y - h / 2 - .04, z: z - .01, r: .03});
   b.box(w, h, .05, o.pane || '#bfe6f7', {x, y: y - h / 2, z: z + .006, r: .02});
   b.box(.03, h, .05, 'white', {x, y: y - h / 2, z: z + .014, r: .01}); b.box(w, .03, .05, 'white', {x, y: y - .015, z: z + .014, r: .01});
+  b.box(w * .86, h * .86, .02, WARM, {x, y: y - h / 2 + h * .07, z: z + .043, r: .01, glow: true});
   b.box(w + .14, .045, .1, 'white', {x, y: y - h / 2 - .075, z: z + .03, r: .02});
   if (o.shutters) for (const s of [-1, 1]) b.box(.11, h + .04, .035, o.shutters, {x: x + s * (w / 2 + .1), y: y - h / 2 - .02, z: z + .004, r: .02});
   if (o.flowers) { b.box(w + .1, .08, .1, 'wood', {x, y: y - h / 2 - .15, z: z + .07, r: .03}); for (let k = 0; k < 4; k++) b.sph(.045, ['red', 'yellow', 'pink', 'white'][(k + (o.flowers | 0)) % 4], {x: x - w / 2 + .05 + k * (w / 3 - .01), y: y - h / 2 - .05, z: z + .08, seg: 8}); }
 }
-function roundWin(b, x, y, z, r = .17) { b.cyl(r + .045, r + .045, .05, 'white', {x, y, z: z - .008, rx: Math.PI / 2, centre: true}); b.cyl(r, r, .05, '#bfe6f7', {x, y, z: z + .008, rx: Math.PI / 2, centre: true}); b.box(.028, r * 2, .05, 'white', {x, y: y - r, z: z + .016, r: .01}); b.box(r * 2, .028, .05, 'white', {x, y: y - .014, z: z + .016, r: .01}); }
+function roundWin(b, x, y, z, r = .17) { b.cyl(r * .85, r * .85, .02, WARM, {x, y, z: z + .042, rx: Math.PI / 2, centre: true, glow: true}); b.cyl(r + .045, r + .045, .05, 'white', {x, y, z: z - .008, rx: Math.PI / 2, centre: true}); b.cyl(r, r, .05, '#bfe6f7', {x, y, z: z + .008, rx: Math.PI / 2, centre: true}); b.box(.028, r * 2, .05, 'white', {x, y: y - r, z: z + .016, r: .01}); b.box(r * 2, .028, .05, 'white', {x, y: y - .014, z: z + .016, r: .01}); }
 // A striped awning sloping out over a shopfront.
 function awning(b, x, y, z, w, d, a, c) { const n = Math.max(4, Math.round(w / .16)); for (let k = 0; k < n; k++) b.box(w / n + .004, .05, d, k % 2 ? a : c, {x: x - w / 2 + (k + .5) * w / n, y, z: z + d / 2 - .02, rx: .32, r: .02}); for (let k = 0; k < n; k++) b.sph(w / n / 2, k % 2 ? a : c, {x: x - w / 2 + (k + .5) * w / n, y: y - d * .3 - .01, z: z + d - .04, sy: .55, sz: .3, seg: 8}); }
 function chimney(b, x, y, z, colour = 'red', lean = .09) { b.box(.2, .42, .2, colour, {x, y, z, rz: lean, r: .04}); b.box(.26, .07, .26, 'cream', {x: x - lean * .42, y: y + .4, z, rz: lean, r: .03}); b.cyl(.06, .07, .1, 'slate', {x: x - lean * .5, y: y + .46, z, rz: lean}); }
 function smoke(b, x, y, z) { [[0, 0, .09], [.07, .16, .12], [-.03, .36, .15], [.09, .58, .17]].forEach(([dx, dy, r]) => b.sph(r, 'white', {x: x + dx, y: y + dy, z, seg: 10})); }
 function tub(b, x, z, flower = 'red') { b.cyl(.085, .065, .11, 'orange', {x, z, seg: 12}); b.sph(.075, 'leaf', {x, y: .14, z, seg: 8}); b.sph(.04, flower, {x: x + .03, y: .2, z: z + .02, seg: 8}); b.sph(.035, 'yellow', {x: x - .04, y: .19, z: z - .02, seg: 8}); }
 function picket(b, x0, z0, x1, z1) { const n = Math.max(2, Math.round(Math.hypot(x1 - x0, z1 - z0) / .13)); for (let k = 0; k <= n; k++) { const x = x0 + (x1 - x0) * k / n, z = z0 + (z1 - z0) * k / n; b.box(.07, .26, .035, 'white', {x, z, ry: Math.atan2(x1 - x0, z1 - z0) + Math.PI / 2, r: .015}); b.cone(.04, .06, 'white', {x, y: .25, z, seg: 4}); } const a = Math.atan2(x1 - x0, z1 - z0); b.box(.03, .035, Math.hypot(x1 - x0, z1 - z0), 'white', {x: (x0 + x1) / 2, y: .14, z: (z0 + z1) / 2, ry: a, r: .01}); }
-function lamp(b, x, z) { b.cyl(.07, .09, .1, 'slate', {x, z, seg: 10}); b.cyl(.028, .035, 1.0, 'slate', {x, y: .08, z, seg: 8}); b.box(.16, .2, .16, '#fff4c4', {x, y: 1.06, z, r: .04}); b.cone(.15, .12, 'slate', {x, y: 1.26, z, seg: 4, ry: Math.PI / 4}); b.sph(.03, 'gold', {x, y: 1.4, z, seg: 8}); }
+function lamp(b, x, z) { b.cyl(.07, .09, .1, 'slate', {x, z, seg: 10}); b.cyl(.028, .035, 1.0, 'slate', {x, y: .08, z, seg: 8}); b.box(.16, .2, .16, '#fff4c4', {x, y: 1.06, z, r: .04}); b.sph(.13, WARM, {x, y: 1.16, z, seg: 8, glow: true}); b.cone(.15, .12, 'slate', {x, y: 1.26, z, seg: 4, ry: Math.PI / 4}); b.sph(.03, 'gold', {x, y: 1.4, z, seg: 8}); }
 function bench(b, x, z, ry) { b.push(x, 0, z, ry); for (const s of [-1, 1]) { b.box(.05, .2, .26, 'slate', {x: s * .3, r: .02}); } for (let k = 0; k < 3; k++) b.box(.72, .035, .07, 'wood', {y: .2, z: -.09 + k * .09, r: .015}); for (let k = 0; k < 2; k++) b.box(.72, .07, .03, 'wood', {y: .3 + k * .1, z: -.15, r: .012}); b.pop(); }
 function pillarBox(b, x, z) { b.cyl(.13, .14, .08, 'black', {x, z, seg: 14}); b.cyl(.12, .12, .44, 'red', {x, y: .07, z, seg: 14}); b.cyl(.14, .14, .04, 'red', {x, y: .5, z, seg: 14}); b.dome(.13, 'red', {x, y: .53, z, sy: .55}); b.box(.12, .025, .02, 'black', {x, y: .4, z: z + .115, r: .008}); b.box(.09, .08, .015, 'white', {x, y: .24, z: z + .118, r: .008}); }
 
@@ -153,11 +157,11 @@ const BUILD = {
     b.push(1.07, 0, .1, Math.PI / 2); for (const s of [-1, 1]) b.box(.035, 1.0, .035, 'yellow', {x: s * .13, y: .08, z: .02, rx: -.06, r: .01}); for (let k = 0; k < 6; k++) b.box(.26, .03, .03, 'yellow', {y: .18 + k * .16, z: .03, r: .01}); b.cyl(.2, .2, .08, 'yellow', {x: -.5, y: .55, z: .03, rx: Math.PI / 2, centre: true, seg: 16}); b.cyl(.1, .1, .1, 'red', {x: -.5, y: .55, z: .04, rx: Math.PI / 2, centre: true, seg: 12}); b.pop();
     b.cyl(.09, .1, .34, 'red', {x: -1.25, z: .95, seg: 10}); b.dome(.09, 'red', {x: -1.25, y: .34, z: .95}); for (const s of [-1, 1]) b.cyl(.035, .035, .08, 'gold', {x: -1.25 + s * .1, y: .2, z: .95, rz: Math.PI / 2, centre: true, seg: 8});   // hydrant
   },
-  policeBox(b) {
-    b.box(.86, .1, .86, 'stone', {r: .03}); b.box(.72, 1.25, .72, 'blue', {y: .08, r: .05}); for (let k = 0; k < 3; k++) b.box(.82 - k * .14, .09, .82 - k * .14, 'blue', {y: 1.3 + k * .08, r: .03});
-    b.cyl(.06, .07, .12, 'white', {y: 1.54, seg: 10}); b.sph(.075, 'sky', {y: 1.7, seg: 10});
-    for (let k = 0; k < 4; k++) { b.push(0, 0, 0, k * Math.PI / 2); b.box(.56, .1, .02, 'white', {y: 1.14, z: .362, r: .01}); for (const s of [-1, 1]) { b.box(.2, .22, .02, '#bfe6f7', {x: s * .14, y: .86, z: .362, r: .015}); for (let m = 0; m < 2; m++) b.box(.2, .24, .015, darken('blue', .18), {x: s * .14, y: .26 + m * .28, z: .36, r: .015}); } b.pop(); }
-    b.sph(.025, 'gold', {x: .05, y: .6, z: .38, seg: 8});
+  policeBox(b) {   // a fat round lookout kiosk: teal drum, white band, domed cap, a blue lamp
+    b.cyl(.5, .52, .1, 'stone', {seg: 20}); b.cyl(.4, .44, 1.1, 'teal', {y: .08, seg: 20}); b.cyl(.45, .45, .1, 'white', {y: .72, seg: 20});
+    b.dome(.5, darken('blue', .3), {y: 1.16, sy: .8, seg: 20}); b.cyl(.06, .07, .12, 'white', {y: 1.52, seg: 10}); b.sph(.08, 'red', {y: 1.7, seg: 10});
+    for (let k = 0; k < 3; k++) { b.push(0, 0, 0, k * Math.PI * 2 / 3 + .4); b.box(.22, .24, .03, '#bfe6f7', {y: .84, z: .43, r: .02}); b.pop(); }
+    b.push(0, 0, 0, 0); door(b, 0, .46, 'cream', .22, .52); b.pop();
   },
   mushroomCottage(b) {
     b.cyl(.6, .72, 1.0, 'cream', {seg: 24}); b.cyl(.72, .78, .1, 'stone', {seg: 24});
@@ -243,7 +247,7 @@ const BUILD = {
     anim.sails = {y: 2.18, z: .76};
   }
 };
-function lampSmall(b, x, z) { b.cyl(.02, .025, .5, 'slate', {x, z, seg: 6}); b.box(.1, .13, .1, '#fff4c4', {x, y: .5, z, r: .03}); b.cone(.1, .08, 'slate', {x, y: .63, z, seg: 4, ry: Math.PI / 4}); }
+function lampSmall(b, x, z) { b.cyl(.02, .025, .5, 'slate', {x, z, seg: 6}); b.box(.1, .13, .1, '#fff4c4', {x, y: .5, z, r: .03}); b.sph(.09, WARM, {x, y: .56, z, seg: 8, glow: true}); b.cone(.1, .08, 'slate', {x, y: .63, z, seg: 4, ry: Math.PI / 4}); }
 
 /* ---------------- ground, roads, scenery ---------------- */
 function terrain() {
@@ -368,6 +372,7 @@ export function buildTown(graph) {
   roads(bag, graph); scenery(bag, graph); railway(bag); paddock(bag); pond(bag); jetty(bag);
   for (const def of BUILDINGS) { const local = {}; bag.push(def.x, heightAt(def.x, def.z), def.z, def.ry); BUILD[def.type](bag, def, local); bag.pop(); for (const k in local) anim[k] = {...local[k], def}; }
   const town = bag.mesh(material); town.castShadow = true; town.receiveShadow = true;
+  const glow = bag.glowMesh(new THREE.MeshBasicMaterial({vertexColors: true, transparent: true, opacity: 0, depthWrite: false, fog: false})); glow.visible = false; glow.renderOrder = 2;
   const ground = terrain();
   const sea = new THREE.Mesh(new THREE.PlaneGeometry(240, 240).rotateX(-Math.PI / 2), new THREE.MeshLambertMaterial({color: P.sea})); sea.position.y = ISLAND.sea;
   // moving parts
@@ -376,7 +381,7 @@ export function buildTown(graph) {
   { const b = new Bag(); b.cone(.34, .5, 'red', {rx: Math.PI, y: .0, seg: 20}); b.cyl(.34, .34, .1, 'yellow', {y: .5, seg: 20}); b.dome(.34, 'blue', {y: .6, sy: .5}); b.torus(.34, .03, 'white', {y: .55, rx: Math.PI / 2}); b.cyl(.03, .03, .32, 'gold', {y: .72, seg: 8}); b.sph(.06, 'gold', {y: 1.06, seg: 8}); const m = b.mesh(material); m.rotation.z = .16; moving.top = place(m, anim.top, anim.top.x, anim.top.y, anim.top.z); }
   { const b = new Bag(); for (let k = 0; k < 4; k++) { const a = k * Math.PI / 2; b.box(.07, 1.25, .04, 'wood', {x: Math.sin(a) * .0, y: 0, rz: -a, r: .015, centre: false}); } const g2 = new Bag(); for (let k = 0; k < 4; k++) { const a = k * Math.PI / 2, m4 = new THREE.Matrix4().makeRotationZ(a); g2.stack.push(m4); g2.box(.07, 1.3, .04, 'wood', {y: .08, r: .015}); g2.box(.36, .95, .025, 'cream', {x: .2, y: .38, r: .02}); for (let r2 = 0; r2 < 5; r2++) g2.box(.36, .02, .035, 'wood', {x: .2, y: .42 + r2 * .2}); g2.stack.pop(); } g2.cyl(.13, .13, .1, 'red', {rx: Math.PI / 2, centre: true, seg: 12}); const m = g2.mesh(material); moving.sails = place(m, anim.sails, 0, anim.sails.y, anim.sails.z); }
   { const mk = (len, w) => { const b = new Bag(); for (let k = 0; k < 4; k++) { b.push(0, 0, 0, k * Math.PI / 2); b.box(w, len, .02, 'black', {z: .715, r: .008}); b.pop(); } return b.mesh(material); }; moving.minute = place(mk(.36, .04), anim.clock, 0, anim.clock.y, 0); moving.hour = place(mk(.24, .055), anim.clock, 0, anim.clock.y, 0); }
-  return {town, ground, sea, moving, material};
+  return {town, glow, ground, sea, moving, material};
 }
 
 /* ---------------- residents and vehicles ---------------- */
@@ -405,6 +410,14 @@ export function buildVehicle(def, material) {
   const face = (y, z, w) => { for (const s of [-1, 1]) { b.sph(.045, '#fff8d8', {x: s * w, y, z, seg: 10}); b.sph(.02, 'black', {x: s * w, y: y + .005, z: z + .035, seg: 6}); } b.box(w * 1.3, .03, .03, 'white', {y: y - .075, z: z + .005, r: .012}); };
   if (def.kind === 'bus') { b.box(.4, .34, 1.0, c, {y: .1, r: .08}); b.box(.42, .06, 1.02, 'cream', {y: .42, r: .03}); b.box(.405, .15, .86, '#bfe6f7', {y: .25, z: -.02, r: .03}); for (let k = 0; k < 5; k++) b.box(.41, .15, .03, c, {y: .25, z: -.42 + k * .2, r: .01}); b.box(.3, .13, .02, '#bfe6f7', {y: .26, z: .495, r: .02}); b.box(.22, .05, .02, 'cream', {y: .385, z: .5, r: .01}); wheels([-.19, .19], [-.32, .32], .09); face(.16, .5, .12); }
   else if (def.kind === 'van') { b.box(.36, .3, .5, c, {y: .09, z: -.12, r: .07}); b.box(.34, .22, .26, c, {y: .09, z: .25, r: .07}); b.box(.3, .1, .02, '#bfe6f7', {y: .2, z: .375, r: .02}); for (const s of [-1, 1]) { b.box(.02, .14, .24, 'white', {x: s * .182, y: .2, z: -.12, r: .01}); b.box(.022, .012, .14, 'red', {x: s * .184, y: .27, z: -.12, rx: .5}); b.box(.022, .012, .14, 'red', {x: s * .184, y: .27, z: -.12, rx: -.5}); } wheels([-.17, .17], [-.24, .24], .08); face(.14, .375, .1); }
+  else if (def.kind === 'float') { b.box(.34, .2, .62, c, {y: .09, r: .07}); b.box(.3, .26, .22, c, {y: .09, z: .22, r: .06}); b.box(.26, .1, .02, '#bfe6f7', {y: .28, z: .335, r: .01}); b.box(.36, .03, .66, 'blue', {y: .29, r: .01});
+    for (const x of [-.09, .09]) for (const z of [-.1, -.28]) { b.cyl(.045, .045, .12, 'white', {x, y: .32, z, seg: 8}); b.cyl(.046, .046, .02, 'blue', {x, y: .42, z, seg: 8}); } wheels([-.17, .17], [-.2, .2], .07); face(.13, .335, .08); }
+  else if (def.kind === 'tractor') { b.box(.3, .22, .5, c, {y: .15, z: .1, r: .06}); b.box(.24, .26, .22, c, {y: .3, z: -.1, r: .05}); b.box(.26, .03, .26, 'yellow', {y: .58, z: -.1, r: .01}); for (const x of [-.11, .11]) b.cyl(.012, .012, .26, 'yellow', {x, y: .33, z: -.2, seg: 4}); b.cyl(.035, .04, .26, 'black', {x: .0, y: .4, z: .3, seg: 8}); b.box(.2, .17, .24, 'yellow', {y: .22, z: -.32, r: .04});
+    for (const x of [-.19, .19]) { b.cyl(.15, .15, .1, 'black', {x, y: .15, z: -.18, rz: Math.PI / 2, centre: true, seg: 16}); b.cyl(.075, .075, .105, 'yellow', {x, y: .15, z: -.18, rz: Math.PI / 2, centre: true, seg: 10}); b.cyl(.09, .09, .08, 'black', {x, y: .09, z: .26, rz: Math.PI / 2, centre: true, seg: 12}); } face(.17, .36, .08); }
+  else if (def.kind === 'icecream') { b.box(.34, .3, .6, c, {y: .09, r: .07}); b.box(.36, .05, .62, 'white', {y: .38, r: .02}); b.box(.2, .13, .02, '#bfe6f7', {x: .0, y: .22, z: .3, r: .01}); b.box(.02, .14, .26, 'white', {x: .172, y: .22, z: -.05, r: .01}); b.box(.03, .035, .26, 'red', {x: .175, y: .31, z: -.05, rz: .0});
+    b.cone(.09, .2, 'crust', {y: .52, z: -.1, rx: Math.PI, seg: 10}); b.sph(.085, 'pink', {y: .5, z: -.1, seg: 10}); b.sph(.07, 'white', {y: .58, z: -.1, seg: 10}); b.sph(.03, 'red', {y: .66, z: -.1, seg: 6}); wheels([-.16, .16], [-.2, .2], .075); face(.14, .3, .08); }
+  else if (def.kind === 'fire') { b.box(.38, .26, .8, c, {y: .1, r: .07}); b.box(.34, .22, .24, c, {y: .1, z: .3, r: .06}); b.box(.3, .1, .02, '#bfe6f7', {y: .26, z: .425, r: .01}); b.box(.3, .03, .5, 'white', {y: .37, z: -.1, r: .01});
+    for (const x of [-.09, .09]) b.box(.03, .04, .6, 'yellow', {x, y: .42, z: -.1, rz: 0}); for (let k = 0; k < 6; k++) b.box(.2, .02, .022, 'yellow', {y: .43, z: -.38 + k * .1}); b.sph(.045, 'gold', {y: .4, z: .38, seg: 8}); b.box(.18, .05, .09, 'blue', {y: .38, z: .22, r: .02}); wheels([-.18, .18], [-.28, .28], .08); face(.14, .425, .1); }
   else { b.box(.36, .17, .62, c, {y: .09, r: .07}); b.box(.3, .15, .3, c, {y: .24, z: -.04, r: .06}); b.box(.31, .09, .26, '#bfe6f7', {y: .27, z: -.04, r: .03}); b.box(.26, .09, .31, '#bfe6f7', {y: .27, z: -.04, r: .03}); if (def.id === 'taxi') { b.box(.14, .06, .08, 'white', {y: .39, z: -.04, r: .02}); for (let k = 0; k < 5; k++) for (const s of [-1, 1]) b.box(.01, .035, .06, k % 2 ? 'black' : 'white', {x: s * .181, y: .16, z: -.24 + k * .12}); } wheels([-.17, .17], [-.2, .2], .08); face(.15, .31, .1); for (const s of [-1, 1]) b.sph(.03, 'red', {x: s * .11, y: .17, z: -.31, seg: 8}); }
   const m = b.mesh(material); m.castShadow = true; const g = new THREE.Group(); g.add(m); g.scale.setScalar(1.25); return g;
 }
@@ -438,5 +451,32 @@ export function buildClouds() {
   // a few small puffy clouds low over the sea, beyond the shore, so they never sit between the camera and the town
   const b = new Bag(); for (let k = 0; k < 7; k++) { const a = k / 7 * TAU + .4, x = Math.cos(a) * (19 + rand(k * 5 + 1) * 5), z = Math.sin(a) * (16 + rand(k * 5 + 2) * 4), s = .5 + rand(k * 5 + 3) * .35; b.push(x, rand(k * 5 + 4) * 1.4, z, 0, s); [[0, 0, 0, 1.1], [1.0, -.1, .1, .8], [-1.0, -.12, -.1, .85], [.4, .35, 0, .75], [-.45, .3, .15, .7]].forEach(([dx, dy, dz, r]) => b.sph(r, 'white', {x: dx, y: dy, z: dz, sy: .7, seg: 12})); b.pop(); }
   const m = b.mesh(new THREE.MeshLambertMaterial({vertexColors: true, transparent: true, opacity: .96})); m.position.y = 1.6; return m;
+}
+// An umbrella to hold over a resident's head (shown only in the rain).
+export function buildUmbrella(material, colour = 'red') {
+  const b = new Bag(); b.cyl(.012, .012, .42, 'slate', {y: .3, z: -.03, seg: 6}); b.dome(.25, colour, {y: .62, z: -.03, sy: .5, seg: 14}); b.torus(.25, .012, 'white', {y: .62, z: -.03, rx: Math.PI / 2}); b.sph(.022, 'gold', {y: .75, z: -.03, seg: 6});
+  const m = b.mesh(material); m.castShadow = true; m.visible = false; return m;
+}
+// Rain: streaks that fall through a box around the view; `update` moves them, `amount` (0..1) thins them out.
+export function buildRain() {
+  const N = 700, X = 40, Z = 30, Y = 16, pos = new Float32Array(N * 6), seeds = Array.from({length: N}, (_, k) => [(rand(k * 3 + 1) - .5) * X, rand(k * 3 + 2) * Y, (rand(k * 3 + 3) - .5) * Z]);
+  const geo = new THREE.BufferGeometry(); geo.setAttribute('position', new THREE.BufferAttribute(pos, 3).setUsage(THREE.DynamicDrawUsage));
+  const mat = new THREE.LineBasicMaterial({color: '#dff2ff', transparent: true, opacity: 0, depthWrite: false, fog: false});
+  const lines = new THREE.LineSegments(geo, mat); lines.frustumCulled = false; lines.visible = false;
+  lines.userData.update = (time, amount) => {
+    const n = Math.floor(N * amount); geo.setDrawRange(0, n * 2); mat.opacity = Math.min(.55, amount * .7); lines.visible = n > 4; if (!lines.visible) return;
+    for (let k = 0; k < n; k++) { const [x, y0, z] = seeds[k], y = Y - ((y0 + time * 14) % Y); pos.set([x, y, z, x - .05, y + .5, z + .03], k * 6); }
+    geo.attributes.position.needsUpdate = true;
+  };
+  return lines;
+}
+// Stars and a little moon on a far dome that follows the camera: two draw calls, shown only at night.
+export function buildSky() {
+  const g = new THREE.Group(), n = 150, pos = new Float32Array(n * 3);
+  for (let k = 0; k < n; k++) { const a = rand(k * 3 + 1) * TAU, e = .15 + rand(k * 3 + 2) * 1.1, r = 120; pos[k * 3] = Math.cos(a) * Math.cos(e) * r; pos[k * 3 + 1] = Math.sin(e) * r; pos[k * 3 + 2] = Math.sin(a) * Math.cos(e) * r; }
+  const geo = new THREE.BufferGeometry(); geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+  const stars = new THREE.Points(geo, new THREE.PointsMaterial({color: '#fff8e0', size: 2.2, sizeAttenuation: false, transparent: true, opacity: 0, depthWrite: false, fog: false}));
+  const moon = new THREE.Mesh(new THREE.SphereGeometry(5, 14, 10), new THREE.MeshBasicMaterial({color: '#fdf5d0', transparent: true, opacity: 0, fog: false, depthWrite: false}));
+  moon.position.set(-60, 75, -70); g.add(stars, moon); g.userData = {stars, moon}; g.visible = false; g.frustumCulled = false; stars.frustumCulled = false; return g;
 }
 export {doorOf};
