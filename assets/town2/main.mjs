@@ -3,7 +3,7 @@ import * as THREE from 'three';
 import {PALETTE as P, ISLAND, CAST, VEHICLES, BUILDINGS, PADDOCK, POND, PIER, heightAt, rand} from './def.mjs';
 import {along} from './graph.mjs';
 import {createSim} from './sim.mjs';
-import {buildTown, buildResident, buildVehicle, buildClouds, buildTrain, buildBoat, buildAnimal, buildSky, buildUmbrella, buildRain, buildFall, buildPuddles} from './build.mjs';
+import {buildTown, buildResident, buildVehicle, buildClouds, buildTrain, buildBoat, buildAnimal, buildSky, buildUmbrella, buildRain, buildFall, buildPuddles, buildCargo, buildPassengers} from './build.mjs';
 import {skyAt, seasonOf, SEASONS} from './sky.mjs';
 import {createSound} from './sound.mjs';
 import {newsStory} from './stories.mjs';
@@ -41,6 +41,22 @@ sim.vehicles.forEach(v => { const g = buildVehicle(v.def, built.material); scene
 // Things that live on their own: the train, the boat at the jetty, the farm animals and the ducks on the pond.
 const trainCars = buildTrain(built.material); for (const c of trainCars) scene.add(c);
 const loop = sim.graph.loop;
+// Cargo and passengers: one instanced mesh each. Crates stand on platforms, ride in the goods wagon or are carried by residents; passengers' heads show in the coaches.
+const cargoMesh = buildCargo(), passMesh = buildPassengers(); scene.add(cargoMesh, passMesh);
+const platformInfo = {}; for (const st of sim.train.stations) { const d = sim.graph.doors['platform:' + st.id], q = along(loop, sim.graph.loopS(d.x, d.z)); platformInfo[st.id] = {x: d.x, z: d.z, tx: q.tx, tz: q.tz}; }
+const v3b = new THREE.Vector3();
+function updateFreight() {
+  let n = 0, onTrain = 0, atStation = {};
+  for (const c of sim.cargo) {
+    if (n >= 48) break;
+    if (c.state === 'carried') { const g = people.get(c.holder); if (!g || !g.visible) continue; const a = g.rotation.y; cargoMesh.userData.set(n++, g.position.x + Math.sin(a) * .12, g.position.y + .36, g.position.z + Math.cos(a) * .12, c.kind, a); }
+    else if (c.state === 'station') { const pf = platformInfo[c.at]; if (!pf) continue; const i = atStation[c.at] = (atStation[c.at] || 0) + 1, k = i - 1, x = pf.x + pf.tx * (-1.2 + (k % 5) * .4), z = pf.z + pf.tz * (-1.2 + (k % 5) * .4); cargoMesh.userData.set(n++, x, heightAt(x, z) + .23 + Math.floor(k / 5) * .125, z, c.kind); }
+    else if (c.state === 'train') { const i = onTrain++, w = trainCars[3]; w.localToWorld(v3b.set(i % 2 ? .1 : -.1, .3 + Math.floor(i / 6) * .13, -.27 + (Math.floor(i / 2) % 3) * .27)); cargoMesh.userData.set(n++, v3b.x, v3b.y, v3b.z, c.kind, w.rotation.y); }
+  }
+  cargoMesh.userData.show(n);
+  let m = 0; sim.riders.forEach((r, i) => { if (m >= 16) return; trainCars[1 + (i % 2)].localToWorld(v3b.set(i % 4 < 2 ? -.1 : .1, .34, -.2 + Math.floor(i / 2) % 3 * .2)); passMesh.userData.set(m++, v3b.x, v3b.y, v3b.z, r.def.coat); });
+  passMesh.userData.show(m);
+}
 const boat = buildBoat(built.material); boat.position.set(PIER.x1 - .6, -.02, PIER.z + .95); boat.rotation.y = Math.PI / 2 - .15; scene.add(boat);
 const critters = [];
 for (let k = 0; k < 6; k++) { const kind = k < 3 ? 'cow' : 'sheep', g = buildAnimal(kind, built.material); scene.add(g); critters.push({g, k, x: PADDOCK.x0 + .6 + rand(k + 5) * (PADDOCK.x1 - PADDOCK.x0 - 1.2), z: PADDOCK.z0 + .6 + rand(k + 9) * (PADDOCK.z1 - PADDOCK.z0 - 1.2), tx: 0, tz: 0, wait: rand(k + 30) * 4, hd: rand(k) * 6, bounds: PADDOCK, step: kind === 'cow' ? .1 : .13}); }
@@ -99,7 +115,7 @@ let sel = null, cardAt = 0, cardText = '';
 const critterKind = c => c.k >= 10 ? 'duck' : c.k < 3 ? 'cow' : 'sheep';
 function posOf(o) {
   if (!o) return null;
-  if (o.kind === 'resident') { const g = people.get(o.id); return g && g.visible ? g.position : null; }
+  if (o.kind === 'resident') { const r = sim.residents.find(x => x.id === o.id); if (r && r.state === 'riding') return trainCars[1].position; const g = people.get(o.id); return g && g.visible ? g.position : null; }   // (a rider is on the train)
   if (o.kind === 'vehicle') { const g = cars.get(o.id); return g && g.visible ? g.position : null; }
   if (o.kind === 'animal') return critters[o.id].g.position;
   if (o.kind === 'train') return trainCars[1].position;
@@ -116,8 +132,8 @@ function describe(o) {
 function select(o) {
   sel = o; follow = o && o.kind !== 'building' ? o : null; cardAt = 0; cardText = '';
   const h = document.getElementById('hint'); if (h && o) h.style.opacity = '0'; if (o) sound.blip();
-  if (!o) { ring.visible = false; if (cardEl) cardEl.classList.remove('on'); return; }
-  ring.scale.setScalar(RING[o.kind]); refreshCard();
+  if (!o) { ring.visible = false; if (cardEl) cardEl.classList.remove('on'); if (sendBtn) sendBtn.hidden = true; return; }
+  ring.scale.setScalar(RING[o.kind]); refreshCard(); if (sendBtn) sendBtn.hidden = !(o.kind === 'building' && BUILDINGS.find(b => b.id === o.id).door > 0);
 }
 function refreshCard() {
   if (!sel || !cardEl) return; const d = describe(sel), p = posOf(sel), gone = !p && sel.kind === 'resident';
@@ -139,7 +155,34 @@ function pick(cx, cy) {
   for (const b of BUILDINGS) { const d = Math.hypot(b.x - hit.x, b.z - hit.z); if (d < nd) { nd = d; near = b; } }
   return near ? {kind: 'building', id: near.id} : null;
 }
-function tap(cx, cy) { const o = pick(cx, cy); select(o && sel && o.kind === sel.kind && o.id === sel.id && o.kind === 'building' ? null : o); }
+// Sending a parcel: press the button on a building's card, then tap where it should go.
+const sendBtn = cardEl && cardEl.querySelector('#send'), toastEl = document.getElementById('toast'); let assigning = null, toastAt = 0;
+function toast(text, secs = 4) { if (!toastEl) return; toastEl.textContent = text; toastEl.classList.add('on'); toastAt = secs; }
+function tap(cx, cy) {
+  const o = pick(cx, cy);
+  if (assigning) {
+    const from = assigning; assigning = null;
+    if (o && o.kind === 'building') { const r = sim.sendParcel(from, o.id); toast(r.ok ? r.carrier + ' takes a parcel from ' + BUILDINGS.find(b => b.id === from).name + ' to ' + BUILDINGS.find(b => b.id === o.id).name + (r.cargo.direct ? ' on foot.' : ' by train, from ' + sim.train.stations.find(x => x.id === r.cargo.originStation).name + '.') : r.reason, 5); }
+    else toast('No parcel sent.', 2);
+    return;
+  }
+  select(o && sel && o.kind === sel.kind && o.id === sel.id && o.kind === 'building' ? null : o);
+}
+if (sendBtn) sendBtn.addEventListener('click', () => { if (sel && sel.kind === 'building') { assigning = sel.id; toast('Now tap the building the parcel should go to (or tap anywhere else to cancel).', 8); } });
+addEventListener('keydown', e => { if (e.key === 'Escape' && assigning) { assigning = null; toast('No parcel sent.', 2); } });
+// The work board: what is being carried and where, and how much has been done.
+const jobsEl = document.getElementById('jobs'); let jobsText = '', jobsAt = 0;
+const KIND = {mail: 'Mail', milk: 'Milk', bread: 'Bread', parcel: 'Parcel'};
+function refreshJobs() {
+  if (!jobsEl) return; const lines = sim.cargo.slice(0, 6).map(c => {
+    const stn = id => (sim.train.stations.find(x => x.id === id) || {}).name || id, who = c.holder && (sim.residents.find(r => r.id === c.holder) || {def: {}}).def.name;
+    const where = c.state === 'carried' ? 'carried by ' + (who || 'somebody') : c.state === 'ready' ? 'waiting for ' + (who || 'a carrier') : c.state === 'train' ? 'on the train' : c.state === 'station' ? 'waiting at ' + stn(c.at) : '';
+    return KIND[c.kind] + ': ' + BUILDINGS.find(b => b.id === c.from).name + ' to ' + BUILDINGS.find(b => b.id === c.to).name + ' (' + where + ')';
+  });
+  const text = 'Work board | delivered ' + sim.freightStats.delivered + ' | ' + sim.riders.length + ' on the train\n' + (lines.join('\n') || 'Nothing to carry just now.');
+  if (text === jobsText) return; jobsText = text; jobsEl.textContent = ''; const [head, ...rest] = text.split('\n'); const h = document.createElement('b'); h.textContent = head; jobsEl.append(h); for (const l of rest) { const e = document.createElement('span'); e.textContent = l; jobsEl.append(e); }
+}
+if (jobsEl) jobsEl.addEventListener('click', () => jobsEl.classList.toggle('open'));
 if (cardEl) cardEl.querySelector('button').addEventListener('click', () => select(null));
 function trackSelection(dt) {
   if (!sel) return; const p = posOf(sel);
@@ -190,21 +233,25 @@ let lastDt = 0;
 function sync(dt) {
   time += dt; lastDt = dt;
   for (const r of sim.residents) {
-    const g = people.get(r.id); g.visible = r.state === 'walking'; if (!g.visible) continue;
-    const step = time * (r.lampJob ? 16 : 9) + r.speed * 40, y = heightAt(r.x, r.z);
-    const chat = r.pause > 0 && r.look; g.position.set(r.x, y + .02 + (chat ? Math.abs(Math.sin(time * 7)) * .025 : Math.abs(Math.sin(step)) * .035), r.z); g.rotation.set(0, chat ? Math.atan2(r.look.x - r.x, r.look.z - r.z) : Math.atan2(r.tx, r.tz), chat ? 0 : Math.sin(step) * .09);
+    const g = people.get(r.id); g.visible = r.state === 'walking' || r.onPlatform; if (!g.visible) continue;
+    const step = time * (r.lampJob ? 16 : r.hurry ? 14 : 9) + r.speed * 40, y = heightAt(r.x, r.z);
+    const standing = r.state !== 'walking', chat = !standing && r.pause > 0 && r.look;   // (standing: waiting on a platform, a step up from the ground)
+    g.position.set(r.x, y + (standing ? .19 : .02 + (chat ? Math.abs(Math.sin(time * 7)) * .025 : Math.abs(Math.sin(step)) * .035)), r.z); g.rotation.set(0, chat ? Math.atan2(r.look.x - r.x, r.look.z - r.z) : Math.atan2(r.tx, r.tz), chat || standing ? 0 : Math.sin(step) * .09);
   }
   for (const v of sim.vehicles) {
     const g = cars.get(v.id); g.visible = v.state !== 'parked'; if (!g.visible) continue;
     const y = heightAt(v.x, v.z), ahead = heightAt(v.x + v.tx * .3, v.z + v.tz * .3);
     g.position.set(v.x, y + .035 + (v.v > .05 ? Math.abs(Math.sin(time * 14 + v.s)) * .008 : 0), v.z); g.rotation.set(-Math.atan2(ahead - y, .3), Math.atan2(v.tx, v.tz), 0, 'YXZ');
   }
-  trainCars.forEach((c, k) => { const q = along(loop, sim.train.s - k * sim.train.gap), y = heightAt(q.x, q.z) + .06; c.position.set(q.x, y, q.z); c.rotation.y = Math.atan2(q.tx, q.tz); });   // the cars follow the head round the loop
+  trainCars.forEach((c, k) => { const q = along(loop, sim.train.s - k * sim.train.gap), y = heightAt(q.x, q.z) + .06; c.position.set(q.x, y, q.z); c.rotation.y = Math.atan2(q.tx, q.tz); c.updateMatrixWorld(true); });   // the cars follow the head round the loop
+  updateFreight();
   moveCritters(dt); boat.position.y = -.02 + Math.sin(time * 1.3) * .022; boat.rotation.z = Math.sin(time * 1.1) * .03;
   built.moving.top.inner.rotation.y = time * 2.2; built.moving.sails.inner.rotation.z = -time * .55;
   built.moving.minute.inner.rotation.z = -time * .1; built.moving.hour.inner.rotation.z = -time * .1 / 12;
   clouds.rotation.y = time * .012;
   const k = Math.min(1, dt * 6); view.x += (view.tx - view.x) * k; view.z += (view.tz - view.z) * k; view.yaw += (view.tyaw - view.yaw) * k; view.dist += (view.tdist - view.dist) * k;
+  if (toastAt > 0 && (toastAt -= dt) <= 0 && toastEl) toastEl.classList.remove('on');
+  if ((jobsAt -= dt) <= 0) { jobsAt = .5; refreshJobs(); }
   trackSelection(dt); placeCamera(); weatherLight(); news(); caption();
 }
 // A phone pass: if frames run slow (under ~24 fps for two seconds) the render resolution steps down, and creeps back up when there is room.
@@ -240,10 +287,10 @@ document.addEventListener('visibilitychange', () => sound.pause(document.hidden)
 window.ToyTownNew = {
   sim, scene, camera, renderer, view, season, sound,
   hour: () => sim.hour, setHour(h) { sim.setHour(h); sync(0); renderer.render(scene, camera); },
-  info: () => ({trainLaps: sim.train.laps, trainStops: sim.train.stopsMade, lampsLit: sim.lamps.filter(l => l.on).length, wet: +sim.weather.wet.toFixed(2), season, pixelRatio: renderer.getPixelRatio(), story: sim.story.current && sim.story.current.id, rain: +sim.weather.rain.toFixed(2), calls: renderer.info.render.calls, triangles: renderer.info.render.triangles, residentsOut: sim.residents.filter(r => r.state === 'walking').length, clock: sim.clock}),
+  info: () => ({delivered: sim.freightStats.delivered, cargoNow: sim.cargo.length, riders: sim.riders.length, trainLaps: sim.train.laps, trainStops: sim.train.stopsMade, lampsLit: sim.lamps.filter(l => l.on).length, wet: +sim.weather.wet.toFixed(2), season, pixelRatio: renderer.getPixelRatio(), story: sim.story.current && sim.story.current.id, rain: +sim.weather.rain.toFixed(2), calls: renderer.info.render.calls, triangles: renderer.info.render.triangles, residentsOut: sim.residents.filter(r => r.state === 'walking').length, clock: sim.clock}),
   look(x, z, dist, yaw = 0) { Object.assign(view, {x, z, dist, yaw, tx: x, tz: z, tdist: dist, tyaw: yaw}); placeCamera(); renderer.render(scene, camera); },
   advance(seconds) { for (let t = 0; t < seconds; t += .05) sim.update(.05); sync(0); renderer.render(scene, camera); },
-  selected: () => sel, tapAt: (cx, cy) => tap(cx, cy), select,
+  trainPos: () => trainCars[0].position, selected: () => sel, tapAt: (cx, cy) => tap(cx, cy), select, sendParcel: (a, b) => sim.sendParcel(a, b), jobsText: () => jobsText,
   project(x, z, y = .4) { const r = canvas.getBoundingClientRect(); camera.updateMatrixWorld(); v3.set(x, heightAt(x, z) + y, z).project(camera); return [(v3.x * .5 + .5) * r.width + r.left, (-v3.y * .5 + .5) * r.height + r.top]; },
   setWeather(kind, seconds = 600) { sim.weather.force(kind, seconds); },
   freeze(on = true) { frozen = on; }

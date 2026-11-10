@@ -22,7 +22,9 @@ export const STORIES = [
   {id: 'stroll',     title: 'An evening stroll to the café', hours: [17, 20], wet: 'dry', go: [['pip', [['cafe', 30]]], ['tilly', [['cafe', 30]]]]},
   {id: 'playtime',   title: 'Playtime at the school', hours: [15, 17], wet: 'dry', go: [['dot', [['school', 40]]], ['dash', [['school', 40]]], ['pip', [['school', 35]]]]},
   {id: 'rainycafe',  title: 'Everyone shelters in the café', hours: [8, 19], wet: 'wet', go: [['moss', [['cafe', 40]]], ['crumb', [['cafe', 40]]], ['pott', [['cafe', 35]]]]},
-  {id: 'harbourtrip', title: 'A trip to see the boat', hours: [10, 15], wet: 'dry', go: [['chalk', [['hut', 30]]], ['dot', [['hut', 30]]], ['dash', [['hut', 30]]]]},
+  {id: 'harbourtrip', title: 'A train trip to see the boat', hours: [8, 15], wet: 'dry', go: [['chalk', [['platform:central', 0, 'ride:harbour'], ['hut', 25], ['platform:harbour', 0, 'ride:central']]], ['dot', [['platform:central', 0, 'ride:harbour'], ['hut', 25], ['platform:harbour', 0, 'ride:central']]], ['dash', [['platform:central', 0, 'ride:harbour'], ['hut', 25], ['platform:harbour', 0, 'ride:central']]]]},
+  {id: 'milltrip', title: 'A day out at Windmill Halt', hours: [8, 15], wet: 'dry', go: [['moss', [['platform:central', 0, 'ride:mill'], ['mill', 25], ['platform:mill', 0, 'ride:central']]], ['tilly', [['platform:central', 0, 'ride:mill'], ['mill', 25], ['platform:mill', 0, 'ride:central']]]]},
+  {id: 'schooltrip', title: 'The school takes the train', hours: [8, 14], wet: 'dry', go: [['chalk', [['platform:central', 0, 'ride:school'], ['platform:school', 12, null], ['platform:school', 0, 'ride:central']]], ['pip', [['platform:central', 0, 'ride:school'], ['platform:school', 12, null], ['platform:school', 0, 'ride:central']]]]},
   {id: 'tinker',     title: 'Sparky shows off a new gadget', hours: [9, 17], go: [['sparky', [['toys', 20], ['cafe', 15]]], ['pip', [['garage', 25]]]]},
   {id: 'snowman',   title: 'Building a snowman at the school', season: 'winter', hours: [10, 16], go: [['dot', [['school', 40]]], ['dash', [['school', 40]]], ['pip', [['school', 30]]]]},
   {id: 'applepick', title: 'Apple picking at the farm', season: 'autumn', hours: [10, 16], wet: 'dry', go: [['hay', [['farm', 35]]], ['dot', [['farm', 35]]], ['dash', [['farm', 35]]]]},
@@ -38,7 +40,7 @@ export function newsStory(title = '', category = '') {
   const t = (title + ' ').toLowerCase();
   if (/\b(rain|storm|flood|weather|monsoon|hurricane)/.test(t)) return {story: 'rainycafe', weather: 'rain'};
   if (/\b(fire|blaze|wildfire|burn)/.test(t)) return {story: 'firedrill'};
-  if (/\b(train|rail|tram|metro|bus|transport)/.test(t)) return {story: 'station'};
+  if (/\b(train|rail|tram|metro|bus|transport)/.test(t)) return {story: 'milltrip'};
   if (/\b(boat|ship|sea|ocean|fish|whale|marine|coast)/.test(t)) return {story: 'harbourtrip'};
   if (/\b(farm|crop|food|milk|bread|bake|harvest)/.test(t)) return {story: 'milkround'};
   if (/\b(school|student|child|teacher|education|university)/.test(t)) return {story: 'sportsday'};

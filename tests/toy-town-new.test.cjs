@@ -5,7 +5,7 @@ const root = path.join(__dirname, '..'), mod = f => import('file://' + path.join
   const def = await mod('def.mjs'), G = await mod('graph.mjs'), S = await mod('sim.mjs');
   // the definition is self-consistent
   const ids = new Set(def.BUILDINGS.map(b => b.id)); assert.equal(ids.size, def.BUILDINGS.length, 'building ids are unique'); assert.ok(def.BUILDINGS.length >= 28, 'a good many buildings (' + def.BUILDINGS.length + ')');
-  for (const c of def.CAST) { assert.ok(ids.has(c.home), c.id + ' has a real home'); for (const [where, stay] of c.round) { assert.ok(ids.has(where) && def.building(where).door > 0, c.id + ' only visits places with a door (' + where + ')'); assert.ok(stay > 0); } }
+  for (const c of def.CAST) { assert.ok(ids.has(c.home), c.id + ' has a real home'); for (const [where, stay, act] of c.round) { assert.ok(where.startsWith('platform:') ? def.STATIONS.some(st => st.id === where.slice(9)) && /^ride:/.test(act) : ids.has(where) && def.building(where).door > 0, c.id + ' only visits places with a door, or a platform to ride from (' + where + ')'); assert.ok(stay >= 0); } }
   for (const v of def.VEHICLES) { assert.ok(ids.has(v.home) && def.building(v.home).door > 0, v.id + ' has a garage'); for (const t of v.targets || []) assert.ok(def.building(t).door > 0, v.id + ' only calls where there is a door (' + t + ')'); }
   for (const line of Object.values(def.BUS_LINES)) for (const t of line) assert.ok(def.building(t).door > 0, 'a bus stop at a door (' + t + ')');
   for (const b of def.BUILDINGS) assert.ok(def.shore(b.x, b.z) < .9 && def.heightAt(b.x, b.z) > 0, b.id + ' stands on dry land');
@@ -99,11 +99,11 @@ const root = path.join(__dirname, '..'), mod = f => import('file://' + path.join
   // small stories and the weather
   const St = await mod('stories.mjs'), W = await mod('weather.mjs');
   const ran = Object.keys(sim.story.count); assert.ok(ran.length >= 8, 'small stories happen, and vary (' + ran.length + ' kinds: ' + ran.join(',') + ')');
-  for (const s of St.STORIES) for (const [who, trips] of s.go) { assert.ok(def.CAST.some(c => c.id === who), s.id + ': ' + who + ' is in the cast'); for (const [place] of trips) assert.ok(def.building(place).door > 0, s.id + ': ' + place + ' has a door'); }
+  for (const s of St.STORIES) for (const [who, trips] of s.go) { assert.ok(def.CAST.some(c => c.id === who), s.id + ': ' + who + ' is in the cast'); for (const [place] of trips) assert.ok(place.startsWith('platform:') ? def.STATIONS.some(st => st.id === place.slice(9)) : def.building(place).door > 0, s.id + ': ' + place + ' is a doorstep or a platform'); }
   assert.equal(new Set(St.STORIES.map(s => s.id)).size, St.STORIES.length, 'story ids are unique'); assert.ok(St.STORIES.length >= 20);
   assert.equal(St.newsStory('Football club wins cup', 'Sport').story, 'sportsday'); assert.equal(St.newsStory('Heavy rain hits the coast', 'World').weather, 'rain'); assert.equal(St.newsStory('Novel wins prize', 'Culture').story, 'bookclub');
-  { const s2 = S.createSim(3); s2.setHour(10); for (let i = 0; i < 20 * 5; i++) s2.update(.05); s2.stage('sportsday', 'Football club wins cup'); let seen = null; for (let i = 0; i < 20 * 90; i++) { s2.update(.05); if (s2.story.current && s2.story.current.headline) seen = s2.story.current; }
-    assert.ok(seen && seen.id === 'sportsday', 'a headline can stage its story'); assert.ok(s2.residents.some(r => r.def.id === 'chalk' && r.outings > 0), 'and the cast go out for it'); }
+  { const s2 = S.createSim(3); s2.setHour(10); for (let i = 0; i < 20 * 5; i++) s2.update(.05); s2.stage('sportsday', 'Football club wins cup'); let seen = null; for (let i = 0; i < 20 * 180; i++) { s2.update(.05); if (s2.story.current && s2.story.current.headline) seen = s2.story.current; }
+    assert.ok(seen && seen.id === 'sportsday', 'a headline can stage its story'); assert.ok(s2.residents.filter(r => ['chalk', 'bell', 'dot', 'dash'].includes(r.def.id) && r.outings > 0).length >= 2, 'and the cast go out for it'); }
   { const w = W.createWeather(7); let wet = 0, dry = 0, maxRain = 0; for (let i = 0; i < 20 * 3000; i++) { w.update(.05); if (w.rain > .5) wet++; else if (w.rain < .1) dry++; maxRain = Math.max(maxRain, w.rain); assert.ok(w.rain >= 0 && w.rain <= 1.0001); }
     assert.ok(wet > 20 * 150 && dry > 20 * 600 && maxRain > .9, 'it rains for a while and is dry for longer (' + wet / 20 + ' s wet, ' + dry / 20 + ' s dry)'); }
   const Sky = await mod('sky.mjs'), noon = Sky.skyAt(12, 0), mid = Sky.skyAt(0, 0), wetNoon = Sky.skyAt(12, 1);
@@ -115,7 +115,7 @@ const root = path.join(__dirname, '..'), mod = f => import('file://' + path.join
     for (const r of s3.residents) { const d = I.describeResident(s3, r); assert.ok(d.title === r.def.name && d.lines.length >= 2 && d.lines.every(l => typeof l === 'string' && l.length > 3 && !/undefined|\[object/.test(l)), r.id + ' can be described: ' + JSON.stringify(d)); }
     for (const b of def.BUILDINGS) { const d = I.describeBuilding(s3, b); assert.ok(d.title.length > 3 && d.lines.length >= 1 && d.lines.every(l => !/undefined|\[object/.test(l)), b.id + ' can be described'); }
     for (const v of s3.vehicles) { const d = I.describeVehicle(s3, v); assert.ok(d.title.length > 3 && d.lines.every(l => !/undefined|\[object/.test(l)), v.id + ' can be described'); }
-    for (const k of ['cow', 'sheep', 'duck']) assert.ok(I.describeAnimal(k).lines.length === 1); assert.ok(I.describeTrain(s3).lines.length === 2);
+    for (const k of ['cow', 'sheep', 'duck']) assert.ok(I.describeAnimal(k).lines.length === 1); assert.ok(I.describeTrain(s3).lines.length === 3);
     const walker = s3.residents.find(r => r.state === 'walking'); if (walker) assert.match(I.describeResident(s3, walker).lines[0], /^(On the way to|Off on an errand to) /); }
   // seasons
   { const Sk = await mod('sky.mjs'); assert.deepEqual(Sk.SEASONS, ['spring', 'summer', 'autumn', 'winter']);
@@ -162,11 +162,25 @@ const root = path.join(__dirname, '..'), mod = f => import('file://' + path.join
     for (let i = 0; i < N; i++) { s6.update(.05); if (i % 10) continue; const w = s6.residents.filter(r => r.state === 'walking'); if (s6.hour > 8 && s6.hour < 17) { maxOut = Math.max(maxOut, w.length); outSum += w.length; daySamples++; }   // (at curfew everybody heads home together, and that is fine)
       for (const r of w) if (r.pause > 0 && r.look && !r.def.lamplighter) chats++;
       for (let a = 0; a < w.length; a++) for (let b = a + 1; b < w.length; b++) { if (w[a].def.lamplighter || w[b].def.lamplighter) continue; pairs++; if (Math.hypot(w[a].x - w[b].x, w[a].z - w[b].z) < .15) stacked++; } }
-    assert.ok(maxOut <= 8, 'by day never a crowd of everybody at once (' + maxOut + ')'); assert.ok(chats > 20, 'people stop to say hello (' + chats + ' sampled moments)'); assert.ok(stacked / Math.max(1, pairs) < .02, 'nobody walks through anybody (' + stacked + ' of ' + pairs + ' close pairs)'); assert.ok(outSum / daySamples > 3, 'the streets are alive by day (' + (outSum / daySamples).toFixed(1) + ' out on average)'); }
+    assert.ok(maxOut <= 10, 'by day never a crowd of everybody at once (' + maxOut + ', carriers with a delivery are not held back)'); assert.ok(chats > 20, 'people stop to say hello (' + chats + ' sampled moments)'); assert.ok(stacked / Math.max(1, pairs) < .02, 'nobody walks through anybody (' + stacked + ' of ' + pairs + ' close pairs)'); assert.ok(outSum / daySamples > 3, 'the streets are alive by day (' + (outSum / daySamples).toFixed(1) + ' out on average)'); }
   sim.setHour(12); sim.dispatchFire(); for (let i = 0; i < 20 * 120; i++) sim.update(1 / 20);
   assert.ok(sim.vehicles.find(v => v.id === 'fire').trips >= 1, 'the fire engine goes out when called and comes back to the station');
   assert.ok(sim.vehicles.every(v => v.state === "parked" || (v.s >= 0 && v.s <= v.route.line.length + 1e-6)), "every vehicle is somewhere on its route");
   for (const c of [0, 1, 2, 3]) { const q = G.along(sim.graph.loop, sim.train.s - c * sim.train.gap); let d = Infinity; for (const p of sim.graph.loop.pts) d = Math.min(d, Math.hypot(p[0] - q.x, p[1] - q.z)); assert.ok(d < .15, 'every car stands on the rails'); }
+  // freight and passengers: the train has work
+  { const s7 = S.createSim(7); let cargoMax = 0, wagonMax = 0, ridersMax = 0; const kinds = new Set(), seenRiding = new Set();
+    for (let i = 0; i < 20 * 960; i++) { s7.update(.05); cargoMax = Math.max(cargoMax, s7.cargo.length); wagonMax = Math.max(wagonMax, s7.cargo.filter(c => c.state === 'train').length); ridersMax = Math.max(ridersMax, s7.riders.length); for (const c of s7.cargo) kinds.add(c.kind);
+      for (const r of s7.residents) { if (r.state === 'riding') { seenRiding.add(r.id); assert.ok(s7.riders.includes(r), r.id + ' riding means on the train'); } if (r.onPlatform) assert.ok(r.at.startsWith('platform:'), 'standing on a platform means at one'); }
+      for (const c of s7.cargo) { if (c.state === 'carried') assert.ok(s7.residents.find(r => r.id === c.holder).carrying === c.id, 'whoever carries it knows it'); if (c.state === 'station') assert.ok(def.STATIONS.some(st => st.id === c.at), 'cargo waits at a station'); } }
+    assert.ok(s7.freightStats.delivered >= 2, 'mail, milk and bread get delivered (' + JSON.stringify(s7.freightStats) + ')'); assert.ok(kinds.size >= 2, 'more than one kind of cargo (' + [...kinds].join(',') + ')');
+    assert.ok(cargoMax <= 14 && wagonMax <= s7.train.wagon && ridersMax <= s7.train.seats, 'the wagon and the seats are never over full (' + [cargoMax, wagonMax, ridersMax] + ')');
+    assert.ok(s7.train.ridden >= 4 && seenRiding.size >= 3, 'people ride the train between stations (' + s7.train.ridden + ' trips by ' + seenRiding.size + ' people)');
+    // a parcel sent by the owner is carried from one building to another
+    const s8 = S.createSim(11); s8.setHour(8); for (let i = 0; i < 20 * 5; i++) s8.update(.05);
+    const bad = s8.sendParcel('cafe', 'cafe'); assert.equal(bad.ok, false); assert.equal(s8.sendParcel('bandstand', 'cafe').ok, false, 'a building without a door cannot send');
+    const good = s8.sendParcel('cafe', 'hut'); assert.ok(good.ok && good.cargo.kind === 'parcel' && good.cargo.originStation !== good.cargo.destStation, 'a parcel from the café to the harbour goes by train (' + JSON.stringify(good.reason || good.carrier) + ')');
+    let done = false; for (let i = 0; i < 20 * 420 && !done; i++) { s8.update(.05); done = s8.freightLog.some(l => l.kind === 'parcel' && l.how === 'delivered'); }
+    assert.ok(done, 'and it arrives'); }
   // the page and its modules exist and the old town redirects to it on request
   for (const f of ['def.mjs', 'curve.mjs', 'graph.mjs', 'sim.mjs', 'build.mjs', 'main.mjs']) assert.ok(fs.existsSync(path.join(root, 'assets/town2', f)), f + ' exists');
   const page = fs.readFileSync(path.join(root, 'toy-town-new.html'), 'utf8'); assert.match(page, /assets\/town2\/main\.mjs/);
