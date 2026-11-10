@@ -10,7 +10,8 @@ import {newsStory} from './stories.mjs';
 import {describeResident, describeBuilding, describeVehicle, describeAnimal, describeTrain} from './inspect.mjs';
 
 const canvas = document.getElementById('town'), q = new URLSearchParams(location.search);
-const renderer = new THREE.WebGLRenderer({canvas, antialias: true, powerPreference: 'high-performance'});
+// Some browsers (Edge on a machine without a good GPU, for one) refuse a context with antialiasing or the high-performance hint: try plainer options before giving up.
+const renderer = (() => { try { return new THREE.WebGLRenderer({canvas, antialias: true, powerPreference: 'high-performance'}); } catch (e) { try { return new THREE.WebGLRenderer({canvas, antialias: false}); } catch (e2) { throw new Error('WebGL could not start (' + (e2 && e2.message || e2) + ')'); } } })();
 const phone = Math.min(innerWidth, innerHeight) < 700;
 renderer.setPixelRatio(Math.min(devicePixelRatio || 1, phone ? 1.5 : 2));
 renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFSoftShadowMap;

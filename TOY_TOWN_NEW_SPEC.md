@@ -43,6 +43,10 @@ town is untouched and stays the default until the owner approves the switch.
 
 Rule: `def`, `graph`, `weather`, `stories`, `sky`, `sound` (its plan; the audio graph only needs an `AudioContext`), `inspect` and `sim` are pure (no THREE, no DOM), so they run in Node. Keep it that way.
 
+**After editing anything under `assets/town2`, run `node scripts/stamp-town2.cjs`.** It stamps `toy-town-new.html` with a hash of the modules: the page's import map
+points every module at `<file>?v=<hash>`, so a browser (Edge was seen mixing a cached old module with new page code) always fetches matching files. The logic test fails if
+the stamp is stale. If the page cannot start, its panel now shows the real error (`#why`), and `main.mjs` retries the WebGL context with plainer options before giving up.
+
 ## 3. World model
 
 - **Axes:** x east, z south, y up. One unit is about a cottage width at the old scale; houses and buildings are now drawn at `BUILD_SCALE` = 0.8
