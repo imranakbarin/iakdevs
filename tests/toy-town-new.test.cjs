@@ -170,6 +170,7 @@ const root = path.join(__dirname, '..'), mod = f => import('file://' + path.join
   // the page and its modules exist and the old town redirects to it on request
   for (const f of ['def.mjs', 'curve.mjs', 'graph.mjs', 'sim.mjs', 'build.mjs', 'main.mjs']) assert.ok(fs.existsSync(path.join(root, 'assets/town2', f)), f + ' exists');
   const page = fs.readFileSync(path.join(root, 'toy-town-new.html'), 'utf8'); assert.match(page, /assets\/town2\/main\.mjs/);
+  { const Stamp = require('../scripts/stamp-town2.cjs'), h = Stamp.hash(); assert.ok(page.includes('data-stamp="' + h + '"') && page.includes('main.mjs?v=' + h), 'toy-town-new.html is stamped for the current modules (run: node scripts/stamp-town2.cjs)'); for (const f of Stamp.files) if (f !== 'main.mjs') assert.ok(page.includes('"./assets/town2/' + f + '?v=' + h + '"') || page.includes('"./assets/town2/' + f + '":"./assets/town2/' + f + '?v=' + h + '"'), f + ' is in the import map'); assert.match(page, /id="why"/, 'the failure panel shows the real error'); }
   assert.match(fs.readFileSync(path.join(root, 'toy-town.html'), 'utf8'), /town=new/, 'toy-town.html?town=new opens the new town');
   console.log('Toy Town NEW PASS: definition (' + def.BUILDINGS.length + ' buildings), road network (' + g.lanes.length + ' lanes, ' + walks + ' door-to-door walks), railway loop (' + g.loop.length.toFixed(0) + ' units, ' + sim.train.laps + ' laps in two days), cast (' + outings + ' outings) and vehicles');
 })().catch(e => { console.error(e); process.exit(1); });
