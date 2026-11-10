@@ -8,7 +8,15 @@ import {mergeGeometries} from 'three/addons/utils/BufferGeometryUtils.js';
 import {PALETTE as P, ISLAND, SQUARE, ROAD, SPOKES, BUILDINGS, TREES, BUS_STOPS, TRACK, PADDOCK, POND, JETTY, heightAt, shore, rand, doorOf} from './def.mjs';
 import {along, leftOf} from './graph.mjs';
 
-const TAU = Math.PI * 2, col = c => new THREE.Color(P[c] || c);
+// Seasons recolour the foliage and the grass (and nothing else) when the town is built.
+const SEASONAL = {}, SEASON_COLOURS = {
+  summer: {},
+  spring: {leaf: '#4fbf70', leafLight: '#f4b3cc', grass: '#9ad96e', grassDark: '#82c862'},
+  autumn: {leaf: '#d9822b', leafLight: '#e8b83a', grass: '#b9c45c', grassDark: '#a5b04e'},
+  winter: {leaf: '#3d7a5a', leafLight: '#e4eef5', grass: '#eef4f8', grassDark: '#d6e4ee'}
+};
+export function setSeason(name) { for (const k in SEASONAL) delete SEASONAL[k]; Object.assign(SEASONAL, SEASON_COLOURS[name] || {}); }
+const TAU = Math.PI * 2, col = c => new THREE.Color(SEASONAL[c] || P[c] || c);
 const lighten = (c, k) => '#' + col(c).lerp(new THREE.Color('#ffffff'), k).getHexString(), darken = (c, k) => '#' + col(c).lerp(new THREE.Color('#1c2430'), k).getHexString();
 
 /* ---------------- the bag ---------------- */
@@ -301,9 +309,9 @@ function roads(bag, graph) {
 }
 function tree(b, kind, seed) {
   const r = k => rand(seed * 13 + k);
-  if (kind === 'bush') { for (let k = 0; k < 3; k++) b.sph(.3 - k * .04, k % 2 ? 'leaf' : 'green', {x: (r(k) - .5) * .4, y: .2 + k * .05, z: (r(k + 5) - .5) * .4, sy: .8, seg: 10}); for (let k = 0; k < 4; k++) b.sph(.05, ['pink', 'white', 'yellow', 'red'][k], {x: (r(k + 9) - .5) * .5, y: .38 + r(k) * .1, z: (r(k + 12) - .5) * .5, seg: 6}); return; }
-  if (kind === 'tall') { b.cyl(.08, .11, .5, 'brown', {seg: 8}); [[.42, .62, 'leaf'], [.34, 1.08, 'green'], [.24, 1.46, 'leaf']].forEach(([s, y, c]) => b.sph(s, c, {y, sy: 1.15, seg: 12})); return; }
-  b.cyl(.1, .14, .62, 'brown', {seg: 8}); b.sph(.62, 'green', {y: 1.0, seg: 18}); b.sph(.45, 'leaf', {x: .34, y: .84, z: .12, seg: 16}); b.sph(.42, lighten('green', .12), {x: -.3, y: 1.1, z: -.1, seg: 16}); b.sph(.36, 'leaf', {x: .05, y: 1.4, z: .1, seg: 14});
+  if (kind === 'bush') { for (let k = 0; k < 3; k++) b.sph(.3 - k * .04, k % 2 ? 'leaf' : 'leafLight', {x: (r(k) - .5) * .4, y: .2 + k * .05, z: (r(k + 5) - .5) * .4, sy: .8, seg: 10}); for (let k = 0; k < 4; k++) b.sph(.05, ['pink', 'white', 'yellow', 'red'][k], {x: (r(k + 9) - .5) * .5, y: .38 + r(k) * .1, z: (r(k + 12) - .5) * .5, seg: 6}); return; }
+  if (kind === 'tall') { b.cyl(.08, .11, .5, 'brown', {seg: 8}); [[.42, .62, 'leaf'], [.34, 1.08, 'leafLight'], [.24, 1.46, 'leaf']].forEach(([s, y, c]) => b.sph(s, c, {y, sy: 1.15, seg: 12})); return; }
+  b.cyl(.1, .14, .62, 'brown', {seg: 8}); b.sph(.62, 'leafLight', {y: 1.0, seg: 18}); b.sph(.45, 'leaf', {x: .34, y: .84, z: .12, seg: 16}); b.sph(.42, lighten('leafLight', .12), {x: -.3, y: 1.1, z: -.1, seg: 16}); b.sph(.36, 'leaf', {x: .05, y: 1.4, z: .1, seg: 14});
   if (kind === 'apple') for (let k = 0; k < 9; k++) { const a = r(k) * TAU, v = r(k + 20) * 1.1 - .2; b.sph(.065, 'red', {x: Math.cos(a) * Math.cos(v) * .6, y: 1.0 + Math.sin(v) * .6, z: Math.sin(a) * Math.cos(v) * .6, seg: 8}); }
 }
 function scenery(bag, graph) {
@@ -323,7 +331,7 @@ function scenery(bag, graph) {
   for (const e of graph.edges) if (e.kind === 'spoke') for (let s = 1.6; s < e.line.length - .8; s += .46) for (const side of [-1, 1]) {
     const q = along(e.line, s), [lx, lz] = leftOf(q.tx, q.tz), x = q.x + lx * side * 1.18, z = q.z + lz * side * 1.18;
     if (nearBuilding(x, z) < 1.75 || Math.hypot(x, z) < 5.6 || shore(x, z) > .88) continue;
-    const k = Math.round(s * 7 + side * 3); bag.sph(.24, k % 3 ? 'leaf' : 'green', {x, y: heightAt(x, z) + .13, z, sx: 1.25, sy: .85, seg: 8}); if (k % 4 === 0) bag.sph(.05, ['pink', 'white', 'yellow'][k % 3], {x: x + .05, y: heightAt(x, z) + .34, z, seg: 6});
+    const k = Math.round(s * 7 + side * 3); bag.sph(.24, k % 3 ? 'leaf' : 'leafLight', {x, y: heightAt(x, z) + .13, z, sx: 1.25, sy: .85, seg: 8}); if (k % 4 === 0) bag.sph(.05, ['pink', 'white', 'yellow'][k % 3], {x: x + .05, y: heightAt(x, z) + .34, z, seg: 6});
   }
   for (let k = 0; k < 420; k++) { const x = (rand(k * 3 + 1) - .5) * 27, z = (rand(k * 3 + 2) - .5) * 20; if (shore(x, z) > .88 || nearRoad(x, z) < 1.0 || nearBuilding(x, z) < 1.6 || Math.hypot(x, z) < 5.5) continue; const y = heightAt(x, z); bag.sph(.045, ['white', 'yellow', 'pink', 'red', 'purple'][k % 5], {x, y: y + .08, z, seg: 6}); bag.cyl(.008, .008, .08, 'leaf', {x, y, z, seg: 4}); }
   // bus stop signs
@@ -354,7 +362,7 @@ function paddock(bag) {
 function pond(bag) {
   const {x, z, r} = POND, y = heightAt(x, z);
   bag.cyl(r + .2, r + .24, .05, 'stone', {x, y: y - .01, z, seg: 28, sx: 1.25}); bag.cyl(r, r, .07, '#6fcdea', {x, y: y + .0, z, seg: 28, sx: 1.25});
-  for (let k = 0; k < 6; k++) { const a = k / 6 * TAU + .3, px = x + Math.cos(a) * (r * 1.25 + .3), pz = z + Math.sin(a) * (r + .3); bag.sph(.2, k % 2 ? 'leaf' : 'green', {x: px, y: heightAt(px, pz) + .1, z: pz, sy: .7, seg: 8}); bag.cyl(.014, .014, .5, 'leaf', {x: px + .15, y: heightAt(px, pz), z: pz, seg: 4}); bag.cyl(.055, .055, .16, 'brown', {x: px + .15, y: heightAt(px, pz) + .5, z: pz, seg: 6}); }
+  for (let k = 0; k < 6; k++) { const a = k / 6 * TAU + .3, px = x + Math.cos(a) * (r * 1.25 + .3), pz = z + Math.sin(a) * (r + .3); bag.sph(.2, k % 2 ? 'leaf' : 'leafLight', {x: px, y: heightAt(px, pz) + .1, z: pz, sy: .7, seg: 8}); bag.cyl(.014, .014, .5, 'leaf', {x: px + .15, y: heightAt(px, pz), z: pz, seg: 4}); bag.cyl(.055, .055, .16, 'brown', {x: px + .15, y: heightAt(px, pz) + .5, z: pz, seg: 6}); }
   for (let k = 0; k < 4; k++) bag.cyl(.14, .14, .015, 'lime', {x: x - .5 + k * .35, y: y + .075, z: z + (k % 2 ? .25 : -.2), seg: 12});
   for (let k = 0; k < 4; k++) bag.sph(.05, 'pink', {x: x - .5 + k * .35, y: y + .1, z: z + (k % 2 ? .25 : -.2), seg: 6});
 }
@@ -367,7 +375,8 @@ function jetty(bag) {
 }
 
 /* ---------------- the whole static town ---------------- */
-export function buildTown(graph) {
+export function buildTown(graph, season = 'summer') {
+  setSeason(season);
   const bag = new Bag(), anim = {}, material = toyMaterial();
   roads(bag, graph); scenery(bag, graph); railway(bag); paddock(bag); pond(bag); jetty(bag);
   for (const def of BUILDINGS) { const local = {}; bag.push(def.x, heightAt(def.x, def.z), def.z, def.ry); BUILD[def.type](bag, def, local); bag.pop(); for (const k in local) anim[k] = {...local[k], def}; }
@@ -478,5 +487,29 @@ export function buildSky() {
   const stars = new THREE.Points(geo, new THREE.PointsMaterial({color: '#fff8e0', size: 2.2, sizeAttenuation: false, transparent: true, opacity: 0, depthWrite: false, fog: false}));
   const moon = new THREE.Mesh(new THREE.SphereGeometry(5, 14, 10), new THREE.MeshBasicMaterial({color: '#fdf5d0', transparent: true, opacity: 0, fog: false, depthWrite: false}));
   moon.position.set(-60, 75, -70); g.add(stars, moon); g.userData = {stars, moon}; g.visible = false; g.frustumCulled = false; stars.frustumCulled = false; return g;
+}
+// Things that drift through the air with the season: petals (spring), fireflies (summer nights), leaves (autumn), snow (winter).
+// `update(time, amount)` moves them round the view; `amount` (0..1) thins them out.
+const FALL = {
+  spring: {colour: '#ffc6dc', size: 4.5, fall: .9, sway: .8, op: .9},
+  summer: {colour: '#ffe27a', size: 3.4, fall: 0, sway: .35, op: .9},
+  autumn: {colour: '#e58a2c', size: 5, fall: 1.1, sway: 1.1, op: .95},
+  winter: {colour: '#ffffff', size: 4, fall: 1.6, sway: .35, op: .95}
+};
+export function buildFall(season = 'summer') {
+  const cfg = FALL[season] || FALL.summer, N = 320, X = 38, Z = 28, Y = 12, pos = new Float32Array(N * 3), seeds = Array.from({length: N}, (_, k) => [(rand(k * 4 + 1) - .5) * X, rand(k * 4 + 2) * Y, (rand(k * 4 + 3) - .5) * Z, rand(k * 4 + 4) * TAU]);
+  const geo = new THREE.BufferGeometry(); geo.setAttribute('position', new THREE.BufferAttribute(pos, 3).setUsage(THREE.DynamicDrawUsage));
+  const mat = new THREE.PointsMaterial({color: cfg.colour, size: cfg.size, sizeAttenuation: false, transparent: true, opacity: 0, depthWrite: false, fog: false});
+  const pts = new THREE.Points(geo, mat); pts.frustumCulled = false; pts.visible = false;
+  pts.userData.update = (time, amount) => {
+    const n = Math.floor(N * amount); geo.setDrawRange(0, n); pts.visible = n > 2; if (!pts.visible) return;
+    mat.opacity = cfg.op * (cfg.fall ? 1 : .55 + .35 * Math.sin(time * 2.1));   // fireflies pulse
+    for (let k = 0; k < n; k++) {
+      const [x, y0, z, ph] = seeds[k], y = cfg.fall ? Y - ((y0 + time * cfg.fall) % Y) : .35 + y0 / Y * 1.7 + Math.sin(time * .7 + ph) * .2;
+      pos[k * 3] = x + Math.sin(time * .8 + ph) * cfg.sway; pos[k * 3 + 1] = y; pos[k * 3 + 2] = z + Math.cos(time * .6 + ph) * cfg.sway;
+    }
+    geo.attributes.position.needsUpdate = true;
+  };
+  return pts;
 }
 export {doorOf};

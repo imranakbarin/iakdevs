@@ -101,6 +101,32 @@ const root = path.join(__dirname, '..'), mod = f => import('file://' + path.join
     for (const v of s3.vehicles) { const d = I.describeVehicle(s3, v); assert.ok(d.title.length > 3 && d.lines.every(l => !/undefined|\[object/.test(l)), v.id + ' can be described'); }
     for (const k of ['cow', 'sheep', 'duck']) assert.ok(I.describeAnimal(k).lines.length === 1); assert.ok(I.describeTrain(s3).lines.length === 2);
     const walker = s3.residents.find(r => r.state === 'walking'); if (walker) assert.match(I.describeResident(s3, walker).lines[0], /^(On the way to|Off on an errand to) /); }
+  // seasons
+  { const Sk = await mod('sky.mjs'); assert.deepEqual(Sk.SEASONS, ['spring', 'summer', 'autumn', 'winter']);
+    assert.equal(Sk.seasonOf(new Date(2026, 0, 15)), 'winter'); assert.equal(Sk.seasonOf(new Date(2026, 3, 1)), 'spring'); assert.equal(Sk.seasonOf(new Date(2026, 6, 1)), 'summer'); assert.equal(Sk.seasonOf(new Date(2026, 10, 10)), 'autumn'); assert.equal(Sk.seasonOf(new Date(2026, 11, 25)), 'winter');
+    const days = Sk.SEASONS.map(n => Sk.skyAt(12, 0, n)); assert.equal(new Set(days.map(d => d.sky)).size, 4, 'each season has its own daytime sky'); assert.equal(days[1].sky, '#bfe9fb', 'summer is the plain blue');
+    assert.ok(Sk.skyAt(12, 0, 'winter').sunI < Sk.skyAt(12, 0, 'summer').sunI && Sk.skyAt(12, 0, 'winter').sunPos[1] < Sk.skyAt(12, 0, 'summer').sunPos[1], 'the winter sun is weaker and lower');
+    assert.equal(Sk.skyAt(0, 0, 'winter').sky, Sk.skyAt(0, 0, 'summer').sky, 'the night sky is the same in every season');
+    for (const season of Sk.SEASONS) { const s4 = S.createSim(9, {season}); for (let i = 0; i < 20 * 900; i++) s4.update(.05);
+      for (const id of Object.keys(s4.story.count)) { const st = St.STORIES.find(x => x.id === id); assert.ok(!st.season || st.season === season, id + ' only runs in ' + st.season + ', not in ' + season); }
+      assert.ok(Object.keys(s4.story.count).length >= 5, season + ' has its stories (' + Object.keys(s4.story.count).join(',') + ')'); }
+    assert.ok(St.STORIES.filter(x => x.season).map(x => x.season).sort().join() === 'autumn,spring,summer,winter', 'each season has its own story'); }
+  // sound: the plan, the chimes and the audio graph (against a fake AudioContext)
+  { const Snd = await mod('sound.mjs'), day = {dark: 0, rain: 0, season: 'summer'}, night = {dark: 1, rain: 0, season: 'summer'};
+    assert.ok(Snd.soundPlan(day).birds > .5 && Snd.soundPlan(day).crickets === 0, 'birds by day'); assert.ok(Snd.soundPlan(night).crickets > .9 && Snd.soundPlan(night).birds === 0, 'crickets by night');
+    assert.ok(Snd.soundPlan({...day, rain: 1}).rain > .4 && Snd.soundPlan({...day, rain: 1}).birds === 0, 'rain drowns the birds'); assert.equal(Snd.soundPlan({...day, rain: 1, season: 'winter'}).rain, 0, 'snow is quiet');
+    assert.equal(Snd.soundPlan({...night, season: 'winter'}).crickets, 0, 'no crickets in winter');
+    assert.equal(Snd.chimeDue(10.9, 11.1), 11); assert.equal(Snd.chimeDue(11.9, 12.1), 12); assert.equal(Snd.chimeDue(12.9, 13.1), 1); assert.equal(Snd.chimeDue(3.9, 4.1), 0); assert.equal(Snd.chimeDue(10.2, 10.8), 0); assert.equal(Snd.chimeDue(23.9, 24.1), 0);
+    const made = {osc: 0, src: 0, started: 0};
+    class P { constructor() { this.value = 0; } setValueAtTime() { return this; } linearRampToValueAtTime() { return this; } exponentialRampToValueAtTime() { return this; } setTargetAtTime() { return this; } }
+    class N { constructor(k) { this.k = k; this.gain = new P(); this.frequency = new P(); this.Q = new P(); this.type = ''; } connect() { return this; } start() { made.started++; } stop() {} }
+    class AC { constructor() { this.sampleRate = 8000; this.currentTime = 0; this.destination = new N('dest'); } createGain() { return new N('gain'); } createOscillator() { made.osc++; return new N('osc'); } createBufferSource() { made.src++; return new N('src'); } createBiquadFilter() { return new N('filter'); } createBuffer(c, n) { const d = new Float32Array(n); return {getChannelData: () => d}; } resume() {} suspend() {} }
+    const snd = Snd.createSound({AudioContext: AC, random: () => .5}); assert.equal(snd.enabled, false); snd.update({...day, hour: 12}, 1); assert.equal(made.osc + made.src, 0, 'nothing is made until it is turned on');
+    snd.toggle(true); assert.ok(snd.enabled && made.src === 3, 'the beds start when it is turned on'); const before = made.osc;
+    for (let i = 0; i < 100; i++) snd.update({...day, hour: 12, trainMoving: false}, .1); assert.ok(made.osc > before + 10, 'birds sing by day (' + (made.osc - before) + ' tones)');
+    const b2 = made.osc; snd.update({...day, hour: 12.95}, .1); snd.update({...day, hour: 13.05}, .1); assert.ok(made.osc - b2 >= 3, 'the clock strikes one at 13:00'); const b3 = made.osc; snd.update({...day, hour: 13.1, trainMoving: true}, .1); assert.ok(made.osc - b3 >= 2, 'the train whistles when it sets off');
+    snd.toggle(false); assert.equal(snd.enabled, false); const b4 = made.osc; for (let i = 0; i < 50; i++) snd.update({...day, hour: 14}, .1); assert.equal(made.osc, b4, 'silent when off');
+    assert.equal(Snd.createSound({AudioContext: null}).supported, false, 'no AudioContext, no sound and no crash'); }
   sim.setHour(12); sim.dispatchFire(); for (let i = 0; i < 20 * 120; i++) sim.update(1 / 20);
   assert.ok(sim.vehicles.find(v => v.id === 'fire').trips >= 1, 'the fire engine goes out when called and comes back to the station');
   assert.ok(sim.vehicles.every(v => v.s >= 0 && v.s < T.length));

@@ -1142,3 +1142,13 @@ A `START` does not prohibit parallel edits. Avoid stepping on each other's uncom
 - **Tests**: the logic test describes every resident, building and vehicle after two simulated minutes (no `undefined`, a plausible first line); the visual test makes real mouse clicks on a walking resident and on the café and checks the selection and card. Screenshot `new-town-tap.png`. All Toy Town suites pass.
 - Not verified on a real phone (touch taps, the card above the home bar); the tap reach numbers are my estimates.
 
+
+### 2026-11-10 · Claude · START (new storybook town, follow-up 2: seasons and sound)
+- Request: "Add sound and seasons next". Seasons: spring, summer, autumn, winter (by today's date, `?season=` overrides): recoloured grass and trees at build time, falling petals / fireflies / leaves / snow, a seasonal sky tint, a few seasonal stories. Sound: synthesised Web Audio (no files), opt-in behind a button: wind and sea, rain, birds by day, crickets at night, the clock striking the hour, the train's whistle, a tap blip. Pure logic (`soundPlan`, `chimeDue`, `seasonOf`) is tested in Node; the audio graph is tested against a fake AudioContext. Not touching the old town, Mushroom Island or the root `HANDOFF.md`.
+
+### 2026-11-10 · Claude · DONE (new storybook town, follow-up 2: seasons and sound)
+- **Seasons**: by today's date (it is autumn now) or `?season=`; four icons in the chip switch. Grass and foliage recolour at build time (spring blossom, summer green, autumn orange and gold, winter snow-white with dark evergreen), with falling petals, summer-night fireflies, falling leaves and snow (heavier in a rain spell), a seasonal sky tint and a lower, weaker winter sun, and four seasonal stories (snowman, apple picking, blossom tea, a paddle). Screenshots `new-town-winter.png` and `new-town-autumn.png`.
+- **Sound**: opt-in speaker button; synthesised Web Audio: wind and waves, rain, birds by day, crickets on warm nights, the clock striking the hour (07:00-21:00), the train whistle, a tap blip. No audio files.
+- **Tests**: the logic test checks `seasonOf`, the seasonal skies and sun, that seasonal stories only run in their season, the sound plan (birds by day, crickets by night, silence in snow, no crickets in winter), the chime counts and the audio graph against a fake `AudioContext` (nothing made until turned on, silent when off, whistle and chimes fire). The visual test loads winter and autumn within the draw budget and clicks the real sound button (audio starts, no page errors). Default view now 64-67 calls.
+- **Not verified**: nobody has listened to it, so the volumes and sounds are my guesses; a real phone's audio policy (an iOS silent switch mutes Web Audio). The old town and Mushroom Island are untouched.
+

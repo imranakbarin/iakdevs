@@ -2,8 +2,9 @@
 import * as THREE from 'three';
 import {PALETTE as P, ISLAND, CAST, VEHICLES, BUILDINGS, TRACK, PADDOCK, POND, JETTY, heightAt, rand} from './def.mjs';
 import {createSim} from './sim.mjs';
-import {buildTown, buildResident, buildVehicle, buildClouds, buildTrain, buildBoat, buildAnimal, buildSky, buildUmbrella, buildRain} from './build.mjs';
-import {skyAt} from './sky.mjs';
+import {buildTown, buildResident, buildVehicle, buildClouds, buildTrain, buildBoat, buildAnimal, buildSky, buildUmbrella, buildRain, buildFall} from './build.mjs';
+import {skyAt, seasonOf, SEASONS} from './sky.mjs';
+import {createSound} from './sound.mjs';
 import {newsStory} from './stories.mjs';
 import {describeResident, describeBuilding, describeVehicle, describeAnimal, describeTrain} from './inspect.mjs';
 
@@ -19,7 +20,8 @@ const sun = new THREE.DirectionalLight('#fff4dc', 2.1); sun.position.set(-14, 22
 sun.shadow.mapSize.set(phone ? 1024 : 2048, phone ? 1024 : 2048); Object.assign(sun.shadow.camera, {left: -17, right: 17, top: 14, bottom: -14, near: 1, far: 70}); sun.shadow.bias = -.0006; sun.shadow.normalBias = .03;
 scene.add(sun, sun.target);
 
-const sim = createSim(7), built = buildTown(sim.graph);
+const season = SEASONS.includes(q.get('season')) ? q.get('season') : seasonOf(), sim = createSim(7, {season}), built = buildTown(sim.graph, season);
+const sound = createSound();
 scene.add(built.ground, built.sea, built.town, built.glow); for (const m of Object.values(built.moving)) scene.add(m.group);
 const clouds = buildClouds(); scene.add(clouds);
 const sky = buildSky(); scene.add(sky);
@@ -29,6 +31,7 @@ const people = new Map(), cars = new Map();
 const brollies = new Map(), BROLLY = ['red', 'yellow', 'pink', 'blue', 'purple', 'orange', 'teal'];
 sim.residents.forEach((r, i) => { const g = buildResident(r.def, i, built.material), u = buildUmbrella(built.material, BROLLY[i % BROLLY.length]); g.add(u); brollies.set(r.id, u); scene.add(g); people.set(r.id, g); });
 const rain = buildRain(); scene.add(rain);
+const fall = buildFall(season); scene.add(fall);
 sim.vehicles.forEach(v => { const g = buildVehicle(v.def, built.material); scene.add(g); cars.set(v.id, g); });
 
 // Things that live on their own: the train, the boat at the jetty, the farm animals and the ducks on the pond.
@@ -107,7 +110,7 @@ function describe(o) {
 }
 function select(o) {
   sel = o; follow = o && o.kind !== 'building' ? o : null; cardAt = 0; cardText = '';
-  const h = document.getElementById('hint'); if (h && o) h.style.opacity = '0';
+  const h = document.getElementById('hint'); if (h && o) h.style.opacity = '0'; if (o) sound.blip();
   if (!o) { ring.visible = false; if (cardEl) cardEl.classList.remove('on'); return; }
   ring.scale.setScalar(RING[o.kind]); refreshCard();
 }
@@ -162,17 +165,21 @@ function caption() {
 let last = 0, frozen = false, time = 0;
 // The light follows the hour: sky, fog, sea, sun or moon, lit windows and lanterns, stars.
 function weatherLight() {
-  const L = skyAt(sim.hour, sim.weather.rain);
+  const L = skyAt(sim.hour, sim.weather.rain, season);
   scene.background.set(L.sky); scene.fog.color.set(L.fog); seaMat.color.set(L.sea);
   hemi.color.set(L.hemiSky); hemi.groundColor.set(L.hemiGround); hemi.intensity = L.hemiI;
   sun.color.set(L.sunColor); sun.intensity = L.sunI; sun.position.set(...L.sunPos);
   const gm = built.glow.material; gm.opacity = L.glow; built.glow.visible = L.glow > .02;
   sky.visible = L.stars > .02; sky.userData.stars.material.opacity = L.stars; sky.userData.moon.material.opacity = L.stars * .95;
-  { const r = sim.weather.rain; for (const u of brollies.values()) u.visible = r > .25; rain.position.set(view.x, 0, view.z); rain.userData.update(time, r > .02 ? r : 0); }
+  { const r = sim.weather.rain; for (const u of brollies.values()) u.visible = r > .25; rain.position.set(view.x, 0, view.z); rain.userData.update(time, season === 'winter' || r < .02 ? 0 : r);
+    const day = 1 - L.night, amount = season === 'winter' ? Math.max(.25, r) : season === 'summer' ? (L.night > .5 ? .7 * (1 - r) : 0) : (season === 'autumn' ? .5 : .4) * day * (1 - r * .7);
+    fall.position.set(view.x, 0, view.z); fall.userData.update(time, amount);
+    sound.update({dark: L.night, rain: r, season, hour: sim.hour, trainMoving: Math.abs(sim.train.v) > .1, zoom: 1 - clamp(0, (view.dist - 7) / 50, 1)}, 0.0001 + lastDt); }
   sky.position.copy(camera.position); document.body.style.background = L.sky; return L;
 }
+let lastDt = 0;
 function sync(dt) {
-  time += dt;
+  time += dt; lastDt = dt;
   for (const r of sim.residents) {
     const g = people.get(r.id); g.visible = r.state === 'walking'; if (!g.visible) continue;
     const step = time * 9 + r.speed * 40, y = heightAt(r.x, r.z);
@@ -209,11 +216,22 @@ function frame(t) {
 resize(); fit(); placeCamera(); requestAnimationFrame(frame);
 const hint = document.getElementById('hint'); if (hint) setTimeout(() => { hint.style.opacity = '0'; }, 6000);
 
+// The sound button: off until asked (browsers need a tap first anyway); remembered for next time.
+const sndBtn = document.getElementById('snd');
+function showSound() { if (!sndBtn) return; sndBtn.textContent = sound.enabled ? '\u{1F50A}' : '\u{1F507}'; sndBtn.setAttribute('aria-pressed', String(sound.enabled)); sndBtn.title = sound.enabled ? 'Sound on' : 'Sound off'; }
+if (sndBtn) { if (!sound.supported) sndBtn.style.display = 'none'; sndBtn.addEventListener('click', () => { sound.toggle(); try { localStorage.setItem('toytown-new-sound', sound.enabled ? '1' : '0'); } catch (e) {} showSound(); }); showSound(); }
+try { if (localStorage.getItem('toytown-new-sound') === '1') { const resume = e => { if (e.target === sndBtn) { removeEventListener('pointerdown', resume); return; } removeEventListener('pointerdown', resume); if (!sound.enabled) { sound.toggle(true); showSound(); } }; addEventListener('pointerdown', resume); } } catch (e) {}
+const seasonsEl = document.getElementById('seasons');
+if (seasonsEl) for (const [name, icon] of [['spring', '\u{1F338}'], ['summer', '\u2600\uFE0F'], ['autumn', '\u{1F342}'], ['winter', '\u2744\uFE0F']]) {
+  const a = document.createElement('a'), u = new URL(location.href); u.searchParams.set('season', name); a.href = u.search; a.textContent = icon; a.title = name + (name === season ? ' (now)' : ''); if (name === season) a.className = 'on'; seasonsEl.append(a);
+}
+document.addEventListener('visibilitychange', () => sound.pause(document.hidden));
+
 // Hooks for tests and screenshots.
 window.ToyTownNew = {
-  sim, scene, camera, renderer, view,
+  sim, scene, camera, renderer, view, season, sound,
   hour: () => sim.hour, setHour(h) { sim.setHour(h); sync(0); renderer.render(scene, camera); },
-  info: () => ({pixelRatio: renderer.getPixelRatio(), story: sim.story.current && sim.story.current.id, rain: +sim.weather.rain.toFixed(2), calls: renderer.info.render.calls, triangles: renderer.info.render.triangles, residentsOut: sim.residents.filter(r => r.state === 'walking').length, clock: sim.clock}),
+  info: () => ({season, pixelRatio: renderer.getPixelRatio(), story: sim.story.current && sim.story.current.id, rain: +sim.weather.rain.toFixed(2), calls: renderer.info.render.calls, triangles: renderer.info.render.triangles, residentsOut: sim.residents.filter(r => r.state === 'walking').length, clock: sim.clock}),
   look(x, z, dist, yaw = 0) { Object.assign(view, {x, z, dist, yaw, tx: x, tz: z, tdist: dist, tyaw: yaw}); placeCamera(); renderer.render(scene, camera); },
   advance(seconds) { for (let t = 0; t < seconds; t += .05) sim.update(.05); sync(0); renderer.render(scene, camera); },
   selected: () => sel, tapAt: (cx, cy) => tap(cx, cy), select,

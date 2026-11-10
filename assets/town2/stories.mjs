@@ -1,6 +1,6 @@
 // New Toy Town: small stories. Pure data and a mapper, no THREE and no DOM.
 // A story sends a few residents on errands (door to door, like every walk) in some hours and weather, with a caption.
-//   hours [from, to) on the day clock; wet: 'dry' (only fine weather), 'wet' (only in rain) or omitted (any);
+//   season: only in that season; hours [from, to) on the day clock; wet: 'dry' (only fine weather), 'wet' (only in rain) or omitted (any);
 //   go: [resident, [[place, secondsToStay], ...]]; fire: also send out the fire engine.
 export const STORIES = [
   {id: 'milkround',  title: 'Farmer Hay brings the milk to the bakery and the café', hours: [6.5, 10], go: [['hay', [['bakery', 14], ['cafe', 14]]]]},
@@ -24,6 +24,10 @@ export const STORIES = [
   {id: 'rainycafe',  title: 'Everyone shelters in the café', hours: [8, 19], wet: 'wet', go: [['moss', [['cafe', 40]]], ['crumb', [['cafe', 40]]], ['pott', [['cafe', 35]]]]},
   {id: 'harbourtrip', title: 'A trip to see the boat', hours: [10, 15], wet: 'dry', go: [['chalk', [['hut', 30]]], ['dot', [['hut', 30]]], ['dash', [['hut', 30]]]]},
   {id: 'tinker',     title: 'Sparky shows off a new gadget', hours: [9, 17], go: [['sparky', [['toys', 20], ['cafe', 15]]], ['pip', [['garage', 25]]]]},
+  {id: 'snowman',   title: 'Building a snowman at the school', season: 'winter', hours: [10, 16], go: [['dot', [['school', 40]]], ['dash', [['school', 40]]], ['pip', [['school', 30]]]]},
+  {id: 'applepick', title: 'Apple picking at the farm', season: 'autumn', hours: [10, 16], wet: 'dry', go: [['hay', [['farm', 35]]], ['dot', [['farm', 35]]], ['dash', [['farm', 35]]]]},
+  {id: 'blossomtea', title: 'Blossom tea at the café', season: 'spring', hours: [10, 17], wet: 'dry', go: [['moss', [['cafe', 40]]], ['pott', [['cafe', 40]]]]},
+  {id: 'paddle',    title: 'A paddle at the harbour', season: 'summer', hours: [11, 17], wet: 'dry', go: [['salt', [['hut', 35]]], ['dot', [['hut', 35]]], ['dash', [['hut', 35]]]]},
   // only staged by the news
   {id: 'market',     title: 'A busy market morning', hours: [8, 16], news: true, go: [['hay', [['bakery', 12], ['toys', 10]]], ['tilly', [['bakery', 15]]], ['crumb', [['farm', 20]]]]},
   {id: 'party',      title: 'A good-news party at the café', hours: [9, 18], news: true, go: [['crumb', [['cafe', 40]]], ['pott', [['cafe', 40]]], ['moss', [['cafe', 40]]], ['bell', [['cafe', 30]]], ['pip', [['cafe', 30]]]]}

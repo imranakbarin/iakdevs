@@ -22,8 +22,11 @@ canvas:active{cursor:grabbing}
 #card b{display:block;font-weight:700;font-size:14px}
 #card span{display:block}
 #card button{position:absolute;right:6px;top:4px;width:26px;height:26px;border:0;border-radius:50%;background:transparent;color:inherit;font:700 18px/1 Nunito,system-ui,sans-serif;cursor:pointer}
+#snd{position:fixed;right:calc(12px + env(safe-area-inset-right,0px));top:calc(12px + env(safe-area-inset-top,0px));width:34px;height:34px;border:0;border-radius:50%;background:var(--paper);font-size:17px;line-height:1;cursor:pointer;padding:0}
+#seasons a{margin-left:6px;text-decoration:none;filter:grayscale(.6)}
+#seasons a.on{filter:none}
 #fail{position:fixed;inset:0;display:none;align-items:center;justify-content:center;padding:24px;text-align:center;background:#bfe9fb}
-html.ui-off #chip,html.ui-off #hint,html.ui-off #story,html.ui-off #card{display:none}
+html.ui-off #snd,html.ui-off #chip,html.ui-off #hint,html.ui-off #story,html.ui-off #card{display:none}
 </style>
 <script type="importmap">
 {"imports":{
@@ -34,14 +37,15 @@ html.ui-off #chip,html.ui-off #hint,html.ui-off #story,html.ui-off #card{display
 </head>
 <body>
 <canvas id="town" aria-label="Toy Town: a little storybook town with a clock tower, a teapot café and a windmill"></canvas>
-<div id="chip">Toy Town · new build preview<a href="toy-town.html">current town</a></div>
+<div id="chip">Toy Town · new build preview<a href="toy-town.html">current town</a><span id="seasons"></span></div>
+<button id="snd" aria-label="Sound" aria-pressed="false" title="Sound off">🔇</button>
 <div id="story" aria-live="polite"></div>
 <div id="card" aria-live="polite"><button aria-label="Close">×</button><b></b><div></div></div>
 <div id="hint">Tap anyone or anything · drag to explore · pinch or scroll to zoom · twist (or right-drag, Q/E) to turn</div>
 <div id="fail">The new town needs WebGL, which this browser could not start. <a href="toy-town.html">Open the current town</a>.</div>
 <script>if(/[?&]clean=1\b/.test(location.search))document.documentElement.classList.add('ui-off');</script>
 <script type="module">
-  import('./assets/town2/main.mjs?v=3').catch(e => { console.error(e); document.getElementById('fail').style.display = 'flex'; });
+  import('./assets/town2/main.mjs?v=4').catch(e => { console.error(e); document.getElementById('fail').style.display = 'flex'; });
 </script>
 </body>
 </html>
