@@ -25,7 +25,7 @@ export function chimeDue(prev, now) {
 export function createSound(opts = {}) {
   const AC = opts.AudioContext || (typeof window !== 'undefined' ? window.AudioContext || window.webkitAudioContext : null), rnd = opts.random || Math.random;
   const me = {enabled: false, supported: !!AC, started: 0};
-  let ctx = null, master = null, gains = {}, noise = null, nextChirp = 1, nextCricket = 1, lastHour = null, wasMoving = false;
+  let ctx = null, master = null, gains = {}, noise = null, nextChirp = 1, nextCricket = 1, lastHour = null, wasMoving = false, lastAt = null;
 
   function noiseBuffer() { const n = ctx.sampleRate * 2, b = ctx.createBuffer(1, n, ctx.sampleRate), d = b.getChannelData(0); for (let i = 0; i < n; i++) d[i] = rnd() * 2 - 1; return b; }
   function bed(type, freq, q, lfoRate) {   // a looped noise through a filter into its own gain; an LFO makes it breathe
@@ -51,6 +51,7 @@ export function createSound(opts = {}) {
   me.cricket = () => { const t = ctx.currentTime; for (let i = 0; i < 4; i++) tone(4300, t + i * .06, .035, .012, {type: 'triangle'}); };
   me.bell = n => { const t0 = ctx.currentTime; for (let i = 0; i < Math.min(12, n); i++) { const t = t0 + i * .9; for (const [m, p] of [[1, .09], [2.76, .04], [5.4, .02]]) tone(523 * m, t, 2.2 / m ** .3, p); } };
   me.whistle = () => { const t = ctx.currentTime; tone(660, t, .32, .05, {to: 700}); tone(880, t + .36, .5, .05, {to: 860}); };
+  me.stationBell = () => { const t = ctx.currentTime; for (let i = 0; i < 4; i++) { tone(1175, t + i * .42, .38, .05); tone(880, t + i * .42 + .2, .3, .035); } };   // ding-dong as the train pulls in
   me.blip = () => { if (!me.enabled) return; const t = ctx.currentTime; tone(880, t, .09, .04, {to: 1320}); };
 
   me.toggle = on => {
@@ -68,6 +69,7 @@ export function createSound(opts = {}) {
     if ((nextCricket -= dt) <= 0) { nextCricket = plan.crickets > .02 ? (.35 + rnd() * .5) / plan.crickets : 2; if (plan.crickets > .02) me.cricket(); }
     if (lastHour !== null) { const n = chimeDue(lastHour, s.hour); if (n) me.bell(n); } lastHour = s.hour;
     if (s.trainMoving && !wasMoving) me.whistle(); wasMoving = !!s.trainMoving;
+    if (s.trainAt && !lastAt) me.stationBell(); lastAt = s.trainAt || null;
   };
   return me;
 }

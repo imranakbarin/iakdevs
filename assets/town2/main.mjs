@@ -3,9 +3,11 @@ import * as THREE from 'three';
 import {PALETTE as P, ISLAND, CAST, VEHICLES, BUILDINGS, PADDOCK, POND, PIER, heightAt, rand} from './def.mjs';
 import {along} from './graph.mjs';
 import {createSim} from './sim.mjs';
-import {buildTown, buildResident, buildVehicle, buildClouds, buildTrain, buildBoat, buildAnimal, buildSky, buildUmbrella, buildRain, buildFall, buildPuddles, buildCargo, buildPassengers} from './build.mjs';
+import {buildTown, buildResident, buildVehicle, buildClouds, buildTrain, buildBoat, buildAnimal, buildSky, buildUmbrella, buildRain, buildFall, buildPuddles, buildCargo, buildPassengers, buildMarketGoods, buildSignals} from './build.mjs';
 import {skyAt, seasonOf, SEASONS, mix} from './sky.mjs';
 import {createSound} from './sound.mjs';
+import {createSmoke} from './smoke.mjs';
+import {load as loadSettings, save as saveSettings, stepsFor, BUSY_FACTOR} from './settings.mjs';
 import {newsStory} from './stories.mjs';
 import {describeResident, describeBuilding, describeVehicle, describeAnimal, describeTrain} from './inspect.mjs';
 
@@ -42,6 +44,9 @@ sim.vehicles.forEach(v => { const g = buildVehicle(v.def, built.material); scene
 const trainCars = buildTrain(built.material); for (const c of trainCars) scene.add(c);
 const loop = sim.graph.loop;
 // Cargo and passengers: one instanced mesh each. Crates stand on platforms, ride in the goods wagon or are carried by residents; passengers' heads show in the coaches.
+const marketGoods = buildMarketGoods(BUILDINGS.find(b => b.id === 'market'), built.material); scene.add(marketGoods);
+const signals = buildSignals(sim.graph); scene.add(signals);
+const smokeMesh = new THREE.InstancedMesh(new THREE.SphereGeometry(1, 8, 6), new THREE.MeshLambertMaterial({color: '#f4f4f4', transparent: true, opacity: .8, depthWrite: false}), 14), smoke = createSmoke(14), smokeM = new THREE.Matrix4(); smokeMesh.frustumCulled = false; scene.add(smokeMesh);
 const cargoMesh = buildCargo(), passMesh = buildPassengers(); scene.add(cargoMesh, passMesh);
 const platformInfo = {}; for (const st of sim.train.stations) { const d = sim.graph.doors['platform:' + st.id], q = along(loop, sim.graph.loopS(d.x, d.z)); platformInfo[st.id] = {x: d.x, z: d.z, tx: q.tx, tz: q.tz}; }
 const v3b = new THREE.Vector3();
@@ -179,7 +184,7 @@ function refreshJobs() {
     const where = c.state === 'carried' ? 'carried by ' + (who || 'somebody') : c.state === 'ready' ? 'waiting for ' + (who || 'a carrier') : c.state === 'train' ? 'on the train' : c.state === 'station' ? 'waiting at ' + stn(c.at) : '';
     return KIND[c.kind] + ': ' + BUILDINGS.find(b => b.id === c.from).name + ' to ' + BUILDINGS.find(b => b.id === c.to).name + ' (' + where + ')';
   });
-  const text = 'Work board | delivered ' + sim.freightStats.delivered + ' | ' + sim.riders.length + ' on the train\n' + (lines.join('\n') || 'Nothing to carry just now.');
+  const text = 'Work board | delivered ' + sim.freightStats.delivered + ' | ' + sim.riders.length + ' on the train | town ' + (sim.townMood > .8 ? 'cheerful' : sim.townMood > .62 ? 'content' : 'grumpy') + '\n' + (lines.join('\n') || 'Nothing to carry just now.');
   if (text === jobsText) return; jobsText = text; jobsEl.textContent = ''; const [head, ...rest] = text.split('\n'); const h = document.createElement('b'); h.textContent = head; jobsEl.append(h); for (const l of rest) { const e = document.createElement('span'); e.textContent = l; jobsEl.append(e); }
 }
 if (jobsEl) jobsEl.addEventListener('click', () => jobsEl.classList.toggle('open'));
@@ -192,9 +197,21 @@ function trackSelection(dt) {
 }
 
 /* ---- the day's news: each light headline stages one of the small stories, one after another ---- */
+// pace and balance: how fast the day goes, how much work the train gets, whether the news stages stories (remembered between visits)
+let store = null; try { store = localStorage; } catch (e) {}
+const settings = store ? loadSettings(store) : loadSettings({getItem: () => null}), setBtn = document.getElementById('set'), panelEl = document.getElementById('panel');
+function applySettings(save = true) {
+  sim.setBusy(BUSY_FACTOR[settings.busy]);
+  if (panelEl) for (const seg of panelEl.querySelectorAll('.seg')) for (const b of seg.children) b.classList.toggle('on', String(settings[seg.dataset.key]) === b.dataset.v);
+  if (save && store) saveSettings(store, settings);
+}
+if (panelEl) for (const seg of panelEl.querySelectorAll('.seg')) seg.addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; const v = b.dataset.v, k = seg.dataset.key; settings[k] = k === 'speed' ? +v : k === 'news' ? v === 'true' : v; applySettings(); });
+if (setBtn) setBtn.addEventListener('click', () => { const on = panelEl.classList.toggle('on'); setBtn.setAttribute('aria-expanded', String(on)); });
+applySettings(false);
 const storyEl = document.getElementById('story'); let headlines = [], newsAt = 40, newsIdx = 0, shown = '';
 if (q.get('news') !== '0') fetch(new URL('../toy-town-news.json', import.meta.url)).then(r => r.ok ? r.json() : null).then(d => { headlines = ((d && d.stories) || []).filter(s => s.tone === 'light' && s.title).slice(0, 12); }).catch(() => {});
 function news() {
+  if (!settings.news) return;
   if (sim.story.current || sim.story.pending || sim.clock < newsAt || !headlines.length) return;
   const h = headlines[newsIdx++ % headlines.length], m = newsStory(h.title, h.category || '');
   if (m.weather) sim.weather.force(m.weather, 70);
@@ -223,7 +240,7 @@ function weatherLight() {
   { const r = sim.weather.rain; for (const u of brollies.values()) u.visible = r > .25; rain.position.set(view.x, 0, view.z); rain.userData.update(time, season === 'winter' || r < .02 ? 0 : r);
     const day = 1 - L.night, amount = season === 'winter' ? Math.max(.25, r) : season === 'summer' ? (L.night > .5 ? .7 * (1 - r) : 0) : (season === 'autumn' ? .5 : .4) * day * (1 - r * .7);
     fall.position.set(view.x, 0, view.z); fall.userData.update(time, amount);
-    sound.update({dark: L.night, rain: r, season, hour: sim.hour, trainMoving: Math.abs(sim.train.v) > .1, zoom: 1 - clamp(0, (view.dist - 7) / 50, 1)}, 0.0001 + lastDt); }
+    sound.update({dark: L.night, rain: r, season, hour: sim.hour, trainMoving: Math.abs(sim.train.v) > .1, trainAt: sim.train.at, zoom: 1 - clamp(0, (view.dist - 7) / 50, 1)}, 0.0001 + lastDt); }
   // the street lamps, one by one as the lamplighter reaches them (faint in daylight, bright after dark), and the puddles
   built.lampGlow.material.opacity = .4 + .55 * L.night;
   sim.lamps.forEach((l, i) => { const v = Math.round(l.lit * 20) / 20; if (v !== lampDrawn[i]) { lampDrawn[i] = v; built.lampGlow.userData.set(i, v); } });
@@ -232,7 +249,8 @@ function weatherLight() {
 }
 let lastDt = 0;
 function sync(dt) {
-  time += dt; lastDt = dt;
+  time += dt; lastDt = dt; marketGoods.visible = sim.market.open;
+  sim.train.stations.forEach((st, i) => signals.userData.set(i, sim.signalFor(st.id) === 'red'));
   for (const r of sim.residents) {
     const g = people.get(r.id); g.visible = r.state === 'walking' || r.onPlatform; if (!g.visible) continue;
     const step = time * (r.lampJob ? 16 : r.hurry ? 14 : 9) + r.speed * 40, y = heightAt(r.x, r.z);
@@ -246,6 +264,9 @@ function sync(dt) {
   }
   trainCars.forEach((c, k) => { const q = along(loop, sim.train.s - k * sim.train.gap), y = heightAt(q.x, q.z) + .06; c.position.set(q.x, y, q.z); c.rotation.y = Math.atan2(q.tx, q.tz); c.updateMatrixWorld(true); });   // the cars follow the head round the loop
   updateFreight();
+  { trainCars[0].localToWorld(v3b.set(0, .66, .36)); const moving = Math.abs(sim.train.v) > .1;   // the engine's smoke: more when it is working
+    smoke.update(dt, {x: v3b.x, y: v3b.y, z: v3b.z, vx: .05, vz: 0}, moving ? 5 : 1.2);
+    smoke.puffs.forEach((p, i) => { const z = smoke.size(p); smokeM.makeScale(z, z, z).setPosition(p.x, p.y, p.z); smokeMesh.setMatrixAt(i, smokeM); }); smokeMesh.instanceMatrix.needsUpdate = true; }
   moveCritters(dt); boat.position.y = -.02 + Math.sin(time * 1.3) * .022; boat.rotation.z = Math.sin(time * 1.1) * .03;
   built.moving.top.inner.rotation.y = time * 2.2; built.moving.sails.inner.rotation.z = -time * .55;
   built.moving.minute.inner.rotation.z = -time * .1; built.moving.hour.inner.rotation.z = -time * .1 / 12;
@@ -268,7 +289,8 @@ function frame(t) {
   requestAnimationFrame(frame);
   const dt = Math.min(.05, last ? (t - last) / 1000 : 0); last = t;
   if (frozen || document.hidden) return;
-  sim.update(dt); sync(dt); renderer.render(scene, camera); tune(dt);
+  const n = stepsFor(dt, settings.speed); for (let i = 0; i < n; i++) sim.update(dt * settings.speed / n);
+  sync(dt); renderer.render(scene, camera); tune(dt);
 }
 resize(); fit(); placeCamera(); requestAnimationFrame(frame);
 const hint = document.getElementById('hint'); if (hint) setTimeout(() => { hint.style.opacity = '0'; }, 6000);
@@ -288,11 +310,11 @@ document.addEventListener('visibilitychange', () => sound.pause(document.hidden)
 window.ToyTownNew = {
   sim, scene, camera, renderer, view, season, sound,
   hour: () => sim.hour, setHour(h) { sim.setHour(h); sync(0); renderer.render(scene, camera); },
-  info: () => ({delivered: sim.freightStats.delivered, cargoNow: sim.cargo.length, riders: sim.riders.length, trainLaps: sim.train.laps, trainStops: sim.train.stopsMade, lampsLit: sim.lamps.filter(l => l.on).length, wet: +sim.weather.wet.toFixed(2), season, pixelRatio: renderer.getPixelRatio(), story: sim.story.current && sim.story.current.id, rain: +sim.weather.rain.toFixed(2), calls: renderer.info.render.calls, triangles: renderer.info.render.triangles, residentsOut: sim.residents.filter(r => r.state === 'walking').length, clock: sim.clock}),
+  info: () => ({market: sim.market.open, marketVisits: sim.market.visits, delivered: sim.freightStats.delivered, cargoNow: sim.cargo.length, riders: sim.riders.length, trainLaps: sim.train.laps, trainStops: sim.train.stopsMade, lampsLit: sim.lamps.filter(l => l.on).length, wet: +sim.weather.wet.toFixed(2), season, pixelRatio: renderer.getPixelRatio(), story: sim.story.current && sim.story.current.id, rain: +sim.weather.rain.toFixed(2), calls: renderer.info.render.calls, triangles: renderer.info.render.triangles, residentsOut: sim.residents.filter(r => r.state === 'walking').length, clock: sim.clock}),
   look(x, z, dist, yaw = 0) { Object.assign(view, {x, z, dist, yaw, tx: x, tz: z, tdist: dist, tyaw: yaw}); placeCamera(); renderer.render(scene, camera); },
   advance(seconds) { for (let t = 0; t < seconds; t += .05) sim.update(.05); sync(0); renderer.render(scene, camera); },
   trainPos: () => trainCars[0].position, selected: () => sel, tapAt: (cx, cy) => tap(cx, cy), select, sendParcel: (a, b) => sim.sendParcel(a, b), jobsText: () => jobsText,
   project(x, z, y = .4) { const r = canvas.getBoundingClientRect(); camera.updateMatrixWorld(); v3.set(x, heightAt(x, z) + y, z).project(camera); return [(v3.x * .5 + .5) * r.width + r.left, (-v3.y * .5 + .5) * r.height + r.top]; },
   setWeather(kind, seconds = 600) { sim.weather.force(kind, seconds); },
-  freeze(on = true) { frozen = on; }
+  settings, applySettings, freeze(on = true) { frozen = on; }
 };
