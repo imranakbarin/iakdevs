@@ -3,10 +3,12 @@ import * as THREE from 'three';
 import {PALETTE as P, ISLAND, CAST, VEHICLES, BUILDINGS, PADDOCK, POND, PIER, heightAt, rand} from './def.mjs';
 import {along} from './graph.mjs';
 import {createSim} from './sim.mjs';
-import {buildTown, buildResident, buildVehicle, buildClouds, buildTrain, buildBoat, buildAnimal, buildSky, buildUmbrella, buildRain, buildFall, buildPuddles, buildCargo, buildPassengers, buildMarketGoods, buildSignals} from './build.mjs';
+import {buildTown, buildResident, buildVehicle, buildClouds, buildTrain, buildBoat, buildAnimal, buildSky, buildUmbrella, buildRain, buildFall, buildPuddles, buildCargo, buildPassengers, buildMarketGoods, buildSignals, buildTufts, buildSkyDome, U} from './build.mjs';
 import {skyAt, seasonOf, SEASONS, mix} from './sky.mjs';
 import {createSound} from './sound.mjs';
 import {createSmoke} from './smoke.mjs';
+import {PROFILE, createGovernor, startTier, isTier} from './quality.mjs';
+import {wind} from './nature.mjs';
 import {load as loadSettings, save as saveSettings, stepsFor, BUSY_FACTOR} from './settings.mjs';
 import {newsStory} from './stories.mjs';
 import {describeResident, describeBuilding, describeVehicle, describeAnimal, describeTrain} from './inspect.mjs';
@@ -16,7 +18,7 @@ const canvas = document.getElementById('town'), q = new URLSearchParams(location
 const renderer = (() => { try { return new THREE.WebGLRenderer({canvas, antialias: true, powerPreference: 'high-performance'}); } catch (e) { try { return new THREE.WebGLRenderer({canvas, antialias: false}); } catch (e2) { throw new Error('WebGL could not start (' + (e2 && e2.message || e2) + ')'); } } })();
 const phone = Math.min(innerWidth, innerHeight) < 700;
 renderer.setPixelRatio(Math.min(devicePixelRatio || 1, phone ? 1.5 : 2));
-renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFShadowMap;
 const scene = new THREE.Scene(); scene.background = new THREE.Color('#bfe9fb'); scene.fog = new THREE.Fog('#bfe9fb', 85, 210);
 const camera = new THREE.PerspectiveCamera(30, 1, .5, 400);
 scene.add(new THREE.HemisphereLight('#ffffff', '#b8d8a0', 1.55));
@@ -27,8 +29,10 @@ scene.add(sun, sun.target);
 const season = SEASONS.includes(q.get('season')) ? q.get('season') : seasonOf(), sim = createSim(7, {season}), built = buildTown(sim.graph, season);
 const sound = createSound();
 scene.add(built.ground, built.sea, built.shallows, built.town, built.glow, built.lampGlow); for (const m of Object.values(built.moving)) scene.add(m.group);
+const tufts = buildTufts(sim.graph); scene.add(tufts);
 const clouds = buildClouds(); scene.add(clouds);
 const sky = buildSky(); scene.add(sky);
+const dome = buildSkyDome(); scene.add(dome);
 const hemi = scene.children.find(o => o.isHemisphereLight), seaMat = built.sea.material, tmp = new THREE.Color();
 if (q.get('h')) sim.setHour(+q.get('h'));
 const people = new Map(), cars = new Map();
@@ -205,7 +209,7 @@ function applySettings(save = true) {
   if (panelEl) for (const seg of panelEl.querySelectorAll('.seg')) for (const b of seg.children) b.classList.toggle('on', String(settings[seg.dataset.key]) === b.dataset.v);
   if (save && store) saveSettings(store, settings);
 }
-if (panelEl) for (const seg of panelEl.querySelectorAll('.seg')) seg.addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; const v = b.dataset.v, k = seg.dataset.key; settings[k] = k === 'speed' ? +v : k === 'news' ? v === 'true' : v; applySettings(); });
+if (panelEl) for (const seg of panelEl.querySelectorAll('.seg')) seg.addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; const v = b.dataset.v, k = seg.dataset.key; settings[k] = k === 'speed' ? +v : k === 'news' ? v === 'true' : v; if (k === 'quality') setQuality(v); applySettings(); });
 if (setBtn) setBtn.addEventListener('click', () => { const on = panelEl.classList.toggle('on'); setBtn.setAttribute('aria-expanded', String(on)); });
 applySettings(false);
 const storyEl = document.getElementById('story'); let headlines = [], newsAt = 40, newsIdx = 0, shown = '';
@@ -227,11 +231,13 @@ function caption() {
 }
 
 /* ---- the loop ---- */
-let last = 0, frozen = false, time = 0;
+let last = 0, frozen = false, time = 0, windNow = wind(0);
 // The light follows the hour: sky, fog, sea, sun or moon, lit windows and lanterns, stars.
 function weatherLight() {
   const L = skyAt(sim.hour, sim.weather.rain, season);
-  scene.background.set(L.sky); scene.fog.color.set(L.fog); seaMat.color.set(L.sea); { const k = (.05 + clamp(0, (1.55 - L.hemiI) / .55, 1) * .28) * (1 - .4 * L.night);   // water holds its colour when the light is low
+  scene.background.set(L.sky);
+  if (dome.visible) { const u = dome.userData.u, r = clamp(0, sim.weather.rain, 1); u.uBottom.value.set(L.sky); u.uTop.value.set(mix(mix(L.sky, '#4f9fe2', (1 - L.night) * (1 - r) * .55), '#060c22', L.night * .55)); u.uSun.value.set(L.sunPos[0], Math.max(.02, L.sunPos[1]), L.sunPos[2]); u.uGlow.value = Math.max(0, Math.min(1, (1.8 - L.sunI) / 1.0)) * (1 - L.night) * (1 - r); u.uGlowColor.value.set(L.sunColor); } scene.fog.color.set(L.fog); seaMat.color.set(L.sea); if (gradeEl) { const warm = Math.max(0, Math.min(1, (1.6 - L.sunI) / .9)) * (1 - L.night), cool = L.night; gradeEl.style.setProperty('--tint', cool > .3 ? 'rgba(40,60,140,' + (cool * .12).toFixed(3) + ')' : 'rgba(255,150,70,' + (warm * .1).toFixed(3) + ')'); }
+  { const k = (.05 + clamp(0, (1.55 - L.hemiI) / .55, 1) * .28) * (1 - .4 * L.night);   // water holds its colour when the light is low
     seaMat.emissive.set(L.sea).multiplyScalar(k); built.shallows.material.color.set(mix(L.sea, '#d8fff6', .5)); built.shallows.material.emissive.set(L.sea).multiplyScalar(k * 1.3); }
   hemi.color.set(L.hemiSky); hemi.groundColor.set(L.hemiGround); hemi.intensity = L.hemiI;
   sun.color.set(L.sunColor); sun.intensity = L.sunI; sun.position.set(...L.sunPos);
@@ -239,17 +245,17 @@ function weatherLight() {
   sky.visible = L.stars > .02; sky.userData.stars.material.opacity = L.stars; sky.userData.moon.material.opacity = L.stars * .95;
   { const r = sim.weather.rain; for (const u of brollies.values()) u.visible = r > .25; rain.position.set(view.x, 0, view.z); rain.userData.update(time, season === 'winter' || r < .02 ? 0 : r);
     const day = 1 - L.night, amount = season === 'winter' ? Math.max(.25, r) : season === 'summer' ? (L.night > .5 ? .7 * (1 - r) : 0) : (season === 'autumn' ? .5 : .4) * day * (1 - r * .7);
-    fall.position.set(view.x, 0, view.z); fall.userData.update(time, amount);
+    fall.position.set(view.x, 0, view.z); fall.userData.update(time, amount, windNow);
     sound.update({dark: L.night, rain: r, season, hour: sim.hour, trainMoving: Math.abs(sim.train.v) > .1, trainAt: sim.train.at, zoom: 1 - clamp(0, (view.dist - 7) / 50, 1)}, 0.0001 + lastDt); }
   // the street lamps, one by one as the lamplighter reaches them (faint in daylight, bright after dark), and the puddles
   built.lampGlow.material.opacity = .4 + .55 * L.night;
   sim.lamps.forEach((l, i) => { const v = Math.round(l.lit * 20) / 20; if (v !== lampDrawn[i]) { lampDrawn[i] = v; built.lampGlow.userData.set(i, v); } });
   puddles.userData.set(sim.weather.wet);
-  sky.position.copy(camera.position); document.body.style.background = L.sky; return L;
+  sky.position.copy(camera.position); dome.position.copy(camera.position); document.body.style.background = L.sky; return L;
 }
 let lastDt = 0;
 function sync(dt) {
-  time += dt; lastDt = dt; marketGoods.visible = sim.market.open;
+  time += dt; lastDt = dt; marketGoods.visible = sim.market.open; U.time.value = time; windNow = wind(time); U.wind.value.set(windNow.x, windNow.z);
   sim.train.stations.forEach((st, i) => signals.userData.set(i, sim.signalFor(st.id) === 'red'));
   for (const r of sim.residents) {
     const g = people.get(r.id); g.visible = r.state === 'walking' || r.onPlatform; if (!g.visible) continue;
@@ -265,7 +271,7 @@ function sync(dt) {
   trainCars.forEach((c, k) => { const q = along(loop, sim.train.s - k * sim.train.gap), y = heightAt(q.x, q.z) + .06; c.position.set(q.x, y, q.z); c.rotation.y = Math.atan2(q.tx, q.tz); c.updateMatrixWorld(true); });   // the cars follow the head round the loop
   updateFreight();
   { trainCars[0].localToWorld(v3b.set(0, .66, .36)); const moving = Math.abs(sim.train.v) > .1;   // the engine's smoke: more when it is working
-    smoke.update(dt, {x: v3b.x, y: v3b.y, z: v3b.z, vx: .05, vz: 0}, moving ? 5 : 1.2);
+    smoke.update(dt, {x: v3b.x, y: v3b.y, z: v3b.z, vx: windNow.x * .14, vz: windNow.z * .14}, moving ? 5 : 1.2);
     smoke.puffs.forEach((p, i) => { const z = smoke.size(p); smokeM.makeScale(z, z, z).setPosition(p.x, p.y, p.z); smokeMesh.setMatrixAt(i, smokeM); }); smokeMesh.instanceMatrix.needsUpdate = true; }
   moveCritters(dt); boat.position.y = -.02 + Math.sin(time * 1.3) * .022; boat.rotation.z = Math.sin(time * 1.1) * .03;
   built.moving.top.inner.rotation.y = time * 2.2; built.moving.sails.inner.rotation.z = -time * .55;
@@ -278,19 +284,37 @@ function sync(dt) {
 }
 // A phone pass: if frames run slow (under ~24 fps for two seconds) the render resolution steps down, and creeps back up when there is room.
 const maxPR = Math.min(devicePixelRatio || 1, phone ? 1.5 : 2); let slow = 0, fast = 0, spent = 0, frames = 0;
+// Picture quality: a tier (see quality.mjs) switches the costly effects. The governor drops a tier after a slow spell and tries one up again after a long smooth one; resolution only goes down once at the lowest tier.
+const gradeEl = document.getElementById('grade');
+const reduceMotion = typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches;
+let tier = 'high';
+function applyTier(t) {
+  tier = t; const p = PROFILE[t]; U.waves.value = p.waves; U.foam.value = p.foam; U.sway.value = p.sway * (reduceMotion ? .3 : 1); tufts.userData.show(p.tufts);
+  if (gradeEl) gradeEl.style.opacity = p.grade ? '1' : '0'; dome.visible = !!p.glow;
+}
+const forcedQ = isTier(q.get('quality')) ? q.get('quality') : isTier(settings.quality) ? settings.quality : null;
+const gov = createGovernor(startTier({forced: forcedQ, phone}), {locked: !!forcedQ || q.get('tune') === '0'});
+applyTier(gov.tier);
+function setQuality(choice) { if (isTier(choice)) { gov.locked = true; gov.tier = choice; applyTier(choice); } else { gov.locked = false; gov.cap = 'high'; } }
 function tune(dt) {
   if (q.get('tune') === '0') return; spent += dt; frames++; if (spent < 2) return;
   const avg = spent / frames; spent = 0; frames = 0;
-  const pr = renderer.getPixelRatio();
-  if (avg > .042 && pr > .75) { renderer.setPixelRatio(Math.max(.75, pr - .25)); renderer.setSize(innerWidth, innerHeight, false); slow++; fast = 0; if (pr <= 1 && sun.castShadow) { sun.castShadow = false; } }
+  const pr = renderer.getPixelRatio(), act = gov.step(avg, pr >= maxPR);
+  if (act) { applyTier(gov.tier); if (act === 'down') return; }
+  if (avg > .042 && gov.tier === 'low' && pr > .75) { renderer.setPixelRatio(Math.max(.75, pr - .25)); renderer.setSize(innerWidth, innerHeight, false); slow++; fast = 0; if (pr <= 1 && sun.castShadow) { sun.castShadow = false; } }
   else if (avg < .022 && pr < maxPR && ++fast >= 3) { renderer.setPixelRatio(Math.min(maxPR, pr + .25)); renderer.setSize(innerWidth, innerHeight, false); fast = 0; }
+}
+// ?debug=1: a small readout of what the picture costs (frames a second, draw calls, triangles, resolution, tier)
+if (q.get('debug') === '1') {
+  const el = document.createElement('div'); el.id = 'dbg'; el.setAttribute('aria-hidden', 'true'); document.body.append(el); let acc = 0, n = 0, at = performance.now();
+  window.__dbg = dt => { acc += dt; n++; if (performance.now() - at < 500) return; const i = renderer.info.render; el.textContent = (n / acc).toFixed(0) + ' fps · ' + (acc / n * 1000).toFixed(1) + ' ms · ' + i.calls + ' calls · ' + (i.triangles / 1000).toFixed(0) + 'k tris · ratio ' + renderer.getPixelRatio() + ' · ' + tier + (gov.locked ? ' (fixed)' : ' (auto)'); acc = 0; n = 0; at = performance.now(); };
 }
 function frame(t) {
   requestAnimationFrame(frame);
   const dt = Math.min(.05, last ? (t - last) / 1000 : 0); last = t;
   if (frozen || document.hidden) return;
   const n = stepsFor(dt, settings.speed); for (let i = 0; i < n; i++) sim.update(dt * settings.speed / n);
-  sync(dt); renderer.render(scene, camera); tune(dt);
+  sync(dt); renderer.render(scene, camera); tune(dt); if (window.__dbg) window.__dbg(dt);
 }
 resize(); fit(); placeCamera(); requestAnimationFrame(frame);
 const hint = document.getElementById('hint'); if (hint) setTimeout(() => { hint.style.opacity = '0'; }, 6000);
@@ -316,5 +340,5 @@ window.ToyTownNew = {
   trainPos: () => trainCars[0].position, selected: () => sel, tapAt: (cx, cy) => tap(cx, cy), select, sendParcel: (a, b) => sim.sendParcel(a, b), jobsText: () => jobsText,
   project(x, z, y = .4) { const r = canvas.getBoundingClientRect(); camera.updateMatrixWorld(); v3.set(x, heightAt(x, z) + y, z).project(camera); return [(v3.x * .5 + .5) * r.width + r.left, (-v3.y * .5 + .5) * r.height + r.top]; },
   setWeather(kind, seconds = 600) { sim.weather.force(kind, seconds); },
-  settings, applySettings, freeze(on = true) { frozen = on; }
+  settings, applySettings, setQuality, tier: () => tier, gov, tufts, U, freeze(on = true) { frozen = on; }
 };
