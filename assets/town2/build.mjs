@@ -5,7 +5,7 @@
 import * as THREE from 'three';
 import {RoundedBoxGeometry} from 'three/addons/geometries/RoundedBoxGeometry.js';
 import {mergeGeometries} from 'three/addons/utils/BufferGeometryUtils.js';
-import {PALETTE as P, ISLAND, SQUARE, ROAD, SPOKES, BUILDINGS, LAMPS, TREES, BUS_STOPS, TRACK, PADDOCK, POND, JETTY, heightAt, shore, rand, doorOf} from './def.mjs';
+import {PALETTE as P, ISLAND, SQUARE, ROAD, ROADS, OUTER, LOOP, BUILDINGS, LAMPS, TREES, BUS_LINES, STATIONS, PADDOCK, POND, PIER, HILL, BUILD_SCALE, heightAt, shore, rand, doorOf, building, loopPt} from './def.mjs';
 import {along, leftOf} from './graph.mjs';
 
 // Seasons recolour the foliage and the grass (and nothing else) when the town is built.
@@ -36,7 +36,11 @@ export class Bag {
     g.setAttribute('color', new THREE.BufferAttribute(a, 3)); (o.glow ? this.glowParts : this.parts).push(g); return this;
   }
   // a rounded box standing on y (its base at o.y unless o.centre)
-  box(w, h, d, colour, o = {}) { const r = Math.min(o.r ?? .06, w / 2 - .001, h / 2 - .001, d / 2 - .001); const seg = Math.max(w, h, d) > .7 ? 2 : 1; return this.add(prim(`box:${w}:${h}:${d}:${r}`, () => new RoundedBoxGeometry(w, h, d, seg, r)), colour, {...o, y: (o.y || 0) + (o.centre ? 0 : h / 2)}); }
+  box(w, h, d, colour, o = {}) {
+    const y = (o.y || 0) + (o.centre ? 0 : h / 2);
+    if (Math.max(w, h, d) < .3 || Math.min(w, h, d) < .09) return this.add(prim(`boxf:${w}:${h}:${d}`, () => new THREE.BoxGeometry(w, h, d)), colour, {...o, y});   // small pieces: plain cuboids (12 triangles), their rounding would not show
+    const r = Math.min(o.r ?? .06, w / 2 - .001, h / 2 - .001, d / 2 - .001), seg = Math.max(w, h, d) > .7 ? 2 : 1; return this.add(prim(`box:${w}:${h}:${d}:${r}`, () => new RoundedBoxGeometry(w, h, d, seg, r)), colour, {...o, y});
+  }
   cyl(rt, rb, h, colour, o = {}) { return this.add(prim(`cyl:${rt}:${rb}:${h}:${o.seg || 20}`, () => new THREE.CylinderGeometry(rt, rb, h, o.seg || 20)), colour, {...o, y: (o.y || 0) + (o.centre ? 0 : h / 2)}); }
   sph(r, colour, o = {}) { const seg = o.seg || (r < .12 ? 8 : r < .3 ? 12 : 18); return this.add(prim(`sph:${r}:${seg}`, () => new THREE.SphereGeometry(r, seg, Math.max(5, Math.round(seg * .7)))), colour, o); }
   dome(r, colour, o = {}) { return this.add(prim(`dome:${r}`, () => new THREE.SphereGeometry(r, 22, 10, 0, TAU, 0, Math.PI / 2)), colour, o); }
@@ -259,7 +263,7 @@ function lampSmall(b, x, z) { b.cyl(.02, .025, .5, 'slate', {x, z, seg: 6}); b.b
 
 /* ---------------- ground, roads, scenery ---------------- */
 function terrain() {
-  const W = 34, D = 27, nx = 136, nz = 108, g = new THREE.PlaneGeometry(W, D, nx, nz); g.rotateX(-Math.PI / 2);
+  const W = 46, D = 38, nx = 138, nz = 114, g = new THREE.PlaneGeometry(W, D, nx, nz); g.rotateX(-Math.PI / 2);
   const pos = g.attributes.position, c = new Float32Array(pos.count * 3), grass = col('grass'), dark = col('grassDark'), sand = col('sand'), deep = new THREE.Color('#e9d49a'), t = new THREE.Color();
   for (let i = 0; i < pos.count; i++) {
     const x = pos.getX(i), z = pos.getZ(i), h = heightAt(x, z), s = shore(x, z); pos.setY(i, h);
@@ -291,21 +295,26 @@ function disc(parts, x, z, r0, r1, colour, lift, seg = 40) {
 function roads(bag, graph) {
   const w = ROAD.width / 2, parts = bag.parts, R = SQUARE.ring;
   // the square: paving out to the shopfronts, the ring road, the green in the middle
-  disc(parts, SQUARE.x, SQUARE.z, 0, 5.3, '#f1e2c2', .012, 56);
-  for (let k = 0; k < 4; k++) disc(parts, SQUARE.x, SQUARE.z, 3.25 + k * .5, 3.3 + k * .5, '#e3d0a8', .016, 56);
+  disc(parts, SQUARE.x, SQUARE.z, 0, 6.1, '#f1e2c2', .012, 64);
+  for (let k = 0; k < 5; k++) disc(parts, SQUARE.x, SQUARE.z, 3.25 + k * .55, 3.3 + k * .55, '#e3d0a8', .016, 64);
   disc(parts, SQUARE.x, SQUARE.z, R - w, R + w, 'road', .03, 64); disc(parts, SQUARE.x, SQUARE.z, R - w - .1, R - w, 'kerb', .045, 64); disc(parts, SQUARE.x, SQUARE.z, R + w, R + w + .1, 'kerb', .045, 64);
   disc(parts, SQUARE.x, SQUARE.z, 0, R - w - .1, 'grass', .04, 48);
   const dash = (L, s0, s1) => { for (let s = s0; s + .3 < s1; s += .7) ribbon(parts, L, -.025, .025, 'white', .038, s, s + .32, .16); };
+  const m = w + .12;   // where a road's own markings start and stop, clear of the junction at each end
   for (const e of graph.edges) {
-    if (e.kind === 'ring') { dash(e.line, .15, e.line.length - .15); continue; }
-    const L = e.line, start = w + .12;
-    ribbon(parts, L, -w, w, 'road', .028, 0, L.length); ribbon(parts, L, w, w + .1, 'kerb', .044, start, L.length); ribbon(parts, L, -w - .1, -w, 'kerb', .044, start, L.length);
-    ribbon(parts, L, ROAD.pave - .15, ROAD.pave + .17, '#ead9b8', .02, start + .3, L.length); ribbon(parts, L, -ROAD.pave - .17, -ROAD.pave + .15, '#ead9b8', .02, start + .3, L.length);
-    dash(L, start + .4, L.length - .5);
-    const end = along(L, L.length); disc(parts, end.x, end.z, 0, .9, 'road', .029, 28); disc(parts, end.x, end.z, .9, 1.0, 'kerb', .044, 28); disc(parts, end.x, end.z, 0, .26, 'grass', .05, 14);
-    // zebra crossing where the lane meets the square
-    const z0 = along(L, start + .75), [lx, lz] = leftOf(z0.tx, z0.tz); for (let k = -2; k <= 2; k++) { const cx = z0.x + lx * k * .17, cz = z0.z + lz * k * .17, y = heightAt(cx, cz) + .037, hw = .055, hl = .2, pts = [[-hw, -hl], [hw, -hl], [hw, hl], [-hw, hl]].map(([a, b2]) => [cx + lx * a + z0.tx * b2, y, cz + lz * a + z0.tz * b2]); const g = new THREE.BufferGeometry(), c = col('white'), pos = [], colr = [], nor = []; for (const v of [pts[0], pts[2], pts[1], pts[0], pts[3], pts[2]]) { pos.push(...v); colr.push(c.r, c.g, c.b); nor.push(0, 1, 0); } g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); g.setAttribute('normal', new THREE.Float32BufferAttribute(nor, 3)); g.setAttribute('color', new THREE.Float32BufferAttribute(colr, 3)); g.computeVertexNormals(); parts.push(g); }
+    const L = e.line;
+    if (e.kind === 'ring') { dash(L, .15, L.length - .15); continue; }
+    ribbon(parts, L, -w, w, 'road', .028, 0, L.length);
+    const a = e.kind === 'spoke' ? m : 1.0, b = L.length - (e.kind === 'spoke' ? m : 1.0);
+    ribbon(parts, L, w, w + .1, 'kerb', .044, a, b); ribbon(parts, L, -w - .1, -w, 'kerb', .044, a, b);
+    ribbon(parts, L, ROAD.pave - .15, ROAD.pave + .17, '#ead9b8', .02, a + .3, b - .3); ribbon(parts, L, -ROAD.pave - .17, -ROAD.pave + .15, '#ead9b8', .02, a + .3, b - .3);
+    dash(L, a + .4, b - .4);
+    if (e.kind === 'spoke') {   // a zebra crossing where the street meets the square
+      const z0 = along(L, m + .75), [lx, lz] = leftOf(z0.tx, z0.tz); for (let k = -2; k <= 2; k++) { const cx = z0.x + lx * k * .17, cz = z0.z + lz * k * .17, y = heightAt(cx, cz) + .037, hw = .055, hl = .2, pts = [[-hw, -hl], [hw, -hl], [hw, hl], [-hw, hl]].map(([a2, b2]) => [cx + lx * a2 + z0.tx * b2, y, cz + lz * a2 + z0.tz * b2]); const c = col('white'), pos = [], colr = [], nor = []; for (const v of [pts[0], pts[1], pts[2], pts[0], pts[2], pts[3]]) { pos.push(...v); colr.push(c.r, c.g, c.b); nor.push(0, 1, 0); } const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); g.setAttribute('normal', new THREE.Float32BufferAttribute(nor, 3)); g.setAttribute('color', new THREE.Float32BufferAttribute(colr, 3)); parts.push(g); }
+    }
   }
+  // a round patch where each spoke meets the outer ring, so the junction has no seams
+  for (const n of Object.values(graph.nodes)) if (n.id.startsWith('out')) disc(parts, n.p[0], n.p[1], 0, w + .02, 'road', .0285, 20);
 }
 function tree(b, kind, seed) {
   const r = k => rand(seed * 13 + k);
@@ -317,8 +326,9 @@ function tree(b, kind, seed) {
 function scenery(bag, graph) {
   const onGround = (x, z, f, ry = 0, s = 1) => { bag.push(x, heightAt(x, z), z, ry, s); f(bag); bag.pop(); };
   const nearRoad = (x, z) => { let d = Infinity; for (const e of graph.edges) for (const p of e.line.pts) d = Math.min(d, Math.hypot(p[0] - x, p[1] - z)); return d; };
-  const nearBuilding = (x, z) => Math.min(...BUILDINGS.map(b => Math.hypot(b.x - x, b.z - z)), Math.abs(x - TRACK.x) < 1.3 && z > TRACK.z0 - .8 && z < TRACK.z1 + .8 ? 0 : 9, x > PADDOCK.x0 - .8 && x < PADDOCK.x1 + .8 && z > PADDOCK.z0 - .8 && z < PADDOCK.z1 + .8 ? 0 : 9, Math.hypot((x - POND.x) / 1.4, z - POND.z) < 2 ? 0 : 9, x > JETTY.x0 - 1.5 && Math.abs(z - JETTY.z) < 1.2 ? 0 : 9);
-  TREES.forEach(([x, z, kind, s], i) => { if (nearRoad(x, z) > .9 && nearBuilding(x, z) > 1.5) onGround(x, z, b => tree(b, kind, i + 1), rand(i) * TAU, s); });
+  const loopPts = graph.loop.pts.filter((_, k) => k % 6 === 0);
+  const nearBuilding = (x, z) => Math.min(...BUILDINGS.map(b => Math.hypot(b.x - x, b.z - z) - b.w * .5 + .8), loopPts.some(p => Math.hypot(p[0] - x, p[1] - z) < 1.3) ? 0 : 9, x > PADDOCK.x0 - .8 && x < PADDOCK.x1 + .8 && z > PADDOCK.z0 - .8 && z < PADDOCK.z1 + .8 ? 0 : 9, Math.hypot((x - POND.x) / 1.4, z - POND.z) < 2 ? 0 : 9, x > PIER.x0 - 1.5 && Math.abs(z - PIER.z) < 1.2 ? 0 : 9);
+  TREES.forEach(([x, z, kind, s], i) => { if (nearRoad(x, z) > .9 && nearBuilding(x, z) > 1.5) onGround(x, z, b => tree(b, kind, i + 1), rand(i) * TAU, s * .9); });
   // lamp posts and benches round the square, bunting strung between the lamps
   const lamps = []; for (let k = 0; k < 8; k++) { const a = (k + .5) / 8 * TAU, x = Math.cos(a) * 3.35, z = Math.sin(a) * 3.35; if (k % 2 === 0) continue; lamps.push([x, z]); }
   for (let k = 0; k < 8; k++) lamps[k] = [LAMPS[k].x, LAMPS[k].z];   // the bunting hangs between the eight lamps round the square
@@ -329,29 +339,33 @@ function scenery(bag, graph) {
   // a signpost on the green, a pillar box, tubs by the crossings
   onGround(1.25, .45, b => { b.cyl(.03, .04, .95, 'white', {seg: 8}); [['red', .3, 0], ['blue', .52, 1.6], ['yellow', .72, 3.2], ['green', .5, 4.7]].forEach(([c, y, a]) => { b.push(0, y, 0, a); b.box(.42, .1, .03, c, {x: .24, r: .02}); b.cone(.07, .1, c, {x: .47, y: .0, rz: -Math.PI / 2, seg: 4}); b.pop(); }); b.sph(.05, 'gold', {y: .98, seg: 8}); });
   // hedges and flowers along the lanes, wild flowers in the meadows
-  for (const e of graph.edges) if (e.kind === 'spoke') for (let s = 1.6; s < e.line.length - .8; s += .46) for (const side of [-1, 1]) {
+  for (const e of graph.edges) if (e.kind === 'spoke') for (let s = 1.6; s < e.line.length - 1.0; s += .7) for (const side of [-1, 1]) {
     const q = along(e.line, s), [lx, lz] = leftOf(q.tx, q.tz), x = q.x + lx * side * 1.18, z = q.z + lz * side * 1.18;
-    if (nearBuilding(x, z) < 1.75 || Math.hypot(x, z) < 5.6 || shore(x, z) > .88) continue;
-    const k = Math.round(s * 7 + side * 3); bag.sph(.24, k % 3 ? 'leaf' : 'leafLight', {x, y: heightAt(x, z) + .13, z, sx: 1.25, sy: .85, seg: 8}); if (k % 4 === 0) bag.sph(.05, ['pink', 'white', 'yellow'][k % 3], {x: x + .05, y: heightAt(x, z) + .34, z, seg: 6});
+    if (nearBuilding(x, z) < 1.2 || Math.hypot(x, z) < 6.3 || shore(x, z) > .88) continue;
+    const k = Math.round(s * 7 + side * 3); bag.sph(.28, k % 3 ? 'leaf' : 'leafLight', {x, y: heightAt(x, z) + .14, z, sx: 1.5, sy: .85, seg: 7}); if (k % 4 === 0) bag.sph(.05, ['pink', 'white', 'yellow'][k % 3], {x: x + .05, y: heightAt(x, z) + .34, z, seg: 6});
   }
-  for (let k = 0; k < 420; k++) { const x = (rand(k * 3 + 1) - .5) * 27, z = (rand(k * 3 + 2) - .5) * 20; if (shore(x, z) > .88 || nearRoad(x, z) < 1.0 || nearBuilding(x, z) < 1.6 || Math.hypot(x, z) < 5.5) continue; const y = heightAt(x, z); bag.sph(.045, ['white', 'yellow', 'pink', 'red', 'purple'][k % 5], {x, y: y + .08, z, seg: 6}); bag.cyl(.008, .008, .08, 'leaf', {x, y, z, seg: 4}); }
-  // bus stop signs
-  for (const st of BUS_STOPS) { const d = graph.attach(st.x, st.z), e = graph.edge(d.edge), q = along(e.line, d.s), [lx, lz] = leftOf(q.tx, q.tz), side = e.kind === 'ring' ? 1 : d.side, x = q.x + lx * side * (ROAD.pave + .3), z = q.z + lz * side * (ROAD.pave + .3); onGround(x, z, b => { b.cyl(.02, .025, .78, 'slate', {seg: 6}); b.cyl(.13, .13, .03, 'red', {y: .78, rx: Math.PI / 2, seg: 16}); b.cyl(.09, .09, .035, 'white', {y: .795, rx: Math.PI / 2, seg: 16, centre: false}); }, Math.atan2(q.tx, q.tz)); }
+  for (let k = 0; k < 480; k++) { const x = (rand(k * 3 + 1) - .5) * 39, z = (rand(k * 3 + 2) - .5) * 32; if (shore(x, z) > .88 || nearRoad(x, z) < 1.0 || nearBuilding(x, z) < 1.2 || Math.hypot(x, z) < 6.2) continue; const y = heightAt(x, z); bag.sph(.045, ['white', 'yellow', 'pink', 'red', 'purple'][k % 5], {x, y: y + .08, z, seg: 6}); bag.cyl(.008, .008, .08, 'leaf', {x, y, z, seg: 4}); }
+  // bus stop signs, on the pavement by the doorstep of each stop
+  for (const id of new Set(Object.values(BUS_LINES).flat())) { const d0 = graph.doors[id], d = graph.attach(d0.x, d0.z), e = graph.edge(d.edge), q = along(e.line, d.s), [lx, lz] = leftOf(q.tx, q.tz), side = e.kind === 'ring' ? 1 : d.side, x = q.x + lx * side * (ROAD.pave + .3), z = q.z + lz * side * (ROAD.pave + .3); onGround(x, z, b => { b.cyl(.02, .025, .78, 'slate', {seg: 6}); b.cyl(.13, .13, .03, 'red', {y: .78, rx: Math.PI / 2, seg: 16}); b.cyl(.09, .09, .035, 'white', {y: .795, rx: Math.PI / 2, seg: 16, centre: false}); }, Math.atan2(q.tx, q.tz)); }
 }
 
-function railway(bag) {
-  const {x, z0, z1, platform: pf} = TRACK, y = k => heightAt(x, k) + 0;
-  const along = (z) => heightAt(x, z);
-  const n = Math.round((z1 - z0) / .16);
-  for (let k = 0; k <= n; k++) { const z = z0 + (z1 - z0) * k / n; bag.box(.62, .045, .08, 'wood', {x, y: along(z) + .02, z, r: .012}); }
-  for (const dx of [-.17, .17]) { const steps = 24; for (let k = 0; k < steps; k++) { const za = z0 + (z1 - z0) * k / steps, zb = z0 + (z1 - z0) * (k + 1) / steps; bag.box(.05, .05, zb - za + .01, 'slate', {x: x + dx, y: Math.max(along(za), along(zb)) + .065, z: (za + zb) / 2, r: .01}); } }
-  for (const dz of [z0 - .1, z1 + .1]) { bag.box(.5, .2, .1, 'red', {x, y: along(dz) + .02, z: dz, r: .04}); bag.box(.54, .05, .12, 'yellow', {x, y: along(dz) + .2, z: dz, r: .02}); }   // buffers
-  for (let zz = pf.z0; zz < pf.z1; zz += .3) bag.box(.5, .02, .31, zz % .6 < .3 ? '#e3d0a8' : '#efe0be', {x: pf.x, y: heightAt(pf.x, zz) + .17, z: zz + .15});
-  bag.box(.52, .17, pf.z1 - pf.z0, 'stone', {x: pf.x, y: heightAt(pf.x, (pf.z0 + pf.z1) / 2), z: (pf.z0 + pf.z1) / 2, r: .02});
-  bag.box(.52, .04, pf.z1 - pf.z0, 'yellow', {x: pf.x + .24, y: heightAt(pf.x, (pf.z0 + pf.z1) / 2) + .165, z: (pf.z0 + pf.z1) / 2});
-  for (const zz of [pf.z0 + .3, pf.z1 - .3]) { bag.cyl(.025, .03, .9, 'slate', {x: pf.x - .1, y: heightAt(pf.x, zz) + .17, z: zz, seg: 6}); bag.box(.3, .26, .05, 'blue', {x: pf.x - .1, y: heightAt(pf.x, zz) + .9, z: zz, r: .02}); }
-  bag.box(.34, .05, 1.2, 'red', {x: pf.x - .2, y: heightAt(pf.x, (pf.z0 + pf.z1) / 2) + .95, z: (pf.z0 + pf.z1) / 2, r: .02});
-  for (const zz of [pf.z0 + .4, pf.z1 - .4]) bag.cyl(.025, .025, .78, 'white', {x: pf.x - .2, y: heightAt(pf.x, zz) + .17, z: zz, seg: 6});
+// The railway loop: ballast, sleepers and two rails all the way round the town, with a platform, shelter and sign at each station.
+function railway(bag, graph) {
+  const loop = graph.loop, parts = bag.parts, L = loop.length;
+  ribbon(parts, loop, -.46, .46, '#d6caa6', .022, 0, L, .3);
+  for (let s = 0; s < L - .2; s += .36) ribbon(parts, loop, -.34, .34, '#8a5a3c', .032, s, s + .13, .13);
+  for (const o of [-.19, .19]) { ribbon(parts, loop, o - .035, o + .035, '#4a525e', .05, 0, L, .25); ribbon(parts, loop, o - .012, o + .012, '#aab4c0', .058, 0, L, .25); }
+  const colours = ['red', 'blue', 'green', 'yellow'];
+  STATIONS.forEach((st, i) => {
+    const p = loopPt(st.t), s0 = graph.loopS(p[0], p[1]), q = along(loop, s0), x = q.x, z = q.z, y = heightAt(x, z), ry = Math.atan2(q.tx, q.tz), c = colours[i % 4];
+    bag.push(x, y, z, ry);   // local +z runs along the track the way the train goes, local +x is outwards, -x towards the town
+    bag.box(.85, .17, 3.6, 'stone', {x: -.95, r: .03}); bag.box(.14, .02, 3.6, 'yellow', {x: -.62, y: .17}); bag.box(.6, .02, 3.5, '#efe0be', {x: -1.05, y: .17});
+    for (const dz of [-1.5, 1.5]) { bag.cyl(.03, .035, .95, 'slate', {x: -1.2, y: .17, z: dz, seg: 6}); }
+    bag.box(.7, .06, 3.4, c, {x: -1.2, y: 1.1, r: .025}); bag.box(.5, .04, 3.3, lighten(c, .25), {x: -1.2, y: 1.15, r: .02});   // a little shelter roof
+    bag.box(.3, .2, 1.1, 'wood', {x: -1.35, y: .17, z: .1, r: .03}); bag.box(.34, .05, 1.2, 'wood', {x: -1.35, y: .4, z: .1, r: .02});   // a bench
+    bag.cyl(.025, .03, 1.2, 'slate', {x: -.75, y: .17, z: 1.85, seg: 6}); bag.box(.06, .42, .7, c, {x: -.75, y: 1.0, z: 1.85, r: .02}); bag.box(.07, .3, .55, 'white', {x: -.75, y: 1.06, z: 1.85, r: .02});   // the station sign
+    bag.pop();
+  });
 }
 function paddock(bag) {
   const {x0, z0, x1, z1} = PADDOCK, fence = (xa, za, xb, zb) => { const n = Math.max(2, Math.round(Math.hypot(xb - xa, zb - za) / .32)); for (let k = 0; k <= n; k++) { const xx = xa + (xb - xa) * k / n, zz = za + (zb - za) * k / n; bag.cyl(.025, .03, .34, 'wood', {x: xx, y: heightAt(xx, zz), z: zz, seg: 6}); } const a = Math.atan2(xb - xa, zb - za), L = Math.hypot(xb - xa, zb - za), mx = (xa + xb) / 2, mz = (za + zb) / 2, my = heightAt(mx, mz); for (const h of [.14, .27]) bag.box(.025, .03, L, 'wood', {x: mx, y: my + h, z: mz, ry: a, r: .01}); };
@@ -367,26 +381,28 @@ function pond(bag) {
   for (let k = 0; k < 4; k++) bag.cyl(.14, .14, .015, 'lime', {x: x - .5 + k * .35, y: y + .075, z: z + (k % 2 ? .25 : -.2), seg: 12});
   for (let k = 0; k < 4; k++) bag.sph(.05, 'pink', {x: x - .5 + k * .35, y: y + .1, z: z + (k % 2 ? .25 : -.2), seg: 6});
 }
-function jetty(bag) {
-  const {x0, x1, z} = JETTY, n = Math.round((x1 - x0) / .2);
-  for (let k = 0; k < n; k++) bag.box(.2, .04, .5, k % 2 ? '#b98a58' : '#c89a64', {x: x0 + (k + .5) * .2, y: .2, z, r: .01});
-  for (const k of [0, Math.round(n / 3), Math.round(2 * n / 3), n]) for (const dz of [-.22, .22]) bag.cyl(.04, .04, .55, 'wood', {x: x0 + k * .2, y: -.1, z: z + dz, seg: 6});
-  for (const dz of [-.26, .26]) bag.box((x1 - x0), .03, .03, 'white', {x: (x0 + x1) / 2, y: .42, z: z + dz});
-  bag.cyl(.07, .08, .1, 'red', {x: x1 - .05, y: .22, z: z + .2, seg: 10}); bag.cyl(.02, .02, .55, 'slate', {x: x1 - .05, y: .3, z: z - .3, seg: 6}); bag.box(.14, .12, .14, '#fff4c4', {x: x1 - .05, y: .86, z: z - .3, r: .03});
+// The harbour pier: a wooden pier from the hut out to sea. It rises over the railway on a little trestle so the train runs underneath.
+function pier(bag) {
+  const {x0, x1, z, bridge: br} = PIER, deckY = x => { const d = Math.abs(x - br.x), k = Math.max(0, Math.min(1, (br.half + 1.3 - d) / 1.3)); return .22 + (br.h - .22) * k * k * (3 - 2 * k); };
+  const n = Math.round((x1 - x0) / .2);
+  for (let k = 0; k < n; k++) { const x = x0 + (k + .5) * .2; bag.box(.2, .04, .56, k % 2 ? '#b98a58' : '#c89a64', {x, y: deckY(x), z, r: .01}); for (const dz of [-.28, .28]) bag.box(.2, .03, .03, 'white', {x, y: deckY(x) + .2, z: z + dz}); }
+  for (let x = x0 + .2; x < x1; x += 1.0) for (const dz of [-.22, .22]) { const g = heightAt(x, z + dz), base = Math.min(g, -.12), top = deckY(x); bag.cyl(.045, .05, top - base, 'wood', {x, y: base, z: z + dz, seg: 6}); }
+  for (const dx of [-br.half, br.half]) for (const dz of [-.22, .22]) { const base = heightAt(br.x + dx, z + dz); bag.cyl(.06, .07, deckY(br.x + dx) - base, 'wood', {x: br.x + dx, y: base, z: z + dz, seg: 6}); }
+  bag.cyl(.07, .08, .1, 'red', {x: x1 - .05, y: deckY(x1) + .02, z: z + .2, seg: 10}); bag.cyl(.02, .02, .55, 'slate', {x: x1 - .05, y: deckY(x1) + .1, z: z - .3, seg: 6}); bag.box(.14, .12, .14, '#fff4c4', {x: x1 - .05, y: deckY(x1) + .66, z: z - .3, r: .03});
 }
 
 /* ---------------- the whole static town ---------------- */
 export function buildTown(graph, season = 'summer') {
   setSeason(season);
   const bag = new Bag(), anim = {}, material = toyMaterial();
-  roads(bag, graph); scenery(bag, graph); railway(bag); paddock(bag); pond(bag); jetty(bag);
-  for (const def of BUILDINGS) { const local = {}; bag.push(def.x, heightAt(def.x, def.z), def.z, def.ry); BUILD[def.type](bag, def, local); bag.pop(); for (const k in local) anim[k] = {...local[k], def}; }
+  roads(bag, graph); scenery(bag, graph); railway(bag, graph); paddock(bag); pond(bag); pier(bag);
+  for (const def of BUILDINGS) { const local = {}; bag.push(def.x, heightAt(def.x, def.z), def.z, def.ry, def.scale || 1); BUILD[def.type](bag, def, local); bag.pop(); for (const k in local) anim[k] = {...local[k], def}; }
   const town = bag.mesh(material); town.castShadow = true; town.receiveShadow = true;
   const glow = bag.glowMesh(new THREE.MeshBasicMaterial({vertexColors: true, transparent: true, opacity: 0, depthWrite: false, fog: false})); glow.visible = false; glow.renderOrder = 2;
   const ground = terrain();
   const sea = new THREE.Mesh(new THREE.PlaneGeometry(240, 240).rotateX(-Math.PI / 2), new THREE.MeshLambertMaterial({color: P.sea})); sea.position.y = ISLAND.sea;
   // moving parts
-  const place = (mesh, a, x = 0, y = 0, z = 0) => { const d = a.def, m = new THREE.Matrix4().compose(new THREE.Vector3(d.x, heightAt(d.x, d.z), d.z), new THREE.Quaternion().setFromEuler(new THREE.Euler(0, d.ry, 0)), new THREE.Vector3(1, 1, 1)); const g = new THREE.Group(); g.applyMatrix4(m); const inner = new THREE.Group(); inner.position.set(x, y, z); inner.add(mesh); g.add(inner); mesh.castShadow = true; return {group: g, inner}; };
+  const place = (mesh, a, x = 0, y = 0, z = 0) => { const d = a.def, m = new THREE.Matrix4().compose(new THREE.Vector3(d.x, heightAt(d.x, d.z), d.z), new THREE.Quaternion().setFromEuler(new THREE.Euler(0, d.ry, 0)), new THREE.Vector3(d.scale || 1, d.scale || 1, d.scale || 1)); const g = new THREE.Group(); g.applyMatrix4(m); const inner = new THREE.Group(); inner.position.set(x, y, z); inner.add(mesh); g.add(inner); mesh.castShadow = true; return {group: g, inner}; };
   const moving = {};
   { const b = new Bag(); b.cone(.34, .5, 'red', {rx: Math.PI, y: .0, seg: 20}); b.cyl(.34, .34, .1, 'yellow', {y: .5, seg: 20}); b.dome(.34, 'blue', {y: .6, sy: .5}); b.torus(.34, .03, 'white', {y: .55, rx: Math.PI / 2}); b.cyl(.03, .03, .32, 'gold', {y: .72, seg: 8}); b.sph(.06, 'gold', {y: 1.06, seg: 8}); const m = b.mesh(material); m.rotation.z = .16; moving.top = place(m, anim.top, anim.top.x, anim.top.y, anim.top.z); }
   { const b = new Bag(); for (let k = 0; k < 4; k++) { const a = k * Math.PI / 2; b.box(.07, 1.25, .04, 'wood', {x: Math.sin(a) * .0, y: 0, rz: -a, r: .015, centre: false}); } const g2 = new Bag(); for (let k = 0; k < 4; k++) { const a = k * Math.PI / 2, m4 = new THREE.Matrix4().makeRotationZ(a); g2.stack.push(m4); g2.box(.07, 1.3, .04, 'wood', {y: .08, r: .015}); g2.box(.36, .95, .025, 'cream', {x: .2, y: .38, r: .02}); for (let r2 = 0; r2 < 5; r2++) g2.box(.36, .02, .035, 'wood', {x: .2, y: .42 + r2 * .2}); g2.stack.pop(); } g2.cyl(.13, .13, .1, 'red', {rx: Math.PI / 2, centre: true, seg: 12}); const m = g2.mesh(material); moving.sails = place(m, anim.sails, 0, anim.sails.y, anim.sails.z); }
@@ -418,7 +434,7 @@ export function buildResident(def, i, material) {
   };
   (H[def.hat] || H.cap)();
   if (def.lamplighter) { b.cyl(.012, .012, .8, 'wood', {x: .18, y: .02, z: .03, rz: -.08, seg: 6}); b.cyl(.025, .02, .05, 'slate', {x: .21, y: .79, z: .03, seg: 6}); b.sph(.03, 'gold', {x: .21, y: .86, z: .03, seg: 6}); }   // his long lighting pole
-  const m = b.mesh(material); m.castShadow = true; const g = new THREE.Group(); g.add(m); g.scale.setScalar(def.small ? .95 : 1.25); g.visible = false; return g;
+  const m = b.mesh(material); m.castShadow = true; const g = new THREE.Group(); g.add(m); g.scale.setScalar(def.small ? .8 : 1.06); g.visible = false; return g;
 }
 export function buildVehicle(def, material) {
   const b = new Bag(), c = def.colour, wheels = (xs, zs, r = .085) => { for (const x of xs) for (const z of zs) { b.cyl(r, r, .07, 'black', {x, y: r, z, rz: Math.PI / 2, centre: true, seg: 14}); b.cyl(r * .5, r * .5, .075, 'cream', {x, y: r, z, rz: Math.PI / 2, centre: true, seg: 10}); } };
@@ -434,19 +450,23 @@ export function buildVehicle(def, material) {
   else if (def.kind === 'fire') { b.box(.38, .26, .8, c, {y: .1, r: .07}); b.box(.34, .22, .24, c, {y: .1, z: .3, r: .06}); b.box(.3, .1, .02, '#bfe6f7', {y: .26, z: .425, r: .01}); b.box(.3, .03, .5, 'white', {y: .37, z: -.1, r: .01});
     for (const x of [-.09, .09]) b.box(.03, .04, .6, 'yellow', {x, y: .42, z: -.1, rz: 0}); for (let k = 0; k < 6; k++) b.box(.2, .02, .022, 'yellow', {y: .43, z: -.38 + k * .1}); b.sph(.045, 'gold', {y: .4, z: .38, seg: 8}); b.box(.18, .05, .09, 'blue', {y: .38, z: .22, r: .02}); wheels([-.18, .18], [-.28, .28], .08); face(.14, .425, .1); }
   else { b.box(.36, .17, .62, c, {y: .09, r: .07}); b.box(.3, .15, .3, c, {y: .24, z: -.04, r: .06}); b.box(.31, .09, .26, '#bfe6f7', {y: .27, z: -.04, r: .03}); b.box(.26, .09, .31, '#bfe6f7', {y: .27, z: -.04, r: .03}); if (def.id === 'taxi') { b.box(.14, .06, .08, 'white', {y: .39, z: -.04, r: .02}); for (let k = 0; k < 5; k++) for (const s of [-1, 1]) b.box(.01, .035, .06, k % 2 ? 'black' : 'white', {x: s * .181, y: .16, z: -.24 + k * .12}); } wheels([-.17, .17], [-.2, .2], .08); face(.15, .31, .1); for (const s of [-1, 1]) b.sph(.03, 'red', {x: s * .11, y: .17, z: -.31, seg: 8}); }
-  const m = b.mesh(material); m.castShadow = true; const g = new THREE.Group(); g.add(m); g.scale.setScalar(1.25); return g;
+  const m = b.mesh(material); m.castShadow = true; const g = new THREE.Group(); g.add(m); g.scale.setScalar(1.05); return g;
 }
 /* ---------------- more moving things: train, boat, farm animals, ducks ---------------- */
 // The little train: an engine with a funnel and two coaches, facing +z, length about 1.9.
+// The train: an engine and three coaches, each its own small mesh so they can follow the curve of the loop. Each car's origin is its middle and its front is +z.
 export function buildTrain(material) {
-  const b = new Bag();
-  b.box(.4, .3, .62, 'red', {y: .08, z: .5, r: .08}); b.cyl(.2, .2, .55, 'red', {y: .14, z: .55, rx: Math.PI / 2, centre: false, seg: 18}); b.box(.42, .34, .3, 'red', {y: .1, z: .1, r: .06}); b.box(.46, .04, .34, 'yellow', {y: .44, z: .1, r: .02});
-  b.cyl(.06, .08, .22, 'black', {y: .36, z: .78, seg: 10}); b.cyl(.1, .06, .05, 'gold', {y: .58, z: .78, seg: 10}); b.sph(.075, 'gold', {y: .46, z: .6, seg: 8});
-  for (const s of [-1, 1]) { for (const z of [.0, .3, .72]) { b.cyl(.09, .09, .06, 'black', {x: s * .2, y: .09, z, rz: Math.PI / 2, centre: true, seg: 14}); b.cyl(.045, .045, .065, 'cream', {x: s * .2, y: .09, z, rz: Math.PI / 2, centre: true, seg: 10}); } b.box(.025, .03, .8, 'slate', {x: s * .2, y: .09, z: .35, r: .01}); }
-  b.sph(.05, '#fff4c4', {y: .24, z: .83, seg: 8}); b.box(.2, .03, .03, 'white', {y: .13, z: .84, r: .01});
-  const coach = (z, c) => { b.box(.44, .32, .8, c, {y: .1, z, r: .08}); b.box(.46, .05, .82, 'cream', {y: .42, z, r: .02}); for (const s of [-1, 1]) for (const k of [-1, 0, 1]) b.box(.02, .13, .17, '#bfe6f7', {x: s * .222, y: .27, z: z + k * .24, r: .01}); for (const s of [-1, 1]) for (const zz of [-.28, .28]) { b.cyl(.08, .08, .05, 'black', {x: s * .21, y: .08, z: z + zz, rz: Math.PI / 2, centre: true, seg: 12}); } b.box(.2, .06, .1, 'slate', {y: .22, z: z + .42, r: .02}); };
-  coach(-.4, 'yellow'); coach(-1.3, 'blue');
-  const m = b.mesh(material); m.castShadow = true; const g = new THREE.Group(); g.add(m); g.scale.setScalar(1.15); return g;
+  const car = f => { const b = new Bag(); f(b); const m = b.mesh(material); m.castShadow = true; const g = new THREE.Group(); g.add(m); g.scale.setScalar(.95); return g; };
+  const engine = car(b => {
+    b.push(0, 0, -.42);
+    b.box(.4, .3, .62, 'red', {y: .08, z: .5, r: .08}); b.cyl(.2, .2, .55, 'red', {y: .14, z: .55, rx: Math.PI / 2, centre: false, seg: 18}); b.box(.42, .34, .3, 'red', {y: .1, z: .1, r: .06}); b.box(.46, .04, .34, 'yellow', {y: .44, z: .1, r: .02});
+    b.cyl(.06, .08, .22, 'black', {y: .36, z: .78, seg: 10}); b.cyl(.1, .06, .05, 'gold', {y: .58, z: .78, seg: 10}); b.sph(.075, 'gold', {y: .46, z: .6, seg: 8});
+    for (const s of [-1, 1]) { for (const z of [.0, .3, .72]) { b.cyl(.09, .09, .06, 'black', {x: s * .2, y: .09, z, rz: Math.PI / 2, centre: true, seg: 14}); b.cyl(.045, .045, .065, 'cream', {x: s * .2, y: .09, z, rz: Math.PI / 2, centre: true, seg: 10}); } b.box(.025, .03, .8, 'slate', {x: s * .2, y: .09, z: .35, r: .01}); }
+    b.sph(.05, '#fff4c4', {y: .24, z: .83, seg: 8}); b.box(.2, .03, .03, 'white', {y: .13, z: .84, r: .01});
+    b.pop();
+  });
+  const coach = c => car(b => { const z = 0; b.box(.44, .32, .8, c, {y: .1, z, r: .08}); b.box(.46, .05, .82, 'cream', {y: .42, z, r: .02}); for (const s of [-1, 1]) for (const k of [-1, 0, 1]) b.box(.02, .13, .17, '#bfe6f7', {x: s * .222, y: .27, z: z + k * .24, r: .01}); for (const s of [-1, 1]) for (const zz of [-.28, .28]) { b.cyl(.08, .08, .05, 'black', {x: s * .21, y: .08, z: z + zz, rz: Math.PI / 2, centre: true, seg: 12}); } b.box(.2, .06, .1, 'slate', {y: .22, z: z + .42, r: .02}); });
+  return [engine, coach('yellow'), coach('blue'), coach('green')];
 }
 export function buildBoat(material) {
   const b = new Bag();
@@ -464,7 +484,7 @@ export function buildAnimal(kind, material) {
 }
 export function buildClouds() {
   // a few small puffy clouds low over the sea, beyond the shore, so they never sit between the camera and the town
-  const b = new Bag(); for (let k = 0; k < 7; k++) { const a = k / 7 * TAU + .4, x = Math.cos(a) * (19 + rand(k * 5 + 1) * 5), z = Math.sin(a) * (16 + rand(k * 5 + 2) * 4), s = .5 + rand(k * 5 + 3) * .35; b.push(x, rand(k * 5 + 4) * 1.4, z, 0, s); [[0, 0, 0, 1.1], [1.0, -.1, .1, .8], [-1.0, -.12, -.1, .85], [.4, .35, 0, .75], [-.45, .3, .15, .7]].forEach(([dx, dy, dz, r]) => b.sph(r, 'white', {x: dx, y: dy, z: dz, sy: .7, seg: 12})); b.pop(); }
+  const b = new Bag(); for (let k = 0; k < 7; k++) { const a = k / 7 * TAU + .4, x = Math.cos(a) * (25 + rand(k * 5 + 1) * 5), z = Math.sin(a) * (20.5 + rand(k * 5 + 2) * 4), s = .5 + rand(k * 5 + 3) * .35; b.push(x, rand(k * 5 + 4) * 1.4, z, 0, s); [[0, 0, 0, 1.1], [1.0, -.1, .1, .8], [-1.0, -.12, -.1, .85], [.4, .35, 0, .75], [-.45, .3, .15, .7]].forEach(([dx, dy, dz, r]) => b.sph(r, 'white', {x: dx, y: dy, z: dz, sy: .7, seg: 12})); b.pop(); }
   const m = b.mesh(new THREE.MeshLambertMaterial({vertexColors: true, transparent: true, opacity: .96})); m.position.y = 1.6; return m;
 }
 // Puddles: flat shiny ovals on the roads, pavements and verges. `userData.set(wet)` grows them as the ground gets wet and shrinks them as it dries (each has its own point at which it appears).

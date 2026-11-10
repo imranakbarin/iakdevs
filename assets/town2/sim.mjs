@@ -1,46 +1,53 @@
 // New Toy Town: the simulation. Pure logic (no THREE, no DOM): who is where, and when.
 //  - Residents live behind a door and do their round door to door along the pavements; they are only ever out of
 //    doors while walking, and they appear and disappear exactly on a doorstep.
-//  - Vehicles follow the one closed tour of the road network, keep a gap from the one in front, wait for anyone
-//    crossing in front of them, and the bus pulls up at its stops.
-import {CAST, VEHICLES, BUS_STOPS, BUILDINGS, TRACK, DAY, LAMPS, rand, doorOf, building} from './def.mjs';
-import {buildGraph, along, nearest, leftOf} from './graph.mjs';
+//  - Vehicles drive over the lane network: each plans a route (shortest lanes) to where it is going, keeps a gap from the one in front, takes a
+//    lock on a junction before crossing it, waits for anyone crossing in front of it, and the bus pulls up at its stops.
+//  - The train circles the railway loop, slowing for each station and standing there a while.
+import {CAST, VEHICLES, BUS_LINES, STATIONS, BUILDINGS, DAY, LAMPS, loopPt, rand, doorOf, building} from './def.mjs';
+import {buildGraph, along, leftOf} from './graph.mjs';
 import {createWeather} from './weather.mjs';
 import {STORIES} from './stories.mjs';
 
 export function createSim(seed = 7, opts = {}) {
   const season = opts.season || null;   // stories can be seasonal; null means all of them
-  const graph = buildGraph(), tour = graph.tour;
+  const graph = buildGraph();
   let clock = 0, n = 0;
   const rnd = () => rand(seed * 977 + (n++));
   const residents = CAST.map((def, i) => ({id: def.id, def, state: 'inside', at: def.home, step: 0, until: 1.5 + i * 3.2, route: null, s: 0, x: graph.doors[def.home].x, z: graph.doors[def.home].z, tx: 0, tz: 1,
     speed: (def.small ? .66 : .52) * (.92 + rand(seed + i * 31) * .2), target: null, outings: 0, errands: [], stay: null, lampJob: null, lampQueue: [], lampWait: 0, ox: 0, oz: 0, pause: 0, look: null, greetAt: 0, blocked: 0}));
-  const stops = BUS_STOPS.map(b => ({...b, s: nearest(tour, b.x, b.z).s}));
-  // A vehicle's home point on the tour: the place on the lanes nearest its garage door. It leaves and returns there only.
-  const vehicles = VEHICLES.map((def, i) => { const d = doorOf(building(def.home)), s0 = nearest(tour, d.x, d.z).s;
-    return {id: def.id, def, home: s0, s: s0, v: 0, wait: 0, lastStop: null, x: 0, z: 0, tx: 1, tz: 0, stopsMade: 0, state: 'parked', laps: 0, trips: 0, call: 0, travelled: 0}; });
+  // Every building with a door has a place on the lanes beside it (the lane and how far along it): where a vehicle stops to call there.
+  const spots = {}; const spotOf = id => spots[id] || (spots[id] = (() => { const d = doorOf(building(id)), p = graph.lanePoint(d.x, d.z); return {id, lane: p.lane, s: p.s}; })());
+  const stops = [...new Set(Object.values(BUS_LINES).flat())].map(id => ({id, ...spotOf(id)}));
+  const vehicles = VEHICLES.map(def => ({id: def.id, def, home: spotOf(def.home), state: 'parked', route: null, s: 0, stopAt: 0, target: null, v: 0, wait: 0, x: 0, z: 0, tx: 1, tz: 0, planIdx: 0, lastId: null, stopsMade: 0, trips: 0, call: 0, travelled: 0, held: null, stuck: 0, ghost: 0}));
+  const homeXY = v => { const p = along(graph.lane(v.home.lane).line, v.home.s); return {x: p.x, z: p.z}; };
   const hourOf = t => (6 + t / DAY * 24) % 24;
   const inWindow = (h, a, b) => a <= b ? h >= a && h < b : h >= a || h < b;
-  // The little train shuttles along its track: in to the platform, wait, up to the far buffer, wait, and back.
-  const platformZ = (TRACK.platform.z0 + TRACK.platform.z1) / 2, stopsAt = [platformZ + .55, TRACK.z0 + 1.55];
-  const train = {z: stopsAt[1], v: 0, target: 0, wait: 4, trips: 0, boardedAtPlatform: 0};
+  // The train: round the railway loop (clockwise), slowing into each station and standing there; the cars follow the head at a fixed spacing.
+  const loop = graph.loop, stationStops = STATIONS.map(st => { const p = loopPt(st.t); return {...st, s: graph.loopS(p[0], p[1])}; }).sort((a, b) => a.s - b.s);
+  const CRUISE = 1.25, STOP_AT = 1.5;   // the head stops this far past the platform's middle, so the cars stand along the platform
+  const train = {s: stationStops[0].s + STOP_AT - 6, v: 0, wait: 3, next: 0, laps: 0, stopsMade: 0, length: loop.length, stations: stationStops, cars: 4, gap: .95, at: null};
+  const toStop = i => ((stationStops[i].s + STOP_AT - train.s) % loop.length + loop.length) % loop.length;
+  { let best = 0, bd = Infinity; for (let i = 0; i < stationStops.length; i++) { const d = toStop(i); if (d < bd) { bd = d; best = i; } } train.next = best; }
   function stepTrain(dt) {
     if (train.wait > 0) { train.wait -= dt; train.v = 0; return; }
-    const goal = stopsAt[train.target], d = goal - train.z, want = Math.sign(d) * Math.min(.7, Math.abs(d) * 1.1 + .06);
-    train.v += Math.max(-1.2 * dt, Math.min(.8 * dt, want - train.v)); train.z += train.v * dt;
-    if (Math.abs(d) < .03 && Math.abs(train.v) < .15) { train.z = goal; train.v = 0; train.wait = train.target === 0 ? 9 : 6; train.target ^= 1; train.trips++; }
+    const d = toStop(train.next), want = Math.min(CRUISE, Math.sqrt(2 * .7 * Math.max(0, d - .05)) + .05);
+    train.v += Math.max(-1.1 * dt, Math.min(.45 * dt, want - train.v));
+    const before = train.s; train.s += train.v * dt; if (train.s >= loop.length) { train.s -= loop.length; train.laps++; }
+    const arrived = ((stationStops[train.next].s + STOP_AT - train.s) % loop.length + loop.length) % loop.length;
+    if (d < .06 || (d < .4 && arrived > loop.length / 2)) { train.s = stationStops[train.next].s + STOP_AT; if (train.s >= loop.length) train.s -= loop.length; train.v = 0; train.wait = 7 + rnd() * 3; train.at = stationStops[train.next].id; train.next = (train.next + 1) % stationStops.length; train.stopsMade++; }
+    else if (d > 1) train.at = null;
   }
-  const ahead = (from, to) => ((to - from) % tour.length + tour.length) % tour.length;   // distance along the tour from one point forward to another
-  function place(v) { const p = along(tour, v.s); v.x = p.x; v.z = p.z; v.tx = p.tx; v.tz = p.tz; }
-  vehicles.forEach(place);
+  const ahead = (from, to, L) => ((to - from) % L + L) % L;
+  function place(v) { const p = along(v.route.line, v.s); v.x = p.x; v.z = p.z; v.tx = p.tx; v.tz = p.tz; }
   let hour = hourOf(0);
   const weather = createWeather(seed);
 
   // The street lamps. Outside the lamplighter's hours they follow the clock (on by night, off by day); in them, only his rounds change them.
-  const E0 = 17.2, E1 = 20.6, M0 = 4.6, M1 = 7.5, evening = h => h >= E0 && h < E1, morning = h => h >= M0 && h < M1;   // his hours: lamps up from late afternoon, out again after dawn
+  const E0 = 17.2, E1 = 20.6, M0 = 4.0, M1 = 7.5, evening = h => h >= E0 && h < E1, morning = h => h >= M0 && h < M1;   // his hours: lamps up from late afternoon, out again after dawn
   const lamps = LAMPS.map(l => ({...l, on: hour < M1 || hour >= E1, lit: 0})); lamps.forEach(l => { l.lit = l.on ? 1 : 0; });
   const lampJobNow = () => evening(hour) ? 'light' : morning(hour) ? 'snuff' : null;
-  const lampsToDo = job => lamps.filter(l => job === 'light' ? !l.on : l.on);
+  const lampsToDo = (job, zone) => lamps.filter(l => l.zone === zone && (job === 'light' ? !l.on : l.on));
   function snapLamps() {   // after a jump in time: a lamplighter part-way through his round
     const N = lamps.length;
     lamps.forEach((l, i) => { l.on = evening(hour) ? (hour - E0) / (E1 - E0) > i / N : morning(hour) ? (hour - M0) / (M1 - M0) < i / N : !(hour >= M1 && hour < E0); l.lit = l.on ? 1 : 0; });
@@ -67,8 +74,8 @@ export function createSim(seed = 7, opts = {}) {
     const p = along(route, 0); r.x = p.x; r.z = p.z; r.tx = p.tx; r.tz = p.tz; return true;
   }
   function startLampRound(r) {
-    const job = lampJobNow(); if (!job || !lampsToDo(job).length) return false;
-    r.lampJob = job; r.lampQueue = lampsToDo(job).map(l => l.id); r.outings++; lastDepart = clock; r.stay = null; return lampLeg(r);
+    const job = lampJobNow(); if (!job || !lampsToDo(job, r.def.zone).length) return false;
+    r.lampJob = job; r.lampQueue = lampsToDo(job, r.def.zone).map(l => l.id); r.outings++; lastDepart = clock; r.stay = null; return lampLeg(r);
   }
   let tended = 0;
   function tendLamp(r) {   // arrived at a lamp: a moment to reach up and light or snuff it
@@ -119,31 +126,82 @@ export function createSim(seed = 7, opts = {}) {
       r.state = 'inside'; r.at = r.target; r.target = null; r.route = null; r.until = clock + stay * (.8 + rnd() * .4); if (r.stay === null && r.at === round[r.step][0]) r.step = (r.step + 1) % round.length; r.stay = null;
     }
   }
-  const clearAt = (s0, gap) => vehicles.every(o => o.state === 'parked' || Math.min(ahead(s0, o.s), ahead(o.s, s0)) > gap);
+  // ---- Vehicles
+  const holders = new Map(), JUNCTION = .8, active = () => vehicles.filter(o => o.state !== 'parked');
+  const houses = BUILDINGS.filter(b => b.door && /^c\d/.test(b.id)).map(b => b.id), places = BUILDINGS.filter(b => b.door).map(b => b.id);
+  const pick = list => list[Math.floor(rnd() * list.length)];
+  // Where this vehicle goes next, as a spot on the lanes plus how long to stand there.
+  function nextTarget(v) {
+    const d = v.def;
+    if (v.state === 'returning') return {...v.home, dwell: 0, park: true};
+    let id;
+    switch (d.plan) {
+      case 'line': { const line = BUS_LINES[d.line]; id = line[v.planIdx % line.length]; v.planIdx++; return {...spotOf(id), id, dwell: 4}; }
+      case 'round': id = d.targets[v.planIdx++ % d.targets.length]; return {...spotOf(id), id, dwell: 3};
+      case 'stops': do id = pick(d.targets); while (id === v.lastId && d.targets.length > 1); return {...spotOf(id), id, dwell: 12};
+      case 'wander': do id = pick(d.targets); while (id === v.lastId && d.targets.length > 1); return {...spotOf(id), id, dwell: 6};
+      case 'call': do id = pick(houses); while (id === v.lastId); return {...spotOf(id), id, dwell: 12};
+      default: do id = pick(places); while (id === v.lastId); return {...spotOf(id), id, dwell: 3 + rnd() * 3};   // taxi
+    }
+  }
+  // Plan the route from a place on a lane to a target; false if there is none.
+  function planLeg(v, lane, s, target) {
+    const ids = target.lane === lane && target.s > s + .3 ? [lane] : graph.laneRoute(lane, target.lane); if (!ids) return false;
+    const r = graph.routeLine(ids); v.route = r; v.s = s; v.target = target; v.stopAt = r.bounds[r.bounds.length - 1].s0 + target.s; return true;
+  }
+  const laneAt = v => { const b = v.route.bounds; let i = b.length - 1; while (i > 0 && v.s < b[i].s0) i--; return {lane: b[i].lane, s: Math.max(0, v.s - b[i].s0)}; };
+  const exitClear = (v, i) => { const b = v.route.bounds[i], p = along(v.route.line, Math.min(v.route.line.length, b.s0 + 1.0)); return vehicles.every(o => o === v || o.state === 'parked' || Math.hypot(o.x - p.x, o.z - p.z) > .55); };
+  const clearHome = v => { const h = homeXY(v); return vehicles.every(o => o === v || o.state === 'parked' || Math.hypot(o.x - h.x, o.z - h.z) > 1.5); };
   function stepVehicle(v, dt) {
     const def = v.def;
     if (v.state === 'parked') {
       const due = def.onCall ? v.call > 0 : inWindow(hour, def.from, def.to);
-      if (due && clearAt(v.home, 2.6)) { v.state = 'driving'; v.s = v.home; v.v = 0; v.wait = 0; v.lastStop = null; v.travelled = 0; place(v); }
-      return;
+      if (!due || !clearHome(v)) return;
+      const t = nextTarget(v);   // the first leg is planned from the garage
+      if (!planLeg(v, v.home.lane, v.home.s, t)) return;
+      v.state = 'driving'; v.v = 0; v.wait = 0; v.travelled = 0; v.lastId = t.id || null; v.held = null; v.stuck = 0; v.ghost = 0; place(v); return;
     }
     if (def.onCall && v.state === 'driving' && v.travelled > 30) v.call = 0;   // the call-out is over after a good run round the town
-    if (v.state === 'driving' && (def.onCall ? v.call <= 0 && v.travelled > 8 : !inWindow(hour, def.from, def.to))) v.state = 'returning';
+    if (v.state === 'driving' && (def.onCall ? v.call <= 0 && v.travelled > 8 : !inWindow(hour, def.from, def.to))) {   // off duty: back to the garage (even from a stop)
+      const here = laneAt(v); if (planLeg(v, here.lane, here.s, nextTarget({...v, state: 'returning'}))) { v.state = 'returning'; v.s = here.s; v.wait = 0; }
+    }
     if (v.wait > 0) { v.wait -= dt; v.v = 0; return; }
-    let want = def.speed * (1 - .18 * weather.rain) * (v.state === 'returning' ? 1.4 : 1);   // heading home after the day's work, a little brisker
-    for (const o of vehicles) if (o !== v && o.state !== 'parked') { const gap = ahead(v.s, o.s); if (gap < 2.2) want = Math.min(want, Math.max(0, (gap - 1.0) / 1.2) * def.speed); }   // keep a gap
+    let want = def.speed * (1 - .18 * weather.rain) * (v.state === 'returning' ? 1.3 : 1);   // heading home after the day's work, a little brisker
+    // keep a gap from whoever is just ahead and going my way (or across my path)
+    for (const o of vehicles) if (o !== v && o.state !== 'parked') {
+      const dx = o.x - v.x, dz = o.z - v.z, f = dx * v.tx + dz * v.tz, lat = Math.abs(dx * v.tz - dz * v.tx), dot = o.tx * v.tx + o.tz * v.tz;
+      if (f > 0 && f < 2.2 && lat < .34 && dot > -.2) want = Math.min(want, Math.max(0, (f - .62) / 1.2) * def.speed);
+    }
     for (const r of residents) if (r.state === 'walking') {   // somebody in the road just ahead: wait for them
       const dx = r.x - v.x, dz = r.z - v.z, f = dx * v.tx + dz * v.tz, side = Math.abs(dx * v.tz - dz * v.tx);
       if (f > .1 && f < .95 && side < .3) want = 0;
     }
-    if (def.stops && v.state === 'driving') for (const st of stops) { const gap = ahead(v.s, st.s); if (gap < .12 && v.lastStop !== st.id) { v.wait = 4; v.lastStop = st.id; v.stopsMade++; want = 0; } else if (gap < 1.2 && v.lastStop !== st.id) want = Math.min(want, .25 + gap * .5); }
-    if (v.state === 'returning') {   // off duty: into the next depot along the road (a garage, the barn, the post office, the fire station)
-      const gap = ahead(v.s, v.home); if (gap < .45) want = Math.min(want, .3);   // only ever into its own garage
-      if (gap < .1 || gap > tour.length - .1) { v.state = 'parked'; v.v = 0; v.trips++; if (def.onCall) v.call = 0; v.parkedAt = v.s; return; }
+    // a junction ahead: take its lock before going in (and only if there is room beyond it), else stop short
+    const b = v.route.bounds;
+    if (v.held && v.s > v.held.s0 + JUNCTION) { if (holders.get(v.held.node) === v) holders.delete(v.held.node); v.held = null; }
+    if (!v.held) for (let i = 1; i < b.length; i++) if (v.s < b[i].s0 + JUNCTION) {
+      const entry = b[i].s0 - JUNCTION, node = graph.lane(b[i - 1].lane).to;
+      if (v.s > entry - .7 && v.ghost <= 0) {
+        if (!holders.get(node) && exitClear(v, i)) { holders.set(node, v); v.held = {node, s0: b[i].s0}; }
+        else want = Math.min(want, Math.max(0, entry - v.s - .08) * 1.6);
+      }
+      break;
     }
+    want = Math.min(want, Math.max(.0, v.stopAt - v.s) * 1.3 + .05);   // ease in to the place to stop
     v.v += Math.max(-2.4 * dt, Math.min(1.1 * dt, want - v.v));
-    const step = Math.max(0, v.v) * dt; v.s = (v.s + step) % tour.length; v.travelled += step; place(v);
+    const step = Math.max(0, v.v) * dt; v.s = Math.min(v.stopAt, v.s + step); v.travelled += step; place(v);
+    // stuck for a long time? stop being polite for a few seconds so nobody blocks the town for ever
+    if (v.v < .03 && v.stopAt - v.s > .1) { v.stuck += dt; if (v.stuck > 20) { v.ghost = 6; v.stuck = 0; } } else v.stuck = 0;
+    if (v.ghost > 0) v.ghost -= dt;
+    if (v.stopAt - v.s < .05 && v.v < .35) {   // arrived
+      const t = v.target; v.v = 0;
+      if (t.park) { v.state = 'parked'; v.trips++; v.route = null; if (def.onCall) v.call = 0; if (v.held && holders.get(v.held.node) === v) holders.delete(v.held.node); v.held = null; return; }
+      v.wait = t.dwell; v.stopsMade++; v.lastId = t.id || v.lastId;
+      const here = laneAt(v), nt = nextTarget(v); if (!planLeg(v, here.lane, here.s, nt)) { v.wait = 5; return; }
+    }
   }
+  function releaseLocks() { for (const [node, o] of holders) if (o.state === 'parked' || !o.held || o.held.node !== node) holders.delete(node); }
+
   // Small stories: every so often, if the cast and the hour and the weather allow, one of them sends a few residents on errands.
   const story = {current: null, last: {}, count: {}, nextAt: 20, pending: null, log: []};
   const awake = r => r.state === 'inside' && inWindow(hour, r.def.wake ?? 6.5, (r.def.sleep ?? 20.5) - .5) && r.errands.length === 0;
@@ -172,7 +230,7 @@ export function createSim(seed = 7, opts = {}) {
     dt = Math.min(dt, .1); clock += dt; hour = hourOf(clock);
     for (const r of residents) stepResident(r, dt);
     for (const v of vehicles) stepVehicle(v, dt);
-    stepTrain(dt); weather.update(dt); stepStories(); stepLamps(dt);
+    releaseLocks(); stepTrain(dt); weather.update(dt); stepStories(); stepLamps(dt);
   }
   return {graph, residents, vehicles, stops, train, weather, season, lamps, get lampsTended() { return tended; }, story, stage, update, get clock() { return clock; }, get hour() { return hour; }, setHour(h) { clock = ((h - 6 + 24) % 24) / 24 * DAY; hour = hourOf(clock); snapLamps(); }, dispatchFire() { const f = vehicles.find(v => v.id === 'fire'); if (f) f.call = 1; }, doorIds: BUILDINGS.filter(b => b.door).map(b => b.id)};
 }

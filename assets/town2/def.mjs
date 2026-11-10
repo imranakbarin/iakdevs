@@ -11,9 +11,12 @@ export const PALETTE = {
 
 import {curve} from './curve.mjs';
 
-export const ISLAND = {rx: 13.8, rz: 10.4, sea: -.12};
+export const ISLAND = {rx: 19.4, rz: 15.9, sea: -.12};
 export const SQUARE = {x: 0, z: 0, ring: 2.4, green: 1.55};
 export const ROAD = {width: .95, lane: .22, pave: .66, paveWidth: .3};
+export const OUTER = {rx: 11.6, rz: 8.4};     // the outer ring road (an ellipse)
+export const LOOP = {rx: 16.0, rz: 13.4};     // the railway, a loop round the whole town
+export const BUILD_SCALE = .8;                // houses and buildings are drawn at this scale (people, vehicles and trees follow)
 
 const smooth = (a, b, v) => { const t = Math.min(1, Math.max(0, (v - a) / (b - a))); return t * t * (3 - 2 * t); };
 // How far inside the island a point is: <1 on land, 1 at the waterline (a gently wobbly ellipse).
@@ -26,89 +29,132 @@ export function heightAt(x, z) {
   const land = smooth(1.0, .84, shore(x, z));
   const roll = .34 * Math.sin(x * .33 + 1.3) * Math.cos(z * .41 - .4) + .2 * Math.sin(x * .71 - z * .52);
   const away = smooth(4.2, 9, Math.hypot(x - SQUARE.x, z - SQUARE.z));
-  const hill = 1.45 * Math.exp(-((x - 1.9) ** 2 + (z + 8.3) ** 2) / 6.5);
+  const hill = 1.1 * Math.exp(-((x - HILL.x) ** 2 + (z - HILL.z) ** 2) / 3.4);
   return (.14 + Math.max(0, roll * .7 + .22) * away + hill) * land - (1 - land) * .55;
 }
+export const HILL = {x: 0, z: -10.3};
 
-// Roads. The ring goes clockwise round the square (seen from above); each spoke leaves it at an exit angle and is a
-// smooth curve through its control points, ending in a turning circle. Angles are measured from east towards south.
-export const SPOKES = [
-  {id: 'high', name: 'High Street', angle: 0, points: [[2.4, 0], [5.5, .25], [8.6, -.15], [11.0, .35]]},
-  {id: 'station', name: 'Station Road', angle: Math.PI / 2, points: [[0, 2.4], [.3, 4.7], [1.1, 6.5], [1.3, 8.3]]},
-  {id: 'cottage', name: 'Cottage Lane', angle: Math.PI, points: [[-2.4, 0], [-5.4, .2], [-8.4, -.1], [-10.8, .4]]},
-  {id: 'hill', name: 'Windmill Lane', angle: Math.PI * 1.5, points: [[0, -2.4], [.35, -4.8], [.9, -6.6], [1.3, -7.5]]}
-];
-
-// Streets. A spoke is a curve, so buildings are placed by how far along it (s, from the ring) and which side of it:
-// +1 is the left of the way out from the square, -1 the right. The front door always faces the street and its step lands
-// on the pavement (STEPOUT from the middle of the road), so everybody steps straight from a doorstep onto the pavement.
-const spokeLines = {};
-function spokeLine(id) {
-  if (!spokeLines[id]) { const pts = curve(SPOKES.find(s => s.id === id).points), at = [0]; for (let i = 1; i < pts.length; i++) at.push(at[i - 1] + Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1])); spokeLines[id] = {pts, at}; }
-  return spokeLines[id];
+// ---- Roads. An inner ring (one way, clockwise seen from above) round the square, eight spokes out to an outer ring road (an
+// ellipse), and the railway loop outside everything. Angles run from east towards south. Every road is an edge between two
+// nodes: 'in0'..'in7' on the inner ring and 'out0'..'out7' on the outer ring, so the whole thing is one connected network.
+const TAU = Math.PI * 2, A8 = k => k * TAU / 8;
+export const ringPt = a => [SQUARE.x + Math.cos(a) * SQUARE.ring, SQUARE.z + Math.sin(a) * SQUARE.ring];
+export const outerPt = a => [Math.cos(a) * OUTER.rx, Math.sin(a) * OUTER.rz];
+export const loopPt = a => [Math.cos(a) * LOOP.rx, Math.sin(a) * LOOP.rz];
+export const SPOKE_NAMES = ['High Street', 'Harbour Road', 'Station Road', 'School Road', 'Cottage Lane', 'Farm Road', 'Windmill Lane', 'Pond Road'];
+export const NODES = {};
+export const ROADS = [];
+for (let k = 0; k < 8; k++) { NODES['in' + k] = ringPt(A8(k)); NODES['out' + k] = outerPt(A8(k)); }
+for (let k = 0; k < 8; k++) {
+  const a = A8(k), p0 = NODES['in' + k], p1 = NODES['out' + k], mx = (p0[0] + p1[0]) / 2, mz = (p0[1] + p1[1]) / 2, len = Math.hypot(p1[0] - p0[0], p1[1] - p0[1]);
+  const bow = k % 2 ? (k % 4 === 1 ? .2 : -.2) : 0, nx = -(p1[1] - p0[1]) / len, nz = (p1[0] - p0[0]) / len;   // the diagonal streets bow a little
+  ROADS.push({id: 'spoke' + k, kind: 'spoke', name: SPOKE_NAMES[k], a: 'in' + k, b: 'out' + k, points: [p0, [mx + nx * bow, mz + nz * bow], p1]});
 }
-export function onSpoke(id, s) {
-  const {pts, at} = spokeLine(id); s = Math.max(0, Math.min(at[at.length - 1], s)); let i = 0; while (i < at.length - 2 && at[i + 1] < s) i++;
+for (let k = 0; k < 8; k++) {
+  const n = (k + 1) % 8, ap = [], op = [];
+  for (let m = 0; m <= 6; m++) ap.push(ringPt(A8(k) + (TAU / 8) * m / 6));
+  for (let m = 0; m <= 8; m++) op.push(outerPt(A8(k) + (TAU / 8) * m / 8));
+  ROADS.push({id: 'ring' + k, kind: 'ring', name: 'the Square', a: 'in' + k, b: 'in' + n, oneway: true, points: ap});
+  ROADS.push({id: 'outer' + k, kind: 'outer', name: 'Ring Road', a: 'out' + k, b: 'out' + n, points: op});
+}
+
+// A road's centre line, sampled, with running length: used to place houses and lamps along streets.
+const roadLines = {};
+export function roadLine(id) {
+  if (!roadLines[id]) { const r = ROADS.find(x => x.id === id), pts = curve(r.points), at = [0]; for (let i = 1; i < pts.length; i++) at.push(at[i - 1] + Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1])); roadLines[id] = {pts, at}; }
+  return roadLines[id];
+}
+export function onRoad(id, s) {
+  const {pts, at} = roadLine(id); s = Math.max(0, Math.min(at[at.length - 1], s)); let i = 0; while (i < at.length - 2 && at[i + 1] < s) i++;
   const a = pts[i], b = pts[i + 1], f = (s - at[i]) / ((at[i + 1] - at[i]) || 1), d = Math.hypot(b[0] - a[0], b[1] - a[1]) || 1;
   return {x: a[0] + (b[0] - a[0]) * f, z: a[1] + (b[1] - a[1]) * f, tx: (b[0] - a[0]) / d, tz: (b[1] - a[1]) / d};
 }
-export const spokeLength = id => { const at = spokeLine(id).at; return at[at.length - 1]; };
-const STEPOUT = .9;
-const street = (id, type, name, spoke, s, side, door, extra = {}) => {
-  const p = onSpoke(spoke, s), nx = p.tz, nz = -p.tx, off = side * (door + STEPOUT);   // (nx, nz): the left of the way out
-  const ry = Math.round(Math.atan2(-side * nx, -side * nz) / (Math.PI / 2)) * Math.PI / 2;   // squared to the grid: houses face the street, never at odd angles
-  return {id, type, name, x: p.x + nx * off, z: p.z + nz * off, ry, door, street: spoke, s, side, ...extra};
-};
+export const roadLength = id => { const at = roadLine(id).at; return at[at.length - 1]; };
+export const allRoadPoints = () => ROADS.flatMap(r => roadLine(r.id).pts);
 
-const Q = Math.PI / 4;
-// Buildings. `ry` turns the building so its front (local +z, where the door is) faces that way: 0 faces south.
-// `door` is how far in front of the centre the doorstep is. Landmarks have a builder of the same name in build.mjs.
-// `at` places a building and turns its front towards a point on the road, so the door always faces the lane.
+// ---- Buildings. `ry` turns the front (local +z, where the door is) to face that way; `door` is how far in front of the centre the doorstep is
+// (already scaled by BUILD_SCALE); `w` is the footprint width. The landmarks round the square are placed by hand; everything else is set out
+// by a small layout solver: each building names the streets it would like to stand on, and takes the first spot along them (on the left, +1,
+// or right, -1, of the way the street runs out from the square) where it fits: clear of the other buildings, every road, the railway, the
+// pond and the paddock, facing its street, with its doorstep on the pavement.
+const S = BUILD_SCALE, STEPOUT = .9;
+const WIDTH = {cottage: 2.0, mushroomCottage: 3.0, school: 3.5, station: 3.6, barn: 3.1, garage: 2.5, fireStation: 3.0, postOffice: 2.4, policeBox: 1.3, harbourHut: 2.0, windmill: 2.4, teapotCafe: 2.8, toyShop: 2.5, bakery: 2.8, bandstand: 3.0, clockTower: 2.4};
+const DOOR = {cottage: .85, mushroomCottage: .95, school: 1.25, station: 1.25, barn: 1.1, garage: 1.0, fireStation: 1.05, postOffice: .95, policeBox: .6, harbourHut: .95, windmill: .95, teapotCafe: 1.25, toyShop: 1.05, bakery: 1.0, bandstand: 0, clockTower: 0};
+export const POND = {x: 3.7, z: -6.4, r: 1.0};
+export const PADDOCK = {x0: -6.0, z0: -7.2, x1: -3.8, z1: -5.2};
+const make = (id, type, name, x, z, ry, extra = {}) => ({id, type, name, x, z, ry, door: DOOR[type] * S, w: WIDTH[type] * S, scale: S, ...extra});
+const wedge = (deg, id, type, name, extra = {}) => { const a = deg * Math.PI / 180, r = 5.0, x = Math.cos(a) * r, z = Math.sin(a) * r; return make(id, type, name, x, z, Math.atan2(-x, -z), extra); };
+const cot = (colour, roof) => ({colour, roof});
+const LOOP_PTS = Array.from({length: 240}, (_, i) => loopPt(i / 240 * TAU));
+
 export const BUILDINGS = [
-  {id: 'clock', type: 'clockTower', name: 'the Clock Tower', x: 0, z: 0, ry: 0, door: 0},
-  // the four corners of the square face its middle
-  {id: 'cafe', type: 'teapotCafe', name: 'the Teapot Café', x: -3.25, z: -3.25, ry: Q, door: 1.25},
-  {id: 'toys', type: 'toyShop', name: 'the Toy Shop', x: 3.25, z: -3.25, ry: -Q, door: 1.05},
-  {id: 'bakery', type: 'bakery', name: 'the Bakery', x: 3.3, z: 3.2, ry: -3 * Q, door: 1.0},
-  {id: 'bandstand', type: 'bandstand', name: 'the Bandstand', x: -3.3, z: 3.3, ry: 3 * Q, door: 0},
-  // High Street, east: services on the left (north), the garage and kiosk on the right, the harbour at the end
-  street('post', 'postOffice', 'the Post Office', 'high', 3.3, 1, .95),
-  street('fire', 'fireStation', 'the Fire Station', 'high', 6.4, 1, 1.05),
-  street('hut', 'harbourHut', 'the Harbour Hut', 'high', 8.6, 1, .95),
-  street('police', 'policeBox', "the Constable's Kiosk", 'high', 3.3, -1, .6),
-  street('garage', 'garage', 'the Garage', 'high', 6.4, -1, 1.0),
-  // Cottage Lane, west: the lane's houses, facing each other across it
-  street('mushroom', 'mushroomCottage', 'Mushroom Cottage', 'cottage', 3.6, -1, .95),
-  street('c1', 'cottage', 'Bluebell Cottage', 'cottage', 6.4, -1, .85, {colour: 'sky', roof: 'red'}),
-  street('c4', 'cottage', 'Apple Cottage', 'cottage', 8.5, -1, .85, {colour: 'lime', roof: 'orange'}),
-  street('c3', 'cottage', 'Rose Cottage', 'cottage', 3.3, 1, .85, {colour: 'pink', roof: 'purple'}),
-  street('c2', 'cottage', 'Buttercup Cottage', 'cottage', 5.9, 1, .85, {colour: 'yellow', roof: 'teal'}),
-  street('c6', 'cottage', 'Lantern Cottage', 'cottage', 8.5, 1, .85, {colour: 'orange', roof: 'teal'}),
-  // Station Road, south: the station on the right, a cottage and the school on the left
-  street('station', 'station', 'the Station', 'station', 4.5, 1, 1.25),
-  street('c5', 'cottage', 'Daisy Cottage', 'station', 3.0, -1, .85, {colour: 'cream', roof: 'blue'}),
-  street('school', 'school', 'the School', 'station', 5.9, -1, 1.25),
-  // Windmill Lane, north: the farm and barn on the left, the windmill at the top of the hill
-  street('farm', 'cottage', 'Hay Farm', 'hill', 3.1, 1, .85, {colour: 'cream', roof: 'orange'}),
-  street('barn', 'barn', 'the Barn', 'hill', 5.7, 1, 1.1),
-  street('mill', 'windmill', 'the Windmill', 'hill', 5.4, -1, .95)
+  {id: 'clock', type: 'clockTower', name: 'the Clock Tower', x: 0, z: 0, ry: 0, door: 0, w: 2.4, scale: S},
+  // round the square, between the spokes, all facing the clock
+  wedge(22.5, 'bakery', 'bakery', 'the Bakery'), wedge(67.5, 'post', 'postOffice', 'the Post Office'), wedge(112.5, 'bandstand', 'bandstand', 'the Bandstand'), wedge(157.5, 'cafe', 'teapotCafe', 'the Teapot Café'),
+  wedge(202.5, 'toys', 'toyShop', 'the Toy Shop'), wedge(292.5, 'police', 'policeBox', "the Constable's Kiosk")
 ];
+{
+  const roadPts = allRoadPoints(), R = id => ROADS.find(r => r.id === id), spokes = k => 'spoke' + k, outer = k => 'outer' + k;
+  const fits = (x, z, w, ownRoad) => {
+    const r = w * .5;
+    if (shore(x, z) > .82 || Math.hypot(x - POND.x, z - POND.z) < POND.r + r + .5) return false;
+    if (x > PADDOCK.x0 - r - .4 && x < PADDOCK.x1 + r + .4 && z > PADDOCK.z0 - r - .4 && z < PADDOCK.z1 + r + .4) return false;
+    if (BUILDINGS.some(b => Math.hypot(b.x - x, b.z - z) < (b.w + w) * .5 * .92 + .12)) return false;
+    if (roadPts.some(p => Math.hypot(p[0] - x, p[1] - z) < r * .84 + .6)) return false;
+    return !LOOP_PTS.some(p => Math.hypot(p[0] - x, p[1] - z) < r + .95);
+  };
+  // prefs: [[roadId, side], ...] in order of liking; `from` is how far out along the road to start looking
+  const put = (id, type, name, prefs, extra = {}, from) => {
+    for (const [roadId, side, start] of prefs) {
+      const len = roadLength(roadId), kind = R(roadId).kind, lo = start ?? from ?? (kind === 'spoke' ? 3.0 : 1.8), hi = len - (kind === 'spoke' ? 1.0 : 1.8);
+      for (let s = lo; s <= hi; s += .3) {
+        const p = onRoad(roadId, s), nx = p.tz, nz = -p.tx, off = side * (DOOR[type] * S + STEPOUT), x = p.x + nx * off, z = p.z + nz * off, w = WIDTH[type] * S;
+        if (fits(x, z, w, roadId)) { BUILDINGS.push(make(id, type, name, x, z, Math.atan2(-side * nx, -side * nz), {street: roadId, s, side, ...extra})); return true; }
+      }
+    }
+    return false;
+  };
+  const E = 0, SE = 1, SO = 2, SW = 3, W = 4, NW = 5, N = 6, NE = 7;
+  const both = (road, a = 1) => [[road, a], [road, -a]];
+  // the big ones first, where they belong
+  put('station', 'station', 'the Station', [[outer(SO), 1, 1.8], [outer(SO), 1, 1.8]]);
+  put('hut', 'harbourHut', 'the Harbour Hut', [[outer(E), 1], [outer(SE), 1]]);
+  put('mill', 'windmill', 'the Windmill', [[outer(N), 1, 2.4]]);
+  put('fire', 'fireStation', 'the Fire Station', [[spokes(E), 1], [spokes(E), -1]]);
+  put('garage', 'garage', 'the Garage', [[spokes(E), -1], [spokes(E), 1]]);
+  put('school', 'school', 'the School', [[spokes(SW), 1], [spokes(SW), -1], [outer(SW), -1]]);
+  put('barn', 'barn', 'the Barn', [...both(spokes(N)), [outer(NW), -1]]);
+  put('farm', 'cottage', 'Hay Farm', [...both(spokes(NW), -1), [outer(NW), -1]], cot('cream', 'orange'));
+  put('mushroom', 'mushroomCottage', 'Mushroom Cottage', [...both(spokes(W), -1), ...both(spokes(W), 1)]);
+  // the cottages, each looking along the streets near the place it belongs
+  const houses = [
+    ['c1', 'Bluebell Cottage', 'sky', 'red', [...both(spokes(W), 1), ...both(spokes(W), -1)]], ['c2', 'Buttercup Cottage', 'yellow', 'teal', [...both(spokes(W), 1), ...both(spokes(W), -1), ...both(spokes(SW), -1)]],
+    ['c3', 'Rose Cottage', 'pink', 'purple', [...both(spokes(W), 1), ...both(spokes(SW), -1), [outer(W), -1]]], ['c4', 'Apple Cottage', 'lime', 'orange', [...both(spokes(W), -1), ...both(spokes(NW), 1)]],
+    ['c5', 'Daisy Cottage', 'cream', 'blue', [...both(spokes(NW), 1), [outer(NW), -1], [outer(NW), 1], [outer(N), -1], ...both(spokes(N), -1), ...both(spokes(NE), -1)]], ['c6', 'Lantern Cottage', 'orange', 'teal', [[outer(W), 1], [outer(SW), 1], ...both(spokes(W), 1)]],
+    ['c8', 'Poppy Cottage', 'pink', 'blue', [...both(spokes(E), -1), [outer(NE), -1], [outer(E), -1]]], ['c9', 'Primrose Cottage', 'yellow', 'red', [...both(spokes(SE), 1), [outer(SE), 1], [outer(SE), -1]]],
+    ['c10', 'Clover Cottage', 'sky', 'orange', [...both(spokes(SE), -1), [outer(SE), -1], [outer(E), -1]]], ['c11', 'Marigold Cottage', 'lime', 'purple', [...both(spokes(SO), -1), [outer(SO), -1], [outer(SO), 1]]],
+    ['c12', 'Foxglove Cottage', 'cream', 'teal', [...both(spokes(SO), 1), [outer(SO), -1]]], ['c13', 'Heather Cottage', 'orange', 'blue', [[outer(SW), 1], ...both(spokes(SW), -1), [outer(W), 1]]],
+    ['c14', 'Violet Cottage', 'sky', 'purple', [[outer(NW), 1], [outer(W), -1], ...both(spokes(NW), -1)]], ['c15', 'Willow Cottage', 'lime', 'red', [...both(spokes(NE), 1), [outer(NE), 1], [outer(N), -1]]]
+  ];
+  for (const [id, name, colour, roof, prefs] of houses) put(id, 'cottage', name, prefs, cot(colour, roof));
+}
+{ const mill = BUILDINGS.find(b => b.id === 'mill'); if (mill) { HILL.x = mill.x; HILL.z = mill.z + .4; } }   // Windmill Hill rises under the windmill
 
-// Lamp posts: eight round the square (with the bunting) and one every couple of units along each street, on alternate sides, never in front of a door.
-// `spot` is the place on the pavement beside each one where the lamplighter stands to tend it.
+// Lamp posts: eight round the square (with the bunting) and one every couple of units along each spoke and the outer ring, on alternate sides,
+// never in front of a door. `spot` is the place on the pavement beside each one where the lamplighter stands to tend it.
 export const LAMPS = (() => {
   const out = [];
-  for (let k = 0; k < 8; k++) { const a = (k + .5) / 8 * Math.PI * 2; out.push({x: Math.cos(a) * 3.3, z: Math.sin(a) * 3.3, spot: [Math.cos(a) * (SQUARE.ring + ROAD.pave), Math.sin(a) * (SQUARE.ring + ROAD.pave)], where: 'the square'}); }
-  for (const sp of SPOKES) {
-    const len = spokeLength(sp.id); let side = 1;
-    for (let s = 2.5; s < len - .5; s += 2.1) {
-      const p = onSpoke(sp.id, s), nx = p.tz, nz = -p.tx, at = sd => [p.x + nx * sd * .86, p.z + nz * sd * .86];
-      const free = sd => { const [x, z] = at(sd); return BUILDINGS.every(b => Math.hypot(b.x - x, b.z - z) > 1.1 && Math.hypot(b.x + Math.sin(b.ry) * b.door - x, b.z + Math.cos(b.ry) * b.door - z) > .9); }, pick = free(side) ? side : free(-side) ? -side : 0;
-      if (pick) { const [x, z] = at(pick); out.push({x, z, spot: [p.x + nx * pick * ROAD.pave, p.z + nz * pick * ROAD.pave], where: sp.name}); }
+  for (let k = 0; k < 8; k++) { const a = (k + .25) / 8 * TAU; out.push({x: Math.cos(a) * 3.2, z: Math.sin(a) * 3.2, spot: [Math.cos(a) * (SQUARE.ring + ROAD.pave), Math.sin(a) * (SQUARE.ring + ROAD.pave)], where: 'the square'}); }
+  for (const r of ROADS) {
+    if (r.kind === 'ring') continue; const len = roadLength(r.id); let side = 1;
+    for (let s = 2.6; s < len - .8; s += 2.3) {
+      const p = onRoad(r.id, s), nx = p.tz, nz = -p.tx, at = sd => [p.x + nx * sd * .86, p.z + nz * sd * .86];
+      const free = sd => { const [x, z] = at(sd); return BUILDINGS.every(b => Math.hypot(b.x - x, b.z - z) > b.w * .5 + .6 && Math.hypot(b.x + Math.sin(b.ry) * b.door - x, b.z + Math.cos(b.ry) * b.door - z) > .8); }, pick = free(side) ? side : free(-side) ? -side : 0;
+      if (pick) { const [x, z] = at(pick); out.push({x, z, spot: [p.x + nx * pick * ROAD.pave, p.z + nz * pick * ROAD.pave], where: r.name}); }
       side = -side;
     }
   }
-  return out.map((l, i) => ({id: 'lamp' + i, ...l}));
+  return out.map((l, i) => ({id: 'lamp' + i, zone: Math.floor((((Math.atan2(l.z, l.x)) % TAU) + TAU) % TAU / (TAU / 3)), ...l}));   // each lamplighter looks after a third of the town
 })();
 
 // The cast. Each lives behind one door and has a round of places to go; `stay` is seconds spent at each.
@@ -126,46 +172,66 @@ export const CAST = [
   {id: 'chalk', wake: 7, sleep: 19.5, name: 'Miss Chalk the teacher', home: 'c5', coat: 'sky', hat: 'bun', round: [['school', 95], ['cafe', 16], ['school', 55], ['c5', 40]]},
   {id: 'sparky', wake: 7.5, sleep: 19.5, name: 'Sparky the mechanic', home: 'c4', coat: 'orange', hat: 'cap', round: [['garage', 80], ['cafe', 14], ['garage', 55], ['c4', 40]]},
   {id: 'salt', wake: 6, sleep: 20, name: 'Captain Salt', home: 'hut', coat: 'blue', hat: 'flat', round: [['hut', 60], ['bakery', 12], ['hut', 50], ['station', 10], ['hut', 40]]},
-  {id: 'wick', wake: 4.6, sleep: 21.4, name: 'Mr Wick the lamplighter', home: 'c6', coat: 'teal', hat: 'flat', lamplighter: true, round: [['c6', 60], ['cafe', 20], ['c6', 60], ['bakery', 10]]},
+  {id: 'wick', wake: 4.0, sleep: 21.4, name: 'Mr Wick the lamplighter', home: 'c6', coat: 'teal', hat: 'flat', lamplighter: true, zone: 0, round: [['c6', 60], ['cafe', 20], ['c6', 60], ['bakery', 10]]},
   {id: 'dot', wake: 7.5, sleep: 18, name: 'Dot', home: 'c4', coat: 'yellow', hat: 'bobble', small: true, round: [['school', 60], ['toys', 25], ['cafe', 14], ['c2', 10], ['c4', 35]]},
-  {id: 'dash', wake: 7.5, sleep: 18, name: 'Dash', home: 'c2', coat: 'sky', hat: 'bobble', small: true, round: [['school', 55], ['toys', 20], ['mushroom', 12], ['bakery', 10], ['c2', 35]]}
+  {id: 'dash', wake: 7.5, sleep: 18, name: 'Dash', home: 'c2', coat: 'sky', hat: 'bobble', small: true, round: [['school', 55], ['toys', 20], ['mushroom', 12], ['bakery', 10], ['c2', 35]]},
+  {id: 'ada', wake: 4.0, sleep: 21.4, name: 'Ada the lamp-girl', home: 'c9', coat: 'pink', hat: 'bow', lamplighter: true, zone: 1, round: [['c9', 60], ['bakery', 14], ['c9', 60], ['cafe', 10]]},
+  {id: 'lew', wake: 4.0, sleep: 21.4, name: 'Lew the lamp-boy', home: 'c15', coat: 'brown', hat: 'cap', lamplighter: true, zone: 2, round: [['c15', 60], ['post', 12], ['c15', 60], ['cafe', 10]]},
+  {id: 'ivy', wake: 6.5, sleep: 19.5, name: 'Ivy the gardener', home: 'c9', coat: 'green', hat: 'flat', round: [['mill', 20], ['cafe', 18], ['farm', 14], ['bakery', 10], ['c9', 50]]},
+  {id: 'rudy', wake: 6.5, sleep: 18.5, name: 'Rudy the paper boy', home: 'c10', coat: 'orange', hat: 'cap', round: [['post', 20], ['c1', 5], ['c3', 5], ['c12', 5], ['c13', 5], ['c15', 5], ['c10', 45]]},
+  {id: 'nell', wake: 7, sleep: 19.5, name: 'Nurse Nell', home: 'c11', coat: 'white', hat: 'bonnet', round: [['school', 22], ['cafe', 18], ['c4', 10], ['c11', 50]]},
+  {id: 'otto', wake: 6, sleep: 19.5, name: 'Otto the stationmaster', home: 'c12', coat: 'blue', hat: 'cap', round: [['station', 90], ['cafe', 14], ['station', 60], ['c12', 40]]},
+  {id: 'bea', wake: 8, sleep: 20, name: 'Bea the bandleader', home: 'c13', coat: 'yellow', hat: 'bow', round: [['toys', 20], ['cafe', 20], ['bakery', 12], ['c13', 50]]},
+  {id: 'finn', wake: 6, sleep: 20, name: 'Finn the fisherman', home: 'c14', coat: 'sky', hat: 'flat', round: [['hut', 60], ['bakery', 10], ['hut', 50], ['c14', 45]]},
+  {id: 'june', wake: 8, sleep: 20, name: 'Auntie June', home: 'c15', coat: 'purple', hat: 'bun', round: [['bakery', 14], ['cafe', 30], ['post', 10], ['c15', 60]]},
+  {id: 'ted', wake: 6, sleep: 20, name: 'Ted the train driver', home: 'c8', coat: 'red', hat: 'cap', round: [['station', 100], ['cafe', 16], ['station', 70], ['c8', 40]]}
 ];
 
-// Vehicles drive one closed tour of the whole road network (see graph.mjs) at their own pace.
+// Vehicles drive over the lane network (see graph.mjs): each one has a plan for where to go next and a garage (a building) it leaves and returns to.
 export const DAY = 480;   // seconds of simulation per day: 06:00 is the start of the morning, so a day is 8 minutes (a walk takes about an hour)
-// Each vehicle lives in a building (its garage), leaves it at `from` o'clock and drives the tour until `to`, then goes back in.
+//   plan 'line': the bus goes round its stops in order, waiting at each; 'taxi': to a random doorstep and on; 'round': to each of `targets` in turn;
+//   'stops': to a random one of `targets`, and waits a while; 'wander': slowly between random targets; 'call': when called out, to a random house and back.
 export const VEHICLES = [
-  {id: 'bus', kind: 'bus', name: 'the Toy Town bus', colour: 'red', speed: .85, stops: true, home: 'garage', from: 6.5, to: 21.5},
-  {id: 'taxi', kind: 'car', name: 'the taxi', colour: 'yellow', speed: 1.1, home: 'garage', from: 6, to: 23},
-  {id: 'van', kind: 'van', name: 'the post van', colour: 'red', speed: .95, home: 'post', from: 8, to: 16},
-  {id: 'milk', kind: 'float', name: 'the milk float', colour: 'white', speed: .7, home: 'barn', from: 5.5, to: 10.5},
-  {id: 'tractor', kind: 'tractor', name: 'the tractor', colour: 'green', speed: .55, home: 'barn', from: 9.5, to: 17},
-  {id: 'icecream', kind: 'icecream', name: 'the ice-cream van', colour: 'pink', speed: .8, home: 'garage', from: 13, to: 18.5},
-  {id: 'fire', kind: 'fire', name: 'the fire engine', colour: 'red', speed: 1.35, home: 'fire', from: -1, to: -1, onCall: true}
+  {id: 'bus', kind: 'bus', name: 'the Toy Town bus', colour: 'red', speed: .9, plan: 'line', line: 'a', home: 'garage', from: 6.5, to: 21.5},
+  {id: 'bus2', kind: 'bus', name: 'the Harbour bus', colour: 'blue', speed: .9, plan: 'line', line: 'b', home: 'garage', from: 7, to: 21},
+  {id: 'taxi', kind: 'car', name: 'the taxi', colour: 'yellow', speed: 1.15, plan: 'taxi', home: 'garage', from: 6, to: 23},
+  {id: 'taxi2', kind: 'car', name: 'the green taxi', colour: 'teal', speed: 1.05, plan: 'taxi', home: 'garage', from: 9, to: 22},
+  {id: 'van', kind: 'van', name: 'the post van', colour: 'red', speed: 1.0, plan: 'round', targets: ['c1', 'c3', 'c5', 'c9', 'c12', 'c13', 'c8', 'c15'], home: 'post', from: 8, to: 16},
+  {id: 'milk', kind: 'float', name: 'the milk float', colour: 'white', speed: .7, plan: 'round', targets: ['c2', 'c4', 'c6', 'c10', 'c11', 'c14'], home: 'barn', from: 5.5, to: 10.5},
+  {id: 'tractor', kind: 'tractor', name: 'the tractor', colour: 'green', speed: .55, plan: 'wander', targets: ['farm', 'barn', 'mill', 'c14', 'hut', 'school'], home: 'barn', from: 9.5, to: 17},
+  {id: 'icecream', kind: 'icecream', name: 'the ice-cream van', colour: 'pink', speed: .8, plan: 'stops', targets: ['cafe', 'post', 'toys', 'school', 'hut', 'station'], home: 'garage', from: 13, to: 18.5},
+  {id: 'fire', kind: 'fire', name: 'the fire engine', colour: 'red', speed: 1.35, plan: 'call', home: 'fire', from: -1, to: -1, onCall: true}
 ];
-// Where the bus pulls up (it waits a few seconds at each).
-export const BUS_STOPS = [{id: 'square', x: 2.9, z: .9}, {id: 'highEnd', x: 9.6, z: 0}, {id: 'lane', x: -8.3, z: .1}, {id: 'hill', x: .6, z: -5.6}, {id: 'station', x: .9, z: 6.2}];
+// The bus lines: each stops (waits a few seconds) at the doorstep of these buildings, one after another, round and round.
+export const BUS_LINES = {a: ['cafe', 'fire', 'hut', 'station', 'school', 'c1', 'farm', 'mill'], b: ['mill', 'farm', 'c1', 'school', 'station', 'hut', 'fire', 'cafe']};
 
-// Railway: one short straight track beside the station with a platform; the little train shuttles along it.
-export const TRACK = {x: 5.15, z0: 3.4, z1: 7.7, platform: {x: 4.35, z0: 5.0, z1: 7.2}};
-export const PADDOCK = {x0: -5.6, z0: -7.6, x1: -3.2, z1: -5.5};
-export const POND = {x: 6.2, z: -5.5, r: 1.25};
-export const JETTY = {x0: 12.0, x1: 13.7, z: .55};
+// Railway: a loop round the whole town. The train goes clockwise and stops at each station; `t` is the angle round the loop.
+export const trackPts = (n = 480) => Array.from({length: n}, (_, i) => loopPt(i / n * TAU));
+export const STATIONS = [
+  {id: 'central', name: 'Central Station', t: null, building: 'station'},   // beside the station building
+  {id: 'harbour', name: 'Harbour Halt', t: .55},
+  {id: 'mill', name: 'Mill Halt', t: TAU * .75 + .3},
+  {id: 'school', name: 'School Halt', t: TAU * .5 + .5}
+];
+{ const b = BUILDINGS.find(x => x.id === 'station'); STATIONS[0].t = (Math.atan2(b.z / LOOP.rz, b.x / LOOP.rx) + TAU) % TAU; }
+// The harbour pier starts behind the harbour hut, crosses the railway on a little trestle and runs out into the sea.
+export const PIER = (() => { const hut = BUILDINGS.find(b => b.id === 'hut'), x0 = hut ? hut.x + 1.0 : 14.3, z = hut ? hut.z + .1 : 1.9; let x1 = x0 + 2; while (shore(x1, z) < 1.0) x1 += .2; return {x0, x1: x1 + .6, z, bridge: {x: LOOP.rx, half: 1.5, h: .8}}; })();
 export const GREEN = {x: 0, z: 0, r: 1.5};
 
 // Scenery that is not a building: tree clusters [x, z, kind, scale], kinds 'round' | 'tall' | 'apple' | 'bush'.
 export const TREES = (() => {
-  const out = [], roadPts = SPOKES.flatMap(sp => curve(sp.points)), kinds = ['round', 'tall', 'apple', 'round'];
-  // is there room for something of radius r at (x, z)? clear of buildings, roads, the ring, the pond, the paddock, the railway and the jetty
-  const room = (x, z, r) => shore(x, z) < .83 && BUILDINGS.every(b => Math.hypot(b.x - x, b.z - z) > r + 1.35) && roadPts.every(p => Math.hypot(p[0] - x, p[1] - z) > r + .85)
-    && Math.hypot(x, z) > SQUARE.ring + r + 1.0 && Math.hypot(x - POND.x, z - POND.z) > POND.r + r + .4 && !(x > PADDOCK.x0 - r - .5 && x < PADDOCK.x1 + r + .5 && z > PADDOCK.z0 - r - .5 && z < PADDOCK.z1 + r + .5)
-    && !(Math.abs(x - TRACK.x) < r + 1.2 && z > TRACK.z0 - 1 && z < TRACK.z1 + 1) && !(x > JETTY.x0 - 2 && Math.abs(z - JETTY.z) < 2.5) && out.every(t => Math.hypot(t[0] - x, t[1] - z) > (t[3] + r) * .72);
-  const add = (x, z, kind, sc) => { if (room(x, z, sc * .6)) out.push([+x.toFixed(2), +z.toFixed(2), kind, sc]); };
-  for (let k = 0; k < 44; k++) { const a = k / 44 * Math.PI * 2 + rand(k + 400) * .1, r = .74 + rand(k + 500) * .05; add(Math.cos(a) * ISLAND.rx * r, Math.sin(a) * ISLAND.rz * r, kinds[k % 4], .95 + rand(k + 600) * .3); }   // a belt of trees just inside the shore
-  const grove = (cx, cz, n, seed) => { for (let k = 0; k < n; k++) { const a = k / n * Math.PI * 2 + rand(seed + k) * 1.2, r = .5 + rand(seed + 30 + k) * 1.3; add(cx + Math.cos(a) * r, cz + Math.sin(a) * r, kinds[(k + seed) % 4], .9 + rand(seed + 60 + k) * .35); } };
-  grove(8.6, -5.3, 6, 1); grove(-9.4, -5.4, 6, 11); grove(-7.4, 6.4, 6, 21); grove(9.8, 5.2, 5, 31); grove(5.3, -8.0, 4, 41); grove(-3.3, 9.0, 3, 51); grove(-12.0, 1.8, 3, 61);   // a grove in each corner of the island
-  for (let i = 0; i < 3; i++) for (let j = 0; j < 2; j++) add(7.2 + i * 1.45, 4.5 + j * 1.5, 'apple', .85);   // an orchard in rows
-  for (const [x, z] of [[4.45, 1.65], [-4.4, -.35], [-4.5, 2.5], [4.2, -.9], [-2.2, -4.5], [1.7, -4.4], [2.2, 4.3], [-2.0, 4.2]]) if (room(x, z, .4)) out.push([x, z, 'bush', .9]);   // low bushes by the ring road
+  const out = [], roadPts = allRoadPoints(), loop = trackPts(200), kinds = ['round', 'tall', 'apple', 'round'];
+  // is there room for something of radius r at (x, z)? clear of buildings, roads, the railway, the pond, the paddock and the pier
+  const room = (x, z, r) => shore(x, z) < .84 && BUILDINGS.every(b => Math.hypot(b.x - x, b.z - z) > r + b.w * .5 + .5) && roadPts.every(p => Math.hypot(p[0] - x, p[1] - z) > r + .85)
+    && loop.every(p => Math.hypot(p[0] - x, p[1] - z) > r + 1.0) && Math.hypot(x, z) > SQUARE.ring + r + 1.0 && Math.hypot(x - POND.x, z - POND.z) > POND.r + r + .5
+    && !(x > PADDOCK.x0 - r - .5 && x < PADDOCK.x1 + r + .5 && z > PADDOCK.z0 - r - .5 && z < PADDOCK.z1 + r + .5) && !(x > PIER.x0 - 1 && Math.abs(z - PIER.z) < 1.5) && out.every(t => Math.hypot(t[0] - x, t[1] - z) > (t[3] + r) * .72);
+  const add = (x, z, kind, sc) => { if (room(x, z, sc * .5)) out.push([+x.toFixed(2), +z.toFixed(2), kind, sc]); };
+  for (let k = 0; k < 70; k++) { const a = k / 70 * TAU + rand(k + 400) * .08, r = .72 + rand(k + 500) * .06; add(Math.cos(a) * ISLAND.rx * r, Math.sin(a) * ISLAND.rz * r, kinds[k % 4], .85 + rand(k + 600) * .3); }   // a belt of trees just inside the shore
+  const grove = (cx, cz, n, seed) => { for (let k = 0; k < n; k++) { const a = k / n * TAU + rand(seed + k) * 1.2, r = .5 + rand(seed + 30 + k) * 1.4; add(cx + Math.cos(a) * r, cz + Math.sin(a) * r, kinds[(k + seed) % 4], .8 + rand(seed + 60 + k) * .3); } };
+  for (let k = 0; k < 8; k++) { const a = A8(k) + TAU / 16; grove(Math.cos(a) * 7.4, Math.sin(a) * 5.6, 4, k * 11 + 3); }   // a grove in each sector, out in the blocks between the streets
+  for (let k = 0; k < 8; k++) { const a = A8(k) + TAU / 16; grove(Math.cos(a) * 9.8, Math.sin(a) * 7.6, 3, k * 13 + 7); }
+  for (let i = 0; i < 3; i++) for (let j = 0; j < 2; j++) add(5.2 + i * 1.3, 3.9 + j * 1.3, 'apple', .8);   // an orchard in rows
+  for (let k = 0; k < 8; k++) { const a = (k + .75) / 8 * TAU, x = Math.cos(a) * 3.9, z = Math.sin(a) * 3.9; if (room(x, z, .3)) out.push([+x.toFixed(2), +z.toFixed(2), 'bush', .85]); }   // low bushes by the square
   return out;
 })();
 

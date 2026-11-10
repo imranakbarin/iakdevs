@@ -1,5 +1,5 @@
 // New Toy Town: what to say about a thing that was tapped. Pure (no THREE, no DOM): takes the sim and returns {title, lines}.
-import {BUILDINGS, CAST, building} from './def.mjs';
+import {BUILDINGS, CAST, STATIONS, building} from './def.mjs';
 import {STORIES} from './stories.mjs';
 
 const nameOf = id => (BUILDINGS.find(b => b.id === id) || {}).name || id;
@@ -32,16 +32,18 @@ export function describeBuilding(sim, b) {
 }
 
 export function describeVehicle(sim, v) {
-  const d = v.def, lines = [];
+  const d = v.def, lines = [], PLAN = {line: 'On its round of the bus stops', round: 'Going round the houses', taxi: 'Looking for a fare', wander: 'Pottering about the town', stops: 'Calling at the shops and the square', call: 'Out on a call'};
   if (v.state === 'returning') lines.push('Heading back to ' + nameOf(d.home));
   else if (d.onCall && v.call > 0) lines.push('Out on a call');
-  else if (v.v < .05) lines.push(d.stops && v.wait > 0 ? 'Waiting at a stop' : 'Stopped for a moment');
-  else lines.push(d.stops ? 'On its round of the stops' : 'On the road');
+  else if (v.wait > 0) lines.push(v.target && v.target.id ? 'Waiting at ' + nameOf(v.target.id) : 'Stopped for a moment');
+  else if (v.v < .05) lines.push('Stopped for a moment');
+  else lines.push(PLAN[d.plan] || 'On the road');
+  if (v.target && v.target.id && !v.wait && v.state !== 'returning') lines.push('Heading for ' + nameOf(v.target.id));
   lines.push('Keeps in ' + nameOf(d.home));
   return {title: upper(d.name), lines};
 }
 
 const ANIMALS = {cow: ['A cow', 'Chewing grass in the paddock'], sheep: ['A sheep', 'Wandering the paddock'], duck: ['A duck', 'Paddling on the pond']};
 export const describeAnimal = kind => ({title: ANIMALS[kind][0], lines: [ANIMALS[kind][1]]});
-export const describeTrain = sim => ({title: 'The little train', lines: [sim.train.wait > 0 ? 'Resting while the passengers hop on and off' : 'Chugging along the track', 'Runs between the platform and the buffers']});
+export const describeTrain = sim => { const st = sim.train.at && STATIONS.find(x => x.id === sim.train.at), next = sim.train.stations[sim.train.next]; return {title: 'The little train', lines: [st ? 'Standing at ' + st.name + ' while the passengers hop on and off' : 'Chugging round the town on the railway loop', next ? 'Next stop: ' + next.name : 'Runs all the way round the town']}; };
 export const buildingAt = id => building(id);
