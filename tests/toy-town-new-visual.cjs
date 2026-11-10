@@ -40,6 +40,17 @@ const ready = async () => { for (let n = 0; n < 60; n++) { try { await new Promi
     await page.mouse.click(...(await page.evaluate(() => ToyTownNew.project(-3.25, -3.25, .6)))); 
     assert.equal(await page.evaluate(() => ToyTownNew.selected() && ToyTownNew.selected().id), 'cafe', 'tapping a building selects it');
     await page.evaluate(() => { ToyTownNew.select(null); ToyTownNew.look(0, .4, 30, 0); });
+    // seasons: each page load is a season; and the sound button starts audio without errors
+    const seasonInfo = {};
+    for (const name of ['winter', 'autumn']) { const sp = await browser.newPage({viewport: {width: 1100, height: 700}}); sp.on('pageerror', e => errors.push(name + ': ' + e.message));
+      if (process.env.THREE_LOCAL) await sp.route('https://cdn.jsdelivr.net/npm/three@0.187.0/**', r => r.fulfill({path: path.join(process.env.THREE_LOCAL, r.request().url().split('three@0.187.0/')[1]), contentType: 'text/javascript'}));
+      await sp.goto(`http://127.0.0.1:${port}/toy-town-new.html?clean=1&season=${name}&news=0`); await sp.waitForFunction(() => !!window.ToyTownNew, null, {timeout: 60000});
+      await sp.evaluate(() => { ToyTownNew.freeze(); ToyTownNew.setHour(12); ToyTownNew.advance(20); ToyTownNew.look(0, .4, 28, 0); }); await sp.screenshot({path: path.join(out, `new-town-${name}.png`)}); seasonInfo[name] = await sp.evaluate(() => ToyTownNew.info());
+      if (name === 'winter') { await sp.setViewportSize({width: 420, height: 800}); await sp.evaluate(() => document.documentElement.classList.remove('ui-off')); await sp.click('#snd'); await sp.waitForTimeout(400);
+        seasonInfo.sound = await sp.evaluate(() => ({on: ToyTownNew.sound.enabled, started: ToyTownNew.sound.started, pressed: document.getElementById('snd').getAttribute('aria-pressed')})); }
+      await sp.close(); }
+    assert.ok(seasonInfo.winter.season === 'winter' && seasonInfo.autumn.season === 'autumn' && seasonInfo.winter.calls <= 80 && seasonInfo.autumn.calls <= 80, 'the seasons draw within budget (' + JSON.stringify(seasonInfo) + ')');
+    assert.ok(seasonInfo.sound.on && seasonInfo.sound.started === 1 && seasonInfo.sound.pressed === 'true', 'the sound button turns sound on (' + JSON.stringify(seasonInfo.sound) + ')');
     console.log('NEW TOWN night', JSON.stringify(night), 'rain', JSON.stringify(wet));
     assert.ok(night.glow && night.calls <= 80 && night.sky !== 'bfe9fb', 'at night the windows glow and the sky is dark (' + night.calls + ' calls)');
     assert.ok(wet.rain > .5 && wet.calls <= 80 && wet.triangles <= 800000, 'in the rain it still draws within budget (' + wet.calls + ' calls, rain ' + wet.rain + ')');

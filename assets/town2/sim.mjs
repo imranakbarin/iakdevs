@@ -8,7 +8,8 @@ import {buildGraph, along, nearest} from './graph.mjs';
 import {createWeather} from './weather.mjs';
 import {STORIES} from './stories.mjs';
 
-export function createSim(seed = 7) {
+export function createSim(seed = 7, opts = {}) {
+  const season = opts.season || null;   // stories can be seasonal; null means all of them
   const graph = buildGraph(), tour = graph.tour;
   let clock = 0, n = 0;
   const rnd = () => rand(seed * 977 + (n++));
@@ -89,7 +90,7 @@ export function createSim(seed = 7) {
   const story = {current: null, last: {}, count: {}, nextAt: 20, pending: null, log: []};
   const awake = r => r.state === 'inside' && inWindow(hour, r.def.wake ?? 6.5, (r.def.sleep ?? 20.5) - .5) && r.errands.length === 0;
   const resident = id => residents.find(r => r.id === id);
-  const fits = (s, forced) => (forced || inWindow(hour, s.hours[0], s.hours[1])) && (s.wet === 'wet' ? weather.rain > .4 : s.wet === 'dry' ? weather.rain < .3 : true) && (forced ? s.go.filter(([who]) => awake(resident(who))).length >= Math.ceil(s.go.length / 2) : s.go.every(([who]) => awake(resident(who))));   // the news will do with half the cast
+  const fits = (s, forced) => (!s.season || !season || s.season === season) && (forced || inWindow(hour, s.hours[0], s.hours[1])) && (s.wet === 'wet' ? weather.rain > .4 : s.wet === 'dry' ? weather.rain < .3 : true) && (forced ? s.go.filter(([who]) => awake(resident(who))).length >= Math.ceil(s.go.length / 2) : s.go.every(([who]) => awake(resident(who))));   // the news will do with half the cast
   function startStory(s, headline) {
     story.current = {id: s.id, title: s.title, headline: headline || null, start: clock, end: clock + 40}; story.last[s.id] = clock; story.count[s.id] = (story.count[s.id] || 0) + 1; story.log.push(s.id);
     s.go.forEach(([who, trips], i) => { const r = resident(who); if (!awake(r)) return; r.errands = trips.map(t => [...t]); r.until = Math.min(r.until, clock + 1 + i * 2.5); });
@@ -115,5 +116,5 @@ export function createSim(seed = 7) {
     for (const v of vehicles) stepVehicle(v, dt);
     stepTrain(dt); weather.update(dt); stepStories();
   }
-  return {graph, residents, vehicles, stops, train, weather, story, stage, update, get clock() { return clock; }, get hour() { return hour; }, setHour(h) { clock = ((h - 6 + 24) % 24) / 24 * DAY; hour = hourOf(clock); }, dispatchFire() { const f = vehicles.find(v => v.id === 'fire'); if (f) f.call = 1; }, doorIds: BUILDINGS.filter(b => b.door).map(b => b.id)};
+  return {graph, residents, vehicles, stops, train, weather, season, story, stage, update, get clock() { return clock; }, get hour() { return hour; }, setHour(h) { clock = ((h - 6 + 24) % 24) / 24 * DAY; hour = hourOf(clock); }, dispatchFire() { const f = vehicles.find(v => v.id === 'fire'); if (f) f.call = 1; }, doorIds: BUILDINGS.filter(b => b.door).map(b => b.id)};
 }

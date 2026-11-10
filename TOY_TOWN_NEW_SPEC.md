@@ -29,7 +29,8 @@ town is untouched and stays the default until the owner approves the switch.
 | `assets/town2/graph.mjs` | Road graph, door-to-door walks, the vehicles' tour | `def` |
 | `assets/town2/weather.mjs` | Spells of clear, cloud, rain, drizzle; `rain` eases 0..1 | `def` |
 | `assets/town2/stories.mjs` | The small stories (data) and `newsStory(title, category)` | nothing |
-| `assets/town2/sky.mjs` | `skyAt(hour, rain)`: sky, fog, sea, sun/moon, window glow, stars (hex strings) | nothing |
+| `assets/town2/sky.mjs` | `skyAt(hour, rain, season)`: sky, fog, sea, sun/moon, window glow, stars (hex strings); `seasonOf(date)`, `SEASONS` | nothing |
+| `assets/town2/sound.mjs` | `soundPlan`, `chimeDue` (pure) and `createSound` (Web Audio, synthesised, opt-in) | nothing |
 | `assets/town2/inspect.mjs` | What to say about a tapped resident, vehicle, animal, train or building | `def`, `stories` |
 | `assets/town2/sim.mjs` | Who is where and when (residents, vehicles, weather, stories) | `def`, `graph`, `weather`, `stories` |
 | `assets/town2/build.mjs` | Geometry builders (THREE) | `def`, `graph`, `three` |
@@ -38,7 +39,7 @@ town is untouched and stays the default until the owner approves the switch.
 | `tests/toy-town-new.test.cjs` | Logic test, no browser | |
 | `tests/toy-town-new-visual.cjs` | Real-WebGL check and screenshots | |
 
-Rule: `def`, `graph`, `weather`, `stories`, `sky`, `inspect` and `sim` are pure (no THREE, no DOM), so they run in Node. Keep it that way.
+Rule: `def`, `graph`, `weather`, `stories`, `sky`, `sound` (its plan; the audio graph only needs an `AudioContext`), `inspect` and `sim` are pure (no THREE, no DOM), so they run in Node. Keep it that way.
 
 ## 3. World model
 
@@ -93,7 +94,17 @@ Rule: `def`, `graph`, `weather`, `stories`, `sky`, `inspect` and `sim` are pure 
    animals 26, the train 44), else the building nearest the ground point under the finger (within 1.5 units). It puts a ring on it and shows a
    card (name and what it is doing, refreshed every 0.4 s); the camera follows anything that moves until the next drag; the x or a second tap
    on a building closes it. Wording lives in `inspect.mjs` so it can be tested without a browser.
-9. **Determinism.** `createSim(seed)` gives the same town life for the same seed and step sequence.
+9. **Seasons.** The season comes from today's date (Dec-Feb winter, Mar-May spring, Jun-Aug summer, Sep-Nov autumn) or `?season=`; the chip's
+   four icons reload with another. It is fixed at build time: `setSeason` swaps only the palette names `leaf`, `leafLight`, `grass`, `grassDark`
+   (foliage and grass; never use these names for anything else), so trees, bushes and the ground change colour at no cost. `buildFall(season)` is one
+   `Points` mesh: petals (spring), fireflies (summer nights), leaves (autumn), snow (winter, heavier in a rain spell, which in winter draws no rain
+   streaks). `skyAt` tints the daytime sky and weakens and lowers the winter sun. Four stories are seasonal (`season` in `STORIES`) and the sim only
+   runs a seasonal story in its season.
+10. **Sound.** Off until the visitor taps the speaker button (top right; remembered in `localStorage`, and a remembered "on" starts at the first tap
+   because browsers need a gesture). Everything is synthesised (no files): wind and waves (looped noise through filters), rain (more with zoom, none in
+   snow), birds by day, crickets on warm nights, the clock tower striking the hour from 07:00 to 21:00, the little train's whistle, a soft blip on a
+   tap. It pauses when the tab is hidden. `soundPlan(state)` decides the levels and is tested in Node; the graph is tested against a fake `AudioContext`.
+11. **Determinism.** `createSim(seed)` gives the same town life for the same seed and step sequence.
 
 ## 5. Art rules
 
@@ -113,7 +124,7 @@ Rule: `def`, `graph`, `weather`, `stories`, `sky`, `inspect` and `sim` are pure 
 
 | | Now | Limit |
 |---|---|---|
-| Draw calls, default view | 64–66 | 80 (night 62, rain 69) |
+| Draw calls, default view | 64–67 | 80 (night 62, rain 70) |
 | Triangles, default view | 608 k | 800 k |
 | Residents out at once | ~4–7 | — |
 
@@ -125,6 +136,7 @@ spheres 8; keep that discipline (the first version was 1.05 M triangles from 3-s
 - `sim`, `scene`, `camera`, `renderer`, `view`
 - `info()` → `{calls, triangles, residentsOut, clock, pixelRatio, story, rain}`
 - `tapAt(clientX, clientY)`, `selected()`, `select(obj|null)`, `project(x, z, y)` → client coordinates of a ground point
+- `season`, `sound` (`enabled`, `started`, `toggle()`); `?season=spring|summer|autumn|winter`
 - `setHour(h)`, `setWeather('rain'|'clear'|..., seconds)`; `?h=<hour>` starts at an hour, `?news=0` turns the news staging off, `?tune=0` turns the adaptive resolution off
 - `look(x, z, dist, yaw)` puts the camera there and renders
 - `advance(seconds)` steps the simulation and renders
@@ -155,7 +167,7 @@ visual step uploads `new-town-*.png` (wide, square, high street, cottage lane, w
 
 ## 9. Known gaps
 
-- No sound, puddles, snow or seasons. No lamplighter figure (lanterns simply glow).
+- No puddles. No lamplighter figure (lanterns simply glow). Sound has not been heard by a person yet: the levels are my guesses and only the code path was exercised.
 - Adaptive resolution (steps the pixel ratio down after 2 s under ~24 fps, and drops the shadow when already at 1.0) has not been measured on a real phone.
 - Vehicles cannot overtake, so a late one can queue behind a slow tractor.
 - Story captions are English text from a data file; the headline text is only ever shown with `textContent`.

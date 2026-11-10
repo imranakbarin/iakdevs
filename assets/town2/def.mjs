@@ -3,7 +3,7 @@
 // Everything about the town that is a matter of design lives here, so adding a house or a resident is a data edit.
 
 export const PALETTE = {
-  red: '#e2473b', yellow: '#f7c93e', blue: '#3f8fd6', sky: '#8fd0f2', green: '#58b368', leaf: '#3f9e58', lime: '#a5d86a',
+  red: '#e2473b', yellow: '#f7c93e', blue: '#3f8fd6', sky: '#8fd0f2', green: '#58b368', leaf: '#3f9e58', leafLight: '#58b368', lime: '#a5d86a',
   cream: '#fff3d6', white: '#ffffff', pink: '#f59ac1', orange: '#f28b3c', purple: '#9a7fe0', teal: '#35b8ad',
   brown: '#8a5a3c', crust: '#c98a4b', wood: '#b07a4a', stone: '#d9cdb8', slate: '#5d6b7a', road: '#8f8a86', kerb: '#f4ead6',
   grass: '#8fd16a', grassDark: '#74bd58', sand: '#f3e2b0', sea: '#5cc4e8', gold: '#f2c14e', black: '#2b2f36'
