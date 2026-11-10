@@ -25,6 +25,7 @@ town is untouched and stays the default until the owner approves the switch.
 
 | File | Role | May import |
 |---|---|---|
+| `assets/town2/curve.mjs` | Catmull-Rom curve sampling, shared by `def` (to place buildings along streets) and `graph` | nothing |
 | `assets/town2/def.mjs` | The town as data: palette, island, roads, buildings, cast, vehicles, trees, `heightAt` | nothing |
 | `assets/town2/graph.mjs` | Road graph, door-to-door walks, the vehicles' tour | `def` |
 | `assets/town2/weather.mjs` | Spells of clear, cloud, rain, drizzle; `rain` eases 0..1 | `def` |
@@ -62,6 +63,7 @@ Rule: `def`, `graph`, `weather`, `stories`, `sky`, `sound` (its plan; the audio 
 - **A road:** add a spoke to `SPOKES` with an `angle` (its exit from the ring) and control points. The graph,
   the tour, the pavements and the drawing follow. Spokes only meet at the ring today; a road that joins two
   spokes needs `buildGraph` and `tour()` extending (the tour assumes a tree of spokes on one ring).
+- **A street house:** `street(id, type, name, spoke, s, side, door, extra)` places a building `s` units out along a spoke on `side` (+1 left of the way out, -1 right): its front faces the street, it is squared to the grid and its doorstep lands on the pavement. Keep houses at least 2 units apart on a side (the test checks). Lamp posts (`LAMPS`) and trees (`TREES`, filtered for room) then arrange themselves round the buildings.
 - **A building:** add to `BUILDINGS` and write `BUILD.<type>(bag, def, anim)` in `build.mjs`. It must be
   ≥ 1.9 from other buildings and ≥ 0.95 from every road sample (the logic test checks both).
 - **A resident:** add to `CAST` with a `home`, optional `wake`/`sleep` hours and a `round` of `[buildingId, secondsToStay]`. Every place in
@@ -104,7 +106,16 @@ Rule: `def`, `graph`, `weather`, `stories`, `sky`, `sound` (its plan; the audio 
    because browsers need a gesture). Everything is synthesised (no files): wind and waves (looped noise through filters), rain (more with zoom, none in
    snow), birds by day, crickets on warm nights, the clock tower striking the hour from 07:00 to 21:00, the little train's whistle, a soft blip on a
    tap. It pauses when the tab is hidden. `soundPlan(state)` decides the levels and is tested in Node; the graph is tested against a fake `AudioContext`.
-11. **Determinism.** `createSim(seed)` gives the same town life for the same seed and step sequence.
+11. **Pedestrian manners.** People leave their doors one at a time (at least 2.2 s apart, at most 7 out at once outside curfew), walk a hand's width
+   to the left of the pavement's middle (so two people going opposite ways pass cleanly), wait behind a slower person ahead (never for more than 5 s),
+   and stop for a moment to say hello when they meet head on (once per 45 s per person; they turn to face each other, shown on the tap card).
+12. **The lamplighter.** Mr Wick (`lamplighter: true` in `CAST`, home Lantern Cottage) tends `LAMPS` (the square's eight and one every couple of units
+   along each street). From 17:12 to 20:36 he walks, briskly and nearest-first, to every lamp that is still off and lights it (0.55 s each); from 04:36 to 07:30 he puts
+   them out. Outside those hours the clock decides (lit from 20:36 to 04:36, out from 07:30 to 17:12). Each lantern's glow is one instance of a single `InstancedMesh`
+   (`built.lampGlow`), so they come on one by one at no extra cost; they glow faintly in daylight and fully in the dark. `sim.lamps` (`on`, `lit`), `sim.lampsTended`.
+13. **Puddles.** `weather.wet` (0..1) rises in rain and drains in about 45 s of dry weather. `buildPuddles` makes 50 flat ovals on roads, pavements and
+   verges as one `InstancedMesh`; each appears at its own wetness and grows as the ground gets wetter. There are none in winter (the rain is snow).
+14. **Determinism.** `createSim(seed)` gives the same town life for the same seed and step sequence.
 
 ## 5. Art rules
 
@@ -124,8 +135,8 @@ Rule: `def`, `graph`, `weather`, `stories`, `sky`, `sound` (its plan; the audio 
 
 | | Now | Limit |
 |---|---|---|
-| Draw calls, default view | 64–67 | 80 (night 62, rain 70) |
-| Triangles, default view | 608 k | 800 k |
+| Draw calls, default view | 46–58 | 80 (night 59, rain 65; a crowd with umbrellas is the worst case) |
+| Triangles, default view | 600–620 k | 800 k |
 | Residents out at once | ~4–7 | — |
 
 The limits are asserted in `tests/toy-town-new-visual.cjs`. Rounded boxes use 1 or 2 segments and small
@@ -134,7 +145,7 @@ spheres 8; keep that discipline (the first version was 1.05 M triangles from 3-s
 ## 7. Test hooks (`window.ToyTownNew`)
 
 - `sim`, `scene`, `camera`, `renderer`, `view`
-- `info()` → `{calls, triangles, residentsOut, clock, pixelRatio, story, rain}`
+- `info()` → `{calls, triangles, residentsOut, clock, pixelRatio, story, rain, wet, lampsLit, season}`
 - `tapAt(clientX, clientY)`, `selected()`, `select(obj|null)`, `project(x, z, y)` → client coordinates of a ground point
 - `season`, `sound` (`enabled`, `started`, `toggle()`); `?season=spring|summer|autumn|winter`
 - `setHour(h)`, `setWeather('rain'|'clear'|..., seconds)`; `?h=<hour>` starts at an hour, `?news=0` turns the news staging off, `?tune=0` turns the adaptive resolution off
@@ -167,7 +178,7 @@ visual step uploads `new-town-*.png` (wide, square, high street, cottage lane, w
 
 ## 9. Known gaps
 
-- No puddles. No lamplighter figure (lanterns simply glow). Sound has not been heard by a person yet: the levels are my guesses and only the code path was exercised.
+- Pedestrians do not yet queue for the little train or sit on the benches. Sound has not been heard by a person yet: the levels are my guesses and only the code path was exercised.
 - Adaptive resolution (steps the pixel ratio down after 2 s under ~24 fps, and drops the shadow when already at 1.0) has not been measured on a real phone.
 - Vehicles cannot overtake, so a late one can queue behind a slow tractor.
 - Story captions are English text from a data file; the headline text is only ever shown with `textContent`.

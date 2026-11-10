@@ -3,8 +3,8 @@
 //    doors while walking, and they appear and disappear exactly on a doorstep.
 //  - Vehicles follow the one closed tour of the road network, keep a gap from the one in front, wait for anyone
 //    crossing in front of them, and the bus pulls up at its stops.
-import {CAST, VEHICLES, BUS_STOPS, BUILDINGS, TRACK, DAY, rand, doorOf, building} from './def.mjs';
-import {buildGraph, along, nearest} from './graph.mjs';
+import {CAST, VEHICLES, BUS_STOPS, BUILDINGS, TRACK, DAY, LAMPS, rand, doorOf, building} from './def.mjs';
+import {buildGraph, along, nearest, leftOf} from './graph.mjs';
 import {createWeather} from './weather.mjs';
 import {STORIES} from './stories.mjs';
 
@@ -14,7 +14,7 @@ export function createSim(seed = 7, opts = {}) {
   let clock = 0, n = 0;
   const rnd = () => rand(seed * 977 + (n++));
   const residents = CAST.map((def, i) => ({id: def.id, def, state: 'inside', at: def.home, step: 0, until: 1.5 + i * 3.2, route: null, s: 0, x: graph.doors[def.home].x, z: graph.doors[def.home].z, tx: 0, tz: 1,
-    speed: (def.small ? .66 : .52) * (.92 + rand(seed + i * 31) * .2), target: null, outings: 0, errands: [], stay: null}));
+    speed: (def.small ? .66 : .52) * (.92 + rand(seed + i * 31) * .2), target: null, outings: 0, errands: [], stay: null, lampJob: null, lampQueue: [], lampWait: 0, ox: 0, oz: 0, pause: 0, look: null, greetAt: 0, blocked: 0}));
   const stops = BUS_STOPS.map(b => ({...b, s: nearest(tour, b.x, b.z).s}));
   // A vehicle's home point on the tour: the place on the lanes nearest its garage door. It leaves and returns there only.
   const vehicles = VEHICLES.map((def, i) => { const d = doorOf(building(def.home)), s0 = nearest(tour, d.x, d.z).s;
@@ -36,11 +36,54 @@ export function createSim(seed = 7, opts = {}) {
   let hour = hourOf(0);
   const weather = createWeather(seed);
 
+  // The street lamps. Outside the lamplighter's hours they follow the clock (on by night, off by day); in them, only his rounds change them.
+  const E0 = 17.2, E1 = 20.6, M0 = 4.6, M1 = 7.5, evening = h => h >= E0 && h < E1, morning = h => h >= M0 && h < M1;   // his hours: lamps up from late afternoon, out again after dawn
+  const lamps = LAMPS.map(l => ({...l, on: hour < M1 || hour >= E1, lit: 0})); lamps.forEach(l => { l.lit = l.on ? 1 : 0; });
+  const lampJobNow = () => evening(hour) ? 'light' : morning(hour) ? 'snuff' : null;
+  const lampsToDo = job => lamps.filter(l => job === 'light' ? !l.on : l.on);
+  function snapLamps() {   // after a jump in time: a lamplighter part-way through his round
+    const N = lamps.length;
+    lamps.forEach((l, i) => { l.on = evening(hour) ? (hour - E0) / (E1 - E0) > i / N : morning(hour) ? (hour - M0) / (M1 - M0) < i / N : !(hour >= M1 && hour < E0); l.lit = l.on ? 1 : 0; });
+    for (const r of residents) if (r.def.lamplighter) { r.lampJob = null; r.lampQueue = []; r.lampWait = 0; }
+  }
+  function stepLamps(dt) {
+    if (hour >= E1 || hour < M0) lamps.forEach(l => { l.on = true; }); else if (hour >= M1 && hour < E0) lamps.forEach(l => { l.on = false; });
+    for (const l of lamps) l.lit += ((l.on ? 1 : 0) - l.lit) * Math.min(1, dt * 3);
+  }
+  // Mr Wick's rounds: the nearest lamp that still needs tending, then the next nearest, and home.
+  function lampLeg(r) {
+    while (r.lampQueue.length) {
+      const here = r.at; let best = null, bl = Infinity;
+      for (const id of r.lampQueue) { const w = graph.walk(here, id); if (w && w.length < bl) { bl = w.length; best = id; } }
+      if (!best) break; r.lampQueue = r.lampQueue.filter(id => id !== best);
+      const l = lamps.find(x => x.id === best); if (!(r.lampJob === 'light' ? !l.on : l.on)) continue;   // somebody got there first, or the clock did
+      return depart(r, best);
+    }
+    r.lampJob = null; r.stay = 40; return depart(r, r.def.home);   // the round is done: home
+  }
+  function depart(r, target) {
+    const route = graph.walk(r.at, target); if (!route) return false;
+    r.route = route; r.s = 0; r.target = target; r.state = 'walking'; r.ox = r.oz = 0; r.pause = 0; r.look = null; r.blocked = 0;
+    const p = along(route, 0); r.x = p.x; r.z = p.z; r.tx = p.tx; r.tz = p.tz; return true;
+  }
+  function startLampRound(r) {
+    const job = lampJobNow(); if (!job || !lampsToDo(job).length) return false;
+    r.lampJob = job; r.lampQueue = lampsToDo(job).map(l => l.id); r.outings++; lastDepart = clock; r.stay = null; return lampLeg(r);
+  }
+  let tended = 0;
+  function tendLamp(r) {   // arrived at a lamp: a moment to reach up and light or snuff it
+    const l = lamps.find(x => x.id === r.target); r.at = r.target; r.target = null; r.route = null; r.lampWait = .55; r.pause = .55; r.look = {x: l.x, z: l.z, def: {name: 'the lamp'}};
+    l.on = r.lampJob === 'light'; tended++;
+  }
+  let lastDepart = -1e9;
   function stepResident(r, dt) {
+    if (r.lampWait > 0) { r.lampWait -= dt; r.pause = Math.max(0, r.lampWait); if (r.lampWait <= 0) { r.look = null; lampLeg(r); } return; }
     if (r.state === 'inside') {
       const asleep = !inWindow(hour, r.def.wake ?? 6.5, r.def.sleep ?? 20.5);
       if (asleep) { if (r.at === r.def.home) { r.step = 0; r.until = Math.max(r.until, clock + .5); return; } }   // at home for the night
+      if (r.def.lamplighter && !asleep && startLampRound(r)) return;   // lamp-lighting time comes before everything else
       if (clock < r.until && !asleep) return;   // (after hours nobody lingers: straight home)
+      if (!asleep && (clock < lastDepart + 2.2 || residents.reduce((n, o) => n + (o.state === 'walking'), 0) >= 7)) { r.until = clock + 1.2 + rnd() * 1.5; return; }   // people come out one by one, never all at once
       const round = r.def.round; let [target] = asleep ? [r.def.home] : round[r.step];   // after hours everybody heads home
       r.stay = null;
       while (!asleep && r.errands.length) {   // an errand from a story comes first
@@ -50,13 +93,28 @@ export function createSim(seed = 7, opts = {}) {
 
       if (target === r.at && !asleep && r.stay === null) { r.step = (r.step + 1) % round.length; [target] = round[r.step]; if (target === r.at) { r.until = clock + 5; return; } }
       const route = graph.walk(r.at, target); if (!route) { r.until = clock + 5; return; }
-      r.route = route; r.s = 0; r.target = target; r.state = 'walking'; r.outings++;
+      r.route = route; r.s = 0; r.target = target; r.state = 'walking'; r.outings++; r.ox = r.oz = 0; r.pause = 0; r.look = null; r.blocked = 0; lastDepart = clock;
       const p = along(route, 0); r.x = p.x; r.z = p.z; r.tx = p.tx; r.tz = p.tz;
       return;
     }
-    r.s = Math.min(r.route.length, r.s + r.speed * (1 + .15 * weather.rain) * dt);   // a quicker step in the rain
-    const p = along(r.route, r.s); r.x = p.x; r.z = p.z; r.tx = p.tx; r.tz = p.tz;
+    // Manners on the pavement: keep to your own side, wait behind whoever is slower in front, and stop for a word with anyone you meet.
+    if (r.pause > 0) r.pause -= dt;
+    else {
+      let k = 1;
+      if (!r.lampJob) for (const o of residents) if (o !== r && o.state === 'walking') {   // (the lamplighter on his round has no time for either)
+        const dx = o.x - r.x, dz = o.z - r.z, f = dx * r.tx + dz * r.tz, lat = Math.abs(dx * r.tz - dz * r.tx), dot = o.tx * r.tx + o.tz * r.tz;
+        if (dot > .3 && f > 0 && f < .42 && lat < .22) k = Math.min(k, Math.max(0, (f - .2) / .22));   // somebody just ahead, going my way
+        else if (dot < -.5 && f > 0 && f < .5 && lat < .3 && clock > r.greetAt && clock > o.greetAt && !o.pause) { r.pause = o.pause = .9 + rnd() * .5; r.greetAt = o.greetAt = clock + 45; r.look = o; o.look = r; k = 0; }   // meeting head on: a hello
+      }
+      if (k < .05) { r.blocked += dt; if (r.blocked > 5) k = 1; } else r.blocked = 0;   // (and never stuck for long)
+      r.s = Math.min(r.route.length, r.s + r.speed * (r.lampJob ? 2.4 : 1) * (1 + .15 * weather.rain) * k * dt);   // a quicker step in the rain
+    }
+    const p = along(r.route, r.s), ramp = Math.min(1, r.s / .45, (r.route.length - r.s) / .45), [lx, lz] = leftOf(p.tx, p.tz), e = Math.min(1, dt * 4);
+    r.ox += (lx * .1 * ramp - r.ox) * e; r.oz += (lz * .1 * ramp - r.oz) * e;   // a hand's width to the left of the pavement's middle, nothing at the doors
+    r.x = p.x + r.ox; r.z = p.z + r.oz; r.tx = p.tx; r.tz = p.tz;
     if (r.s >= r.route.length) {   // on the doorstep: in they go
+      r.x = p.x; r.z = p.z;
+      if (r.target && r.target.startsWith('lamp')) { tendLamp(r); return; }
       const round = r.def.round, stay = r.stay ?? round[r.step][1];
       r.state = 'inside'; r.at = r.target; r.target = null; r.route = null; r.until = clock + stay * (.8 + rnd() * .4); if (r.stay === null && r.at === round[r.step][0]) r.step = (r.step + 1) % round.length; r.stay = null;
     }
@@ -114,7 +172,7 @@ export function createSim(seed = 7, opts = {}) {
     dt = Math.min(dt, .1); clock += dt; hour = hourOf(clock);
     for (const r of residents) stepResident(r, dt);
     for (const v of vehicles) stepVehicle(v, dt);
-    stepTrain(dt); weather.update(dt); stepStories();
+    stepTrain(dt); weather.update(dt); stepStories(); stepLamps(dt);
   }
-  return {graph, residents, vehicles, stops, train, weather, season, story, stage, update, get clock() { return clock; }, get hour() { return hour; }, setHour(h) { clock = ((h - 6 + 24) % 24) / 24 * DAY; hour = hourOf(clock); }, dispatchFire() { const f = vehicles.find(v => v.id === 'fire'); if (f) f.call = 1; }, doorIds: BUILDINGS.filter(b => b.door).map(b => b.id)};
+  return {graph, residents, vehicles, stops, train, weather, season, lamps, get lampsTended() { return tended; }, story, stage, update, get clock() { return clock; }, get hour() { return hour; }, setHour(h) { clock = ((h - 6 + 24) % 24) / 24 * DAY; hour = hourOf(clock); snapLamps(); }, dispatchFire() { const f = vehicles.find(v => v.id === 'fire'); if (f) f.call = 1; }, doorIds: BUILDINGS.filter(b => b.door).map(b => b.id)};
 }

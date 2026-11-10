@@ -5,7 +5,7 @@
 import * as THREE from 'three';
 import {RoundedBoxGeometry} from 'three/addons/geometries/RoundedBoxGeometry.js';
 import {mergeGeometries} from 'three/addons/utils/BufferGeometryUtils.js';
-import {PALETTE as P, ISLAND, SQUARE, ROAD, SPOKES, BUILDINGS, TREES, BUS_STOPS, TRACK, PADDOCK, POND, JETTY, heightAt, shore, rand, doorOf} from './def.mjs';
+import {PALETTE as P, ISLAND, SQUARE, ROAD, SPOKES, BUILDINGS, LAMPS, TREES, BUS_STOPS, TRACK, PADDOCK, POND, JETTY, heightAt, shore, rand, doorOf} from './def.mjs';
 import {along, leftOf} from './graph.mjs';
 
 // Seasons recolour the foliage and the grass (and nothing else) when the town is built.
@@ -80,7 +80,7 @@ function chimney(b, x, y, z, colour = 'red', lean = .09) { b.box(.2, .42, .2, co
 function smoke(b, x, y, z) { [[0, 0, .09], [.07, .16, .12], [-.03, .36, .15], [.09, .58, .17]].forEach(([dx, dy, r]) => b.sph(r, 'white', {x: x + dx, y: y + dy, z, seg: 10})); }
 function tub(b, x, z, flower = 'red') { b.cyl(.085, .065, .11, 'orange', {x, z, seg: 12}); b.sph(.075, 'leaf', {x, y: .14, z, seg: 8}); b.sph(.04, flower, {x: x + .03, y: .2, z: z + .02, seg: 8}); b.sph(.035, 'yellow', {x: x - .04, y: .19, z: z - .02, seg: 8}); }
 function picket(b, x0, z0, x1, z1) { const n = Math.max(2, Math.round(Math.hypot(x1 - x0, z1 - z0) / .13)); for (let k = 0; k <= n; k++) { const x = x0 + (x1 - x0) * k / n, z = z0 + (z1 - z0) * k / n; b.box(.07, .26, .035, 'white', {x, z, ry: Math.atan2(x1 - x0, z1 - z0) + Math.PI / 2, r: .015}); b.cone(.04, .06, 'white', {x, y: .25, z, seg: 4}); } const a = Math.atan2(x1 - x0, z1 - z0); b.box(.03, .035, Math.hypot(x1 - x0, z1 - z0), 'white', {x: (x0 + x1) / 2, y: .14, z: (z0 + z1) / 2, ry: a, r: .01}); }
-function lamp(b, x, z) { b.cyl(.07, .09, .1, 'slate', {x, z, seg: 10}); b.cyl(.028, .035, 1.0, 'slate', {x, y: .08, z, seg: 8}); b.box(.16, .2, .16, '#fff4c4', {x, y: 1.06, z, r: .04}); b.sph(.13, WARM, {x, y: 1.16, z, seg: 8, glow: true}); b.cone(.15, .12, 'slate', {x, y: 1.26, z, seg: 4, ry: Math.PI / 4}); b.sph(.03, 'gold', {x, y: 1.4, z, seg: 8}); }
+function lamp(b, x, z) { b.cyl(.07, .09, .1, 'slate', {x, z, seg: 10}); b.cyl(.028, .035, 1.0, 'slate', {x, y: .08, z, seg: 8}); b.box(.16, .2, .16, '#fff4c4', {x, y: 1.06, z, r: .04}); b.cone(.15, .12, 'slate', {x, y: 1.26, z, seg: 4, ry: Math.PI / 4}); b.sph(.03, 'gold', {x, y: 1.4, z, seg: 8}); }
 function bench(b, x, z, ry) { b.push(x, 0, z, ry); for (const s of [-1, 1]) { b.box(.05, .2, .26, 'slate', {x: s * .3, r: .02}); } for (let k = 0; k < 3; k++) b.box(.72, .035, .07, 'wood', {y: .2, z: -.09 + k * .09, r: .015}); for (let k = 0; k < 2; k++) b.box(.72, .07, .03, 'wood', {y: .3 + k * .1, z: -.15, r: .012}); b.pop(); }
 function pillarBox(b, x, z) { b.cyl(.13, .14, .08, 'black', {x, z, seg: 14}); b.cyl(.12, .12, .44, 'red', {x, y: .07, z, seg: 14}); b.cyl(.14, .14, .04, 'red', {x, y: .5, z, seg: 14}); b.dome(.13, 'red', {x, y: .53, z, sy: .55}); b.box(.12, .025, .02, 'black', {x, y: .4, z: z + .115, r: .008}); b.box(.09, .08, .015, 'white', {x, y: .24, z: z + .118, r: .008}); }
 
@@ -321,7 +321,8 @@ function scenery(bag, graph) {
   TREES.forEach(([x, z, kind, s], i) => { if (nearRoad(x, z) > .9 && nearBuilding(x, z) > 1.5) onGround(x, z, b => tree(b, kind, i + 1), rand(i) * TAU, s); });
   // lamp posts and benches round the square, bunting strung between the lamps
   const lamps = []; for (let k = 0; k < 8; k++) { const a = (k + .5) / 8 * TAU, x = Math.cos(a) * 3.35, z = Math.sin(a) * 3.35; if (k % 2 === 0) continue; lamps.push([x, z]); }
-  for (let k = 0; k < 8; k++) { const a = (k + .5) / 8 * TAU + .35, x = Math.cos(a) * 3.3, z = Math.sin(a) * 3.3; onGround(x, z, b => lamp(b, 0, 0)); lamps[k] = [x, z]; }
+  for (let k = 0; k < 8; k++) lamps[k] = [LAMPS[k].x, LAMPS[k].z];   // the bunting hangs between the eight lamps round the square
+  for (const l of LAMPS) onGround(l.x, l.z, b => lamp(b, 0, 0));   // every lamp post: round the square and along each street
   const flags = ['red', 'yellow', 'sky', 'pink', 'green', 'orange', 'purple', 'white'];
   for (let k = 0; k < 8; k++) { const [x0, z0] = lamps[k], [x1, z1] = lamps[(k + 1) % 8], n = 9, ry = Math.atan2(x1 - x0, z1 - z0); for (let m = 1; m < n; m++) { const f = m / n, x = x0 + (x1 - x0) * f, z = z0 + (z1 - z0) * f, y = 1.08 - Math.sin(f * Math.PI) * .22; bag.cone(.075, .14, flags[(m + k) % 8], {x, y: y - .14, z, ry: ry + Math.PI / 2, rx: Math.PI, sz: .25, seg: 3}); } bag.tube([[x0, 1.1, z0], [(x0 + x1) / 2, .86, (z0 + z1) / 2], [x1, 1.1, z1]], .008, 'white'); }
   for (let k = 0; k < 4; k++) { const a = k / 4 * TAU + Math.PI / 4, x = Math.cos(a) * 1.52, z = Math.sin(a) * 1.52; onGround(x, z, b => bench(b, 0, 0, -a + Math.PI / 2)); }
@@ -390,7 +391,11 @@ export function buildTown(graph, season = 'summer') {
   { const b = new Bag(); b.cone(.34, .5, 'red', {rx: Math.PI, y: .0, seg: 20}); b.cyl(.34, .34, .1, 'yellow', {y: .5, seg: 20}); b.dome(.34, 'blue', {y: .6, sy: .5}); b.torus(.34, .03, 'white', {y: .55, rx: Math.PI / 2}); b.cyl(.03, .03, .32, 'gold', {y: .72, seg: 8}); b.sph(.06, 'gold', {y: 1.06, seg: 8}); const m = b.mesh(material); m.rotation.z = .16; moving.top = place(m, anim.top, anim.top.x, anim.top.y, anim.top.z); }
   { const b = new Bag(); for (let k = 0; k < 4; k++) { const a = k * Math.PI / 2; b.box(.07, 1.25, .04, 'wood', {x: Math.sin(a) * .0, y: 0, rz: -a, r: .015, centre: false}); } const g2 = new Bag(); for (let k = 0; k < 4; k++) { const a = k * Math.PI / 2, m4 = new THREE.Matrix4().makeRotationZ(a); g2.stack.push(m4); g2.box(.07, 1.3, .04, 'wood', {y: .08, r: .015}); g2.box(.36, .95, .025, 'cream', {x: .2, y: .38, r: .02}); for (let r2 = 0; r2 < 5; r2++) g2.box(.36, .02, .035, 'wood', {x: .2, y: .42 + r2 * .2}); g2.stack.pop(); } g2.cyl(.13, .13, .1, 'red', {rx: Math.PI / 2, centre: true, seg: 12}); const m = g2.mesh(material); moving.sails = place(m, anim.sails, 0, anim.sails.y, anim.sails.z); }
   { const mk = (len, w) => { const b = new Bag(); for (let k = 0; k < 4; k++) { b.push(0, 0, 0, k * Math.PI / 2); b.box(w, len, .02, 'black', {z: .715, r: .008}); b.pop(); } return b.mesh(material); }; moving.minute = place(mk(.36, .04), anim.clock, 0, anim.clock.y, 0); moving.hour = place(mk(.24, .055), anim.clock, 0, anim.clock.y, 0); }
-  return {town, glow, ground, sea, moving, material};
+  // one lantern glow per lamp post, as a single instanced mesh: the lamplighter switches them on and off one by one (scale 0 is off)
+  const lampGlow = new THREE.InstancedMesh(new THREE.SphereGeometry(.13, 8, 6), new THREE.MeshBasicMaterial({color: WARM, transparent: true, opacity: .95, depthWrite: false, fog: false}), LAMPS.length);
+  lampGlow.frustumCulled = false; lampGlow.renderOrder = 2; lampGlow.userData.set = (i, scale) => { const l = LAMPS[i], m = new THREE.Matrix4().compose(new THREE.Vector3(l.x, heightAt(l.x, l.z) + 1.16, l.z), new THREE.Quaternion(), new THREE.Vector3(scale, scale, scale)); lampGlow.setMatrixAt(i, m); lampGlow.instanceMatrix.needsUpdate = true; };
+  for (let i = 0; i < LAMPS.length; i++) lampGlow.userData.set(i, 0);
+  return {town, glow, lampGlow, ground, sea, moving, material};
 }
 
 /* ---------------- residents and vehicles ---------------- */
@@ -412,6 +417,7 @@ export function buildResident(def, i, material) {
     bobble() { b.dome(.104, coat === 'yellow' ? 'red' : 'yellow', {y: .41, sy: 1.05}); b.torus(.1, .02, 'white', {y: .42, rx: Math.PI / 2}); b.sph(.035, 'white', {y: .54, seg: 8}); }
   };
   (H[def.hat] || H.cap)();
+  if (def.lamplighter) { b.cyl(.012, .012, .8, 'wood', {x: .18, y: .02, z: .03, rz: -.08, seg: 6}); b.cyl(.025, .02, .05, 'slate', {x: .21, y: .79, z: .03, seg: 6}); b.sph(.03, 'gold', {x: .21, y: .86, z: .03, seg: 6}); }   // his long lighting pole
   const m = b.mesh(material); m.castShadow = true; const g = new THREE.Group(); g.add(m); g.scale.setScalar(def.small ? .95 : 1.25); g.visible = false; return g;
 }
 export function buildVehicle(def, material) {
@@ -460,6 +466,27 @@ export function buildClouds() {
   // a few small puffy clouds low over the sea, beyond the shore, so they never sit between the camera and the town
   const b = new Bag(); for (let k = 0; k < 7; k++) { const a = k / 7 * TAU + .4, x = Math.cos(a) * (19 + rand(k * 5 + 1) * 5), z = Math.sin(a) * (16 + rand(k * 5 + 2) * 4), s = .5 + rand(k * 5 + 3) * .35; b.push(x, rand(k * 5 + 4) * 1.4, z, 0, s); [[0, 0, 0, 1.1], [1.0, -.1, .1, .8], [-1.0, -.12, -.1, .85], [.4, .35, 0, .75], [-.45, .3, .15, .7]].forEach(([dx, dy, dz, r]) => b.sph(r, 'white', {x: dx, y: dy, z: dz, sy: .7, seg: 12})); b.pop(); }
   const m = b.mesh(new THREE.MeshLambertMaterial({vertexColors: true, transparent: true, opacity: .96})); m.position.y = 1.6; return m;
+}
+// Puddles: flat shiny ovals on the roads, pavements and verges. `userData.set(wet)` grows them as the ground gets wet and shrinks them as it dries (each has its own point at which it appears).
+export function buildPuddles(graph) {
+  const N = 52, total = graph.edges.reduce((n, e) => n + e.line.length, 0), spots = [];
+  for (let k = 0; k < N; k++) {
+    let t = rand(k * 7 + 1) * total, e = graph.edges[0]; for (const ed of graph.edges) { if (t < ed.line.length) { e = ed; break; } t -= ed.line.length; }
+    const q = along(e.line, t), [lx, lz] = leftOf(q.tx, q.tz), lat = (rand(k * 7 + 2) - .5) * (rand(k * 7 + 3) < .65 ? .7 : 2.2), x = q.x + lx * lat, z = q.z + lz * lat;
+    if (BUILDINGS.some(b => Math.hypot(b.x - x, b.z - z) < 1.05) || shore(x, z) > .85) continue;
+    spots.push({x, z, a: Math.atan2(q.tx, q.tz), w: .22 + rand(k * 7 + 4) * .3, d: .13 + rand(k * 7 + 5) * .17, thr: .04 + rand(k * 7 + 6) * .55});
+  }
+  const geo = new THREE.CircleGeometry(1, 14).rotateX(-Math.PI / 2);
+  const mat = new THREE.MeshLambertMaterial({color: '#a9d3ea', emissive: '#1b3347', transparent: true, opacity: .8, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2});
+  const mesh = new THREE.InstancedMesh(geo, mat, spots.length); mesh.frustumCulled = false; mesh.renderOrder = 1; mesh.visible = false;
+  const m = new THREE.Matrix4(), q = new THREE.Quaternion(), up = new THREE.Vector3(0, 1, 0), pos = new THREE.Vector3(), sc = new THREE.Vector3();
+  let last = -1;
+  mesh.userData.set = wet => {
+    if (Math.abs(wet - last) < .01) return; last = wet; mesh.visible = wet > .04 && spots.length > 0;
+    spots.forEach((p, i) => { const f = Math.max(0, Math.min(1, (wet - p.thr) / .3)); q.setFromAxisAngle(up, p.a); pos.set(p.x, heightAt(p.x, p.z) + .05, p.z); sc.set(Math.max(.001, p.w * f), 1, Math.max(.001, p.d * f)); m.compose(pos, q, sc); mesh.setMatrixAt(i, m); });
+    mesh.instanceMatrix.needsUpdate = true;
+  };
+  return mesh;
 }
 // An umbrella to hold over a resident's head (shown only in the rain).
 export function buildUmbrella(material, colour = 'red') {

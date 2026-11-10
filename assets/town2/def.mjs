@@ -9,6 +9,8 @@ export const PALETTE = {
   grass: '#8fd16a', grassDark: '#74bd58', sand: '#f3e2b0', sea: '#5cc4e8', gold: '#f2c14e', black: '#2b2f36'
 };
 
+import {curve} from './curve.mjs';
+
 export const ISLAND = {rx: 13.8, rz: 10.4, sea: -.12};
 export const SQUARE = {x: 0, z: 0, ring: 2.4, green: 1.55};
 export const ROAD = {width: .95, lane: .22, pave: .66, paveWidth: .3};
@@ -31,41 +33,83 @@ export function heightAt(x, z) {
 // Roads. The ring goes clockwise round the square (seen from above); each spoke leaves it at an exit angle and is a
 // smooth curve through its control points, ending in a turning circle. Angles are measured from east towards south.
 export const SPOKES = [
-  {id: 'high', name: 'High Street', angle: 0, points: [[2.4, 0], [5, .6], [8, -.2], [10.3, -1.3], [11.5, .6]]},
-  {id: 'station', name: 'Station Road', angle: Math.PI / 2, points: [[0, 2.4], [.5, 5], [-.4, 7.0], [1.5, 8.1]]},
-  {id: 'cottage', name: 'Cottage Lane', angle: Math.PI, points: [[-2.4, 0], [-5, -.9], [-8, -.2], [-9.9, 1.5], [-9.4, 4.1]]},
-  {id: 'hill', name: 'Windmill Lane', angle: Math.PI * 1.5, points: [[0, -2.4], [-.9, -4.8], [.6, -7.0], [-1.2, -8.6]]}
+  {id: 'high', name: 'High Street', angle: 0, points: [[2.4, 0], [5.5, .25], [8.6, -.15], [11.0, .35]]},
+  {id: 'station', name: 'Station Road', angle: Math.PI / 2, points: [[0, 2.4], [.3, 4.7], [1.1, 6.5], [1.3, 8.3]]},
+  {id: 'cottage', name: 'Cottage Lane', angle: Math.PI, points: [[-2.4, 0], [-5.4, .2], [-8.4, -.1], [-10.8, .4]]},
+  {id: 'hill', name: 'Windmill Lane', angle: Math.PI * 1.5, points: [[0, -2.4], [.35, -4.8], [.9, -6.6], [1.3, -7.5]]}
 ];
+
+// Streets. A spoke is a curve, so buildings are placed by how far along it (s, from the ring) and which side of it:
+// +1 is the left of the way out from the square, -1 the right. The front door always faces the street and its step lands
+// on the pavement (STEPOUT from the middle of the road), so everybody steps straight from a doorstep onto the pavement.
+const spokeLines = {};
+function spokeLine(id) {
+  if (!spokeLines[id]) { const pts = curve(SPOKES.find(s => s.id === id).points), at = [0]; for (let i = 1; i < pts.length; i++) at.push(at[i - 1] + Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1])); spokeLines[id] = {pts, at}; }
+  return spokeLines[id];
+}
+export function onSpoke(id, s) {
+  const {pts, at} = spokeLine(id); s = Math.max(0, Math.min(at[at.length - 1], s)); let i = 0; while (i < at.length - 2 && at[i + 1] < s) i++;
+  const a = pts[i], b = pts[i + 1], f = (s - at[i]) / ((at[i + 1] - at[i]) || 1), d = Math.hypot(b[0] - a[0], b[1] - a[1]) || 1;
+  return {x: a[0] + (b[0] - a[0]) * f, z: a[1] + (b[1] - a[1]) * f, tx: (b[0] - a[0]) / d, tz: (b[1] - a[1]) / d};
+}
+export const spokeLength = id => { const at = spokeLine(id).at; return at[at.length - 1]; };
+const STEPOUT = .9;
+const street = (id, type, name, spoke, s, side, door, extra = {}) => {
+  const p = onSpoke(spoke, s), nx = p.tz, nz = -p.tx, off = side * (door + STEPOUT);   // (nx, nz): the left of the way out
+  const ry = Math.round(Math.atan2(-side * nx, -side * nz) / (Math.PI / 2)) * Math.PI / 2;   // squared to the grid: houses face the street, never at odd angles
+  return {id, type, name, x: p.x + nx * off, z: p.z + nz * off, ry, door, street: spoke, s, side, ...extra};
+};
 
 const Q = Math.PI / 4;
 // Buildings. `ry` turns the building so its front (local +z, where the door is) faces that way: 0 faces south.
 // `door` is how far in front of the centre the doorstep is. Landmarks have a builder of the same name in build.mjs.
 // `at` places a building and turns its front towards a point on the road, so the door always faces the lane.
-const face = (x, z, tx, tz) => Math.atan2(tx - x, tz - z);
-const at = (id, type, name, x, z, to, door, extra = {}) => ({id, type, name, x, z, ry: face(x, z, to[0], to[1]), door, ...extra});
 export const BUILDINGS = [
   {id: 'clock', type: 'clockTower', name: 'the Clock Tower', x: 0, z: 0, ry: 0, door: 0},
+  // the four corners of the square face its middle
   {id: 'cafe', type: 'teapotCafe', name: 'the Teapot Café', x: -3.25, z: -3.25, ry: Q, door: 1.25},
   {id: 'toys', type: 'toyShop', name: 'the Toy Shop', x: 3.25, z: -3.25, ry: -Q, door: 1.05},
   {id: 'bakery', type: 'bakery', name: 'the Bakery', x: 3.3, z: 3.2, ry: -3 * Q, door: 1.0},
   {id: 'bandstand', type: 'bandstand', name: 'the Bandstand', x: -3.3, z: 3.3, ry: 3 * Q, door: 0},
-  {id: 'post', type: 'postOffice', name: 'the Post Office', x: 5.7, z: -1.25, ry: 0, door: .95},
-  {id: 'fire', type: 'fireStation', name: 'the Fire Station', x: 8.5, z: -2.1, ry: -.12, door: 1.05},
-  {id: 'police', type: 'policeBox', name: "the Constable's Kiosk", x: 6.9, z: 1.75, ry: Math.PI, door: .6},
-  {id: 'mushroom', type: 'mushroomCottage', name: 'Mushroom Cottage', x: -5.75, z: -3.05, ry: .1, door: .95},
-  at('c1', 'cottage', 'Bluebell Cottage', -8.2, -2.2, [-8, -.6], .85, {colour: 'sky', roof: 'red'}),
-  at('c2', 'cottage', 'Buttercup Cottage', -5.6, 1.9, [-5, -.4], .85, {colour: 'yellow', roof: 'teal'}),
-  at('c3', 'cottage', 'Rose Cottage', -7.6, 1.55, [-9.6, 1.5], .85, {colour: 'pink', roof: 'purple'}),
-  at('c4', 'cottage', 'Apple Cottage', -11.0, -.2, [-9.7, .4], .85, {colour: 'lime', roof: 'orange'}),
-  at('c5', 'cottage', 'Daisy Cottage', -2.6, 5.9, [-.2, 5.6], .85, {colour: 'cream', roof: 'blue'}),
-  at('school', 'school', 'the School', -7.0, 5.6, [-9.3, 4.2], 1.25),
-  at('station', 'station', 'the Station', 3.5, 6.2, [.2, 6.3], 1.25),
-  at('barn', 'barn', 'the Barn', -3.6, -7.7, [-1.4, -8.2], 1.1),
-  at('farm', 'cottage', 'Hay Farm', -2.4, -5.5, [-.9, -5.0], .85, {colour: 'cream', roof: 'orange'}),
-  at('garage', 'garage', 'the Garage', 9.0, 2.6, [10.5, 1.0], 1.0),
-  at('hut', 'harbourHut', 'the Harbour Hut', 9.4, .6, [11.0, .6], .95),
-  {id: 'mill', type: 'windmill', name: 'the Windmill', x: 2.2, z: -8.2, ry: -Math.PI / 4, door: .95}
+  // High Street, east: services on the left (north), the garage and kiosk on the right, the harbour at the end
+  street('post', 'postOffice', 'the Post Office', 'high', 3.3, 1, .95),
+  street('fire', 'fireStation', 'the Fire Station', 'high', 6.4, 1, 1.05),
+  street('hut', 'harbourHut', 'the Harbour Hut', 'high', 8.6, 1, .95),
+  street('police', 'policeBox', "the Constable's Kiosk", 'high', 3.3, -1, .6),
+  street('garage', 'garage', 'the Garage', 'high', 6.4, -1, 1.0),
+  // Cottage Lane, west: the lane's houses, facing each other across it
+  street('mushroom', 'mushroomCottage', 'Mushroom Cottage', 'cottage', 3.6, -1, .95),
+  street('c1', 'cottage', 'Bluebell Cottage', 'cottage', 6.4, -1, .85, {colour: 'sky', roof: 'red'}),
+  street('c4', 'cottage', 'Apple Cottage', 'cottage', 8.5, -1, .85, {colour: 'lime', roof: 'orange'}),
+  street('c3', 'cottage', 'Rose Cottage', 'cottage', 3.3, 1, .85, {colour: 'pink', roof: 'purple'}),
+  street('c2', 'cottage', 'Buttercup Cottage', 'cottage', 5.9, 1, .85, {colour: 'yellow', roof: 'teal'}),
+  street('c6', 'cottage', 'Lantern Cottage', 'cottage', 8.5, 1, .85, {colour: 'orange', roof: 'teal'}),
+  // Station Road, south: the station on the right, a cottage and the school on the left
+  street('station', 'station', 'the Station', 'station', 4.5, 1, 1.25),
+  street('c5', 'cottage', 'Daisy Cottage', 'station', 3.0, -1, .85, {colour: 'cream', roof: 'blue'}),
+  street('school', 'school', 'the School', 'station', 5.9, -1, 1.25),
+  // Windmill Lane, north: the farm and barn on the left, the windmill at the top of the hill
+  street('farm', 'cottage', 'Hay Farm', 'hill', 3.1, 1, .85, {colour: 'cream', roof: 'orange'}),
+  street('barn', 'barn', 'the Barn', 'hill', 5.7, 1, 1.1),
+  street('mill', 'windmill', 'the Windmill', 'hill', 5.4, -1, .95)
 ];
+
+// Lamp posts: eight round the square (with the bunting) and one every couple of units along each street, on alternate sides, never in front of a door.
+// `spot` is the place on the pavement beside each one where the lamplighter stands to tend it.
+export const LAMPS = (() => {
+  const out = [];
+  for (let k = 0; k < 8; k++) { const a = (k + .5) / 8 * Math.PI * 2; out.push({x: Math.cos(a) * 3.3, z: Math.sin(a) * 3.3, spot: [Math.cos(a) * (SQUARE.ring + ROAD.pave), Math.sin(a) * (SQUARE.ring + ROAD.pave)], where: 'the square'}); }
+  for (const sp of SPOKES) {
+    const len = spokeLength(sp.id); let side = 1;
+    for (let s = 2.5; s < len - .5; s += 2.1) {
+      const p = onSpoke(sp.id, s), nx = p.tz, nz = -p.tx, at = sd => [p.x + nx * sd * .86, p.z + nz * sd * .86];
+      const free = sd => { const [x, z] = at(sd); return BUILDINGS.every(b => Math.hypot(b.x - x, b.z - z) > 1.1 && Math.hypot(b.x + Math.sin(b.ry) * b.door - x, b.z + Math.cos(b.ry) * b.door - z) > .9); }, pick = free(side) ? side : free(-side) ? -side : 0;
+      if (pick) { const [x, z] = at(pick); out.push({x, z, spot: [p.x + nx * pick * ROAD.pave, p.z + nz * pick * ROAD.pave], where: sp.name}); }
+      side = -side;
+    }
+  }
+  return out.map((l, i) => ({id: 'lamp' + i, ...l}));
+})();
 
 // The cast. Each lives behind one door and has a round of places to go; `stay` is seconds spent at each.
 // `wake`/`sleep` are the hours they are about; before and after they are indoors (the defaults are 6.5 and 20.5).
@@ -82,6 +126,7 @@ export const CAST = [
   {id: 'chalk', wake: 7, sleep: 19.5, name: 'Miss Chalk the teacher', home: 'c5', coat: 'sky', hat: 'bun', round: [['school', 95], ['cafe', 16], ['school', 55], ['c5', 40]]},
   {id: 'sparky', wake: 7.5, sleep: 19.5, name: 'Sparky the mechanic', home: 'c4', coat: 'orange', hat: 'cap', round: [['garage', 80], ['cafe', 14], ['garage', 55], ['c4', 40]]},
   {id: 'salt', wake: 6, sleep: 20, name: 'Captain Salt', home: 'hut', coat: 'blue', hat: 'flat', round: [['hut', 60], ['bakery', 12], ['hut', 50], ['station', 10], ['hut', 40]]},
+  {id: 'wick', wake: 4.6, sleep: 21.4, name: 'Mr Wick the lamplighter', home: 'c6', coat: 'teal', hat: 'flat', lamplighter: true, round: [['c6', 60], ['cafe', 20], ['c6', 60], ['bakery', 10]]},
   {id: 'dot', wake: 7.5, sleep: 18, name: 'Dot', home: 'c4', coat: 'yellow', hat: 'bobble', small: true, round: [['school', 60], ['toys', 25], ['cafe', 14], ['c2', 10], ['c4', 35]]},
   {id: 'dash', wake: 7.5, sleep: 18, name: 'Dash', home: 'c2', coat: 'sky', hat: 'bobble', small: true, round: [['school', 55], ['toys', 20], ['mushroom', 12], ['bakery', 10], ['c2', 35]]}
 ];
@@ -99,23 +144,30 @@ export const VEHICLES = [
   {id: 'fire', kind: 'fire', name: 'the fire engine', colour: 'red', speed: 1.35, home: 'fire', from: -1, to: -1, onCall: true}
 ];
 // Where the bus pulls up (it waits a few seconds at each).
-export const BUS_STOPS = [{id: 'square', x: 2.9, z: .9}, {id: 'highEnd', x: 9.6, z: -.7}, {id: 'lane', x: -8.3, z: .2}, {id: 'hill', x: -.4, z: -6.0}, {id: 'station', x: .1, z: 6.4}];
+export const BUS_STOPS = [{id: 'square', x: 2.9, z: .9}, {id: 'highEnd', x: 9.6, z: 0}, {id: 'lane', x: -8.3, z: .1}, {id: 'hill', x: .6, z: -5.6}, {id: 'station', x: .9, z: 6.2}];
 
 // Railway: one short straight track beside the station with a platform; the little train shuttles along it.
-export const TRACK = {x: 5.35, z0: 3.4, z1: 7.7, platform: {x: 4.55, z0: 5.0, z1: 7.2}};
-export const PADDOCK = {x0: -7.2, z0: -7.0, x1: -5.0, z1: -4.9};
+export const TRACK = {x: 5.15, z0: 3.4, z1: 7.7, platform: {x: 4.35, z0: 5.0, z1: 7.2}};
+export const PADDOCK = {x0: -5.6, z0: -7.6, x1: -3.2, z1: -5.5};
 export const POND = {x: 6.2, z: -5.5, r: 1.25};
 export const JETTY = {x0: 12.0, x1: 13.7, z: .55};
 export const GREEN = {x: 0, z: 0, r: 1.5};
 
 // Scenery that is not a building: tree clusters [x, z, kind, scale], kinds 'round' | 'tall' | 'apple' | 'bush'.
-export const TREES = [
-  [-1.6, -5.4, 'round', 1.1], [2.5, -5.6, 'tall', 1], [4.4, -6.6, 'round', 1.2], [-3.6, -6.9, 'apple', 1], [-5.6, -6.2, 'round', 1.3], [6.9, -5.2, 'tall', 1.1],
-  [9.9, -4.6, 'round', 1.1], [11.3, 1.1, 'apple', 1], [9.3, 2.9, 'round', 1.2], [7.3, 4.6, 'tall', 1], [5.1, 5.4, 'round', 1.3], [2.6, 7.4, 'apple', 1.1],
-  [-2.6, 6.6, 'round', 1.2], [-5.1, 5.1, 'tall', 1.1], [-7.6, 5.4, 'round', 1.1], [-10.4, 3.9, 'apple', 1], [-11.6, -2.9, 'round', 1.2], [-9.1, -4.9, 'tall', 1],
-  [-7.1, -5.3, 'round', 1], [-3.1, 8.2, 'tall', 1.1], [4.3, 8.0, 'round', 1], [-12.0, .6, 'tall', .9], [12.2, -1.9, 'round', 1], [-1.9, -8.6, 'round', 1], [5.6, -8.1, 'apple', .9],
-  [-4.4, 2.5, 'bush', 1], [4.5, 1.6, 'bush', 1], [-2.2, -4.2, 'bush', .9], [2.1, 4.4, 'bush', 1], [7.9, 1.4, 'bush', .9], [-9.6, -2.4, 'bush', 1], [-4.2, -.1, 'bush', .8], [1.4, -4.6, 'bush', .9]
-];
+export const TREES = (() => {
+  const out = [], roadPts = SPOKES.flatMap(sp => curve(sp.points)), kinds = ['round', 'tall', 'apple', 'round'];
+  // is there room for something of radius r at (x, z)? clear of buildings, roads, the ring, the pond, the paddock, the railway and the jetty
+  const room = (x, z, r) => shore(x, z) < .83 && BUILDINGS.every(b => Math.hypot(b.x - x, b.z - z) > r + 1.35) && roadPts.every(p => Math.hypot(p[0] - x, p[1] - z) > r + .85)
+    && Math.hypot(x, z) > SQUARE.ring + r + 1.0 && Math.hypot(x - POND.x, z - POND.z) > POND.r + r + .4 && !(x > PADDOCK.x0 - r - .5 && x < PADDOCK.x1 + r + .5 && z > PADDOCK.z0 - r - .5 && z < PADDOCK.z1 + r + .5)
+    && !(Math.abs(x - TRACK.x) < r + 1.2 && z > TRACK.z0 - 1 && z < TRACK.z1 + 1) && !(x > JETTY.x0 - 2 && Math.abs(z - JETTY.z) < 2.5) && out.every(t => Math.hypot(t[0] - x, t[1] - z) > (t[3] + r) * .72);
+  const add = (x, z, kind, sc) => { if (room(x, z, sc * .6)) out.push([+x.toFixed(2), +z.toFixed(2), kind, sc]); };
+  for (let k = 0; k < 44; k++) { const a = k / 44 * Math.PI * 2 + rand(k + 400) * .1, r = .74 + rand(k + 500) * .05; add(Math.cos(a) * ISLAND.rx * r, Math.sin(a) * ISLAND.rz * r, kinds[k % 4], .95 + rand(k + 600) * .3); }   // a belt of trees just inside the shore
+  const grove = (cx, cz, n, seed) => { for (let k = 0; k < n; k++) { const a = k / n * Math.PI * 2 + rand(seed + k) * 1.2, r = .5 + rand(seed + 30 + k) * 1.3; add(cx + Math.cos(a) * r, cz + Math.sin(a) * r, kinds[(k + seed) % 4], .9 + rand(seed + 60 + k) * .35); } };
+  grove(8.6, -5.3, 6, 1); grove(-9.4, -5.4, 6, 11); grove(-7.4, 6.4, 6, 21); grove(9.8, 5.2, 5, 31); grove(5.3, -8.0, 4, 41); grove(-3.3, 9.0, 3, 51); grove(-12.0, 1.8, 3, 61);   // a grove in each corner of the island
+  for (let i = 0; i < 3; i++) for (let j = 0; j < 2; j++) add(7.2 + i * 1.45, 4.5 + j * 1.5, 'apple', .85);   // an orchard in rows
+  for (const [x, z] of [[4.45, 1.65], [-4.4, -.35], [-4.5, 2.5], [4.2, -.9], [-2.2, -4.5], [1.7, -4.4], [2.2, 4.3], [-2.0, 4.2]]) if (room(x, z, .4)) out.push([x, z, 'bush', .9]);   // low bushes by the ring road
+  return out;
+})();
 
 // Small deterministic random numbers (0..1) from a seed, for anything that should look hand-placed but stay stable.
 export function rand(seed) { let t = (seed + 0x6D2B79F5) | 0; t = Math.imul(t ^ t >>> 15, 1 | t); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }
