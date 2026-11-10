@@ -698,12 +698,17 @@ export {doorOf};
 // Market day: the goods on the counters and the sellers behind them. One small mesh, shown only while the market is open.
 export function buildMarketGoods(def, material) {
   const b = new Bag(); b.push(def.x, heightAt(def.x, def.z), def.z, def.ry, def.scale || 1);
-  const stalls = [{x: -1.12, coat: 'red', goods: ['milk', 'milk', 'milk']}, {x: 0, coat: 'blue', goods: ['bread', 'bread', 'bread', 'bread']}, {x: 1.12, coat: 'green', goods: ['apple', 'apple', 'apple', 'apple', 'apple']}];
+  const stalls = [{x: -1.12, coat: 'red', goods: ['milk', 'milk', 'milk']}, {x: 0, coat: 'blue', goods: ['fish', 'fish', 'bread', 'fish', 'bread']}, {x: 1.12, coat: 'green', goods: ['apple', 'apple', 'apple', 'apple', 'apple']}];
   for (const st of stalls) {
-    st.goods.forEach((g, k) => { const gx = st.x - .34 + k * (.68 / Math.max(1, st.goods.length - 1)), c = g === 'milk' ? 'white' : g === 'bread' ? 'crust' : 'red';
-      if (g === 'milk') b.cyl(.07, .08, .2, c, {x: gx, y: .49, z: .1, seg: 8}); else if (g === 'bread') b.sph(.09, c, {x: gx, y: .56, z: .1, sx: 1.3, sy: .7, seg: 8}); else b.sph(.06, c, {x: gx, y: .54, z: .12, seg: 8}); });
-    b.cyl(.1, .13, .38, st.coat, {x: st.x, y: .05, z: -.2, seg: 10}); b.sph(.11, '#f3c9a0', {x: st.x, y: .5, z: -.2, seg: 10}); b.cone(.12, .14, 'cream', {x: st.x, y: .58, z: -.2, seg: 10});
+    st.goods.forEach((g, k) => { const gx = st.x - .34 + k * (.68 / Math.max(1, st.goods.length - 1)), c = g === 'milk' ? 'white' : g === 'bread' ? 'crust' : g === 'fish' ? '#8fb8d0' : 'red';
+      if (g === 'milk') b.cyl(.07, .08, .2, c, {x: gx, y: .49, z: .1, seg: 8}); else if (g === 'fish') { b.sph(.07, c, {x: gx, y: .52, z: .1, sx: 1.9, sy: .7, seg: 8}); b.cone(.05, .1, c, {x: gx + .15, y: .52, z: .1, rz: -Math.PI / 2, seg: 6}); } else if (g === 'bread') b.sph(.09, c, {x: gx, y: .56, z: .1, sx: 1.3, sy: .7, seg: 8}); else b.sph(.06, c, {x: gx, y: .54, z: .12, seg: 8}); });
   }
   for (let i = 0; i < 11; i++) { const t = i / 10; b.sph(.05, ['red', 'yellow', 'sky', 'pink', 'green'][i % 5], {x: -1.75 + t * 3.5, y: 1.35 - Math.sin(t * Math.PI) * -.08 - .1, z: .62, seg: 6}); }
   b.pop(); const m = b.mesh(material); m.castShadow = true; m.visible = false; return m;
+}
+
+// A fishing rod for the fishermen: held out over the water, a thin line down to a red float. Hidden until they stand on the pier.
+export function buildRod() {
+  const g = new THREE.Group(), pole = new THREE.Mesh(new THREE.CylinderGeometry(.006, .01, .5, 6), new THREE.MeshBasicMaterial({color: '#8a5a3c'})), line = new THREE.Mesh(new THREE.CylinderGeometry(.0025, .0025, .4, 4), new THREE.MeshBasicMaterial({color: '#ffffff'})), bob = new THREE.Mesh(new THREE.SphereGeometry(.022, 8, 6), new THREE.MeshBasicMaterial({color: '#e2473b'}));
+  pole.position.set(0, .3, .22); pole.rotation.x = Math.PI / 2 - .6; line.position.set(0, .1, .46); bob.position.set(0, -.1, .46); g.add(pole, line, bob); g.visible = false; g.userData.bob = bob; return g;
 }

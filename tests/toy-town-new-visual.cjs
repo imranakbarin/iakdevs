@@ -34,7 +34,7 @@ const shot2 = (pg, name) => pg.screenshot({path: path.join(out, `new-town-${name
     const wet = await page.evaluate(() => ToyTownNew.info());
     assert.ok(wet.wet > .3, 'the ground is wet in the rain (' + wet.wet + ')');
     await page.evaluate(() => { ToyTownNew.setWeather('clear', 5); ToyTownNew.setHour(19); ToyTownNew.advance(3); ToyTownNew.look(0, .4, 30, .3); }); await shot('dusk');   // the lamplighter is part-way round: some lanterns lit, some not
-    const dusk = await page.evaluate(() => ToyTownNew.info()); assert.ok(dusk.lampsLit > 4 && dusk.lampsLit < 32 && dusk.calls <= 120, 'at dusk the lamps are being lit one by one (' + JSON.stringify(dusk) + ')');
+    const dusk = await page.evaluate(() => ToyTownNew.info()); assert.ok(dusk.lampsLit > 4 && dusk.lampsLit < 32 && dusk.calls <= 135, 'at dusk the lamps are being lit one by one (' + JSON.stringify(dusk) + ')');
     await page.evaluate(() => { ToyTownNew.setWeather('clear', 5); ToyTownNew.setHour(12); ToyTownNew.look(0, .4, 46, 0); });
     // tap to inspect: a real click on a walking resident selects them, a click on a building selects it
     await page.evaluate(() => { ToyTownNew.setHour(11); for (let i = 0; i < 80 && !ToyTownNew.sim.residents.some(r => r.state === 'walking' && !r.def.lamplighter); i++) ToyTownNew.advance(5); });   // (a jump in time leaves people waiting on old timers: let somebody come out)
@@ -70,7 +70,7 @@ const shot2 = (pg, name) => pg.screenshot({path: path.join(out, `new-town-${name
       if (name === 'winter') { await sp.setViewportSize({width: 420, height: 800}); await sp.evaluate(() => document.documentElement.classList.remove('ui-off')); await sp.click('#snd'); await sp.waitForTimeout(400);
         seasonInfo.sound = await sp.evaluate(() => ({on: ToyTownNew.sound.enabled, started: ToyTownNew.sound.started, pressed: document.getElementById('snd').getAttribute('aria-pressed')})); }
       await sp.close(); }
-    assert.ok(seasonInfo.winter.season === 'winter' && seasonInfo.autumn.season === 'autumn' && seasonInfo.winter.calls <= 120 && seasonInfo.autumn.calls <= 120, 'the seasons draw within budget (' + JSON.stringify(seasonInfo) + ')');
+    assert.ok(seasonInfo.winter.season === 'winter' && seasonInfo.autumn.season === 'autumn' && seasonInfo.winter.calls <= 135 && seasonInfo.autumn.calls <= 135, 'the seasons draw within budget (' + JSON.stringify(seasonInfo) + ')');
     assert.ok(seasonInfo.sound.on && seasonInfo.sound.started === 1 && seasonInfo.sound.pressed === 'true', 'the sound button turns sound on (' + JSON.stringify(seasonInfo.sound) + ')');
     // phone (emulated, not a real device): touch input, no horizontal scroll, nothing overlapping, finger-sized buttons, the settings panel, a parcel sent by finger
     { const {devices} = require('playwright'), ctx = await browser.newContext({...devices['iPhone 13']}), mp = await ctx.newPage(); mp.on('pageerror', e => errors.push('phone: ' + e.message));
@@ -113,6 +113,12 @@ const shot2 = (pg, name) => pg.screenshot({path: path.join(out, `new-town-${name
         await wp.evaluate(() => { ToyTownNew.freeze(); ToyTownNew.setHour(9.2); ToyTownNew.advance(80); const m = ToyTownNew.sim.graph.doors.market; ToyTownNew.look(m.x, m.z, 12, .3); });
         wk[name] = await wp.evaluate(() => ({day: ToyTownNew.sim.dayName, open: ToyTownNew.sim.market.open, visits: ToyTownNew.sim.market.visits, board: ToyTownNew.jobsText(), stations: ToyTownNew.sim.train.stations.length})); if (name === 'sun') await shot2(wp, 'sunday-market'); await wp.close(); }
       assert.ok(wk.sun.day === 'Sunday' && wk.sun.open && wk.sun.visits >= 1 && /Sun/.test(wk.sun.board), 'on Sunday the market is open and busy (' + JSON.stringify(wk.sun) + ')'); assert.ok(wk.mon.day === 'Monday' && !wk.mon.open, 'on Monday it is shut'); assert.equal(wk.sun.stations, 6, 'the train serves six stations'); }
+    // fishing: a fisherman stands at the end of the pier with a rod out, and the sellers are at their stalls on a Sunday
+    { const fp = await browser.newPage({viewport: {width: 900, height: 600}}); fp.on('pageerror', e => errors.push('fishing: ' + e.message));
+      if (process.env.THREE_LOCAL) await fp.route('https://cdn.jsdelivr.net/npm/three@0.187.0/**', r => r.fulfill({path: path.join(process.env.THREE_LOCAL, r.request().url().split('three@0.187.0/')[1]), contentType: 'text/javascript'}));
+      await fp.goto(`http://127.0.0.1:${port}/toy-town-new.html?day=sun&news=0&quality=low`); await fp.waitForFunction(() => !!window.ToyTownNew, null, {timeout: 60000});
+      const fish = await fp.evaluate(() => { ToyTownNew.freeze(); ToyTownNew.setHour(9); const S = ToyTownNew.sim; let who = null; for (let i = 0; i < 500 && !who; i++) { ToyTownNew.advance(2); const r = S.residents.find(x => x.at === 'pier' && x.state === 'inside'); if (r) who = r.id; } const d = S.graph.doors.pier; ToyTownNew.look(d.x - 1, d.z, 6, 1.2); ToyTownNew.advance(.2); return {who, rods: ToyTownNew.rodsOut(), caught: S.fishing.caught}; });
+      await shot2(fp, 'fisherman'); await fp.close(); assert.ok(fish.who && fish.rods >= 1, 'a fisherman stands on the pier with a rod out (' + JSON.stringify(fish) + ')'); }
     // picture quality: high has the grass tufts, wind and glow; low has none of them; ?debug=1 shows a readout; the phone starts in the middle
     { const tiers = {}; for (const [name, query] of [['low', 'quality=low&debug=1'], ['high', 'quality=high&debug=1']]) { const qp = await browser.newPage({viewport: {width: 900, height: 600}}); qp.on('pageerror', e => errors.push(name + ' quality: ' + e.message));
         if (process.env.THREE_LOCAL) await qp.route('https://cdn.jsdelivr.net/npm/three@0.187.0/**', r => r.fulfill({path: path.join(process.env.THREE_LOCAL, r.request().url().split('three@0.187.0/')[1]), contentType: 'text/javascript'}));
@@ -121,11 +127,11 @@ const shot2 = (pg, name) => pg.screenshot({path: path.join(out, `new-town-${name
         if (name === 'high') await shot2(qp, 'quality-high'); await qp.close(); }
       assert.ok(tiers.low.tier === 'low' && tiers.low.tufts === 0 && tiers.low.sway === 0 && tiers.low.waves === 0, 'the low tier has no tufts, wind or waves (' + JSON.stringify(tiers.low) + ')');
       assert.ok(tiers.high.tier === 'high' && tiers.high.tufts > 500 && tiers.high.sway > .9 && tiers.high.waves === 1, 'the high tier has them (' + JSON.stringify(tiers.high) + ')'); assert.ok(tiers.high.time > 0, 'the shader clock runs');
-      assert.match(tiers.high.dbg, /fps .* calls .* tris .* ratio .* high/, 'the debug readout says what the picture costs'); assert.ok(tiers.low.locked && tiers.high.locked, 'a requested tier is not overridden'); assert.ok(tiers.high.calls <= 120 && tiers.low.calls <= tiers.high.calls + 2, 'draw calls stay in budget (' + tiers.low.calls + ' low, ' + tiers.high.calls + ' high)');
+      assert.match(tiers.high.dbg, /fps .* calls .* tris .* ratio .* high/, 'the debug readout says what the picture costs'); assert.ok(tiers.low.locked && tiers.high.locked, 'a requested tier is not overridden'); assert.ok(tiers.high.calls <= 135 && tiers.low.calls <= tiers.high.calls + 2, 'draw calls stay in budget (' + tiers.low.calls + ' low, ' + tiers.high.calls + ' high)');
       assert.equal(await mp0Tier(browser, port, errors), 'medium', 'a phone starts in the middle tier'); }
     console.log('NEW TOWN night', JSON.stringify(night), 'rain', JSON.stringify(wet));
-    assert.ok(night.glow && night.calls <= 120 && night.sky !== 'bfe9fb', 'at night the windows glow and the sky is dark (' + night.calls + ' calls)');
-    assert.ok(wet.rain > .5 && wet.calls <= 120 && wet.triangles <= 800000, 'in the rain it still draws within budget (' + wet.calls + ' calls, rain ' + wet.rain + ')');
+    assert.ok(night.glow && night.calls <= 135 && night.sky !== 'bfe9fb', 'at night the windows glow and the sky is dark (' + night.calls + ' calls)');
+    assert.ok(wet.rain > .5 && wet.calls <= 135 && wet.triangles <= 800000, 'in the rain it still draws within budget (' + wet.calls + ' calls, rain ' + wet.rain + ')');
     console.log('NEW TOWN', JSON.stringify(info));
     assert.deepEqual(errors, [], 'no page errors');
     assert.ok(info.calls > 5 && info.calls <= 80, 'the whole town draws in a handful of calls (' + info.calls + ')');

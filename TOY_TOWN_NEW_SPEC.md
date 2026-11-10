@@ -164,6 +164,12 @@ the stamp is stale. If the page cannot start, its panel now shows the real error
 - **Train**: six stations (Central, Harbour, School, Farm, East, Mill), so a lap is about 108 s. `sim.timetable()` guesses arrival times (`track.etas`, median error under 12 s in the test); the station building's card lists them and the train's card gives the next stop with its time. Cargo put down while the train is standing at the station is loaded at once.
 - **Parcel tracking** (`track.mjs`): `stageOf(cargo)` gives the step (six by train: waiting, to the station, at the station, on the train, at the far station, to the door; three if walked), shown in a yellow strip under the work board with dots, with a toast when it arrives; `freightLog` entries carry the cargo id.
 
+### Fishing, professions and life stories (tested)
+
+- **Fishing**: `pier` is a place (the end of the pier, a standing spot like a platform). Finn and Captain Salt have `pier` in their rounds; whoever stands there catches a fish every 11 s (85 percent, less in rain) into `sim.fishing.stock`. A `fish` freight template (`def.FREIGHT`, `fish: true`) only spawns when there is stock: a basket of up to 3 goes from the hut to the café, the market, the bakery, the school or a house; each fish delivered pays `FISH.price` coins (`sim.fishing = {stock, caught, sold, coins}`), and visitors to an open market buy a fish from the stock too. The work board shows fish sold and coins. Fishermen are drawn with a rod and float (hidden unless they are on the pier) facing out to sea.
+- **Professions**: every cast member has a `job` (from `lives.mjs`, shown on the card). New: Mrs Gill the fishmonger, Mr Apple the greengrocer and Dr Mint. On market days `def.VENDORS` (Gill, Apple, Farmer Hay) are sent to stand at their stalls from opening to closing (fish, apples, milk on the counters).
+- **Life stories** (`lives.mjs`, 31 of them): each one has a `star` (whom it is about); every cast member has at least one. They are ordinary stories needing only half their cast (`relaxed`). A card says "Their story right now" or "Stories told: n of m". In a simulated week at least 14 people have had a story of their own told.
+
 ## 5. Art rules
 
 - Fat, rounded, slightly wonky. No sharp corners: `bag.box` is a rounded box; roofs overhang.
@@ -194,6 +200,7 @@ spheres 8; keep that discipline (the first version was 1.05 M triangles from 3-s
 - `sim`, `scene`, `camera`, `renderer`, `view`
 - `info()` → `{calls, triangles, residentsOut, clock, pixelRatio, story, rain, wet, lampsLit, season}`
 - `tapAt(clientX, clientY)`, `selected()`, `select(obj|null)`, `project(x, z, y)` → client coordinates of a ground point
+- `rodsOut()` (fishing rods showing)
 - `trackText()`, `trackState()`; `?day=`
 - `tier()`, `gov` (the governor), `setQuality(tier|'auto')`, `tufts`, `U` (shader inputs); `?quality=` and `?debug=1`
 - `settings`, `applySettings()`; `info()` also has `market, marketVisits`

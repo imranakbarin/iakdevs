@@ -2,6 +2,7 @@
 // A story sends a few residents on errands (door to door, like every walk) in some hours and weather, with a caption.
 //   days: 'week' (Monday to Friday) or 'weekend' only; season: only in that season; hours [from, to) on the day clock; wet: 'dry' (only fine weather), 'wet' (only in rain) or omitted (any);
 //   relaxed: only half the cast need to be free;  go: [resident, [[place, secondsToStay], ...]]; fire: also send out the fire engine.
+import {LIFE_STORIES} from './lives.mjs';
 export const STORIES = [
   {id: 'milkround',  title: 'Farmer Hay brings the milk to the bakery and the café', hours: [6.5, 10], go: [['hay', [['bakery', 14], ['cafe', 14]]]]},
   {id: 'postround',  title: 'Mr Pott does the post round', hours: [8, 15], go: [['pott', [['c3', 6], ['c4', 6], ['c5', 6], ['post', 12]]]]},
@@ -38,7 +39,7 @@ export const STORIES = [
   // only staged by the news
   {id: 'market',     title: 'A busy market morning', hours: [8, 16], news: true, go: [['hay', [['bakery', 12], ['toys', 10]]], ['tilly', [['bakery', 15]]], ['crumb', [['farm', 20]]]]},
   {id: 'party',      title: 'A good-news party at the café', hours: [9, 18], news: true, go: [['crumb', [['cafe', 40]]], ['pott', [['cafe', 40]]], ['moss', [['cafe', 40]]], ['bell', [['cafe', 30]]], ['pip', [['cafe', 30]]]]}
-];
+].concat(LIFE_STORIES);
 
 // Which story a headline calls up: keywords first, then its category. Rain and fire are staged too.
 export function newsStory(title = '', category = '') {

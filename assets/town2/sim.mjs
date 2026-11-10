@@ -4,7 +4,7 @@
 //  - Vehicles drive over the lane network: each plans a route (shortest lanes) to where it is going, keeps a gap from the one in front, takes a
 //    lock on a junction before crossing it, waits for anyone crossing in front of it, and the bus pulls up at its stops.
 //  - The train circles the railway loop, slowing for each station and standing there a while.
-import {CAST, VEHICLES, BUS_LINES, STATIONS, BUILDINGS, DAY, LAMPS, FREIGHT, MARKET, DAYS, loopPt, rand, doorOf, building} from './def.mjs';
+import {CAST, VEHICLES, BUS_LINES, STATIONS, BUILDINGS, DAY, LAMPS, FREIGHT, MARKET, DAYS, FISH, VENDORS, loopPt, rand, doorOf, building} from './def.mjs';
 import {buildGraph, along, leftOf} from './graph.mjs';
 import {makeNeeds, stepNeeds, arrive as needsArrive, meet as needsMeet, want as needsWant, moodOf} from './needs.mjs';
 import {bump, friendSpot} from './memory.mjs';
@@ -20,7 +20,7 @@ export function createSim(seed = 7, opts = {}) {
   // the week: the day of the week moves on every 480 s (Monday is 0); on Saturday and Sunday some people have a different round (no school)
   let weekday = ((opts.weekday ?? 0) % 7 + 7) % 7, dayIdx = 0; const startDay = weekday;
   const roundOf = r => (weekday >= 5 && r.def.weekend) || r.def.round;
-  const residents = CAST.map((def, i) => ({id: def.id, def, state: 'inside', at: def.home, step: 0, until: 1.5 + i * 3.2, route: null, s: 0, x: graph.doors[def.home].x, z: graph.doors[def.home].z, tx: 0, tz: 1,
+  const residents = CAST.map((def, i) => ({id: def.id, def, state: 'inside', at: def.home, step: 0, until: 1.5 + (i % 13) * 4.2, route: null, s: 0, x: graph.doors[def.home].x, z: graph.doors[def.home].z, tx: 0, tz: 1,
     speed: (def.small ? .66 : .52) * (.92 + rand(seed + i * 31) * .2), target: null, outings: 0, errands: [], stay: null, lampJob: null, lampQueue: [], lampWait: 0, act: null, hurry: false, onPlatform: false, rideTo: null, rideFrom: null, carrying: null, ox: 0, oz: 0, pause: 0, look: null, greetAt: 0, blocked: 0, needs: makeNeeds((k => () => rand(seed * 131 + i * 17 + k++))(0)), mood: {score: 1, label: 'cheerful', why: null}, friends: {}, visits: {}}));
   // Every building with a door has a place on the lanes beside it (the lane and how far along it): where a vehicle stops to call there.
   const spots = {}; const spotOf = id => spots[id] || (spots[id] = (() => { const d = doorOf(building(id)), p = graph.lanePoint(d.x, d.z); return {id, lane: p.lane, s: p.s}; })());
@@ -157,7 +157,7 @@ export function createSim(seed = 7, opts = {}) {
       if (r.target && r.target.startsWith('lamp')) { tendLamp(r); return; }
       const round = roundOf(r), stay = r.stay ?? round[r.step][1], act = r.act; r.act = null;
       r.state = 'inside'; r.at = r.target; r.target = null; r.route = null; r.until = clock + stay * (.8 + rnd() * .4); if (r.stay === null && r.at === round[r.step][0]) r.step = (r.step + 1) % round.length; r.stay = null;
-      r.onPlatform = r.at.startsWith('platform:') || r.at === 'market'; if (r.at === 'market') market.visits++; needsArrive(r.needs, r.at, r.def.home); remember(r); if (act) doAct(r, act);
+      r.onPlatform = r.at.startsWith('platform:') || r.at === 'market' || r.at === 'pier'; if (r.at === 'market') { market.visits++; if (market.open && fishing.stock > 0 && !VENDORS.includes(r.id)) { fishing.stock--; fishing.sold++; fishing.coins += FISH.price; } } needsArrive(r.needs, r.at, r.def.home); remember(r); if (act) doAct(r, act);
     }
   }
   // ---- Vehicles
@@ -251,7 +251,7 @@ export function createSim(seed = 7, opts = {}) {
     const c = cargo.find(x => x.id === +arg); if (!c) return;
     if (kind === 'pickup' && (c.state === 'ready' || c.state === 'station')) { c.state = 'carried'; c.holder = r.id; c.at = null; r.carrying = c.id; }
     else if (kind === 'station' && c.holder === r.id) { c.state = 'station'; c.at = here; c.holder = null; r.carrying = null; c.since = clock; if (train.at === here && train.wait > .8) loadCargo(here); }
-    else if (kind === 'deliver' && c.holder === r.id) { r.carrying = null; stats.delivered++; finish(c, 'delivered'); }
+    else if (kind === 'deliver' && c.holder === r.id) { r.carrying = null; stats.delivered++; if (c.kind === 'fish') { fishing.sold += c.qty || 1; fishing.coins += (c.qty || 1) * FISH.price; } finish(c, 'delivered'); }
   }
   // somebody going to bed with work in their hands: the job is called off
   function dropWork(r) {
@@ -268,10 +268,10 @@ export function createSim(seed = 7, opts = {}) {
   }
   function spawnCargo() {
     for (let tries = 0; tries < FREIGHT.length; tries++) {
-      const t = FREIGHT[tplIdx++ % FREIGHT.length]; if (!inWindow(hour, t.hours[0], t.hours[1])) continue;
+      const t = FREIGHT[tplIdx++ % FREIGHT.length]; if (!inWindow(hour, t.hours[0], t.hours[1]) || (t.fish && fishing.stock < 1)) continue;
       const from = pick(t.from), to = pick(t.to.filter(x => x !== from && stationOf(x) !== stationOf(from))); if (!to) continue;
       const near = idleNear(from), usual = idleFor(t.pick), picker = usual && near && graph.walk(usual.at, from).length <= graph.walk(near.at, from).length + 8 ? usual : near; if (!picker) continue;   // the usual person if free and not much further away, else whoever is nearest
-      newCargo(t.kind, t.label, from, to, picker, t.drop); return;
+      const qty = t.fish ? Math.min(FISH.perBasket, fishing.stock) : 0; if (qty) fishing.stock -= qty; const c = newCargo(t.kind, qty ? (qty === 1 ? 'a fresh fish' : qty + ' fresh fish') : t.label, from, to, picker, t.drop); if (qty) c.qty = qty; return;
     }
   }
   // A parcel sent by the owner: from one building to another, by whoever is free (the train if the two are served by different stations).
@@ -307,13 +307,19 @@ export function createSim(seed = 7, opts = {}) {
   // anybody waiting on that platform steps aboard (also when they arrive while the train is standing there)
   function boardAt(id) { for (const r of residents) if (r.state === 'inside' && r.onPlatform && r.rideTo && r.at === 'platform:' + id && r.rideTo !== id && riders.length < train.seats) { r.state = 'riding'; r.onPlatform = false; riders.push(r); } }
 
+  // Fishing: whoever stands at the end of the pier catches a fish every so often (fewer in rain); the fish wait at the hut until somebody carries a basket to town, and the town pays for them.
+  const fishing = {stock: 0, caught: 0, sold: 0, coins: 0};
+  function stepFishing(dt) {
+    for (const r of residents) if (r.state === 'inside' && r.at === 'pier') { r.fishAcc = (r.fishAcc || 0) + dt; if (r.fishAcc >= FISH.every) { r.fishAcc = 0; if (rnd() < .85 - weather.rain * .4) { fishing.stock++; fishing.caught++; r.caught = (r.caught || 0) + 1; } } }
+  }
   // Market day: every third day the stalls are open from 9 to 15, and people drop by (standing at the stalls) all through it.
   const market = {open: false, visits: 0, opens: 0, next: 0};
-  const shoppersNow = () => residents.filter(r => r.at === 'market' || r.target === 'market').length;
+  const shoppersNow = () => residents.filter(r => !VENDORS.includes(r.id) && (r.at === 'market' || r.target === 'market')).length;
   function stepMarket() {
     const d = Math.floor(clock / DAY); if (d !== dayIdx) { dayIdx = d; weekday = (startDay + d) % 7; for (const r of residents) r.step = 0; }
     const cfg = MARKET.days[weekday], want = !!cfg && hour >= cfg.from && hour < cfg.to; market.cfg = cfg || null;
-    if (want && !market.open) { market.open = true; market.opens++; market.next = clock + 4; if (!story.current) story.current = {id: 'marketday', title: cfg.name + ': the stalls are open until ' + cfg.to + ':00', headline: null, start: clock, end: clock + 30}; }
+    if (want && !market.open) { market.open = true; market.opens++; market.next = clock + 4; for (const id of VENDORS) { const v = resident(id); if (v && v.state === 'inside' && !v.onPlatform && !v.carrying) { v.errands.unshift(['market', Math.max(10, (cfg.to - hour) * 20)]); v.until = Math.min(v.until, clock + .5 + VENDORS.indexOf(id)); } }
+      if (!story.current) story.current = {id: 'marketday', title: cfg.name + ': the stalls are open until ' + cfg.to + ':00', headline: null, start: clock, end: clock + 30}; }
     else if (!want && market.open) { market.open = false; for (const r of residents) if (r.at === 'market' && r.state === 'inside') r.until = Math.min(r.until, clock + 1 + rnd() * 3); }
     if (market.open && clock >= market.next) {
       market.next = clock + cfg.gap[0] + rnd() * (cfg.gap[1] - cfg.gap[0]);
@@ -354,7 +360,7 @@ export function createSim(seed = 7, opts = {}) {
     }
     for (const r of residents) stepResident(r, dt);
     for (const v of vehicles) stepVehicle(v, dt);
-    releaseLocks(); stepTrain(dt); if (train.wait > .8 && train.at) boardAt(train.at); carryRiders(); stepFreight(); stepMarket(); weather.update(dt); stepStories(); stepLamps(dt);
+    releaseLocks(); stepTrain(dt); if (train.wait > .8 && train.at) boardAt(train.at); carryRiders(); stepFreight(); stepFishing(dt); stepMarket(); weather.update(dt); stepStories(); stepLamps(dt);
   }
-  return {graph, residents, vehicles, stops, train, weather, season, lamps, market, cargo, riders, freightLog, freightStats: stats, sendParcel, stationOf, signalFor, timetable, get weekday() { return weekday; }, get dayName() { return DAYS[weekday]; }, needsStats, get townMood() { return residents.reduce((a, r) => a + r.mood.score, 0) / residents.length; }, setBusy(k) { busy = Math.max(.2, Math.min(3, +k || 1)); }, get busy() { return busy; }, get lampsTended() { return tended; }, story, stage, update, get clock() { return clock; }, get hour() { return hour; }, setHour(h) { clock = ((h - 6 + 24) % 24) / 24 * DAY; hour = hourOf(clock); snapLamps(); }, dispatchFire() { const f = vehicles.find(v => v.id === 'fire'); if (f) f.call = 1; }, doorIds: BUILDINGS.filter(b => b.door).map(b => b.id)};
+  return {graph, residents, vehicles, stops, train, weather, season, lamps, market, fishing, cargo, riders, freightLog, freightStats: stats, sendParcel, stationOf, signalFor, timetable, get weekday() { return weekday; }, get dayName() { return DAYS[weekday]; }, needsStats, get townMood() { return residents.reduce((a, r) => a + r.mood.score, 0) / residents.length; }, setBusy(k) { busy = Math.max(.2, Math.min(3, +k || 1)); }, get busy() { return busy; }, get lampsTended() { return tended; }, story, stage, update, get clock() { return clock; }, get hour() { return hour; }, setHour(h) { clock = ((h - 6 + 24) % 24) / 24 * DAY; hour = hourOf(clock); snapLamps(); }, dispatchFire() { const f = vehicles.find(v => v.id === 'fire'); if (f) f.call = 1; }, doorIds: BUILDINGS.filter(b => b.door).map(b => b.id)};
 }

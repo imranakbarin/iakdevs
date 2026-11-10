@@ -1,9 +1,9 @@
 // New Toy Town: the page. Renderer, camera and controls, lights, and the loop that moves the cast and vehicles.
 import * as THREE from 'three';
-import {PALETTE as P, ISLAND, CAST, VEHICLES, BUILDINGS, PADDOCK, POND, PIER, heightAt, rand} from './def.mjs';
+import {PALETTE as P, ISLAND, CAST, VEHICLES, BUILDINGS, PADDOCK, POND, PIER, VENDORS, heightAt, rand} from './def.mjs';
 import {along} from './graph.mjs';
 import {createSim} from './sim.mjs';
-import {buildTown, buildResident, buildVehicle, buildClouds, buildTrain, buildBoat, buildAnimal, buildSky, buildUmbrella, buildRain, buildFall, buildPuddles, buildCargo, buildPassengers, buildMarketGoods, buildSignals, buildTufts, buildSkyDome, U} from './build.mjs';
+import {buildTown, buildResident, buildVehicle, buildClouds, buildTrain, buildBoat, buildAnimal, buildSky, buildUmbrella, buildRain, buildFall, buildPuddles, buildCargo, buildPassengers, buildMarketGoods, buildSignals, buildTufts, buildSkyDome, buildRod, U} from './build.mjs';
 import {skyAt, seasonOf, SEASONS, mix} from './sky.mjs';
 import {createSound} from './sound.mjs';
 import {createSmoke} from './smoke.mjs';
@@ -39,8 +39,8 @@ const dome = buildSkyDome(); scene.add(dome);
 const hemi = scene.children.find(o => o.isHemisphereLight), seaMat = built.sea.material, tmp = new THREE.Color();
 if (q.get('h')) sim.setHour(+q.get('h'));
 const people = new Map(), cars = new Map();
-const brollies = new Map(), BROLLY = ['red', 'yellow', 'pink', 'blue', 'purple', 'orange', 'teal'];
-sim.residents.forEach((r, i) => { const g = buildResident(r.def, i, built.material), u = buildUmbrella(built.material, BROLLY[i % BROLLY.length]); g.add(u); brollies.set(r.id, u); scene.add(g); people.set(r.id, g); });
+const marketDef = BUILDINGS.find(b => b.id === 'market'), rods = new Map(), brollies = new Map(), BROLLY = ['red', 'yellow', 'pink', 'blue', 'purple', 'orange', 'teal'];
+sim.residents.forEach((r, i) => { const g = buildResident(r.def, i, built.material), u = buildUmbrella(built.material, BROLLY[i % BROLLY.length]); g.add(u); brollies.set(r.id, u); if (r.id === 'finn' || r.id === 'salt') { const rod = buildRod(); g.add(rod); rods.set(r.id, rod); } scene.add(g); people.set(r.id, g); });
 const rain = buildRain(); scene.add(rain);
 const fall = buildFall(season); scene.add(fall);
 const puddles = buildPuddles(sim.graph); if (season !== 'winter') scene.add(puddles);   // (in winter the rain is snow)
@@ -197,14 +197,14 @@ function refreshTrack() {
 }
 // The work board: what is being carried and where, and how much has been done.
 const jobsEl = document.getElementById('jobs'); let jobsText = '', jobsAt = 0;
-const KIND = {mail: 'Mail', milk: 'Milk', bread: 'Bread', parcel: 'Parcel'};
+const KIND = {mail: 'Mail', milk: 'Milk', bread: 'Bread', fish: 'Fish', parcel: 'Parcel'};
 function refreshJobs() {
   if (!jobsEl) return; const lines = sim.cargo.slice(0, 6).map(c => {
     const stn = id => (sim.train.stations.find(x => x.id === id) || {}).name || id, who = c.holder && (sim.residents.find(r => r.id === c.holder) || {def: {}}).def.name;
     const where = c.state === 'carried' ? 'carried by ' + (who || 'somebody') : c.state === 'ready' ? 'waiting for ' + (who || 'a carrier') : c.state === 'train' ? 'on the train' : c.state === 'station' ? 'waiting at ' + stn(c.at) : '';
     return KIND[c.kind] + ': ' + BUILDINGS.find(b => b.id === c.from).name + ' to ' + BUILDINGS.find(b => b.id === c.to).name + ' (' + where + ')';
   });
-  const text = 'Work board | ' + sim.dayName.slice(0, 3) + ' | delivered ' + sim.freightStats.delivered + ' | ' + sim.riders.length + ' on the train | town ' + (sim.townMood > .8 ? 'cheerful' : sim.townMood > .62 ? 'content' : 'grumpy') + '\n' + (lines.join('\n') || 'Nothing to carry just now.');
+  const text = 'Work board | ' + sim.dayName.slice(0, 3) + ' | delivered ' + sim.freightStats.delivered + (sim.fishing.caught ? ' | fish ' + sim.fishing.sold + ' sold, ' + sim.fishing.coins + ' coins' : '') + ' | ' + sim.riders.length + ' on the train | town ' + (sim.townMood > .8 ? 'cheerful' : sim.townMood > .62 ? 'content' : 'grumpy') + '\n' + (lines.join('\n') || 'Nothing to carry just now.');
   if (text === jobsText) return; jobsText = text; jobsEl.textContent = ''; const [head, ...rest] = text.split('\n'); const h = document.createElement('b'); h.textContent = head; jobsEl.append(h); for (const l of rest) { const e = document.createElement('span'); e.textContent = l; jobsEl.append(e); }
 }
 if (jobsEl) jobsEl.addEventListener('click', () => jobsEl.classList.toggle('open'));
@@ -280,7 +280,11 @@ function sync(dt) {
     const g = people.get(r.id); g.visible = r.state === 'walking' || r.onPlatform; if (!g.visible) continue;
     const step = time * (r.lampJob ? 16 : r.hurry ? 14 : 9) + r.speed * 40, y = heightAt(r.x, r.z);
     const standing = r.state !== 'walking', chat = !standing && r.pause > 0 && r.look;   // (standing: waiting on a platform, a step up from the ground)
-    g.position.set(r.x, y + (standing ? .19 : .02 + (chat ? Math.abs(Math.sin(time * 7)) * .025 : Math.abs(Math.sin(step)) * .035)), r.z); g.rotation.set(0, chat ? Math.atan2(r.look.x - r.x, r.look.z - r.z) : Math.atan2(r.tx, r.tz), chat || standing ? 0 : Math.sin(step) * .09);
+    const onPier = r.at === 'pier' && r.state === 'inside', stall = r.at === 'market' && r.state === 'inside' && sim.market.open && VENDORS.includes(r.id);
+    if (stall) { const m = marketDef, lx = [-1.12, 0, 1.12][VENDORS.indexOf(r.id)] ?? 0, lz = -.25, c = Math.cos(m.ry), sn = Math.sin(m.ry), sc = m.scale || 1; r.tx = Math.sin(m.ry); r.tz = Math.cos(m.ry); g.position.set(m.x + (lx * c + lz * sn) * sc, heightAt(m.x, m.z) + .1, m.z + (-lx * sn + lz * c) * sc); g.rotation.set(0, m.ry, 0); }
+    else g.position.set(r.x, onPier ? .24 : y + (standing ? .19 : .02 + (chat ? Math.abs(Math.sin(time * 7)) * .025 : Math.abs(Math.sin(step)) * .035)), r.z); g.rotation.set(0, chat ? Math.atan2(r.look.x - r.x, r.look.z - r.z) : Math.atan2(r.tx, r.tz), chat || standing ? 0 : Math.sin(step) * .09);
+    if (onPier) g.rotation.y = Math.PI / 2;   // facing out to sea
+    const rod = rods.get(r.id); if (rod) { rod.visible = onPier; if (onPier) rod.userData.bob.position.y = -.1 + Math.sin(time * 2.3 + r.speed * 9) * .012; }
   }
   for (const v of sim.vehicles) {
     const g = cars.get(v.id); g.visible = v.state !== 'parked'; if (!g.visible) continue;
@@ -359,5 +363,5 @@ window.ToyTownNew = {
   trainPos: () => trainCars[0].position, selected: () => sel, tapAt: (cx, cy) => tap(cx, cy), select, sendParcel: (a, b) => sim.sendParcel(a, b), jobsText: () => jobsText, trackText: () => (trackEl ? trackEl.textContent : ''), trackState: () => ({tracked, trackAt, el: !!trackEl}),
   project(x, z, y = .4) { const r = canvas.getBoundingClientRect(); camera.updateMatrixWorld(); v3.set(x, heightAt(x, z) + y, z).project(camera); return [(v3.x * .5 + .5) * r.width + r.left, (-v3.y * .5 + .5) * r.height + r.top]; },
   setWeather(kind, seconds = 600) { sim.weather.force(kind, seconds); },
-  highlight: () => ({pin: pin.visible, ring: ring.visible, mode: settings.highlight}), settings, applySettings, setQuality, tier: () => tier, gov, tufts, U, freeze(on = true) { frozen = on; }
+  rodsOut: () => [...rods.values()].filter(r => r.visible).length, highlight: () => ({pin: pin.visible, ring: ring.visible, mode: settings.highlight}), settings, applySettings, setQuality, tier: () => tier, gov, tufts, U, freeze(on = true) { frozen = on; }
 };
