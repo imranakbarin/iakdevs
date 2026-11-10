@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generated_at": "2026-11-10T09:58:17.077Z",
+  "generated_at": "2026-11-10T17:55:20.044Z",
   "status": "ok",
   "successful_sources": [
     "BBC News",
@@ -17,12 +17,68 @@
   ],
   "stories": [
     {
-      "title": "Good News in History, November 10",
-      "url": "https://www.goodnewsnetwork.org/events061110/",
+      "title": "‘Nothing short of a miracle’ – Rescuers Find Boy with Autism Missing for 3 Days",
+      "url": "https://www.goodnewsnetwork.org/nothing-short-of-a-miracle-rescuers-find-boy-with-autism-missing-for-3-days/",
       "source": "Good News Network",
       "category": "Good news",
       "tone": "light",
-      "published_at": "2026-11-10T08:00:00.000Z"
+      "published_at": "2026-11-10T16:30:45.000Z"
+    },
+    {
+      "title": "NASA Scientists Show How Gravitational Waves Can Reveal New Worlds",
+      "url": "https://science.nasa.gov/missions/lisa/gravitational-waves-can-reveal-new-worlds/",
+      "source": "NASA",
+      "category": "Science",
+      "tone": "light",
+      "published_at": "2026-11-10T16:00:26.000Z"
+    },
+    {
+      "title": "David Walliams' career and controversies including Britain's Got Talent and Little Britain",
+      "url": "https://www.bbc.co.uk/news/articles/c6d7q98z1yz3o?at_medium=RSS&at_campaign=rss",
+      "source": "BBC Culture",
+      "category": "Culture",
+      "tone": "light",
+      "published_at": "2026-11-10T14:53:28.000Z"
+    },
+    {
+      "title": "McTominay reveals heart treatment at World Cup",
+      "url": "https://www.bbc.co.uk/sport/football/articles/cw5ynynx204zo?at_medium=RSS&at_campaign=rss",
+      "source": "BBC Sport",
+      "category": "Sport",
+      "tone": "light",
+      "published_at": "2026-11-10T16:46:31.000Z"
+    },
+    {
+      "title": "High oil prices have led to a dip in global carbon emissions",
+      "url": "https://arstechnica.com/science/2026/11/carbon-emissions-are-down-this-year-but-that-probably-wont-last/",
+      "source": "Ars Technica",
+      "category": "Technology",
+      "tone": "light",
+      "published_at": "2026-11-10T16:29:27.000Z"
+    },
+    {
+      "title": "Kim Kardashian's Skims offers refunds for $148 advent calendar after backlash",
+      "url": "https://www.bbc.co.uk/news/articles/cqp8g8p53x6ko?at_medium=RSS&at_campaign=rss",
+      "source": "BBC Business",
+      "category": "Business",
+      "tone": "light",
+      "published_at": "2026-11-10T17:04:55.000Z"
+    },
+    {
+      "title": "Controversial kinship: From colonial rule to the Holocaust?",
+      "url": "https://www.dw.com/en/controversial-kinship-from-colonial-rule-to-the-holocaust/a-79902228?maca=en-rss-en-world-4025-xml-mrss",
+      "source": "DW",
+      "category": "World",
+      "tone": "light",
+      "published_at": "2026-11-10T15:49:00.000Z"
+    },
+    {
+      "title": "Actor, 85, takes to the stage despite Alzheimer’s diagnosis",
+      "url": "https://www.positive.news/society/actor-85-takes-to-the-stage-despite-alzheimers-diagnosis/",
+      "source": "Positive News",
+      "category": "Good news",
+      "tone": "light",
+      "published_at": "2026-11-10T11:34:34.000Z"
     },
     {
       "title": "Locals launch campaign to buy ancient wood",
@@ -31,62 +87,6 @@
       "category": "Science",
       "tone": "light",
       "published_at": "2026-11-10T08:13:42.000Z"
-    },
-    {
-      "title": "'Baffling but brilliant' post-apocalyptic novel The End of Everything wins Booker Prize",
-      "url": "https://www.bbc.co.uk/news/articles/cw0737kv52lko?at_medium=RSS&at_campaign=rss",
-      "source": "BBC Culture",
-      "category": "Culture",
-      "tone": "light",
-      "published_at": "2026-11-10T09:35:15.000Z"
-    },
-    {
-      "title": "'I wanted to prove that motherhood is not the finish line' - ultrarunner Stephanie Case",
-      "url": "https://www.bbc.co.uk/sport/athletics/videos/cmly0yde7098o?at_medium=RSS&at_campaign=rss",
-      "source": "BBC Sport",
-      "category": "Sport",
-      "tone": "light",
-      "published_at": "2026-11-10T09:24:42.000Z"
-    },
-    {
-      "title": "Faisal Islam: What the boss of US tech giant Nvidia told me about China and national security",
-      "url": "https://www.bbc.co.uk/news/articles/c64g1gzy2vdzo?at_medium=RSS&at_campaign=rss",
-      "source": "BBC Technology",
-      "category": "Technology",
-      "tone": "light",
-      "published_at": "2026-11-10T09:23:55.000Z"
-    },
-    {
-      "title": "Kim Kardashian's Skims offers refunds for $148 advent calendar after backlash",
-      "url": "https://www.bbc.co.uk/news/articles/cqp8g8p53x6ko?at_medium=RSS&at_campaign=rss",
-      "source": "BBC Business",
-      "category": "Business",
-      "tone": "light",
-      "published_at": "2026-11-10T09:57:49.000Z"
-    },
-    {
-      "title": "Oxford museum returns ancestral Naga skulls to India",
-      "url": "https://www.bbc.co.uk/news/articles/ck1l3lzg3y79o?at_medium=RSS&at_campaign=rss",
-      "source": "BBC News",
-      "category": "World",
-      "tone": "light",
-      "published_at": "2026-11-10T06:23:42.000Z"
-    },
-    {
-      "title": "‘Digital advances are reshaping nature conservation’ say experts",
-      "url": "https://www.positive.news/environment/digital-advances-are-reshaping-nature-conservation-say-experts/",
-      "source": "Positive News",
-      "category": "Good news",
-      "tone": "light",
-      "published_at": "2026-11-09T13:44:06.000Z"
-    },
-    {
-      "title": "APOD: 2026 November 10 – Saturn Behind the Moon",
-      "url": "https://science.nasa.gov/image-article/apod-2026-november-10-saturn-behind-the-moon/",
-      "source": "NASA",
-      "category": "Science",
-      "tone": "light",
-      "published_at": "2026-11-10T05:05:00.000Z"
     }
   ]
 }
