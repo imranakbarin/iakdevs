@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generated_at": "2026-11-09T18:52:43.879Z",
+  "generated_at": "2026-11-10T02:12:36.434Z",
   "status": "ok",
   "successful_sources": [
     "BBC News",
@@ -17,20 +17,20 @@
   ],
   "stories": [
     {
-      "title": "Interpreting Autistic Cues Is Difficult, a Teen Built an App That’s Helping Hundreds of Families",
-      "url": "https://www.goodnewsnetwork.org/15-yo-teaches-himself-machine-learning-to-build-app-that-interprets-autistic-communication/",
+      "title": "This Diwali, Trade the Doom Scroll for These 10 Questions",
+      "url": "https://www.goodnewsnetwork.org/this-diwali-trade-the-doom-scroll-for-these-10-questions/",
       "source": "Good News Network",
       "category": "Good news",
       "tone": "light",
-      "published_at": "2026-11-09T16:30:23.000Z"
+      "published_at": "2026-11-09T18:59:42.000Z"
     },
     {
-      "title": "NASA Advanced Mid-Power Electric Rocket Challenge",
-      "url": "https://www.nasa.gov/directorates/stmd/prizes-challenges-crowdsourcing-program/center-of-excellence-for-collaborative-innovation-coeci/nasa-advanced-mid-power-electric-rocket-challenge/",
+      "title": "Curiosity Blog, Sols 5056-5062: Charging Back Up!",
+      "url": "https://science.nasa.gov/blog/curiosity-blog-sols-5056-5062-charging-back-up/",
       "source": "NASA",
       "category": "Science",
       "tone": "light",
-      "published_at": "2026-11-09T17:42:42.000Z"
+      "published_at": "2026-11-10T01:07:45.000Z"
     },
     {
       "title": "Find out who's in the running for this year's Booker Prize",
@@ -41,28 +41,28 @@
       "published_at": "2026-11-09T11:30:13.000Z"
     },
     {
-      "title": "England wing Feyi-Waboso out of Nations Championship",
-      "url": "https://www.bbc.co.uk/sport/rugby-union/articles/cw5yny20m7jzo?at_medium=RSS&at_campaign=rss",
+      "title": "Plymouth Parkway beat Berkhamsted to reach FA Cup second round",
+      "url": "https://www.bbc.co.uk/sport/football/videos/cqm24237y5z5o?at_medium=RSS&at_campaign=rss",
       "source": "BBC Sport",
       "category": "Sport",
       "tone": "light",
-      "published_at": "2026-11-09T18:33:37.000Z"
+      "published_at": "2026-11-10T00:13:13.000Z"
     },
     {
-      "title": "Claude Code is accidentally exposing secrets all over GitHub",
-      "url": "https://arstechnica.com/ai/2026/11/claude-code-settings-files-expose-thousands-of-secrets-on-github/",
-      "source": "Ars Technica",
+      "title": "Qantas to outsource 850 local jobs with most roles moving to India",
+      "url": "https://www.bbc.co.uk/news/articles/cry838v4qzvyo?at_medium=RSS&at_campaign=rss",
+      "source": "BBC Technology",
       "category": "Technology",
       "tone": "light",
-      "published_at": "2026-11-09T17:24:26.000Z"
+      "published_at": "2026-11-10T01:55:22.000Z"
     },
     {
-      "title": "How a civil servant got away with juggling five jobs for so long",
-      "url": "https://www.bbc.co.uk/news/articles/cw1m4d8vjvppo?at_medium=RSS&at_campaign=rss",
+      "title": "Headteachers say families will struggle after another rise in school dinner prices",
+      "url": "https://www.bbc.co.uk/news/articles/c9m262yv6yx8o?at_medium=RSS&at_campaign=rss",
       "source": "BBC Business",
       "category": "Business",
       "tone": "light",
-      "published_at": "2026-11-09T18:40:31.000Z"
+      "published_at": "2026-11-10T00:00:22.000Z"
     },
     {
       "title": "Republican congressman to force impeachment vote on Defence Secretary Hegseth",
@@ -70,7 +70,7 @@
       "source": "BBC News",
       "category": "World",
       "tone": "light",
-      "published_at": "2026-11-09T18:19:19.000Z"
+      "published_at": "2026-11-10T01:38:49.000Z"
     },
     {
       "title": "‘Digital advances are reshaping nature conservation’ say experts",
@@ -81,12 +81,12 @@
       "published_at": "2026-11-09T13:44:06.000Z"
     },
     {
-      "title": "Birds return to waterfowl park after oil vandalism",
-      "url": "https://www.bbc.co.uk/news/articles/c6gqwq1x85e0o?at_medium=RSS&at_campaign=rss",
+      "title": "The superpower battle over energy – and what it means for your bills",
+      "url": "https://www.bbc.co.uk/news/articles/cw62y2z53pg1o?at_medium=RSS&at_campaign=rss",
       "source": "BBC Science",
       "category": "Science",
       "tone": "light",
-      "published_at": "2026-11-09T14:52:07.000Z"
+      "published_at": "2026-11-10T00:08:28.000Z"
     }
   ]
 }
