@@ -1,6 +1,7 @@
 // New Toy Town: the page. Renderer, camera and controls, lights, and the loop that moves the cast and vehicles.
 import * as THREE from 'three';
-import {PALETTE as P, ISLAND, CAST, VEHICLES, BUILDINGS, TRACK, PADDOCK, POND, JETTY, heightAt, rand} from './def.mjs';
+import {PALETTE as P, ISLAND, CAST, VEHICLES, BUILDINGS, PADDOCK, POND, PIER, heightAt, rand} from './def.mjs';
+import {along} from './graph.mjs';
 import {createSim} from './sim.mjs';
 import {buildTown, buildResident, buildVehicle, buildClouds, buildTrain, buildBoat, buildAnimal, buildSky, buildUmbrella, buildRain, buildFall, buildPuddles} from './build.mjs';
 import {skyAt, seasonOf, SEASONS} from './sky.mjs';
@@ -13,11 +14,11 @@ const renderer = new THREE.WebGLRenderer({canvas, antialias: true, powerPreferen
 const phone = Math.min(innerWidth, innerHeight) < 700;
 renderer.setPixelRatio(Math.min(devicePixelRatio || 1, phone ? 1.5 : 2));
 renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-const scene = new THREE.Scene(); scene.background = new THREE.Color('#bfe9fb'); scene.fog = new THREE.Fog('#bfe9fb', 60, 140);
-const camera = new THREE.PerspectiveCamera(30, 1, .5, 300);
+const scene = new THREE.Scene(); scene.background = new THREE.Color('#bfe9fb'); scene.fog = new THREE.Fog('#bfe9fb', 85, 210);
+const camera = new THREE.PerspectiveCamera(30, 1, .5, 400);
 scene.add(new THREE.HemisphereLight('#ffffff', '#b8d8a0', 1.55));
 const sun = new THREE.DirectionalLight('#fff4dc', 2.1); sun.position.set(-14, 22, 10); sun.castShadow = true;
-sun.shadow.mapSize.set(phone ? 1024 : 2048, phone ? 1024 : 2048); Object.assign(sun.shadow.camera, {left: -17, right: 17, top: 14, bottom: -14, near: 1, far: 70}); sun.shadow.bias = -.0006; sun.shadow.normalBias = .03;
+sun.shadow.mapSize.set(phone ? 1024 : 2048, phone ? 1024 : 2048); Object.assign(sun.shadow.camera, {left: -25, right: 25, top: 20, bottom: -20, near: 1, far: 90}); sun.shadow.bias = -.0006; sun.shadow.normalBias = .03;
 scene.add(sun, sun.target);
 
 const season = SEASONS.includes(q.get('season')) ? q.get('season') : seasonOf(), sim = createSim(7, {season}), built = buildTown(sim.graph, season);
@@ -37,8 +38,9 @@ const lampDrawn = sim.lamps.map(() => -1);
 sim.vehicles.forEach(v => { const g = buildVehicle(v.def, built.material); scene.add(g); cars.set(v.id, g); });
 
 // Things that live on their own: the train, the boat at the jetty, the farm animals and the ducks on the pond.
-const train = buildTrain(built.material); scene.add(train);
-const boat = buildBoat(built.material); boat.position.set(JETTY.x1 + .15, -.02, JETTY.z + .78); boat.rotation.y = Math.PI / 2 - .15; scene.add(boat);
+const trainCars = buildTrain(built.material); for (const c of trainCars) scene.add(c);
+const loop = sim.graph.loop;
+const boat = buildBoat(built.material); boat.position.set(PIER.x1 - .6, -.02, PIER.z + .95); boat.rotation.y = Math.PI / 2 - .15; scene.add(boat);
 const critters = [];
 for (let k = 0; k < 6; k++) { const kind = k < 3 ? 'cow' : 'sheep', g = buildAnimal(kind, built.material); scene.add(g); critters.push({g, k, x: PADDOCK.x0 + .6 + rand(k + 5) * (PADDOCK.x1 - PADDOCK.x0 - 1.2), z: PADDOCK.z0 + .6 + rand(k + 9) * (PADDOCK.z1 - PADDOCK.z0 - 1.2), tx: 0, tz: 0, wait: rand(k + 30) * 4, hd: rand(k) * 6, bounds: PADDOCK, step: kind === 'cow' ? .1 : .13}); }
 for (let k = 0; k < 3; k++) { const g = buildAnimal('duck', built.material); scene.add(g); critters.push({g, k: 10 + k, x: POND.x + (rand(k + 40) - .5) * 1.4, z: POND.z + (rand(k + 50) - .5) * .8, tx: 0, tz: 0, wait: rand(k + 60) * 3, hd: rand(k + 70) * 6, bounds: {x0: POND.x - 1.1, x1: POND.x + 1.1, z0: POND.z - .65, z1: POND.z + .65}, step: .12, water: true}); }
@@ -56,9 +58,9 @@ function moveCritters(dt) {
 }
 
 /* ---- camera: look down at a point on the ground from a fixed tilt; drag to pan, pinch or wheel to zoom, twist to turn ---- */
-const view = {x: 0, z: .4, yaw: 0, dist: 30, tx: 0, tz: .4, tyaw: 0, tdist: 30};
+const view = {x: 0, z: .4, yaw: 0, dist: 44, tx: 0, tz: .4, tyaw: 0, tdist: 44};
 const TILT = .66, clamp = (a, v, b) => Math.max(a, Math.min(b, v));
-function fit() { const a = innerWidth / innerHeight; view.tdist = view.dist = clamp(24, a > 1.5 ? 29 : 29 * 1.5 / a, 62); }
+function fit() { const a = innerWidth / innerHeight; view.tdist = view.dist = clamp(34, a > 1.5 ? 43 : 43 * 1.5 / a, 92); }
 function resize() { renderer.setSize(innerWidth, innerHeight, false); camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix(); }
 function placeCamera() {
   const c = Math.cos(TILT), s = Math.sin(TILT);
@@ -72,10 +74,10 @@ canvas.addEventListener('pointermove', e => {
     if (p.moved > 8) follow = null;   // a drag lets go of whatever the camera was following
     if (p.button === 2 || e.shiftKey) { view.tyaw -= dx * .006; return; }
     const k = view.dist * .00135, cs = Math.cos(view.yaw), sn = Math.sin(view.yaw);
-    view.tx = clamp(-13, view.tx - (dx * cs + dy * sn * 1.5) * k, 13); view.tz = clamp(-10, view.tz - (-dx * sn + dy * cs * 1.5) * k, 10);
+    view.tx = clamp(-22, view.tx - (dx * cs + dy * sn * 1.5) * k, 22); view.tz = clamp(-17, view.tz - (-dx * sn + dy * cs * 1.5) * k, 17);
   } else if (pointers.size === 2) {
     const [a, b] = [...pointers.values()], d = Math.hypot(a.x - b.x, a.y - b.y), ang = Math.atan2(b.y - a.y, b.x - a.x);
-    if (gesture) { view.tdist = clamp(7, view.tdist * gesture.d / d, 64); let da = ang - gesture.ang; da = Math.atan2(Math.sin(da), Math.cos(da)); view.tyaw -= da; }
+    if (gesture) { view.tdist = clamp(7, view.tdist * gesture.d / d, 96); let da = ang - gesture.ang; da = Math.atan2(Math.sin(da), Math.cos(da)); view.tyaw -= da; }
     gesture = {d, ang};
   }
 });
@@ -83,9 +85,9 @@ for (const t of ['pointerup', 'pointercancel']) canvas.addEventListener(t, e => 
   const p = pointers.get(e.pointerId); pointers.delete(e.pointerId); gesture = null;
   if (t === 'pointerup' && p && !p.multi && p.moved < 10 && performance.now() - p.t0 < 600 && p.button !== 2) tap(e.clientX, e.clientY);
 });
-canvas.addEventListener('wheel', e => { e.preventDefault(); view.tdist = clamp(7, view.tdist * Math.exp(e.deltaY * .0012), 64); }, {passive: false});
+canvas.addEventListener('wheel', e => { e.preventDefault(); view.tdist = clamp(7, view.tdist * Math.exp(e.deltaY * .0012), 96); }, {passive: false});
 canvas.addEventListener('contextmenu', e => e.preventDefault());
-addEventListener('keydown', e => { const k = e.key.toLowerCase(); if (k === 'q') view.tyaw += .3; if (k === 'e') view.tyaw -= .3; if (k === '+' || k === '=') view.tdist = clamp(7, view.tdist * .85, 64); if (k === '-') view.tdist = clamp(7, view.tdist / .85, 64); if (k === '0') { view.tx = 0; view.tz = .4; view.tyaw = 0; fit(); } });
+addEventListener('keydown', e => { const k = e.key.toLowerCase(); if (k === 'q') view.tyaw += .3; if (k === 'e') view.tyaw -= .3; if (k === '+' || k === '=') view.tdist = clamp(7, view.tdist * .85, 96); if (k === '-') view.tdist = clamp(7, view.tdist / .85, 96); if (k === '0') { view.tx = 0; view.tz = .4; view.tyaw = 0; fit(); } });
 addEventListener('resize', () => { resize(); });
 
 /* ---- tap to inspect: a resident, vehicle, animal, the train or a building: a ring, a card, and the camera follows what moves ---- */
@@ -99,7 +101,7 @@ function posOf(o) {
   if (o.kind === 'resident') { const g = people.get(o.id); return g && g.visible ? g.position : null; }
   if (o.kind === 'vehicle') { const g = cars.get(o.id); return g && g.visible ? g.position : null; }
   if (o.kind === 'animal') return critters[o.id].g.position;
-  if (o.kind === 'train') return train.position;
+  if (o.kind === 'train') return trainCars[1].position;
   if (o.kind === 'building') { const b = BUILDINGS.find(x => x.id === o.id); return {x: b.x, y: heightAt(b.x, b.z), z: b.z}; }
   return null;
 }
@@ -129,7 +131,7 @@ function pick(cx, cy) {
   const test = (pos, o, reach = bd) => { if (!pos) return; v3.set(pos.x, pos.y + .3, pos.z).project(camera); if (v3.z > 1) return; const d = Math.hypot((v3.x * .5 + .5) * r.width + r.left - cx, (-v3.y * .5 + .5) * r.height + r.top - cy); if (d < bd && d < reach) { bd = d; best = o; } };
   for (const rs of sim.residents) test(posOf({kind: 'resident', id: rs.id}), {kind: 'resident', id: rs.id});
   for (const v of sim.vehicles) test(posOf({kind: 'vehicle', id: v.id}), {kind: 'vehicle', id: v.id}, 40);
-  critters.forEach((c, i) => test(c.g.position, {kind: 'animal', id: i}, 26)); test(train.position, {kind: 'train'}, 44);
+  critters.forEach((c, i) => test(c.g.position, {kind: 'animal', id: i}, 26)); for (const c of trainCars) test(c.position, {kind: 'train'}, 40);
   if (best) return best;
   ray.setFromCamera({x: ((cx - r.left) / r.width) * 2 - 1, y: -((cy - r.top) / r.height) * 2 + 1}, camera);
   const hit = ray.ray.intersectPlane(plane, v3.clone()); if (!hit) return null; let near = null, nd = 1.5;
@@ -140,7 +142,7 @@ function tap(cx, cy) { const o = pick(cx, cy); select(o && sel && o.kind === sel
 if (cardEl) cardEl.querySelector('button').addEventListener('click', () => select(null));
 function trackSelection(dt) {
   if (!sel) return; const p = posOf(sel);
-  if (p) { ring.visible = true; ring.position.set(p.x, (p.y || heightAt(p.x, p.z)) + .06, p.z); ring.rotation.y += dt * 1.2; if (follow) { view.tx = clamp(-13, p.x, 13); view.tz = clamp(-10, p.z, 10); } }
+  if (p) { ring.visible = true; ring.position.set(p.x, (p.y || heightAt(p.x, p.z)) + .06, p.z); ring.rotation.y += dt * 1.2; if (follow) { view.tx = clamp(-22, p.x, 22); view.tz = clamp(-17, p.z, 17); } }
   else { ring.visible = false; follow = null; }
   if ((cardAt -= dt) <= 0) { cardAt = .4; refreshCard(); }
 }
@@ -196,7 +198,7 @@ function sync(dt) {
     const y = heightAt(v.x, v.z), ahead = heightAt(v.x + v.tx * .3, v.z + v.tz * .3);
     g.position.set(v.x, y + .035 + (v.v > .05 ? Math.abs(Math.sin(time * 14 + v.s)) * .008 : 0), v.z); g.rotation.set(-Math.atan2(ahead - y, .3), Math.atan2(v.tx, v.tz), 0, 'YXZ');
   }
-  { const t = sim.train, y = heightAt(TRACK.x, t.z) + .06; train.position.set(TRACK.x, y, t.z); train.rotation.y = Math.PI; }
+  trainCars.forEach((c, k) => { const q = along(loop, sim.train.s - k * sim.train.gap), y = heightAt(q.x, q.z) + .06; c.position.set(q.x, y, q.z); c.rotation.y = Math.atan2(q.tx, q.tz); });   // the cars follow the head round the loop
   moveCritters(dt); boat.position.y = -.02 + Math.sin(time * 1.3) * .022; boat.rotation.z = Math.sin(time * 1.1) * .03;
   built.moving.top.inner.rotation.y = time * 2.2; built.moving.sails.inner.rotation.z = -time * .55;
   built.moving.minute.inner.rotation.z = -time * .1; built.moving.hour.inner.rotation.z = -time * .1 / 12;
@@ -237,7 +239,7 @@ document.addEventListener('visibilitychange', () => sound.pause(document.hidden)
 window.ToyTownNew = {
   sim, scene, camera, renderer, view, season, sound,
   hour: () => sim.hour, setHour(h) { sim.setHour(h); sync(0); renderer.render(scene, camera); },
-  info: () => ({lampsLit: sim.lamps.filter(l => l.on).length, wet: +sim.weather.wet.toFixed(2), season, pixelRatio: renderer.getPixelRatio(), story: sim.story.current && sim.story.current.id, rain: +sim.weather.rain.toFixed(2), calls: renderer.info.render.calls, triangles: renderer.info.render.triangles, residentsOut: sim.residents.filter(r => r.state === 'walking').length, clock: sim.clock}),
+  info: () => ({trainLaps: sim.train.laps, trainStops: sim.train.stopsMade, lampsLit: sim.lamps.filter(l => l.on).length, wet: +sim.weather.wet.toFixed(2), season, pixelRatio: renderer.getPixelRatio(), story: sim.story.current && sim.story.current.id, rain: +sim.weather.rain.toFixed(2), calls: renderer.info.render.calls, triangles: renderer.info.render.triangles, residentsOut: sim.residents.filter(r => r.state === 'walking').length, clock: sim.clock}),
   look(x, z, dist, yaw = 0) { Object.assign(view, {x, z, dist, yaw, tx: x, tz: z, tdist: dist, tyaw: yaw}); placeCamera(); renderer.render(scene, camera); },
   advance(seconds) { for (let t = 0; t < seconds; t += .05) sim.update(.05); sync(0); renderer.render(scene, camera); },
   selected: () => sel, tapAt: (cx, cy) => tap(cx, cy), select,

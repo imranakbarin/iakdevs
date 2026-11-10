@@ -4,28 +4,36 @@ const root = path.join(__dirname, '..'), mod = f => import('file://' + path.join
 (async () => {
   const def = await mod('def.mjs'), G = await mod('graph.mjs'), S = await mod('sim.mjs');
   // the definition is self-consistent
-  const ids = new Set(def.BUILDINGS.map(b => b.id)); assert.equal(ids.size, def.BUILDINGS.length, 'building ids are unique');
+  const ids = new Set(def.BUILDINGS.map(b => b.id)); assert.equal(ids.size, def.BUILDINGS.length, 'building ids are unique'); assert.ok(def.BUILDINGS.length >= 28, 'a good many buildings (' + def.BUILDINGS.length + ')');
   for (const c of def.CAST) { assert.ok(ids.has(c.home), c.id + ' has a real home'); for (const [where, stay] of c.round) { assert.ok(ids.has(where) && def.building(where).door > 0, c.id + ' only visits places with a door (' + where + ')'); assert.ok(stay > 0); } }
+  for (const v of def.VEHICLES) { assert.ok(ids.has(v.home) && def.building(v.home).door > 0, v.id + ' has a garage'); for (const t of v.targets || []) assert.ok(def.building(t).door > 0, v.id + ' only calls where there is a door (' + t + ')'); }
+  for (const line of Object.values(def.BUS_LINES)) for (const t of line) assert.ok(def.building(t).door > 0, 'a bus stop at a door (' + t + ')');
   for (const b of def.BUILDINGS) assert.ok(def.shore(b.x, b.z) < .9 && def.heightAt(b.x, b.z) > 0, b.id + ' stands on dry land');
   assert.ok(Math.abs(def.heightAt(0, 0) - def.heightAt(1.5, 1.5)) < .02, 'the square is flat');
-  assert.ok(def.heightAt(1.9, -8.3) > def.heightAt(0, 0) + 1, 'Windmill Hill is a hill');
-  assert.ok(def.heightAt(14.5, 0) < def.ISLAND.sea, 'beyond the shore the ground is under the sea');
+  assert.ok(def.heightAt(def.HILL.x, def.HILL.z) > def.heightAt(0, 0) + .8, 'Windmill Hill is a hill'); assert.ok(Math.hypot(def.building('mill').x - def.HILL.x, def.building('mill').z - def.HILL.z) < 1.2, 'and the windmill stands on it');
+  assert.ok(def.heightAt(def.ISLAND.rx + 1.5, 0) < def.ISLAND.sea, 'beyond the shore the ground is under the sea');
 
-  // the graph: a ring of four arcs and four spokes, everything connected
+  // the road network: an inner ring, eight spokes and an outer ring road, one connected whole
   const g = G.buildGraph();
-  assert.equal(Object.keys(g.nodes).length, 8); assert.equal(g.edges.length, 8);
+  assert.equal(Object.keys(g.nodes).length, 16); assert.equal(g.edges.length, 24, '8 spokes, 8 arcs of the square, 8 arcs of the ring road'); assert.equal(g.lanes.length, 40, 'a lane each way on two-way roads, one lane clockwise round the square');
   for (const e of g.edges) for (const p of e.line.pts) assert.ok(def.shore(p[0], p[1]) < .93, 'every road is on land (' + e.id + ')');
+  for (const a of g.lanes) for (const b of g.lanes) assert.ok(g.laneRoute(a.id, b.id), 'every lane leads to every other (' + a.id + ' to ' + b.id + ')');
+  for (const e of g.edges) if (!e.oneway) { const f = g.lane(e.id + '+'), r = g.lane(e.id + '-'); let m = Infinity; for (const p of f.line.pts) for (const q of r.line.pts) m = Math.min(m, Math.hypot(p[0] - q[0], p[1] - q[1])); assert.ok(m > .38, 'the two lanes of ' + e.id + ' are a lane-width apart (' + m.toFixed(2) + ')'); }
   const doorIds = def.BUILDINGS.filter(b => b.door).map(b => b.id);
-  for (const b of doorIds) { const d = g.doors[b]; assert.ok(d.dist < 2.6, b + ' is near a road (' + d.dist.toFixed(2) + ')'); }
-  // no building stands on a road, and no two buildings overlap
-  for (const b of def.BUILDINGS) if (b.id !== 'clock') for (const e of g.edges) for (const p of e.line.pts) assert.ok(Math.hypot(p[0] - b.x, p[1] - b.z) > .95, b.id + ' is clear of ' + e.id);
-  for (const a of def.BUILDINGS) for (const b of def.BUILDINGS) if (a.id < b.id) assert.ok(Math.hypot(a.x - b.x, a.z - b.z) > 1.9, a.id + ' and ' + b.id + ' do not overlap');
-  // the layout: houses stand along the streets, squared to them, with their doorsteps on the pavement
-  { const onStreet = def.BUILDINGS.filter(b => b.street); assert.ok(onStreet.length >= 15, 'most buildings stand on a street (' + onStreet.length + ')');
-    for (const b of onStreet) { assert.ok(Math.abs(b.ry / (Math.PI / 2) - Math.round(b.ry / (Math.PI / 2))) < 1e-9, b.id + ' is squared to the grid'); assert.ok(g.doors[b.id].dist < 1.15, b.id + ' has its doorstep by the pavement (' + g.doors[b.id].dist.toFixed(2) + ')'); }
-    const sides = {}; for (const b of onStreet) { const k = b.street + ':' + b.side; (sides[k] = sides[k] || []).push(b.s); }
-    for (const [k, ss] of Object.entries(sides)) { ss.sort((x, y) => x - y); for (let i = 1; i < ss.length; i++) assert.ok(ss[i] - ss[i - 1] >= 2.0, k + ' houses are evenly spaced, not crowded (' + ss.join(',') + ')'); }
-    for (const t of def.TREES) for (const b of def.BUILDINGS) assert.ok(Math.hypot(t[0] - b.x, t[1] - b.z) > 1.3, 'a tree is not on a building'); }
+  for (const b of doorIds) { const d = g.doors[b]; assert.ok(d.dist < 1.9, b + ' is near a road (' + d.dist.toFixed(2) + ')'); }
+  // the layout: nothing on a road or the railway, nothing overlapping, streets lined with houses that face them, with doorsteps on the pavement
+  const loopPts = def.trackPts(300), roadPts = def.allRoadPoints();
+  for (const b of def.BUILDINGS) if (b.id !== 'clock') { for (const p of roadPts) assert.ok(Math.hypot(p[0] - b.x, p[1] - b.z) > b.w * .42 + .59, b.id + ' is clear of the roads'); for (const p of loopPts) assert.ok(Math.hypot(p[0] - b.x, p[1] - b.z) > b.w * .5 + .85, b.id + ' is clear of the railway'); }
+  for (const a of def.BUILDINGS) for (const b of def.BUILDINGS) if (a.id < b.id) assert.ok(Math.hypot(a.x - b.x, a.z - b.z) >= (a.w + b.w) * .45, a.id + ' and ' + b.id + ' do not overlap');
+  { const onStreet = def.BUILDINGS.filter(b => b.street); assert.ok(onStreet.length >= 20, 'most buildings stand along a street (' + onStreet.length + ')');
+    for (const b of onStreet) assert.ok(g.doors[b.id].dist < 1.2, b.id + ' has its doorstep by the pavement (' + g.doors[b.id].dist.toFixed(2) + ')');
+    for (const b of def.BUILDINGS) assert.ok(Math.abs(b.scale - def.BUILD_SCALE) < 1e-9 || b.id === 'clock', 'buildings are drawn at the town scale');
+    for (const t of def.TREES) { for (const b of def.BUILDINGS) assert.ok(Math.hypot(t[0] - b.x, t[1] - b.z) > b.w * .5 + .4, 'a tree is not on a building'); for (const p of roadPts) assert.ok(Math.hypot(t[0] - p[0], t[1] - p[1]) > .8, 'a tree is not on a road'); } }
+  // the railway: a closed loop round the whole town, outside every building and road, with stations on it
+  { const L = g.loop; assert.ok(L.closed && L.length > 85, 'a railway loop (' + L.length.toFixed(1) + ' units)'); for (const r of roadPts) { let d = Infinity; for (const p of L.pts) d = Math.min(d, Math.hypot(p[0] - r[0], p[1] - r[1])); assert.ok(d > 2.0, 'the railway never crosses a road'); }
+    for (const p of L.pts) assert.ok(def.shore(p[0], p[1]) < .9, 'the railway is on land');
+    assert.ok(def.STATIONS.length >= 3, 'more than one station'); const ss = def.STATIONS.map(st => g.loopS(...def.loopPt(st.t))).sort((a, b) => a - b); for (let i = 0; i < ss.length; i++) assert.ok(((ss[(i + 1) % ss.length] - ss[i]) + L.length) % L.length > 10, 'stations are well spaced');
+    assert.ok(def.PIER.x0 < def.PIER.bridge.x && def.PIER.x1 > def.PIER.bridge.x + 1 && def.PIER.bridge.h > .6, 'the harbour pier crosses the railway on a trestle'); }
   // door-to-door walks: start and end on the doorsteps, stay on the pavements, never jump
   let walks = 0;
   for (const a of doorIds) for (const b of doorIds) if (a !== b) {
@@ -38,20 +46,17 @@ const root = path.join(__dirname, '..'), mod = f => import('file://' + path.join
       assert.ok(dmin < def.ROAD.pave + .2, 'the walk keeps to the pavement (' + a + '→' + b + ', ' + dmin.toFixed(2) + ')');
     }
   }
-  assert.ok(walks >= 100);
-  // the vehicles' tour: closed, on the roads, and it never comes near itself except where it is continuous
-  const T = g.tour; assert.ok(T.closed && T.length > 60, 'the tour covers the network (' + T.length.toFixed(1) + ')');
-  let closest = Infinity;
-  for (let i = 0; i < T.pts.length; i += 2) for (let j = i + 2; j < T.pts.length; j += 2) {
-    const sep = Math.min(Math.abs(T.at[i] - T.at[j]), T.length - Math.abs(T.at[i] - T.at[j])); if (sep < 1.2) continue;
-    closest = Math.min(closest, Math.hypot(T.pts[i][0] - T.pts[j][0], T.pts[i][1] - T.pts[j][1]));
-  }
-  assert.ok(closest > .3, 'the lanes of the tour never touch (' + closest.toFixed(2) + ')');
+  assert.ok(walks >= 400);
+  // vehicle routes: from every garage to every doorstep, a smooth line along real lanes
+  for (const v of def.VEHICLES) { const home = g.lanePoint(...Object.values(def.doorOf(def.building(v.home)))); for (const id of doorIds) { const d = def.doorOf(def.building(id)), t = g.lanePoint(d.x, d.z); const lanes = g.laneRoute(home.lane, t.lane); assert.ok(lanes && lanes[0] === home.lane && lanes[lanes.length - 1] === t.lane, v.id + ' can get to ' + id);
+      if (id === doorIds[0]) { const rl = g.routeLine(lanes); assert.ok(rl.line.length > 0 && rl.bounds.length === lanes.length, 'a route has a bound for every lane'); for (let k = 1; k < rl.bounds.length; k++) assert.ok(Math.abs(rl.bounds[k].s0 - rl.bounds[k - 1].s1) < 1e-6, 'bounds follow on'); for (let k = 1; k < rl.line.pts.length; k++) assert.ok(Math.hypot(rl.line.pts[k][0] - rl.line.pts[k - 1][0], rl.line.pts[k][1] - rl.line.pts[k - 1][1]) < .4, 'a route has no jumps'); } } }
 
-  // the simulation: residents appear and vanish only on doorsteps, nobody jumps, vehicles keep apart, the bus stops
+  // the simulation: residents appear and vanish only on doorsteps, nobody jumps, vehicles keep apart and keep moving, the bus stops, the train circles
   const sim = S.createSim(7), doors = Object.values(sim.graph.doors), atDoor = (x, z) => doors.some(d => Math.hypot(d.x - x, d.z - z) < .08);
-  let prev = null, outings = 0, minGap = Infinity, out = 0, samples = 0, nightOut = 0, nightSamples = 0, dayOut = 0, daySamples = 0, popped = 0;
-  const wasParked = new Map(sim.vehicles.map(v => [v.id, v.state === 'parked'])), seen = {};
+  let prev = null, outings = 0, minD = Infinity, out = 0, samples = 0, nightOut = 0, nightSamples = 0, dayOut = 0, daySamples = 0, popped = 0, stillMax = {}, offRoad = 0;
+  const wasParked = new Map(sim.vehicles.map(v => [v.id, v.state === 'parked'])), seen = {}, still = {}, trainAt = {};
+  const homeXY = v => G.along(sim.graph.lane(v.home.lane).line, v.home.s), allEdgePts = g.edges.flatMap(e => e.line.pts);
+  let lastTrainS = sim.train.s, trainJump = 0, lastAt = null;
   for (let i = 0; i < 20 * 1000; i++) {
     sim.update(1 / 20);
     const h = sim.hour, night = h >= 23.5 || h < 5;
@@ -68,24 +73,29 @@ const root = path.join(__dirname, '..'), mod = f => import('file://' + path.join
     const active = sim.vehicles.filter(v => v.state !== 'parked');
     for (const v of sim.vehicles) {   // vehicles come out of and go back into their garage, nowhere else
       const was = wasParked.get(v.id), now = v.state === 'parked';
-      if (was !== now) { const home = def.doorOf(def.building(v.def.home)); if (Math.hypot(v.x - home.x, v.z - home.z) > 2.1) popped++; seen[v.id] = (seen[v.id] || 0) + 1; wasParked.set(v.id, now); }
-      if (v.state !== 'parked') { const o = v.def; const inside = o.onCall || v.state === 'returning' || (o.from <= o.to ? h >= o.from - .3 && h < o.to : true); assert.ok(inside, v.id + ' is only out in its hours, or on its way home (' + h.toFixed(1) + ')'); if (v.state === 'returning') { v.returningFor = (v.returningFor || 0) + 1; assert.ok(v.returningFor < 20 * 150, v.id + ' gets home within a couple of minutes'); } else v.returningFor = 0; }
+      if (was !== now) { const hp = homeXY(v), p = now ? v : v; if (Math.hypot(v.x - hp.x, v.z - hp.z) > .35) popped++; seen[v.id] = (seen[v.id] || 0) + 1; wasParked.set(v.id, now); }
+      if (v.state !== 'parked') { const o = v.def; const inside = o.onCall || v.state === 'returning' || (o.from <= o.to ? h >= o.from - .3 && h < o.to + .45 : true); assert.ok(inside, v.id + ' is only out in its hours, or on its way home (' + h.toFixed(1) + ')'); if (v.state === 'returning') { v.returningFor = (v.returningFor || 0) + 1; assert.ok(v.returningFor < 20 * 150, v.id + ' gets home within a couple of minutes'); } else v.returningFor = 0;
+        still[v.id] = (v.v < .03 && v.wait <= 0 && v.state !== 'parked') ? (still[v.id] || 0) + 1 : 0; stillMax[v.id] = Math.max(stillMax[v.id] || 0, still[v.id]);
+        if (i % 10 === 0) { let d = Infinity; for (const p of allEdgePts) d = Math.min(d, Math.hypot(p[0] - v.x, p[1] - v.z)); if (d > .6) offRoad++; } }
     }
-    for (const a of active) for (const b of active) if (a.id < b.id) {
-      const d = Math.hypot(a.x - b.x, a.z - b.z), fwd = Math.min(((b.s - a.s) % T.length + T.length) % T.length, ((a.s - b.s) % T.length + T.length) % T.length);
-      minGap = Math.min(minGap, fwd);
-      if (d < .7) assert.ok(d > .36, 'two vehicles never touch, even on opposite sides of a turning circle (' + d.toFixed(2) + ')');
-    }
+    for (const a of active) for (const b of active) if (a.id < b.id) minD = Math.min(minD, Math.hypot(a.x - b.x, a.z - b.z));
+    // the train: moves smoothly round the loop and stands at stations
+    const dsT = ((sim.train.s - lastTrainS) % sim.train.length + sim.train.length) % sim.train.length; if (dsT > .2 && dsT < sim.train.length - .2) trainJump++; lastTrainS = sim.train.s;
+    if (sim.train.at && sim.train.at !== lastAt) trainAt[sim.train.at] = (trainAt[sim.train.at] || 0) + 1; lastAt = sim.train.at;
   }
   assert.ok(outings >= 50, 'the cast keeps coming and going (' + outings + ' outings in two days)');
   assert.ok(sim.residents.every(r => r.outings >= 3), 'everybody goes out');
-  assert.ok(out / samples > 1.5 && out / samples < 9, 'a few people are out at any moment (' + (out / samples).toFixed(1) + ')');
+  assert.ok(out / samples > 1.5 && out / samples < 10, 'a few people are out at any moment (' + (out / samples).toFixed(1) + ')');
   assert.ok(nightSamples > 100 && daySamples > 100, 'the run covers day and night');
   assert.ok(nightOut / nightSamples < .12 * dayOut / daySamples, 'nobody is about at night (' + (nightOut / nightSamples).toFixed(2) + ' vs ' + (dayOut / daySamples).toFixed(2) + ')');
   assert.equal(popped, 0, 'vehicles only ever leave and enter by their garage');
-  assert.ok(Object.keys(seen).length >= 5, 'the milk float, tractor, ice-cream van, bus and taxi all took their turn (' + Object.keys(seen).join(',') + ')');
-  assert.ok(minGap > .8, 'vehicles keep a gap along the road (' + minGap.toFixed(2) + ')');
-  assert.ok(sim.vehicles.find(v => v.id === 'bus').stopsMade >= 8, 'the bus serves its stops');
+  assert.ok(Object.keys(seen).length >= 8, 'the buses, taxis, post van, milk float, tractor and ice-cream van all took their turn (' + Object.keys(seen).join(',') + ')');
+  assert.ok(minD > .3, 'vehicles never overlap (closest ' + minD.toFixed(2) + ')');
+  assert.equal(offRoad, 0, 'vehicles stay on the roads');
+  for (const v of sim.vehicles) if (!v.def.onCall) { assert.ok(stillMax[v.id] < 20 * 45, v.id + ' never sits stuck for long (' + (stillMax[v.id] / 20).toFixed(0) + ' s)'); assert.ok(v.stopsMade >= 3 && v.trips >= 1, v.id + ' did its work (' + v.stopsMade + ' stops, ' + v.trips + ' trips)'); }
+  assert.ok(sim.vehicles.find(v => v.id === 'bus').stopsMade >= 12 && sim.vehicles.find(v => v.id === 'bus2').stopsMade >= 8, 'the two buses serve their stops');
+  assert.ok(sim.train.laps >= 5, 'the train circles the whole town (' + sim.train.laps + ' laps in two days)'); assert.equal(trainJump, 0, 'and never jumps');
+  assert.ok(def.STATIONS.every(st => (trainAt[st.id] || 0) >= 4), 'it stops at every station again and again (' + JSON.stringify(trainAt) + ')');
   // small stories and the weather
   const St = await mod('stories.mjs'), W = await mod('weather.mjs');
   const ran = Object.keys(sim.story.count); assert.ok(ran.length >= 8, 'small stories happen, and vary (' + ran.length + ' kinds: ' + ran.join(',') + ')');
@@ -155,13 +165,11 @@ const root = path.join(__dirname, '..'), mod = f => import('file://' + path.join
     assert.ok(maxOut <= 8, 'by day never a crowd of everybody at once (' + maxOut + ')'); assert.ok(chats > 20, 'people stop to say hello (' + chats + ' sampled moments)'); assert.ok(stacked / Math.max(1, pairs) < .02, 'nobody walks through anybody (' + stacked + ' of ' + pairs + ' close pairs)'); assert.ok(outSum / daySamples > 3, 'the streets are alive by day (' + (outSum / daySamples).toFixed(1) + ' out on average)'); }
   sim.setHour(12); sim.dispatchFire(); for (let i = 0; i < 20 * 120; i++) sim.update(1 / 20);
   assert.ok(sim.vehicles.find(v => v.id === 'fire').trips >= 1, 'the fire engine goes out when called and comes back to the station');
-  assert.ok(sim.vehicles.every(v => v.s >= 0 && v.s < T.length));
-  assert.ok(sim.train.trips >= 8, 'the little train shuttles between the platform and the buffers (' + sim.train.trips + ' trips)');
-  assert.ok(sim.train.z > def.TRACK.z0 && sim.train.z < def.TRACK.z1, 'and stays on its track');
-  for (const b of def.BUILDINGS) assert.ok(Math.abs(b.x - def.TRACK.x) > 1.0 || b.z < def.TRACK.z0 - 1 || b.z > def.TRACK.z1 + 1, b.id + ' is clear of the railway');
+  assert.ok(sim.vehicles.every(v => v.state === "parked" || (v.s >= 0 && v.s <= v.route.line.length + 1e-6)), "every vehicle is somewhere on its route");
+  for (const c of [0, 1, 2, 3]) { const q = G.along(sim.graph.loop, sim.train.s - c * sim.train.gap); let d = Infinity; for (const p of sim.graph.loop.pts) d = Math.min(d, Math.hypot(p[0] - q.x, p[1] - q.z)); assert.ok(d < .15, 'every car stands on the rails'); }
   // the page and its modules exist and the old town redirects to it on request
-  for (const f of ['def.mjs', 'graph.mjs', 'sim.mjs', 'build.mjs', 'main.mjs']) assert.ok(fs.existsSync(path.join(root, 'assets/town2', f)), f + ' exists');
+  for (const f of ['def.mjs', 'curve.mjs', 'graph.mjs', 'sim.mjs', 'build.mjs', 'main.mjs']) assert.ok(fs.existsSync(path.join(root, 'assets/town2', f)), f + ' exists');
   const page = fs.readFileSync(path.join(root, 'toy-town-new.html'), 'utf8'); assert.match(page, /assets\/town2\/main\.mjs/);
   assert.match(fs.readFileSync(path.join(root, 'toy-town.html'), 'utf8'), /town=new/, 'toy-town.html?town=new opens the new town');
-  console.log('Toy Town NEW PASS: definition, road graph (' + walks + ' door-to-door walks), tour (' + T.length.toFixed(0) + ' units, lanes ' + closest.toFixed(2) + ' apart), cast (' + outings + ' outings) and vehicles');
+  console.log('Toy Town NEW PASS: definition (' + def.BUILDINGS.length + ' buildings), road network (' + g.lanes.length + ' lanes, ' + walks + ' door-to-door walks), railway loop (' + g.loop.length.toFixed(0) + ' units, ' + sim.train.laps + ' laps in two days), cast (' + outings + ' outings) and vehicles');
 })().catch(e => { console.error(e); process.exit(1); });
