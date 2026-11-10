@@ -1133,3 +1133,12 @@ A `START` does not prohibit parallel edits. Avoid stepping on each other's uncom
 - **Tests**: the logic test checks that stories happen and vary, every errand is by name to a place with a door, headline mapping, forced staging, weather spells, and the sky (night is dim with glow and stars, rain dulls the day). The visual test adds night and rain views inside the budgets (night 62 calls, rain 69, default 64–66; 608 k triangles) and screenshots `new-town-night.png` and `new-town-rain.png`. All Toy Town suites pass.
 - Not verified: phone, touch controls, long-run behaviour of the adaptive resolution. The default town is unchanged; switching is the owner's call.
 
+
+### 2026-11-10 · Claude · START (new storybook town, follow-up 1: tap to inspect)
+- The owner tested merges A–C on a phone: it works. Next: tap a resident, vehicle, animal or building to see its name and what it is doing, with a ring on it, and follow a moving one with the camera until the next drag. Pure wording in `assets/town2/inspect.mjs` (tested in Node); picking and the card in `main.mjs` and the page. Not touching the old town, Mushroom Island or the root `HANDOFF.md`.
+
+### 2026-11-10 · Claude · DONE (new storybook town, follow-up 1: tap to inspect)
+- Tap or click a resident, vehicle, farm animal, the train or a building: a gold ring, a card with its name and what it is doing ("On the way to Mushroom Cottage", "Inside now: Mrs Pott and Mr Sprocket", "Out on a call"), and the camera follows anything that moves until the next drag. Pure wording in `inspect.mjs`; picking is screen-space for movers (phone-sized reach) and a ground ray for buildings.
+- **Tests**: the logic test describes every resident, building and vehicle after two simulated minutes (no `undefined`, a plausible first line); the visual test makes real mouse clicks on a walking resident and on the café and checks the selection and card. Screenshot `new-town-tap.png`. All Toy Town suites pass.
+- Not verified on a real phone (touch taps, the card above the home bar); the tap reach numbers are my estimates.
+

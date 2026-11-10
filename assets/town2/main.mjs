@@ -1,10 +1,11 @@
 // New Toy Town: the page. Renderer, camera and controls, lights, and the loop that moves the cast and vehicles.
 import * as THREE from 'three';
-import {PALETTE as P, ISLAND, CAST, VEHICLES, TRACK, PADDOCK, POND, JETTY, heightAt, rand} from './def.mjs';
+import {PALETTE as P, ISLAND, CAST, VEHICLES, BUILDINGS, TRACK, PADDOCK, POND, JETTY, heightAt, rand} from './def.mjs';
 import {createSim} from './sim.mjs';
 import {buildTown, buildResident, buildVehicle, buildClouds, buildTrain, buildBoat, buildAnimal, buildSky, buildUmbrella, buildRain} from './build.mjs';
 import {skyAt} from './sky.mjs';
 import {newsStory} from './stories.mjs';
+import {describeResident, describeBuilding, describeVehicle, describeAnimal, describeTrain} from './inspect.mjs';
 
 const canvas = document.getElementById('town'), q = new URLSearchParams(location.search);
 const renderer = new THREE.WebGLRenderer({canvas, antialias: true, powerPreference: 'high-performance'});
@@ -58,11 +59,12 @@ function placeCamera() {
   const c = Math.cos(TILT), s = Math.sin(TILT);
   camera.position.set(view.x + Math.sin(view.yaw) * c * view.dist, s * view.dist, view.z + Math.cos(view.yaw) * c * view.dist); camera.lookAt(view.x, .6, view.z);
 }
-const pointers = new Map(); let gesture = null;
-canvas.addEventListener('pointerdown', e => { canvas.setPointerCapture(e.pointerId); pointers.set(e.pointerId, {x: e.clientX, y: e.clientY, button: e.button}); gesture = null; });
+const pointers = new Map(); let gesture = null, follow = null;
+canvas.addEventListener('pointerdown', e => { canvas.setPointerCapture(e.pointerId); pointers.set(e.pointerId, {x: e.clientX, y: e.clientY, button: e.button, x0: e.clientX, y0: e.clientY, t0: performance.now(), moved: 0}); if (pointers.size > 1) for (const p of pointers.values()) p.multi = true; gesture = null; });
 canvas.addEventListener('pointermove', e => {
-  const p = pointers.get(e.pointerId); if (!p) return; const dx = e.clientX - p.x, dy = e.clientY - p.y; p.x = e.clientX; p.y = e.clientY;
+  const p = pointers.get(e.pointerId); if (!p) return; const dx = e.clientX - p.x, dy = e.clientY - p.y; p.x = e.clientX; p.y = e.clientY; p.moved += Math.abs(dx) + Math.abs(dy);
   if (pointers.size === 1) {
+    if (p.moved > 8) follow = null;   // a drag lets go of whatever the camera was following
     if (p.button === 2 || e.shiftKey) { view.tyaw -= dx * .006; return; }
     const k = view.dist * .00135, cs = Math.cos(view.yaw), sn = Math.sin(view.yaw);
     view.tx = clamp(-13, view.tx - (dx * cs + dy * sn * 1.5) * k, 13); view.tz = clamp(-10, view.tz - (-dx * sn + dy * cs * 1.5) * k, 10);
@@ -72,11 +74,71 @@ canvas.addEventListener('pointermove', e => {
     gesture = {d, ang};
   }
 });
-for (const t of ['pointerup', 'pointercancel']) canvas.addEventListener(t, e => { pointers.delete(e.pointerId); gesture = null; });
+for (const t of ['pointerup', 'pointercancel']) canvas.addEventListener(t, e => {
+  const p = pointers.get(e.pointerId); pointers.delete(e.pointerId); gesture = null;
+  if (t === 'pointerup' && p && !p.multi && p.moved < 10 && performance.now() - p.t0 < 600 && p.button !== 2) tap(e.clientX, e.clientY);
+});
 canvas.addEventListener('wheel', e => { e.preventDefault(); view.tdist = clamp(7, view.tdist * Math.exp(e.deltaY * .0012), 64); }, {passive: false});
 canvas.addEventListener('contextmenu', e => e.preventDefault());
 addEventListener('keydown', e => { const k = e.key.toLowerCase(); if (k === 'q') view.tyaw += .3; if (k === 'e') view.tyaw -= .3; if (k === '+' || k === '=') view.tdist = clamp(7, view.tdist * .85, 64); if (k === '-') view.tdist = clamp(7, view.tdist / .85, 64); if (k === '0') { view.tx = 0; view.tz = .4; view.tyaw = 0; fit(); } });
 addEventListener('resize', () => { resize(); });
+
+/* ---- tap to inspect: a resident, vehicle, animal, the train or a building: a ring, a card, and the camera follows what moves ---- */
+const cardEl = document.getElementById('card'), ring = new THREE.Mesh(new THREE.TorusGeometry(.3, .035, 8, 28).rotateX(Math.PI / 2), new THREE.MeshBasicMaterial({color: '#ffd54a', transparent: true, opacity: .95, depthTest: false}));
+ring.renderOrder = 4; ring.visible = false; scene.add(ring);
+const RING = {resident: .8, vehicle: 1.3, animal: .8, train: 1.7, building: 3.4};
+let sel = null, cardAt = 0, cardText = '';
+const critterKind = c => c.k >= 10 ? 'duck' : c.k < 3 ? 'cow' : 'sheep';
+function posOf(o) {
+  if (!o) return null;
+  if (o.kind === 'resident') { const g = people.get(o.id); return g && g.visible ? g.position : null; }
+  if (o.kind === 'vehicle') { const g = cars.get(o.id); return g && g.visible ? g.position : null; }
+  if (o.kind === 'animal') return critters[o.id].g.position;
+  if (o.kind === 'train') return train.position;
+  if (o.kind === 'building') { const b = BUILDINGS.find(x => x.id === o.id); return {x: b.x, y: heightAt(b.x, b.z), z: b.z}; }
+  return null;
+}
+function describe(o) {
+  if (o.kind === 'resident') return describeResident(sim, sim.residents.find(r => r.id === o.id));
+  if (o.kind === 'vehicle') return describeVehicle(sim, sim.vehicles.find(v => v.id === o.id));
+  if (o.kind === 'animal') return describeAnimal(critterKind(critters[o.id]));
+  if (o.kind === 'train') return describeTrain(sim);
+  return describeBuilding(sim, BUILDINGS.find(b => b.id === o.id));
+}
+function select(o) {
+  sel = o; follow = o && o.kind !== 'building' ? o : null; cardAt = 0; cardText = '';
+  const h = document.getElementById('hint'); if (h && o) h.style.opacity = '0';
+  if (!o) { ring.visible = false; if (cardEl) cardEl.classList.remove('on'); return; }
+  ring.scale.setScalar(RING[o.kind]); refreshCard();
+}
+function refreshCard() {
+  if (!sel || !cardEl) return; const d = describe(sel), p = posOf(sel), gone = !p && sel.kind === 'resident';
+  const lines = gone ? [describeResident(sim, sim.residents.find(r => r.id === sel.id)).lines[0]] : d.lines, text = d.title + '|' + lines.join('|');
+  if (text === cardText) return; cardText = text; cardEl.querySelector('b').textContent = d.title; const box = cardEl.querySelector('div'); box.textContent = '';
+  for (const l of lines) { const e = document.createElement('span'); e.textContent = l; box.append(e); }
+  cardEl.classList.add('on');
+}
+const ray = new THREE.Raycaster(), plane = new THREE.Plane(new THREE.Vector3(0, 1, 0), -.5), v3 = new THREE.Vector3();
+function pick(cx, cy) {
+  const r = canvas.getBoundingClientRect(); camera.updateMatrixWorld(); let best = null, bd = 34;
+  const test = (pos, o, reach = bd) => { if (!pos) return; v3.set(pos.x, pos.y + .3, pos.z).project(camera); if (v3.z > 1) return; const d = Math.hypot((v3.x * .5 + .5) * r.width + r.left - cx, (-v3.y * .5 + .5) * r.height + r.top - cy); if (d < bd && d < reach) { bd = d; best = o; } };
+  for (const rs of sim.residents) test(posOf({kind: 'resident', id: rs.id}), {kind: 'resident', id: rs.id});
+  for (const v of sim.vehicles) test(posOf({kind: 'vehicle', id: v.id}), {kind: 'vehicle', id: v.id}, 40);
+  critters.forEach((c, i) => test(c.g.position, {kind: 'animal', id: i}, 26)); test(train.position, {kind: 'train'}, 44);
+  if (best) return best;
+  ray.setFromCamera({x: ((cx - r.left) / r.width) * 2 - 1, y: -((cy - r.top) / r.height) * 2 + 1}, camera);
+  const hit = ray.ray.intersectPlane(plane, v3.clone()); if (!hit) return null; let near = null, nd = 1.5;
+  for (const b of BUILDINGS) { const d = Math.hypot(b.x - hit.x, b.z - hit.z); if (d < nd) { nd = d; near = b; } }
+  return near ? {kind: 'building', id: near.id} : null;
+}
+function tap(cx, cy) { const o = pick(cx, cy); select(o && sel && o.kind === sel.kind && o.id === sel.id && o.kind === 'building' ? null : o); }
+if (cardEl) cardEl.querySelector('button').addEventListener('click', () => select(null));
+function trackSelection(dt) {
+  if (!sel) return; const p = posOf(sel);
+  if (p) { ring.visible = true; ring.position.set(p.x, (p.y || heightAt(p.x, p.z)) + .06, p.z); ring.rotation.y += dt * 1.2; if (follow) { view.tx = clamp(-13, p.x, 13); view.tz = clamp(-10, p.z, 10); } }
+  else { ring.visible = false; follow = null; }
+  if ((cardAt -= dt) <= 0) { cardAt = .4; refreshCard(); }
+}
 
 /* ---- the day's news: each light headline stages one of the small stories, one after another ---- */
 const storyEl = document.getElementById('story'); let headlines = [], newsAt = 40, newsIdx = 0, shown = '';
@@ -127,7 +189,7 @@ function sync(dt) {
   built.moving.minute.inner.rotation.z = -time * .1; built.moving.hour.inner.rotation.z = -time * .1 / 12;
   clouds.rotation.y = time * .012;
   const k = Math.min(1, dt * 6); view.x += (view.tx - view.x) * k; view.z += (view.tz - view.z) * k; view.yaw += (view.tyaw - view.yaw) * k; view.dist += (view.tdist - view.dist) * k;
-  placeCamera(); weatherLight(); news(); caption();
+  trackSelection(dt); placeCamera(); weatherLight(); news(); caption();
 }
 // A phone pass: if frames run slow (under ~24 fps for two seconds) the render resolution steps down, and creeps back up when there is room.
 const maxPR = Math.min(devicePixelRatio || 1, phone ? 1.5 : 2); let slow = 0, fast = 0, spent = 0, frames = 0;
@@ -154,6 +216,8 @@ window.ToyTownNew = {
   info: () => ({pixelRatio: renderer.getPixelRatio(), story: sim.story.current && sim.story.current.id, rain: +sim.weather.rain.toFixed(2), calls: renderer.info.render.calls, triangles: renderer.info.render.triangles, residentsOut: sim.residents.filter(r => r.state === 'walking').length, clock: sim.clock}),
   look(x, z, dist, yaw = 0) { Object.assign(view, {x, z, dist, yaw, tx: x, tz: z, tdist: dist, tyaw: yaw}); placeCamera(); renderer.render(scene, camera); },
   advance(seconds) { for (let t = 0; t < seconds; t += .05) sim.update(.05); sync(0); renderer.render(scene, camera); },
+  selected: () => sel, tapAt: (cx, cy) => tap(cx, cy), select,
+  project(x, z, y = .4) { const r = canvas.getBoundingClientRect(); camera.updateMatrixWorld(); v3.set(x, heightAt(x, z) + y, z).project(camera); return [(v3.x * .5 + .5) * r.width + r.left, (-v3.y * .5 + .5) * r.height + r.top]; },
   setWeather(kind, seconds = 600) { sim.weather.force(kind, seconds); },
   freeze(on = true) { frozen = on; }
 };

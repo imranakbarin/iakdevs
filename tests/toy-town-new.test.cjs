@@ -94,6 +94,13 @@ const root = path.join(__dirname, '..'), mod = f => import('file://' + path.join
   assert.ok(noon.glow < .05 && mid.glow > .95 && mid.stars > .95 && noon.stars < .05, 'windows are lit and stars are out at night only');
   assert.ok(noon.sunI > 2 && mid.sunI < .5 && wetNoon.sunI < noon.sunI * .6 && wetNoon.sky !== noon.sky, 'night is dim, rain dulls the day');
   assert.ok(Sky.skyAt(6.2, 0).sky !== noon.sky && Sky.skyAt(18.4, 0).sky !== noon.sky, 'dawn and dusk have their own colours');
+  // tap-to-inspect wording
+  { const I = await mod('inspect.mjs'), s3 = S.createSim(5); s3.setHour(11); for (let i = 0; i < 20 * 120; i++) s3.update(.05);
+    for (const r of s3.residents) { const d = I.describeResident(s3, r); assert.ok(d.title === r.def.name && d.lines.length >= 2 && d.lines.every(l => typeof l === 'string' && l.length > 3 && !/undefined|\[object/.test(l)), r.id + ' can be described: ' + JSON.stringify(d)); }
+    for (const b of def.BUILDINGS) { const d = I.describeBuilding(s3, b); assert.ok(d.title.length > 3 && d.lines.length >= 1 && d.lines.every(l => !/undefined|\[object/.test(l)), b.id + ' can be described'); }
+    for (const v of s3.vehicles) { const d = I.describeVehicle(s3, v); assert.ok(d.title.length > 3 && d.lines.every(l => !/undefined|\[object/.test(l)), v.id + ' can be described'); }
+    for (const k of ['cow', 'sheep', 'duck']) assert.ok(I.describeAnimal(k).lines.length === 1); assert.ok(I.describeTrain(s3).lines.length === 2);
+    const walker = s3.residents.find(r => r.state === 'walking'); if (walker) assert.match(I.describeResident(s3, walker).lines[0], /^(On the way to|Off on an errand to) /); }
   sim.setHour(12); sim.dispatchFire(); for (let i = 0; i < 20 * 120; i++) sim.update(1 / 20);
   assert.ok(sim.vehicles.find(v => v.id === 'fire').trips >= 1, 'the fire engine goes out when called and comes back to the station');
   assert.ok(sim.vehicles.every(v => v.s >= 0 && v.s < T.length));
