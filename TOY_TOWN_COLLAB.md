@@ -1237,3 +1237,10 @@ A `START` does not prohibit parallel edits. Avoid stepping on each other's uncom
 - **Side effects I had to handle**: the pier is walkable (tests allow walkers there), Finn is no longer a general carrier so he keeps fishing, first-morning starts are staggered by `i % 13` (late cast members used to leave around 10:00), crowded-scene draw calls rose to about 120 (budget raised to 135), and a few simulation thresholds moved (outings, rides) because the cast grew.
 - **Not verified**: a real phone; the fishermen's rod is small at the default zoom; the amount of fish and coins is a guess.
 
+### 2026-11-10 · Claude · DONE (new storybook town, follow-up 12: fewer draw calls, the town paper and journals)
+- **Request (owner)**: "2 and 3": cut the draw calls, and a town hall with the story of the town.
+- **Draw calls**: umbrellas are now one instanced mesh (a rainy crowd cost one draw plus one shadow draw per person before) and figures and vehicles do not cast shadows when the camera is far. Rain at noon 106 to 75 calls, clear noon 81 to 66 (with more people out). I did not merge the figures themselves (each has its own hat and coat colours), so a crowd still costs about one call per walker.
+- **The paper**: a ledger of counters per day and an edition for today or yesterday ("The Toy Town Times": weather, the harbour, goods and travel, the market, stories told, new friendships, the mood of the town, tomorrow). **Journals**: each resident keeps the last 40 things they did, opened from a Journal button on their card. Both share one panel, finger-sized, no overlaps on the phone emulation.
+- **Tests**: edition formatting, headline choice, the ledger only grows, yesterday is empty on the first morning, journals have no doubled entries and most people have three or more; visual: the paper opens by finger on the phone and clears the other buttons, a journal opens for Finn.
+- **Not verified**: a real phone (the call counts are from the headless renderer); the wording of the paper.
+

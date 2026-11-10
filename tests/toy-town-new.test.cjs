@@ -251,6 +251,19 @@ const root = path.join(__dirname, '..'), mod = f => import('file://' + path.join
     const sw = S.createSim(5, {weekday: 0}); for (let i = 0; i < 20 * 480 * 7; i++) sw.update(.05); const told = new Set(Object.keys(sw.story.count).map(id => (St.STORIES.find(x => x.id === id) || {}).star).filter(Boolean));
     assert.ok(told.size >= 14, 'in a week at least fourteen people have had a story of their own told (' + told.size + ')');
     const cardF = (await mod('inspect.mjs')).describeResident(sw, sw.residents.find(r => r.id === 'finn')).lines; assert.ok(cardF.some(l => /^Job: Fisherman/.test(l)) && cardF.some(l => /^(Stories told|Their story)/.test(l)), 'the card shows the job and the stories: ' + cardF.join(' | ')); }
+  // the town paper and the journals
+  { const Pp = await mod('paper.mjs');
+    assert.equal(Pp.clockText(9.5), '09:30'); assert.equal(Pp.clockText(23.999), '00:00');
+    const zero = {delivered: 0, ridden: 0, fishCaught: 0, fishSold: 0, coins: 0, marketVisits: 0, rain: 0, friends: 0, stories: 0, mood: .7};
+    const quiet = Pp.edition({dayName: 'Monday', start: zero, end: zero, titles: [], tomorrow: {dayName: 'Tuesday', weekend: false}}); assert.equal(quiet.headline, 'A quiet day in Toy Town'); assert.ok(quiet.items.some(l => /^Weather: Dry all day/.test(l)) && quiet.items.some(l => /school as usual/.test(l)));
+    const busy = Pp.edition({dayName: 'Sunday', start: zero, end: {...zero, fishCaught: 6, fishSold: 5, coins: 10, delivered: 7, ridden: 2, marketVisits: 9, rain: 100, friends: 1, mood: .9}, titles: ['A', 'B', 'C', 'D', 'E', 'F'], marketName: 'Sunday market', tomorrow: {dayName: 'Monday', market: null, weekend: false}});
+    assert.match(busy.headline, /Fish fever: 10 coins/); assert.ok(busy.items.some(l => /5 sold in town for 10 coins/.test(l)) && busy.items.some(l => /and 2 more/.test(l)) && busy.items.some(l => /1 pair of neighbours/.test(l)) && busy.items.some(l => /cheerful/.test(l)), 'the busy day is reported: ' + busy.items.join(' | '));
+    assert.equal(Pp.journalLines([{h: 8, text: 'a'}, {h: 9.5, text: 'b'}], 1)[0], '09:30  b', 'journal lines carry the hour');
+    const sj = S.createSim(7); assert.equal(sj.paper('yesterday'), null, 'no yesterday on the first morning'); for (let i = 0; i < 20 * 480 * 2 + 40; i++) sj.update(.05);
+    const y = sj.paper('yesterday'), t = sj.paper('today'); assert.ok(y && y.which === 'yesterday' && y.date === 'Tuesday' && t.date === 'Wednesday', 'yesterday and today are named by their day (' + (y && y.date) + ', ' + t.date + ')'); assert.ok(y.items.length >= 4 && y.headline.length > 5, 'an edition has news: ' + y.items.join(' | '));
+    assert.ok(sj.days.length === 3 && sj.days.every((d, i) => i === 0 || d.delivered >= sj.days[i - 1].delivered && d.stories >= sj.days[i - 1].stories), 'the ledger only grows');
+    const jr = sj.residents.map(r => r.journal.length); assert.ok(jr.every(n => n <= 40) && jr.filter(n => n >= 3).length >= 20, 'most people have a journal of their day (' + jr + ')'); for (const r of sj.residents) for (let i = 1; i < r.journal.length; i++) assert.notEqual(r.journal[i].text, r.journal[i - 1].text, r.id + ': no doubled entry');
+    const fin = sj.residents.find(r => r.id === 'finn'), fj = fin.journal.map(e => e.text).join(' | '); assert.ok(fin.journal.length >= 2, 'Finn has a journal: ' + fj); }
   // a jump in time never strands anybody: whatever the lamplighter was doing, the sim keeps running and he starts afresh
   { for (const h0 of [6, 12, 19.6]) for (const h of [9, 19, 23, 5]) { const sj = S.createSim(7); for (let i = 0; i < 40; i++) sj.update(.05); sj.setHour(h0); for (let i = 0; i < 100; i++) sj.update(.05); sj.setHour(h);
       for (let i = 0; i < 20 * 30; i++) { sj.update(.05); for (const r of sj.residents) if (r.state === 'walking') assert.ok(r.route || r.lampWait > 0, r.id + ' walking without a route after a jump to ' + h); } } }
