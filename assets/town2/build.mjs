@@ -31,9 +31,12 @@ export class Bag {
   add(geo, colour, o = {}) {
     const g = geo.clone(), m = new THREE.Matrix4().compose(new THREE.Vector3(o.x || 0, o.y || 0, o.z || 0), new THREE.Quaternion().setFromEuler(new THREE.Euler(o.rx || 0, o.ry || 0, o.rz || 0, 'YXZ')), new THREE.Vector3(o.sx ?? o.s ?? 1, o.sy ?? o.s ?? 1, o.sz ?? o.s ?? 1));
     g.applyMatrix4(this.top.clone().multiply(m));
-    const c = col(colour), n = g.attributes.position.count, a = new Float32Array(n * 3);
-    for (let i = 0; i < n; i++) { a[i * 3] = c.r; a[i * 3 + 1] = c.g; a[i * 3 + 2] = c.b; }
-    g.setAttribute('color', new THREE.BufferAttribute(a, 3)); (o.glow ? this.glowParts : this.parts).push(g); return this;
+    const c = col(colour), n = g.attributes.position.count, a = new Float32Array(n * 3), P = g.attributes.position, N = g.attributes.normal, base = this.top.elements[13];
+    for (let i = 0; i < n; i++) {   // baked shading: walls and undersides are a little darker down at the ground, where light is blocked (no cost at run time)
+      let k = 1; if (!o.glow && !o.flat && N) { const ny = N.getY(i), h = P.getY(i) - base; if (ny < .7) k = .8 + .2 * Math.min(1, Math.max(0, h / .55)); if (ny < -.35) k *= .9; }
+      a[i * 3] = c.r * k; a[i * 3 + 1] = c.g * k; a[i * 3 + 2] = c.b * k;
+    }
+    g.setAttribute('color', new THREE.BufferAttribute(a, 3)); g.setAttribute('sway', new THREE.BufferAttribute(new Float32Array(n).fill(o.sway || 0), 1)); (o.glow ? this.glowParts : this.parts).push(g); return this;
   }
   // a rounded box standing on y (its base at o.y unless o.centre)
   box(w, h, d, colour, o = {}) {
@@ -54,10 +57,37 @@ export class Bag {
   tube(points, r, colour, o = {}) { const curve = new THREE.CatmullRomCurve3(points.map(p => new THREE.Vector3(...p))); let g = new THREE.TubeGeometry(curve, 24, r, 10, false); g = g.toNonIndexed(); g.deleteAttribute('uv'); return this.add(g, colour, o); }
   // the lit panes and lanterns, gathered apart so they can be switched on at dusk
   glowMesh(material) { if (!this.glowParts.length) return null; const g = mergeGeometries(this.glowParts, false); g.computeBoundingSphere(); this.glowParts = []; return new THREE.Mesh(g, material); }
-  mesh(material) { const g = mergeGeometries(this.parts, false); g.computeBoundingSphere(); const m = new THREE.Mesh(g, material); this.parts = []; return m; }
+  mesh(material) { for (const p of this.parts) if (!p.attributes.sway) p.setAttribute('sway', new THREE.BufferAttribute(new Float32Array(p.attributes.position.count), 1)); const g = mergeGeometries(this.parts, false); g.computeBoundingSphere(); const m = new THREE.Mesh(g, material); this.parts = []; return m; }
 }
 const WARM = '#ffcf70';
-export const toyMaterial = () => new THREE.MeshLambertMaterial({vertexColors: true});
+// Shared shader inputs: time, the wind, and how much of each effect the current picture quality allows (see quality.mjs).
+export const U = {time: {value: 0}, wind: {value: new THREE.Vector2(.8, .3)}, sway: {value: 1}, waves: {value: 1}, foam: {value: 1}};
+// Foliage leans and flutters in the wind: a per-vertex `sway` weight (0 for everything that stands still) moves the vertex along the wind.
+const WIND_VERT = 'float ph = uTime * 1.7 + position.x * .8 + position.z * .6; vec2 wd = uWind * (.6 + .4 * sin(ph)) + vec2(-uWind.y, uWind.x) * .25 * sin(ph * 1.7 + 1.3); transformed.xz += wd * sway * uSway * .035;';
+export function windify(mat) {
+  mat.onBeforeCompile = sh => {
+    sh.uniforms.uTime = U.time; sh.uniforms.uWind = U.wind; sh.uniforms.uSway = U.sway;
+    sh.vertexShader = sh.vertexShader.replace('#include <common>', '#include <common>\nattribute float sway; uniform float uTime, uSway; uniform vec2 uWind;').replace('#include <begin_vertex>', '#include <begin_vertex>\n{ ' + WIND_VERT + ' }');
+  };
+  mat.customProgramCacheKey = () => 'toywind1'; return mat;
+}
+// The sea: slow swells that darken and lighten the water, little glints, and (on the shallows) foam along the shore and a pulsing ring further out.
+const SHORE_GLSL = `float shoreAt(vec2 p) { float a = atan(p.y, p.x); return length(p / vec2(${ISLAND.rx.toFixed(2)}, ${ISLAND.rz.toFixed(2)})) + .028 * sin(a * 5. + .6) + .018 * sin(a * 9. - 1.1); }`;
+const WAVE_FRAG = `float w1 = sin(vW.x * 1.3 + uTime * .7 + sin(vW.y * .9 + uTime * .3) * 1.5), w2 = sin(vW.y * 1.7 - uTime * .9 + sin(vW.x * 1.1) * 1.2);
+  float glint = smoothstep(.86, 1., sin(vW.x * 1.7 + vW.y * 1.3 + uTime * 1.1) * sin(vW.x * 1.3 - vW.y * 2.1 - uTime * .9));
+  diffuseColor.rgb *= 1. + uWaves * .06 * w1 * w2; diffuseColor.rgb += uWaves * glint * .06;`;
+const FOAM_FRAG = `float sh = shoreAt(vW), ang = atan(vW.y, vW.x), edge = .952 + .012 * sin(uTime * .9 + ang * 6.) + .006 * sin(uTime * 1.7 + ang * 13.);
+  float f1 = smoothstep(edge + .012, edge - .012, sh) * smoothstep(.895, .915, sh) * .85, f2 = (1. - smoothstep(0., .008, abs(sh - (.985 + .02 * sin(uTime * .8))))) * .45;
+  float foam = clamp(f1 + f2 * (1. - f1), 0., 1.) * uFoam; diffuseColor.rgb = mix(diffuseColor.rgb, vec3(1.), foam * .9); diffuseColor.a = max(diffuseColor.a, foam * .85);`;
+export function waterify(mat, foam) {
+  mat.onBeforeCompile = sh => {
+    sh.uniforms.uTime = U.time; sh.uniforms.uWaves = U.waves; sh.uniforms.uFoam = U.foam;
+    sh.vertexShader = sh.vertexShader.replace('#include <common>', '#include <common>\nvarying vec2 vW;').replace('#include <begin_vertex>', '#include <begin_vertex>\nvW = (modelMatrix * vec4(transformed, 1.)).xz;');
+    sh.fragmentShader = sh.fragmentShader.replace('#include <common>', '#include <common>\nvarying vec2 vW; uniform float uTime, uWaves, uFoam;\n' + SHORE_GLSL).replace('#include <color_fragment>', '#include <color_fragment>\n{ ' + WAVE_FRAG + (foam ? FOAM_FRAG : '') + ' }');
+  };
+  mat.customProgramCacheKey = () => foam ? 'toyfoam1' : 'toywave1'; return mat;
+}
+export const toyMaterial = () => windify(new THREE.MeshLambertMaterial({vertexColors: true}));
 
 /* ---------------- common pieces ---------------- */
 // A front door with a rounded top, a white frame, a knob and a step. The doorway stands at local (x, 0, z) facing +z.
@@ -272,18 +302,51 @@ const BUILD = {
 function lampSmall(b, x, z) { b.cyl(.02, .025, .5, 'slate', {x, z, seg: 6}); b.box(.1, .13, .1, '#fff4c4', {x, y: .5, z, r: .03}); b.sph(.09, WARM, {x, y: .56, z, seg: 8, glow: true}); b.cone(.1, .08, 'slate', {x, y: .63, z, seg: 4, ry: Math.PI / 4}); }
 
 /* ---------------- ground, roads, scenery ---------------- */
-function terrain() {
-  const W = 46, D = 38, nx = 138, nz = 114, g = new THREE.PlaneGeometry(W, D, nx, nz); g.rotateX(-Math.PI / 2);
-  const pos = g.attributes.position, c = new Float32Array(pos.count * 3), grass = col('grass'), dark = col('grassDark'), sand = col('sand'), deep = new THREE.Color('#e9d49a'), t = new THREE.Color();
+// A coarse grid over some points, so "how far is the nearest road" is cheap to ask.
+function pointGrid(pts, cell = 1.2) {
+  const m = new Map(); for (const p of pts) { const k = Math.floor(p[0] / cell) + ',' + Math.floor(p[1] / cell); if (!m.has(k)) m.set(k, []); m.get(k).push(p); }
+  return {near(x, z, r) { let d = Infinity; const c = Math.ceil(r / cell), cx = Math.floor(x / cell), cz = Math.floor(z / cell); for (let i = -c; i <= c; i++) for (let j = -c; j <= c; j++) { const a = m.get((cx + i) + ',' + (cz + j)); if (a) for (const p of a) d = Math.min(d, Math.hypot(p[0] - x, p[1] - z)); } return d; }};
+}
+const hash2 = (x, z) => { const h = Math.sin(x * 127.1 + z * 311.7) * 43758.5453; return h - Math.floor(h); };
+function vnoise(x, z) { const xi = Math.floor(x), zi = Math.floor(z), fx = x - xi, fz = z - zi, u = fx * fx * (3 - 2 * fx), v = fz * fz * (3 - 2 * fz); return (hash2(xi, zi) * (1 - u) + hash2(xi + 1, zi) * u) * (1 - v) + (hash2(xi, zi + 1) * (1 - u) + hash2(xi + 1, zi + 1) * u) * v; }
+function roadGrid(graph) { return pointGrid([...graph.edges.flatMap(e => e.line.pts), ...graph.loop.pts]); }
+function terrain(graph) {
+  const W = 46, D = 38, nx = 138, nz = 114, g = new THREE.PlaneGeometry(W, D, nx, nz); g.rotateX(-Math.PI / 2); const roads = roadGrid(graph);
+  const pos = g.attributes.position, c = new Float32Array(pos.count * 3), grass = col('grass'), dark = col('grassDark'), sand = col('sand'), deep = new THREE.Color('#e9d49a'), hill = new THREE.Color('#a9dd7a'), soil = new THREE.Color('#b99a68'), patch = grass.clone().lerp(new THREE.Color('#d6df72'), .55), t = new THREE.Color();
   for (let i = 0; i < pos.count; i++) {
     const x = pos.getX(i), z = pos.getZ(i), h = heightAt(x, z), s = shore(x, z); pos.setY(i, h);
     const n = .5 + .5 * Math.sin(x * 1.7 + Math.sin(z * 1.3) * 1.4) * Math.cos(z * 1.9 - x * .6);
-    t.copy(grass).lerp(dark, n * .55); if (h > .7) t.lerp(new THREE.Color('#a9dd7a'), Math.min(1, (h - .7) * .8));
+    t.copy(grass).lerp(dark, n * .55); if (h > .7) t.lerp(hill, Math.min(1, (h - .7) * .8));
+    if (s < .9) {   // the lawn: big soft patches of lighter and darker grass and some dry yellowish ones, and bare soil just outside the pavements
+      const v = vnoise(x * .45, z * .45) * .6 + vnoise(x * 1.6, z * 1.6) * .4; t.offsetHSL(0, 0, (v - .5) * .09);
+      const dry = Math.max(0, vnoise(x * .3 + 9, z * .3 - 4) - .6) / .4; t.lerp(patch, dry * .35);
+      const d = roads.near(x, z, 1.6); if (d < 1.5) t.lerp(soil, (1 - Math.min(1, Math.max(0, (d - .88) / .5))) * .55 * (1 - Math.min(1, Math.max(0, (s - .8) / .1))));
+    }
     if (s > .9) t.lerp(sand, Math.min(1, (s - .9) / .035)); if (s > .97) t.lerp(deep, Math.min(1, (s - .97) / .05));
     c[i * 3] = t.r; c[i * 3 + 1] = t.g; c[i * 3 + 2] = t.b;
   }
   g.setAttribute('color', new THREE.BufferAttribute(c, 3)); g.computeVertexNormals();
   const m = new THREE.Mesh(g, new THREE.MeshLambertMaterial({vertexColors: true})); m.receiveShadow = true; return m;
+}
+// Tufts of grass scattered over the lawns: one instanced mesh that sways in the wind. `show(n)` shows the first n (the picture quality decides how many).
+export function buildTufts(graph, max = 2400) {
+  const blade = (rot, lean) => new THREE.ConeGeometry(.022, .11, 4).translate(0, .055, 0).rotateZ(lean).rotateY(rot), geo = mergeGeometries([blade(0, .12), blade(2.1, -.1), blade(4.2, .16)].map(g => g.toNonIndexed()), false);
+  const mat = new THREE.MeshLambertMaterial({color: '#ffffff'});
+  mat.onBeforeCompile = sh => {
+    sh.uniforms.uTime = U.time; sh.uniforms.uWind = U.wind; sh.uniforms.uSway = U.sway;
+    sh.vertexShader = sh.vertexShader.replace('#include <common>', '#include <common>\nuniform float uTime, uSway; uniform vec2 uWind;').replace('#include <begin_vertex>', '#include <begin_vertex>\n{ float ph = uTime * 2.1 + instanceMatrix[3].x * 1.3 + instanceMatrix[3].z * 1.1; transformed.xz += (uWind * (.6 + .4 * sin(ph)) * (.4 + uSway)) * position.y * .9; }');
+  };
+  mat.customProgramCacheKey = () => 'toytuft1';
+  const mesh = new THREE.InstancedMesh(geo, mat, max), roads = roadGrid(graph), m = new THREE.Matrix4(), q = new THREE.Quaternion(), e = new THREE.Euler(), v = new THREE.Vector3(), sc = new THREE.Vector3(), c = new THREE.Color(), light = col('grass'), dark = col('grassDark');
+  const loopGrid = pointGrid(graph.loop.pts); let n = 0;
+  for (let k = 0; n < max && k < max * 6; k++) {
+    const x = (rand(k * 5 + 11) - .5) * 40, z = (rand(k * 5 + 12) - .5) * 33;
+    if (shore(x, z) > .84 || roads.near(x, z, 1.3) < 1.05 || loopGrid.near(x, z, 1.8) < 1.5 || Math.hypot(x - POND.x, z - POND.z) < POND.r + .9 || (x > PADDOCK.x0 - .4 && x < PADDOCK.x1 + .4 && z > PADDOCK.z0 - .4 && z < PADDOCK.z1 + .4) || (x > PIER.x0 - 1 && Math.abs(z - PIER.z) < 1.2)) continue;
+    if (BUILDINGS.some(b => Math.hypot(b.x - x, b.z - z) < b.w * .5 + .55)) continue;
+    const s = .8 + rand(k * 5 + 13) * .5; mesh.setMatrixAt(n, m.compose(v.set(x, heightAt(x, z) - .01, z), q.setFromEuler(e.set(0, rand(k * 5 + 14) * TAU, 0)), sc.set(s, s * (.8 + rand(k * 5 + 15) * .5), s)));
+    mesh.setColorAt(n, c.copy(light).lerp(dark, rand(k * 5 + 16) * .6).offsetHSL(0, 0, -.02 + rand(k * 5 + 17) * .07)); n++;
+  }
+  mesh.userData.total = n; mesh.count = n; mesh.frustumCulled = false; mesh.userData.show = k => { mesh.count = Math.min(n, Math.max(0, k | 0)); mesh.visible = mesh.count > 0; }; return mesh;
 }
 // A flat ribbon following a sampled line between two offsets from its centre, draped on the ground.
 function ribbon(parts, L, from, to, colour, lift, s0 = 0, s1 = L.length, step = .22) {
@@ -328,10 +391,10 @@ function roads(bag, graph) {
 }
 function tree(b, kind, seed) {
   const r = k => rand(seed * 13 + k);
-  if (kind === 'bush') { for (let k = 0; k < 3; k++) b.sph(.3 - k * .04, k % 2 ? 'leaf' : 'leafLight', {x: (r(k) - .5) * .4, y: .2 + k * .05, z: (r(k + 5) - .5) * .4, sy: .8, seg: 10}); for (let k = 0; k < 4; k++) b.sph(.05, ['pink', 'white', 'yellow', 'red'][k], {x: (r(k + 9) - .5) * .5, y: .38 + r(k) * .1, z: (r(k + 12) - .5) * .5, seg: 6}); return; }
-  if (kind === 'tall') { b.cyl(.08, .11, .5, 'brown', {seg: 8}); [[.42, .62, 'leaf'], [.34, 1.08, SEASONAL.blossom ? lighten('leaf', .14) : 'leafLight'], [.24, 1.46, 'leaf']].forEach(([s, y, c]) => b.sph(s, c, {y, sy: 1.15, seg: 12})); return; }
+  if (kind === 'bush') { for (let k = 0; k < 3; k++) b.sph(.3 - k * .04, k % 2 ? 'leaf' : 'leafLight', {x: (r(k) - .5) * .4, y: .2 + k * .05, z: (r(k + 5) - .5) * .4, sy: .8, seg: 10, sway: .3}); for (let k = 0; k < 4; k++) b.sph(.05, ['pink', 'white', 'yellow', 'red'][k], {x: (r(k + 9) - .5) * .5, y: .38 + r(k) * .1, z: (r(k + 12) - .5) * .5, seg: 6}); return; }
+  if (kind === 'tall') { b.cyl(.08, .11, .5, 'brown', {seg: 8}); [[.42, .62, 'leaf', .4], [.34, 1.08, SEASONAL.blossom ? lighten('leaf', .14) : 'leafLight', .7], [.24, 1.46, 'leaf', 1]].forEach(([s, y, c, w]) => b.sph(s, c, {y, sy: 1.15, seg: 12, sway: w})); return; }
   b.cyl(.1, .14, .62, 'brown', {seg: 8}); const deep = SEASONAL.blossom ? 'blossom' : 'leaf';   // (in spring the whole crown is blossom, not pink with a green cap)
-  b.sph(.62, 'leafLight', {y: 1.0, seg: 18}); b.sph(.45, deep, {x: .34, y: .84, z: .12, seg: 16}); b.sph(.42, lighten('leafLight', .12), {x: -.3, y: 1.1, z: -.1, seg: 16}); b.sph(.36, deep, {x: .05, y: 1.4, z: .1, seg: 14});
+  b.sph(.62, 'leafLight', {y: 1.0, seg: 18, sway: .6}); b.sph(.45, deep, {x: .34, y: .84, z: .12, seg: 16, sway: .5}); b.sph(.42, lighten('leafLight', .12), {x: -.3, y: 1.1, z: -.1, seg: 16, sway: .8}); b.sph(.36, deep, {x: .05, y: 1.4, z: .1, seg: 14, sway: 1});
   if (kind === 'apple') for (let k = 0; k < 9; k++) { const a = r(k) * TAU, v = r(k + 20) * 1.1 - .2; b.sph(.065, 'red', {x: Math.cos(a) * Math.cos(v) * .6, y: 1.0 + Math.sin(v) * .6, z: Math.sin(a) * Math.cos(v) * .6, seg: 8}); }
 }
 function scenery(bag, graph) {
@@ -423,17 +486,17 @@ export function buildTown(graph, season = 'summer') {
   for (const def of BUILDINGS) { const local = {}; bag.push(def.x, heightAt(def.x, def.z), def.z, def.ry, def.scale || 1); BUILD[def.type](bag, def, local); bag.pop(); for (const k in local) anim[k] = {...local[k], def}; }
   const town = bag.mesh(material); town.castShadow = true; town.receiveShadow = true;
   const glow = bag.glowMesh(new THREE.MeshBasicMaterial({vertexColors: true, transparent: true, opacity: 0, depthWrite: false, fog: false})); glow.visible = false; glow.renderOrder = 2;
-  const ground = terrain();
+  const ground = terrain(graph);
   // shallows: a band of lighter water that fades out from the coast, so the island does not sit on a flat plane
   const shallows = (() => {
-    const A = 96, R = [0.0, 1.0, 1.07, 1.2, 1.4], alpha = [0, .9, .7, .32, 0], pos = [], colr = [], idx = [];
+    const A = 96, R = [0.0, .88, 1.0, 1.12, 1.35], alpha = [0, .6, .45, .22, 0], pos = [], colr = [], idx = [];
     const radiusFor = (a, target) => { let lo = .3, hi = 2.2; for (let i = 0; i < 28; i++) { const m = (lo + hi) / 2; if (shore(Math.cos(a) * ISLAND.rx * m, Math.sin(a) * ISLAND.rz * m) < target) lo = m; else hi = m; } return (lo + hi) / 2; };
     for (let i = 0; i <= A; i++) { const a = i / A * TAU; for (let j = 1; j < R.length; j++) { const m = radiusFor(a, R[j] + (j === 1 ? .0 : 0)); pos.push(Math.cos(a) * ISLAND.rx * m, 0, Math.sin(a) * ISLAND.rz * m); colr.push(1, 1, 1, alpha[j]); } }
-    const n = R.length - 1; for (let i = 0; i < A; i++) for (let j = 0; j < n - 1; j++) { const a = i * n + j, b2 = a + 1, c = a + n, d = c + 1; idx.push(a, b2, c, b2, d, c); }
-    const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); g.setAttribute('color', new THREE.Float32BufferAttribute(colr, 4)); g.setIndex(idx);
-    const m = new THREE.Mesh(g, new THREE.MeshLambertMaterial({vertexColors: true, transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -1, color: '#9fe6e6'})); m.position.y = ISLAND.sea + .02; m.renderOrder = 1; return m;
+    const n = R.length - 1; for (let i = 0; i < A; i++) for (let j = 0; j < n - 1; j++) { const a = i * n + j, b2 = a + 1, c = a + n, d = c + 1; idx.push(a, c, b2, b2, c, d); }   // (wound so it faces up)
+    const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); g.setAttribute('color', new THREE.Float32BufferAttribute(colr, 4)); g.setAttribute('normal', new THREE.Float32BufferAttribute(Array.from({length: pos.length / 3}, () => [0, 1, 0]).flat(), 3)); g.setIndex(idx);
+    const m = new THREE.Mesh(g, waterify(new THREE.MeshLambertMaterial({vertexColors: true, transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -1, color: '#9fe6e6'}), true)); m.position.y = ISLAND.sea + .02; m.renderOrder = 1; return m;
   })();
-  const sea = new THREE.Mesh(new THREE.PlaneGeometry(240, 240).rotateX(-Math.PI / 2), new THREE.MeshLambertMaterial({color: P.sea})); sea.position.y = ISLAND.sea;
+  const sea = new THREE.Mesh(new THREE.PlaneGeometry(240, 240).rotateX(-Math.PI / 2), waterify(new THREE.MeshLambertMaterial({color: P.sea}), false)); sea.position.y = ISLAND.sea;
   // moving parts
   const place = (mesh, a, x = 0, y = 0, z = 0) => { const d = a.def, m = new THREE.Matrix4().compose(new THREE.Vector3(d.x, heightAt(d.x, d.z), d.z), new THREE.Quaternion().setFromEuler(new THREE.Euler(0, d.ry, 0)), new THREE.Vector3(d.scale || 1, d.scale || 1, d.scale || 1)); const g = new THREE.Group(); g.applyMatrix4(m); const inner = new THREE.Group(); inner.position.set(x, y, z); inner.add(mesh); g.add(inner); mesh.castShadow = true; return {group: g, inner}; };
   const moving = {};
@@ -582,6 +645,14 @@ export function buildRain() {
   return lines;
 }
 // Stars and a little moon on a far dome that follows the camera: two draw calls, shown only at night.
+// A sky that shades from the horizon (the colour of the haze, so the sea melts into it) up to a deeper blue, with a warm glow round the sun when it is low.
+export function buildSkyDome() {
+  const u = {uBottom: {value: new THREE.Color('#bfe9fb')}, uTop: {value: new THREE.Color('#6fb8ee')}, uSun: {value: new THREE.Vector3(0, 1, 0)}, uGlow: {value: 0}, uGlowColor: {value: new THREE.Color('#ffb070')}};
+  const m = new THREE.ShaderMaterial({uniforms: u, side: THREE.BackSide, depthWrite: false, depthTest: false, fog: false,
+    vertexShader: 'varying vec3 vDir; void main() { vDir = position; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.); }',
+    fragmentShader: 'varying vec3 vDir; uniform vec3 uBottom, uTop, uSun, uGlowColor; uniform float uGlow; void main() { vec3 d = normalize(vDir); float h = clamp(d.y * 1.6, 0., 1.); vec3 c = mix(uBottom, uTop, pow(h, .7)); float s = max(dot(d, normalize(uSun)), 0.); c += uGlowColor * uGlow * (pow(s, 6.) * .35 + pow(s, 40.) * .5); gl_FragColor = vec4(c, 1.); }'});
+  const mesh = new THREE.Mesh(new THREE.SphereGeometry(300, 24, 12), m); mesh.renderOrder = -10; mesh.frustumCulled = false; mesh.userData.u = u; return mesh;
+}
 export function buildSky() {
   const g = new THREE.Group(), n = 150, pos = new Float32Array(n * 3);
   for (let k = 0; k < n; k++) { const a = rand(k * 3 + 1) * TAU, e = .15 + rand(k * 3 + 2) * 1.1, r = 120; pos[k * 3] = Math.cos(a) * Math.cos(e) * r; pos[k * 3 + 1] = Math.sin(e) * r; pos[k * 3 + 2] = Math.sin(a) * Math.cos(e) * r; }
@@ -611,12 +682,12 @@ export function buildFall(season = 'summer') {
   const geo = new THREE.BufferGeometry(); geo.setAttribute('position', new THREE.BufferAttribute(pos, 3).setUsage(THREE.DynamicDrawUsage));
   const mat = new THREE.PointsMaterial({color: cfg.colour, size: cfg.size, sizeAttenuation: false, transparent: true, opacity: 0, depthWrite: false, fog: false, map: softDot(), alphaTest: .02});
   const pts = new THREE.Points(geo, mat); pts.frustumCulled = false; pts.visible = false;
-  pts.userData.update = (time, amount) => {
+  pts.userData.update = (time, amount, wind) => {
     const n = Math.floor(N * amount); geo.setDrawRange(0, n); pts.visible = n > 2; if (!pts.visible) return;
     mat.opacity = cfg.op * (cfg.fall ? 1 : .55 + .35 * Math.sin(time * 2.1));   // fireflies pulse
     for (let k = 0; k < n; k++) {
       const [x, y0, z, ph] = seeds[k], y = cfg.fall ? Y - ((y0 + time * cfg.fall) % Y) : .35 + y0 / Y * 1.7 + Math.sin(time * .7 + ph) * .2;
-      pos[k * 3] = x + Math.sin(time * .8 + ph) * cfg.sway; pos[k * 3 + 1] = y; pos[k * 3 + 2] = z + Math.cos(time * .6 + ph) * cfg.sway;
+      pos[k * 3] = x + Math.sin(time * .8 + ph) * cfg.sway + (wind ? wind.x * 1.2 * (1 - y / Y * .5) : 0); pos[k * 3 + 1] = y; pos[k * 3 + 2] = z + Math.cos(time * .6 + ph) * cfg.sway + (wind ? wind.z * 1.2 * (1 - y / Y * .5) : 0);
     }
     geo.attributes.position.needsUpdate = true;
   };

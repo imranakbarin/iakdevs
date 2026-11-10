@@ -4,6 +4,9 @@
 const {chromium} = require('playwright'), {spawn} = require('node:child_process'), fs = require('node:fs/promises'), path = require('node:path'), http = require('node:http'), assert = require('node:assert/strict');
 const port = 8771, out = path.join(__dirname, '../visual-artifacts');
 const ready = async () => { for (let n = 0; n < 60; n++) { try { await new Promise((ok, no) => http.get(`http://127.0.0.1:${port}/toy-town-new.html`, r => { r.resume(); r.statusCode === 200 ? ok() : no(new Error('HTTP ' + r.statusCode)); }).on('error', no)); return; } catch (e) { await new Promise(r => setTimeout(r, 250)); } } throw Error('Local site did not start'); };
+const mp0Tier = async (browser, port, errors) => { const {devices} = require('playwright'), ctx = await browser.newContext({...devices['iPhone 13']}), pg = await ctx.newPage(); pg.on('pageerror', e => errors.push('phone tier: ' + e.message));
+  if (process.env.THREE_LOCAL) await pg.route('https://cdn.jsdelivr.net/npm/three@0.187.0/**', r => r.fulfill({path: path.join(process.env.THREE_LOCAL, r.request().url().split('three@0.187.0/')[1]), contentType: 'text/javascript'}));
+  await pg.goto(`http://127.0.0.1:${port}/toy-town-new.html?news=0&tune=0`); await pg.waitForFunction(() => !!window.ToyTownNew, null, {timeout: 60000}); const t = await pg.evaluate(() => ToyTownNew.tier()); await ctx.close(); return t; };
 const shot2 = (pg, name) => pg.screenshot({path: path.join(out, `new-town-${name}.png`)});
 (async () => {
   await fs.mkdir(out, {recursive: true});
@@ -39,6 +42,7 @@ const shot2 = (pg, name) => pg.screenshot({path: path.join(out, `new-town-${name
     assert.ok(walker, 'somebody is walking at 11:00');
     await page.mouse.click(walker.p[0] + 5, walker.p[1] + 3); await page.evaluate(() => ToyTownNew.advance(.05));
     const picked = await page.evaluate(() => ({sel: ToyTownNew.selected(), card: document.getElementById('card').innerText})); await shot('tap');
+    const hl = await page.evaluate(() => ToyTownNew.highlight()); assert.ok(hl.mode === 'pin' && hl.pin && !hl.ring, 'a tap shows the small pin, not the ring on the ground (' + JSON.stringify(hl) + ')');
     assert.ok(picked.sel && picked.sel.kind === 'resident' && picked.sel.id === walker.id && /On the way|errand/.test(picked.card), 'tapping a resident shows who and where (' + JSON.stringify(picked) + ')');
     await page.evaluate(() => { const d = ToyTownNew.sim.graph.doors.cafe; ToyTownNew.select(null); ToyTownNew.look(d.x, d.z, 12, .2); });
     await page.mouse.click(...(await page.evaluate(() => { const d = ToyTownNew.sim.graph.doors.cafe; return ToyTownNew.project(d.x, d.z, .5); })));
@@ -95,6 +99,16 @@ const shot2 = (pg, name) => pg.screenshot({path: path.join(out, `new-town-${name
       const fps = await mp.evaluate(() => new Promise(ok => { let n = 0; const t0 = performance.now(); const f = () => { n++; if (performance.now() - t0 > 3000) ok(n / 3); else requestAnimationFrame(f); }; requestAnimationFrame(f); }));
       const pr = await mp.evaluate(() => ToyTownNew.renderer.getPixelRatio()); console.log('PHONE (emulated, 4x slower CPU):', fps.toFixed(1), 'fps, pixel ratio', pr); assert.ok(fps > 1, 'it keeps running when slow (' + fps.toFixed(1) + ' fps)');
       await ctx.close(); }
+    // picture quality: high has the grass tufts, wind and glow; low has none of them; ?debug=1 shows a readout; the phone starts in the middle
+    { const tiers = {}; for (const [name, query] of [['low', 'quality=low&debug=1'], ['high', 'quality=high&debug=1']]) { const qp = await browser.newPage({viewport: {width: 900, height: 600}}); qp.on('pageerror', e => errors.push(name + ' quality: ' + e.message));
+        if (process.env.THREE_LOCAL) await qp.route('https://cdn.jsdelivr.net/npm/three@0.187.0/**', r => r.fulfill({path: path.join(process.env.THREE_LOCAL, r.request().url().split('three@0.187.0/')[1]), contentType: 'text/javascript'}));
+        await qp.goto(`http://127.0.0.1:${port}/toy-town-new.html?${query}&news=0`); await qp.waitForFunction(() => !!window.ToyTownNew, null, {timeout: 60000}); await qp.waitForTimeout(1500);
+        tiers[name] = await qp.evaluate(() => ({tier: ToyTownNew.tier(), tufts: ToyTownNew.tufts.count, sway: ToyTownNew.U.sway.value, waves: ToyTownNew.U.waves.value, time: ToyTownNew.U.time.value, dbg: (document.getElementById('dbg') || {}).textContent || '', locked: ToyTownNew.gov.locked, calls: ToyTownNew.renderer.info.render.calls}));
+        if (name === 'high') await shot2(qp, 'quality-high'); await qp.close(); }
+      assert.ok(tiers.low.tier === 'low' && tiers.low.tufts === 0 && tiers.low.sway === 0 && tiers.low.waves === 0, 'the low tier has no tufts, wind or waves (' + JSON.stringify(tiers.low) + ')');
+      assert.ok(tiers.high.tier === 'high' && tiers.high.tufts > 500 && tiers.high.sway > .9 && tiers.high.waves === 1, 'the high tier has them (' + JSON.stringify(tiers.high) + ')'); assert.ok(tiers.high.time > 0, 'the shader clock runs');
+      assert.match(tiers.high.dbg, /fps .* calls .* tris .* ratio .* high/, 'the debug readout says what the picture costs'); assert.ok(tiers.low.locked && tiers.high.locked, 'a requested tier is not overridden'); assert.ok(tiers.high.calls <= 120 && tiers.low.calls <= tiers.high.calls + 2, 'draw calls stay in budget (' + tiers.low.calls + ' low, ' + tiers.high.calls + ' high)');
+      assert.equal(await mp0Tier(browser, port, errors), 'medium', 'a phone starts in the middle tier'); }
     console.log('NEW TOWN night', JSON.stringify(night), 'rain', JSON.stringify(wet));
     assert.ok(night.glow && night.calls <= 120 && night.sky !== 'bfe9fb', 'at night the windows glow and the sky is dark (' + night.calls + ' calls)');
     assert.ok(wet.rain > .5 && wet.calls <= 120 && wet.triangles <= 800000, 'in the rain it still draws within budget (' + wet.calls + ' calls, rain ' + wet.rain + ')');

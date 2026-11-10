@@ -150,6 +150,13 @@ the stamp is stale. If the page cannot start, its panel now shows the real error
 - **Settings** (gear button, `settings.mjs`, remembered in `localStorage`, bad or blocked storage falls back to defaults): speed of the day (0.5, 1, 2, 4; a frame takes up to 10 steps of at most 50 ms), work for the train (`sim.setBusy`: quiet 0.4, normal 1, busy 2 times as many jobs) and whether the news stages stories.
 - **Needs and moods** (`needs.mjs`): hunger, tiredness and loneliness run 0 to 1. Hunger rises over 12 waking hours, tiredness over 15, loneliness over 10 when alone; sleep rests; a bite at the bakery, cafe or market and company at the cafe, market, school, bandstand, toy shop or post office bring them down; a hello on the pavement eases loneliness. A need above its threshold (hunger over .75, loneliness over .85) sends an idle resident to the nearest food or company (`sim.needsStats`); hunger over .9 breaks a wait. `r.mood = {score, label, why}` (cheerful, content, grumpy, hungry, tired, lonely) shows in the card; the work board shows the town's mood.
 
+### Picture quality and the natural look (quality.mjs, nature.mjs, build.mjs shaders; tested)
+
+- **Tiers** `low`, `medium`, `high` (`quality.PROFILE`): water waves, shore foam, wind sway, grass tufts (0, 900, 2200), sky glow and the colour grade. A phone starts on `medium`, everything else on `high`. `?quality=low|medium|high` (or the Picture quality row in the settings) fixes a tier; otherwise a governor takes the average frame time every 2 s, goes a tier down after two slow samples (over 45 ms), a tier up after five fast ones (under 20 ms, and only when the resolution is at its maximum), and caps a tier it just left for a couple of minutes. The render resolution only goes down once the lowest tier is reached. `?debug=1` shows fps, ms, draw calls, triangles, resolution and tier.
+- **Wind** (`nature.wind(t)`): one slowly swelling and veering breeze. Foliage (round trees, pines, bushes) has a per-vertex `sway` weight and leans in the vertex shader (`windify`); the grass tufts lean in their own shader; smoke and petals drift with it. `prefers-reduced-motion` cuts the sway to 30 percent.
+- **Water**: the sea plane has slow swells and soft glints in the fragment shader (`waterify`); the shallows band (a ring from the waterline out to 1.35 of the island radius, alpha fading) carries the shore foam, a second pulsing ring and the wave tint.
+- **Ground and light**: lawn colour has big soft patches (lighter, darker, dry yellowish) and bare soil beside the pavements (a grid of road points answers "how far to a road"); walls and undersides are shaded darker near the ground when the mesh is built (no run-time cost); the sky is a gradient dome (haze colour at the horizon, deeper blue above) with a glow round a low sun; a CSS overlay gives the vignette and a warm dawn and dusk or cool night tint (high tier only).
+
 ## 5. Art rules
 
 - Fat, rounded, slightly wonky. No sharp corners: `bag.box` is a rounded box; roofs overhang.
@@ -180,6 +187,7 @@ spheres 8; keep that discipline (the first version was 1.05 M triangles from 3-s
 - `sim`, `scene`, `camera`, `renderer`, `view`
 - `info()` → `{calls, triangles, residentsOut, clock, pixelRatio, story, rain, wet, lampsLit, season}`
 - `tapAt(clientX, clientY)`, `selected()`, `select(obj|null)`, `project(x, z, y)` → client coordinates of a ground point
+- `tier()`, `gov` (the governor), `setQuality(tier|'auto')`, `tufts`, `U` (shader inputs); `?quality=` and `?debug=1`
 - `settings`, `applySettings()`; `info()` also has `market, marketVisits`
 - `trainPos()` (head of the train), `sendParcel(from, to)`, `jobsText()` (the work board text); `info()` also has `delivered, cargoNow, riders`
 - `season`, `sound` (`enabled`, `started`, `toggle()`); `?season=spring|summer|autumn|winter`
