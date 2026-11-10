@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generated_at": "2026-11-10T02:12:36.434Z",
+  "generated_at": "2026-11-10T09:58:17.077Z",
   "status": "ok",
   "successful_sources": [
     "BBC News",
@@ -17,60 +17,60 @@
   ],
   "stories": [
     {
-      "title": "This Diwali, Trade the Doom Scroll for These 10 Questions",
-      "url": "https://www.goodnewsnetwork.org/this-diwali-trade-the-doom-scroll-for-these-10-questions/",
+      "title": "Good News in History, November 10",
+      "url": "https://www.goodnewsnetwork.org/events061110/",
       "source": "Good News Network",
       "category": "Good news",
       "tone": "light",
-      "published_at": "2026-11-09T18:59:42.000Z"
+      "published_at": "2026-11-10T08:00:00.000Z"
     },
     {
-      "title": "Curiosity Blog, Sols 5056-5062: Charging Back Up!",
-      "url": "https://science.nasa.gov/blog/curiosity-blog-sols-5056-5062-charging-back-up/",
-      "source": "NASA",
+      "title": "Locals launch campaign to buy ancient wood",
+      "url": "https://www.bbc.co.uk/news/articles/c3rryynzqxwno?at_medium=RSS&at_campaign=rss",
+      "source": "BBC Science",
       "category": "Science",
       "tone": "light",
-      "published_at": "2026-11-10T01:07:45.000Z"
+      "published_at": "2026-11-10T08:13:42.000Z"
     },
     {
-      "title": "Find out who's in the running for this year's Booker Prize",
-      "url": "https://www.bbc.co.uk/news/articles/cqzjz8dk4wddo?at_medium=RSS&at_campaign=rss",
+      "title": "'Baffling but brilliant' post-apocalyptic novel The End of Everything wins Booker Prize",
+      "url": "https://www.bbc.co.uk/news/articles/cw0737kv52lko?at_medium=RSS&at_campaign=rss",
       "source": "BBC Culture",
       "category": "Culture",
       "tone": "light",
-      "published_at": "2026-11-09T11:30:13.000Z"
+      "published_at": "2026-11-10T09:35:15.000Z"
     },
     {
-      "title": "Plymouth Parkway beat Berkhamsted to reach FA Cup second round",
-      "url": "https://www.bbc.co.uk/sport/football/videos/cqm24237y5z5o?at_medium=RSS&at_campaign=rss",
+      "title": "'I wanted to prove that motherhood is not the finish line' - ultrarunner Stephanie Case",
+      "url": "https://www.bbc.co.uk/sport/athletics/videos/cmly0yde7098o?at_medium=RSS&at_campaign=rss",
       "source": "BBC Sport",
       "category": "Sport",
       "tone": "light",
-      "published_at": "2026-11-10T00:13:13.000Z"
+      "published_at": "2026-11-10T09:24:42.000Z"
     },
     {
-      "title": "Qantas to outsource 850 local jobs with most roles moving to India",
-      "url": "https://www.bbc.co.uk/news/articles/cry838v4qzvyo?at_medium=RSS&at_campaign=rss",
+      "title": "Faisal Islam: What the boss of US tech giant Nvidia told me about China and national security",
+      "url": "https://www.bbc.co.uk/news/articles/c64g1gzy2vdzo?at_medium=RSS&at_campaign=rss",
       "source": "BBC Technology",
       "category": "Technology",
       "tone": "light",
-      "published_at": "2026-11-10T01:55:22.000Z"
+      "published_at": "2026-11-10T09:23:55.000Z"
     },
     {
-      "title": "Headteachers say families will struggle after another rise in school dinner prices",
-      "url": "https://www.bbc.co.uk/news/articles/c9m262yv6yx8o?at_medium=RSS&at_campaign=rss",
+      "title": "Kim Kardashian's Skims offers refunds for $148 advent calendar after backlash",
+      "url": "https://www.bbc.co.uk/news/articles/cqp8g8p53x6ko?at_medium=RSS&at_campaign=rss",
       "source": "BBC Business",
       "category": "Business",
       "tone": "light",
-      "published_at": "2026-11-10T00:00:22.000Z"
+      "published_at": "2026-11-10T09:57:49.000Z"
     },
     {
-      "title": "Republican congressman to force impeachment vote on Defence Secretary Hegseth",
-      "url": "https://www.bbc.co.uk/news/articles/cwr5y58jjp8ro?at_medium=RSS&at_campaign=rss",
+      "title": "Oxford museum returns ancestral Naga skulls to India",
+      "url": "https://www.bbc.co.uk/news/articles/ck1l3lzg3y79o?at_medium=RSS&at_campaign=rss",
       "source": "BBC News",
       "category": "World",
       "tone": "light",
-      "published_at": "2026-11-10T01:38:49.000Z"
+      "published_at": "2026-11-10T06:23:42.000Z"
     },
     {
       "title": "‘Digital advances are reshaping nature conservation’ say experts",
@@ -81,12 +81,12 @@
       "published_at": "2026-11-09T13:44:06.000Z"
     },
     {
-      "title": "The superpower battle over energy – and what it means for your bills",
-      "url": "https://www.bbc.co.uk/news/articles/cw62y2z53pg1o?at_medium=RSS&at_campaign=rss",
-      "source": "BBC Science",
+      "title": "APOD: 2026 November 10 – Saturn Behind the Moon",
+      "url": "https://science.nasa.gov/image-article/apod-2026-november-10-saturn-behind-the-moon/",
+      "source": "NASA",
       "category": "Science",
       "tone": "light",
-      "published_at": "2026-11-10T00:08:28.000Z"
+      "published_at": "2026-11-10T05:05:00.000Z"
     }
   ]
 }
