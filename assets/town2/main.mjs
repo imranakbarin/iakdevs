@@ -81,7 +81,8 @@ function sync(dt) {
     g.position.set(r.x, y + .02 + Math.abs(Math.sin(step)) * .035, r.z); g.rotation.set(0, Math.atan2(r.tx, r.tz), Math.sin(step) * .09);
   }
   for (const v of sim.vehicles) {
-    const g = cars.get(v.id), y = heightAt(v.x, v.z), ahead = heightAt(v.x + v.tx * .3, v.z + v.tz * .3);
+    const g = cars.get(v.id); g.visible = v.state !== 'parked'; if (!g.visible) continue;
+    const y = heightAt(v.x, v.z), ahead = heightAt(v.x + v.tx * .3, v.z + v.tz * .3);
     g.position.set(v.x, y + .035 + (v.v > .05 ? Math.abs(Math.sin(time * 14 + v.s)) * .008 : 0), v.z); g.rotation.set(-Math.atan2(ahead - y, .3), Math.atan2(v.tx, v.tz), 0, 'YXZ');
   }
   { const t = sim.train, y = heightAt(TRACK.x, t.z) + .06; train.position.set(TRACK.x, y, t.z); train.rotation.y = Math.PI; }
@@ -104,6 +105,7 @@ const hint = document.getElementById('hint'); if (hint) setTimeout(() => { hint.
 // Hooks for tests and screenshots.
 window.ToyTownNew = {
   sim, scene, camera, renderer, view,
+  hour: () => sim.hour, setHour(h) { sim.setHour(h); sync(0); renderer.render(scene, camera); },
   info: () => ({calls: renderer.info.render.calls, triangles: renderer.info.render.triangles, residentsOut: sim.residents.filter(r => r.state === 'walking').length, clock: sim.clock}),
   look(x, z, dist, yaw = 0) { Object.assign(view, {x, z, dist, yaw, tx: x, tz: z, tdist: dist, tyaw: yaw}); placeCamera(); renderer.render(scene, camera); },
   advance(seconds) { for (let t = 0; t < seconds; t += .05) sim.update(.05); sync(0); renderer.render(scene, camera); },

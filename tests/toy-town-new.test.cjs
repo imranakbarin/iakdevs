@@ -44,9 +44,11 @@ const root = path.join(__dirname, '..'), mod = f => import('file://' + path.join
 
   // the simulation: residents appear and vanish only on doorsteps, nobody jumps, vehicles keep apart, the bus stops
   const sim = S.createSim(7), doors = Object.values(sim.graph.doors), atDoor = (x, z) => doors.some(d => Math.hypot(d.x - x, d.z - z) < .08);
-  let prev = null, outings = 0, minGap = Infinity, out = 0, samples = 0;
-  for (let i = 0; i < 20 * 900; i++) {
+  let prev = null, outings = 0, minGap = Infinity, out = 0, samples = 0, nightOut = 0, nightSamples = 0, dayOut = 0, daySamples = 0, popped = 0;
+  const wasParked = new Map(sim.vehicles.map(v => [v.id, v.state === 'parked'])), seen = {};
+  for (let i = 0; i < 20 * 1000; i++) {
     sim.update(1 / 20);
+    const h = sim.hour, night = h >= 23.5 || h < 5;
     const cur = sim.residents.map(r => ({state: r.state, x: r.x, z: r.z}));
     if (prev) cur.forEach((r, k) => {
       const q = prev[k];
@@ -55,18 +57,31 @@ const root = path.join(__dirname, '..'), mod = f => import('file://' + path.join
       if (r.state === 'walking' && q.state === 'walking') assert.ok(Math.hypot(r.x - q.x, r.z - q.z) < .08, 'nobody jumps');
       if (r.state === 'walking') assert.ok(def.shore(r.x, r.z) < .95, 'walkers stay on land');
     });
-    prev = cur; out += cur.filter(r => r.state === 'walking').length; samples++;
-    for (const a of sim.vehicles) for (const b of sim.vehicles) if (a.id < b.id) {
+    prev = cur; const walking = cur.filter(r => r.state === 'walking').length; out += walking; samples++;
+    if (night) { nightOut += walking; nightSamples++; } else { dayOut += walking; daySamples++; }
+    const active = sim.vehicles.filter(v => v.state !== 'parked');
+    for (const v of sim.vehicles) {   // vehicles come out of and go back into their garage, nowhere else
+      const was = wasParked.get(v.id), now = v.state === 'parked';
+      if (was !== now) { const home = def.doorOf(def.building(v.def.home)); if (Math.hypot(v.x - home.x, v.z - home.z) > 2.1) popped++; seen[v.id] = (seen[v.id] || 0) + 1; wasParked.set(v.id, now); }
+      if (v.state !== 'parked') { const o = v.def; const inside = o.onCall || v.state === 'returning' || (o.from <= o.to ? h >= o.from - .3 && h < o.to : true); assert.ok(inside, v.id + ' is only out in its hours, or on its way home (' + h.toFixed(1) + ')'); if (v.state === 'returning') { v.returningFor = (v.returningFor || 0) + 1; assert.ok(v.returningFor < 20 * 150, v.id + ' gets home within a couple of minutes'); } else v.returningFor = 0; }
+    }
+    for (const a of active) for (const b of active) if (a.id < b.id) {
       const d = Math.hypot(a.x - b.x, a.z - b.z), fwd = Math.min(((b.s - a.s) % T.length + T.length) % T.length, ((a.s - b.s) % T.length + T.length) % T.length);
-      minGap = Math.min(minGap, fwd);   // the gap along the tour: what keeps them from running into each other
+      minGap = Math.min(minGap, fwd);
       if (d < .7) assert.ok(d > .36, 'two vehicles never touch, even on opposite sides of a turning circle (' + d.toFixed(2) + ')');
     }
   }
-  assert.ok(outings >= 60, 'the cast keeps coming and going (' + outings + ' outings in 15 minutes)');
+  assert.ok(outings >= 50, 'the cast keeps coming and going (' + outings + ' outings in two days)');
   assert.ok(sim.residents.every(r => r.outings >= 3), 'everybody goes out');
-  assert.ok(out / samples > 1.5 && out / samples < 8, 'a few people are out at any moment (' + (out / samples).toFixed(1) + ')');
+  assert.ok(out / samples > 1.5 && out / samples < 9, 'a few people are out at any moment (' + (out / samples).toFixed(1) + ')');
+  assert.ok(nightSamples > 100 && daySamples > 100, 'the run covers day and night');
+  assert.ok(nightOut / nightSamples < .12 * dayOut / daySamples, 'nobody is about at night (' + (nightOut / nightSamples).toFixed(2) + ' vs ' + (dayOut / daySamples).toFixed(2) + ')');
+  assert.equal(popped, 0, 'vehicles only ever leave and enter by their garage');
+  assert.ok(Object.keys(seen).length >= 5, 'the milk float, tractor, ice-cream van, bus and taxi all took their turn (' + Object.keys(seen).join(',') + ')');
   assert.ok(minGap > .8, 'vehicles keep a gap along the road (' + minGap.toFixed(2) + ')');
   assert.ok(sim.vehicles.find(v => v.id === 'bus').stopsMade >= 8, 'the bus serves its stops');
+  sim.setHour(12); sim.dispatchFire(); for (let i = 0; i < 20 * 120; i++) sim.update(1 / 20);
+  assert.ok(sim.vehicles.find(v => v.id === 'fire').trips >= 1, 'the fire engine goes out when called and comes back to the station');
   assert.ok(sim.vehicles.every(v => v.s >= 0 && v.s < T.length));
   assert.ok(sim.train.trips >= 8, 'the little train shuttles between the platform and the buffers (' + sim.train.trips + ' trips)');
   assert.ok(sim.train.z > def.TRACK.z0 && sim.train.z < def.TRACK.z1, 'and stays on its track');

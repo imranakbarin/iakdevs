@@ -14,7 +14,7 @@ log a START entry before touching code, a DONE entry after, no force pushes).
 | 1 | Town definition, road graph, terrain, camera, page | **Done** |
 | 2 | The Square and first landmarks (14 buildings), a cast of 10, 3 vehicles | **Done** |
 | 3 | Remaining districts: station and shuttle train, school with playground, farm with animals, garage, harbour hut with a jetty and boat, pond with ducks, a fifth cottage | **Done** (no stream, no extra cottages) |
-| 4 | Full cast life: timetables by hour, named vehicles (milk float, tractor, fire engine, ice-cream van), a train | Not started |
+| 4 | Full cast life: timetables by hour, named vehicles (milk float, tractor, fire engine, ice-cream van), a train | **Done** |
 | 5 | Day and night, weather, small stories, the daily-news staging | Not started |
 | 6 | Phone performance pass, then make it the default town | Not started |
 
@@ -59,9 +59,9 @@ Rule: `def`, `graph` and `sim` are pure (no THREE, no DOM), so they run in Node.
   spokes needs `buildGraph` and `tour()` extending (the tour assumes a tree of spokes on one ring).
 - **A building:** add to `BUILDINGS` and write `BUILD.<type>(bag, def, anim)` in `build.mjs`. It must be
   ≥ 1.9 from other buildings and ≥ 0.95 from every road sample (the logic test checks both).
-- **A resident:** add to `CAST` with a `home` and a `round` of `[buildingId, secondsToStay]`. Every place in
+- **A resident:** add to `CAST` with a `home`, optional `wake`/`sleep` hours and a `round` of `[buildingId, secondsToStay]`. Every place in
   a round must have a door.
-- **A vehicle:** add to `VEHICLES` (`kind`: `car`, `van`, `bus`); new kinds need a branch in `buildVehicle`.
+- **A vehicle:** add to `VEHICLES` (`kind`: `car`, `van`, `bus`, `float`, `tractor`, `icecream`, `fire`; new kinds need a branch in `buildVehicle`) with a `home` building (its garage), the hours it works (`from`, `to`) or `onCall: true`. Vehicles are parked (invisible) in their garage outside their hours, leave and return only by their own garage, and an `onCall` one (the fire engine, `sim.dispatchFire()`) goes out for a run round the town and comes back.
 
 ## 4. Behaviour rules (tested)
 
@@ -73,7 +73,10 @@ Rule: `def`, `graph` and `sim` are pure (no THREE, no DOM), so they run in Node.
    ring to an exit, out along the spoke on the left, round the turning circle, back on the other side, on
    round the ring. It never crosses itself, so a gap along the tour is all the collision avoidance needed.
    Vehicles also stop for anyone on the road just ahead, and the bus waits 4 s at each of `BUS_STOPS`.
-4. **Determinism.** `createSim(seed)` gives the same town life for the same seed and step sequence.
+4. **The day.** One day is `DAY` = 480 s of simulation, starting at 06:00 (`sim.hour`, `sim.setHour(h)`). Residents wake and
+   sleep by their own hours and everybody heads home after hours, so the town is nearly empty at night. Vehicles
+   work their hours, then drive on to their own garage (never any other) and park out of sight.
+5. **Determinism.** `createSim(seed)` gives the same town life for the same seed and step sequence.
 
 ## 5. Art rules
 
@@ -93,8 +96,8 @@ Rule: `def`, `graph` and `sim` are pure (no THREE, no DOM), so they run in Node.
 
 | | Now | Limit |
 |---|---|---|
-| Draw calls, default view | 58 | 80 |
-| Triangles, default view | 600 k | 800 k |
+| Draw calls, default view | 64 | 80 |
+| Triangles, default view | 604 k | 800 k |
 | Residents out at once | ~4–7 | — |
 
 The limits are asserted in `tests/toy-town-new-visual.cjs`. Rounded boxes use 1 or 2 segments and small

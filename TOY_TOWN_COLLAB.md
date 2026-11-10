@@ -1119,3 +1119,10 @@ A `START` does not prohibit parallel edits. Avoid stepping on each other's uncom
 - **Tests**: the logic test adds the train (≥ 8 trips, on its track) and that no building stands on the railway; walks 342, outings 220. The visual check's budgets still hold: 58 draw calls, 600 k triangles (the animals, boat, train and residents are separate small meshes).
 - Seen in real WebGL: the whole island, the station with the train at the platform, the farm with cows in the paddock, the harbour with the boat, the school and the cottages.
 - Not verified: phone; touch controls.
+
+### 2026-11-10 · Claude · DONE (new storybook town, merge B: phase 4, life by the hour)
+- **Time**: a day is 480 s from 06:00; each resident has `wake`/`sleep` hours and heads home when they pass, so nights are empty. Each vehicle has a home garage (garage, barn, post office, fire station) and hours; outside them it is parked (hidden), it leaves and returns only by its own garage, and a late one drives on to its door at 1.4x speed.
+- **Vehicles**: milk float, tractor, ice-cream van and a fire engine (on call, `sim.dispatchFire()`, one run round the town) join the bus, taxi and post van. The Police Box became the round teal Constable's Kiosk (the old shape read as one particular famous blue box, against the own-designs rule).
+- **Tests**: logic test now also checks vehicles only keep to their hours (or are on their way home), leave/enter only at their own garage, get home within 150 s, the fire engine goes out and comes back, nobody is about at night. All logic suites pass; real-WebGL screenshots of the tractor, ice-cream van and kiosk checked.
+- Not verified: phone; touch controls. Vehicles cannot overtake, so a late one can queue behind a slow tractor.
+
