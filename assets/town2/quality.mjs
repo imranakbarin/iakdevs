@@ -2,9 +2,9 @@
 // Features cost the GPU, so they go first when the town runs slowly; the render resolution comes next (that is main.mjs's business).
 export const TIERS = ['low', 'medium', 'high'];
 export const PROFILE = {
-  low:    {waves: 0, foam: 0, sway: 0,  tufts: 0,    glow: 0, grade: 0},
-  medium: {waves: 1, foam: 1, sway: .6, tufts: 900,  glow: 1, grade: 0},
-  high:   {waves: 1, foam: 1, sway: 1,  tufts: 2200, glow: 1, grade: 1}
+  low:    {waves: 0, foam: 0, sway: 0,  tufts: 0,    glow: 0, grade: 0, flowers: 0,   flies: 3, life: 0},
+  medium: {waves: 1, foam: 1, sway: .6, tufts: 900,  glow: 1, grade: 0, flowers: 350, flies: 8, life: 1},
+  high:   {waves: 1, foam: 1, sway: 1,  tufts: 2200, glow: 1, grade: 1, flowers: 800, flies: 14, life: 1}
 };
 export const isTier = t => TIERS.includes(t);
 // where to start: what the visitor asked for, else a phone starts in the middle and everything else high

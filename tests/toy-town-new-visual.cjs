@@ -129,6 +129,28 @@ const shot2 = (pg, name) => pg.screenshot({path: path.join(out, `new-town-${name
       await fp.goto(`http://127.0.0.1:${port}/toy-town-new.html?day=sun&news=0&quality=low`); await fp.waitForFunction(() => !!window.ToyTownNew, null, {timeout: 60000});
       const fish = await fp.evaluate(() => { ToyTownNew.freeze(); ToyTownNew.sim.setEvents(false); ToyTownNew.setHour(9); const S = ToyTownNew.sim; const fin = S.residents.find(x => x.id === 'finn'); fin.errands = [['pier', 200]]; fin.until = 0; fin.state === 'inside' && (fin.at = fin.def.home); let who = null; for (let i = 0; i < 500 && !who; i++) { ToyTownNew.advance(2, true); const r = S.residents.find(x => x.at === 'pier' && x.state === 'inside'); if (r) who = r.id; } const d = S.graph.doors.pier; ToyTownNew.look(d.x - 1, d.z, 6, 1.2); ToyTownNew.advance(.2); return {who, rods: ToyTownNew.rodsOut(), caught: S.fishing.caught}; });
       await shot2(fp, 'fisherman'); await fp.close(); assert.ok(fish.who && fish.rods >= 1, 'a fisherman stands on the pier with a rod out (' + JSON.stringify(fish) + ')'); }
+    // nature: hens in their yard, dogs with their owners, a garden belt, dolphins and whales, and the dwarfs' islet with its lantern at dusk
+    { const np = await browser.newPage({viewport: {width: 1000, height: 650}}); np.on('pageerror', e => errors.push('nature: ' + e.message));
+      if (process.env.THREE_LOCAL) await np.route('https://cdn.jsdelivr.net/npm/three@0.187.0/**', r => r.fulfill({path: path.join(process.env.THREE_LOCAL, r.request().url().split('three@0.187.0/')[1]), contentType: 'text/javascript'}));
+      await np.goto(`http://127.0.0.1:${port}/toy-town-new.html?season=summer&news=0&quality=high&tune=0`); await np.waitForFunction(() => !!window.ToyTownNew, null, {timeout: 60000});
+      const nat = await np.evaluate(() => { ToyTownNew.freeze(); ToyTownNew.sim.setEvents(false); ToyTownNew.setHour(10.5); ToyTownNew.advance(70, true); const W = ToyTownNew.wild, S = ToyTownNew.sim, ctx = {hour: 10.5, day: 0, rain: 0, night: 0, dist: 30};
+        for (let i = 0; i < 40; i++) W.update(.1, i * .1, ctx); const c = ToyTownNew.coop;
+        const hens = W.hens.filter(a => a.g.visible).length, inYard = W.hens.every(a => Math.hypot(a.w.x - c.x, a.w.z - c.z) < c.r), dogs = W.pets.filter(a => a.kind === 'dog').map(a => { const o = S.residents.find(r => r.id === a.def.owner), g = ToyTownNew.scene.children.length && null; return {id: a.def.id, owner: a.def.owner, d: Math.hypot(a.w.x - o.x, a.w.z - o.z), ownerState: o.state}; });
+        // a leap: dolphins in the air at a known moment, and the pod stays in the sea
+        const dol = W.pick.filter(a => a.kind === 'dolphin'); W.update(0, 12.5 * 4 + .8, ctx); const leaping = dol.some(a => a.g.position.y > .5), inSea = dol.every(a => Math.hypot(a.g.position.x / 19.4, a.g.position.z / 15.9) > 1.1);
+        // dusk: the dwarfs are out, the cave glows, a lantern is lit
+        W.forceDwarfs(3, .32); ToyTownNew.setHour(19.4); W.update(0, 50, {hour: 19.4, day: 1, rain: 0, night: .8, dist: 30}); const dw = W.dwarfs.filter(a => a.g.visible).length, glow = W.islet.userData.glow && W.islet.userData.glow.material.opacity, cave = W.islet.userData.innerMat.opacity;
+        W.forceDwarfs(0); ToyTownNew.setHour(10.5); W.update(0, 51, ctx);
+        return {hens, inYard, dogs, leaping, inSea, dw, glow, cave, plots: ToyTownNew.plots, calls: ToyTownNew.renderer.info.render.calls, dayDwarfs: W.dwarfs.filter(a => a.g.visible).length}; });
+      assert.ok(nat.hens === 6 && nat.inYard, 'six hens scratch about inside the yard (' + JSON.stringify([nat.hens, nat.inYard]) + ')'); assert.ok(nat.dogs.length === 3 && nat.dogs.every(d => d.d < 9), 'the dogs are never far from their owners (' + JSON.stringify(nat.dogs) + ')');
+      assert.ok(nat.leaping && nat.inSea, 'the dolphins leap and stay out at sea'); assert.ok(nat.dw === 3 && nat.glow > .5 && nat.cave > .3, 'at dusk the dwarfs are out and the cave glows (' + JSON.stringify([nat.dw, nat.glow, nat.cave]) + ')'); assert.equal(nat.dayDwarfs, 0, 'they stay in the cave by day'); assert.ok(nat.plots >= 10, 'a garden belt of ' + nat.plots + ' plots');
+      // tap a hen: the card names her
+      const card = await np.evaluate(() => { const i = ToyTownNew.critterList().findIndex(c => c.wild && c.describe().title.includes('Rex')); ToyTownNew.select({kind: 'animal', id: i}); return document.getElementById('card').textContent; }); assert.match(card, /Rex the rooster/, 'the card names the rooster (' + card + ')');
+      await np.evaluate(() => { ToyTownNew.select(null); const c = ToyTownNew.coop; ToyTownNew.look(c.x, c.z + .2, 6.5, .2); }); await shot2(np, 'hens');
+      await np.evaluate(() => ToyTownNew.look(0, .4, 52, 0)); await shot2(np, 'gardens');
+      await np.evaluate(() => { const W = ToyTownNew.wild; W.forceDwarfs(3, .32); ToyTownNew.setHour(19.4); W.update(0, 50, {hour: 19.4, day: 1, rain: 0, night: .8, dist: 30}); ToyTownNew.look(17.2, 20.4, 7, 0); }); await shot2(np, 'dwarf-rock');
+      await np.evaluate(() => { const W = ToyTownNew.wild; W.forceDwarfs(0); ToyTownNew.setHour(13); W.update(0, 12.5 * 4 + .8, {hour: 13, day: 0, rain: 0, night: 0, dist: 30}); const d = W.pick.find(a => a.kind === 'dolphin'); ToyTownNew.look(d.g.position.x, d.g.position.z, 9, .2); }); await shot2(np, 'dolphins');
+      await np.close(); }
     // emergencies, the town hall, the case book and photo mode
     { const ep = await browser.newPage({viewport: {width: 1000, height: 650}}); ep.on('pageerror', e => errors.push('events: ' + e.message));
       if (process.env.THREE_LOCAL) await ep.route('https://cdn.jsdelivr.net/npm/three@0.187.0/**', r => r.fulfill({path: path.join(process.env.THREE_LOCAL, r.request().url().split('three@0.187.0/')[1]), contentType: 'text/javascript'}));
@@ -158,7 +180,7 @@ const shot2 = (pg, name) => pg.screenshot({path: path.join(out, `new-town-${name
     assert.ok(wet.rain > .5 && wet.calls <= 135 && wet.triangles <= 800000, 'in the rain it still draws within budget (' + wet.calls + ' calls, rain ' + wet.rain + ')');
     console.log('NEW TOWN', JSON.stringify(info));
     assert.deepEqual(errors, [], 'no page errors');
-    assert.ok(info.calls > 5 && info.calls <= 80, 'the whole town draws in a handful of calls (' + info.calls + ')');
+    assert.ok(info.calls > 5 && info.calls <= 100, 'the whole town draws in a handful of calls (' + info.calls + ')');
     assert.ok(info.triangles > 100000 && info.triangles <= 800000, 'and within its triangle budget (' + info.triangles + ')');
     assert.ok(info.residentsOut >= 1, 'residents are out and about');
     assert.ok(after.some((s, i) => s !== before[i]), 'vehicles are moving');

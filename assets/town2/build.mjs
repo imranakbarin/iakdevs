@@ -7,6 +7,7 @@ import {RoundedBoxGeometry} from 'three/addons/geometries/RoundedBoxGeometry.js'
 import {mergeGeometries} from 'three/addons/utils/BufferGeometryUtils.js';
 import {PALETTE as P, ISLAND, SQUARE, ROAD, ROADS, OUTER, LOOP, BUILDINGS, LAMPS, TREES, BUS_LINES, STATIONS, PADDOCK, POND, PIER, HILL, BUILD_SCALE, CARGO_COLOURS, heightAt, shore, rand, doorOf, building, loopPt} from './def.mjs';
 import {along, leftOf} from './graph.mjs';
+import {inGarden} from './garden.mjs';
 
 // Seasons recolour the foliage and the grass (and nothing else) when the town is built.
 const SEASONAL = {}, SEASON_COLOURS = {
@@ -392,6 +393,8 @@ function roads(bag, graph) {
 function tree(b, kind, seed) {
   const r = k => rand(seed * 13 + k);
   if (kind === 'bush') { for (let k = 0; k < 3; k++) b.sph(.3 - k * .04, k % 2 ? 'leaf' : 'leafLight', {x: (r(k) - .5) * .4, y: .2 + k * .05, z: (r(k + 5) - .5) * .4, sy: .8, seg: 10, sway: .3}); for (let k = 0; k < 4; k++) b.sph(.05, ['pink', 'white', 'yellow', 'red'][k], {x: (r(k + 9) - .5) * .5, y: .38 + r(k) * .1, z: (r(k + 12) - .5) * .5, seg: 6}); return; }
+  if (kind === 'pine') { b.cyl(.07, .1, .4, 'brown', {seg: 7}); const snow = SEASONAL.leafLight === '#e4eef5'; [[.5, .5, .55], [.4, 1.0, .52], [.3, 1.45, .46], [.2, 1.8, .4]].forEach(([rr, y, h], k) => { b.cone(rr, h, k % 2 ? '#2f7d4f' : '#3a8c58', {y, seg: 9, sway: .5 + k * .15}); if (snow) b.cone(rr * .72, h * .55, '#ffffff', {y: y + h * .42, seg: 9, sway: .5}); }); return; }
+  if (kind === 'birch') { b.cyl(.05, .07, 1.0, '#f1ece0', {seg: 7}); for (let k = 0; k < 5; k++) b.box(.1, .025, .1, '#3a3a3a', {y: .2 + k * .17, r: .01, ry: k}); [[.34, .95, 0, 0], [.3, 1.25, .16, .08], [.28, 1.2, -.18, -.06], [.24, 1.55, .0, .04]].forEach(([rr, y, dx, dz], k) => b.sph(rr, k % 2 ? 'leafLight' : lighten('leaf', .12), {x: dx, y, z: dz, sy: 1.1, seg: 12, sway: .5 + k * .15})); return; }
   if (kind === 'tall') { b.cyl(.08, .11, .5, 'brown', {seg: 8}); [[.42, .62, 'leaf', .4], [.34, 1.08, SEASONAL.blossom ? lighten('leaf', .14) : 'leafLight', .7], [.24, 1.46, 'leaf', 1]].forEach(([s, y, c, w]) => b.sph(s, c, {y, sy: 1.15, seg: 12, sway: w})); return; }
   b.cyl(.1, .14, .62, 'brown', {seg: 8}); const deep = SEASONAL.blossom ? 'blossom' : 'leaf';   // (in spring the whole crown is blossom, not pink with a green cap)
   b.sph(.62, 'leafLight', {y: 1.0, seg: 18, sway: .6}); b.sph(.45, deep, {x: .34, y: .84, z: .12, seg: 16, sway: .5}); b.sph(.42, lighten('leafLight', .12), {x: -.3, y: 1.1, z: -.1, seg: 16, sway: .8}); b.sph(.36, deep, {x: .05, y: 1.4, z: .1, seg: 14, sway: 1});
@@ -402,7 +405,7 @@ function scenery(bag, graph) {
   const nearRoad = (x, z) => { let d = Infinity; for (const e of graph.edges) for (const p of e.line.pts) d = Math.min(d, Math.hypot(p[0] - x, p[1] - z)); return d; };
   const loopPts = graph.loop.pts.filter((_, k) => k % 6 === 0);
   const nearBuilding = (x, z) => Math.min(...BUILDINGS.map(b => Math.hypot(b.x - x, b.z - z) - b.w * .5 + .8), loopPts.some(p => Math.hypot(p[0] - x, p[1] - z) < 1.3) ? 0 : 9, x > PADDOCK.x0 - .8 && x < PADDOCK.x1 + .8 && z > PADDOCK.z0 - .8 && z < PADDOCK.z1 + .8 ? 0 : 9, Math.hypot((x - POND.x) / 1.4, z - POND.z) < 2 ? 0 : 9, x > PIER.x0 - 1.5 && Math.abs(z - PIER.z) < 1.2 ? 0 : 9);
-  TREES.forEach(([x, z, kind, s], i) => { if (nearRoad(x, z) > .9 && nearBuilding(x, z) > 1.5) onGround(x, z, b => tree(b, kind, i + 1), rand(i) * TAU, s * .9); });
+  TREES.forEach(([x, z, kind, s], i) => { if (nearRoad(x, z) > .9 && nearBuilding(x, z) > 1.5 && !inGarden(x, z, .25)) onGround(x, z, b => tree(b, kind, i + 1), rand(i) * TAU, s * .9); });
   // lamp posts and benches round the square, bunting strung between the lamps
   const lamps = []; for (let k = 0; k < 8; k++) { const a = (k + .5) / 8 * TAU, x = Math.cos(a) * 3.35, z = Math.sin(a) * 3.35; if (k % 2 === 0) continue; lamps.push([x, z]); }
   for (let k = 0; k < 8; k++) lamps[k] = [LAMPS[k].x, LAMPS[k].z];   // the bunting hangs between the eight lamps round the square
@@ -744,7 +747,7 @@ function findSpots(graph, count, maxR, salt) {
   for (let k = 0; out.length < count && k < 4000; k++) {
     const x = (rand(k * 7 + salt) - .5) * 2 * maxR, z = (rand(k * 7 + salt + 1) - .5) * 2 * maxR * .8;
     if (shore(x, z) > .8 || roads.near(x, z, 1.8) < 1.5 || loopGrid.near(x, z, 2.2) < 2 || Math.hypot(x - POND.x, z - POND.z) < POND.r + 1.2 || (x > PADDOCK.x0 - 1 && x < PADDOCK.x1 + 1 && z > PADDOCK.z0 - 1 && z < PADDOCK.z1 + 1) || (x > PIER.x0 - 2 && Math.abs(z - PIER.z) < 2)) continue;
-    if (BUILDINGS.some(b => Math.hypot(b.x - x, b.z - z) < b.w * .5 + 1.1) || out.some(p => Math.hypot(p.x - x, p.z - z) < 1.4)) continue;
+    if (inGarden(x, z, .6) || BUILDINGS.some(b => Math.hypot(b.x - x, b.z - z) < b.w * .5 + 1.1) || out.some(p => Math.hypot(p.x - x, p.z - z) < 1.4)) continue;
     out.push({x, z});
   }
   return out;
