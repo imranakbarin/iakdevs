@@ -20,15 +20,17 @@ const PLOT_COUNT = PLOTS.length;
 import {describeResident, describeBuilding, describeVehicle, describeAnimal, describeTrain} from './inspect.mjs';
 
 const canvas = document.getElementById('town'), q = new URLSearchParams(location.search);
+// Lite mode: a TV or other weak browser (or ?lite=1) gets the lowest picture tier, no shadows, no antialiasing, a smaller render size, about 30 frames a second and none of the extra flowers and hedges; ?lite=0 turns it off.
+const lite = q.get('lite') === '1' || (q.get('lite') !== '0' && /SMART-?TV|SmartTV|Tizen|Web0S|webOS|VIDAA|HbbTV|BRAVIA|Android ?TV|AFTM|AFTB|AFTS|CrKey|NetCast|Roku|Hisense|Viera|PHILIPSTV|Opera TV|Fire ?TV|GoogleTV/i.test(navigator.userAgent || '')), litePR = Math.min(1, 1280 / Math.max(innerWidth, 1));
 // Some browsers (Edge on a machine without a good GPU, for one) refuse a context with antialiasing or the high-performance hint: try plainer options before giving up.
-const renderer = (() => { try { return new THREE.WebGLRenderer({canvas, antialias: true, powerPreference: 'high-performance'}); } catch (e) { try { return new THREE.WebGLRenderer({canvas, antialias: false}); } catch (e2) { throw new Error('WebGL could not start (' + (e2 && e2.message || e2) + ')'); } } })();
+const renderer = (() => { try { return new THREE.WebGLRenderer({canvas, antialias: !lite, powerPreference: lite ? 'default' : 'high-performance'}); } catch (e) { try { return new THREE.WebGLRenderer({canvas, antialias: false}); } catch (e2) { throw new Error('WebGL could not start (' + (e2 && e2.message || e2) + ')'); } } })();
 const phone = Math.min(innerWidth, innerHeight) < 700;
-renderer.setPixelRatio(Math.min(devicePixelRatio || 1, phone ? 1.5 : 2));
-renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFShadowMap;
+renderer.setPixelRatio(lite ? litePR : Math.min(devicePixelRatio || 1, phone ? 1.5 : 2));
+renderer.shadowMap.enabled = !lite; renderer.shadowMap.type = THREE.PCFShadowMap;
 const scene = new THREE.Scene(); scene.background = new THREE.Color('#bfe9fb'); scene.fog = new THREE.Fog('#bfe9fb', 85, 210);
 const camera = new THREE.PerspectiveCamera(30, 1, .5, 400);
 scene.add(new THREE.HemisphereLight('#ffffff', '#b8d8a0', 1.55));
-const sun = new THREE.DirectionalLight('#fff4dc', 2.1); sun.position.set(-14, 22, 10); sun.castShadow = true;
+const sun = new THREE.DirectionalLight('#fff4dc', 2.1); sun.position.set(-14, 22, 10); sun.castShadow = !lite;
 sun.shadow.mapSize.set(phone ? 1024 : 2048, phone ? 1024 : 2048); Object.assign(sun.shadow.camera, {left: -25, right: 25, top: 20, bottom: -20, near: 1, far: 90}); sun.shadow.bias = -.0006; sun.shadow.normalBias = .03;
 scene.add(sun, sun.target);
 
@@ -80,7 +82,7 @@ const boat = buildBoat(built.material); boat.position.set(PIER.x1 - .6, -.02, PI
 const critters = [];
 for (let k = 0; k < 6; k++) { const kind = k < 3 ? 'cow' : 'sheep', g = buildAnimal(kind, built.material); scene.add(g); critters.push({g, k, x: PADDOCK.x0 + .6 + rand(k + 5) * (PADDOCK.x1 - PADDOCK.x0 - 1.2), z: PADDOCK.z0 + .6 + rand(k + 9) * (PADDOCK.z1 - PADDOCK.z0 - 1.2), tx: 0, tz: 0, wait: rand(k + 30) * 4, hd: rand(k) * 6, bounds: PADDOCK, step: kind === 'cow' ? .1 : .13}); }
 for (let k = 0; k < 3; k++) { const g = buildAnimal('duck', built.material); scene.add(g); critters.push({g, k: 10 + k, x: POND.x + (rand(k + 40) - .5) * 1.4, z: POND.z + (rand(k + 50) - .5) * .8, tx: 0, tz: 0, wait: rand(k + 60) * 3, hd: rand(k + 70) * 6, bounds: {x0: POND.x - 1.1, x1: POND.x + 1.1, z0: POND.z - .65, z1: POND.z + .65}, step: .12, water: true}); }
-const wild = createWildlife({scene, sim, people, material: built.material, season}); critters.push(...wild.pick.map(a => ({g: a.g, wild: true, describe: a.describe})));
+const wild = createWildlife({scene, sim, people, material: built.material, season, lite}); critters.push(...wild.pick.map(a => ({g: a.g, wild: true, describe: a.describe})));
 function moveCritters(dt) {
   for (const c of critters) {
     if (c.wild) continue;
@@ -369,7 +371,7 @@ function sync(dt) {
   trackSelection(dt); placeCamera(); weatherLight(); news(); caption();
 }
 // A phone pass: if frames run slow (under ~24 fps for two seconds) the render resolution steps down, and creeps back up when there is room.
-const maxPR = Math.min(devicePixelRatio || 1, phone ? 1.5 : 2); let slow = 0, fast = 0, spent = 0, frames = 0;
+const maxPR = lite ? litePR : Math.min(devicePixelRatio || 1, phone ? 1.5 : 2); let slow = 0, fast = 0, spent = 0, frames = 0;
 // Picture quality: a tier (see quality.mjs) switches the costly effects. The governor drops a tier after a slow spell and tries one up again after a long smooth one; resolution only goes down once at the lowest tier.
 const gradeEl = document.getElementById('grade');
 const reduceMotion = typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -378,7 +380,7 @@ function applyTier(t) {
   tier = t; const p = PROFILE[t]; U.waves.value = p.waves; U.foam.value = p.foam; U.sway.value = p.sway * (reduceMotion ? .3 : 1); tufts.userData.show(p.tufts); wild.setQuality(p);
   if (gradeEl) gradeEl.style.opacity = p.grade ? '1' : '0'; dome.visible = !!p.glow;
 }
-const forcedQ = isTier(q.get('quality')) ? q.get('quality') : isTier(settings.quality) ? settings.quality : null;
+const forcedQ = isTier(q.get('quality')) ? q.get('quality') : lite ? 'low' : isTier(settings.quality) ? settings.quality : null;
 const gov = createGovernor(startTier({forced: forcedQ, phone}), {locked: !!forcedQ || q.get('tune') === '0'});
 applyTier(gov.tier);
 function setQuality(choice) { if (isTier(choice)) { gov.locked = true; gov.tier = choice; applyTier(choice); } else { gov.locked = false; gov.cap = 'high'; } }
@@ -397,6 +399,7 @@ if (q.get('debug') === '1') {
 }
 function frame(t) {
   requestAnimationFrame(frame);
+  if (lite && last && t - last < 30) return;   // (about 30 frames a second)
   const dt = Math.min(.05, last ? (t - last) / 1000 : 0); last = t;
   if (frozen || document.hidden) return;
   const n = stepsFor(dt, settings.speed); for (let i = 0; i < n; i++) sim.update(dt * settings.speed / n);
@@ -418,6 +421,7 @@ document.addEventListener('visibilitychange', () => sound.pause(document.hidden)
 
 // Hooks for tests and screenshots.
 window.ToyTownNew = {
+  lite,
   sim, scene, camera, renderer, view, season, sound,
   hour: () => sim.hour, setHour(h) { sim.setHour(h); sync(0); renderer.render(scene, camera); },
   info: () => ({market: sim.market.open, marketVisits: sim.market.visits, delivered: sim.freightStats.delivered, cargoNow: sim.cargo.length, riders: sim.riders.length, trainLaps: sim.train.laps, trainStops: sim.train.stopsMade, lampsLit: sim.lamps.filter(l => l.on).length, wet: +sim.weather.wet.toFixed(2), season, pixelRatio: renderer.getPixelRatio(), story: sim.story.current && sim.story.current.id, rain: +sim.weather.rain.toFixed(2), calls: renderer.info.render.calls, triangles: renderer.info.render.triangles, residentsOut: sim.residents.filter(r => r.state === 'walking').length, clock: sim.clock}),

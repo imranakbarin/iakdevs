@@ -7,8 +7,8 @@ import {PETS, HENS, DOLPHINS, WHALES, ISLET, DWARFS, ground, makeWalker, wanderS
 import {PLOTS, COOP} from './garden.mjs';
 
 const TAU = Math.PI * 2, clamp = (a, v, b) => Math.max(a, Math.min(b, v));
-export function createWildlife({scene, sim, people, material, season}) {
-  const gr = ground(), gardens = buildGardens(season, material), borders = buildBorders(sim.graph, season, material), islet = buildIslet(material), meadow = buildMeadow(season);
+export function createWildlife({scene, sim, people, material, season, lite = false}) {
+  const gr = ground(), gardens = buildGardens(season, material), borders = lite ? new THREE.Group() : buildBorders(sim.graph, season, material), islet = buildIslet(material), meadow = buildMeadow(season, lite ? 1 : 800);
   scene.add(gardens, borders, islet, meadow);
   let seed = 100; const rnd = () => rand(seed++);
   const pick = [];   // everything a visitor can tap: {g, describe()}
