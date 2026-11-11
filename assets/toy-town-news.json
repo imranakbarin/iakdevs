@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generated_at": "2026-11-10T17:55:20.044Z",
+  "generated_at": "2026-11-11T06:37:18.016Z",
   "status": "ok",
   "successful_sources": [
     "BBC News",
@@ -25,52 +25,52 @@
       "published_at": "2026-11-10T16:30:45.000Z"
     },
     {
-      "title": "NASA Scientists Show How Gravitational Waves Can Reveal New Worlds",
-      "url": "https://science.nasa.gov/missions/lisa/gravitational-waves-can-reveal-new-worlds/",
-      "source": "NASA",
+      "title": "Artist creates world's biggest soil painting",
+      "url": "https://www.bbc.co.uk/news/articles/cm3wvvp5d1qzo?at_medium=RSS&at_campaign=rss",
+      "source": "BBC Science",
       "category": "Science",
       "tone": "light",
-      "published_at": "2026-11-10T16:00:26.000Z"
+      "published_at": "2026-11-11T06:06:21.000Z"
     },
     {
-      "title": "David Walliams' career and controversies including Britain's Got Talent and Little Britain",
-      "url": "https://www.bbc.co.uk/news/articles/c6d7q98z1yz3o?at_medium=RSS&at_campaign=rss",
+      "title": "David Walliams accused of sexual misconduct after losing injunction bid",
+      "url": "https://www.bbc.co.uk/news/articles/ckn8w8p9370zo?at_medium=RSS&at_campaign=rss",
       "source": "BBC Culture",
       "category": "Culture",
       "tone": "light",
-      "published_at": "2026-11-10T14:53:28.000Z"
+      "published_at": "2026-11-10T20:20:11.000Z"
     },
     {
-      "title": "McTominay reveals heart treatment at World Cup",
-      "url": "https://www.bbc.co.uk/sport/football/articles/cw5ynynx204zo?at_medium=RSS&at_campaign=rss",
+      "title": "Does Pickford finally face serious competition for his England place?",
+      "url": "https://www.bbc.co.uk/sport/football/articles/crvg9y27n45wo?at_medium=RSS&at_campaign=rss",
       "source": "BBC Sport",
       "category": "Sport",
       "tone": "light",
-      "published_at": "2026-11-10T16:46:31.000Z"
+      "published_at": "2026-11-11T06:24:28.000Z"
     },
     {
-      "title": "High oil prices have led to a dip in global carbon emissions",
-      "url": "https://arstechnica.com/science/2026/11/carbon-emissions-are-down-this-year-but-that-probably-wont-last/",
-      "source": "Ars Technica",
+      "title": "Robot vessels take on the dangerous work of mine hunting",
+      "url": "https://www.bbc.co.uk/news/articles/cj5yn24llxd6o?at_medium=RSS&at_campaign=rss",
+      "source": "BBC Technology",
       "category": "Technology",
       "tone": "light",
-      "published_at": "2026-11-10T16:29:27.000Z"
+      "published_at": "2026-11-11T00:19:13.000Z"
     },
     {
-      "title": "Kim Kardashian's Skims offers refunds for $148 advent calendar after backlash",
-      "url": "https://www.bbc.co.uk/news/articles/cqp8g8p53x6ko?at_medium=RSS&at_campaign=rss",
+      "title": "Electricity bills to rise by 2.5% from March",
+      "url": "https://www.bbc.co.uk/news/articles/c6x292elgnm5o?at_medium=RSS&at_campaign=rss",
       "source": "BBC Business",
       "category": "Business",
       "tone": "light",
-      "published_at": "2026-11-10T17:04:55.000Z"
+      "published_at": "2026-11-11T06:24:15.000Z"
     },
     {
-      "title": "Controversial kinship: From colonial rule to the Holocaust?",
-      "url": "https://www.dw.com/en/controversial-kinship-from-colonial-rule-to-the-holocaust/a-79902228?maca=en-rss-en-world-4025-xml-mrss",
-      "source": "DW",
+      "title": "US House blocks bid to impeach Defence Secretary Pete Hegseth, for now",
+      "url": "https://www.bbc.co.uk/news/articles/cxly4y5jzl0qo?at_medium=RSS&at_campaign=rss",
+      "source": "BBC News",
       "category": "World",
       "tone": "light",
-      "published_at": "2026-11-10T15:49:00.000Z"
+      "published_at": "2026-11-11T03:26:42.000Z"
     },
     {
       "title": "Actor, 85, takes to the stage despite Alzheimer’s diagnosis",
@@ -81,12 +81,12 @@
       "published_at": "2026-11-10T11:34:34.000Z"
     },
     {
-      "title": "Locals launch campaign to buy ancient wood",
-      "url": "https://www.bbc.co.uk/news/articles/c3rryynzqxwno?at_medium=RSS&at_campaign=rss",
-      "source": "BBC Science",
+      "title": "APOD: 2026 November 11 – NGC 4449: Small Galaxy, Big Impact",
+      "url": "https://science.nasa.gov/image-article/apod-2026-november-11-ngc-4449-small-galaxy-big-impact/",
+      "source": "NASA",
       "category": "Science",
       "tone": "light",
-      "published_at": "2026-11-10T08:13:42.000Z"
+      "published_at": "2026-11-11T05:05:00.000Z"
     }
   ]
 }
