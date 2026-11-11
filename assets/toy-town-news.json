@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generated_at": "2026-11-10T17:55:20.044Z",
+  "generated_at": "2026-11-11T15:20:15.931Z",
   "status": "ok",
   "successful_sources": [
     "BBC News",
@@ -17,76 +17,76 @@
   ],
   "stories": [
     {
-      "title": "‘Nothing short of a miracle’ – Rescuers Find Boy with Autism Missing for 3 Days",
-      "url": "https://www.goodnewsnetwork.org/nothing-short-of-a-miracle-rescuers-find-boy-with-autism-missing-for-3-days/",
+      "title": "‘I pulled him out, I heard more screaming’ – How a Cadet Saved a Father and Son from Drowning",
+      "url": "https://www.goodnewsnetwork.org/i-pulled-him-out-i-heard-more-screaming-how-a-cadet-saved-a-father-and-son-from-drowning/",
       "source": "Good News Network",
       "category": "Good news",
       "tone": "light",
-      "published_at": "2026-11-10T16:30:45.000Z"
+      "published_at": "2026-11-11T14:00:06.000Z"
     },
     {
-      "title": "NASA Scientists Show How Gravitational Waves Can Reveal New Worlds",
-      "url": "https://science.nasa.gov/missions/lisa/gravitational-waves-can-reveal-new-worlds/",
-      "source": "NASA",
-      "category": "Science",
-      "tone": "light",
-      "published_at": "2026-11-10T16:00:26.000Z"
-    },
-    {
-      "title": "David Walliams' career and controversies including Britain's Got Talent and Little Britain",
-      "url": "https://www.bbc.co.uk/news/articles/c6d7q98z1yz3o?at_medium=RSS&at_campaign=rss",
-      "source": "BBC Culture",
-      "category": "Culture",
-      "tone": "light",
-      "published_at": "2026-11-10T14:53:28.000Z"
-    },
-    {
-      "title": "McTominay reveals heart treatment at World Cup",
-      "url": "https://www.bbc.co.uk/sport/football/articles/cw5ynynx204zo?at_medium=RSS&at_campaign=rss",
-      "source": "BBC Sport",
-      "category": "Sport",
-      "tone": "light",
-      "published_at": "2026-11-10T16:46:31.000Z"
-    },
-    {
-      "title": "High oil prices have led to a dip in global carbon emissions",
-      "url": "https://arstechnica.com/science/2026/11/carbon-emissions-are-down-this-year-but-that-probably-wont-last/",
-      "source": "Ars Technica",
-      "category": "Technology",
-      "tone": "light",
-      "published_at": "2026-11-10T16:29:27.000Z"
-    },
-    {
-      "title": "Kim Kardashian's Skims offers refunds for $148 advent calendar after backlash",
-      "url": "https://www.bbc.co.uk/news/articles/cqp8g8p53x6ko?at_medium=RSS&at_campaign=rss",
-      "source": "BBC Business",
-      "category": "Business",
-      "tone": "light",
-      "published_at": "2026-11-10T17:04:55.000Z"
-    },
-    {
-      "title": "Controversial kinship: From colonial rule to the Holocaust?",
-      "url": "https://www.dw.com/en/controversial-kinship-from-colonial-rule-to-the-holocaust/a-79902228?maca=en-rss-en-world-4025-xml-mrss",
-      "source": "DW",
-      "category": "World",
-      "tone": "light",
-      "published_at": "2026-11-10T15:49:00.000Z"
-    },
-    {
-      "title": "Actor, 85, takes to the stage despite Alzheimer’s diagnosis",
-      "url": "https://www.positive.news/society/actor-85-takes-to-the-stage-despite-alzheimers-diagnosis/",
-      "source": "Positive News",
-      "category": "Good news",
-      "tone": "light",
-      "published_at": "2026-11-10T11:34:34.000Z"
-    },
-    {
-      "title": "Locals launch campaign to buy ancient wood",
-      "url": "https://www.bbc.co.uk/news/articles/c3rryynzqxwno?at_medium=RSS&at_campaign=rss",
+      "title": "Toby Jones stars in film about UK Mars mission",
+      "url": "https://www.bbc.co.uk/news/articles/cqm2l304w0x9o?at_medium=RSS&at_campaign=rss",
       "source": "BBC Science",
       "category": "Science",
       "tone": "light",
-      "published_at": "2026-11-10T08:13:42.000Z"
+      "published_at": "2026-11-11T14:10:11.000Z"
+    },
+    {
+      "title": "'You makes Barry proud' - Gavin & Stacey star Joanna Page to enter I'm a Celeb jungle",
+      "url": "https://www.bbc.co.uk/news/articles/cm62prjl7p2no?at_medium=RSS&at_campaign=rss",
+      "source": "BBC Culture",
+      "category": "Culture",
+      "tone": "light",
+      "published_at": "2026-11-11T14:09:25.000Z"
+    },
+    {
+      "title": "England cancel Windies Test in favour of home Ashes warm-ups",
+      "url": "https://www.bbc.co.uk/sport/cricket/articles/c5zjrympwrlmo?at_medium=RSS&at_campaign=rss",
+      "source": "BBC Sport",
+      "category": "Sport",
+      "tone": "light",
+      "published_at": "2026-11-11T14:46:29.000Z"
+    },
+    {
+      "title": "Google DeepMind just mathematically verified key parts of Signal",
+      "url": "https://arstechnica.com/ai/2026/11/signals-encryption-just-passed-an-ai-powered-mathematical-checkup/",
+      "source": "Ars Technica",
+      "category": "Technology",
+      "tone": "light",
+      "published_at": "2026-11-11T14:08:57.000Z"
+    },
+    {
+      "title": "What are cold weather payments and who can get them?",
+      "url": "https://www.bbc.co.uk/news/articles/c87470q4w21o?at_medium=RSS&at_campaign=rss",
+      "source": "BBC Business",
+      "category": "Business",
+      "tone": "light",
+      "published_at": "2026-11-11T12:49:31.000Z"
+    },
+    {
+      "title": "Is AIIB's complaint mechanism failing affected communities?",
+      "url": "https://www.dw.com/en/is-aiib-s-complaint-mechanism-failing-affected-communities/a-79919917?maca=en-rss-en-world-4025-xml-mrss",
+      "source": "DW",
+      "category": "World",
+      "tone": "light",
+      "published_at": "2026-11-11T15:12:00.000Z"
+    },
+    {
+      "title": "Caitlin Moran on how to find hope when the world feels hopeless",
+      "url": "https://www.positive.news/society/caitlin-moran-on-how-to-find-hope-when-the-world-feels-hopeless/",
+      "source": "Positive News",
+      "category": "Good news",
+      "tone": "light",
+      "published_at": "2026-11-11T12:35:13.000Z"
+    },
+    {
+      "title": "APOD: 2026 November 11 – NGC 4449: Small Galaxy, Big Impact",
+      "url": "https://science.nasa.gov/image-article/apod-2026-november-11-ngc-4449-small-galaxy-big-impact/",
+      "source": "NASA",
+      "category": "Science",
+      "tone": "light",
+      "published_at": "2026-11-11T05:05:00.000Z"
     }
   ]
 }
