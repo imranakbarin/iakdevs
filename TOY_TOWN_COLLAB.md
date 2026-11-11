@@ -1244,3 +1244,9 @@ A `START` does not prohibit parallel edits. Avoid stepping on each other's uncom
 - **Tests**: edition formatting, headline choice, the ledger only grows, yesterday is empty on the first morning, journals have no doubled entries and most people have three or more; visual: the paper opens by finger on the phone and clears the other buttons, a journal opens for Finn.
 - **Not verified**: a real phone (the call counts are from the headless renderer); the wording of the paper.
 
+### 2026-11-11 · Claude · DONE (new storybook town, follow-up 13: emergencies, elections, seasons change the map, the saga, mysteries and photo mode)
+- **Request (owner)**: "1-6" from my list of fresh directions.
+- **Built**: (1) fires, a lost child and storms with responders, flames, smoke, branches and a rising sea; (2) elections every third day with a Town hall tab and lasting effects (fountain or flower beds, longer market, Saturday concert or film, harbour lights or bench); (3) ice, flood, leaf piles and a beach by season with stories to match; (4) ages, birthdays, weddings and babies, saved between visits; (5) mystery cases whose clues are true to the journals, with an accusation in a Case tab; (6) a camera button that frames a postcard, polaroid or plain picture with a caption.
+- **Side effects**: older logic tests now run with `events: false` (an emergency sends people to unexpected places), several simulation thresholds moved again (fish, rides, outings), three rounds start with a train ride so commuting stays visible, the visual test steps with `advance(seconds, true)` (many queued frames made screenshots time out in the software renderer: found while chasing a screenshot hang that was not a rendering fault), and there is a new Emergencies on/off row in the settings.
+- **Not verified**: a real phone; the balance and wording of emergencies, votes and clues; whether weddings and babies arrive too fast (a wedding about every three days once friendships form).
+
