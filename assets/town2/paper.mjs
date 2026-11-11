@@ -13,6 +13,7 @@ export function edition(d) {
   if (d.titles && d.titles.length) items.push('Stories: ' + d.titles.slice(0, 4).join('; ') + (d.titles.length > 4 ? '; and ' + (d.titles.length - 4) + ' more' : '') + '.');
   if (d.incidents && d.incidents.length) items.push('Emergencies: ' + d.incidents.join('; ') + '.');
   if (d.family && d.family.length) items.push('Town news: ' + d.family.slice(0, 4).join('; ') + (d.family.length > 4 ? '; and ' + (d.family.length - 4) + ' more' : '') + '.');
+  if (diff('dwarfSeen')) items.push('Nature notes: lantern lights were seen out on Dwarf Rock again.');
   const fr = diff('friends'); if (fr) items.push('New friendships: ' + plural(fr, 'pair') + ' of neighbours became friends.');
   items.push('The mood of the town: ' + (b.mood > .8 ? 'cheerful' : b.mood > .62 ? 'content' : 'grumpy') + '.');
   if (d.tomorrow) items.push('Tomorrow, ' + d.tomorrow.dayName + ': ' + (d.tomorrow.market ? d.tomorrow.market + ' at 9; ' : '') + (d.tomorrow.weekend ? 'no school.' : 'school as usual.'));

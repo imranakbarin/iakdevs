@@ -25,7 +25,14 @@ export function shore(x, z) {
   return Math.hypot(x / ISLAND.rx, z / ISLAND.rz) + .028 * Math.sin(a * 5 + .6) + .018 * Math.sin(a * 9 - 1.1);
 }
 // Ground height. The square is flat, the countryside rolls gently, Windmill Hill rises in the north.
+// Level patches: the garden plots are flattened (garden.mjs fills this in), so a bed never runs half under the lawn.
+export const FLAT = [];
 export function heightAt(x, z) {
+  let h = baseHeight(x, z);
+  for (const f of FLAT) { const d = Math.hypot(x - f.x, z - f.z); if (d < f.r * 1.5) { const t = smooth(f.r * 1.5, f.r * 1.02, d); h += (f.y - h) * t; } }
+  return h;
+}
+export function baseHeight(x, z) {
   const land = smooth(1.0, .84, shore(x, z));
   const roll = .34 * Math.sin(x * .33 + 1.3) * Math.cos(z * .41 - .4) + .2 * Math.sin(x * .71 - z * .52);
   const away = smooth(4.2, 9, Math.hypot(x - SQUARE.x, z - SQUARE.z));
@@ -245,14 +252,14 @@ export const GREEN = {x: 0, z: 0, r: 1.5};
 
 // Scenery that is not a building: tree clusters [x, z, kind, scale], kinds 'round' | 'tall' | 'apple' | 'bush'.
 export const TREES = (() => {
-  const out = [], roadPts = allRoadPoints(), loop = trackPts(200), kinds = ['round', 'tall', 'apple', 'round'];
+  const out = [], roadPts = allRoadPoints(), loop = trackPts(200), kinds = ['round', 'tall', 'apple', 'birch', 'round', 'pine', 'tall', 'round'];
   // is there room for something of radius r at (x, z)? clear of buildings, roads, the railway, the pond, the paddock and the pier
   const room = (x, z, r) => shore(x, z) < .84 && BUILDINGS.every(b => Math.hypot(b.x - x, b.z - z) > r + b.w * .5 + .5) && roadPts.every(p => Math.hypot(p[0] - x, p[1] - z) > r + .85)
     && loop.every(p => Math.hypot(p[0] - x, p[1] - z) > r + 1.0) && Math.hypot(x, z) > SQUARE.ring + r + 1.0 && Math.hypot(x - POND.x, z - POND.z) > POND.r + r + .5
     && !(x > PADDOCK.x0 - r - .5 && x < PADDOCK.x1 + r + .5 && z > PADDOCK.z0 - r - .5 && z < PADDOCK.z1 + r + .5) && !(x > PIER.x0 - 1 && Math.abs(z - PIER.z) < 1.5) && out.every(t => Math.hypot(t[0] - x, t[1] - z) > (t[3] + r) * .72);
   const add = (x, z, kind, sc) => { if (room(x, z, sc * .5)) out.push([+x.toFixed(2), +z.toFixed(2), kind, sc]); };
-  for (let k = 0; k < 70; k++) { const a = k / 70 * TAU + rand(k + 400) * .08, r = .72 + rand(k + 500) * .06; add(Math.cos(a) * ISLAND.rx * r, Math.sin(a) * ISLAND.rz * r, kinds[k % 4], .85 + rand(k + 600) * .3); }   // a belt of trees just inside the shore
-  const grove = (cx, cz, n, seed) => { for (let k = 0; k < n; k++) { const a = k / n * TAU + rand(seed + k) * 1.2, r = .5 + rand(seed + 30 + k) * 1.4; add(cx + Math.cos(a) * r, cz + Math.sin(a) * r, kinds[(k + seed) % 4], .8 + rand(seed + 60 + k) * .3); } };
+  for (let k = 0; k < 70; k++) { const a = k / 70 * TAU + rand(k + 400) * .08, r = .72 + rand(k + 500) * .06; add(Math.cos(a) * ISLAND.rx * r, Math.sin(a) * ISLAND.rz * r, kinds[k % 8], .85 + rand(k + 600) * .3); }   // a belt of trees just inside the shore
+  const grove = (cx, cz, n, seed) => { for (let k = 0; k < n; k++) { const a = k / n * TAU + rand(seed + k) * 1.2, r = .5 + rand(seed + 30 + k) * 1.4; add(cx + Math.cos(a) * r, cz + Math.sin(a) * r, kinds[(k + seed) % 8], .8 + rand(seed + 60 + k) * .3); } };
   for (let k = 0; k < 8; k++) { const a = A8(k) + TAU / 16; grove(Math.cos(a) * 7.4, Math.sin(a) * 5.6, 4, k * 11 + 3); }   // a grove in each sector, out in the blocks between the streets
   for (let k = 0; k < 8; k++) { const a = A8(k) + TAU / 16; grove(Math.cos(a) * 9.8, Math.sin(a) * 7.6, 3, k * 13 + 7); }
   for (let i = 0; i < 3; i++) for (let j = 0; j < 2; j++) add(5.2 + i * 1.3, 3.9 + j * 1.3, 'apple', .8);   // an orchard in rows

@@ -14,6 +14,9 @@ import {stageOf, dots} from './track.mjs';
 import {journalLines} from './paper.mjs';
 import {load as loadSettings, save as saveSettings, stepsFor, BUSY_FACTOR} from './settings.mjs';
 import {newsStory} from './stories.mjs';
+import {createWildlife} from './wildscene.mjs';
+import {COOP, PLOTS} from './garden.mjs';
+const PLOT_COUNT = PLOTS.length;
 import {describeResident, describeBuilding, describeVehicle, describeAnimal, describeTrain} from './inspect.mjs';
 
 const canvas = document.getElementById('town'), q = new URLSearchParams(location.search);
@@ -77,8 +80,10 @@ const boat = buildBoat(built.material); boat.position.set(PIER.x1 - .6, -.02, PI
 const critters = [];
 for (let k = 0; k < 6; k++) { const kind = k < 3 ? 'cow' : 'sheep', g = buildAnimal(kind, built.material); scene.add(g); critters.push({g, k, x: PADDOCK.x0 + .6 + rand(k + 5) * (PADDOCK.x1 - PADDOCK.x0 - 1.2), z: PADDOCK.z0 + .6 + rand(k + 9) * (PADDOCK.z1 - PADDOCK.z0 - 1.2), tx: 0, tz: 0, wait: rand(k + 30) * 4, hd: rand(k) * 6, bounds: PADDOCK, step: kind === 'cow' ? .1 : .13}); }
 for (let k = 0; k < 3; k++) { const g = buildAnimal('duck', built.material); scene.add(g); critters.push({g, k: 10 + k, x: POND.x + (rand(k + 40) - .5) * 1.4, z: POND.z + (rand(k + 50) - .5) * .8, tx: 0, tz: 0, wait: rand(k + 60) * 3, hd: rand(k + 70) * 6, bounds: {x0: POND.x - 1.1, x1: POND.x + 1.1, z0: POND.z - .65, z1: POND.z + .65}, step: .12, water: true}); }
+const wild = createWildlife({scene, sim, people, material: built.material, season}); critters.push(...wild.pick.map(a => ({g: a.g, wild: true, describe: a.describe})));
 function moveCritters(dt) {
   for (const c of critters) {
+    if (c.wild) continue;
     if (c.wait > 0) c.wait -= dt;
     else {
       const dx = c.tx - c.x, dz = c.tz - c.z, d = Math.hypot(dx, dz);
@@ -144,7 +149,7 @@ function posOf(o) {
 function describe(o) {
   if (o.kind === 'resident') return describeResident(sim, sim.residents.find(r => r.id === o.id));
   if (o.kind === 'vehicle') return describeVehicle(sim, sim.vehicles.find(v => v.id === o.id));
-  if (o.kind === 'animal') return describeAnimal(critterKind(critters[o.id]));
+  if (o.kind === 'animal') { const c = critters[o.id]; return c.describe ? c.describe() : describeAnimal(critterKind(c)); }
   if (o.kind === 'train') return describeTrain(sim);
   return describeBuilding(sim, BUILDINGS.find(b => b.id === o.id));
 }
@@ -300,11 +305,11 @@ function caption() {
 }
 
 /* ---- the loop ---- */
-let sagaSaved = 0, flood = 0, shadowsNear = true, last = 0, frozen = false, time = 0, windNow = wind(0);
+let nightNow = 0, sagaSaved = 0, flood = 0, shadowsNear = true, last = 0, frozen = false, time = 0, windNow = wind(0);
 // The light follows the hour: sky, fog, sea, sun or moon, lit windows and lanterns, stars.
 function weatherLight() {
   const L = skyAt(sim.hour, sim.weather.rain, season);
-  scene.background.set(L.sky);
+  scene.background.set(L.sky); nightNow = L.night;
   if (dome.visible) { const u = dome.userData.u, r = clamp(0, sim.weather.rain, 1); u.uBottom.value.set(L.sky); u.uTop.value.set(mix(mix(L.sky, '#4f9fe2', (1 - L.night) * (1 - r) * .55), '#060c22', L.night * .55)); u.uSun.value.set(L.sunPos[0], Math.max(.02, L.sunPos[1]), L.sunPos[2]); u.uGlow.value = Math.max(0, Math.min(1, (1.8 - L.sunI) / 1.0)) * (1 - L.night) * (1 - r); u.uGlowColor.value.set(L.sunColor); } scene.fog.color.set(L.fog); seaMat.color.set(L.sea); if (gradeEl) { const warm = Math.max(0, Math.min(1, (1.6 - L.sunI) / .9)) * (1 - L.night), cool = L.night; gradeEl.style.setProperty('--tint', cool > .3 ? 'rgba(40,60,140,' + (cool * .12).toFixed(3) + ')' : 'rgba(255,150,70,' + (warm * .1).toFixed(3) + ')'); }
   { const k = (.05 + clamp(0, (1.55 - L.hemiI) / .55, 1) * .28) * (1 - .4 * L.night);   // water holds its colour when the light is low
     seaMat.emissive.set(L.sea).multiplyScalar(k); built.shallows.material.color.set(mix(L.sea, '#d8fff6', .5)); built.shallows.material.emissive.set(L.sea).multiplyScalar(k * 1.3); }
@@ -353,7 +358,7 @@ function sync(dt) {
   { trainCars[0].localToWorld(v3b.set(0, .66, .36)); const moving = Math.abs(sim.train.v) > .1;   // the engine's smoke: more when it is working
     smoke.update(dt, {x: v3b.x, y: v3b.y, z: v3b.z, vx: windNow.x * .14, vz: windNow.z * .14}, moving ? 5 : 1.2);
     smoke.puffs.forEach((p, i) => { const z = smoke.size(p); smokeM.makeScale(z, z, z).setPosition(p.x, p.y, p.z); smokeMesh.setMatrixAt(i, smokeM); }); smokeMesh.instanceMatrix.needsUpdate = true; }
-  moveCritters(dt); boat.position.y = -.02 + Math.sin(time * 1.3) * .022; boat.rotation.z = Math.sin(time * 1.1) * .03;
+  wild.update(dt, time, {hour: sim.hour, day: sim.day, rain: sim.weather.rain, night: nightNow, dist: view.dist}); moveCritters(dt); boat.position.y = -.02 + Math.sin(time * 1.3) * .022; boat.rotation.z = Math.sin(time * 1.1) * .03;
   built.moving.top.inner.rotation.y = time * 2.2; built.moving.sails.inner.rotation.z = -time * .55;
   built.moving.minute.inner.rotation.z = -time * .1; built.moving.hour.inner.rotation.z = -time * .1 / 12;
   clouds.rotation.y = time * .012;
@@ -369,7 +374,7 @@ const gradeEl = document.getElementById('grade');
 const reduceMotion = typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches;
 let tier = 'high';
 function applyTier(t) {
-  tier = t; const p = PROFILE[t]; U.waves.value = p.waves; U.foam.value = p.foam; U.sway.value = p.sway * (reduceMotion ? .3 : 1); tufts.userData.show(p.tufts);
+  tier = t; const p = PROFILE[t]; U.waves.value = p.waves; U.foam.value = p.foam; U.sway.value = p.sway * (reduceMotion ? .3 : 1); tufts.userData.show(p.tufts); wild.setQuality(p);
   if (gradeEl) gradeEl.style.opacity = p.grade ? '1' : '0'; dome.visible = !!p.glow;
 }
 const forcedQ = isTier(q.get('quality')) ? q.get('quality') : isTier(settings.quality) ? settings.quality : null;
@@ -420,5 +425,7 @@ window.ToyTownNew = {
   trainPos: () => trainCars[0].position, selected: () => sel, tapAt: (cx, cy) => tap(cx, cy), select, sendParcel: (a, b) => sim.sendParcel(a, b), jobsText: () => jobsText, trackText: () => (trackEl ? trackEl.textContent : ''), trackState: () => ({tracked, trackAt, el: !!trackEl}),
   project(x, z, y = .4) { const r = canvas.getBoundingClientRect(); camera.updateMatrixWorld(); v3.set(x, heightAt(x, z) + y, z).project(camera); return [(v3.x * .5 + .5) * r.width + r.left, (-v3.y * .5 + .5) * r.height + r.top]; },
   setWeather(kind, seconds = 600) { sim.weather.force(kind, seconds); },
+  critterList: () => critters, coop: COOP, plots: PLOT_COUNT,
+  wild: {update: wild.update, hens: wild.hens, pets: wild.pets, dwarfs: wild.dwarfs, islet: wild.islet, meadow: wild.meadow, gardens: wild.gardens, borders: wild.borders, out: () => wild.dwarfsOut({day: sim.day, hour: sim.hour}), forceDwarfs: (n, u) => wild.forceDwarfs(n, u), pick: wild.pick},
   fxState: () => ({flames: flames.visible, debris: debris.count, flood: +flood.toFixed(2), decor: seasonDecor.children.length, townFx: townFx ? townFx.children.length : 0}), photo: o => { photoRaw = null; photoStyle = (o && o.style) || 'postcard'; grabPhoto(); if (o && o.caption) photoCaption = o.caption; const c = composePhoto(), url = c.toDataURL('image/jpeg', .92), d = c.getContext('2d').getImageData(0, Math.round(c.height * .82), c.width, Math.round(c.height * .17)).data; let dark = 0; for (let i = 0; i < d.length; i += 4) if (d[i] < 120) dark++; return {w: c.width, h: c.height, rawW: photoRaw.width, rawH: photoRaw.height, url: url.slice(0, 40), len: url.length, dark}; }, paperText: () => (paperEl ? paperEl.textContent : ''), openPaper, closePaper, seasonDecor: () => seasonDecor.children.length, rodsOut: () => [...rods.values()].filter(r => r.visible).length, highlight: () => ({pin: pin.visible, ring: ring.visible, mode: settings.highlight}), settings, applySettings, setQuality, tier: () => tier, gov, tufts, U, freeze(on = true) { frozen = on; }
 };

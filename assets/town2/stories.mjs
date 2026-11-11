@@ -46,7 +46,15 @@ export const STORIES = [
   {id: 'paddle',    title: 'A paddle at the harbour', season: 'summer', hours: [11, 17], wet: 'dry', go: [['salt', [['hut', 35]]], ['dot', [['hut', 35]]], ['dash', [['hut', 35]]]]},
   // only staged by the news
   {id: 'market',     title: 'A busy market morning', hours: [8, 16], news: true, go: [['hay', [['bakery', 12], ['toys', 10]]], ['tilly', [['bakery', 15]]], ['crumb', [['farm', 20]]]]},
-  {id: 'party',      title: 'A good-news party at the café', hours: [9, 18], news: true, go: [['crumb', [['cafe', 40]]], ['pott', [['cafe', 40]]], ['moss', [['cafe', 40]]], ['bell', [['cafe', 30]]], ['pip', [['cafe', 30]]]]}
+  {id: 'party',      title: 'A good-news party at the café', hours: [9, 18], news: true, go: [['crumb', [['cafe', 40]]], ['pott', [['cafe', 40]]], ['moss', [['cafe', 40]]], ['bell', [['cafe', 30]]], ['pip', [['cafe', 30]]]]},
+  // the animals, the gardens and the dwarfs
+  {id: 'dogbiscuit', title: 'Granny Moss buys a bone-shaped biscuit for Biscuit', hours: [9, 15], go: [['moss', [['bakery', 14]]]]},
+  {id: 'pepperplay', relaxed: true, title: 'Dot takes Pepper to the toy shop for a squeaky toy', hours: [15, 18], wet: 'dry', go: [['dot', [['toys', 25]]]]},
+  {id: 'henfeed', relaxed: true, title: 'Dot and Dash help Farmer Hay feed the hens', days: 'weekend', hours: [8, 11], wet: 'dry', go: [['hay', [['farm', 30]]], ['dot', [['farm', 30]]], ['dash', [['farm', 30]]]]},
+  {id: 'dolphinwatch', relaxed: true, title: 'Dolphins! The children run to the harbour to see them leap', hours: [10, 17], wet: 'dry', go: [['dot', [['hut', 35]]], ['dash', [['hut', 35]]], ['june', [['hut', 30]]]]},
+  {id: 'whalewatch', relaxed: true, season: 'summer', title: 'A whale has been spotted far out: everyone gathers on the beach', days: 'weekend', hours: [10, 16], wet: 'dry', go: [['bea', [['hut', 40]]], ['sparky', [['hut', 40]]], ['june', [['hut', 35]]]]},
+  {id: 'dwarflights', relaxed: true, title: 'Granny Moss and Mrs Pott watch for lights on Dwarf Rock', hours: [18, 21], wet: 'dry', go: [['moss', [['hut', 40]]], ['pott', [['hut', 40]]]]},
+  {id: 'gardentour', relaxed: true, title: "Ivy shows Auntie June and Mrs Pott round her garden", hours: [10, 15], wet: 'dry', go: [['june', [['c9', 35]]], ['pott', [['c9', 35]]], ['ivy', [['c9', 35]]]]},
 ].concat(LIFE_STORIES);
 
 // Which story a headline calls up: keywords first, then its category. Rain and fire are staged too.
