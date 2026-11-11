@@ -393,7 +393,8 @@ export function createSim(seed = 7, opts = {}) {
   const mystery = {active: null, solved: 0, failed: 0, nextAt: opts.mysteryAt ?? DAY + 6 * 20};
   function stepMystery() {
     const m = mystery.active;
-    if (!m) { if (opts.mysteries !== false && clock >= mystery.nextAt && hour >= 12 && hour < 16 && !incident) startMystery(); return; }
+    if (!m || m.over) { if (opts.mysteries !== false && clock >= mystery.nextAt && hour >= 12 && hour < 16 && !incident) startMystery(); return; }   // (a finished case stays on the case book until the next one starts)
+    if (clock - m.start > DAY * 1.1) { m.over = true; m.result = 'cold'; mystery.failed++; m.feedback = 'The trail went cold: ' + resident(m.culprit).def.name + ' got away with ' + m.c.item + '.'; sagaLog.push({day: dayIdx, type: 'case', text: 'Mystery unsolved: the trail went cold'}); mystery.nextAt = clock + GAP; return; }
     while (m.released < m.clues.length && clock - m.start >= m.clues[m.released].at) { const c = m.clues[m.released++]; m.shown.push({at: clock, text: c.text.includes('{other}') ? c.text : c.text}); }
   }
   function startMystery() {
