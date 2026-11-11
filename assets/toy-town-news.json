@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generated_at": "2026-11-11T15:20:15.931Z",
+  "generated_at": "2026-11-11T22:45:05.981Z",
   "status": "ok",
   "successful_sources": [
     "BBC News",
@@ -12,17 +12,16 @@
     "BBC Science",
     "BBC Culture",
     "Good News Network",
-    "Positive News",
     "NASA"
   ],
   "stories": [
     {
-      "title": "‘I pulled him out, I heard more screaming’ – How a Cadet Saved a Father and Son from Drowning",
-      "url": "https://www.goodnewsnetwork.org/i-pulled-him-out-i-heard-more-screaming-how-a-cadet-saved-a-father-and-son-from-drowning/",
+      "title": "Oh Whale! Revisits the Exploding Whale That Became One of the Internet’s First Viral Videos",
+      "url": "https://www.goodnewsnetwork.org/oh-whale-revisits-the-exploding-whale-that-became-one-of-the-internets-first-viral-videos/",
       "source": "Good News Network",
       "category": "Good news",
       "tone": "light",
-      "published_at": "2026-11-11T14:00:06.000Z"
+      "published_at": "2026-11-11T19:32:59.000Z"
     },
     {
       "title": "Toby Jones stars in film about UK Mars mission",
@@ -33,52 +32,52 @@
       "published_at": "2026-11-11T14:10:11.000Z"
     },
     {
-      "title": "'You makes Barry proud' - Gavin & Stacey star Joanna Page to enter I'm a Celeb jungle",
-      "url": "https://www.bbc.co.uk/news/articles/cm62prjl7p2no?at_medium=RSS&at_campaign=rss",
+      "title": "Author says there were 'real concerns' about David Walliams within publishing industry",
+      "url": "https://www.bbc.co.uk/news/articles/c95y15830k77o?at_medium=RSS&at_campaign=rss",
       "source": "BBC Culture",
       "category": "Culture",
       "tone": "light",
-      "published_at": "2026-11-11T14:09:25.000Z"
+      "published_at": "2026-11-11T20:40:47.000Z"
     },
     {
-      "title": "England cancel Windies Test in favour of home Ashes warm-ups",
-      "url": "https://www.bbc.co.uk/sport/cricket/articles/c5zjrympwrlmo?at_medium=RSS&at_campaign=rss",
+      "title": "Arsenal join Scott chase - Thursday's gossip",
+      "url": "https://www.bbc.co.uk/sport/football/articles/c62l51xyl98no?at_medium=RSS&at_campaign=rss",
       "source": "BBC Sport",
       "category": "Sport",
       "tone": "light",
-      "published_at": "2026-11-11T14:46:29.000Z"
+      "published_at": "2026-11-11T21:38:01.000Z"
     },
     {
-      "title": "Google DeepMind just mathematically verified key parts of Signal",
-      "url": "https://arstechnica.com/ai/2026/11/signals-encryption-just-passed-an-ai-powered-mathematical-checkup/",
+      "title": "T-Mobile illegally imposed 50GB cap on low-income home Internet plan, NY says",
+      "url": "https://arstechnica.com/tech-policy/2026/11/t-mobile-illegally-imposed-50-gb-cap-on-low-income-home-internet-plan-ny-says/",
       "source": "Ars Technica",
       "category": "Technology",
       "tone": "light",
-      "published_at": "2026-11-11T14:08:57.000Z"
+      "published_at": "2026-11-11T20:32:21.000Z"
     },
     {
-      "title": "What are cold weather payments and who can get them?",
-      "url": "https://www.bbc.co.uk/news/articles/c87470q4w21o?at_medium=RSS&at_campaign=rss",
+      "title": "Poundland set for more time to secure a rescue deal as emergency talks continue",
+      "url": "https://www.bbc.co.uk/news/articles/c3702jjkez4ko?at_medium=RSS&at_campaign=rss",
       "source": "BBC Business",
       "category": "Business",
       "tone": "light",
-      "published_at": "2026-11-11T12:49:31.000Z"
+      "published_at": "2026-11-11T22:08:56.000Z"
     },
     {
-      "title": "Is AIIB's complaint mechanism failing affected communities?",
-      "url": "https://www.dw.com/en/is-aiib-s-complaint-mechanism-failing-affected-communities/a-79919917?maca=en-rss-en-world-4025-xml-mrss",
-      "source": "DW",
+      "title": "African writing award probe finds 'no evidence' winning story was AI generated",
+      "url": "https://www.bbc.co.uk/news/articles/cmglr260z7eko?at_medium=RSS&at_campaign=rss",
+      "source": "BBC News",
       "category": "World",
       "tone": "light",
-      "published_at": "2026-11-11T15:12:00.000Z"
+      "published_at": "2026-11-11T20:00:54.000Z"
     },
     {
-      "title": "Caitlin Moran on how to find hope when the world feels hopeless",
-      "url": "https://www.positive.news/society/caitlin-moran-on-how-to-find-hope-when-the-world-feels-hopeless/",
-      "source": "Positive News",
+      "title": "For Centuries, Visitors Walked Right by 280 Unseen Ice Age Cave Paintings",
+      "url": "https://www.goodnewsnetwork.org/for-centuries-visitors-walked-right-by-280-unseen-ice-age-cave-paintings/",
+      "source": "Good News Network",
       "category": "Good news",
       "tone": "light",
-      "published_at": "2026-11-11T12:35:13.000Z"
+      "published_at": "2026-11-11T19:30:10.000Z"
     },
     {
       "title": "APOD: 2026 November 11 – NGC 4449: Small Galaxy, Big Impact",
