@@ -10,9 +10,9 @@ const smooth = (a, b, v) => { const t = clamp01((v - a) / (b - a)); return t * t
 // hour, sky, hemisphere sky, hemisphere ground, hemisphere strength, sun colour, sun strength, sea
 const K = [
   [0,    '#16233f', '#5b6fb0', '#2b3a5c', .72, '#9db4ff', .35, '#2a5f86'],
-  [4.8,  '#16233f', '#5b6fb0', '#2b3a5c', .72, '#9db4ff', .35, '#2a5f86'],
-  [6.2,  '#f7b79a', '#ffd9c0', '#b89a8a', 1.0, '#ffc890', 1.0, '#6fb2c8'],
-  [8.2,  '#bfe9fb', '#ffffff', '#b8d8a0', 1.55, '#fff4dc', 2.1, '#5cc4e8'],
+  [4.6,  '#16233f', '#5b6fb0', '#2b3a5c', .72, '#9db4ff', .35, '#2a5f86'],
+  [5.3,  '#f6c4a8', '#ffe9d9', '#c8ad9c', 1.4, '#ffdcb0', 1.8, '#62c0de'],
+  [6.5,  '#bfe9fb', '#ffffff', '#b8d8a0', 1.55, '#fff4dc', 2.1, '#5cc4e8'],
   [16.4, '#bfe9fb', '#ffffff', '#b8d8a0', 1.55, '#fff4dc', 2.1, '#5cc4e8'],
   [18.4, '#f4a67e', '#ffd0b0', '#b89a8a', 1.0, '#ffb070', 1.1, '#6fa7c0'],
   [19.9, '#2a3358', '#7a86c0', '#3a4468', .8, '#9db4ff', .4, '#2f6a90'],
@@ -24,16 +24,16 @@ export const SEASONS = ['spring', 'summer', 'autumn', 'winter'];
 // Northern-hemisphere seasons by calendar month (Dec-Feb winter, Mar-May spring, Jun-Aug summer, Sep-Nov autumn).
 export const seasonOf = (date = new Date()) => { const m = date.getMonth(); return m === 11 || m < 2 ? 'winter' : m < 5 ? 'spring' : m < 8 ? 'summer' : 'autumn'; };
 // How a season tints the day: sky colour and how much, the sun's strength and height.
-const TINT = {spring: ['#c8f0f2', .18, 1, 1], summer: ['#bfe9fb', 0, 1, 1], autumn: ['#f1d9a8', .22, .95, .9], winter: ['#d4e2ee', .3, .82, .72]};
+const TINT = {spring: ['#c8f0f2', .1, 1, 1], summer: ['#bfe9fb', 0, 1, 1], autumn: ['#f1d9a8', .12, .97, .92], winter: ['#d4e2ee', .18, .86, .76]};
 
 export function skyAt(hour, rain = 0, season = 'summer') {
   const h = ((hour % 24) + 24) % 24; let i = 0; while (i < K.length - 2 && h >= K[i + 1][0]) i++;
   const a = K[i], b = K[i + 1], t = clamp01((h - a[0]) / (b[0] - a[0]));
-  const dark = h < 12 ? 1 - smooth(5.2, 7.0, h) : smooth(18.2, 20.2, h);
+  const dark = h < 12 ? 1 - smooth(4.6, 5.5, h) : smooth(18.2, 20.2, h);
   const grey = mix('#8e99a6', '#3a4150', dark), r = clamp01(rain);
   const [tint, tk, sunK, lowK] = TINT[season] || TINT.summer, day = 1 - dark;
   const sky = mix(mix(mix(a[1], b[1], t), tint, tk * day), grey, r * .8);
-  const dayAngle = clamp01((h - 6) / 13) * Math.PI, sunPos = [Math.cos(dayAngle) * 18 - 4, Math.sin(dayAngle) * 22 + 3, 10], moonPos = [-12, 20, 8];
+  const dayAngle = clamp01((h - 6) / 13) * Math.PI, sunPos = [Math.cos(dayAngle) * 18 - 4, Math.sin(dayAngle) * 17 + 9, 10], moonPos = [-12, 20, 8];
   const pos = sunPos.map((v, k) => lerp(v, moonPos[k], dark));
   return {
     hour: h, dark, sky, fog: sky, sea: mix(mix(a[7], b[7], t), '#6f8794', r * .5),
