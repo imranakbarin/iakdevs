@@ -1273,3 +1273,6 @@ A `START` does not prohibit parallel edits. Avoid stepping on each other's uncom
 - **Cause**: every visit starts at 06:00, and the dawn palette was dim (sun almost level with the ground, a long grey-pink stretch before full day, strong seasonal tints). Fog also began at a fixed distance, which on a tall phone screen (camera 90 units out) washed out the whole island.
 - **Fix**: dawn is brighter and shorter (full daylight by about 06:30, so the start of a visit looks like morning), the sun never drops below a fair height, autumn, winter and spring tints are gentler, and the fog now starts beyond the island however far the camera is. Weather (rain, cloud) still greys the sky as before.
 - **Tests**: logic suite and browser suite pass. **Not verified**: a real phone; whether the dusk and night palettes want the same treatment (left as they were).
+
+### 2026-11-11 · Claude · START (new storybook town, follow-up 17: TV browser froze)
+- **Base**: master 9ce48c0. **Request (owner)**: the page froze in a TV browser. **Plan**: detect TV and other weak browsers (user agent or `?lite=1`), and run a lite mode: lowest picture tier, no shadows, no antialiasing, a smaller render size, about 30 frames a second, and no meadow, hedges or butterflies. Files: `assets/town2/main.mjs`, `wildscene.mjs`, tests, spec.
