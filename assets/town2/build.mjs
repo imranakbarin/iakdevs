@@ -723,3 +723,51 @@ export function buildUmbrellas(max = 40) {
   return mesh;
 }
 const PALETTE_PICK = c => P[c] || c;
+
+// Flames over a burning building: tapering cones that flicker (instanced, tinted orange and yellow), shown only during a fire.
+export function buildFlames(n = 14) {
+  const mesh = new THREE.InstancedMesh(new THREE.ConeGeometry(.17, .55, 7).translate(0, .27, 0), new THREE.MeshBasicMaterial({color: '#ffffff', fog: false}), n), m = new THREE.Matrix4(), c = new THREE.Color();
+  mesh.frustumCulled = false; mesh.visible = false; mesh.userData.n = n;
+  mesh.userData.set = (def, y0, time) => { for (let i = 0; i < n; i++) { const a = i / n * TAU + (i % 3), r = (def.w || 1.6) * .32 * (.3 + (i % 4) * .22), f = .7 + .5 * Math.abs(Math.sin(time * 7 + i * 1.9)) + .25 * Math.sin(time * 13 + i); m.compose(new THREE.Vector3(def.x + Math.cos(a) * r, y0 + (i % 3) * .12, def.z + Math.sin(a) * r), new THREE.Quaternion().setFromEuler(new THREE.Euler(0, a, Math.sin(time * 5 + i) * .12)), new THREE.Vector3(f, f * (.8 + (i % 3) * .25), f)); mesh.setMatrixAt(i, m); mesh.setColorAt(i, c.set(i % 3 === 0 ? '#ffd84a' : i % 3 === 1 ? '#ff9a2e' : '#ff6a2e')); } mesh.instanceMatrix.needsUpdate = true; if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true; };
+  return mesh;
+}
+// Fallen branches at some doorsteps after a storm: a few brown logs each.
+export function buildDebris(max = 8) {
+  const mesh = new THREE.InstancedMesh(new THREE.BoxGeometry(.5, .06, .08), new THREE.MeshLambertMaterial({color: '#7a5230'}), max * 3), m = new THREE.Matrix4(); mesh.count = 0; mesh.frustumCulled = false;
+  mesh.userData.show = spots => { let k = 0; for (const p of spots) for (let j = 0; j < 3 && k < max * 3; j++) { m.compose(new THREE.Vector3(p.x + (j - 1) * .14, heightAt(p.x, p.z) + .05 + j * .035, p.z + (j % 2 ? .06 : -.05)), new THREE.Quaternion().setFromEuler(new THREE.Euler(0, .6 + j * 1.1, 0)), new THREE.Vector3(1, 1, 1)); mesh.setMatrixAt(k++, m); } mesh.count = k; mesh.instanceMatrix.needsUpdate = true; };
+  return mesh;
+}
+
+// Open spots on the lawns (clear of roads, rails, buildings, the pond, the paddock and the pier), the same way the grass tufts are placed.
+function findSpots(graph, count, maxR, salt) {
+  const roads = roadGrid(graph), loopGrid = pointGrid(graph.loop.pts), out = [];
+  for (let k = 0; out.length < count && k < 4000; k++) {
+    const x = (rand(k * 7 + salt) - .5) * 2 * maxR, z = (rand(k * 7 + salt + 1) - .5) * 2 * maxR * .8;
+    if (shore(x, z) > .8 || roads.near(x, z, 1.8) < 1.5 || loopGrid.near(x, z, 2.2) < 2 || Math.hypot(x - POND.x, z - POND.z) < POND.r + 1.2 || (x > PADDOCK.x0 - 1 && x < PADDOCK.x1 + 1 && z > PADDOCK.z0 - 1 && z < PADDOCK.z1 + 1) || (x > PIER.x0 - 2 && Math.abs(z - PIER.z) < 2)) continue;
+    if (BUILDINGS.some(b => Math.hypot(b.x - x, b.z - z) < b.w * .5 + 1.1) || out.some(p => Math.hypot(p.x - x, p.z - z) < 1.4)) continue;
+    out.push({x, z});
+  }
+  return out;
+}
+// What each season adds to the map: ice on the pond (winter), a flooded meadow (spring), leaf piles (autumn), beach umbrellas by the harbour (summer).
+export function buildSeasonDecor(season, graph, material) {
+  const g = new THREE.Group(), b = new Bag();
+  if (season === 'winter') { const ice = new THREE.Mesh(new THREE.CircleGeometry(POND.r * 1.02, 28).rotateX(-Math.PI / 2).scale(1.25, 1, 1), new THREE.MeshLambertMaterial({color: '#e3f5ff', transparent: true, opacity: .93})); ice.position.set(POND.x, heightAt(POND.x, POND.z) + .095, POND.z); ice.renderOrder = 1; g.add(ice); }
+  if (season === 'spring') { const sp = findSpots(graph, 1, 12, 91)[0] || {x: -8, z: 7}, f = new THREE.Mesh(new THREE.CircleGeometry(1.6, 24).rotateX(-Math.PI / 2).scale(1.4, 1, 1), new THREE.MeshLambertMaterial({color: '#6fc6ea', transparent: true, opacity: .7})); f.position.set(sp.x, heightAt(sp.x, sp.z) + .035, sp.z); f.renderOrder = 1; g.add(f); g.userData.flood = sp; }
+  if (season === 'autumn') for (const p of findSpots(graph, 8, 11, 33)) { const y = heightAt(p.x, p.z); b.push(p.x, y, p.z, rand(p.x * 9) * TAU); b.sph(.34, '#d9822b', {y: .08, sy: .45, seg: 9}); b.sph(.26, '#e8b83a', {x: .12, y: .12, z: .06, sy: .5, seg: 8}); b.sph(.2, '#b5551f', {x: -.14, y: .1, z: -.05, sy: .5, seg: 8}); b.pop(); }
+  if (season === 'summer') { const hut = BUILDINGS.find(x => x.id === 'hut'); if (hut) for (let i = 0; i < 3; i++) { const x = hut.x - .6 + i * .9, z = hut.z + 1.9 + (i % 2) * .5, y = heightAt(x, z); if (shore(x, z) > .97) continue; b.push(x, y, z, 0); b.cyl(.015, .015, .75, 'white', {seg: 6}); b.cone(.38, .22, ['red', 'blue', 'yellow'][i], {y: .62, seg: 12}); b.box(.4, .02, .22, ['pink', 'sky', 'orange'][i], {x: .45, z: .1, y: .0, ry: .3}); b.pop(); } }
+  if (b.parts.length) { const m = b.mesh(material); m.castShadow = true; g.add(m); }
+  return g;
+}
+
+// What the town has voted for: a fountain or flower beds on a lawn near the centre, lights along the pier or a bench by the harbour.
+export function buildTownEffects(effects, graph, material) {
+  const g = new THREE.Group(), b = new Bag();
+  if (effects.green) { const p = findSpots(graph, 1, 8, 57)[0] || {x: -3, z: 7}, y = heightAt(p.x, p.z);
+    if (effects.green === 'fountain') { b.push(p.x, y, p.z, 0); b.cyl(.62, .68, .16, 'stone', {seg: 20}); b.cyl(.5, .5, .06, '#6fcdea', {y: .14, seg: 20}); b.cyl(.09, .12, .5, 'stone', {y: .14, seg: 10}); b.cyl(.3, .08, .06, 'stone', {y: .6, seg: 14}); b.sph(.09, '#cfeeff', {y: .8, seg: 8}); for (let k = 0; k < 6; k++) { const a = k / 6 * TAU; b.sph(.035, '#cfeeff', {x: Math.cos(a) * .24, y: .5, z: Math.sin(a) * .24, seg: 6}); } b.pop(); }
+    else for (let k = 0; k < 14; k++) { const a = k * 2.4, r = .15 + (k % 5) * .17; b.sph(.09, ['red', 'yellow', 'pink', 'white', 'purple', 'orange'][k % 6], {x: p.x + Math.cos(a) * r, y: heightAt(p.x, p.z) + .1 + (k % 3) * .03, z: p.z + Math.sin(a) * r * .8, seg: 7}); b.cyl(.015, .015, .12, 'leaf', {x: p.x + Math.cos(a) * r, y: heightAt(p.x, p.z), z: p.z + Math.sin(a) * r * .8, seg: 4}); } }
+  if (effects.harbour === 'bench') { const x = PIER.x0 - .7, z = PIER.z + 1.0, y = heightAt(x, z); b.push(x, y, z, Math.PI / 2); b.box(.7, .06, .24, 'wood', {y: .26, r: .02}); b.box(.7, .26, .05, 'wood', {y: .3, z: -.1, r: .02}); for (const sx of [-.28, .28]) b.box(.05, .26, .2, 'slate', {x: sx, r: .01}); b.pop(); }
+  if (b.parts.length) { const m = b.mesh(material); m.castShadow = true; g.add(m); }
+  if (effects.harbour === 'lights') { const n = 14, mesh = new THREE.InstancedMesh(new THREE.SphereGeometry(.05, 8, 6), new THREE.MeshBasicMaterial({color: '#ffe08a', fog: false}), n * 2), m = new THREE.Matrix4(); let k = 0; for (let i = 0; i < n; i++) for (const dz of [-.28, .28]) { const x = PIER.x0 + (i + .5) * (PIER.x1 - PIER.x0) / n, y = .22 + .27 + Math.sin(i * .9) * .03; m.makeTranslation(x, y, PIER.z + dz); mesh.setMatrixAt(k++, m); } mesh.frustumCulled = false; g.add(mesh); }
+  return g;
+}

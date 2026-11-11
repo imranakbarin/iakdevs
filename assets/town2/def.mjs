@@ -182,12 +182,12 @@ export const CAST = [
   {id: 'rudy', wake: 6.5, sleep: 18.5, name: 'Rudy the paper boy', home: 'c10', coat: 'orange', hat: 'cap', round: [['post', 20], ['c1', 5], ['c3', 5], ['c12', 5], ['c13', 5], ['c15', 5], ['c10', 45]]},
   {id: 'nell', wake: 7, sleep: 19.5, name: 'Nurse Nell', home: 'c11', coat: 'white', hat: 'bonnet', round: [['school', 22], ['cafe', 18], ['c4', 10], ['c11', 50]], weekend: [['cafe', 30], ['c4', 10], ['c11', 70]]},
   {id: 'otto', wake: 6, sleep: 19.5, name: 'Otto the stationmaster', home: 'c12', coat: 'blue', hat: 'cap', round: [['station', 90], ['cafe', 14], ['station', 60], ['c12', 40]]},
-  {id: 'bea', wake: 8, sleep: 20, name: 'Bea the bandleader', home: 'c13', coat: 'yellow', hat: 'bow', round: [['toys', 20], ['cafe', 20], ['bakery', 12], ['c13', 50]]},
+  {id: 'bea', wake: 8, sleep: 20, name: 'Bea the bandleader', home: 'c13', coat: 'yellow', hat: 'bow', round: [['toys', 20], ['platform:central', 0, 'ride:east'], ['platform:east', 0, 'ride:central'], ['cafe', 20], ['bakery', 12], ['c13', 50]]},
   {id: 'finn', wake: 6, sleep: 20, name: 'Finn the fisherman', home: 'c14', coat: 'sky', hat: 'flat', round: [['hut', 15], ['pier', 80], ['hut', 20], ['bakery', 10], ['pier', 60], ['hut', 20], ['c14', 45]]},
-  {id: 'june', wake: 8, sleep: 20, name: 'Auntie June', home: 'c15', coat: 'purple', hat: 'bun', round: [['bakery', 14], ['cafe', 30], ['post', 10], ['c15', 60]]},
+  {id: 'june', wake: 8, sleep: 20, name: 'Auntie June', home: 'c15', coat: 'purple', hat: 'bun', round: [['bakery', 14], ['platform:central', 0, 'ride:farm'], ['farm', 12], ['platform:farm', 0, 'ride:central'], ['cafe', 30], ['post', 10], ['c15', 60]]},
   {id: 'gill', wake: 6.5, sleep: 19.5, name: 'Mrs Gill the fishmonger', home: 'c14', coat: 'teal', hat: 'bun', round: [['hut', 25], ['cafe', 18], ['bakery', 10], ['hut', 30], ['c14', 45]]},
-  {id: 'apple', wake: 6.5, sleep: 19.5, name: 'Mr Apple the greengrocer', home: 'c11', coat: 'green', hat: 'cap', round: [['farm', 15], ['platform:farm', 0, 'ride:central'], ['bakery', 10], ['cafe', 16], ['platform:central', 0, 'ride:farm'], ['farm', 30], ['c11', 45]]},
-  {id: 'mint', wake: 7, sleep: 19.5, name: 'Dr Mint', home: 'c13', coat: 'white', hat: 'flat', round: [['c1', 8], ['mushroom', 10], ['platform:central', 0, 'ride:school'], ['school', 14], ['platform:school', 0, 'ride:central'], ['cafe', 16], ['c9', 8], ['c13', 45]]},
+  {id: 'apple', wake: 6.5, sleep: 19.5, name: 'Mr Apple the greengrocer', home: 'c11', coat: 'green', hat: 'cap', round: [['platform:farm', 0, 'ride:central'], ['bakery', 10], ['cafe', 16], ['platform:central', 0, 'ride:farm'], ['farm', 30], ['c11', 45]]},
+  {id: 'mint', wake: 7, sleep: 19.5, name: 'Dr Mint', home: 'c13', coat: 'white', hat: 'flat', round: [['platform:central', 0, 'ride:school'], ['school', 14], ['platform:school', 0, 'ride:central'], ['c1', 8], ['mushroom', 10], ['cafe', 16], ['c9', 8], ['c13', 45]]},
   {id: 'ted', wake: 6, sleep: 20, name: 'Ted the train driver', home: 'c8', coat: 'red', hat: 'cap', round: [['station', 100], ['cafe', 16], ['station', 70], ['c8', 40]]}
 ];
 

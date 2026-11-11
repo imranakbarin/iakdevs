@@ -3,12 +3,13 @@ import * as THREE from 'three';
 import {PALETTE as P, ISLAND, CAST, VEHICLES, BUILDINGS, PADDOCK, POND, PIER, VENDORS, heightAt, rand} from './def.mjs';
 import {along} from './graph.mjs';
 import {createSim} from './sim.mjs';
-import {buildTown, buildResident, buildVehicle, buildClouds, buildTrain, buildBoat, buildAnimal, buildSky, buildUmbrella, buildRain, buildFall, buildPuddles, buildCargo, buildPassengers, buildMarketGoods, buildSignals, buildTufts, buildSkyDome, buildRod, buildUmbrellas, U} from './build.mjs';
+import {buildTown, buildResident, buildVehicle, buildClouds, buildTrain, buildBoat, buildAnimal, buildSky, buildUmbrella, buildRain, buildFall, buildPuddles, buildCargo, buildPassengers, buildMarketGoods, buildSignals, buildTufts, buildSkyDome, buildRod, buildUmbrellas, buildFlames, buildDebris, buildSeasonDecor, buildTownEffects, U} from './build.mjs';
 import {skyAt, seasonOf, SEASONS, mix} from './sky.mjs';
 import {createSound} from './sound.mjs';
 import {createSmoke} from './smoke.mjs';
 import {PROFILE, createGovernor, startTier, isTier} from './quality.mjs';
 import {wind} from './nature.mjs';
+import {loadSaga, saveSaga} from './saga.mjs';
 import {stageOf, dots} from './track.mjs';
 import {journalLines} from './paper.mjs';
 import {load as loadSettings, save as saveSettings, stepsFor, BUSY_FACTOR} from './settings.mjs';
@@ -30,7 +31,7 @@ scene.add(sun, sun.target);
 
 // the day of the week: today's, unless ?day=mon..sun (or 0..6) says otherwise
 function dayFromQuery() { const d = (q.get('day') || '').toLowerCase().slice(0, 3), i = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'].indexOf(d); return i >= 0 ? i : /^[0-6]$/.test(q.get('day') || '') ? +q.get('day') : (new Date().getDay() + 6) % 7; }
-const season = SEASONS.includes(q.get('season')) ? q.get('season') : seasonOf(), sim = createSim(7, {season, weekday: dayFromQuery()}), built = buildTown(sim.graph, season);
+const season = SEASONS.includes(q.get('season')) ? q.get('season') : seasonOf(), sagaStore = (() => { try { return localStorage; } catch (e) { return null; } })(), sim = createSim(7, {season, weekday: dayFromQuery(), saga: q.get('fresh') === '1' || !sagaStore ? null : loadSaga(sagaStore)}), built = buildTown(sim.graph, season);
 const sound = createSound();
 scene.add(built.ground, built.sea, built.shallows, built.town, built.glow, built.lampGlow); for (const m of Object.values(built.moving)) scene.add(m.group);
 const tufts = buildTufts(sim.graph); scene.add(tufts);
@@ -41,7 +42,8 @@ const hemi = scene.children.find(o => o.isHemisphereLight), seaMat = built.sea.m
 if (q.get('h')) sim.setHour(+q.get('h'));
 const people = new Map(), cars = new Map();
 const marketDef = BUILDINGS.find(b => b.id === 'market'), rods = new Map(), BROLLY = ['red', 'yellow', 'pink', 'blue', 'purple', 'orange', 'teal'];
-const umbrellas = buildUmbrellas(); scene.add(umbrellas);
+const seasonDecor = buildSeasonDecor(season, sim.graph, built.material); scene.add(seasonDecor); let townFx = null, fxKey = '';
+const umbrellas = buildUmbrellas(); scene.add(umbrellas); const flames = buildFlames(), debris = buildDebris(); scene.add(flames, debris); const fireSmoke = createSmoke(16, 3.2), fireSmokeMesh = new THREE.InstancedMesh(new THREE.SphereGeometry(1, 8, 6), new THREE.MeshLambertMaterial({color: '#4a4a52', transparent: true, opacity: .75, depthWrite: false}), 16); fireSmokeMesh.frustumCulled = false; fireSmokeMesh.visible = false; scene.add(fireSmokeMesh); const fireM = new THREE.Matrix4();
 sim.residents.forEach((r, i) => { const g = buildResident(r.def, i, built.material); if (r.id === 'finn' || r.id === 'salt') { const rod = buildRod(); g.add(rod); rods.set(r.id, rod); } scene.add(g); people.set(r.id, g); });
 const rain = buildRain(); scene.add(rain);
 const fall = buildFall(season); scene.add(fall);
@@ -197,18 +199,50 @@ function refreshTrack() {
   if (!tracked.done) { const l = sim.freightLog.find(x => x.id === tracked.id); tracked.done = l ? l.how : 'lost'; tracked.doneAt = sim.clock; if (tracked.done === 'delivered') toast('Your parcel arrived at ' + name(tracked.to) + '.', 5); else toast('Your parcel to ' + name(tracked.to) + ' was called off.', 5); trackEl.textContent = tracked.done === 'delivered' ? 'Your parcel arrived at ' + name(tracked.to) + '  \u25CF\u25CF\u25CF' : 'Your parcel was called off'; }
   if (sim.clock - tracked.doneAt > 20) { tracked = null; trackEl.classList.remove('on'); }
 }
+// Photo mode: a picture of what you are looking at, in a frame with a caption, to save or share.
+let photoRaw = null, photoStyle = 'postcard', photoCaption = '';
+function grabPhoto() { renderer.render(scene, camera); const c = document.createElement('canvas'); c.width = canvas.width; c.height = canvas.height; c.getContext('2d').drawImage(canvas, 0, 0); photoRaw = c; photoCaption = (sim.story.current && sim.story.current.title) || sim.paper('today').headline; }
+function composePhoto() {
+  const w = photoRaw.width, h = photoRaw.height, st = photoStyle, pad = st === 'plain' ? 0 : Math.round(w * .035), bottom = st === 'polaroid' ? Math.round(w * .15) : st === 'postcard' ? Math.round(w * .08) : 0, out = document.createElement('canvas'); out.width = w + pad * 2; out.height = h + pad + Math.max(pad, bottom);
+  const g = out.getContext('2d'); g.fillStyle = st === 'polaroid' ? '#ffffff' : '#fff6e2'; g.fillRect(0, 0, out.width, out.height); g.drawImage(photoRaw, pad, pad);
+  if (st !== 'plain') { const size = Math.round(w * (st === 'polaroid' ? .036 : .03)), y = pad + h + (out.height - pad - h) / 2 + size * .35, when = sim.dayName.slice(0, 3) + ' ' + clockTextOf(sim.hour) + ' \u00B7 ' + season; g.fillStyle = '#3c4654'; g.font = '600 ' + size + 'px Nunito, Georgia, serif'; g.textAlign = 'center'; g.fillText(photoCaption.slice(0, 70), out.width / 2, y);
+    if (st === 'postcard') { g.font = '600 ' + Math.round(size * .62) + 'px Nunito, Georgia, serif'; g.textAlign = 'right'; g.fillStyle = '#8a6a3c'; g.fillText('Toy Town \u00B7 ' + when, out.width - pad, pad * .75); g.strokeStyle = '#d9c9a8'; g.lineWidth = Math.max(2, w * .004); g.strokeRect(pad / 2, pad / 2, out.width - pad, out.height - pad); } }
+  return out;
+}
+const clockTextOf = h => String(Math.floor(h)).padStart(2, '0') + ':' + String(Math.floor((h % 1) * 60)).padStart(2, '0');
+function photoUrl() { return composePhoto().toDataURL('image/jpeg', .92); }
 // The town paper and the residents' journals (one panel, three views: today, yesterday, a resident's day).
 const paperBtn = document.getElementById('paperBtn'), paperEl = document.getElementById('paper'), journalBtn = document.getElementById('journalBtn'); let paperMode = null, paperAt = -1e9;
 function el(tag, text, cls) { const e = document.createElement(tag); if (text !== undefined) e.textContent = text; if (cls) e.className = cls; return e; }
+function hallTabs() {
+  const tabs = el('div', undefined, 'tabs'); for (const [m, label] of [['today', 'Today'], ['yesterday', 'Yesterday'], ['hall', 'Town hall'], ['case', 'Case']]) { const b = el('button', label); if (m === paperMode) b.className = 'on'; b.disabled = m === 'yesterday' && !sim.paper('yesterday'); b.addEventListener('click', () => { paperMode = m; renderPaper(); }); tabs.append(b); } return tabs;
+}
 function renderPaper() {
   if (!paperEl) return; paperEl.textContent = '';
   if (paperMode === 'journal') { const o = sel && sel.kind === 'resident' && sim.residents.find(r => r.id === sel.id); if (!o) { closePaper(); return; }
     paperEl.append(el('h2', o.def.name + "'s day"), el('h3', o.def.job || '')); const lines = journalLines(o.journal, 14); if (!lines.length) paperEl.append(el('p', 'Nothing yet today.')); for (const l of lines) paperEl.append(el('p', l, 'j')); return; }
-  const tabs = el('div', undefined, 'tabs'); for (const m of ['today', 'yesterday']) { const b = el('button', m === 'today' ? 'Today' : 'Yesterday'); if (m === paperMode) b.className = 'on'; b.disabled = m === 'yesterday' && !sim.paper('yesterday'); b.addEventListener('click', () => { paperMode = m; renderPaper(); }); tabs.append(b); }
+  if (paperMode === 'hall') { paperEl.append(hallTabs(), el('h2', 'The town hall')); const el_ = sim.election;
+    if (el_.open) { paperEl.append(el('h3', 'Voting now: ' + el_.q.text), el('p', el_.you ? 'You voted for: ' + (el_.q.options.find(o => o.id === el_.you) || {}).label + '. The count is at 18:00.' : 'Your vote counts three. The count is at 18:00.')); if (!el_.you) { const row = el('div', undefined, 'tabs'); for (const o of el_.q.options) { const b = el('button', o.label); b.addEventListener('click', () => { sim.castVote(o.id); renderPaper(); }); row.append(b); } paperEl.append(row); } }
+    else if (el_.last) paperEl.append(el('h3', 'Last vote: ' + el_.last.q.text), el('p', 'The town chose ' + (el_.last.q.options.find(o => o.id === el_.last.winner) || {}).label + ' (' + Object.values(el_.last.counts).join(' to ') + ').')); else paperEl.append(el('p', 'The first vote is on the third morning (days 3, 6, 9 ...), from 10:00 to 18:00.'));
+    const chosen = Object.entries(sim.effects); if (chosen.length) paperEl.append(el('h3', 'What the town has chosen'), ...chosen.map(([k, v]) => el('p', k + ': ' + v))); return; }
+  if (paperMode === 'photo') { if (!photoRaw) grabPhoto(); const url = photoUrl(), im = el('img', undefined, 'shot'); im.src = url; im.alt = 'Your photo'; const row = el('div', undefined, 'tabs');
+    for (const st of ['postcard', 'polaroid', 'plain']) { const b = el('button', st[0].toUpperCase() + st.slice(1)); if (st === photoStyle) b.className = 'on'; b.addEventListener('click', () => { photoStyle = st; renderPaper(); }); row.append(b); }
+    const cap = el('input'); cap.value = photoCaption; cap.maxLength = 70; cap.setAttribute('aria-label', 'Caption'); cap.addEventListener('change', () => { photoCaption = cap.value; renderPaper(); });
+    const act = el('div', undefined, 'tabs'), save = el('button', 'Save'); save.addEventListener('click', () => { const a = document.createElement('a'); a.href = url; a.download = 'toy-town-' + Date.now() + '.jpg'; a.click(); });
+    const again = el('button', 'Retake'); again.addEventListener('click', () => { photoRaw = null; renderPaper(); }); act.append(save, again);
+    if (navigator.canShare && navigator.share) { const sh = el('button', 'Share'); sh.addEventListener('click', async () => { try { const blob = await (await fetch(url)).blob(), f = new File([blob], 'toy-town.jpg', {type: 'image/jpeg'}); if (navigator.canShare({files: [f]})) await navigator.share({files: [f], title: 'Toy Town', text: photoCaption}); } catch (e) {} }); act.append(sh); }
+    paperEl.append(el('h2', 'Photo'), im, row, cap, act); return; }
+  if (paperMode === 'case') { paperEl.append(hallTabs(), el('h2', 'The case book')); const m = sim.mystery.active;
+    if (!m) { paperEl.append(el('p', sim.mystery.solved || sim.mystery.failed ? 'No open case. Solved so far: ' + sim.mystery.solved + '.' : 'No case yet. Something goes missing around midday after the first day.')); return; }
+    paperEl.append(el('h3', m.c.title)); if (!m.shown.length) paperEl.append(el('p', 'The constable is looking for witnesses...')); for (const c of m.shown) paperEl.append(el('p', 'Clue: ' + c.text));
+    if (m.feedback) paperEl.append(el('p', m.feedback)); if (!m.over) { const sel_ = el('select'); sel_.setAttribute('aria-label', 'Who did it?'); for (const r of sim.residents) { if (m.wrong.includes(r.id)) continue; const o = el('option', r.def.name); o.value = r.id; sel_.append(o); } const b = el('button', 'Accuse'); b.addEventListener('click', () => { sim.accuse(sel_.value); renderPaper(); }); const row = el('div', undefined, 'tabs'); row.append(sel_, b); paperEl.append(row, el('p', 'You may be wrong twice. The residents\' journals show who was where.')); }
+    return; }
+  const tabs = hallTabs();
   const e = sim.paper(paperMode) || sim.paper('today'); paperEl.append(tabs, el('h2', e.title), el('h3', e.date + ': ' + e.headline)); for (const it of e.items) paperEl.append(el('p', it));
 }
 function openPaper(mode) { paperMode = mode; paperEl.classList.add('on'); if (paperBtn) paperBtn.setAttribute('aria-expanded', 'true'); panelEl.classList.remove('on'); renderPaper(); }
 function closePaper() { paperMode = null; paperEl.classList.remove('on'); if (paperBtn) paperBtn.setAttribute('aria-expanded', 'false'); }
+const photoBtn = document.getElementById('photoBtn'); if (photoBtn) photoBtn.addEventListener('click', () => { if (paperMode === 'photo') closePaper(); else { photoRaw = null; openPaper('photo'); } });
 if (paperBtn) paperBtn.addEventListener('click', () => { if (paperMode && paperMode !== 'journal') closePaper(); else openPaper('today'); });
 if (journalBtn) journalBtn.addEventListener('click', () => { if (paperMode === 'journal') closePaper(); else openPaper('journal'); });
 // The work board: what is being carried and where, and how much has been done.
@@ -240,7 +274,7 @@ function trackSelection(dt) {
 let store = null; try { store = localStorage; } catch (e) {}
 const settings = store ? loadSettings(store) : loadSettings({getItem: () => null}), setBtn = document.getElementById('set'), panelEl = document.getElementById('panel');
 function applySettings(save = true) {
-  sim.setBusy(BUSY_FACTOR[settings.busy]);
+  sim.setBusy(BUSY_FACTOR[settings.busy]); sim.setEvents(settings.events);
   if (panelEl) for (const seg of panelEl.querySelectorAll('.seg')) for (const b of seg.children) b.classList.toggle('on', String(settings[seg.dataset.key]) === b.dataset.v);
   if (save && store) saveSettings(store, settings);
 }
@@ -266,7 +300,7 @@ function caption() {
 }
 
 /* ---- the loop ---- */
-let shadowsNear = true, last = 0, frozen = false, time = 0, windNow = wind(0);
+let sagaSaved = 0, flood = 0, shadowsNear = true, last = 0, frozen = false, time = 0, windNow = wind(0);
 // The light follows the hour: sky, fog, sea, sun or moon, lit windows and lanterns, stars.
 function weatherLight() {
   const L = skyAt(sim.hour, sim.weather.rain, season);
@@ -309,7 +343,13 @@ function sync(dt) {
     g.position.set(v.x, y + .035 + (v.v > .05 ? Math.abs(Math.sin(time * 14 + v.s)) * .008 : 0), v.z); g.rotation.set(-Math.atan2(ahead - y, .3), Math.atan2(v.tx, v.tz), 0, 'YXZ');
   }
   trainCars.forEach((c, k) => { const q = along(loop, sim.train.s - k * sim.train.gap), y = heightAt(q.x, q.z) + .06; c.position.set(q.x, y, q.z); c.rotation.y = Math.atan2(q.tx, q.tz); c.updateMatrixWorld(true); });   // the cars follow the head round the loop
-  updateFreight(); refreshTrack(); if (paperMode && Math.abs(sim.clock - paperAt) > 1) { paperAt = sim.clock; renderPaper(); }
+  { const inc = sim.incident, fire = inc && inc.type === 'fire', d = fire && BUILDINGS.find(b => b.id === inc.target);
+    flames.visible = !!fire; fireSmokeMesh.visible = !!fire; if (fire) { flames.userData.set(d, heightAt(d.x, d.z) + 1.25, time); fireSmoke.update(dt, {x: d.x, y: heightAt(d.x, d.z) + 1.9, z: d.z, vx: windNow.x * .2, vz: windNow.z * .2}, 6); fireSmoke.puffs.forEach((p, i) => { const z = fireSmoke.size(p) * 2.4; fireM.makeScale(z, z, z).setPosition(p.x, p.y, p.z); fireSmokeMesh.setMatrixAt(i, fireM); }); fireSmokeMesh.instanceMatrix.needsUpdate = true; }
+    const debrisSpots = inc && inc.type === 'storm' && inc.debris ? inc.debris.map(id => sim.graph.doors[id]).filter(Boolean) : []; if (debris.userData.last !== debrisSpots.length) { debris.userData.last = debrisSpots.length; debris.userData.show(debrisSpots); }
+    flood += ((inc && inc.type === 'storm' ? 1 : 0) - flood) * Math.min(1, dt * .8); built.sea.position.y = -.12 + flood * .2; built.shallows.position.y = -.10 + flood * .2; }
+  { const k = JSON.stringify(sim.effects); if (k !== fxKey) { fxKey = k; if (townFx) scene.remove(townFx); townFx = buildTownEffects(sim.effects, sim.graph, built.material); scene.add(townFx); } }
+  if (sagaStore && sim.sagaLog.length !== sagaSaved) { sagaSaved = sim.sagaLog.length; saveSaga(sagaStore, sim.sagaState()); }
+  updateFreight(); refreshTrack(); if (paperMode && paperMode !== 'photo' && Math.abs(sim.clock - paperAt) > 1) { paperAt = sim.clock; renderPaper(); }
   { trainCars[0].localToWorld(v3b.set(0, .66, .36)); const moving = Math.abs(sim.train.v) > .1;   // the engine's smoke: more when it is working
     smoke.update(dt, {x: v3b.x, y: v3b.y, z: v3b.z, vx: windNow.x * .14, vz: windNow.z * .14}, moving ? 5 : 1.2);
     smoke.puffs.forEach((p, i) => { const z = smoke.size(p); smokeM.makeScale(z, z, z).setPosition(p.x, p.y, p.z); smokeMesh.setMatrixAt(i, smokeM); }); smokeMesh.instanceMatrix.needsUpdate = true; }
@@ -376,9 +416,9 @@ window.ToyTownNew = {
   hour: () => sim.hour, setHour(h) { sim.setHour(h); sync(0); renderer.render(scene, camera); },
   info: () => ({market: sim.market.open, marketVisits: sim.market.visits, delivered: sim.freightStats.delivered, cargoNow: sim.cargo.length, riders: sim.riders.length, trainLaps: sim.train.laps, trainStops: sim.train.stopsMade, lampsLit: sim.lamps.filter(l => l.on).length, wet: +sim.weather.wet.toFixed(2), season, pixelRatio: renderer.getPixelRatio(), story: sim.story.current && sim.story.current.id, rain: +sim.weather.rain.toFixed(2), calls: renderer.info.render.calls, triangles: renderer.info.render.triangles, residentsOut: sim.residents.filter(r => r.state === 'walking').length, clock: sim.clock}),
   look(x, z, dist, yaw = 0) { Object.assign(view, {x, z, dist, yaw, tx: x, tz: z, tdist: dist, tyaw: yaw}); placeCamera(); renderer.render(scene, camera); },
-  advance(seconds) { for (let t = 0; t < seconds; t += .05) sim.update(.05); sync(0); renderer.render(scene, camera); },
+  advance(seconds, quick) { for (let t = 0; t < seconds; t += .05) sim.update(.05); sync(0); if (!quick) renderer.render(scene, camera); },   // (quick: no picture; a test that steps in a loop should not queue hundreds of frames for the software renderer)
   trainPos: () => trainCars[0].position, selected: () => sel, tapAt: (cx, cy) => tap(cx, cy), select, sendParcel: (a, b) => sim.sendParcel(a, b), jobsText: () => jobsText, trackText: () => (trackEl ? trackEl.textContent : ''), trackState: () => ({tracked, trackAt, el: !!trackEl}),
   project(x, z, y = .4) { const r = canvas.getBoundingClientRect(); camera.updateMatrixWorld(); v3.set(x, heightAt(x, z) + y, z).project(camera); return [(v3.x * .5 + .5) * r.width + r.left, (-v3.y * .5 + .5) * r.height + r.top]; },
   setWeather(kind, seconds = 600) { sim.weather.force(kind, seconds); },
-  paperText: () => (paperEl ? paperEl.textContent : ''), openPaper, closePaper, rodsOut: () => [...rods.values()].filter(r => r.visible).length, highlight: () => ({pin: pin.visible, ring: ring.visible, mode: settings.highlight}), settings, applySettings, setQuality, tier: () => tier, gov, tufts, U, freeze(on = true) { frozen = on; }
+  fxState: () => ({flames: flames.visible, debris: debris.count, flood: +flood.toFixed(2), decor: seasonDecor.children.length, townFx: townFx ? townFx.children.length : 0}), photo: o => { photoRaw = null; photoStyle = (o && o.style) || 'postcard'; grabPhoto(); if (o && o.caption) photoCaption = o.caption; const c = composePhoto(), url = c.toDataURL('image/jpeg', .92), d = c.getContext('2d').getImageData(0, Math.round(c.height * .82), c.width, Math.round(c.height * .17)).data; let dark = 0; for (let i = 0; i < d.length; i += 4) if (d[i] < 120) dark++; return {w: c.width, h: c.height, rawW: photoRaw.width, rawH: photoRaw.height, url: url.slice(0, 40), len: url.length, dark}; }, paperText: () => (paperEl ? paperEl.textContent : ''), openPaper, closePaper, seasonDecor: () => seasonDecor.children.length, rodsOut: () => [...rods.values()].filter(r => r.visible).length, highlight: () => ({pin: pin.visible, ring: ring.visible, mode: settings.highlight}), settings, applySettings, setQuality, tier: () => tier, gov, tufts, U, freeze(on = true) { frozen = on; }
 };

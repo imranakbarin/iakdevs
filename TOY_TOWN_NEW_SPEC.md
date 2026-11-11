@@ -177,6 +177,15 @@ the stamp is stale. If the page cannot start, its panel now shows the real error
 - **Journals**: `r.journal` keeps the last 40 entries `{h, text}`: places visited, meals, fish caught, deliveries, train arrivals, new friends, the stories they were part of (and "Their story:" for the one it is about); no doubled entries.
 - **UI**: a newspaper button (under the gear) opens the paper with Today and Yesterday tabs; a resident's card has a Journal button that opens their day in the same panel. Both are finger-sized and checked against the other buttons on the phone emulation.
 
+### Emergencies, elections, seasons, the saga, mysteries and photos (tested)
+
+- **Emergencies** (`events.mjs`, `sim.incident`, `sim.trigger(type)`, off with `?` setting "Emergencies"): about one a day, only 08:00 to 17:30. *Fire*: the fire engine is sent to the burning building (`v.callTarget`), the fire chief, the mechanic, the constable and the nurse hurry there (act `respond`), three neighbours watch; flames and dark smoke are drawn; it lasts 75 s. *Lost child*: Dot or Dash hides somewhere, the constable and three helpers search places in order until one is where the child is. *Storm*: heavy rain, the sea rises, branches lie at four doorsteps until a crew has visited each. The start and end are announced in the caption and appear in the paper.
+- **Elections** (`vote.mjs`): from 10:00 to 18:00 on days 2, 5, 8 ...; every resident votes by a steady taste nudged by mood, your vote counts three (`sim.castVote(id)`, a Town hall tab in the paper panel). The winner stays (`sim.effects`, saved with the saga): a fountain or flower beds on a lawn, two hours longer market, a Saturday concert or film night (stories gated by `effect`), lights or a bench at the harbour.
+- **Seasons change the map** (`buildSeasonDecor`): ice on the pond (winter), a flooded meadow (spring), leaf piles (autumn), beach umbrellas by the hut (summer), each with a story that goes with it.
+- **The saga** (`saga.mjs`): ages (`AGES`), a birthday once a week of days (`YEAR_DAYS` = 7), weddings between adult close friends (held at the café with their friends), babies (at most two per couple, four in the town). Marriages, babies, ages and election results are saved in `localStorage` (`toytown-new-saga`; `?fresh=1` ignores it) and restored with `createSim(seed, {saga})`. Cards show age and marriage.
+- **Mysteries** (`mystery.mjs`): after the first day, at midday, something goes missing (the prize pie, the golden top, the rare stamps). The thief really visits the place and then a hideout (it is in their journal), five clues come out over two minutes (coat colour, hat, footprints, a red herring who was really there, "look in the journals"), and you accuse from the Case tab: two wrong accusations end the case.
+- **Photo mode**: the camera button grabs the current picture and frames it as a postcard, a polaroid or plain with a caption (the day's headline or the caption showing), to save as a JPEG or share. `ToyTownNew.photo({style, caption})` is the test hook; `advance(seconds, true)` steps without drawing (a test that loops must use it, or it queues hundreds of frames for the software renderer).
+
 ## 5. Art rules
 
 - Fat, rounded, slightly wonky. No sharp corners: `bag.box` is a rounded box; roofs overhang.
@@ -207,6 +216,7 @@ spheres 8; keep that discipline (the first version was 1.05 M triangles from 3-s
 - `sim`, `scene`, `camera`, `renderer`, `view`
 - `info()` → `{calls, triangles, residentsOut, clock, pixelRatio, story, rain, wet, lampsLit, season}`
 - `tapAt(clientX, clientY)`, `selected()`, `select(obj|null)`, `project(x, z, y)` → client coordinates of a ground point
+- `fxState()` (flames, branches, flood, decor), `photo({style, caption})`
 - `paperText()`, `openPaper(mode)`, `closePaper()`
 - `rodsOut()` (fishing rods showing)
 - `trackText()`, `trackState()`; `?day=`
