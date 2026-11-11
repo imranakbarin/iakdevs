@@ -102,6 +102,7 @@ function fit() { const a = innerWidth / innerHeight; view.tdist = view.dist = cl
 function resize() { renderer.setSize(innerWidth, innerHeight, false); camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix(); }
 function placeCamera() {
   const c = Math.cos(TILT), s = Math.sin(TILT);
+  scene.fog.near = view.dist + 40; scene.fog.far = view.dist + 190;   // (haze starts beyond the island however far the camera is: a fixed distance washed the whole town out on a tall phone screen)
   camera.position.set(view.x + Math.sin(view.yaw) * c * view.dist, s * view.dist, view.z + Math.cos(view.yaw) * c * view.dist); camera.lookAt(view.x, .6, view.z);
 }
 const pointers = new Map(); let gesture = null, follow = null;
