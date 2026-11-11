@@ -170,6 +170,13 @@ the stamp is stale. If the page cannot start, its panel now shows the real error
 - **Professions**: every cast member has a `job` (from `lives.mjs`, shown on the card). New: Mrs Gill the fishmonger, Mr Apple the greengrocer and Dr Mint. On market days `def.VENDORS` (Gill, Apple, Farmer Hay) are sent to stand at their stalls from opening to closing (fish, apples, milk on the counters).
 - **Life stories** (`lives.mjs`, 31 of them): each one has a `star` (whom it is about); every cast member has at least one. They are ordinary stories needing only half their cast (`relaxed`). A card says "Their story right now" or "Stories told: n of m". In a simulated week at least 14 people have had a story of their own told.
 
+### Draw calls, the town paper and journals (tested)
+
+- **Draw calls**: all umbrellas are one instanced mesh (`buildUmbrellas`: white canopies tinted per instance), and the figures and vehicles stop casting shadows when the camera is more than 27 units away (a draw each in the shadow pass). Measured in the headless renderer: a rainy crowd went from 106 to 75 calls, a clear noon from 81 to 66 (with more people out). Crowded-scene budget in the visual test stays at 135.
+- **The ledger**: `sim.days[d]` is a snapshot of the counters (deliveries, rides, fish caught and sold, coins, market visits, seconds of rain, friend pairs, story count, mood) taken at the start of each day. `sim.paper('today' | 'yesterday')` builds an edition (`paper.mjs`): weather, the harbour, goods and travel, the market, the stories told, new friendships, the town's mood, and tomorrow (market, school). The headline is the biggest news: a big fish day, a busy market, the first story, a busy train, else "A quiet day".
+- **Journals**: `r.journal` keeps the last 40 entries `{h, text}`: places visited, meals, fish caught, deliveries, train arrivals, new friends, the stories they were part of (and "Their story:" for the one it is about); no doubled entries.
+- **UI**: a newspaper button (under the gear) opens the paper with Today and Yesterday tabs; a resident's card has a Journal button that opens their day in the same panel. Both are finger-sized and checked against the other buttons on the phone emulation.
+
 ## 5. Art rules
 
 - Fat, rounded, slightly wonky. No sharp corners: `bag.box` is a rounded box; roofs overhang.
@@ -200,6 +207,7 @@ spheres 8; keep that discipline (the first version was 1.05 M triangles from 3-s
 - `sim`, `scene`, `camera`, `renderer`, `view`
 - `info()` → `{calls, triangles, residentsOut, clock, pixelRatio, story, rain, wet, lampsLit, season}`
 - `tapAt(clientX, clientY)`, `selected()`, `select(obj|null)`, `project(x, z, y)` → client coordinates of a ground point
+- `paperText()`, `openPaper(mode)`, `closePaper()`
 - `rodsOut()` (fishing rods showing)
 - `trackText()`, `trackState()`; `?day=`
 - `tier()`, `gov` (the governor), `setQuality(tier|'auto')`, `tufts`, `U` (shader inputs); `?quality=` and `?debug=1`

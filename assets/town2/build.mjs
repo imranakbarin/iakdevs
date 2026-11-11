@@ -712,3 +712,14 @@ export function buildRod() {
   const g = new THREE.Group(), pole = new THREE.Mesh(new THREE.CylinderGeometry(.006, .01, .5, 6), new THREE.MeshBasicMaterial({color: '#8a5a3c'})), line = new THREE.Mesh(new THREE.CylinderGeometry(.0025, .0025, .4, 4), new THREE.MeshBasicMaterial({color: '#ffffff'})), bob = new THREE.Mesh(new THREE.SphereGeometry(.022, 8, 6), new THREE.MeshBasicMaterial({color: '#e2473b'}));
   pole.position.set(0, .3, .22); pole.rotation.x = Math.PI / 2 - .6; line.position.set(0, .1, .46); bob.position.set(0, -.1, .46); g.add(pole, line, bob); g.visible = false; g.userData.bob = bob; return g;
 }
+
+// All the umbrellas in one instanced mesh (white canopies tinted per instance), so a rainy crowd costs one draw call, not one each.
+export function buildUmbrellas(max = 40) {
+  const b = new Bag(); b.dome(.25, '#ffffff', {y: .62, z: -.03, sy: .5, seg: 14}); b.torus(.25, .012, '#ffffff', {y: .62, z: -.03, rx: Math.PI / 2}); b.cyl(.012, .012, .42, '#ffffff', {y: .3, z: -.03, seg: 6});
+  const g = mergeGeometries(b.parts, false), mesh = new THREE.InstancedMesh(g, new THREE.MeshLambertMaterial({vertexColors: true}), max), m = new THREE.Matrix4(), c = new THREE.Color(), q = new THREE.Quaternion(), e = new THREE.Euler(), v = new THREE.Vector3(), sc = new THREE.Vector3(1, 1, 1);
+  mesh.count = 0; mesh.frustumCulled = false; mesh.castShadow = true;
+  mesh.userData.set = (i, x, y, z, ry, colour) => { mesh.setMatrixAt(i, m.compose(v.set(x, y, z), q.setFromEuler(e.set(0, ry, 0)), sc)); mesh.setColorAt(i, c.set(PALETTE_PICK(colour))); };
+  mesh.userData.show = n => { mesh.count = Math.min(max, n); mesh.instanceMatrix.needsUpdate = true; if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true; };
+  return mesh;
+}
+const PALETTE_PICK = c => P[c] || c;

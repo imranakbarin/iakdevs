@@ -3,13 +3,14 @@ import * as THREE from 'three';
 import {PALETTE as P, ISLAND, CAST, VEHICLES, BUILDINGS, PADDOCK, POND, PIER, VENDORS, heightAt, rand} from './def.mjs';
 import {along} from './graph.mjs';
 import {createSim} from './sim.mjs';
-import {buildTown, buildResident, buildVehicle, buildClouds, buildTrain, buildBoat, buildAnimal, buildSky, buildUmbrella, buildRain, buildFall, buildPuddles, buildCargo, buildPassengers, buildMarketGoods, buildSignals, buildTufts, buildSkyDome, buildRod, U} from './build.mjs';
+import {buildTown, buildResident, buildVehicle, buildClouds, buildTrain, buildBoat, buildAnimal, buildSky, buildUmbrella, buildRain, buildFall, buildPuddles, buildCargo, buildPassengers, buildMarketGoods, buildSignals, buildTufts, buildSkyDome, buildRod, buildUmbrellas, U} from './build.mjs';
 import {skyAt, seasonOf, SEASONS, mix} from './sky.mjs';
 import {createSound} from './sound.mjs';
 import {createSmoke} from './smoke.mjs';
 import {PROFILE, createGovernor, startTier, isTier} from './quality.mjs';
 import {wind} from './nature.mjs';
 import {stageOf, dots} from './track.mjs';
+import {journalLines} from './paper.mjs';
 import {load as loadSettings, save as saveSettings, stepsFor, BUSY_FACTOR} from './settings.mjs';
 import {newsStory} from './stories.mjs';
 import {describeResident, describeBuilding, describeVehicle, describeAnimal, describeTrain} from './inspect.mjs';
@@ -39,8 +40,9 @@ const dome = buildSkyDome(); scene.add(dome);
 const hemi = scene.children.find(o => o.isHemisphereLight), seaMat = built.sea.material, tmp = new THREE.Color();
 if (q.get('h')) sim.setHour(+q.get('h'));
 const people = new Map(), cars = new Map();
-const marketDef = BUILDINGS.find(b => b.id === 'market'), rods = new Map(), brollies = new Map(), BROLLY = ['red', 'yellow', 'pink', 'blue', 'purple', 'orange', 'teal'];
-sim.residents.forEach((r, i) => { const g = buildResident(r.def, i, built.material), u = buildUmbrella(built.material, BROLLY[i % BROLLY.length]); g.add(u); brollies.set(r.id, u); if (r.id === 'finn' || r.id === 'salt') { const rod = buildRod(); g.add(rod); rods.set(r.id, rod); } scene.add(g); people.set(r.id, g); });
+const marketDef = BUILDINGS.find(b => b.id === 'market'), rods = new Map(), BROLLY = ['red', 'yellow', 'pink', 'blue', 'purple', 'orange', 'teal'];
+const umbrellas = buildUmbrellas(); scene.add(umbrellas);
+sim.residents.forEach((r, i) => { const g = buildResident(r.def, i, built.material); if (r.id === 'finn' || r.id === 'salt') { const rod = buildRod(); g.add(rod); rods.set(r.id, rod); } scene.add(g); people.set(r.id, g); });
 const rain = buildRain(); scene.add(rain);
 const fall = buildFall(season); scene.add(fall);
 const puddles = buildPuddles(sim.graph); if (season !== 'winter') scene.add(puddles);   // (in winter the rain is snow)
@@ -147,8 +149,8 @@ function describe(o) {
 function select(o) {
   sel = o; follow = o && o.kind !== 'building' ? o : null; cardAt = 0; cardText = '';
   const h = document.getElementById('hint'); if (h && o) h.style.opacity = '0'; if (o) sound.blip();
-  if (!o) { ring.visible = false; pin.visible = false; if (cardEl) cardEl.classList.remove('on'); if (sendBtn) sendBtn.hidden = true; return; }
-  ring.scale.setScalar(RING[o.kind]); refreshCard(); if (sendBtn) sendBtn.hidden = !(o.kind === 'building' && BUILDINGS.find(b => b.id === o.id).door > 0);
+  if (!o) { ring.visible = false; pin.visible = false; if (paperMode === 'journal') closePaper(); if (cardEl) cardEl.classList.remove('on'); if (sendBtn) sendBtn.hidden = true; return; }
+  ring.scale.setScalar(RING[o.kind]); refreshCard(); if (sendBtn) sendBtn.hidden = !(o.kind === 'building' && BUILDINGS.find(b => b.id === o.id).door > 0); if (journalBtn) { journalBtn.hidden = o.kind !== 'resident'; if (paperMode === 'journal' && o.kind === 'resident') renderPaper(); }
 }
 function refreshCard() {
   if (!sel || !cardEl) return; const d = describe(sel), p = posOf(sel), gone = !p && sel.kind === 'resident';
@@ -195,6 +197,20 @@ function refreshTrack() {
   if (!tracked.done) { const l = sim.freightLog.find(x => x.id === tracked.id); tracked.done = l ? l.how : 'lost'; tracked.doneAt = sim.clock; if (tracked.done === 'delivered') toast('Your parcel arrived at ' + name(tracked.to) + '.', 5); else toast('Your parcel to ' + name(tracked.to) + ' was called off.', 5); trackEl.textContent = tracked.done === 'delivered' ? 'Your parcel arrived at ' + name(tracked.to) + '  \u25CF\u25CF\u25CF' : 'Your parcel was called off'; }
   if (sim.clock - tracked.doneAt > 20) { tracked = null; trackEl.classList.remove('on'); }
 }
+// The town paper and the residents' journals (one panel, three views: today, yesterday, a resident's day).
+const paperBtn = document.getElementById('paperBtn'), paperEl = document.getElementById('paper'), journalBtn = document.getElementById('journalBtn'); let paperMode = null, paperAt = -1e9;
+function el(tag, text, cls) { const e = document.createElement(tag); if (text !== undefined) e.textContent = text; if (cls) e.className = cls; return e; }
+function renderPaper() {
+  if (!paperEl) return; paperEl.textContent = '';
+  if (paperMode === 'journal') { const o = sel && sel.kind === 'resident' && sim.residents.find(r => r.id === sel.id); if (!o) { closePaper(); return; }
+    paperEl.append(el('h2', o.def.name + "'s day"), el('h3', o.def.job || '')); const lines = journalLines(o.journal, 14); if (!lines.length) paperEl.append(el('p', 'Nothing yet today.')); for (const l of lines) paperEl.append(el('p', l, 'j')); return; }
+  const tabs = el('div', undefined, 'tabs'); for (const m of ['today', 'yesterday']) { const b = el('button', m === 'today' ? 'Today' : 'Yesterday'); if (m === paperMode) b.className = 'on'; b.disabled = m === 'yesterday' && !sim.paper('yesterday'); b.addEventListener('click', () => { paperMode = m; renderPaper(); }); tabs.append(b); }
+  const e = sim.paper(paperMode) || sim.paper('today'); paperEl.append(tabs, el('h2', e.title), el('h3', e.date + ': ' + e.headline)); for (const it of e.items) paperEl.append(el('p', it));
+}
+function openPaper(mode) { paperMode = mode; paperEl.classList.add('on'); if (paperBtn) paperBtn.setAttribute('aria-expanded', 'true'); panelEl.classList.remove('on'); renderPaper(); }
+function closePaper() { paperMode = null; paperEl.classList.remove('on'); if (paperBtn) paperBtn.setAttribute('aria-expanded', 'false'); }
+if (paperBtn) paperBtn.addEventListener('click', () => { if (paperMode && paperMode !== 'journal') closePaper(); else openPaper('today'); });
+if (journalBtn) journalBtn.addEventListener('click', () => { if (paperMode === 'journal') closePaper(); else openPaper('journal'); });
 // The work board: what is being carried and where, and how much has been done.
 const jobsEl = document.getElementById('jobs'); let jobsText = '', jobsAt = 0;
 const KIND = {mail: 'Mail', milk: 'Milk', bread: 'Bread', fish: 'Fish', parcel: 'Parcel'};
@@ -229,7 +245,7 @@ function applySettings(save = true) {
   if (save && store) saveSettings(store, settings);
 }
 if (panelEl) for (const seg of panelEl.querySelectorAll('.seg')) seg.addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; const v = b.dataset.v, k = seg.dataset.key; settings[k] = k === 'speed' ? +v : k === 'news' ? v === 'true' : v; if (k === 'quality') setQuality(v); applySettings(); });
-if (setBtn) setBtn.addEventListener('click', () => { const on = panelEl.classList.toggle('on'); setBtn.setAttribute('aria-expanded', String(on)); });
+if (setBtn) setBtn.addEventListener('click', () => { if (paperMode) closePaper(); const on = panelEl.classList.toggle('on'); setBtn.setAttribute('aria-expanded', String(on)); });
 applySettings(false);
 const storyEl = document.getElementById('story'); let headlines = [], newsAt = 40, newsIdx = 0, shown = '';
 if (q.get('news') !== '0') fetch(new URL('../toy-town-news.json', import.meta.url)).then(r => r.ok ? r.json() : null).then(d => { headlines = ((d && d.stories) || []).filter(s => s.tone === 'light' && s.title).slice(0, 12); }).catch(() => {});
@@ -250,7 +266,7 @@ function caption() {
 }
 
 /* ---- the loop ---- */
-let last = 0, frozen = false, time = 0, windNow = wind(0);
+let shadowsNear = true, last = 0, frozen = false, time = 0, windNow = wind(0);
 // The light follows the hour: sky, fog, sea, sun or moon, lit windows and lanterns, stars.
 function weatherLight() {
   const L = skyAt(sim.hour, sim.weather.rain, season);
@@ -262,7 +278,7 @@ function weatherLight() {
   sun.color.set(L.sunColor); sun.intensity = L.sunI; sun.position.set(...L.sunPos);
   const gm = built.glow.material; gm.opacity = L.glow; built.glow.visible = L.glow > .02;
   sky.visible = L.stars > .02; sky.userData.stars.material.opacity = L.stars; sky.userData.moon.material.opacity = L.stars * .95;
-  { const r = sim.weather.rain; for (const u of brollies.values()) u.visible = r > .25; rain.position.set(view.x, 0, view.z); rain.userData.update(time, season === 'winter' || r < .02 ? 0 : r);
+  { const r = sim.weather.rain; { let n = 0; if (r > .25) sim.residents.forEach((q, i) => { const g = people.get(q.id); if (g.visible && q.state === 'walking') umbrellas.userData.set(n++, g.position.x, g.position.y, g.position.z, g.rotation.y, BROLLY[i % BROLLY.length]); }); umbrellas.userData.show(n); } rain.position.set(view.x, 0, view.z); rain.userData.update(time, season === 'winter' || r < .02 ? 0 : r);
     const day = 1 - L.night, amount = season === 'winter' ? Math.max(.25, r) : season === 'summer' ? (L.night > .5 ? .7 * (1 - r) : 0) : (season === 'autumn' ? .5 : .4) * day * (1 - r * .7);
     fall.position.set(view.x, 0, view.z); fall.userData.update(time, amount, windNow);
     sound.update({dark: L.night, rain: r, season, hour: sim.hour, trainMoving: Math.abs(sim.train.v) > .1, trainAt: sim.train.at, zoom: 1 - clamp(0, (view.dist - 7) / 50, 1)}, 0.0001 + lastDt); }
@@ -286,13 +302,14 @@ function sync(dt) {
     if (onPier) g.rotation.y = Math.PI / 2;   // facing out to sea
     const rod = rods.get(r.id); if (rod) { rod.visible = onPier; if (onPier) rod.userData.bob.position.y = -.1 + Math.sin(time * 2.3 + r.speed * 9) * .012; }
   }
+  { const near = view.dist < 27; if (near !== shadowsNear) { shadowsNear = near; for (const g of people.values()) g.traverse(o => { if (o.isMesh) o.castShadow = near; }); for (const g of cars.values()) g.traverse(o => { if (o.isMesh) o.castShadow = near; }); } }   // (far away the little shadows are not worth a draw each)
   for (const v of sim.vehicles) {
     const g = cars.get(v.id); g.visible = v.state !== 'parked'; if (!g.visible) continue;
     const y = heightAt(v.x, v.z), ahead = heightAt(v.x + v.tx * .3, v.z + v.tz * .3);
     g.position.set(v.x, y + .035 + (v.v > .05 ? Math.abs(Math.sin(time * 14 + v.s)) * .008 : 0), v.z); g.rotation.set(-Math.atan2(ahead - y, .3), Math.atan2(v.tx, v.tz), 0, 'YXZ');
   }
   trainCars.forEach((c, k) => { const q = along(loop, sim.train.s - k * sim.train.gap), y = heightAt(q.x, q.z) + .06; c.position.set(q.x, y, q.z); c.rotation.y = Math.atan2(q.tx, q.tz); c.updateMatrixWorld(true); });   // the cars follow the head round the loop
-  updateFreight(); refreshTrack();
+  updateFreight(); refreshTrack(); if (paperMode && Math.abs(sim.clock - paperAt) > 1) { paperAt = sim.clock; renderPaper(); }
   { trainCars[0].localToWorld(v3b.set(0, .66, .36)); const moving = Math.abs(sim.train.v) > .1;   // the engine's smoke: more when it is working
     smoke.update(dt, {x: v3b.x, y: v3b.y, z: v3b.z, vx: windNow.x * .14, vz: windNow.z * .14}, moving ? 5 : 1.2);
     smoke.puffs.forEach((p, i) => { const z = smoke.size(p); smokeM.makeScale(z, z, z).setPosition(p.x, p.y, p.z); smokeMesh.setMatrixAt(i, smokeM); }); smokeMesh.instanceMatrix.needsUpdate = true; }
@@ -363,5 +380,5 @@ window.ToyTownNew = {
   trainPos: () => trainCars[0].position, selected: () => sel, tapAt: (cx, cy) => tap(cx, cy), select, sendParcel: (a, b) => sim.sendParcel(a, b), jobsText: () => jobsText, trackText: () => (trackEl ? trackEl.textContent : ''), trackState: () => ({tracked, trackAt, el: !!trackEl}),
   project(x, z, y = .4) { const r = canvas.getBoundingClientRect(); camera.updateMatrixWorld(); v3.set(x, heightAt(x, z) + y, z).project(camera); return [(v3.x * .5 + .5) * r.width + r.left, (-v3.y * .5 + .5) * r.height + r.top]; },
   setWeather(kind, seconds = 600) { sim.weather.force(kind, seconds); },
-  rodsOut: () => [...rods.values()].filter(r => r.visible).length, highlight: () => ({pin: pin.visible, ring: ring.visible, mode: settings.highlight}), settings, applySettings, setQuality, tier: () => tier, gov, tufts, U, freeze(on = true) { frozen = on; }
+  paperText: () => (paperEl ? paperEl.textContent : ''), openPaper, closePaper, rodsOut: () => [...rods.values()].filter(r => r.visible).length, highlight: () => ({pin: pin.visible, ring: ring.visible, mode: settings.highlight}), settings, applySettings, setQuality, tier: () => tier, gov, tufts, U, freeze(on = true) { frozen = on; }
 };
