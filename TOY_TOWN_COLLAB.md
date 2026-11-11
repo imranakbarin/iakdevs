@@ -1250,3 +1250,9 @@ A `START` does not prohibit parallel edits. Avoid stepping on each other's uncom
 - **Side effects**: older logic tests now run with `events: false` (an emergency sends people to unexpected places), several simulation thresholds moved again (fish, rides, outings), three rounds start with a train ride so commuting stays visible, the visual test steps with `advance(seconds, true)` (many queued frames made screenshots time out in the software renderer: found while chasing a screenshot hang that was not a rendering fault), and there is a new Emergencies on/off row in the settings.
 - **Not verified**: a real phone; the balance and wording of emergencies, votes and clues; whether weddings and babies arrive too fast (a wedding about every three days once friendships form).
 
+
+### 2026-11-11 · Claude · DONE (new storybook town, follow-up 14: stability pass)
+- **Request (owner)**: "Stability pass".
+- **Soak**: new `node scripts/soak-town2.cjs [days] [seeds]` runs multi-day sims over several seeds, seasons and weekdays and checks every 2 simulated seconds: NaN positions, walking without a route, stuck walkers, needs range, journal/errand/cargo/rider caps, ledger consistency, trains per day, deliveries, slowdown over time. 60 days x 5 seeds and a 40-day run with a simulated player (accusing, voting) passed with no violations; about 60 to 190 ms per simulated day, no slowdown.
+- **Fix**: an unsolved or finished mystery used to block every later case. Cases now go cold after about a day (logged in the saga) and a finished case stays on the case book until the next one starts; the soak now sees 13 to 14 cases per 40 days.
+- **Not verified**: a real phone and Edge; balance of weddings (about 10 per 40 days) and cases.
