@@ -16,7 +16,7 @@ export const SQUARE = {x: 0, z: 0, ring: 2.4, green: 1.55};
 export const ROAD = {width: .95, lane: .22, pave: .66, paveWidth: .3};
 export const OUTER = {rx: 11.6, rz: 8.4};     // the outer ring road (an ellipse)
 export const LOOP = {rx: 16.0, rz: 13.4};     // the railway, a loop round the whole town
-export const BUILD_SCALE = .8;                // houses and buildings are drawn at this scale (people, vehicles and trees follow)
+export const BUILD_SCALE = .72;  // houses and buildings are drawn at this scale (10% smaller than the first storybook version, .8)
 
 const smooth = (a, b, v) => { const t = Math.min(1, Math.max(0, (v - a) / (b - a))); return t * t * (3 - 2 * t); };
 // How far inside the island a point is: <1 on land, 1 at the waterline (a gently wobbly ellipse).
@@ -88,35 +88,35 @@ const S = BUILD_SCALE, STEPOUT = .9;
 const WIDTH = {cottage: 2.0, mushroomCottage: 3.0, school: 3.5, station: 3.6, barn: 3.1, garage: 2.5, fireStation: 3.0, postOffice: 2.4, policeBox: 1.3, harbourHut: 2.0, windmill: 2.4, teapotCafe: 2.8, toyShop: 2.5, bakery: 2.8, bandstand: 3.0, market: 3.4, clockTower: 2.4};
 const DOOR = {cottage: .85, mushroomCottage: .95, school: 1.25, station: 1.25, barn: 1.1, garage: 1.0, fireStation: 1.05, postOffice: .95, policeBox: .6, harbourHut: .95, windmill: .95, teapotCafe: 1.25, toyShop: 1.05, bakery: 1.0, bandstand: 0, market: 1.1, clockTower: 0};
 export const POND = {x: 3.7, z: -6.4, r: 1.0};
-export const PADDOCK = {x0: -6.0, z0: -7.2, x1: -3.8, z1: -5.2};
+export const PADDOCK = {x0: 90, z0: 90, x1: 90.1, z1: 90.1};   // (the farm's paddock: set below, in the belt beside the barn, once the barn is placed)
 const make = (id, type, name, x, z, ry, extra = {}) => ({id, type, name, x, z, ry, door: DOOR[type] * S, w: WIDTH[type] * S, scale: S, ...extra});
 const wedge = (deg, id, type, name, extra = {}) => { const a = deg * Math.PI / 180, r = 5.0, x = Math.cos(a) * r, z = Math.sin(a) * r; return make(id, type, name, x, z, Math.atan2(-x, -z), extra); };
 const cot = (colour, roof) => ({colour, roof});
 const LOOP_PTS = Array.from({length: 240}, (_, i) => loopPt(i / 240 * TAU));
 
 export const BUILDINGS = [
-  {id: 'clock', type: 'clockTower', name: 'the Clock Tower', x: 0, z: 0, ry: 0, door: 0, w: 2.4, scale: S},
+  {id: 'clock', type: 'clockTower', name: 'the Clock Tower', x: 0, z: 0, ry: 0, door: 0, w: 3 * S, scale: S},
   // round the square, between the spokes, all facing the clock
   wedge(22.5, 'bakery', 'bakery', 'the Bakery'), wedge(67.5, 'post', 'postOffice', 'the Post Office'), wedge(112.5, 'bandstand', 'bandstand', 'the Bandstand'), wedge(157.5, 'cafe', 'teapotCafe', 'the Teapot Café'),
   wedge(202.5, 'toys', 'toyShop', 'the Toy Shop'), wedge(292.5, 'police', 'policeBox', "the Constable's Kiosk")
 ];
 {
   const roadPts = allRoadPoints(), R = id => ROADS.find(r => r.id === id), spokes = k => 'spoke' + k, outer = k => 'outer' + k;
-  const fits = (x, z, w, ownRoad) => {
+  const fits = (x, z, w, ownRoad, loopPad = .95) => {
     const r = w * .5;
     if (shore(x, z) > .82 || Math.hypot(x - POND.x, z - POND.z) < POND.r + r + .5) return false;
     if (x > PADDOCK.x0 - r - .4 && x < PADDOCK.x1 + r + .4 && z > PADDOCK.z0 - r - .4 && z < PADDOCK.z1 + r + .4) return false;
     if (BUILDINGS.some(b => Math.hypot(b.x - x, b.z - z) < (b.w + w) * .5 * .92 + .12)) return false;
     if (roadPts.some(p => Math.hypot(p[0] - x, p[1] - z) < r * .84 + .6)) return false;
-    return !LOOP_PTS.some(p => Math.hypot(p[0] - x, p[1] - z) < r + .95);
+    return !LOOP_PTS.some(p => Math.hypot(p[0] - x, p[1] - z) < r + loopPad);
   };
   // prefs: [[roadId, side], ...] in order of liking; `from` is how far out along the road to start looking
-  const put = (id, type, name, prefs, extra = {}, from) => {
+  const put = (id, type, name, prefs, extra = {}, from, loopPad) => {
     for (const [roadId, side, start] of prefs) {
       const len = roadLength(roadId), kind = R(roadId).kind, lo = start ?? from ?? (kind === 'spoke' ? 3.0 : 1.8), hi = len - (kind === 'spoke' ? 1.0 : 1.8);
       for (let s = lo; s <= hi; s += .3) {
         const p = onRoad(roadId, s), nx = p.tz, nz = -p.tx, off = side * (DOOR[type] * S + STEPOUT), x = p.x + nx * off, z = p.z + nz * off, w = WIDTH[type] * S;
-        if (fits(x, z, w, roadId)) { BUILDINGS.push(make(id, type, name, x, z, Math.atan2(-side * nx, -side * nz), {street: roadId, s, side, ...extra})); return true; }
+        if (fits(x, z, w, roadId, loopPad)) { BUILDINGS.push(make(id, type, name, x, z, Math.atan2(-side * nx, -side * nz), {street: roadId, s, side, ...extra})); return true; }
       }
     }
     return false;
@@ -130,8 +130,21 @@ export const BUILDINGS = [
   put('fire', 'fireStation', 'the Fire Station', [[spokes(E), 1], [spokes(E), -1]]);
   put('garage', 'garage', 'the Garage', [[spokes(E), -1], [spokes(E), 1]]);
   put('school', 'school', 'the School', [[spokes(SW), 1], [spokes(SW), -1], [outer(SW), -1]]);
-  put('barn', 'barn', 'the Barn', [...both(spokes(N)), [outer(NW), -1]]);
-  put('farm', 'cottage', 'Hay Farm', [...both(spokes(NW), -1), [outer(NW), -1]], cot('cream', 'orange'));
+  // the farm lives outside the town, in the belt between the ring road and the railway: the barn and Hay Farm on the outer side of the ring road in the north-west
+  put('barn', 'barn', 'the Barn', [[outer(NW), 1, 1.5], [outer(W), 1, 1.5], [outer(N), 1, 1.5]], {}, undefined, .4);
+  put('farm', 'cottage', 'Hay Farm', [[outer(NW), 1, 1.5], [outer(W), 1, 1.5], [outer(N), 1, 1.5]], cot('cream', 'orange'), undefined, .4);
+  {   // the paddock: the open patch of the belt nearest the barn
+    const barn = BUILDINGS.find(b => b.id === 'barn'), W = 2.3, H = 2.0; let best = null;
+    for (let cx = barn.x - 6; cx <= barn.x + 6; cx += .25) for (let cz = barn.z - 6; cz <= barn.z + 6; cz += .25) {
+      const x0 = cx - W / 2, x1 = cx + W / 2, z0 = cz - H / 2, z1 = cz + H / 2; let ok = true;
+      for (let x = x0; ok && x <= x1 + .01; x += .5) for (let z = z0; ok && z <= z1 + .01; z += .5) {
+        if (shore(x, z) > .8 || Math.hypot(x - POND.x, z - POND.z) < POND.r + .6 || roadPts.some(p => Math.hypot(p[0] - x, p[1] - z) < 1.15) || LOOP_PTS.some(p => Math.hypot(p[0] - x, p[1] - z) < 1.0)) ok = false;
+        else if (BUILDINGS.some(b => Math.abs(b.x - x) < b.w * .5 + .35 && Math.abs(b.z - z) < b.w * .5 + .35)) ok = false;
+      }
+      if (ok) { const d = Math.hypot(cx - barn.x, cz - barn.z); if (!best || d < best.d) best = {d, x0, z0, x1, z1}; }
+    }
+    if (best) Object.assign(PADDOCK, {x0: best.x0, z0: best.z0, x1: best.x1, z1: best.z1});
+  }
   put('market', 'market', 'the Market', [...both(spokes(SO)), ...both(spokes(SE)), ...both(spokes(NE)), ...both(spokes(SW)), ...both(spokes(W)), ...both(outer(SO)), ...both(outer(SE))], {}, 2.6);
   put('mushroom', 'mushroomCottage', 'Mushroom Cottage', [...both(spokes(W), -1), ...both(spokes(W), 1)]);
   // the cottages, each looking along the streets near the place it belongs
@@ -211,7 +224,7 @@ export const VEHICLES = [
   {id: 'taxi', kind: 'car', name: 'the taxi', colour: 'yellow', speed: 1.15, plan: 'taxi', home: 'garage', from: 6, to: 23},
   {id: 'taxi2', kind: 'car', name: 'the green taxi', colour: 'teal', speed: 1.05, plan: 'taxi', home: 'garage', from: 9, to: 22},
   {id: 'van', kind: 'van', name: 'the post van', colour: 'red', speed: 1.0, plan: 'round', targets: ['c1', 'c3', 'c5', 'c9', 'c12', 'c13', 'c8', 'c15'], home: 'post', from: 8, to: 16},
-  {id: 'milk', kind: 'float', name: 'the milk float', colour: 'white', speed: .7, plan: 'round', targets: ['c2', 'c4', 'c6', 'c10', 'c11', 'c14'], home: 'barn', from: 5.5, to: 10.5},
+  {id: 'milk', kind: 'float', name: 'the milk float', colour: 'white', speed: .95, plan: 'round', targets: ['c2', 'c4', 'c14', 'c6', 'c11', 'c10'], home: 'barn', from: 5.5, to: 10.5},
   {id: 'tractor', kind: 'tractor', name: 'the tractor', colour: 'green', speed: .55, plan: 'wander', targets: ['farm', 'barn', 'mill', 'c14', 'hut', 'school'], home: 'barn', from: 9.5, to: 17},
   {id: 'icecream', kind: 'icecream', name: 'the ice-cream van', colour: 'pink', speed: .8, plan: 'stops', targets: ['cafe', 'post', 'toys', 'school', 'hut', 'station'], home: 'garage', from: 13, to: 18.5},
   {id: 'farmcart', kind: 'horsecart', name: "Farmer Hay's horse cart", colour: 'brown', speed: .5, plan: 'round', targets: ['bakery', 'cafe', 'market', 'c2', 'c4', 'c10', 'c11', 'farm'], home: 'barn', from: 6, to: 15},

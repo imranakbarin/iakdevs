@@ -5,7 +5,7 @@ import {PIER, shore} from './def.mjs';
 import {ISLET, DOLPHINS, dolphinPose, whalePose, dwarfsOut} from './wildlife.mjs';
 
 const clamp = (a, v, b) => Math.max(a, Math.min(b, v)), wrap = a => Math.atan2(Math.sin(a), Math.cos(a));
-export const MOOR = {x: PIER.x1 + .1, z: PIER.z + 1.3, hd: Math.PI / 2 - .15};   // (just off the end of the pier, in open water)
+export const MOOR = (() => { let x = PIER.x1 + .1; const z = PIER.z + 1.3; while (shore(x, z) < 1.07 && x < PIER.x1 + 3) x += .1; return {x, z, hd: Math.PI / 2 - .15}; })();   // (just off the end of the pier, in open water: if the shoreline wobbles, a little further out)   // (just off the end of the pier, in open water)
 // the sand in front of the cave, in the world (the islet's own frame: out in front of the mouth by 1.7)
 export const LANDING = (() => { const x = 0, z = 2.0, f = ISLET.face; return {x: ISLET.x + (x * Math.cos(f) + z * Math.sin(f)) * ISLET.s, z: ISLET.z + (-x * Math.sin(f) + z * Math.cos(f)) * ISLET.s, r: 1.5}; })();
 export const SPEED = 3.2, TURN = 1.5, WORLD = {x: 58, z: 46};
@@ -14,14 +14,15 @@ export const SPEED = 3.2, TURN = 1.5, WORLD = {x: 58, z: 46};
 export function blocked(x, z) {
   if (Math.abs(x) > WORLD.x || Math.abs(z) > WORLD.z) return true;
   if (Math.hypot(x - LANDING.x, z - LANDING.z) < LANDING.r) return false;
+  if (Math.hypot(x - LANDING.x, z - LANDING.z) < LANDING.r + .5 && Math.hypot(x - ISLET.x, z - ISLET.z) > ISLET.s * 2 + .15 && shore(x, z) >= 1.04) return false;   // (a little apron before the landing, so the last metres of the approach are not caught by the rock's margin)
   if (Math.hypot(x - ISLET.x, z - ISLET.z) < ISLET.s * 2.3 + .3) return true;
   if (x > PIER.x0 - 1 && x < PIER.x1 + .1 && Math.abs(z - PIER.z) < .5) return true;
   return shore(x, z) < 1.04;
 }
 export const newBoat = () => ({x: MOOR.x, z: MOOR.z, hd: MOOR.hd, v: 0, bumped: 0, target: null});
 // Going round the island: if the way ahead is blocked, turn to the nearest heading that is clear (so the boat follows the coast instead of stopping at it).
-function clearHeading(b, want) {
-  for (const k of [0, .4, -.4, .8, -.8, 1.3, -1.3, 1.9, -1.9, 2.6, -2.6]) { const h = want + k, px = b.x + Math.sin(h) * 2.4, pz = b.z + Math.cos(h) * 2.4; if (!blocked(px, pz)) return h; }
+function clearHeading(b, want, look = 2.4) {
+  for (const k of [0, .4, -.4, .8, -.8, 1.3, -1.3, 1.9, -1.9, 2.6, -2.6]) { const h = want + k, px = b.x + Math.sin(h) * look, pz = b.z + Math.cos(h) * look; if (!blocked(px, pz)) return h; }
   return want;
 }
 // Heading for the landing from behind the rock: go round it first, in hops along a circle, until the cave mouth is in view.
@@ -37,7 +38,8 @@ export function stepBoat(b, dt, input = {}) {
   let turn = input.turn || 0, thrust = input.thrust || 0;
   if (input.target) {
     const dx0 = input.target.x - b.x, dz0 = input.target.z - b.z, d = Math.hypot(dx0, dz0), rt = routeTarget(b, input.target), dx = rt.x - b.x, dz = rt.z - b.z;
-    if (d < .9) { thrust = 0; input.target = null; b.target = null; } else { const dh = wrap(clearHeading(b, Math.atan2(dx, dz)) - b.hd); turn = clamp(dh * 2.2, -1, 1); thrust = Math.abs(dh) > 1.4 ? .25 : 1; }
+    if (d < .9) { thrust = 0; input.target = null; b.target = null; } else { const dh = wrap(clearHeading(b, Math.atan2(dx, dz), Math.min(2.4, Math.max(.5, d - .3))) - b.hd);   // (close to the target, look only as far as the target)
+    turn = clamp(dh * 2.2, -1, 1); thrust = Math.abs(dh) > 1.4 ? .25 : 1; }
   }
   b.hd = wrap(b.hd + turn * TURN * dt); b.v += (thrust * SPEED - b.v) * Math.min(1, dt * 1.6);
   const nx = b.x + Math.sin(b.hd) * b.v * dt, nz = b.z + Math.cos(b.hd) * b.v * dt;
