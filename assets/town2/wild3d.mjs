@@ -123,7 +123,7 @@ export function buildMeadow(season, max = 800) {
     sh.vertexShader = sh.vertexShader.replace('#include <common>', '#include <common>\nuniform float uTime, uSway; uniform vec2 uWind;').replace('#include <begin_vertex>', '#include <begin_vertex>\n{ float ph = uTime * 2.3 + instanceMatrix[3].x * 1.4 + instanceMatrix[3].z * 1.2; transformed.xz += (uWind * (.6 + .4 * sin(ph)) * (.4 + uSway)) * position.y * .7; }');
   };
   mat.customProgramCacheKey = () => 'toymeadow1';
-  const mesh = new THREE.InstancedMesh(geo, mat, max), pal = BLOOM[season].meadow.map(c => new THREE.Color(c)), gr = ground(), m = new THREE.Matrix4(), q = new THREE.Quaternion(), e = new THREE.Euler(), p = new THREE.Vector3(), sc = new THREE.Vector3(), c = new THREE.Color();
+  const mesh = new THREE.InstancedMesh(geo, mat, max), pal = BLOOM[season].wild.map(c => new THREE.Color(c)), gr = ground(), m = new THREE.Matrix4(), q = new THREE.Quaternion(), e = new THREE.Euler(), p = new THREE.Vector3(), sc = new THREE.Vector3(), c = new THREE.Color();
   let n = 0;
   for (let k = 0; n < max && k < max * 14; k++) {
     // clustered in drifts: pick a drift centre, then a point near it
@@ -142,56 +142,125 @@ const flower = (b, x, y, z, colour, h = .16, r = .035, o = {}) => { b.cyl(.006, 
 const bush = (b, x, y, z, r, colour = 'leaf') => poly(b, 'ico', r * 1.1, colour, {x, y: y + r * .6, z, sy: .8, sway: .5});
 const ring = (b, p, y0, r, gapAt, colour = 'stone') => { const n = Math.round(r * TAU / .2); for (let k = 0; k < n; k++) { const a = k / n * TAU; if (Math.abs(Math.atan2(Math.sin(a - gapAt), Math.cos(a - gapAt))) < .3) continue; const x = p.x + Math.cos(a) * r, z = p.z + Math.sin(a) * r; b.box(.11 + (k % 3) * .02, .06, .08, k % 3 ? colour : '#cbbfa8', {x, y: heightAt(x, z), z, ry: a + k, r: .01}); } };
 
-const DECO = ['roses', 'tulips', 'lavender', 'sunflowers', 'herbs', 'meadow'];
-// A formal garden: a low box hedge all round with an opening towards the town, a gravel path in a cross, four beds (one colour in each) and a feature in the middle.
-function formalGarden(b, p, S, winter, cs, R, pick, gap, y0) {
-  const r = p.r, ca = Math.cos(gap), sa = Math.sin(gap), at = (u, v) => [p.x + u * ca - v * sa, p.z + u * sa + v * ca], gy = (x, z) => heightAt(x, z);
-  // the lawn inside and the hedge round it
-  b.cyl(r, r + .02, .03, winter ? '#e8eef0' : '#79bf58', {x: p.x, y: y0, z: p.z, seg: 28});
-  const n = Math.round(r * TAU / .3);
-  for (let k = 0; k < n; k++) { const a = k / n * TAU; if (Math.abs(Math.atan2(Math.sin(a - gap), Math.cos(a - gap))) < .34) continue; const x = p.x + Math.cos(a) * r * .97, z = p.z + Math.sin(a) * r * .97; b.box(.3, .24, .2, winter ? (k % 2 ? '#e8f0ea' : '#7da58c') : k % 2 ? 'leaf' : 'leafLight', {x, y: gy(x, z), z, ry: -a + Math.PI / 2, r: .07, sway: .2}); }
-  // the gravel cross
-  for (const [w, d] of [[.2, r * 1.9], [r * 1.9, .2]]) { const [cx, cz] = at(0, 0); b.box(w, .02, d, winter ? '#dfe5e8' : '#e9d9b0', {x: cx, y: y0 + .03, z: cz, ry: -gap, r: .005}); }
-  // four beds, a colour each, round the middle
-  const pal = cs.length ? cs : ['#ffffff'];
-  for (let q = 0; q < 4; q++) {
-    const u = (q % 2 ? 1 : -1) * r * .5, v = (q < 2 ? 1 : -1) * r * .5, [bx, bz] = at(u, v), rb = r * .34, col = pal[q % pal.length], col2 = pal[(q + 1) % pal.length];
-    b.cyl(rb, rb + .02, .05, winter ? '#ece8e0' : '#5d4030', {x: bx, y: y0, z: bz, seg: 16}); const st = [['#cbbfa8', '#b9ad96']]; for (let k = 0; k < 14; k++) { const a = k / 14 * TAU; b.box(.1, .05, .07, k % 2 ? st[0][0] : st[0][1], {x: bx + Math.cos(a) * rb, y: gy(bx, bz) + .01, z: bz + Math.sin(a) * rb, ry: -a, r: .01}); }
-    if (winter) { for (let k = 0; k < 4; k++) poly(b, 'ico', .1, k % 2 ? '#ffffff' : '#9fb4a8', {x: bx + (R(q * 9 + k) - .5) * rb, y: y0 + .05, z: bz + (R(q * 9 + k + 3) - .5) * rb, sy: .5}); continue; }
-    const yy = y0 + .04;
-    if (p.kind === 'roses') { for (let k = 0; k < 4; k++) { const a = k / 4 * TAU + q, x = bx + Math.cos(a) * rb * .5, z = bz + Math.sin(a) * rb * .5; poly(b, 'ico', .13, 'leaf', {x, y: yy + .08, z, sy: .8, sway: .4}); for (let f = 0; f < 5; f++) poly(b, 'oct', .045, f % 3 ? col : col2, {x: x + (R(q + k + f) - .5) * .2, y: yy + .17 + R(q * 3 + f) * .08, z: z + (R(q + f + 9) - .5) * .2, sway: .6}); } }
-    else if (p.kind === 'tulips') { for (let row = -2; row <= 2; row++) for (let c2 = -2; c2 <= 2; c2++) { const x = bx + c2 * .13, z = bz + row * .13; if (Math.hypot(x - bx, z - bz) > rb * .88) continue; b.cyl(.006, .008, .13, 'leaf', {x, y: yy, z, seg: 4, sway: .9}); cone2(b, .04, .07, (row + c2) % 2 ? col : col2, {x, y: yy + .17, z, rx: Math.PI, seg: 6, sway: .9}); } }
-    else if (p.kind === 'lavender') { for (let row = -2; row <= 2; row++) for (let c2 = -2; c2 <= 2; c2++) { const x = bx + c2 * .12, z = bz + row * .14; if (Math.hypot(x - bx, z - bz) > rb * .88) continue; poly(b, 'ico', .07, 'leaf', {x, y: yy + .04, z, sy: .8}); cone2(b, .035, .18, col, {x, y: yy + .2, z, seg: 5, sway: .9}); } }
-    else if (p.kind === 'sunflowers') { for (let k = 0; k < 5; k++) { const a = k / 5 * TAU + q, x = bx + Math.cos(a) * rb * .45, z = bz + Math.sin(a) * rb * .45, h = .42 + R(q * 5 + k) * .16; b.cyl(.012, .018, h, 'leaf', {x, y: yy, z, seg: 5, sway: .8}); b.cyl(.085, .085, .02, col, {x, y: yy + h, z, rx: .5, seg: 12, sway: 1}); b.sph(.045, '#6b4423', {x, y: yy + h + .01, z: z + .012, seg: 8, sway: 1}); } }
-    else if (p.kind === 'herbs') { for (let ring2 = 0; ring2 < 2; ring2++) for (let k = 0; k < 4 + ring2 * 3; k++) { const a = k / (4 + ring2 * 3) * TAU, rr = (.25 + ring2 * .3) * rb * 1.6, x = bx + Math.cos(a) * rr, z = bz + Math.sin(a) * rr; poly(b, 'ico', .07 - ring2 * .01, ['leaf', 'lime', 'leafLight'][(k + ring2) % 3], {x, y: yy + .05, z, sy: .8, sway: .4}); if (k % 3 === 0) poly(b, 'oct', .03, col, {x, y: yy + .14, z}); } }
-    else { for (let k = 0; k < 14; k++) { const a = R(q * 20 + k) * TAU, rr = Math.sqrt(R(q * 20 + k + 5)) * rb * .85, x = bx + Math.cos(a) * rr, z = bz + Math.sin(a) * rr; b.cyl(.006, .008, .1 + R(k) * .1, 'leaf', {x, y: yy, z, seg: 4, sway: .9}); poly(b, 'oct', .045, k % 2 ? col : col2, {x, y: yy + .1 + R(k) * .1, z, sway: .9}); } }
-  }
-  // a feature in the middle, by kind
-  const [mx, mz] = at(0, 0), my = gy(mx, mz) + .03;
-  if (p.kind === 'roses') { const A = at(-.22, 0), B = at(-.1, 0), C = at(.1, 0), D = at(.22, 0); for (const q2 of [A, D]) b.cyl(.02, .02, .55, 'white', {x: q2[0], y: my, z: q2[1], seg: 6}); b.tube([[A[0], my + .55, A[1]], [B[0], my + .74, B[1]], [C[0], my + .74, C[1]], [D[0], my + .55, D[1]]], .018, 'white'); for (let k = 0; k < 6; k++) { const f = k / 5, px = A[0] + (D[0] - A[0]) * f, pz = A[1] + (D[1] - A[1]) * f; poly(b, 'oct', .04, k % 2 ? '#f59ac1' : '#e2473b', {x: px, y: my + .74 - Math.sin(f * Math.PI) * .0 - .03 * Math.abs(f - .5), z: pz}); } }
-  else if (p.kind === 'tulips') { b.cyl(.07, .1, .22, 'stone', {x: mx, y: my, z: mz, seg: 10}); b.cyl(.15, .1, .05, 'stone', {x: mx, y: my + .22, z: mz, seg: 12}); b.cyl(.12, .12, .02, '#6fcdea', {x: mx, y: my + .27, z: mz, seg: 12}); }
-  else if (p.kind === 'lavender') { const [bx, bz] = at(0, .0); b.push(bx, my, bz, -gap + Math.PI / 2); b.box(.5, .05, .18, 'wood', {y: .2, r: .01}); b.box(.5, .2, .04, 'wood', {y: .24, z: -.08, r: .01}); for (const sx of [-.2, .2]) b.box(.04, .2, .14, 'slate', {x: sx}); b.pop(); }
-  else if (p.kind === 'sunflowers') { b.cyl(.012, .012, .5, 'wood', {x: mx, y: my, z: mz, seg: 5}); b.box(.3, .02, .02, 'wood', {x: mx, y: my + .36, z: mz}); b.sph(.05, '#e8d29a', {x: mx, y: my + .52, z: mz, seg: 8}); cone2(b, .075, .08, '#8a5a3c', {x: mx, y: my + .6, z: mz, seg: 8}); }
-  else if (p.kind === 'herbs') { b.cyl(.04, .05, .1, 'stone', {x: mx, y: my, z: mz, seg: 10}); b.cyl(.09, .09, .02, 'stone', {x: mx, y: my + .1, z: mz, seg: 12}); b.box(.1, .01, .02, 'gold', {x: mx, y: my + .125, z: mz, ry: .6}); }
-  else { for (const [dx, dz] of [[-.12, -.05], [.1, .06]]) { const [hx, hz] = at(dx, dz); b.box(.17, .12, .17, 'white', {x: hx, y: my, z: hz, r: .02}); b.box(.17, .1, .17, 'white', {x: hx, y: my + .12, z: hz, r: .02}); b.box(.19, .03, .19, 'gold', {x: hx, y: my + .22, z: hz, r: .01}); } }
+const gapOf = (a, g) => Math.abs(Math.atan2(Math.sin(a - g), Math.cos(a - g)));
+const SNOW = '#f2f7fa';
+// A ring of box hedge (or of a given radius) with an opening of half-width `half` radians facing `gap`.
+function hedgeRing(b, p, rad, gap, half, winter, h = .24, step = .3) {
+  const n = Math.round(rad * TAU / step);
+  for (let k = 0; k < n; k++) { const a = k / n * TAU; if (gapOf(a, gap) < half) continue; const x = p.x + Math.cos(a) * rad, z = p.z + Math.sin(a) * rad; b.box(step + .03, h, .2, winter ? (k % 2 ? '#e8f0ea' : '#7da58c') : k % 2 ? 'leaf' : 'leafLight', {x, y: heightAt(x, z), z, ry: -a + Math.PI / 2, r: .06, sway: .15}); }
 }
+// A wooden post-and-rail fence round a plot, open towards `gap`.
+function fenceRing(b, p, rad, gap, half, y0) {
+  const n = Math.round(rad * TAU / .34);
+  for (let k = 0; k < n; k++) { const a = k / n * TAU; if (gapOf(a, gap) < half) continue; const x = p.x + Math.cos(a) * rad, z = p.z + Math.sin(a) * rad, y = heightAt(x, z); b.cyl(.016, .02, .3, 'wood', {x, y, z, seg: 5}); const a2 = (k + 1) / n * TAU; if (gapOf(a2, gap) >= half) for (const hy of [.12, .23]) { const x2 = p.x + Math.cos(a2) * rad, z2 = p.z + Math.sin(a2) * rad; b.box(.34, .018, .018, '#a3744a', {x: (x + x2) / 2, y: y + hy, z: (z + z2) / 2, ry: -(a + a2) / 2 + Math.PI / 2}); } }
+}
+const lawn = (b, p, y0, winter, colour = '#79bf58', rr = 1) => b.cyl(p.r * rr, p.r * rr + .02, .03, winter ? '#e8eef0' : colour, {x: p.x, y: y0, z: p.z, seg: 30});
+
+// ORCHARD: rows of fruit trees in a fenced paddock, blossom in spring, apples in summer, russet in autumn, bare and frosted in winter, and a picnic blanket in the shade.
+function orchardGarden(b, p, season, R, gap, y0, cs) {
+  const winter = season === 'winter', r = p.r; lawn(b, p, y0, winter, '#82c45e'); fenceRing(b, p, r * .98, gap, .4, y0);
+  const crown = {spring: ['#f7c3d8', '#ffffff', '#fbd0e0'], summer: ['#4f9a47', '#5fae52', '#3f8a40'], autumn: ['#e8b83a', '#d9822b', '#b5551f'], winter: ['#9fb4a8']}[season];
+  const spots = []; for (let row = -2; row <= 2; row++) for (let col = -2; col <= 2; col++) { const x = p.x + col * r * .42 + (row % 2) * r * .2, z = p.z + row * r * .38; if (Math.hypot(x - p.x, z - p.z) < r * .8 && !(Math.abs(row) <= 0 && Math.abs(col) <= 0)) spots.push([x, z]); }
+  spots.forEach(([x, z], k) => {
+    const y = heightAt(x, z), sc = .8 + R(k + 10) * .35; b.cyl(.035 * sc, .05 * sc, .36 * sc, 'brown', {x, y, z, seg: 6});
+    if (winter) { for (let t = 0; t < 4; t++) { const a = t / 4 * TAU + k; cone2(b, .02, .26 * sc, 'brown', {x: x + Math.cos(a) * .08, y: y + .4 * sc, z: z + Math.sin(a) * .08, rx: Math.sin(a) * .7, rz: -Math.cos(a) * .7, seg: 4}); } poly(b, 'ico', .13 * sc, SNOW, {x, y: y + .62 * sc, z, sy: .5}); return; }
+    for (let t = 0; t < 3; t++) poly(b, 'ico', (.27 - t * .03) * sc, crown[(k + t) % crown.length], {x: x + (t - 1) * .08, y: y + (.5 + t * .1) * sc, z: z + (t % 2 ? .06 : -.05), sy: .85, sway: .5});
+    if (season === 'summer') for (let f = 0; f < 4; f++) { const a = R(k * 4 + f) * TAU; b.sph(.035, f % 3 ? '#e2473b' : '#f2c14e', {x: x + Math.cos(a) * .2 * sc, y: y + (.42 + R(k + f) * .2) * sc, z: z + Math.sin(a) * .2 * sc, seg: 5}); }
+    if (season === 'autumn') for (let f = 0; f < 3; f++) { const a = R(k * 3 + f) * TAU; b.sph(.03, '#d9822b', {x: x + Math.cos(a) * .28, y: y + .02, z: z + Math.sin(a) * .28, seg: 4}); }
+  });
+  // a picnic blanket and basket in the middle
+  const my = heightAt(p.x, p.z) + .03; for (let u = 0; u < 4; u++) for (let v = 0; v < 3; v++) b.box(.13, .012, .13, (u + v) % 2 ? '#ffffff' : '#d9453b', {x: p.x - .2 + u * .13, y: my, z: p.z - .13 + v * .13});
+  b.box(.1, .07, .07, '#a3744a', {x: p.x + .12, y: my + .01, z: p.z, r: .01}); b.tube([[p.x + .08, my + .08, p.z], [p.x + .12, my + .16, p.z], [p.x + .16, my + .08, p.z]], .007, '#7a5230');
+  for (let k = 0; k < 3; k++) b.sph(.03, ['#e2473b', '#f2c14e', '#7fc45a'][k], {x: p.x - .1 + k * .08, y: my + .035, z: p.z + .17, seg: 5});
+}
+
+// HEDGE MAZE: three rings of hedge with their gaps on opposite sides and a fountain in the middle.
+function mazeGarden(b, p, season, R, gap, y0, cs) {
+  const winter = season === 'winter', r = p.r; lawn(b, p, y0, winter, '#8ccd66');
+  const my = heightAt(p.x, p.z) + .02;
+  hedgeRing(b, p, r * .97, gap, .3, winter, .3); hedgeRing(b, p, r * .7, gap + Math.PI, .3, winter, .3); hedgeRing(b, p, r * .44, gap, .3, winter, .3);
+  // the paths: pale gravel between the rings
+  for (const [ra, rb] of [[r * .8, r * .93], [r * .53, r * .64], [r * .12, r * .38]]) { const n = 26; for (let k = 0; k < n; k++) { const a = k / n * TAU, a2 = (k + 1) / n * TAU; for (const rr of [(ra + rb) / 2]) { const x = p.x + Math.cos(a) * rr, z = p.z + Math.sin(a) * rr; b.box(rb - ra, .012, .5 * rr * TAU / n * 1.02, winter ? '#dfe5e8' : '#e9d9b0', {x, y: heightAt(x, z) + .03, z, ry: -a}); } } }
+  // the fountain in the heart of it
+  b.cyl(.2, .22, .07, 'stone', {x: p.x, y: my, z: p.z, seg: 14}); b.cyl(.16, .16, .02, winter ? '#dff1f7' : '#6fcdea', {x: p.x, y: my + .07, z: p.z, seg: 14}); b.cyl(.025, .035, .22, 'stone', {x: p.x, y: my + .07, z: p.z, seg: 8}); b.cyl(.08, .04, .03, 'stone', {x: p.x, y: my + .27, z: p.z, seg: 10});
+  if (!winter) for (let k = 0; k < 6; k++) { const a = k / 6 * TAU; b.sph(.012, '#bfe9f6', {x: p.x + Math.cos(a) * .07, y: my + .27 + (k % 2) * .03, z: p.z + Math.sin(a) * .07, seg: 4}); }
+  // two clipped topiary cones at the entrance
+  for (const sd of [-1, 1]) { const a = gap + sd * .42, x = p.x + Math.cos(a) * r * .97, z = p.z + Math.sin(a) * r * .97; cone2(b, .1, .36, winter ? '#9fb4a8' : 'leaf', {x, y: heightAt(x, z) + .22, z, seg: 8}); b.cyl(.09, .09, .06, 'stone', {x, y: heightAt(x, z), z, seg: 8}); }
+}
+
+// WATER GARDEN: a pond with lily pads, reeds round it, stepping stones across, a bench and a weeping willow.
+function waterGarden(b, p, season, R, gap, y0, cs) {
+  const winter = season === 'winter', r = p.r; lawn(b, p, y0, winter, '#7dbf5c');
+  const px = p.x - r * .08, pz = p.z + r * .04, pr = r * .56, wy = y0 + .035;
+  b.cyl(pr * 1.12, pr * 1.14, .05, '#a9a39a', {x: px, y: y0, z: pz, seg: 26, sx: 1.2});   // the stone kerb
+  b.cyl(pr, pr, .03, winter ? '#dbeef5' : '#5fc0e0', {x: px, y: y0 + .03, z: pz, seg: 26, sx: 1.2});   // the water (a flattened disc)
+  const kerb = 18; for (let k = 0; k < kerb; k++) { const a = k / kerb * TAU; b.box(.16, .06, .1, k % 2 ? '#c2bbb0' : '#b0a99e', {x: px + Math.cos(a) * pr * 1.25, y: y0 + .01, z: pz + Math.sin(a) * pr * 1.07, ry: -a, r: .01}); }
+  if (!winter) { for (let k = 0; k < 9; k++) { const a = R(k + 3) * TAU, d = Math.sqrt(R(k + 9)) * pr * .8, x = px + Math.cos(a) * d * 1.15, z = pz + Math.sin(a) * d; b.cyl(.07 + R(k) * .03, .07, .012, '#4f9a47', {x, y: wy + .005, z, seg: 8}); if (k % 3 === 0) poly(b, 'oct', .035, cs[k % cs.length], {x, y: wy + .035, z}); } }
+  else for (let k = 0; k < 4; k++) b.sph(.18, '#ffffff', {x: px + (R(k) - .5) * pr, y: wy, z: pz + (R(k + 4) - .5) * pr * .7, sy: .1, seg: 8});
+  // reeds and cattails round the far side
+  for (let k = 0; k < 16; k++) { const a = gap + Math.PI + (R(k + 20) - .5) * 3.2, rr = pr * (1.1 + R(k + 30) * .25), x = px + Math.cos(a) * rr * 1.15, z = pz + Math.sin(a) * rr, y = heightAt(x, z), h = .28 + R(k) * .16; b.cyl(.006, .009, h, winter ? '#b9a57a' : '#6fa646', {x, y, z, seg: 4, sway: .9}); if (k % 3 === 0) b.cyl(.014, .014, .07, '#7a4a2a', {x, y: y + h - .02, z, seg: 5, sway: .9}); }
+  // stepping stones across the lawn to the water and a bench
+  for (let k = 0; k < 5; k++) { const x = p.x + Math.cos(gap) * (r * .95 - k * r * .2), z = p.z + Math.sin(gap) * (r * .95 - k * r * .2) + (k % 2 ? .06 : -.06); b.cyl(.09, .1, .03, '#b8b2a8', {x, y: heightAt(x, z) + .02, z, seg: 7}); }
+  const bx = p.x + Math.cos(gap + 2.2) * r * .78, bz = p.z + Math.sin(gap + 2.2) * r * .78; b.push(bx, heightAt(bx, bz), bz, -(gap + 2.2) + Math.PI / 2); b.box(.4, .04, .14, 'wood', {y: .16, r: .01}); b.box(.4, .14, .03, 'wood', {y: .2, z: -.06, r: .01}); for (const sx of [-.16, .16]) b.box(.03, .16, .12, 'slate', {x: sx}); b.pop();
+  // a weeping willow
+  const wx = p.x + Math.cos(gap + Math.PI * .8) * r * .72, wz = p.z + Math.sin(gap + Math.PI * .8) * r * .72, wy0 = heightAt(wx, wz); b.cyl(.05, .07, .5, 'brown', {x: wx, y: wy0, z: wz, seg: 6});
+  poly(b, 'ico', .3, winter ? '#9fb4a8' : '#8fb85a', {x: wx, y: wy0 + .66, z: wz, sy: .7, sway: .6}); if (!winter) for (let k = 0; k < 9; k++) { const a = k / 9 * TAU; b.tube([[wx + Math.cos(a) * .22, wy0 + .7, wz + Math.sin(a) * .22], [wx + Math.cos(a) * .32, wy0 + .48, wz + Math.sin(a) * .32], [wx + Math.cos(a) * .34, wy0 + .26, wz + Math.sin(a) * .34]], .012, '#7fa84e'); }
+}
+
+// ROSE PAVILION: an eight-post gazebo with a red cone roof and a bench inside, rose beds round it, a rose arch at the gate, a hedge border.
+function pavilionGarden(b, p, season, R, gap, y0, cs) {
+  const winter = season === 'winter', r = p.r, ca = Math.cos(gap), sa = Math.sin(gap); lawn(b, p, y0, winter, '#79bf58'); hedgeRing(b, p, r * .97, gap, .36, winter, .2);
+  const my = heightAt(p.x, p.z) + .03; b.cyl(.42, .45, .05, '#cbbfa8', {x: p.x, y: my - .02, z: p.z, seg: 8});   // the floor
+  for (let k = 0; k < 8; k++) { const a = k / 8 * TAU + .39, x = p.x + Math.cos(a) * .38, z = p.z + Math.sin(a) * .38; b.cyl(.018, .02, .55, 'white', {x, y: my, z, seg: 6}); if (!winter) for (let f = 0; f < 3; f++) poly(b, 'oct', .03, cs[(k + f) % cs.length], {x: x + (R(k * 3 + f) - .5) * .05, y: my + .12 + f * .15, z: z + (R(k + f) - .5) * .05, sway: .5}); }
+  cone2(b, .52, .26, winter ? SNOW : '#d9453b', {x: p.x, y: my + .68, z: p.z, seg: 8}); b.cyl(.05, .05, .04, 'gold', {x: p.x, y: my + .82, z: p.z, seg: 6}); b.cyl(.44, .44, .03, 'white', {x: p.x, y: my + .53, z: p.z, seg: 8});
+  b.box(.3, .04, .1, 'wood', {x: p.x, y: my + .14, z: p.z + .06, r: .01});
+  // rose beds in a ring, a pair of colours, with a gravel path round
+  const n = 8; for (let k = 0; k < n; k++) { const a = k / n * TAU, x = p.x + Math.cos(a) * r * .68, z = p.z + Math.sin(a) * r * .68, y = heightAt(x, z) + .02; b.cyl(.2, .22, .05, winter ? '#ece8e0' : '#5d4030', {x, y: y - .01, z, seg: 10});
+    if (winter) { poly(b, 'ico', .1, '#9fb4a8', {x, y: y + .08, z, sy: .5}); continue; }
+    poly(b, 'ico', .13, 'leaf', {x, y: y + .1, z, sy: .8, sway: .4}); for (let f = 0; f < 4; f++) poly(b, 'oct', .045, cs[(k + f) % cs.length], {x: x + (R(k * 5 + f) - .5) * .22, y: y + .16 + R(k + f) * .08, z: z + (R(k * 7 + f) - .5) * .22, sway: .5}); }
+  for (let k = 0; k < 28; k++) { const a = k / 28 * TAU, x = p.x + Math.cos(a) * r * .5, z = p.z + Math.sin(a) * r * .5; b.box(.16, .012, .13, winter ? '#dfe5e8' : '#e9d9b0', {x, y: heightAt(x, z) + .03, z, ry: -a}); }
+  // the rose arch at the gate
+  const gx = p.x + ca * r * .97, gz = p.z + sa * r * .97, gy = heightAt(gx, gz); for (const sd of [-1, 1]) b.cyl(.02, .02, .5, 'white', {x: gx - sa * sd * .22, y: gy, z: gz + ca * sd * .22, seg: 5});
+  b.tube([[gx + sa * .22, gy + .5, gz - ca * .22], [gx + sa * .1, gy + .64, gz - ca * .1], [gx - sa * .1, gy + .64, gz + ca * .1], [gx - sa * .22, gy + .5, gz + ca * .22]], .016, 'white'); if (!winter) for (let f = 0; f < 6; f++) poly(b, 'oct', .03, cs[f % cs.length], {x: gx + sa * (.2 - f * .08), y: gy + .55 + (f % 2) * .08, z: gz - ca * (.2 - f * .08)});
+}
+
+// WILDFLOWER FIELD: no fence, drifts of flowers, a winding path of stones and three beehives where the bees live.
+function wildGarden(b, p, season, R, gap, y0, cs) {
+  const winter = season === 'winter', r = p.r; lawn(b, p, y0, winter, '#86c85f', .96);
+  for (let k = 0, m = Math.round(r * r * 22); k < m; k++) { const a = R(k + 200) * TAU, rr = Math.sqrt(R(k + 300)) * r * .9, x = p.x + Math.cos(a) * rr, z = p.z + Math.sin(a) * rr, y = heightAt(x, z), c = cs[Math.floor(R(k + 400) * cs.length)];
+    if (winter) { if (k % 3 === 0) cone2(b, .02, .14 + R(k) * .08, '#b9a57a', {x, y: y + .08, z, seg: 4, sway: .9}); continue; }
+    if (k % 4 === 0) cone2(b, .02, .16 + R(k + 5) * .1, '#7fb55a', {x, y: y + .09, z, seg: 4, sway: .9}); else flower(b, x, y, z, c, .1 + R(k + 7) * .16, .03 + R(k + 8) * .02); }
+  // the path of flat stones, winding from the gate to the hives
+  for (let k = 0; k < 9; k++) { const t = k / 8, a = gap + Math.sin(t * 4) * .5, d = r * (.95 - t * .8), x = p.x + Math.cos(a) * d, z = p.z + Math.sin(a) * d; b.cyl(.1 + (k % 2) * .02, .11, .03, '#c0b9ae', {x, y: heightAt(x, z) + .025, z, seg: 7}); }
+  // three beehives on little stands, with a few bees about them
+  for (let h = 0; h < 3; h++) { const a = gap + Math.PI + (h - 1) * .75, x = p.x + Math.cos(a) * r * .62, z = p.z + Math.sin(a) * r * .62, y = heightAt(x, z); b.push(x, y, z, -a + Math.PI / 2);
+    for (const sx of [-.07, .07]) b.cyl(.012, .012, .1, 'wood', {x: sx, seg: 4}); b.box(.2, .04, .16, 'wood', {y: .1}); b.box(.18, .1, .14, winter ? '#e8e2d0' : '#f7e9a8', {y: .14, r: .01}); b.box(.19, .03, .15, winter ? SNOW : '#d9a441', {y: .245, r: .005}); b.box(.06, .02, .01, '#3a2a20', {y: .17, z: .075}); b.pop(); }
+}
+
+// ALLOTMENT: raised beds in rows of vegetables, a shed with a water butt, a scarecrow, a wheelbarrow, a compost heap and a fence.
+function allotmentGarden(b, p, season, R, gap, y0, cs) {
+  const winter = season === 'winter', r = p.r, ca = Math.cos(gap), sa = Math.sin(gap), at = (u, v) => [p.x + u * ca - v * sa, p.z + u * sa + v * ca]; lawn(b, p, y0, winter, '#84c45e'); fenceRing(b, p, r * .98, gap, .36, y0);
+  const crops = {spring: [['#7fc45a', 'cabbage'], ['#a5d86a', 'leaf'], ['#7fc45a', 'leaf']], summer: [['#e2473b', 'tomato'], ['#4f9a47', 'bean'], ['#f28b3c', 'carrot']], autumn: [['#f28b3c', 'pumpkin'], ['#7a9a3c', 'cabbage'], ['#d9822b', 'pumpkin']]}[season] || [];
+  for (let row = 0; row < 3; row++) for (let col = 0; col < 2; col++) { const [bx, bz] = at(-r * .2 + col * r * .62 - r * .18, (row - 1) * r * .46), y = heightAt(bx, bz); b.push(bx, y, bz, -gap); b.box(r * .5, .09, .28, '#a3744a', {r: .01}); b.box(r * .46, .03, .24, winter ? SNOW : '#4a3324', {y: .09}); b.pop();
+    if (winter) continue; const [col1, kind] = crops[(row + col) % crops.length]; for (let k = 0; k < 4; k++) { const [x, z] = at(-r * .2 + col * r * .62 - r * .18 - r * .17 + k * r * .113, (row - 1) * r * .46), yy = y + .11; if (kind === 'tomato') { b.cyl(.006, .006, .26, 'wood', {x, y: yy, z, seg: 4}); for (let t = 0; t < 3; t++) b.sph(.028, col1, {x: x + .02, y: yy + .08 + t * .06, z, seg: 5}); } else if (kind === 'bean') { b.cyl(.006, .006, .3, 'wood', {x, y: yy, z, seg: 4}); poly(b, 'ico', .06, col1, {x, y: yy + .2, z, sy: 1.6, sway: .5}); } else if (kind === 'carrot') { for (let t = 0; t < 3; t++) cone2(b, .015, .1, '#6fb04a', {x: x + (t - 1) * .025, y: yy + .06, z, seg: 4, sway: .6}); } else if (kind === 'pumpkin') b.sph(.065, col1, {x, y: yy + .05, z, sy: .75, seg: 8}); else poly(b, 'ico', .075, col1, {x, y: yy + .06, z, sy: .8}); } }
+  // shed, butt, scarecrow, barrow, compost
+  const [sx, sz] = at(r * .62, -r * .45), sy = heightAt(sx, sz); b.push(sx, sy, sz, -gap + Math.PI * .15); b.box(.4, .3, .3, '#a3744a', {y: 0, r: .01}); b.gable(.34, .16, .38, winter ? SNOW : '#8a5a3c', {y: .3}); b.box(.1, .2, .02, '#3a2a20', {y: 0, z: .16}); b.pop();
+  const [wx, wz] = at(r * .62, -r * .1); b.cyl(.06, .06, .14, '#3f7fc0', {x: wx, y: heightAt(wx, wz), z: wz, seg: 8});
+  const [cx, cz] = at(r * .5, r * .5), cy = heightAt(cx, cz); b.cyl(.012, .012, .5, 'wood', {x: cx, y: cy, z: cz, seg: 5}); b.box(.3, .02, .02, 'wood', {x: cx, y: cy + .36, z: cz, ry: -gap}); b.sph(.05, '#e8d29a', {x: cx, y: cy + .52, z: cz, seg: 8}); cone2(b, .075, .08, '#8a5a3c', {x: cx, y: cy + .6, z: cz, seg: 8}); b.box(.12, .14, .02, '#6f7fb0', {x: cx, y: cy + .22, z: cz, ry: -gap});
+  const [bx2, bz2] = at(-r * .75, r * .4), by = heightAt(bx2, bz2); b.push(bx2, by, bz2, -gap + .5); b.box(.12, .05, .2, '#c8473b', {y: .08}); b.cyl(.04, .04, .02, 'black', {y: .04, z: .12, rz: Math.PI / 2, centre: true, seg: 8}); b.pop();
+  const [hx, hz] = at(-r * .55, -r * .6); b.sph(.12, winter ? '#9fb4a8' : '#6a8a3a', {x: hx, y: heightAt(hx, hz) + .04, z: hz, sy: .5, seg: 8});
+}
+
 export function buildGardens(season, material) {
   const b = new Bag(), glass = [], bloom = BLOOM[season], winter = season === 'winter', S = winter ? .5 : 1;
   for (const p of PLOTS) {
-    const y = heightAt(p.x, p.z) + .01, r = p.r, R = k => rand(p.seed * 17 + k), pick = (cs, k) => cs[Math.floor(R(k) * cs.length)], cs = bloom[p.kind] || bloom.meadow;
+    const y = heightAt(p.x, p.z) + .01, r = p.r, R = k => rand(p.seed * 17 + k), pick = (cs, k) => cs[Math.floor(R(k) * cs.length)], cs = bloom[p.kind] || bloom.wild;
     const gap = Math.atan2(-p.z, -p.x);   // the opening of the border faces the middle of the town
-    const deco = DECO.includes(p.kind);
-    if (deco) formalGarden(b, p, S, winter, cs, R, pick, gap, y);
-    else if (p.kind !== 'coop') {
-      b.cyl(r, r + .03, .035, winter ? '#ece8e0' : '#6e4c32', {x: p.x, y, z: p.z, seg: 28}); ring(b, p, y, r, gap);
-      if (p.kind !== 'greenhouse' && p.kind !== 'allotment') for (let k = 0, m = Math.round(r * r * 15); k < m; k++) { const a = R(k + 200) * TAU, rr = Math.sqrt(R(k + 300)) * r * .93; poly(b, 'ico', .09 + R(k + 400) * .05, winter ? (k % 2 ? '#dfe9ee' : '#9fb4a8') : k % 3 ? 'leaf' : 'leafLight', {x: p.x + Math.cos(a) * rr, y: y + .035, z: p.z + Math.sin(a) * rr, sy: .6, sway: .4}); }
-    }
-    if (deco) {   // (drawn above)
-    } else if (p.kind === 'allotment') {
-      for (const dz of [-.42, .0, .42]) { const z0 = p.z + dz; b.box(r * 1.2, .09, .3, '#8a5a3c', {x: p.x - r * .05, y, z: z0, r: .02}); b.box(r * 1.15, .03, .24, '#4a3324', {x: p.x - r * .05, y: y + .09, z: z0}); for (let k = 0; k < 5; k++) { const x = p.x - r * .5 + k * r * .23; if (winter) b.sph(.05, 'white', {x, y: y + .11, z: z0, sy: .5, seg: 6}); else if ((k + dz * 3) % 2 > .5) bush(b, x, y + .08, z0, .075, k % 2 ? 'lime' : 'leaf'); else cone2(b, .03, .1, 'leaf', {x, y: y + .17, z: z0, seg: 5, sway: .6}); } }
-      b.cyl(.012, .012, .5, 'wood', {x: p.x + r * .6, y, z: p.z, seg: 5}); b.box(.3, .02, .02, 'wood', {x: p.x + r * .6, y: y + .36, z: p.z}); b.sph(.05, '#e8d29a', {x: p.x + r * .6, y: y + .52, z: p.z, seg: 8}); cone2(b, .075, .08, '#8a5a3c', {x: p.x + r * .6, y: y + .6, z: p.z, seg: 8});
-      if (season === 'autumn') for (let k = 0; k < 4; k++) b.sph(.07, '#f28b3c', {x: p.x - r * .5 + k * .3, y: y + .12, z: p.z + .62, sy: .8, seg: 8});
-    } else if (p.kind === 'greenhouse') {
+    const builders = {orchard: orchardGarden, maze: mazeGarden, water: waterGarden, pavilion: pavilionGarden, wild: wildGarden, allotment: allotmentGarden};
+    if (builders[p.kind]) builders[p.kind](b, p, season, R, gap, y, cs);
+    else if (p.kind === 'greenhouse') {
+      b.cyl(r, r + .03, .035, winter ? '#ece8e0' : '#b9ad96', {x: p.x, y, z: p.z, seg: 28}); ring(b, p, y, r, gap);
+      for (let k = 0; k < 6; k++) { const a = k / 6 * TAU + .3, x = p.x + Math.cos(a) * r * .8, z = p.z + Math.sin(a) * r * .8; b.cyl(.06, .05, .08, '#c8604a', {x, y: heightAt(x, z), z, seg: 7}); if (!winter) poly(b, 'ico', .06, k % 2 ? 'leaf' : 'lime', {x, y: heightAt(x, z) + .12, z, sy: .8}); }
       const w = r * 1.05, d = r * .85, h = .42, hh = .28;
       b.box(w, .06, d, 'stone', {x: p.x, y, z: p.z, r: .015});
       for (const sx of [-1, 1]) for (const sz of [-1, 1]) b.box(.035, h + .02, .035, 'white', {x: p.x + sx * w / 2, y, z: p.z + sz * d / 2, r: .008});

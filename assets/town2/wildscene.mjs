@@ -4,7 +4,7 @@ import * as THREE from 'three';
 import {ISLAND, BUILDINGS, heightAt, rand} from './def.mjs';
 import {buildPet, buildHen, buildChick, buildDolphin, buildWhale, buildDrops, buildButterflies, buildMeadow, buildGardens, buildBorders, buildIslet, buildDwarf} from './wild3d.mjs';
 import {PETS, HENS, DOLPHINS, WHALES, ISLET, DWARFS, ground, makeWalker, wanderStep, followStep, doorstep, dolphinPose, whalePose, dwarfsOut, dwarfWindow, dwarfPose} from './wildlife.mjs';
-import {PLOTS, COOP, clearance} from './garden.mjs';
+import {PLOTS, COOP, clearance, inGarden} from './garden.mjs';
 import {newGait, stepGait} from './gait.mjs';
 import {setGait} from './limbs.mjs';
 
@@ -20,8 +20,8 @@ export function createWildlife({scene, sim, people, material, season, lite = fal
   /* ---- hens: half in the coop yard, half scratching about the farmyard by the barn, with a few chicks ---- */
   const house = {x: COOP.x, z: COOP.z - COOP.r * .5}, hensIn = () => sim.hour >= 19.6 || sim.hour < 6.2;
   const henFree = (x, z) => Math.hypot(x - COOP.x, z - COOP.z) < COOP.r * .8 && Math.hypot(x - house.x, z - house.z) > .5 && Math.hypot(x - COOP.x - COOP.r * .4 * 0, z - COOP.z - COOP.r * .4) > .2;
-  const farmDoor = doorstep('farm'), farmYard = (() => { let best = {x: farmDoor.x, z: farmDoor.z, c: -1}; for (let r = 1.2; r <= 2.8; r += .2) for (let k = 0; k < 24; k++) { const x = farmDoor.x + Math.cos(k / 24 * TAU) * r, z = farmDoor.z + Math.sin(k / 24 * TAU) * r, c = clearance(x, z) - Math.hypot(x - farmDoor.x, z - farmDoor.z) * .12; if (c > best.c) best = {x, z, c}; } return {cx: best.x, cz: best.z, r: Math.max(.7, Math.min(1.3, best.c + .5))}; })();
-  const YARDS = [{cx: COOP.x, cz: COOP.z, r: COOP.r * .8, free: henFree}, {...farmYard, free: (x, z) => Math.hypot(x - farmYard.cx, z - farmYard.cz) < farmYard.r && clearance(x, z) > .18}];
+  const farmDoor = doorstep('farm'), farmYard = (() => { let best = {x: farmDoor.x, z: farmDoor.z, c: -1}; for (let r = 1.2; r <= 2.8; r += .2) for (let k = 0; k < 24; k++) { const x = farmDoor.x + Math.cos(k / 24 * TAU) * r, z = farmDoor.z + Math.sin(k / 24 * TAU) * r, c = clearance(x, z) - Math.hypot(x - farmDoor.x, z - farmDoor.z) * .12 - (inGarden(x, z, .6) ? 9 : 0); if (c > best.c) best = {x, z, c}; } return {cx: best.x, cz: best.z, r: Math.max(.7, Math.min(1.3, best.c + .5))}; })();
+  const YARDS = [{cx: COOP.x, cz: COOP.z, r: COOP.r * .8, free: henFree}, {...farmYard, free: (x, z) => Math.hypot(x - farmYard.cx, z - farmYard.cz) < farmYard.r && clearance(x, z) > .18 && !inGarden(x, z, .2)}];
   const hens = HENS.map((h, k) => {
     const yard = YARDS[k % 2], g = holder(buildHen(h.kind, h.coat, material)), w = makeWalker(yard.cx + (rand(k + 5) - .5) * yard.r, yard.cz + (rand(k + 9) - .3) * yard.r * .8, k * 3 + 400);
     const a = {kind: h.kind, def: h, g, w, k, yard, gait: newGait(), describe: () => ({title: h.name + (h.kind === 'hen' ? ' the hen' : ''), lines: [h.kind === 'hen' ? 'Scratching and pecking about the yard' : 'Struts about the yard and crows at dawn', w.anim === 'peck' ? 'Busy pecking' : 'Out for a stroll', hensIn() ? 'Roosting in the henhouse for the night' : 'Lays eggs for the bakery and the café'].filter(Boolean)})};
@@ -93,7 +93,7 @@ export function createWildlife({scene, sim, people, material, season, lite = fal
   const gemSpot = doorstep('hut'), gem = new THREE.Mesh(new THREE.OctahedronGeometry(.07, 0).scale(1, 1.4, 1), new THREE.MeshBasicMaterial({color: '#8fd8ff', fog: false})); gem.visible = false; scene.add(gem);
 
   /* ---- butterflies ---- */
-  const flowerPlots = PLOTS.filter(p => p.kind !== 'coop' && p.kind !== 'greenhouse' && p.kind !== 'allotment'), flies = buildButterflies(14); scene.add(flies);
+  const flowerPlots = PLOTS.filter(p => ['pavilion', 'orchard', 'wild'].includes(p.kind)), flies = buildButterflies(14); scene.add(flies);
   // bees: little striped dots that circle the beds in daylight, as many as the hives can spare
   const bees = new THREE.InstancedMesh(new THREE.SphereGeometry(.035, 6, 4), new THREE.MeshBasicMaterial({color: '#f2c14e'}), 18); bees.frustumCulled = false; bees.count = 0; scene.add(bees); const bm = new THREE.Matrix4(), bq = new THREE.Quaternion(), bp = new THREE.Vector3(), bs = new THREE.Vector3(1, 1, 1);
   let fliesMax = 14, forced = null, lifeOn = true, ecoNow = null, flowersBase = 800;
