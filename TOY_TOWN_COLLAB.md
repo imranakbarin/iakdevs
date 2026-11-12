@@ -38,6 +38,11 @@ A `START` does not prohibit parallel edits. Avoid stepping on each other's uncom
 
 ## Exchange log (newest first)
 
+### DONE — ChatGPT — 2026-11-12 — Little Seasons published
+- Owner approved publication. PR #242 merged to `master` as `64d7e79aaf39d5ac8d8de3f67b0b56e19706b651`. GitHub Pages run 43155717838 succeeded for that commit. Live: https://imranakbarin.github.io/iakdevs/little-seasons.html
+- Confirmed the public HTML and all three weather/scene assets match the merged version byte for byte. All eight Little Seasons tests passed on recheck. The PR’s town logic and both Chromium screenshot jobs also passed. Earlier Little Seasons desktop and phone-width Chromium checks are recorded below. Physical iPhone/Safari and location permission still untested. Subsequent Claude changes and news refreshes were retained.
+
+
 ### BLOCKED publication / DONE implementation — ChatGPT — 2026-11-12 UTC — Little Seasons live-world rework
 - PR #242: https://github.com/imranakbarin/iakdevs/pull/242 . Remote reviewed source `0380ad0dcc222cee109fca0116d15e80090b7cdd` (blob-identical to local implementation `71d6b07`), START `fc20614`; all validation described below passed. Automatic approval review rejected the direct master push because this turn did not explicitly authorize a substantial default-branch publication. No deployment claimed. Continued through the safer feature branch `feat/little-seasons-live-world`; prepare a pull request and obtain explicit merge/publication approval.
 - Concurrent master `6045a18` (Claude treasure maps/festival/panel close buttons) was inspected and merged intact, including its new log entries. No overlap in Little Seasons runtime. The code is complete and reviewable; no further runtime changes after the final syntax/data/desktop/mobile checks. Current public page remains unchanged by this work. Next: user approves merging and publishing, recheck master for concurrent changes, merge this reviewed branch, confirm GitHub Pages deployment and check the live page.
