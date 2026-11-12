@@ -13,7 +13,7 @@ import {loadSaga, saveSaga} from './saga.mjs';
 import {stageOf, dots} from './track.mjs';
 import {journalLines, natureReport} from './paper.mjs';
 import {load as loadSettings, save as saveSettings, stepsFor, BUSY_FACTOR} from './settings.mjs';
-import {newsStory} from './stories.mjs';
+import {newsStory, STORIES} from './stories.mjs';
 import {createWildlife} from './wildscene.mjs';
 import {newGait, stepGait} from './gait.mjs';
 import {setGait} from './limbs.mjs';
@@ -364,6 +364,15 @@ if (panelEl) for (const seg of panelEl.querySelectorAll('.seg')) seg.addEventLis
 if (setBtn) setBtn.addEventListener('click', () => { if (paperMode) closePaper(); const on = panelEl.classList.toggle('on'); setBtn.setAttribute('aria-expanded', String(on)); });
 applySettings(false);
 const storyEl = document.getElementById('story'); let headlines = [], newsAt = 40, newsIdx = 0, shown = '';
+// Tapping the story banner takes you to it: the camera goes to the first person in the story who is out and about (or to the place they are going to) and you see who they are.
+if (storyEl) storyEl.addEventListener('click', () => {
+  const c = sim.story.current; if (!c) return;
+  const inc = sim.incident; if (c.id === 'incident' && inc) { const t = inc.type === 'lostchild' ? sim.residents.find(r => r.id === inc.child) : null; if (t && t.state === 'walking') { closePaper(); select({kind: 'resident', id: t.id}); return; } const b = BUILDINGS.find(x => x.id === inc.target); if (b) { closePaper(); Object.assign(view, {tx: b.x, tz: b.z, tdist: Math.min(view.tdist, 12)}); select({kind: 'building', id: b.id}); } return; }
+  const def = STORIES.find(x => x.id === c.id); if (!def || !def.go) return;
+  for (const [who] of def.go) { const r = sim.residents.find(x => x.id === who); if (r && (r.state === 'walking' || r.onPlatform)) { closePaper(); view.tdist = Math.min(view.tdist, 13); select({kind: 'resident', id: r.id}); return; } }
+  const first = def.go.flatMap(([, trips]) => trips.map(t => t[0])).find(id => BUILDINGS.some(b => b.id === id)), b = first && BUILDINGS.find(x => x.id === first);
+  if (b) { closePaper(); Object.assign(view, {tx: b.x, tz: b.z, tdist: Math.min(view.tdist, 12)}); select({kind: 'building', id: b.id}); toast('Everyone is on their way to ' + b.name, 3); }
+});
 if (q.get('news') !== '0') fetch(new URL('../toy-town-news.json', import.meta.url)).then(r => r.ok ? r.json() : null).then(d => { headlines = ((d && d.stories) || []).filter(s => s.tone === 'light' && s.title).slice(0, 12); }).catch(() => {});
 function news() {
   if (!settings.news) return;
