@@ -1442,3 +1442,9 @@ A `START` does not prohibit parallel edits. Avoid stepping on each other's uncom
 
 ### 2026-11-12 · Claude · START (new storybook town, follow-up 29: make it a game people come back to: daily wishes, a sticker album, a next-goal pill, a welcome-back gift, a first-minute guide)
 - **Base**: master afb23d1. **Request (owner)**: "can you help me making this better and keeping interactive and keep the user hooked ... go ahead and build all". **Plan** (pure modules, each tested): `quests.mjs` (three wishes each morning, asked by residents, done by real actions: fish, plant, feed the hens, rest the sea, meet a resident, send a parcel, take the boat, read the paper; coins go to the chest), `album.mjs` (stickers found by seeing things; saved with the saga), `welcome.mjs` (what happened while you were away, a gift that grows with a streak of days), `guide.mjs` (a five-step first-minute guide). UI: Wishes and Album tabs on the paper, a small "next goal" pill that opens Wishes, the welcome page on return. The "town grows" part is the goal pill plus the existing chest upgrades.
+
+### 2026-11-12 · Claude · DONE (new storybook town, follow-up 29: things to come back for)
+- **Done**: spec 4i. Four pure modules (`quests`, `album`, `welcome`, `guide`), sim and saga integration, Wishes and Album tabs, the goal pill, the welcome page and the guide tip. Logic block (determinism, wishes granted and paid once, a new day, damaged saves, stickers, streak and gift, guide) and a browser assertion; both suites pass (96 calls).
+- **Not verified**: a real phone, the welcome-back page after a real day away (logic only), balance of the rewards over weeks.
+- **Not built**: bigger visible rewards from wishes (the chest upgrades are the same five plus the beehive).
+

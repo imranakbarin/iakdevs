@@ -15,6 +15,10 @@ import {journalLines, natureReport} from './paper.mjs';
 import {load as loadSettings, save as saveSettings, stepsFor, BUSY_FACTOR} from './settings.mjs';
 import {newsStory, STORIES} from './stories.mjs';
 import {createWildlife} from './wildscene.mjs';
+import {awayText} from './welcome.mjs';
+import {nextVisit} from './welcome.mjs';
+import {next as guideNext} from './guide.mjs';
+import {headline as chronicleHeadline} from './chronicle.mjs';
 import {newGait, stepGait} from './gait.mjs';
 import {setGait} from './limbs.mjs';
 import {COOP, PLOTS} from './garden.mjs';
@@ -45,7 +49,7 @@ scene.add(sun, sun.target);
 
 // the day of the week: today's, unless ?day=mon..sun (or 0..6) says otherwise
 function dayFromQuery() { const d = (q.get('day') || '').toLowerCase().slice(0, 3), i = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'].indexOf(d); return i >= 0 ? i : /^[0-6]$/.test(q.get('day') || '') ? +q.get('day') : (new Date().getDay() + 6) % 7; }
-const season = SEASONS.includes(q.get('season')) ? q.get('season') : seasonOf(), sagaStore = (() => { try { return localStorage; } catch (e) { return null; } })(), sim = createSim(7, {season, weekday: dayFromQuery(), saga: q.get('fresh') === '1' || !sagaStore ? null : loadSaga(sagaStore)}), built = buildTown(sim.graph, season);
+const season = SEASONS.includes(q.get('season')) ? q.get('season') : seasonOf(), sagaStore = (() => { try { return localStorage; } catch (e) { return null; } })(), savedSaga = q.get('fresh') === '1' || !sagaStore ? null : loadSaga(sagaStore), sim = createSim(7, {season, weekday: dayFromQuery(), saga: savedSaga, wishSeed: Math.floor(Date.now() / 864e5)}), built = buildTown(sim.graph, season);
 const sound = createSound();
 scene.add(built.ground, built.sea, built.shallows, built.town, built.glow, built.lampGlow); for (const m of Object.values(built.moving)) scene.add(m.group);
 const tufts = buildTufts(sim.graph); scene.add(tufts);
@@ -129,7 +133,7 @@ canvas.addEventListener('pointerdown', e => { canvas.setPointerCapture(e.pointer
 canvas.addEventListener('pointermove', e => {
   const p = pointers.get(e.pointerId); if (!p) return; const dx = e.clientX - p.x, dy = e.clientY - p.y; p.x = e.clientX; p.y = e.clientY; p.moved += Math.abs(dx) + Math.abs(dy);
   if (pointers.size === 1) {
-    if (p.moved > 8) follow = null;   // a drag lets go of whatever the camera was following
+    if (p.moved > 8) { follow = null; guideStep('look'); }   // a drag lets go of whatever the camera was following
     if (p.button === 2 || e.shiftKey) { view.tyaw -= dx * .006; return; }
     const k = view.dist * .00135, cs = Math.cos(view.yaw), sn = Math.sin(view.yaw);
     view.tx = clamp(-22, view.tx - (dx * cs + dy * sn * 1.5) * k, 22); view.tz = clamp(-17, view.tz - (-dx * sn + dy * cs * 1.5) * k, 17);
@@ -174,6 +178,7 @@ function describe(o) {
   return describeBuilding(sim, BUILDINGS.find(b => b.id === o.id));
 }
 function select(o) {
+  if (o && o.kind === 'resident') { sim.note('tap', o.id); guideStep('tap'); }
   sel = o; follow = o && o.kind !== 'building' ? o : null; cardAt = 0; cardText = '';
   const h = document.getElementById('hint'); if (h && o) h.style.opacity = '0'; if (o) sound.blip();
   if (!o) { ring.visible = false; pin.visible = false; if (paperMode === 'journal') closePaper(); if (cardEl) cardEl.classList.remove('on'); if (sendBtn) sendBtn.hidden = true; return; }
@@ -242,11 +247,11 @@ function photoUrl() { return composePhoto().toDataURL('image/jpeg', .92); }
 const paperBtn = document.getElementById('paperBtn'), paperEl = document.getElementById('paper'), journalBtn = document.getElementById('journalBtn'); let paperMode = null, paperAt = -1e9;
 function el(tag, text, cls) { const e = document.createElement(tag); if (text !== undefined) e.textContent = text; if (cls) e.className = cls; return e; }
 function hallTabs() {
-  const tabs = el('div', undefined, 'tabs'); for (const [m, label] of [['today', 'Today'], ['yesterday', 'Yesterday'], ['hall', 'Town hall'], ['case', 'Case'], ['nature', 'Nature'], ['chest', 'Chest']]) { const b = el('button', label); if (m === paperMode) b.className = 'on'; b.disabled = m === 'yesterday' && !sim.paper('yesterday'); b.addEventListener('click', () => { paperMode = m; renderPaper(); }); tabs.append(b); } return tabs;
+  const tabs = el('div', undefined, 'tabs'); for (const [m, label] of [['today', 'Today'], ['wishes', 'Wishes'], ['album', 'Album'], ['yesterday', 'Yesterday'], ['hall', 'Town hall'], ['case', 'Case'], ['nature', 'Nature'], ['chest', 'Chest']]) { const b = el('button', label); if (m === paperMode) b.className = 'on'; b.disabled = m === 'yesterday' && !sim.paper('yesterday'); b.addEventListener('click', () => { paperMode = m; renderPaper(); }); tabs.append(b); } return tabs;
 }
 // ---- sailing: take the harbour boat out; tap the sea to steer (or the arrow keys), watch the dolphins and the whale, and land on Dwarf Rock ----
 let sailing = null, sailKeys = {l: 0, r: 0, u: 0}, wakeAt = 0; const wake = buildDrops(14); scene.add(wake); const wakePts = [];
-function startSailing() { sailing = newBoat(); sea0 = sim.sea.trips; sim.sea.trips++; closeCardIfAny(); view.tdist = 15; follow = null; openPaper('sail'); toast('You are at the helm! Tap the sea to steer.', 4); }
+function startSailing() { sim.note('boat'); sailing = newBoat(); sea0 = sim.sea.trips; sim.sea.trips++; closeCardIfAny(); view.tdist = 15; follow = null; openPaper('sail'); toast('You are at the helm! Tap the sea to steer.', 4); }
 let sea0 = 0; const closeCardIfAny = () => { if (cardEl) cardEl.classList.remove('on'); sel = null; ring.visible = false; pin.visible = false; };
 function stopSailing(msg) { sailing = null; view.tx = 0; view.tz = .4; boat.position.set(MOOR.x, -.02, MOOR.z); boat.rotation.set(0, MOOR.hd, 0); wake.userData.show(0); wakePts.length = 0; closePaper(); view.tdist = clamp(34, view.tdist, 92); fit(); if (msg) toast(msg, 3); }
 function sailTick(dt) {
@@ -284,6 +289,16 @@ function renderPaper() {
     const again = el('button', 'Retake'); again.addEventListener('click', () => { photoRaw = null; renderPaper(); }); act.append(save, again);
     if (navigator.canShare && navigator.share) { const sh = el('button', 'Share'); sh.addEventListener('click', async () => { try { const blob = await (await fetch(url)).blob(), f = new File([blob], 'toy-town.jpg', {type: 'image/jpeg'}); if (navigator.canShare({files: [f]})) await navigator.share({files: [f], title: 'Toy Town', text: photoCaption}); } catch (e) {} }); act.append(sh); }
     paperEl.append(el('h2', 'Photo'), im, row, cap, act); return; }
+  if (paperMode === 'wishes') { paperEl.append(hallTabs(), el('h2', 'Wishes'));
+    paperEl.append(el('p', 'Neighbours would like your help today. Each wish granted pays coins into the chest.'));
+    for (const w of sim.wishes()) { const who = (sim.residents.find(r => r.id === w.who) || {def: {name: 'A neighbour'}}).def.name; paperEl.append(el('h3', (w.done ? '\u2713 ' : '') + who + ': ' + w.text), el('p', (w.done ? 'Done' : w.have + ' of ' + w.need) + ' \u00b7 ' + w.reward + ' coins')); }
+    paperEl.append(el('p', 'Wishes granted so far: ' + sim.quest.total + '. Days in a row: ' + visitInfo.visit.streak + '. New wishes every morning.')); return; }
+  if (paperMode === 'album') { const st = sim.stickers(), got = st.filter(x => x.found).length; paperEl.append(hallTabs(), el('h2', 'Sticker album: ' + got + ' of ' + st.length));
+    for (const s of st) paperEl.append(el('p', s.found ? '\u2605 ' + s.name : '\u2606 ??? ' + s.hint)); return; }
+  if (paperMode === 'welcome') { paperEl.append(el('h2', 'Welcome back!')); paperEl.append(el('p', 'You were away for ' + awayText(visitInfo.away) + '.'));
+    const last = sim.chronicle[sim.chronicle.length - 1], h = chronicleHeadline(last); if (h) paperEl.append(el('p', 'The last page of the paper said: ' + h + '.'));
+    if (visitInfo.gift) paperEl.append(el('p', 'A thank-you gift for visiting: ' + visitInfo.gift + ' coins in the chest.' + (visitInfo.visit.streak > 1 ? ' (' + visitInfo.visit.streak + ' days in a row!)' : '')));
+    const b = el('button', 'See today\u2019s wishes'); b.addEventListener('click', () => openPaper('wishes')); paperEl.append(b); return; }
   if (paperMode === 'chest') { paperEl.append(hallTabs(), el('h2', 'The town chest')); const st = sim.chestState();
     paperEl.append(el('p', 'Coins in the chest: ' + chestBal(st) + '. The town earns them from fish sold at the stall, golden fish, the dwarfs\' gems and gems found at Dwarf Rock.'));
     for (const u of UPGRADES) { const c = canBuy(st, u.id), row = el('div', undefined, 'tabs'), b = el('button', c.ok ? 'Buy for ' + u.cost : c.why === 'owned' ? 'Bought ✓' : 'Need ' + c.need + ' more'); b.disabled = !c.ok; b.dataset.id = u.id; b.addEventListener('click', () => { const r = sim.buy(u.id); if (r.ok) { toast('The town bought ' + u.name.toLowerCase() + '!', 4); sound.blip(); } renderPaper(); });
@@ -300,7 +315,7 @@ function renderPaper() {
   if (paperMode === 'nature') { paperEl.append(hallTabs(), el('h2', 'Nature notes')); const plots = {}; for (const p of PLOTS) plots[p.kind] = (plots[p.kind] || 0) + 1;
     { const E = sim.eco, S_ = sim.ecoSummary(), bar = v => '█'.repeat(Math.round(v * 8)) + '░'.repeat(8 - Math.round(v * 8)); paperEl.append(el('h3', 'The land'));
       for (const [k, v] of [['Meadow', E.meadow], ['Flowers', E.flowers], ['Bees', E.bees], ['The sea', E.sea], ['Mice', E.pests]]) paperEl.append(el('p', k + '  ' + bar(v)));
-      { const row = el('div'); for (const [k, label] of [['flowers', 'Plant flowers 🌼'], ['hens', 'Feed the hens 🐔'], ['rest', E.rest ? 'Let them fish again 🎣' : 'Rest the sea 🌊']]) { const b = el('button', label); b.dataset.care = k; b.addEventListener('click', () => { const r = sim.care(k); toast(r.ok ? r.text : r.why, 3); renderPaper(); }); row.append(b); } paperEl.append(row); }
+      { const row = el('div'); for (const [k, label] of [['flowers', 'Plant flowers 🌼'], ['hens', 'Feed the hens 🐔'], ['rest', E.rest ? 'Let them fish again 🎣' : 'Rest the sea 🌊']]) { const b = el('button', label); b.dataset.care = k; b.addEventListener('click', () => { const r = sim.care(k); if (r.ok) guideStep('care'); toast(r.ok ? r.text : r.why, 3); renderPaper(); }); row.append(b); } paperEl.append(row); }
       paperEl.append(el('p', 'At the farm: ' + Math.floor(E.farm.eggs) + ' eggs, ' + Math.floor(E.farm.milk) + ' milk. In the pantry: ' + Math.floor(E.pantry.eggs) + ' eggs, ' + Math.floor(E.pantry.milk) + ' milk, ' + Math.floor(E.pantry.honey) + ' honey. Honey at the hive: ' + Math.floor(E.honey) + '.'), el('p', 'The meadow is ' + S_.meadow + ', ' + S_.flowers + ', ' + S_.bees + '; the sea is ' + S_.sea + '.')); }
     if (sim.wild.gemsFound >= 1 || sim.sea.dwarfs >= 1 || sim.hunt.active || sim.hunt.done) { paperEl.append(el('h3', 'Treasure map')); const hc = sim.huntClue(); if (hc) { paperEl.append(el('p', 'Clue ' + (sim.hunt.step + 1) + ' of 5: ' + hc.text), el('p', hc.at === 'islet' ? 'Take the harbour boat to the landing in front of the cave.' : 'Tap the building the riddle means.')); } else { const row = el('div', undefined, 'tabs'), b = el('button', sim.hunt.done ? 'Ask for another map' : 'Ask the dwarfs for a map'); b.id = 'huntBegin'; b.addEventListener('click', () => { sim.huntBegin(); renderPaper(); }); row.append(b); paperEl.append(row); } if (sim.hunt.done) paperEl.append(el('p', 'Maps solved: ' + sim.hunt.done + ' (' + sim.hunt.coins + ' coins).')); }
     for (const sec of natureReport({sea: sim.sea, wild: sim.wild, nameOf: id => (sim.residents.find(r => r.id === id) || {def: {name: 'Somebody'}}).def.name, pets: PETS, plots})) { paperEl.append(el('h3', sec.title)); for (const l of sec.lines) paperEl.append(el('p', l)); }
@@ -319,7 +334,7 @@ function renderPaper() {
   }
   for (const it of e.items) paperEl.append(el('p', it));
 }
-function openPaper(mode) { paperMode = mode; paperEl.classList.add('on'); if (paperBtn) paperBtn.setAttribute('aria-expanded', 'true'); panelEl.classList.remove('on'); renderPaper(); }
+function openPaper(mode) { sim.note('paper'); guideStep('paper'); if (mode === 'wishes') guideStep('wish'); paperMode = mode; paperEl.classList.add('on'); if (paperBtn) paperBtn.setAttribute('aria-expanded', 'true'); panelEl.classList.remove('on'); renderPaper(); }
 function closePaper() { paperMode = null; paperEl.classList.remove('on'); if (paperBtn) paperBtn.setAttribute('aria-expanded', 'false'); }
 const photoBtn = document.getElementById('photoBtn'); if (photoBtn) photoBtn.addEventListener('click', () => { if (paperMode === 'photo') closePaper(); else { photoRaw = null; openPaper('photo'); } });
 if (paperBtn) paperBtn.addEventListener('click', () => { if (paperMode && paperMode !== 'journal') closePaper(); else openPaper('today'); });
@@ -446,13 +461,14 @@ function sync(dt) {
   { const k = sim.chest.bought.join(','); if (k !== upgKey) { upgKey = k; if (upg) scene.remove(upg.group); upg = buildUpgrades(sim.chest.bought, built.material); scene.add(upg.group); }
     if (upg) { if (upg.boat2) { upg.boat2.position.y = -.02 + Math.sin(time * 1.2 + 1) * .022; upg.boat2.rotation.z = Math.sin(time * 1.05 + 1) * .03; } if (upg.glow) { upg.glow.material.opacity = Math.max(0, Math.min(1, nightNow * 1.2)); upg.glow.visible = nightNow > .05; } if (upg.beam) { upg.beam.visible = nightNow > .3; upg.beam.rotation.y = time * .8; upg.lampMat.opacity = .2 * Math.min(1, (nightNow - .3) * 2); } } }
   { const k = JSON.stringify(sim.effects); if (k !== fxKey) { fxKey = k; if (townFx) scene.remove(townFx); townFx = buildTownEffects(sim.effects, sim.graph, built.material); scene.add(townFx); } }
-  if (sagaStore && (sim.sagaLog.length !== sagaSaved || Math.abs(sim.clock - sagaSavedAt) > 30)) { sagaSaved = sim.sagaLog.length; sagaSavedAt = sim.clock; saveSaga(sagaStore, sim.sagaState()); }   // (and every half minute, so coins earned are kept)
+  if (sagaStore && (sim.sagaLog.length !== sagaSaved || Math.abs(sim.clock - sagaSavedAt) > 30)) { sagaSaved = sim.sagaLog.length; sagaSavedAt = sim.clock; saveSaga(sagaStore, {...sim.sagaState(), visit: visitInfo.visit, guide: guideDone}); }   // (and every half minute, so coins earned are kept)
   updateFreight(); refreshTrack(); if (paperMode && paperMode !== 'photo' && paperMode !== 'fishing' && paperMode !== 'sail' && paperMode !== 'chest' && Math.abs(sim.clock - paperAt) > 1) { paperAt = sim.clock; renderPaper(); }
   { trainCars[0].localToWorld(v3b.set(0, .68, .48)); const moving = Math.abs(sim.train.v) > .1;   // the engine's smoke: more when it is working
     smoke.update(dt, {x: v3b.x, y: v3b.y, z: v3b.z, vx: windNow.x * .14, vz: windNow.z * .14}, moving ? 5 : 1.2);
     smoke.puffs.forEach((p, i) => { const z = smoke.size(p); smokeM.makeScale(z, z, z).setPosition(p.x, p.y, p.z); smokeMesh.setMatrixAt(i, smokeM); }); smokeMesh.instanceMatrix.needsUpdate = true; }
   fest.update(dt, time, {weekday: sim.weekday, hour: sim.hour}); wild.update(dt, time, {hour: sim.hour, day: sim.day, rain: sim.weather.rain, night: nightNow, dist: view.dist, festival: !!sim.festival, eco: sim.eco}); moveCritters(dt); if (!sailing) { boat.position.y = -.02 + Math.sin(time * 1.3) * .022; boat.rotation.z = Math.sin(time * 1.1) * .03; }
   built.moving.top.inner.rotation.y = time * 2.2; built.moving.sails.inner.rotation.z = -time * .55;
+  if (time - goalAt > 1) { goalAt = time; renderGoal(); }
   built.moving.minute.inner.rotation.z = -(sim.hour % 1) * Math.PI * 2; built.moving.hour.inner.rotation.z = -(sim.hour % 12) / 12 * Math.PI * 2; if (built.moving.stMinute) { built.moving.stMinute.inner.rotation.z = built.moving.minute.inner.rotation.z; built.moving.stHour.inner.rotation.z = built.moving.hour.inner.rotation.z; }   // (the tower clock tells the town's own time, the same hour the timetable and the paper use)
   clouds.rotation.y = time * .012;
   const k = Math.min(1, dt * 6); view.x += (view.tx - view.x) * k; view.z += (view.tz - view.z) * k; view.yaw += (view.tyaw - view.yaw) * k; view.dist += (view.tdist - view.dist) * k;
@@ -503,6 +519,17 @@ const sndBtn = document.getElementById('snd');
 function showSound() { if (!sndBtn) return; sndBtn.textContent = sound.enabled ? '\u{1F50A}' : '\u{1F507}'; sndBtn.setAttribute('aria-pressed', String(sound.enabled)); sndBtn.title = sound.enabled ? 'Sound on' : 'Sound off'; }
 if (sndBtn) { if (!sound.supported) sndBtn.style.display = 'none'; sndBtn.addEventListener('click', () => { sound.toggle(); try { localStorage.setItem('toytown-new-sound', sound.enabled ? '1' : '0'); } catch (e) {} showSound(); }); showSound(); }
 try { if (localStorage.getItem('toytown-new-sound') === '1') { const resume = e => { if (e.target === sndBtn) { removeEventListener('pointerdown', resume); return; } removeEventListener('pointerdown', resume); if (!sound.enabled) { sound.toggle(true); showSound(); } }; addEventListener('pointerdown', resume); } } catch (e) {}
+// ---- the hooks that keep a visitor coming back: the goal pill, the first-minute guide and the welcome-back page ----
+const visitInfo = nextVisit(savedSaga && savedSaga.visit, Date.now()); let guideDone = visitInfo.first ? [] : (savedSaga && savedSaga.guide) || [];
+sim.note('season', season); if (visitInfo.gift) sim.quest.coins += visitInfo.gift;
+const goalEl = document.createElement('button'), guideEl = document.createElement('div'); goalEl.id = 'goal'; guideEl.id = 'guideTip'; document.body.append(goalEl, guideEl);
+goalEl.addEventListener('click', () => openPaper('wishes'));
+function guideStep(id) { if (!guideDone.includes(id)) { guideDone.push(id); renderGuide(); } }
+function renderGuide() { const g = guideNext(guideDone); guideEl.textContent = g ? '\u2728 ' + g.text : ''; guideEl.classList.toggle('on', !!g); }
+let goalAt = -9; function renderGoal() { const w = sim.wishes(), n = w.filter(x => x.done).length, st = sim.chestState ? sim.chestState() : null, up = st && UPGRADES.find(u => !st.bought.includes(u.id));
+  goalEl.textContent = '\u{1F31F} ' + n + '/' + w.length + (up ? ' \u00b7 \u{1F381} ' + Math.min(chestBal(st), up.cost) + '/' + up.cost : ''); goalEl.title = 'Wishes ' + n + ' of ' + w.length + (up ? '. Next gift for the town: ' + up.name : ''); }
+renderGuide(); renderGoal(); setTimeout(() => guideStep('look'), 9000);
+if (visitInfo.away >= 6 * 3600e3 && !visitInfo.first) setTimeout(() => { if (!paperMode) openPaper('welcome'); }, 1500);
 const seasonsEl = document.getElementById('seasons');
 if (seasonsEl) for (const [name, icon] of [['spring', '\u{1F338}'], ['summer', '\u2600\uFE0F'], ['autumn', '\u{1F342}'], ['winter', '\u2744\uFE0F']]) {
   const a = document.createElement('a'), u = new URL(location.href); u.searchParams.set('season', name); a.href = u.search; a.textContent = icon; a.title = name + (name === season ? ' (now)' : ''); if (name === season) a.className = 'on'; seasonsEl.append(a);

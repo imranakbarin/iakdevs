@@ -231,6 +231,14 @@ The train is a tank engine with brass-banded boiler, side tanks, funnel, steam a
 
 In Nature, under "The land": **Plant flowers** and **Feed the hens** (each once a day; they lift `eco.boost` for about three days) and **Rest the sea** (a switch the fishermen obey). A **beehive** can be bought for the chest (20 coins): the bees never dwindle below .45 and honey comes half as fast again. What you did is written in the chronicle ("You planted flowers and fed the hens") and in the saga log.
 
+## 4i. Things to come back for
+
+- **Daily wishes** (`quests.mjs`): three different wishes each morning, seeded by the real calendar day (the same day always gives the same wishes), each asked by a resident and done by a real action: catch fish, plant flowers, feed the hens, rest the sea, meet people, send a parcel, take the boat, read the paper. Each pays coins into the chest; granted wishes are kept for the day (no double pay) and saved with the saga.
+- **Sticker album** (`album.mjs`): 22 stickers found by seeing or doing things (the whale, the dwarfs' gem, a golden fish, a wedding, a honey day, ten wishes...); unfound ones show a hint. Saved with the saga.
+- **Goal pill**: a small pill bottom-left ("wishes 1/3 · gift 12/15") that opens the Wishes tab; the next chest upgrade shows its progress.
+- **Welcome back** (`welcome.mjs`): after six hours away, a page with what the paper last said and a gift of coins that grows with a streak of days (capped at 10).
+- **First-minute guide** (`guide.mjs`): a yellow tip walks a new visitor through look, tap, paper, wishes and plant flowers, then retires.
+
 ## 5. Art rules
 
 - Fat, rounded, slightly wonky. No sharp corners: `bag.box` is a rounded box; roofs overhang.
