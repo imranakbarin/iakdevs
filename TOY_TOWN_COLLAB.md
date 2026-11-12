@@ -1379,3 +1379,6 @@ A `START` does not prohibit parallel edits. Avoid stepping on each other's uncom
 - **Bugs caught**: `clamp` argument order in gait.mjs (stride amplitude was unbounded), found by the new test.
 - **Not verified**: a real phone; the horse's gait at speed (it moves slowly); sitting and sleeping poses of animals were only lightly checked. Draw calls at the default view 95 (limit 100).
 
+
+### 2026-11-12 · Claude · START (new storybook town, follow-up 23: smaller places, the barn outside the town, fewer and more varied gardens)
+- **Base**: master ae0ca6b. **Request (owner, caps)**: "reduce the sizes of places by 10%; not happy with the barn inside the town, keep it outside by removing the gardens; too many gardens and all look the same: reduce them, enlarge the area a bit, bring in more changes." **Plan**: BUILD_SCALE .8 -> .72 (layout solver reflows); the barn, Hay Farm, the paddock and the hen coop move out to the belt between the ring road and the railway (a short farm lane off the ring road), the gardens that were there go; about six larger gardens, each with its own design (rose pavilion, orchard, allotment with scarecrow and shed, hedge maze, water garden, wildflower field) instead of one hedge-ring layout re-coloured. Tests and screenshots as always.
