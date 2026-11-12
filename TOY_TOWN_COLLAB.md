@@ -1349,3 +1349,9 @@ A `START` does not prohibit parallel edits. Avoid stepping on each other's uncom
 - **Side effects**: the horse cart is long, so following cars keep a bigger gap around it (and the model is centred); the starving-people threshold in the logic test moved from .14 to .17 (random sequence shift again).
 - **Not verified**: a real phone; the trucks and cars have no animation (the horse does not walk its legs, only the whole cart moves).
 - **Still to come**: C) ecosystem core; D) interdependence; E) story director; F) player influence.
+
+### 2026-11-12 · Claude · DONE (new storybook town, follow-up 20C: the ecosystem core)
+- **Request (owner)**: a cycle like a food chain, one thing depending on another, a peaceful land. **Done**: `assets/town2/ecology.mjs` (pure) wired into `sim.mjs`: rain/season -> meadow -> flowers -> bees -> honey; meadow -> hens/cows -> eggs/milk; horse cart and pick-up deliver to bakery/café/market; empty pantry means a plain roll; catches lower the sea and fishermen rest a poor sea. Visible: dolphin pod/whales by sea, flower count, bees, Nature "The land". Spec section 4b.
+- **Tests**: new logic block (bounds over 30 days per season, boost, rest day, floor, eatAt, deliver, peace, sim deliveries, poor-sea fishing vs control).
+- **Not verified**: browser screenshot of bees/pod size (see next entry if added); real phone.
+- **Still to come**: D) interdependence stories; E) story director + chronicle; F) player influence UI.
