@@ -1431,3 +1431,8 @@ A `START` does not prohibit parallel edits. Avoid stepping on each other's uncom
 
 ### 2026-11-12 · Claude · START (new storybook town, follow-up 27: the tower clock and the train timetable must show the same time)
 - **Base**: master 1762cb4. **Request (owner, caps)**: "the clock times must sync with the train times; they both are on different times". **Cause found**: the tower clock's hands turned with the real-time animation clock, not the town's hour, while the timetable (inspect card) and the paper use the sim hour. **Plan**: drive the hands from `sim.hour`; check the timetable's predicted arrival hours against the real train (within 6 minutes; tune its speed constant); add a browser assertion that the hands match `sim.hour`.
+
+### 2026-11-12 · Claude · DONE (new storybook town, follow-up 27: clock and train times)
+- **Done**: the tower clock's hands now follow `sim.hour` (they used the animation clock), so the clock, the paper, the journals and the station timetable all read the same town time. The timetable's predicted arrivals are within about 6 minutes of the real train (speed constant 1.45 -> 1.38 for a closer match). New browser assertion that the hands match the hour; both suites pass.
+- **Not verified**: the platform clocks on the station buildings are painted at a fixed time (10:10 style) and do not move; a real phone.
+

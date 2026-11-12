@@ -24,6 +24,8 @@ const shot2 = (pg, name) => pg.screenshot({path: path.join(out, `new-town-${name
     const views = [['wide', 0, .4, 46, 0], ['square', 0, .3, 14, .5], ['high-street', 7.4, -.6, 13, .2], ['cottage-lane', -7.6, -.4, 13, -.3], ['station', -1, 11.5, 11, 0], ['windmill', 2.6, -9.2, 10, .7], ['harbour', 15, 2.3, 12, .6], ['behind', 0, .4, 46, 2.4]];
     for (const [name, x, z, d, yaw] of views) { await page.evaluate(([x, z, d, y]) => ToyTownNew.look(x, z, d, y), [x, z, d, yaw]); await page.screenshot({path: path.join(out, `new-town-${name}.png`)}); }
     await page.evaluate(() => ToyTownNew.look(0, .4, 46, 0));
+    { const h = await page.evaluate(() => { ToyTownNew.setHour(15.5); ToyTownNew.advance(.05); const m = ToyTownNew.moving; return {hour: ToyTownNew.sim.hour, min: m.minute.inner.rotation.z, hr: m.hour.inner.rotation.z}; });
+      const tm = (-h.min / (Math.PI * 2) + 1) % 1, th = (-h.hr / (Math.PI * 2) * 12 + 12) % 12; assert.ok(Math.abs(tm - (h.hour % 1)) < .02 && Math.abs(th - (h.hour % 12)) < .1, 'the tower clock shows the town hour (' + JSON.stringify(h) + ')'); }
     const info = await page.evaluate(() => ToyTownNew.info());
     const before = await page.evaluate(() => ToyTownNew.sim.vehicles.map(v => v.s)); await page.evaluate(() => ToyTownNew.advance(5)); const after = await page.evaluate(() => ToyTownNew.sim.vehicles.map(v => v.s));
     // night: lit windows (one more draw call), a dark sky; then rain with umbrellas up. Both must stay inside the budgets.

@@ -10,7 +10,7 @@ export function stageOf(c) {
 }
 export const dots = (step, steps) => Array.from({length: steps}, (_, i) => i <= step ? '●' : '○').join('');
 // seconds until the train reaches a station, from the train's state. train: {at, wait, next}; stops: [{id, ahead}] where ahead is the distance still to run to that station's stopping point.
-export function etas(train, stops, speed = 1.45, dwell = 7.5) {
+export function etas(train, stops, speed = 1.38, dwell = 7.5) {
   const out = {}, order = stops.slice().sort((a, b) => a.ahead - b.ahead);
   order.forEach((st, i) => { out[st.id] = st.id === train.at ? 0 : st.ahead / speed + (train.at ? Math.max(0, train.wait) : 0) + i * dwell - (order[0].id === train.at ? dwell : 0); });
   return out;
