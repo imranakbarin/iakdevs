@@ -393,9 +393,13 @@ export function createSim(seed = 7, opts = {}) {
   // Mysteries: after the first day, at midday, something goes missing; the thief goes to the place and on to a hideout, clues come out over two minutes, and you can accuse somebody.
   const mystery = {active: null, solved: 0, failed: 0, nextAt: opts.mysteryAt ?? DAY + 6 * 20};
   // The dwarfs of Dwarf Rock come out on some evenings; whoever is at the harbour then looks out to sea and sees their lanterns (once an evening).
-  const wild = {sightings: 0, seen: new Set(), out: null, log: []};
+  const GEM_COINS = 10, wild = {sightings: 0, seen: new Set(), out: null, log: [], gems: 0, gemsFound: 0, gemCoins: 0, wasOut: null};   // (after an evening the lanterns were seen, the dwarfs leave a gem on the harbour beach; the next person at the harbour finds it)
   function stepWild() {
-    const out = wild.out = dwarfsOut(dayIdx, hour); if (!out || wild.seen.has(out.day)) return;
+    const out = wild.out = dwarfsOut(dayIdx, hour);
+    if (wild.wasOut !== null && !out) { if (wild.seen.has(wild.wasOut)) { wild.gems++; sagaLog.push({day: dayIdx, type: 'dwarf', text: 'The dwarfs left a gem on the harbour beach'}); } wild.wasOut = null; }
+    if (out) wild.wasOut = out.day;
+    if (wild.gems > 0) { const f = residents.find(r => r.state === 'inside' && r.at === 'hut'); if (f) { wild.gems--; wild.gemsFound++; wild.gemCoins += GEM_COINS; note(f, 'Found a shining gem on the beach: the dwarfs left it'); sagaLog.push({day: dayIdx, type: 'dwarf', text: f.def.name + ' found the dwarfs\' gem (worth ' + GEM_COINS + ' coins)'}); } }
+    if (!out || wild.seen.has(out.day)) return;
     const who = residents.find(r => (r.state === 'inside' && (r.at === 'pier' || r.at === 'hut')) || (r.state === 'walking' && r.x > PIER.x0 - 2 && Math.abs(r.z - PIER.z) < 2.5));
     if (!who) return;
     wild.seen.add(out.day); wild.sightings++; note(who, 'Saw lantern lights out on Dwarf Rock'); wild.log.push({day: dayIdx, who: who.id});
@@ -474,7 +478,7 @@ export function createSim(seed = 7, opts = {}) {
   let rainSeconds = 0; const days = [];
   const pairsAt2 = () => { let n = 0; for (const r of residents) for (const k in r.friends) if (r.friends[k] >= 2 && r.id < k) n++; return n; };
   const moodNow = () => residents.reduce((a, r) => a + r.mood.score, 0) / residents.length;
-  const snap = () => ({delivered: stats.delivered, ridden: train.ridden, fishCaught: fishing.caught, fishSold: fishing.sold, coins: fishing.coins, marketVisits: market.visits, rain: rainSeconds, friends: pairsAt2(), stories: story.log.length, incidents: incidentLog.length, saga: sagaLog.length, dwarfSeen: wild.sightings, mood: moodNow()});
+  const snap = () => ({delivered: stats.delivered, ridden: train.ridden, fishCaught: fishing.caught, fishSold: fishing.sold, coins: fishing.coins, marketVisits: market.visits, rain: rainSeconds, friends: pairsAt2(), stories: story.log.length, incidents: incidentLog.length, saga: sagaLog.length, dwarfSeen: wild.sightings, gemsFound: wild.gemsFound, mood: moodNow()});
   days.push(snap());
   // the paper: 'today' so far, or 'yesterday' (null on the first day)
   function paper(which = 'today') {

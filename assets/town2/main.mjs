@@ -11,11 +11,12 @@ import {PROFILE, createGovernor, startTier, isTier} from './quality.mjs';
 import {wind} from './nature.mjs';
 import {loadSaga, saveSaga} from './saga.mjs';
 import {stageOf, dots} from './track.mjs';
-import {journalLines} from './paper.mjs';
+import {journalLines, natureReport} from './paper.mjs';
 import {load as loadSettings, save as saveSettings, stepsFor, BUSY_FACTOR} from './settings.mjs';
 import {newsStory} from './stories.mjs';
 import {createWildlife} from './wildscene.mjs';
 import {COOP, PLOTS} from './garden.mjs';
+import {PETS} from './wildlife.mjs';
 const PLOT_COUNT = PLOTS.length;
 import {describeResident, describeBuilding, describeVehicle, describeAnimal, describeTrain} from './inspect.mjs';
 
@@ -43,6 +44,11 @@ const tufts = buildTufts(sim.graph); scene.add(tufts);
 const clouds = buildClouds(); scene.add(clouds);
 const sky = buildSky(); scene.add(sky);
 const dome = buildSkyDome(); scene.add(dome);
+// A path of moonlight on the sea, from the island out towards the moon (night only, clear skies): a long soft additive strip with a few glints in it.
+const moonPath = (() => { const c = document.createElement('canvas'); c.width = 64; c.height = 256; const g = c.getContext('2d'), grad = g.createLinearGradient(0, 0, 0, 256); grad.addColorStop(0, 'rgba(190,210,255,.0)'); grad.addColorStop(.25, 'rgba(190,210,255,.55)'); grad.addColorStop(1, 'rgba(190,210,255,0)'); g.fillStyle = grad; g.fillRect(0, 0, 64, 256);
+  g.globalCompositeOperation = 'destination-in'; const h = g.createLinearGradient(0, 0, 64, 0); h.addColorStop(0, 'rgba(0,0,0,0)'); h.addColorStop(.5, 'rgba(0,0,0,1)'); h.addColorStop(1, 'rgba(0,0,0,0)'); g.fillStyle = h; g.fillRect(0, 0, 64, 256); g.globalCompositeOperation = 'source-over';
+  for (let i = 0; i < 60; i++) { g.fillStyle = 'rgba(255,255,255,' + (.25 + rand(i + 3) * .5).toFixed(2) + ')'; g.fillRect(20 + rand(i * 7 + 1) * 24, 10 + rand(i * 7 + 2) * 230, 2 + rand(i) * 4, 1); }
+  const t = new THREE.CanvasTexture(c), m = new THREE.Mesh(new THREE.PlaneGeometry(7, 46).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({map: t, transparent: true, opacity: 0, depthWrite: false, blending: THREE.AdditiveBlending, fog: false})); m.renderOrder = 1; m.visible = false; return m; })(); scene.add(moonPath);
 const hemi = scene.children.find(o => o.isHemisphereLight), seaMat = built.sea.material, tmp = new THREE.Color();
 if (q.get('h')) sim.setHour(+q.get('h'));
 const people = new Map(), cars = new Map();
@@ -223,7 +229,7 @@ function photoUrl() { return composePhoto().toDataURL('image/jpeg', .92); }
 const paperBtn = document.getElementById('paperBtn'), paperEl = document.getElementById('paper'), journalBtn = document.getElementById('journalBtn'); let paperMode = null, paperAt = -1e9;
 function el(tag, text, cls) { const e = document.createElement(tag); if (text !== undefined) e.textContent = text; if (cls) e.className = cls; return e; }
 function hallTabs() {
-  const tabs = el('div', undefined, 'tabs'); for (const [m, label] of [['today', 'Today'], ['yesterday', 'Yesterday'], ['hall', 'Town hall'], ['case', 'Case']]) { const b = el('button', label); if (m === paperMode) b.className = 'on'; b.disabled = m === 'yesterday' && !sim.paper('yesterday'); b.addEventListener('click', () => { paperMode = m; renderPaper(); }); tabs.append(b); } return tabs;
+  const tabs = el('div', undefined, 'tabs'); for (const [m, label] of [['today', 'Today'], ['yesterday', 'Yesterday'], ['hall', 'Town hall'], ['case', 'Case'], ['nature', 'Nature']]) { const b = el('button', label); if (m === paperMode) b.className = 'on'; b.disabled = m === 'yesterday' && !sim.paper('yesterday'); b.addEventListener('click', () => { paperMode = m; renderPaper(); }); tabs.append(b); } return tabs;
 }
 function renderPaper() {
   if (!paperEl) return; paperEl.textContent = '';
@@ -240,6 +246,9 @@ function renderPaper() {
     const again = el('button', 'Retake'); again.addEventListener('click', () => { photoRaw = null; renderPaper(); }); act.append(save, again);
     if (navigator.canShare && navigator.share) { const sh = el('button', 'Share'); sh.addEventListener('click', async () => { try { const blob = await (await fetch(url)).blob(), f = new File([blob], 'toy-town.jpg', {type: 'image/jpeg'}); if (navigator.canShare({files: [f]})) await navigator.share({files: [f], title: 'Toy Town', text: photoCaption}); } catch (e) {} }); act.append(sh); }
     paperEl.append(el('h2', 'Photo'), im, row, cap, act); return; }
+  if (paperMode === 'nature') { paperEl.append(hallTabs(), el('h2', 'Nature notes')); const plots = {}; for (const p of PLOTS) plots[p.kind] = (plots[p.kind] || 0) + 1;
+    for (const sec of natureReport({wild: sim.wild, nameOf: id => (sim.residents.find(r => r.id === id) || {def: {name: 'Somebody'}}).def.name, pets: PETS, plots})) { paperEl.append(el('h3', sec.title)); for (const l of sec.lines) paperEl.append(el('p', l)); }
+    return; }
   if (paperMode === 'case') { paperEl.append(hallTabs(), el('h2', 'The case book')); const m = sim.mystery.active;
     if (!m) { paperEl.append(el('p', sim.mystery.solved || sim.mystery.failed ? 'No open case. Solved so far: ' + sim.mystery.solved + '.' : 'No case yet. Something goes missing around midday after the first day.')); return; }
     paperEl.append(el('h3', m.c.title)); if (!m.shown.length) paperEl.append(el('p', 'The constable is looking for witnesses...')); for (const c of m.shown) paperEl.append(el('p', 'Clue: ' + c.text));
@@ -319,11 +328,12 @@ function weatherLight() {
   hemi.color.set(L.hemiSky); hemi.groundColor.set(L.hemiGround); hemi.intensity = L.hemiI;
   sun.color.set(L.sunColor); sun.intensity = L.sunI; sun.position.set(...L.sunPos);
   const gm = built.glow.material; gm.opacity = L.glow; built.glow.visible = L.glow > .02;
+  { const o = L.night > .5 && !lite ? (L.night - .5) * 2 * (1 - clamp(0, sim.weather.rain * 1.4, 1)) * .6 : 0; moonPath.visible = o > .02; if (o > .02) { const dx = L.sunPos[0], dz = L.sunPos[2], d = Math.hypot(dx, dz) || 1; moonPath.material.opacity = o * (.85 + .15 * Math.sin(time * 1.3)); moonPath.rotation.y = Math.atan2(dx, dz) + Math.PI; moonPath.position.set(dx / d * 40, ISLAND.sea + .03, dz / d * 40); } }
   sky.visible = L.stars > .02; sky.userData.stars.material.opacity = L.stars; sky.userData.moon.material.opacity = L.stars * .95;
   { const r = sim.weather.rain; { let n = 0; if (r > .25) sim.residents.forEach((q, i) => { const g = people.get(q.id); if (g.visible && q.state === 'walking') umbrellas.userData.set(n++, g.position.x, g.position.y, g.position.z, g.rotation.y, BROLLY[i % BROLLY.length]); }); umbrellas.userData.show(n); } rain.position.set(view.x, 0, view.z); rain.userData.update(time, season === 'winter' || r < .02 ? 0 : r);
     const day = 1 - L.night, amount = season === 'winter' ? Math.max(.25, r) : season === 'summer' ? (L.night > .5 ? .7 * (1 - r) : 0) : (season === 'autumn' ? .5 : .4) * day * (1 - r * .7);
     fall.position.set(view.x, 0, view.z); fall.userData.update(time, amount, windNow);
-    sound.update({dark: L.night, rain: r, season, hour: sim.hour, trainMoving: Math.abs(sim.train.v) > .1, trainAt: sim.train.at, zoom: 1 - clamp(0, (view.dist - 7) / 50, 1)}, 0.0001 + lastDt); }
+    sound.update({wild: wild.soundState(), dark: L.night, rain: r, season, hour: sim.hour, trainMoving: Math.abs(sim.train.v) > .1, trainAt: sim.train.at, zoom: 1 - clamp(0, (view.dist - 7) / 50, 1)}, 0.0001 + lastDt); }
   // the street lamps, one by one as the lamplighter reaches them (faint in daylight, bright after dark), and the puddles
   built.lampGlow.material.opacity = .4 + .55 * L.night;
   sim.lamps.forEach((l, i) => { const v = Math.round(l.lit * 20) / 20; if (v !== lampDrawn[i]) { lampDrawn[i] = v; built.lampGlow.userData.set(i, v); } });

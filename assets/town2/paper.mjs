@@ -13,7 +13,7 @@ export function edition(d) {
   if (d.titles && d.titles.length) items.push('Stories: ' + d.titles.slice(0, 4).join('; ') + (d.titles.length > 4 ? '; and ' + (d.titles.length - 4) + ' more' : '') + '.');
   if (d.incidents && d.incidents.length) items.push('Emergencies: ' + d.incidents.join('; ') + '.');
   if (d.family && d.family.length) items.push('Town news: ' + d.family.slice(0, 4).join('; ') + (d.family.length > 4 ? '; and ' + (d.family.length - 4) + ' more' : '') + '.');
-  if (diff('dwarfSeen')) items.push('Nature notes: lantern lights were seen out on Dwarf Rock again.');
+  if (diff('dwarfSeen') || diff('gemsFound')) items.push('Nature notes: ' + [diff('dwarfSeen') ? 'lantern lights were seen out on Dwarf Rock' : '', diff('gemsFound') ? 'a gem left by the dwarfs was found on the harbour beach' : ''].filter(Boolean).join('; ') + '.');
   const fr = diff('friends'); if (fr) items.push('New friendships: ' + plural(fr, 'pair') + ' of neighbours became friends.');
   items.push('The mood of the town: ' + (b.mood > .8 ? 'cheerful' : b.mood > .62 ? 'content' : 'grumpy') + '.');
   if (d.tomorrow) items.push('Tomorrow, ' + d.tomorrow.dayName + ': ' + (d.tomorrow.market ? d.tomorrow.market + ' at 9; ' : '') + (d.tomorrow.weekend ? 'no school.' : 'school as usual.'));
@@ -23,3 +23,12 @@ export function edition(d) {
 }
 // a resident's day: [{h, text}] in order, the last `n`
 export const journalLines = (journal, n = 12) => (journal || []).slice(-n).map(e => clockText(e.h) + '  ' + e.text);
+
+// The nature page: what the dwarfs have been up to, the pets and hens, the gardens. d: {wild: {out, sightings, gems, gemsFound, gemCoins, log: [{day, who}]}, nameOf(id), pets: [{name, blurb}], plots: {kind: count}}
+export function natureReport(d) {
+  const w = d.wild, dwarfs = [w.out ? 'Lanterns are moving on Dwarf Rock right now.' : 'No lights on Dwarf Rock at the moment.', 'Evenings the lanterns were seen: ' + w.sightings + '.', 'Gems found on the harbour beach: ' + w.gemsFound + (w.gemCoins ? ' (worth ' + w.gemCoins + ' coins)' : '') + '.'];
+  if (w.gems) dwarfs.push('A gem is waiting on the beach to be picked up.');
+  for (const l of (w.log || []).slice(-4).reverse()) dwarfs.push('Day ' + (l.day + 1) + ': ' + d.nameOf(l.who) + ' saw the lanterns.');
+  const kinds = Object.entries(d.plots || {}).map(([k, n]) => n + ' ' + ({roses: 'rose garden', tulips: 'tulip bed', lavender: 'lavender garden', sunflowers: 'sunflower patch', herbs: 'herb garden', meadow: 'wildflower meadow', allotment: 'allotment', greenhouse: 'greenhouse', coop: 'hen yard'}[k] || k) + (n > 1 && k !== 'greenhouse' && k !== 'coop' ? 's' : ''));
+  return [{title: 'Dwarf watch', lines: dwarfs}, {title: 'Pets and hens', lines: (d.pets || []).map(p => p.name + ': ' + p.blurb)}, {title: 'Gardens', lines: [kinds.join(', ') + '.']}];
+}

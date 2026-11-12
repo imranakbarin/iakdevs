@@ -9,15 +9,15 @@ const smooth = (a, b, v) => { const t = clamp01((v - a) / (b - a)); return t * t
 
 // hour, sky, hemisphere sky, hemisphere ground, hemisphere strength, sun colour, sun strength, sea
 const K = [
-  [0,    '#16233f', '#5b6fb0', '#2b3a5c', .72, '#9db4ff', .35, '#2a5f86'],
-  [4.6,  '#16233f', '#5b6fb0', '#2b3a5c', .72, '#9db4ff', .35, '#2a5f86'],
+  [0,    '#1a2a4d', '#6f86c9', '#3b4d78', .95, '#b9c9ff', .6, '#2f6e9a'],
+  [4.6,  '#1a2a4d', '#6f86c9', '#3b4d78', .95, '#b9c9ff', .6, '#2f6e9a'],
   [5.3,  '#f6c4a8', '#ffe9d9', '#c8ad9c', 1.4, '#ffdcb0', 1.8, '#62c0de'],
   [6.5,  '#bfe9fb', '#ffffff', '#b8d8a0', 1.55, '#fff4dc', 2.1, '#5cc4e8'],
   [16.4, '#bfe9fb', '#ffffff', '#b8d8a0', 1.55, '#fff4dc', 2.1, '#5cc4e8'],
-  [18.4, '#f4a67e', '#ffd0b0', '#b89a8a', 1.0, '#ffb070', 1.1, '#6fa7c0'],
-  [19.9, '#2a3358', '#7a86c0', '#3a4468', .8, '#9db4ff', .4, '#2f6a90'],
-  [21.4, '#16233f', '#5b6fb0', '#2b3a5c', .72, '#9db4ff', .35, '#2a5f86'],
-  [24,   '#16233f', '#5b6fb0', '#2b3a5c', .72, '#9db4ff', .35, '#2a5f86']
+  [18.4, '#f6b088', '#ffdcc0', '#c4a28e', 1.3, '#ffb878', 1.6, '#6fb0cc'],
+  [19.9, '#314070', '#8794cc', '#44507a', 1.05, '#b0c0ff', .55, '#33729c'],
+  [21.4, '#1a2a4d', '#6f86c9', '#3b4d78', .95, '#b9c9ff', .6, '#2f6e9a'],
+  [24,   '#1a2a4d', '#6f86c9', '#3b4d78', .95, '#b9c9ff', .6, '#2f6e9a']
 ];
 
 export const SEASONS = ['spring', 'summer', 'autumn', 'winter'];
