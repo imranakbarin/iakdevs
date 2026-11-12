@@ -2,7 +2,7 @@
 // wild flowers and butterflies. Everything static is drawn into one bag (one mesh); animals are one small mesh each, built facing +z.
 import * as THREE from 'three';
 import {mergeGeometries} from 'three/addons/utils/BufferGeometryUtils.js';
-import {Bag, U} from './build.mjs';
+import {Bag, U, crown} from './build.mjs';
 import {along} from './graph.mjs';
 import {ISLAND, POND, NODES, heightAt, shore, rand, BUILDINGS, PIER} from './def.mjs';
 import {PLOTS, BLOOM, inGarden, freeSpot} from './garden.mjs';
@@ -14,7 +14,8 @@ const coneCache = new Map();
 const cone2 = (b, r, h, colour, o = {}) => { const key = r + ':' + h + ':' + (o.seg || 8); if (!coneCache.has(key)) { const g = new THREE.ConeGeometry(r, h, o.seg || 8).toNonIndexed(); g.deleteAttribute('uv'); coneCache.set(key, g); } return b.add(coneCache.get(key), colour, o); };   // a cone turned about its own centre (pointing +y, then rotated)
 const polyCache = new Map();
 // low-poly buds and mounds: an octahedron (8 triangles) or a flattened icosahedron (20) instead of a smooth sphere (48 and up): faceted like the rocks, and far cheaper
-const poly = (b, kind, r, colour, o = {}) => { const key = kind + r; if (!polyCache.has(key)) { const g = (kind === 'oct' ? new THREE.OctahedronGeometry(r, 0) : new THREE.IcosahedronGeometry(r, 0)).toNonIndexed(); g.deleteAttribute('uv'); polyCache.set(key, g); } return b.add(polyCache.get(key), colour, o); };
+// (soft little blobs, not faceted gems: buds and bushes should look grown, not cut. The name is kept; 'oct' is a small bud, 'ico' a leafy mound)
+const poly = (b, kind, r, colour, o = {}) => { const key = kind + r; if (!polyCache.has(key)) { const g = (kind === 'oct' ? new THREE.SphereGeometry(r, 7, 5) : new THREE.SphereGeometry(r, 9, 6)).toNonIndexed(); g.deleteAttribute('uv'); polyCache.set(key, g); } return b.add(polyCache.get(key), colour, o); };
 // an animal with limbs: its own material (its own gait), the mesh kept on the group for `setGait`
 const finishL = (b, scale) => { const m = limbMesh(b, limbMaterial()); m.castShadow = false; const g = new THREE.Group(); g.add(m); g.scale.setScalar(scale); g.userData.limbMesh = m; return g; };
 const finish = (b, material, scale) => { const m = b.mesh(material); m.castShadow = false; const g = new THREE.Group(); g.add(m); g.scale.setScalar(scale); return g; };
@@ -117,7 +118,7 @@ export function buildButterflies(n = 14) {
 
 /* ---------------- wild flowers: one instanced mesh of little heads sprinkled over the grass between the garden and the shore ---------------- */
 export function buildMeadow(season, max = 800) {
-  const geo = new THREE.OctahedronGeometry(.045, 0).scale(1, .75, 1).translate(0, .08, 0), mat = new THREE.MeshLambertMaterial({color: '#ffffff'});
+  const geo = new THREE.SphereGeometry(.04, 7, 5).scale(1, .8, 1).translate(0, .08, 0), mat = new THREE.MeshLambertMaterial({color: '#ffffff'});
   mat.onBeforeCompile = sh => {
     sh.uniforms.uTime = U.time; sh.uniforms.uWind = U.wind; sh.uniforms.uSway = U.sway;
     sh.vertexShader = sh.vertexShader.replace('#include <common>', '#include <common>\nuniform float uTime, uSway; uniform vec2 uWind;').replace('#include <begin_vertex>', '#include <begin_vertex>\n{ float ph = uTime * 2.3 + instanceMatrix[3].x * 1.4 + instanceMatrix[3].z * 1.2; transformed.xz += (uWind * (.6 + .4 * sin(ph)) * (.4 + uSway)) * position.y * .7; }');
@@ -159,12 +160,12 @@ const lawn = (b, p, y0, winter, colour = '#79bf58', rr = 1) => b.cyl(p.r * rr, p
 // ORCHARD: rows of fruit trees in a fenced paddock, blossom in spring, apples in summer, russet in autumn, bare and frosted in winter, and a picnic blanket in the shade.
 function orchardGarden(b, p, season, R, gap, y0, cs) {
   const winter = season === 'winter', r = p.r; lawn(b, p, y0, winter, '#82c45e'); fenceRing(b, p, r * .98, gap, .4, y0);
-  const crown = {spring: ['#f7c3d8', '#ffffff', '#fbd0e0'], summer: ['#4f9a47', '#5fae52', '#3f8a40'], autumn: ['#e8b83a', '#d9822b', '#b5551f'], winter: ['#9fb4a8']}[season];
+  const crownCols = {spring: ['#f7c3d8', '#ffffff', '#fbd0e0'], summer: ['#4f9a47', '#5fae52', '#3f8a40'], autumn: ['#e8b83a', '#d9822b', '#b5551f'], winter: ['#9fb4a8']}[season];
   const spots = []; for (let row = -2; row <= 2; row++) for (let col = -2; col <= 2; col++) { const x = p.x + col * r * .42 + (row % 2) * r * .2, z = p.z + row * r * .38; if (Math.hypot(x - p.x, z - p.z) < r * .8 && !(Math.abs(row) <= 0 && Math.abs(col) <= 0)) spots.push([x, z]); }
   spots.forEach(([x, z], k) => {
     const y = heightAt(x, z), sc = .8 + R(k + 10) * .35; b.cyl(.035 * sc, .05 * sc, .36 * sc, 'brown', {x, y, z, seg: 6});
     if (winter) { for (let t = 0; t < 4; t++) { const a = t / 4 * TAU + k; cone2(b, .02, .26 * sc, 'brown', {x: x + Math.cos(a) * .08, y: y + .4 * sc, z: z + Math.sin(a) * .08, rx: Math.sin(a) * .7, rz: -Math.cos(a) * .7, seg: 4}); } poly(b, 'ico', .13 * sc, SNOW, {x, y: y + .62 * sc, z, sy: .5}); return; }
-    for (let t = 0; t < 3; t++) poly(b, 'ico', (.27 - t * .03) * sc, crown[(k + t) % crown.length], {x: x + (t - 1) * .08, y: y + (.5 + t * .1) * sc, z: z + (t % 2 ? .06 : -.05), sy: .85, sway: .5});
+    crown(b, x, y + .58 * sc, z, .3 * sc, crownCols, k + p.seed, 8);
     if (season === 'summer') for (let f = 0; f < 4; f++) { const a = R(k * 4 + f) * TAU; b.sph(.035, f % 3 ? '#e2473b' : '#f2c14e', {x: x + Math.cos(a) * .2 * sc, y: y + (.42 + R(k + f) * .2) * sc, z: z + Math.sin(a) * .2 * sc, seg: 5}); }
     if (season === 'autumn') for (let f = 0; f < 3; f++) { const a = R(k * 3 + f) * TAU; b.sph(.03, '#d9822b', {x: x + Math.cos(a) * .28, y: y + .02, z: z + Math.sin(a) * .28, seg: 4}); }
   });

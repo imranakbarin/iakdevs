@@ -1,6 +1,6 @@
 // New Toy Town: limbs that move. A person or an animal is still ONE merged mesh (one draw call); its legs, arms, head and tail carry a per-vertex pivot and a kind, and a
 // little vertex shader swings them about the pivot from the walker's gait (see gait.mjs). Kinds: 1 swing about the hip or shoulder, 3 head (nods, bobs), 4 tail (wags),
-// 6 head thrust (a hen's head bobs forward and back), 7 wheel (spins about its axle).
+// 6 head thrust (a hen's head bobs forward and back), 7 wheel (spins about its axle), 8 crank pin (a coupling rod: goes round a small circle without turning).
 import * as THREE from 'three';
 
 // Run `fn` (which adds pieces to the bag) and mark everything it added as one limb: pivot [x,y,z] in the mesh's own coordinates, kind, phase offset, amplitude, lift.
@@ -27,6 +27,7 @@ float limbAngle() { float t = limb.w; if (t < .5) return 0.; float w = uGait.y, 
 vec3 limbShift() { float t = limb.w; if (t < .5) return vec3(0.); float w = uGait.y, ph = uGait.x + motion.x;
   if (t < 1.5) return vec3(0., max(0., -cos(ph)) * motion.z * w, 0.);
   if (t > 5.5 && t < 6.5) return vec3(0., 0., sin(ph) * motion.y * w);
+  if (t > 7.5) { float a = uGait.x * motion.y; return vec3(0., sin(a) * motion.z, cos(a) * motion.z); }   // 8: a crank pin, going round a small circle (coupling rods)
   return vec3(0.); }
 vec3 limbRot(vec3 v, float a) { float c = cos(a), s = sin(a); return limb.w > 3.5 && limb.w < 4.5 ? vec3(c * v.x + s * v.z, v.y, -s * v.x + c * v.z) : vec3(v.x, c * v.y - s * v.z, s * v.y + c * v.z); }`;
 export function limbMaterial() {

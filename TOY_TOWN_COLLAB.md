@@ -1412,3 +1412,10 @@ A `START` does not prohibit parallel edits. Avoid stepping on each other's uncom
 
 ### 2026-11-12 · Claude · START (new storybook town, follow-up 25: richer natural stations, a real steam train, softer more natural trees and plants)
 - **Base**: master dfa7248. **Request (owner, caps)**: "make stations richer and natural, and the same with the train rather than a box; the trees and other things are more of polygons: bring the naturality and realistic". **Plan**: the train becomes a tank engine (boiler with brass bands, side tanks, funnel, domes, cab with arched roof, cowcatcher, buffers, spoked driving wheels and coupling rods that turn with the distance travelled, via the limb shader) with arched-roof carriages and a planked wagon; the central station (brick, wings, tiled roof, clock porch, canopies on iron posts, trolley, churns, lamps) and the six halts (a station hut each, with a lookout room on every other one, fences, lamps, flowers); trees built from many soft leaf clusters over flared trunks with branches, layered irregular pines; buds, bushes and meadow flowers are rounded, not faceted gems.
+
+### 2026-11-12 · Claude · DONE (new storybook town, follow-up 25: stations, train and plants)
+- **Request (owner)**: richer natural stations and train, and trees and other things less polygonal. **Done**: spec section 4g.
+- **Tests**: logic and browser suites pass (93 draw calls, 713k triangles); close-ups of the engine and carriage, the central station (front and back), a halt and the orchard checked by hand; the train's wheel phase was read back from the page while it moved.
+- **Slip caught on the way**: a scripted edit matched the wrong `STATIONS.forEach` and cut the railway function out of build.mjs; it was restored from git and re-applied to the right place before anything was committed.
+- **Not verified**: a real phone; autumn and winter trees; every halt up close (only one); the train smoke still comes from the old funnel position.
+

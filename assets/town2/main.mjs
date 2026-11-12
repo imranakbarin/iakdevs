@@ -72,7 +72,7 @@ const lampDrawn = sim.lamps.map(() => -1);
 sim.vehicles.forEach(v => { const g = buildVehicle(v.def, built.material); scene.add(g); cars.set(v.id, g); });
 
 // Things that live on their own: the train, the boat at the jetty, the farm animals and the ducks on the pond.
-const trainCars = buildTrain(built.material); for (const c of trainCars) scene.add(c);
+const trainCars = buildTrain(built.material), trainGait = newGait(); for (const c of trainCars) scene.add(c);
 const loop = sim.graph.loop;
 // Cargo and passengers: one instanced mesh each. Crates stand on platforms, ride in the goods wagon or are carried by residents; passengers' heads show in the coaches.
 const marketGoods = buildMarketGoods(BUILDINGS.find(b => b.id === 'market'), built.material); scene.add(marketGoods);
@@ -428,6 +428,7 @@ function sync(dt) {
     g.position.set(v.x, y + .035 + (g.userData.limbMesh ? Math.abs(Math.sin(g.userData.gait.phase)) * .006 * g.userData.gait.amp : v.v > .05 ? Math.abs(Math.sin(time * 14 + v.s)) * .008 : 0), v.z); g.rotation.set(-Math.atan2(ahead - y, .3), Math.atan2(v.tx, v.tz), 0, 'YXZ');
   }
   trainCars.forEach((c, k) => { const q = along(loop, sim.train.s - k * sim.train.gap), y = heightAt(q.x, q.z) + .06; c.position.set(q.x, y, q.z); c.rotation.y = Math.atan2(q.tx, q.tz); c.updateMatrixWorld(true); });   // the cars follow the head round the loop
+  { stepGait(trainGait, dt, trainCars[0].position.x, trainCars[0].position.z, {k: 10.5, vref: .8, v0: .03}); for (const c of trainCars) setGait(c.userData.limbMesh, trainGait); }   // (the wheels and rods turn with the distance the train covers)
   { const inc = sim.incident, fire = inc && inc.type === 'fire', d = fire && BUILDINGS.find(b => b.id === inc.target);
     flames.visible = !!fire; fireSmokeMesh.visible = !!fire; if (fire) { flames.userData.set(d, heightAt(d.x, d.z) + 1.25, time); fireSmoke.update(dt, {x: d.x, y: heightAt(d.x, d.z) + 1.9, z: d.z, vx: windNow.x * .2, vz: windNow.z * .2}, 6); fireSmoke.puffs.forEach((p, i) => { const z = fireSmoke.size(p) * 2.4; fireM.makeScale(z, z, z).setPosition(p.x, p.y, p.z); fireSmokeMesh.setMatrixAt(i, fireM); }); fireSmokeMesh.instanceMatrix.needsUpdate = true; }
     const debrisSpots = inc && inc.type === 'storm' && inc.debris ? inc.debris.map(id => sim.graph.doors[id]).filter(Boolean) : []; if (debris.userData.last !== debrisSpots.length) { debris.userData.last = debrisSpots.length; debris.userData.show(debrisSpots); }
@@ -510,6 +511,7 @@ window.ToyTownNew = {
   project(x, z, y = .4) { const r = canvas.getBoundingClientRect(); camera.updateMatrixWorld(); v3.set(x, heightAt(x, z) + y, z).project(camera); return [(v3.x * .5 + .5) * r.width + r.left, (-v3.y * .5 + .5) * r.height + r.top]; },
   setWeather(kind, seconds = 600) { sim.weather.force(kind, seconds); },
   critterList: () => critters, coop: COOP, plots: PLOT_COUNT,
+  trainCars,
   gait: id => { const g = people.get(id) || cars.get(id); const t = g && g.userData.gait; return t ? {phase: t.phase, amp: t.amp, walk: t.walk, speed: t.speed} : null; },
   wild: {update: wild.update, hens: wild.hens, pets: wild.pets, dwarfs: wild.dwarfs, islet: wild.islet, meadow: wild.meadow, gardens: wild.gardens, borders: wild.borders, out: () => wild.dwarfsOut({day: sim.day, hour: sim.hour}), forceDwarfs: (n, u) => wild.forceDwarfs(n, u), pick: wild.pick},
   sail: {start: () => startSailing(), stop: () => stopSailing(), boat: () => sailing, tapSea(x, z) { if (sailing) sailing.target = {x, z}; }, sim: () => sim.sea}, fest, festival: () => sim.festival, chest: {state: () => sim.chestState(), buy: id => sim.buy(id), upg: () => upg}, fishGame, angle: k => sim.angle(k), openFishing() { Object.assign(fishGame, {phase: 'idle', bite: null, msg: '', last: null}); openPaper('fishing'); },
