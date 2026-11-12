@@ -1389,3 +1389,6 @@ A `START` does not prohibit parallel edits. Avoid stepping on each other's uncom
 - **Tests**: logic and browser suites pass (93 draw calls); close-ups of every garden in summer, and of the orchard, water garden and pavilion in winter and spring, checked by hand.
 - **Not verified**: a real phone; autumn gardens (only the code path); the pick-up and taxi near-touch.
 
+
+### 2026-11-12 · Claude · START (new storybook town, follow-up 24: the story director and the town chronicle (ecosystem phases D and E))
+- **Base**: master e61b3dc. **Request (owner)**: "GO AHEAD" with the ecosystem plan (one thing depends on another; a beautiful story every day with a cause). **Plan**: `chronicle.mjs` (pure): each day is closed into a record (weather, bloom, bees, honey, eggs, milk, catches, sea, shortages, stories) and turned into a cause chain for the paper ("rain -> the meadow bloomed -> the bees were busy -> honey cakes at the café"), a headline, and a follow-up for the next morning; `director.mjs` (pure): chooses the day's stories by the state of the land (stories get `needs` conditions: honey cakes, plain rolls, plenty of eggs, a bloom walk, a resting sea, mice in the barn) with the follow-up boosted; the chronicle is saved with the saga so the town remembers; the paper's Today/Yesterday pages show "How it happened". Then phase F (player influence) as its own PR.
