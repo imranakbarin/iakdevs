@@ -26,6 +26,8 @@ const shot2 = (pg, name) => pg.screenshot({path: path.join(out, `new-town-${name
     await page.evaluate(() => ToyTownNew.look(0, .4, 46, 0));
     { const h = await page.evaluate(() => { ToyTownNew.setHour(15.5); ToyTownNew.advance(.05); const m = ToyTownNew.moving; return {hour: ToyTownNew.sim.hour, min: m.minute.inner.rotation.z, hr: m.hour.inner.rotation.z, smin: m.stMinute.inner.rotation.z, shr: m.stHour.inner.rotation.z}; });
       const tm = (-h.min / (Math.PI * 2) + 1) % 1, th = (-h.hr / (Math.PI * 2) * 12 + 12) % 12; assert.ok(Math.abs(tm - (h.hour % 1)) < .02 && Math.abs(th - (h.hour % 12)) < .1 && h.smin === h.min && h.shr === h.hr, 'the tower clock and the station clock show the town hour (' + JSON.stringify(h) + ')'); }
+    { const r = await page.evaluate(async () => { ToyTownNew.setHour(10.5); for (let i = 0; i < 60 && !ToyTownNew.sim.story.current; i++) ToyTownNew.advance(5, true); ToyTownNew.advance(8, true); const el = document.getElementById('story'); if (!ToyTownNew.sim.story.current || ToyTownNew.sim.story.current.id === 'incident') return {none: true}; ToyTownNew.select(null); el.click(); return {sel: ToyTownNew.selected(), on: el.classList.contains('on')}; });
+      assert.ok(r.none || (r.sel && r.sel.id), 'tapping the story banner takes you to it (' + JSON.stringify(r) + ')'); }
     const info = await page.evaluate(() => ToyTownNew.info());
     const before = await page.evaluate(() => ToyTownNew.sim.vehicles.map(v => v.s)); await page.evaluate(() => ToyTownNew.advance(5)); const after = await page.evaluate(() => ToyTownNew.sim.vehicles.map(v => v.s));
     // night: lit windows (one more draw call), a dark sky; then rain with umbrellas up. Both must stay inside the budgets.

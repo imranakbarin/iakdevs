@@ -1436,3 +1436,6 @@ A `START` does not prohibit parallel edits. Avoid stepping on each other's uncom
 - **Done**: the tower clock's hands now follow `sim.hour` (they used the animation clock), so the clock, the paper, the journals and the station timetable all read the same town time. The timetable's predicted arrivals are within about 6 minutes of the real train (speed constant 1.45 -> 1.38 for a closer match). New browser assertion that the hands match the hour; both suites pass.
 - **Also**: the central station's porch clock had painted hands at a fixed time; it now has moving hands on the same town time (checked by the same assertion). **Not verified**: a real phone.
 
+
+### 2026-11-12 · Claude · START+DONE (new storybook town, follow-up 28: tap the story banner to go to the story)
+- **Request (owner)**: "when I click above the story or the happening, why doesn't it take it to that place or happening". **Done**: the story banner (`#story`) was click-through; it is now tappable. A tap closes the paper, then selects the first person in the story who is out walking (the camera follows them and the card shows who and where), else flies to the first place they are headed to; for an emergency (fire, a lost child, a storm) it goes to the burning house or the missing child. Browser assertion added. Not verified: a real phone.
