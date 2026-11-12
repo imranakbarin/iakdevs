@@ -459,6 +459,15 @@ const root = path.join(__dirname, '..'), mod = f => import('file://' + path.join
     assert.ok(Object.keys(sc.chronicleNow()).length > 10 && sc.paper('today').chain.length >= 2 && sc.paper('yesterday').chain.length >= 4, 'the paper shows how the day came about');
     const saved = sc.sagaState(); assert.equal(saved.chronicle.length, 8); const Sg = await mod('saga.mjs'); const store = {v: null, getItem() { return this.v; }, setItem(k, v) { this.v = v; }}; Sg.saveSaga(store, saved); const back = Sg.loadSaga(store); assert.equal(back.chronicle.length, 8, 'the chronicle is saved with the saga');
     const s2 = S.createSim(7, {events: false, season: 'summer', saga: back}); assert.equal(s2.chronicle.length, 8, 'a new visit remembers the last days'); }
+  // follow-up 26: looking after the land
+  { const Ec = await mod('ecology.mjs'), Ch = await mod('chronicle.mjs'), Cx = await mod('chest.mjs');
+    const e = Ec.newEco(); assert.equal(Ec.care(e, 'flowers').ok, true); assert.equal(Ec.care(e, 'flowers').ok, false, 'flowers once a day'); assert.equal(Ec.care(e, 'hens').ok, true); assert.ok(e.boost.flowers > .4 && e.boost.hens > .4);
+    assert.equal(Ec.care(e, 'rest').ok && e.rest, true); Ec.care(e, 'rest'); assert.equal(e.rest, false, 'resting the sea is a switch'); assert.equal(Ec.care(e, 'nope').ok, false);
+    const a = Ec.newEco(), b = Ec.newEco(); a.bees = b.bees = .1; for (let t = 0; t < 2000; t++) { Ec.stepEco(a, 1, {season: 'winter', rain: 0}); Ec.stepEco(b, 1, {season: 'winter', rain: 0, hive: true}); } assert.ok(b.bees >= .45 && a.bees < .3, 'a hive keeps the bees up through the winter (' + a.bees.toFixed(2) + ' vs ' + b.bees.toFixed(2) + ')');
+    assert.ok(Cx.upgradeOf('beehive'), 'the hive is in the chest');
+    const sc = S.createSim(7, {events: false, season: 'summer'}); assert.equal(sc.care('flowers').ok, true); sc.care('hens'); for (let i = 0; i < 20 * 490; i++) sc.update(.05);
+    assert.deepEqual(sc.chronicle[0].cared, ['flowers', 'hens'], 'the day was written down with what you did'); assert.ok(/You planted flowers and fed the hens/.test(Ch.chain(sc.chronicle[0]).join('|')), 'and it is in the chain'); assert.equal(sc.care('flowers').ok, true, 'a new day, flowers again');
+    const sr = S.createSim(7, {events: false, season: 'summer'}); sr.care('rest'); for (let i = 0; i < 20 * 480; i++) sr.update(.05); const free = S.createSim(7, {events: false, season: 'summer'}); for (let i = 0; i < 20 * 480; i++) free.update(.05); assert.ok(sr.fishing.caught < free.fishing.caught * .4 + 1, 'the fishermen obey a rest day (' + sr.fishing.caught + ' vs ' + free.fishing.caught + ')'); }
   // the page and its modules exist and the old town redirects to it on request
   for (const f of ['def.mjs', 'curve.mjs', 'graph.mjs', 'sim.mjs', 'build.mjs', 'main.mjs']) assert.ok(fs.existsSync(path.join(root, 'assets/town2', f)), f + ' exists');
   const page = fs.readFileSync(path.join(root, 'toy-town-new.html'), 'utf8'); assert.match(page, /assets\/town2\/main\.mjs/);

@@ -6,13 +6,14 @@ const num = (v, d = 0) => Number.isFinite(v) ? v : d, r1 = v => Math.round(v * 1
 export function record(day, season, today, extra = {}) {
   const t = today || {};
   return {day, season, rain: t.secs > 0 ? Math.min(1, num(t.rain) / t.secs) : 0, bloom: num(t.bloomPeak), bees: num(t.beesPeak), honey: r1(num(t.honey)), eggs: r1(num(t.eggs)), milk: r1(num(t.milk)), caught: num(t.caught),
-    sea: t.seaLow === undefined ? 1 : num(t.seaLow, 1), swaps: num(t.swaps), meals: num(t.meals), shortages: Object.keys(t.shortages || {}), stories: (extra.stories || []).slice(0, 12), peace: num(extra.peace, .7), deliveries: num(extra.deliveries)};
+    sea: t.seaLow === undefined ? 1 : num(t.seaLow, 1), swaps: num(t.swaps), meals: num(t.meals), shortages: Object.keys(t.shortages || {}), cared: (t.cared || []).slice(0, 3), stories: (extra.stories || []).slice(0, 12), peace: num(extra.peace, .7), deliveries: num(extra.deliveries)};
 }
 const plural = (n, a, b = a + 's') => n + ' ' + (n === 1 ? a : b);
 // The links of the chain, in the order of the food chain; a link is only told if it really happened.
 export function chain(rec) {
   if (!rec) return [];
   const out = [], winter = rec.season === 'winter';
+  if (rec.cared && rec.cared.length) out.push('You ' + rec.cared.map(k => k === 'flowers' ? 'planted flowers' : 'fed the hens').join(' and '));
   out.push(rec.rain > .35 ? 'Rain fell for much of the day' : rec.rain > .08 ? 'A little rain fell' : winter ? 'A cold, dry day' : 'A dry, bright day');
   out.push(winter ? 'the meadow slept under the cold' : rec.bloom > .8 ? 'the meadow was in full bloom' : rec.bloom > .5 ? 'the meadow stayed green' : 'the meadow was thin and bare');
   if (!winter && rec.bees > .75 && rec.bloom > .5) out.push('the bees were busy' + (rec.honey > .4 ? ' and the hives made ' + plural(r1(rec.honey), 'jar') + ' of honey' : ''));
@@ -53,5 +54,5 @@ export function followUp(rec) {
 export function push(list, rec) { const out = (list || []).filter(r => r.day !== rec.day); out.push(rec); return out.slice(-LIMIT); }
 // A saved chronicle may be old or damaged: keep only well-formed records.
 export function clean(list) {
-  return (Array.isArray(list) ? list : []).filter(r => r && Number.isFinite(r.day) && typeof r.season === 'string').slice(-LIMIT).map(r => ({day: r.day | 0, season: r.season.slice(0, 8), rain: num(r.rain), bloom: num(r.bloom), bees: num(r.bees), honey: num(r.honey), eggs: num(r.eggs), milk: num(r.milk), caught: num(r.caught), sea: num(r.sea, 1), swaps: num(r.swaps), meals: num(r.meals), shortages: (Array.isArray(r.shortages) ? r.shortages : []).filter(x => x === 'eggs' || x === 'milk'), stories: (Array.isArray(r.stories) ? r.stories : []).filter(x => typeof x === 'string').slice(0, 12), peace: num(r.peace, .7), deliveries: num(r.deliveries)}));
+  return (Array.isArray(list) ? list : []).filter(r => r && Number.isFinite(r.day) && typeof r.season === 'string').slice(-LIMIT).map(r => ({day: r.day | 0, season: r.season.slice(0, 8), rain: num(r.rain), bloom: num(r.bloom), bees: num(r.bees), honey: num(r.honey), eggs: num(r.eggs), milk: num(r.milk), caught: num(r.caught), sea: num(r.sea, 1), swaps: num(r.swaps), meals: num(r.meals), cared: (Array.isArray(r.cared) ? r.cared : []).filter(x => x === 'flowers' || x === 'hens'), shortages: (Array.isArray(r.shortages) ? r.shortages : []).filter(x => x === 'eggs' || x === 'milk'), stories: (Array.isArray(r.stories) ? r.stories : []).filter(x => typeof x === 'string').slice(0, 12), peace: num(r.peace, .7), deliveries: num(r.deliveries)}));
 }

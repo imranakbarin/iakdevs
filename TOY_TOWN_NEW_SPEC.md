@@ -227,6 +227,10 @@ Buildings are drawn 10% smaller (`BUILD_SCALE` .72); the layout solver in `def.m
 
 The train is a tank engine with brass-banded boiler, side tanks, funnel, steam and sand domes, an arched-roof cab, cowcatcher and buffers; its driving wheels (black tyre, painted centre, spokes, brass hub) and coupling rods turn with the distance the train covers (`limbs.mjs` kinds 7 and 8, fed by `stepGait` with the train's own gait in `main.mjs`), and the carriages (arched roof with a clerestory, framed windows, doors, end rails, buffers, bogies) and the planked goods wagon turn theirs too. The central station is brick with two wings, a tiled roof, a bell turret and weather vane, a clock porch over double doors, canopies on iron posts with scalloped valances over the wings, benches, lamps, a luggage trolley, churns and flower tubs. Each of the six halts has its own station hut (wall and roof colours by halt, door, windows with flower boxes or shutters, chimney, every other one with a little lookout room), a textured platform edge, a lamp, a fence, a bench, a name board and flowers. Trees are many soft leaf clusters (`crown` in `build.mjs`) over a trunk that flares at the root and sends branches into the crown; pines have six irregular tiers; birches hang clumps from thin white branches. Buds, bushes and meadow flowers are small rounded blobs (no more faceted gems). The picture costs about 100k more triangles (713k at the default view, limit 800k).
 
+## 4h. Looking after the land
+
+In Nature, under "The land": **Plant flowers** and **Feed the hens** (each once a day; they lift `eco.boost` for about three days) and **Rest the sea** (a switch the fishermen obey). A **beehive** can be bought for the chest (20 coins): the bees never dwindle below .45 and honey comes half as fast again. What you did is written in the chronicle ("You planted flowers and fed the hens") and in the saga log.
+
 ## 5. Art rules
 
 - Fat, rounded, slightly wonky. No sharp corners: `bag.box` is a rounded box; roofs overhang.
