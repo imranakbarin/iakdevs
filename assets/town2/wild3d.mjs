@@ -5,7 +5,7 @@ import {mergeGeometries} from 'three/addons/utils/BufferGeometryUtils.js';
 import {Bag, U} from './build.mjs';
 import {along} from './graph.mjs';
 import {ISLAND, POND, NODES, heightAt, shore, rand, BUILDINGS, PIER} from './def.mjs';
-import {PLOTS, BLOOM, inGarden} from './garden.mjs';
+import {PLOTS, BLOOM, inGarden, freeSpot} from './garden.mjs';
 import {ISLET, ground} from './wildlife.mjs';
 
 const TAU = Math.PI * 2;
@@ -264,3 +264,38 @@ export function buildIslet(material) {
   // the whole islet group is already in world coordinates (the bag was pushed to the islet's position), so the group stays at the origin
   return g;
 }
+
+/* ---------------- what the town has bought (see chest.mjs) ---------------- */
+export function buildUpgrades(bought, material) {
+  const g = new THREE.Group(), b = new Bag(), gl = new Bag(), out = {group: g, boat2: null, beam: null, lamp: null};
+  if (bought.includes('bunting')) {
+    const cols = ['red', 'yellow', 'sky', 'pink', 'green', 'orange'];
+    for (const dz of [-.34, .34]) { const pts = []; for (let i = 0; i <= 10; i++) { const f = i / 10, x = PIER.x0 + .4 + f * (PIER.x1 - PIER.x0 - .8); pts.push([x, .82 - Math.sin(f * Math.PI * 4) * .04 - .0, PIER.z + dz]); } b.tube(pts, .008, 'white'); pts.forEach((p, i) => { if (i % 1 === 0 && i < pts.length) cone2(b, .06, .12, cols[(i + (dz > 0 ? 3 : 0)) % cols.length], {x: p[0], y: p[1] - .08, z: p[2], rx: Math.PI, sz: .3, seg: 3}); }); }
+    for (let i = 0; i <= 4; i++) for (const dz of [-.34, .34]) b.cyl(.015, .02, .8, 'white', {x: PIER.x0 + .4 + i * (PIER.x1 - PIER.x0 - .8) / 4, y: .24, z: PIER.z + dz, seg: 5});
+  }
+  if (bought.includes('pierlights')) {
+    const n = 12; for (let i = 0; i < n; i++) for (const dz of [-.4, .4]) { const x = PIER.x0 + (i + .5) * (PIER.x1 - PIER.x0) / n; b.cyl(.012, .015, .3, 'slate', {x, y: .24, z: PIER.z + dz, seg: 5}); gl.sph(.045, '#ffe08a', {x, y: .58, z: PIER.z + dz, seg: 6, glow: true}); }
+  }
+  if (bought.includes('fountain')) {
+    const p = freeSpot(1.1);
+    if (p) { const y = heightAt(p.x, p.z), x = p.x, z = p.z; b.cyl(1.0, 1.04, .03, '#8fd16a', {x, y, z, seg: 24});
+      b.cyl(.58, .64, .17, 'stone', {x, y: y + .02, z, seg: 20}); b.cyl(.46, .46, .05, '#6fcdea', {x, y: y + .16, z, seg: 20}); b.cyl(.09, .12, .5, 'stone', {x, y: y + .16, z, seg: 10}); b.cyl(.28, .08, .06, 'stone', {x, y: y + .62, z, seg: 14}); b.sph(.08, '#cfeeff', {x, y: y + .84, z, seg: 8});
+      for (let k = 0; k < 6; k++) { const a = k / 6 * TAU; b.sph(.032, '#cfeeff', {x: x + Math.cos(a) * .22, y: y + .54, z: z + Math.sin(a) * .22, seg: 6}); }
+      for (const a of [Math.PI * .25, Math.PI * 1.25]) { const bx = x + Math.cos(a) * .95, bz = z + Math.sin(a) * .95; b.push(bx, heightAt(bx, bz), bz, -a + Math.PI / 2); b.box(.5, .05, .18, 'wood', {y: .2, r: .01}); b.box(.5, .2, .04, 'wood', {y: .24, z: -.08, r: .01}); for (const sx of [-.2, .2]) b.box(.04, .2, .14, 'slate', {x: sx}); b.pop(); } }
+  }
+  if (bought.includes('secondboat')) { const bt = buildBoat2(material); bt.position.set(PIER.x1 + .1, -.02, PIER.z - 1.3); bt.rotation.y = Math.PI / 2 + .12; out.boat2 = bt; g.add(bt); }
+  if (bought.includes('lighthouse')) {
+    const f = ISLET.face, y0 = ISLAND.sea; b.push(ISLET.x, y0, ISLET.z, f, ISLET.s); gl.push(ISLET.x, y0, ISLET.z, f, ISLET.s);
+    const x = -.25, z = -.75, top = 1.55; b.cyl(.32, .4, .26, '#8d8a86', {x, y: top - .2, z, seg: 12});   // a stone footing on the rocks
+    for (let k = 0; k < 5; k++) b.cyl(.27 - k * .02, .3 - k * .02, .32, k % 2 ? 'red' : 'white', {x, y: top + k * .32, z, seg: 14});
+    b.cyl(.34, .34, .05, 'slate', {x, y: top + 1.6, z, seg: 14}); b.cyl(.2, .2, .26, '#bfe6f7', {x, y: top + 1.65, z, seg: 12}); cone2(b, .3, .26, 'red', {x, y: top + 1.98, z, seg: 12}); b.sph(.05, 'gold', {x, y: top + 2.14, z, seg: 6});
+    gl.sph(.16, '#fff2b0', {x, y: top + 1.78, z, seg: 8, glow: true}); b.pop(); gl.pop();
+    // the beam: two soft wedges that turn round the lamp (world frame)
+    const beam = new THREE.Group(), wedge = new THREE.Mesh(new THREE.ConeGeometry(1.1, 9, 16, 1, true).rotateZ(-Math.PI / 2).translate(4.6, 0, 0), new THREE.MeshBasicMaterial({color: '#fff2b0', transparent: true, opacity: .0, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide, fog: false}));
+    beam.add(wedge); const w2 = wedge.clone(); w2.rotation.y = Math.PI; beam.add(w2); const lx = ISLET.x + (x * Math.cos(f) + z * Math.sin(f)) * ISLET.s, lz = ISLET.z + (-x * Math.sin(f) + z * Math.cos(f)) * ISLET.s; beam.position.set(lx, y0 + (top + 1.78) * ISLET.s, lz); beam.visible = false; out.beam = beam; g.add(beam); out.lampMat = wedge.material;
+  }
+  if (b.parts.length) { const m = b.mesh(material); m.castShadow = false; g.add(m); }
+  const glow = gl.glowMesh(new THREE.MeshBasicMaterial({vertexColors: true, transparent: true, opacity: 1, depthWrite: false, fog: false})); if (glow) { glow.renderOrder = 2; g.add(glow); out.glow = glow; }
+  return out;
+}
+function buildBoat2(material) { const b = new Bag(); b.box(.46, .18, .95, 'blue', {y: -.05, r: .1}); b.box(.5, .05, .98, 'white', {y: .12, r: .02}); b.box(.3, .24, .3, 'yellow', {y: .16, z: -.1, r: .04}); b.box(.34, .04, .34, 'red', {y: .38, z: -.1, r: .02}); b.cyl(.02, .02, .7, 'wood', {y: .16, z: .25, seg: 6}); b.box(.26, .34, .02, 'cream', {y: .5, z: .25, r: .01}); const m = b.mesh(material); const g = new THREE.Group(); g.add(m); g.scale.setScalar(1.05); return g; }

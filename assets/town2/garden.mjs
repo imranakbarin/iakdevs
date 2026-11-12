@@ -47,3 +47,10 @@ export const BLOOM = {
 };
 export const plotName = p => ({roses: 'a rose garden', tulips: 'a bed of tulips', lavender: 'a lavender garden', allotment: 'an allotment', sunflowers: 'a patch of sunflowers', meadow: 'a wildflower meadow', herbs: 'a herb garden', coop: 'the hen yard', greenhouse: 'the greenhouse'}[p.kind]);
 export const seedOf = p => rand(p.seed * 31 + 7);
+
+// The best open spot (at least `minR` clear on every side) that is not in a plot: where a new lawn can go.
+export function freeSpot(minR = 1.2) {
+  let best = null;
+  for (let x = -19; x <= 19; x += .5) for (let z = -15; z <= 15; z += .5) { const c = clearance(x, z); if (c >= minR && PLOTS.every(p => Math.hypot(p.x - x, p.z - z) > p.r + minR + .3) && (!best || c > best.c)) best = {x, z, c}; }
+  return best;
+}

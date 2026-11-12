@@ -18,7 +18,8 @@ import {createWildlife} from './wildscene.mjs';
 import {COOP, PLOTS} from './garden.mjs';
 import {PETS} from './wildlife.mjs';
 import {newBoat, stepBoat, sightings, MOOR} from './sail.mjs';
-import {buildDrops} from './wild3d.mjs';
+import {buildDrops, buildUpgrades} from './wild3d.mjs';
+import {UPGRADES, canBuy, balance as chestBal} from './chest.mjs';
 import {newBite, markerAt, reel as angleReel, message as angleMessage} from './angling.mjs';
 const PLOT_COUNT = PLOTS.length;
 import {describeResident, describeBuilding, describeVehicle, describeAnimal, describeTrain} from './inspect.mjs';
@@ -56,7 +57,7 @@ const hemi = scene.children.find(o => o.isHemisphereLight), seaMat = built.sea.m
 if (q.get('h')) sim.setHour(+q.get('h'));
 const people = new Map(), cars = new Map(), rodSeen = new Map(), rodTug = new Map();
 const marketDef = BUILDINGS.find(b => b.id === 'market'), rods = new Map(), BROLLY = ['red', 'yellow', 'pink', 'blue', 'purple', 'orange', 'teal'];
-const seasonDecor = buildSeasonDecor(season, sim.graph, built.material); scene.add(seasonDecor); let townFx = null, fxKey = '';
+const seasonDecor = buildSeasonDecor(season, sim.graph, built.material); scene.add(seasonDecor); let townFx = null, fxKey = '', upg = null, upgKey = '';
 const umbrellas = buildUmbrellas(); scene.add(umbrellas); const flames = buildFlames(), debris = buildDebris(); scene.add(flames, debris); const fireSmoke = createSmoke(16, 3.2), fireSmokeMesh = new THREE.InstancedMesh(new THREE.SphereGeometry(1, 8, 6), new THREE.MeshLambertMaterial({color: '#4a4a52', transparent: true, opacity: .75, depthWrite: false}), 16); fireSmokeMesh.frustumCulled = false; fireSmokeMesh.visible = false; scene.add(fireSmokeMesh); const fireM = new THREE.Matrix4();
 sim.residents.forEach((r, i) => { const g = buildResident(r.def, i, built.material); if (r.id === 'finn' || r.id === 'salt') { const rod = buildRod(); g.add(rod); rods.set(r.id, rod); } scene.add(g); people.set(r.id, g); });
 const rain = buildRain(); scene.add(rain);
@@ -234,7 +235,7 @@ function photoUrl() { return composePhoto().toDataURL('image/jpeg', .92); }
 const paperBtn = document.getElementById('paperBtn'), paperEl = document.getElementById('paper'), journalBtn = document.getElementById('journalBtn'); let paperMode = null, paperAt = -1e9;
 function el(tag, text, cls) { const e = document.createElement(tag); if (text !== undefined) e.textContent = text; if (cls) e.className = cls; return e; }
 function hallTabs() {
-  const tabs = el('div', undefined, 'tabs'); for (const [m, label] of [['today', 'Today'], ['yesterday', 'Yesterday'], ['hall', 'Town hall'], ['case', 'Case'], ['nature', 'Nature']]) { const b = el('button', label); if (m === paperMode) b.className = 'on'; b.disabled = m === 'yesterday' && !sim.paper('yesterday'); b.addEventListener('click', () => { paperMode = m; renderPaper(); }); tabs.append(b); } return tabs;
+  const tabs = el('div', undefined, 'tabs'); for (const [m, label] of [['today', 'Today'], ['yesterday', 'Yesterday'], ['hall', 'Town hall'], ['case', 'Case'], ['nature', 'Nature'], ['chest', 'Chest']]) { const b = el('button', label); if (m === paperMode) b.className = 'on'; b.disabled = m === 'yesterday' && !sim.paper('yesterday'); b.addEventListener('click', () => { paperMode = m; renderPaper(); }); tabs.append(b); } return tabs;
 }
 // ---- sailing: take the harbour boat out; tap the sea to steer (or the arrow keys), watch the dolphins and the whale, and land on Dwarf Rock ----
 let sailing = null, sailKeys = {l: 0, r: 0, u: 0}, wakeAt = 0; const wake = buildDrops(14); scene.add(wake); const wakePts = [];
@@ -275,6 +276,11 @@ function renderPaper() {
     const again = el('button', 'Retake'); again.addEventListener('click', () => { photoRaw = null; renderPaper(); }); act.append(save, again);
     if (navigator.canShare && navigator.share) { const sh = el('button', 'Share'); sh.addEventListener('click', async () => { try { const blob = await (await fetch(url)).blob(), f = new File([blob], 'toy-town.jpg', {type: 'image/jpeg'}); if (navigator.canShare({files: [f]})) await navigator.share({files: [f], title: 'Toy Town', text: photoCaption}); } catch (e) {} }); act.append(sh); }
     paperEl.append(el('h2', 'Photo'), im, row, cap, act); return; }
+  if (paperMode === 'chest') { paperEl.append(hallTabs(), el('h2', 'The town chest')); const st = sim.chestState();
+    paperEl.append(el('p', 'Coins in the chest: ' + chestBal(st) + '. The town earns them from fish sold at the stall, golden fish, the dwarfs\' gems and gems found at Dwarf Rock.'));
+    for (const u of UPGRADES) { const c = canBuy(st, u.id), row = el('div', undefined, 'tabs'), b = el('button', c.ok ? 'Buy for ' + u.cost : c.why === 'owned' ? 'Bought ✓' : 'Need ' + c.need + ' more'); b.disabled = !c.ok; b.dataset.id = u.id; b.addEventListener('click', () => { const r = sim.buy(u.id); if (r.ok) { toast('The town bought ' + u.name.toLowerCase() + '!', 4); sound.blip(); } renderPaper(); });
+      paperEl.append(el('h3', u.name + ' (' + u.cost + ' coins)'), el('p', u.blurb)); row.append(b); paperEl.append(row); }
+    return; }
   if (paperMode === 'sail') { paperEl.append(el('h2', 'At the helm')); paperEl.append(el('p', 'Tap the sea to steer, or use the arrow keys. Watch for dolphins and the whale, and land on Dwarf Rock (the sand in front of the cave).'));
     const sl = sim.sea; paperEl.append(el('p', 'Dolphins seen: ' + sl.dolphins + ' · Whale spouts: ' + sl.whales + ' · Landings on Dwarf Rock: ' + sl.islet)); const back = el('button', 'Back to the harbour'); back.id = 'sailBack'; back.addEventListener('click', () => stopSailing('The boat is tied up at the pier again.')); const row = el('div', undefined, 'tabs'); row.append(back); paperEl.append(row); return; }
   if (paperMode === 'fishing') { paperEl.append(el('h2', 'Fishing off the pier')); const g = fishGame;
@@ -357,7 +363,7 @@ function caption() {
 }
 
 /* ---- the loop ---- */
-let nightNow = 0, sagaSaved = 0, flood = 0, shadowsNear = true, last = 0, frozen = false, time = 0, windNow = wind(0);
+let nightNow = 0, sagaSaved = 0, sagaSavedAt = 0, flood = 0, shadowsNear = true, last = 0, frozen = false, time = 0, windNow = wind(0);
 // The light follows the hour: sky, fog, sea, sun or moon, lit windows and lanterns, stars.
 function weatherLight() {
   const L = skyAt(sim.hour, sim.weather.rain, season);
@@ -406,9 +412,11 @@ function sync(dt) {
     flames.visible = !!fire; fireSmokeMesh.visible = !!fire; if (fire) { flames.userData.set(d, heightAt(d.x, d.z) + 1.25, time); fireSmoke.update(dt, {x: d.x, y: heightAt(d.x, d.z) + 1.9, z: d.z, vx: windNow.x * .2, vz: windNow.z * .2}, 6); fireSmoke.puffs.forEach((p, i) => { const z = fireSmoke.size(p) * 2.4; fireM.makeScale(z, z, z).setPosition(p.x, p.y, p.z); fireSmokeMesh.setMatrixAt(i, fireM); }); fireSmokeMesh.instanceMatrix.needsUpdate = true; }
     const debrisSpots = inc && inc.type === 'storm' && inc.debris ? inc.debris.map(id => sim.graph.doors[id]).filter(Boolean) : []; if (debris.userData.last !== debrisSpots.length) { debris.userData.last = debrisSpots.length; debris.userData.show(debrisSpots); }
     flood += ((inc && inc.type === 'storm' ? 1 : 0) - flood) * Math.min(1, dt * .8); built.sea.position.y = -.12 + flood * .2; built.shallows.position.y = -.10 + flood * .2; }
+  { const k = sim.chest.bought.join(','); if (k !== upgKey) { upgKey = k; if (upg) scene.remove(upg.group); upg = buildUpgrades(sim.chest.bought, built.material); scene.add(upg.group); }
+    if (upg) { if (upg.boat2) { upg.boat2.position.y = -.02 + Math.sin(time * 1.2 + 1) * .022; upg.boat2.rotation.z = Math.sin(time * 1.05 + 1) * .03; } if (upg.glow) { upg.glow.material.opacity = Math.max(0, Math.min(1, nightNow * 1.2)); upg.glow.visible = nightNow > .05; } if (upg.beam) { upg.beam.visible = nightNow > .3; upg.beam.rotation.y = time * .8; upg.lampMat.opacity = .2 * Math.min(1, (nightNow - .3) * 2); } } }
   { const k = JSON.stringify(sim.effects); if (k !== fxKey) { fxKey = k; if (townFx) scene.remove(townFx); townFx = buildTownEffects(sim.effects, sim.graph, built.material); scene.add(townFx); } }
-  if (sagaStore && sim.sagaLog.length !== sagaSaved) { sagaSaved = sim.sagaLog.length; saveSaga(sagaStore, sim.sagaState()); }
-  updateFreight(); refreshTrack(); if (paperMode && paperMode !== 'photo' && paperMode !== 'fishing' && paperMode !== 'sail' && Math.abs(sim.clock - paperAt) > 1) { paperAt = sim.clock; renderPaper(); }
+  if (sagaStore && (sim.sagaLog.length !== sagaSaved || Math.abs(sim.clock - sagaSavedAt) > 30)) { sagaSaved = sim.sagaLog.length; sagaSavedAt = sim.clock; saveSaga(sagaStore, sim.sagaState()); }   // (and every half minute, so coins earned are kept)
+  updateFreight(); refreshTrack(); if (paperMode && paperMode !== 'photo' && paperMode !== 'fishing' && paperMode !== 'sail' && paperMode !== 'chest' && Math.abs(sim.clock - paperAt) > 1) { paperAt = sim.clock; renderPaper(); }
   { trainCars[0].localToWorld(v3b.set(0, .66, .36)); const moving = Math.abs(sim.train.v) > .1;   // the engine's smoke: more when it is working
     smoke.update(dt, {x: v3b.x, y: v3b.y, z: v3b.z, vx: windNow.x * .14, vz: windNow.z * .14}, moving ? 5 : 1.2);
     smoke.puffs.forEach((p, i) => { const z = smoke.size(p); smokeM.makeScale(z, z, z).setPosition(p.x, p.y, p.z); smokeMesh.setMatrixAt(i, smokeM); }); smokeMesh.instanceMatrix.needsUpdate = true; }
@@ -483,6 +491,6 @@ window.ToyTownNew = {
   setWeather(kind, seconds = 600) { sim.weather.force(kind, seconds); },
   critterList: () => critters, coop: COOP, plots: PLOT_COUNT,
   wild: {update: wild.update, hens: wild.hens, pets: wild.pets, dwarfs: wild.dwarfs, islet: wild.islet, meadow: wild.meadow, gardens: wild.gardens, borders: wild.borders, out: () => wild.dwarfsOut({day: sim.day, hour: sim.hour}), forceDwarfs: (n, u) => wild.forceDwarfs(n, u), pick: wild.pick},
-  sail: {start: () => startSailing(), stop: () => stopSailing(), boat: () => sailing, tapSea(x, z) { if (sailing) sailing.target = {x, z}; }, sim: () => sim.sea}, fishGame, angle: k => sim.angle(k), openFishing() { Object.assign(fishGame, {phase: 'idle', bite: null, msg: '', last: null}); openPaper('fishing'); },
+  sail: {start: () => startSailing(), stop: () => stopSailing(), boat: () => sailing, tapSea(x, z) { if (sailing) sailing.target = {x, z}; }, sim: () => sim.sea}, chest: {state: () => sim.chestState(), buy: id => sim.buy(id), upg: () => upg}, fishGame, angle: k => sim.angle(k), openFishing() { Object.assign(fishGame, {phase: 'idle', bite: null, msg: '', last: null}); openPaper('fishing'); },
   fxState: () => ({flames: flames.visible, debris: debris.count, flood: +flood.toFixed(2), decor: seasonDecor.children.length, townFx: townFx ? townFx.children.length : 0}), photo: o => { photoRaw = null; photoStyle = (o && o.style) || 'postcard'; grabPhoto(); if (o && o.caption) photoCaption = o.caption; const c = composePhoto(), url = c.toDataURL('image/jpeg', .92), d = c.getContext('2d').getImageData(0, Math.round(c.height * .82), c.width, Math.round(c.height * .17)).data; let dark = 0; for (let i = 0; i < d.length; i += 4) if (d[i] < 120) dark++; return {w: c.width, h: c.height, rawW: photoRaw.width, rawH: photoRaw.height, url: url.slice(0, 40), len: url.length, dark}; }, paperText: () => (paperEl ? paperEl.textContent : ''), openPaper, closePaper, seasonDecor: () => seasonDecor.children.length, rodsOut: () => [...rods.values()].filter(r => r.visible).length, highlight: () => ({pin: pin.visible, ring: ring.visible, mode: settings.highlight}), settings, applySettings, setQuality, tier: () => tier, gov, tufts, U, freeze(on = true) { frozen = on; }
 };
