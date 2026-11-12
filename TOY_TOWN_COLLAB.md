@@ -1434,5 +1434,5 @@ A `START` does not prohibit parallel edits. Avoid stepping on each other's uncom
 
 ### 2026-11-12 · Claude · DONE (new storybook town, follow-up 27: clock and train times)
 - **Done**: the tower clock's hands now follow `sim.hour` (they used the animation clock), so the clock, the paper, the journals and the station timetable all read the same town time. The timetable's predicted arrivals are within about 6 minutes of the real train (speed constant 1.45 -> 1.38 for a closer match). New browser assertion that the hands match the hour; both suites pass.
-- **Not verified**: the platform clocks on the station buildings are painted at a fixed time (10:10 style) and do not move; a real phone.
+- **Also**: the central station's porch clock had painted hands at a fixed time; it now has moving hands on the same town time (checked by the same assertion). **Not verified**: a real phone.
 
