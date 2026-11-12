@@ -25,7 +25,7 @@ export function chimeDue(prev, now) {
 // The voices of the new life: hens clucking in the yard, a dog barking, a cat mewing, dolphins chirping as they leap, the whale's song as she blows,
 // the dwarfs' chime as they come out and the tink of their picks. Pure: `s` is what is happening ({zoom 0..1, hens, dogRun, cats, leap, spout, dwarfs}), `t` the timers
 // (newWildTimers()), and the result is a list of [cue, volume]. The ones on the ground are only heard when the camera is close.
-export const newWildTimers = () => ({hen: 2, dog: 9, cat: 16, tink: 3, leap: false, spout: false, dwarfs: 0});
+export const newWildTimers = () => ({hen: 2, dog: 9, cat: 16, tink: 3, leap: false, spout: false, dwarfs: 0, bang: -1});
 export function wildDue(s, t, dt, rnd = Math.random) {
   const out = [], near = clamp01(s.zoom ?? .5);
   if ((t.hen -= dt) <= 0) { t.hen = 3 + rnd() * 6; if (s.hens && near > .3) out.push(['cluck', .4 + .6 * near]); }
@@ -34,6 +34,7 @@ export function wildDue(s, t, dt, rnd = Math.random) {
   if (s.leap && !t.leap) out.push(['dolphin', .45 + .55 * near]); t.leap = !!s.leap;
   if (s.spout && !t.spout) out.push(['whale', .5 + .3 * near]); t.spout = !!s.spout;
   if ((s.dwarfs || 0) > t.dwarfs) out.push(['dwarf', .7]); t.dwarfs = s.dwarfs || 0;
+  { const b = s.bang ?? -1; if (b >= 0 && b !== t.bang) out.push(['pop', .8]); t.bang = b; }   // a firework burst begins
   if ((t.tink -= dt) <= 0) { t.tink = 2.5 + rnd() * 3.5; if (s.dwarfs && near > .3) out.push(['tink', .4 + .5 * near]); }
   return out;
 }
@@ -75,6 +76,7 @@ export function createSound(opts = {}) {
   me.whale = (v = 1) => { const t = ctx.currentTime; tone(120, t, 3.6, .06 * v, {to: 70}); tone(180, t + .3, 3, .03 * v, {to: 105}); };
   me.dwarf = (v = 1) => { const t = ctx.currentTime; [988, 784, 659].forEach((f, i) => tone(f, t + i * .16, .7, .035 * v, {type: 'triangle'})); };
   me.tink = (v = 1) => { const t = ctx.currentTime; tone(2200, t, .08, .03 * v, {type: 'triangle'}); tone(3100, t + .11, .06, .02 * v, {type: 'triangle'}); };
+  me.pop = (v = 1) => { const t = ctx.currentTime; tone(900, t, .5, .05 * v, {type: 'sawtooth', to: 120}); for (let i = 0; i < 6; i++) tone(2400 + rnd() * 1800, t + .25 + i * .07, .05, .018 * v, {type: 'triangle'}); };
   me.blip = () => { if (!me.enabled) return; const t = ctx.currentTime; tone(880, t, .09, .04, {to: 1320}); };
 
   me.toggle = on => {

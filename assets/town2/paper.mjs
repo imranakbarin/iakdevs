@@ -16,7 +16,8 @@ export function edition(d) {
   if (diff('dwarfSeen') || diff('gemsFound')) items.push('Nature notes: ' + [diff('dwarfSeen') ? 'lantern lights were seen out on Dwarf Rock' : '', diff('gemsFound') ? 'a gem left by the dwarfs was found on the harbour beach' : ''].filter(Boolean).join('; ') + '.');
   const fr = diff('friends'); if (fr) items.push('New friendships: ' + plural(fr, 'pair') + ' of neighbours became friends.');
   items.push('The mood of the town: ' + (b.mood > .8 ? 'cheerful' : b.mood > .62 ? 'content' : 'grumpy') + '.');
-  if (d.tomorrow) items.push('Tomorrow, ' + d.tomorrow.dayName + ': ' + (d.tomorrow.market ? d.tomorrow.market + ' at 9; ' : '') + (d.tomorrow.weekend ? 'no school.' : 'school as usual.'));
+  if (d.festival) items.push('The Lantern Festival: lanterns along the shore, paper boats afloat from 19:30 and fireworks at 21:00.');
+  if (d.tomorrow) items.push('Tomorrow, ' + d.tomorrow.dayName + ': ' + (d.tomorrow.market ? d.tomorrow.market + ' at 9; ' : '') + (d.tomorrow.festival ? 'the Lantern Festival at 18:30; ' : '') + (d.tomorrow.weekend ? 'no school.' : 'school as usual.'));
   let headline = 'A quiet day in Toy Town';
   if (d.family && d.family.some(t => /married|born/.test(t))) headline = d.family.find(t => /married|born/.test(t)); else if (coins >= 8) headline = 'Fish fever: ' + plural(coins, 'coin') + ' earned at the harbour'; else if (visits >= 6) headline = 'Crowds at the market'; else if (d.titles && d.titles.length) headline = d.titles[0]; else if (delivered >= 6) headline = 'The little train had a busy day';
   return {title: 'The Toy Town Times', date: d.dayName, headline, items};

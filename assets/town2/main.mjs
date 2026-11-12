@@ -17,6 +17,7 @@ import {newsStory} from './stories.mjs';
 import {createWildlife} from './wildscene.mjs';
 import {COOP, PLOTS} from './garden.mjs';
 import {PETS} from './wildlife.mjs';
+import {createFestival} from './festscene.mjs';
 import {newBoat, stepBoat, sightings, MOOR} from './sail.mjs';
 import {buildDrops, buildUpgrades} from './wild3d.mjs';
 import {UPGRADES, canBuy, balance as chestBal} from './chest.mjs';
@@ -92,6 +93,7 @@ const boat = buildBoat(built.material); boat.position.set(MOOR.x, -.02, MOOR.z);
 const critters = [];
 for (let k = 0; k < 6; k++) { const kind = k < 3 ? 'cow' : 'sheep', g = buildAnimal(kind, built.material); scene.add(g); critters.push({g, k, x: PADDOCK.x0 + .6 + rand(k + 5) * (PADDOCK.x1 - PADDOCK.x0 - 1.2), z: PADDOCK.z0 + .6 + rand(k + 9) * (PADDOCK.z1 - PADDOCK.z0 - 1.2), tx: 0, tz: 0, wait: rand(k + 30) * 4, hd: rand(k) * 6, bounds: PADDOCK, step: kind === 'cow' ? .1 : .13}); }
 for (let k = 0; k < 3; k++) { const g = buildAnimal('duck', built.material); scene.add(g); critters.push({g, k: 10 + k, x: POND.x + (rand(k + 40) - .5) * 1.4, z: POND.z + (rand(k + 50) - .5) * .8, tx: 0, tz: 0, wait: rand(k + 60) * 3, hd: rand(k + 70) * 6, bounds: {x0: POND.x - 1.1, x1: POND.x + 1.1, z0: POND.z - .65, z1: POND.z + .65}, step: .12, water: true}); }
+const fest = createFestival({scene});
 const wild = createWildlife({scene, sim, people, material: built.material, season, lite}); critters.push(...wild.pick.map(a => ({g: a.g, wild: true, describe: a.describe})));
 critters.push({g: boat, wild: true, boat: true, describe: () => ({title: 'The harbour boat', lines: sailing ? ['You are at the helm', 'Tap the sea to steer, or use the arrow keys'] : ['Tied up just off the end of the pier', 'You can take it out to sea']})});
 function moveCritters(dt) {
@@ -206,6 +208,7 @@ function tap(cx, cy) {
     return;
   }
   select(o && sel && o.kind === sel.kind && o.id === sel.id && o.kind === 'building' ? null : o);
+  if (o && o.kind === 'building' && sim.hunt.active) { const r = sim.huntTap(o.id); if (r.kind === 'next') { toast('A mark! Clue ' + (r.step + 1) + ' of ' + r.of + ': ' + r.clue.text, 7); sound.blip(); if (paperMode === 'nature') renderPaper(); } else if (r.kind === 'done') { toast('The dwarfs\' treasure! ' + r.reward + ' coins for the town chest.', 6); sound.blip(); if (paperMode === 'nature') renderPaper(); } else if (r.kind === 'wrong') toast('Not the place the riddle means.', 2); }
 }
 if (sendBtn) sendBtn.addEventListener('click', () => { if (sel && sel.kind === 'building') { assigning = sel.id; toast('Now tap the building the parcel should go to (or tap anywhere else to cancel).', 8); } });
 addEventListener('keydown', e => { if (e.key === 'Escape' && assigning) { assigning = null; toast('No parcel sent.', 2); } });
@@ -290,6 +293,7 @@ function renderPaper() {
     go.addEventListener('click', () => { if (g.phase === 'bite') { const r = angleReel(g.bite, nowSec() - g.t0); sim.angle(r.kind); g.msg = angleMessage(r.kind); g.last = r.kind; g.phase = 'done'; if (r.kind !== 'miss') toast(angleMessage(r.kind), 3); sound.blip(); renderPaper(); } else { g.bite = newBite(Math.random); g.phase = 'wait'; g.t0 = nowSec(); renderPaper(); } });
     const stats = el('p', 'You have caught ' + sim.fishing.player + (sim.fishing.golden ? ' (' + sim.fishing.golden + ' golden)' : '') + '.'); row.append(go); paperEl.append(row, stats); return; }
   if (paperMode === 'nature') { paperEl.append(hallTabs(), el('h2', 'Nature notes')); const plots = {}; for (const p of PLOTS) plots[p.kind] = (plots[p.kind] || 0) + 1;
+    if (sim.wild.gemsFound >= 1 || sim.sea.dwarfs >= 1 || sim.hunt.active || sim.hunt.done) { paperEl.append(el('h3', 'Treasure map')); const hc = sim.huntClue(); if (hc) { paperEl.append(el('p', 'Clue ' + (sim.hunt.step + 1) + ' of 5: ' + hc.text), el('p', hc.at === 'islet' ? 'Take the harbour boat to the landing in front of the cave.' : 'Tap the building the riddle means.')); } else { const row = el('div', undefined, 'tabs'), b = el('button', sim.hunt.done ? 'Ask for another map' : 'Ask the dwarfs for a map'); b.id = 'huntBegin'; b.addEventListener('click', () => { sim.huntBegin(); renderPaper(); }); row.append(b); paperEl.append(row); } if (sim.hunt.done) paperEl.append(el('p', 'Maps solved: ' + sim.hunt.done + ' (' + sim.hunt.coins + ' coins).')); }
     for (const sec of natureReport({sea: sim.sea, wild: sim.wild, nameOf: id => (sim.residents.find(r => r.id === id) || {def: {name: 'Somebody'}}).def.name, pets: PETS, plots})) { paperEl.append(el('h3', sec.title)); for (const l of sec.lines) paperEl.append(el('p', l)); }
     return; }
   if (paperMode === 'case') { paperEl.append(hallTabs(), el('h2', 'The case book')); const m = sim.mystery.active;
@@ -379,7 +383,7 @@ function weatherLight() {
   { const r = sim.weather.rain; { let n = 0; if (r > .25) sim.residents.forEach((q, i) => { const g = people.get(q.id); if (g.visible && q.state === 'walking') umbrellas.userData.set(n++, g.position.x, g.position.y, g.position.z, g.rotation.y, BROLLY[i % BROLLY.length]); }); umbrellas.userData.show(n); } rain.position.set(view.x, 0, view.z); rain.userData.update(time, season === 'winter' || r < .02 ? 0 : r);
     const day = 1 - L.night, amount = season === 'winter' ? Math.max(.25, r) : season === 'summer' ? (L.night > .5 ? .7 * (1 - r) : 0) : (season === 'autumn' ? .5 : .4) * day * (1 - r * .7);
     fall.position.set(view.x, 0, view.z); fall.userData.update(time, amount, windNow);
-    sound.update({wild: wild.soundState(), dark: L.night, rain: r, season, hour: sim.hour, trainMoving: Math.abs(sim.train.v) > .1, trainAt: sim.train.at, zoom: 1 - clamp(0, (view.dist - 7) / 50, 1)}, 0.0001 + lastDt); }
+    sound.update({wild: {...wild.soundState(), bang: fest.bang()}, dark: L.night, rain: r, season, hour: sim.hour, trainMoving: Math.abs(sim.train.v) > .1, trainAt: sim.train.at, zoom: 1 - clamp(0, (view.dist - 7) / 50, 1)}, 0.0001 + lastDt); }
   // the street lamps, one by one as the lamplighter reaches them (faint in daylight, bright after dark), and the puddles
   built.lampGlow.material.opacity = .4 + .55 * L.night;
   sim.lamps.forEach((l, i) => { const v = Math.round(l.lit * 20) / 20; if (v !== lampDrawn[i]) { lampDrawn[i] = v; built.lampGlow.userData.set(i, v); } });
@@ -420,7 +424,7 @@ function sync(dt) {
   { trainCars[0].localToWorld(v3b.set(0, .66, .36)); const moving = Math.abs(sim.train.v) > .1;   // the engine's smoke: more when it is working
     smoke.update(dt, {x: v3b.x, y: v3b.y, z: v3b.z, vx: windNow.x * .14, vz: windNow.z * .14}, moving ? 5 : 1.2);
     smoke.puffs.forEach((p, i) => { const z = smoke.size(p); smokeM.makeScale(z, z, z).setPosition(p.x, p.y, p.z); smokeMesh.setMatrixAt(i, smokeM); }); smokeMesh.instanceMatrix.needsUpdate = true; }
-  wild.update(dt, time, {hour: sim.hour, day: sim.day, rain: sim.weather.rain, night: nightNow, dist: view.dist}); moveCritters(dt); if (!sailing) { boat.position.y = -.02 + Math.sin(time * 1.3) * .022; boat.rotation.z = Math.sin(time * 1.1) * .03; }
+  fest.update(dt, time, {weekday: sim.weekday, hour: sim.hour}); wild.update(dt, time, {hour: sim.hour, day: sim.day, rain: sim.weather.rain, night: nightNow, dist: view.dist, festival: !!sim.festival}); moveCritters(dt); if (!sailing) { boat.position.y = -.02 + Math.sin(time * 1.3) * .022; boat.rotation.z = Math.sin(time * 1.1) * .03; }
   built.moving.top.inner.rotation.y = time * 2.2; built.moving.sails.inner.rotation.z = -time * .55;
   built.moving.minute.inner.rotation.z = -time * .1; built.moving.hour.inner.rotation.z = -time * .1 / 12;
   clouds.rotation.y = time * .012;
@@ -491,6 +495,6 @@ window.ToyTownNew = {
   setWeather(kind, seconds = 600) { sim.weather.force(kind, seconds); },
   critterList: () => critters, coop: COOP, plots: PLOT_COUNT,
   wild: {update: wild.update, hens: wild.hens, pets: wild.pets, dwarfs: wild.dwarfs, islet: wild.islet, meadow: wild.meadow, gardens: wild.gardens, borders: wild.borders, out: () => wild.dwarfsOut({day: sim.day, hour: sim.hour}), forceDwarfs: (n, u) => wild.forceDwarfs(n, u), pick: wild.pick},
-  sail: {start: () => startSailing(), stop: () => stopSailing(), boat: () => sailing, tapSea(x, z) { if (sailing) sailing.target = {x, z}; }, sim: () => sim.sea}, chest: {state: () => sim.chestState(), buy: id => sim.buy(id), upg: () => upg}, fishGame, angle: k => sim.angle(k), openFishing() { Object.assign(fishGame, {phase: 'idle', bite: null, msg: '', last: null}); openPaper('fishing'); },
+  sail: {start: () => startSailing(), stop: () => stopSailing(), boat: () => sailing, tapSea(x, z) { if (sailing) sailing.target = {x, z}; }, sim: () => sim.sea}, fest, festival: () => sim.festival, chest: {state: () => sim.chestState(), buy: id => sim.buy(id), upg: () => upg}, fishGame, angle: k => sim.angle(k), openFishing() { Object.assign(fishGame, {phase: 'idle', bite: null, msg: '', last: null}); openPaper('fishing'); },
   fxState: () => ({flames: flames.visible, debris: debris.count, flood: +flood.toFixed(2), decor: seasonDecor.children.length, townFx: townFx ? townFx.children.length : 0}), photo: o => { photoRaw = null; photoStyle = (o && o.style) || 'postcard'; grabPhoto(); if (o && o.caption) photoCaption = o.caption; const c = composePhoto(), url = c.toDataURL('image/jpeg', .92), d = c.getContext('2d').getImageData(0, Math.round(c.height * .82), c.width, Math.round(c.height * .17)).data; let dark = 0; for (let i = 0; i < d.length; i += 4) if (d[i] < 120) dark++; return {w: c.width, h: c.height, rawW: photoRaw.width, rawH: photoRaw.height, url: url.slice(0, 40), len: url.length, dark}; }, paperText: () => (paperEl ? paperEl.textContent : ''), openPaper, closePaper, seasonDecor: () => seasonDecor.children.length, rodsOut: () => [...rods.values()].filter(r => r.visible).length, highlight: () => ({pin: pin.visible, ring: ring.visible, mode: settings.highlight}), settings, applySettings, setQuality, tier: () => tier, gov, tufts, U, freeze(on = true) { frozen = on; }
 };

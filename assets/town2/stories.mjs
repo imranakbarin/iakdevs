@@ -55,6 +55,7 @@ export const STORIES = [
   {id: 'whalewatch', relaxed: true, season: 'summer', title: 'A whale has been spotted far out: everyone gathers on the beach', days: 'weekend', hours: [10, 16], wet: 'dry', go: [['bea', [['hut', 40]]], ['sparky', [['hut', 40]]], ['june', [['hut', 35]]]]},
   {id: 'dwarflights', relaxed: true, title: 'Granny Moss and Mrs Pott watch for lights on Dwarf Rock', hours: [18, 21], wet: 'dry', go: [['moss', [['hut', 40]]], ['pott', [['hut', 40]]]]},
   {id: 'gardentour', relaxed: true, title: "Ivy shows Auntie June and Mrs Pott round her garden", hours: [10, 15], wet: 'dry', go: [['june', [['c9', 35]]], ['pott', [['c9', 35]]], ['ivy', [['c9', 35]]]]},
+  {id: 'lanternfest', relaxed: true, festival: true, weekday: 5, title: 'The Lantern Festival: lanterns, paper boats and fireworks at the harbour', hours: [18.5, 21.8], go: [['salt', [['hut', 60]]], ['finn', [['hut', 60]]], ['gill', [['hut', 60]]], ['moss', [['hut', 60]]], ['pott', [['hut', 60]]], ['june', [['hut', 60]]], ['bea', [['hut', 60]]], ['dot', [['hut', 60]]], ['dash', [['hut', 60]]], ['crumb', [['hut', 60]]]]},
 ].concat(LIFE_STORIES);
 
 // Which story a headline calls up: keywords first, then its category. Rain and fire are staged too.
