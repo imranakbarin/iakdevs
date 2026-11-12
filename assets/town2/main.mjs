@@ -17,6 +17,7 @@ import {newsStory} from './stories.mjs';
 import {createWildlife} from './wildscene.mjs';
 import {COOP, PLOTS} from './garden.mjs';
 import {PETS} from './wildlife.mjs';
+import {newBite, markerAt, reel as angleReel, message as angleMessage} from './angling.mjs';
 const PLOT_COUNT = PLOTS.length;
 import {describeResident, describeBuilding, describeVehicle, describeAnimal, describeTrain} from './inspect.mjs';
 
@@ -51,7 +52,7 @@ const moonPath = (() => { const c = document.createElement('canvas'); c.width = 
   const t = new THREE.CanvasTexture(c), m = new THREE.Mesh(new THREE.PlaneGeometry(7, 46).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({map: t, transparent: true, opacity: 0, depthWrite: false, blending: THREE.AdditiveBlending, fog: false})); m.renderOrder = 1; m.visible = false; return m; })(); scene.add(moonPath);
 const hemi = scene.children.find(o => o.isHemisphereLight), seaMat = built.sea.material, tmp = new THREE.Color();
 if (q.get('h')) sim.setHour(+q.get('h'));
-const people = new Map(), cars = new Map();
+const people = new Map(), cars = new Map(), rodSeen = new Map(), rodTug = new Map();
 const marketDef = BUILDINGS.find(b => b.id === 'market'), rods = new Map(), BROLLY = ['red', 'yellow', 'pink', 'blue', 'purple', 'orange', 'teal'];
 const seasonDecor = buildSeasonDecor(season, sim.graph, built.material); scene.add(seasonDecor); let townFx = null, fxKey = '';
 const umbrellas = buildUmbrellas(); scene.add(umbrellas); const flames = buildFlames(), debris = buildDebris(); scene.add(flames, debris); const fireSmoke = createSmoke(16, 3.2), fireSmokeMesh = new THREE.InstancedMesh(new THREE.SphereGeometry(1, 8, 6), new THREE.MeshLambertMaterial({color: '#4a4a52', transparent: true, opacity: .75, depthWrite: false}), 16); fireSmokeMesh.frustumCulled = false; fireSmokeMesh.visible = false; scene.add(fireSmokeMesh); const fireM = new THREE.Matrix4();
@@ -169,7 +170,7 @@ function select(o) {
   ring.scale.setScalar(RING[o.kind]); refreshCard(); if (sendBtn) sendBtn.hidden = !(o.kind === 'building' && BUILDINGS.find(b => b.id === o.id).door > 0); if (journalBtn) { journalBtn.hidden = o.kind !== 'resident'; if (paperMode === 'journal' && o.kind === 'resident') renderPaper(); }
 }
 function refreshCard() {
-  if (!sel || !cardEl) return; const d = describe(sel), p = posOf(sel), gone = !p && sel.kind === 'resident';
+  if (!sel || !cardEl) return; if (fishBtn) fishBtn.hidden = !(sel.kind === 'resident' && isFishing(sel.id)); const d = describe(sel), p = posOf(sel), gone = !p && sel.kind === 'resident';
   const lines = gone ? [describeResident(sim, sim.residents.find(r => r.id === sel.id)).lines[0]] : d.lines, text = d.title + '|' + lines.join('|');
   if (text === cardText) return; cardText = text; cardEl.querySelector('b').textContent = d.title; const box = cardEl.querySelector('div'); box.textContent = '';
   for (const l of lines) { const e = document.createElement('span'); e.textContent = l; box.append(e); }
@@ -189,7 +190,7 @@ function pick(cx, cy) {
   return near ? {kind: 'building', id: near.id} : null;
 }
 // Sending a parcel: press the button on a building's card, then tap where it should go.
-const sendBtn = cardEl && cardEl.querySelector('#send'), toastEl = document.getElementById('toast'); let assigning = null, toastAt = 0;
+const fishBtn = cardEl && cardEl.querySelector('#fishBtn'), sendBtn = cardEl && cardEl.querySelector('#send'), toastEl = document.getElementById('toast'); let assigning = null, toastAt = 0;
 function toast(text, secs = 4) { if (!toastEl) return; toastEl.textContent = text; toastEl.classList.add('on'); toastAt = secs; }
 function tap(cx, cy) {
   const o = pick(cx, cy);
@@ -231,6 +232,13 @@ function el(tag, text, cls) { const e = document.createElement(tag); if (text !=
 function hallTabs() {
   const tabs = el('div', undefined, 'tabs'); for (const [m, label] of [['today', 'Today'], ['yesterday', 'Yesterday'], ['hall', 'Town hall'], ['case', 'Case'], ['nature', 'Nature']]) { const b = el('button', label); if (m === paperMode) b.className = 'on'; b.disabled = m === 'yesterday' && !sim.paper('yesterday'); b.addEventListener('click', () => { paperMode = m; renderPaper(); }); tabs.append(b); } return tabs;
 }
+const nowSec = () => performance.now() / 1000; let fishMarker = null; const fishGame = {phase: 'idle', bite: null, t0: 0, msg: '', last: null};
+function fishTick() {
+  if (paperMode !== 'fishing') return; const g = fishGame;
+  if (g.phase === 'wait' && nowSec() - g.t0 >= g.bite.wait) { g.phase = 'bite'; g.t0 = nowSec(); renderPaper(); }
+  else if (g.phase === 'bite' && fishMarker) fishMarker.style.left = markerAt(g.bite, nowSec() - g.t0) * 100 + '%';
+}
+const isFishing = id => { const r = sim.residents.find(x => x.id === id); return !!r && r.state === 'inside' && r.at === 'pier'; };
 function renderPaper() {
   if (!paperEl) return; paperEl.textContent = '';
   if (paperMode === 'journal') { const o = sel && sel.kind === 'resident' && sim.residents.find(r => r.id === sel.id); if (!o) { closePaper(); return; }
@@ -246,6 +254,12 @@ function renderPaper() {
     const again = el('button', 'Retake'); again.addEventListener('click', () => { photoRaw = null; renderPaper(); }); act.append(save, again);
     if (navigator.canShare && navigator.share) { const sh = el('button', 'Share'); sh.addEventListener('click', async () => { try { const blob = await (await fetch(url)).blob(), f = new File([blob], 'toy-town.jpg', {type: 'image/jpeg'}); if (navigator.canShare({files: [f]})) await navigator.share({files: [f], title: 'Toy Town', text: photoCaption}); } catch (e) {} }); act.append(sh); }
     paperEl.append(el('h2', 'Photo'), im, row, cap, act); return; }
+  if (paperMode === 'fishing') { paperEl.append(el('h2', 'Fishing off the pier')); const g = fishGame;
+    paperEl.append(el('p', g.phase === 'idle' ? 'Cast your line, then press Reel in when the red marker is over the green zone.' : g.phase === 'wait' ? 'Waiting for a bite...' : g.phase === 'bite' ? 'A bite! Reel in!' : g.msg));
+    const bar = el('div'); bar.id = 'fishbar'; if (g.bite && g.phase !== 'idle') { const z = el('i'); z.style.left = g.bite.at * 100 + '%'; z.style.width = g.bite.zone * 100 + '%'; const m = el('b'); m.style.left = '0%'; bar.append(z, m); fishMarker = m; } else fishMarker = null; paperEl.append(bar);
+    const row = el('div', undefined, 'tabs'), go = el('button', g.phase === 'bite' ? 'Reel in!' : g.phase === 'wait' ? 'Waiting...' : g.phase === 'done' ? 'Cast again' : 'Cast'); go.id = 'fishGo'; go.disabled = g.phase === 'wait';
+    go.addEventListener('click', () => { if (g.phase === 'bite') { const r = angleReel(g.bite, nowSec() - g.t0); sim.angle(r.kind); g.msg = angleMessage(r.kind); g.last = r.kind; g.phase = 'done'; if (r.kind !== 'miss') toast(angleMessage(r.kind), 3); sound.blip(); renderPaper(); } else { g.bite = newBite(Math.random); g.phase = 'wait'; g.t0 = nowSec(); renderPaper(); } });
+    const stats = el('p', 'You have caught ' + sim.fishing.player + (sim.fishing.golden ? ' (' + sim.fishing.golden + ' golden)' : '') + '.'); row.append(go); paperEl.append(row, stats); return; }
   if (paperMode === 'nature') { paperEl.append(hallTabs(), el('h2', 'Nature notes')); const plots = {}; for (const p of PLOTS) plots[p.kind] = (plots[p.kind] || 0) + 1;
     for (const sec of natureReport({wild: sim.wild, nameOf: id => (sim.residents.find(r => r.id === id) || {def: {name: 'Somebody'}}).def.name, pets: PETS, plots})) { paperEl.append(el('h3', sec.title)); for (const l of sec.lines) paperEl.append(el('p', l)); }
     return; }
@@ -261,17 +275,19 @@ function openPaper(mode) { paperMode = mode; paperEl.classList.add('on'); if (pa
 function closePaper() { paperMode = null; paperEl.classList.remove('on'); if (paperBtn) paperBtn.setAttribute('aria-expanded', 'false'); }
 const photoBtn = document.getElementById('photoBtn'); if (photoBtn) photoBtn.addEventListener('click', () => { if (paperMode === 'photo') closePaper(); else { photoRaw = null; openPaper('photo'); } });
 if (paperBtn) paperBtn.addEventListener('click', () => { if (paperMode && paperMode !== 'journal') closePaper(); else openPaper('today'); });
+if (fishBtn) fishBtn.addEventListener('click', () => { Object.assign(fishGame, {phase: 'idle', bite: null, msg: '', last: null}); openPaper('fishing'); });
 if (journalBtn) journalBtn.addEventListener('click', () => { if (paperMode === 'journal') closePaper(); else openPaper('journal'); });
 // The work board: what is being carried and where, and how much has been done.
 const jobsEl = document.getElementById('jobs'); let jobsText = '', jobsAt = 0;
 const KIND = {mail: 'Mail', milk: 'Milk', bread: 'Bread', fish: 'Fish', parcel: 'Parcel'};
+const fishersNow = () => sim.residents.filter(r => r.state === 'inside' && r.at === 'pier').map(r => r.def.name.split(' ')[0]);
 function refreshJobs() {
   if (!jobsEl) return; const lines = sim.cargo.slice(0, 6).map(c => {
     const stn = id => (sim.train.stations.find(x => x.id === id) || {}).name || id, who = c.holder && (sim.residents.find(r => r.id === c.holder) || {def: {}}).def.name;
     const where = c.state === 'carried' ? 'carried by ' + (who || 'somebody') : c.state === 'ready' ? 'waiting for ' + (who || 'a carrier') : c.state === 'train' ? 'on the train' : c.state === 'station' ? 'waiting at ' + stn(c.at) : '';
     return KIND[c.kind] + ': ' + BUILDINGS.find(b => b.id === c.from).name + ' to ' + BUILDINGS.find(b => b.id === c.to).name + ' (' + where + ')';
   });
-  const text = 'Work board | ' + sim.dayName.slice(0, 3) + ' | delivered ' + sim.freightStats.delivered + (sim.fishing.caught ? ' | fish ' + sim.fishing.sold + ' sold, ' + sim.fishing.coins + ' coins' : '') + ' | ' + sim.riders.length + ' on the train | town ' + (sim.townMood > .8 ? 'cheerful' : sim.townMood > .62 ? 'content' : 'grumpy') + '\n' + (lines.join('\n') || 'Nothing to carry just now.');
+  const text = 'Work board | ' + sim.dayName.slice(0, 3) + ' | delivered ' + sim.freightStats.delivered + (sim.fishing.caught ? ' | fish ' + sim.fishing.sold + ' sold, ' + sim.fishing.coins + ' coins' : '') + (fishersNow().length ? ' | fishing: ' + fishersNow().join(', ') : '') + ' | ' + sim.riders.length + ' on the train | town ' + (sim.townMood > .8 ? 'cheerful' : sim.townMood > .62 ? 'content' : 'grumpy') + '\n' + (lines.join('\n') || 'Nothing to carry just now.');
   if (text === jobsText) return; jobsText = text; jobsEl.textContent = ''; const [head, ...rest] = text.split('\n'); const h = document.createElement('b'); h.textContent = head; jobsEl.append(h); for (const l of rest) { const e = document.createElement('span'); e.textContent = l; jobsEl.append(e); }
 }
 if (jobsEl) jobsEl.addEventListener('click', () => jobsEl.classList.toggle('open'));
@@ -352,7 +368,8 @@ function sync(dt) {
     if (stall) { const m = marketDef, lx = [-1.12, 0, 1.12][VENDORS.indexOf(r.id)] ?? 0, lz = -.25, c = Math.cos(m.ry), sn = Math.sin(m.ry), sc = m.scale || 1; r.tx = Math.sin(m.ry); r.tz = Math.cos(m.ry); g.position.set(m.x + (lx * c + lz * sn) * sc, heightAt(m.x, m.z) + .1, m.z + (-lx * sn + lz * c) * sc); g.rotation.set(0, m.ry, 0); }
     else g.position.set(r.x, onPier ? .24 : y + (standing ? .19 : .02 + (chat ? Math.abs(Math.sin(time * 7)) * .025 : Math.abs(Math.sin(step)) * .035)), r.z); g.rotation.set(0, chat ? Math.atan2(r.look.x - r.x, r.look.z - r.z) : Math.atan2(r.tx, r.tz), chat || standing ? 0 : Math.sin(step) * .09);
     if (onPier) g.rotation.y = Math.PI / 2;   // facing out to sea
-    const rod = rods.get(r.id); if (rod) { rod.visible = onPier; if (onPier) rod.userData.bob.position.y = -.1 + Math.sin(time * 2.3 + r.speed * 9) * .012; }
+    const rod = rods.get(r.id); if (rod) { rod.visible = onPier; if (onPier) { const U_ = rod.userData, ca = (r.caught || 0) !== (rodSeen.get(r.id) ?? (r.caught || 0)); if (ca) rodTug.set(r.id, time); rodSeen.set(r.id, r.caught || 0); const k = time - (rodTug.get(r.id) ?? -9), tug = k < 1.2 ? Math.sin(k * 14) * (1 - k / 1.2) : 0;   // a catch makes the float duck and the ripples spread
+        U_.bob.position.y = U_.bobAt[1] + Math.sin(time * 2.3 + r.speed * 9) * .012 - Math.max(0, tug) * .08; U_.ring.scale.setScalar(1 + (k < 1.2 ? k * 2.2 : 0) + .15 * Math.sin(time * 2.3)); U_.ring.material.opacity = k < 1.2 ? .9 * (1 - k / 1.2) + .15 : .3; } }
   }
   { const near = view.dist < 27; if (near !== shadowsNear) { shadowsNear = near; for (const g of people.values()) g.traverse(o => { if (o.isMesh) o.castShadow = near; }); for (const g of cars.values()) g.traverse(o => { if (o.isMesh) o.castShadow = near; }); } }   // (far away the little shadows are not worth a draw each)
   for (const v of sim.vehicles) {
@@ -367,7 +384,7 @@ function sync(dt) {
     flood += ((inc && inc.type === 'storm' ? 1 : 0) - flood) * Math.min(1, dt * .8); built.sea.position.y = -.12 + flood * .2; built.shallows.position.y = -.10 + flood * .2; }
   { const k = JSON.stringify(sim.effects); if (k !== fxKey) { fxKey = k; if (townFx) scene.remove(townFx); townFx = buildTownEffects(sim.effects, sim.graph, built.material); scene.add(townFx); } }
   if (sagaStore && sim.sagaLog.length !== sagaSaved) { sagaSaved = sim.sagaLog.length; saveSaga(sagaStore, sim.sagaState()); }
-  updateFreight(); refreshTrack(); if (paperMode && paperMode !== 'photo' && Math.abs(sim.clock - paperAt) > 1) { paperAt = sim.clock; renderPaper(); }
+  updateFreight(); refreshTrack(); if (paperMode && paperMode !== 'photo' && paperMode !== 'fishing' && Math.abs(sim.clock - paperAt) > 1) { paperAt = sim.clock; renderPaper(); }
   { trainCars[0].localToWorld(v3b.set(0, .66, .36)); const moving = Math.abs(sim.train.v) > .1;   // the engine's smoke: more when it is working
     smoke.update(dt, {x: v3b.x, y: v3b.y, z: v3b.z, vx: windNow.x * .14, vz: windNow.z * .14}, moving ? 5 : 1.2);
     smoke.puffs.forEach((p, i) => { const z = smoke.size(p); smokeM.makeScale(z, z, z).setPosition(p.x, p.y, p.z); smokeMesh.setMatrixAt(i, smokeM); }); smokeMesh.instanceMatrix.needsUpdate = true; }
@@ -378,7 +395,7 @@ function sync(dt) {
   const k = Math.min(1, dt * 6); view.x += (view.tx - view.x) * k; view.z += (view.tz - view.z) * k; view.yaw += (view.tyaw - view.yaw) * k; view.dist += (view.tdist - view.dist) * k;
   if (toastAt > 0 && (toastAt -= dt) <= 0 && toastEl) toastEl.classList.remove('on');
   if ((jobsAt -= dt) <= 0) { jobsAt = .5; refreshJobs(); }
-  trackSelection(dt); placeCamera(); weatherLight(); news(); caption();
+  fishTick(); trackSelection(dt); placeCamera(); weatherLight(); news(); caption();
 }
 // A phone pass: if frames run slow (under ~24 fps for two seconds) the render resolution steps down, and creeps back up when there is room.
 const maxPR = lite ? litePR : Math.min(devicePixelRatio || 1, phone ? 1.5 : 2); let slow = 0, fast = 0, spent = 0, frames = 0;
@@ -442,5 +459,6 @@ window.ToyTownNew = {
   setWeather(kind, seconds = 600) { sim.weather.force(kind, seconds); },
   critterList: () => critters, coop: COOP, plots: PLOT_COUNT,
   wild: {update: wild.update, hens: wild.hens, pets: wild.pets, dwarfs: wild.dwarfs, islet: wild.islet, meadow: wild.meadow, gardens: wild.gardens, borders: wild.borders, out: () => wild.dwarfsOut({day: sim.day, hour: sim.hour}), forceDwarfs: (n, u) => wild.forceDwarfs(n, u), pick: wild.pick},
+  fishGame, angle: k => sim.angle(k), openFishing() { Object.assign(fishGame, {phase: 'idle', bite: null, msg: '', last: null}); openPaper('fishing'); },
   fxState: () => ({flames: flames.visible, debris: debris.count, flood: +flood.toFixed(2), decor: seasonDecor.children.length, townFx: townFx ? townFx.children.length : 0}), photo: o => { photoRaw = null; photoStyle = (o && o.style) || 'postcard'; grabPhoto(); if (o && o.caption) photoCaption = o.caption; const c = composePhoto(), url = c.toDataURL('image/jpeg', .92), d = c.getContext('2d').getImageData(0, Math.round(c.height * .82), c.width, Math.round(c.height * .17)).data; let dark = 0; for (let i = 0; i < d.length; i += 4) if (d[i] < 120) dark++; return {w: c.width, h: c.height, rawW: photoRaw.width, rawH: photoRaw.height, url: url.slice(0, 40), len: url.length, dark}; }, paperText: () => (paperEl ? paperEl.textContent : ''), openPaper, closePaper, seasonDecor: () => seasonDecor.children.length, rodsOut: () => [...rods.values()].filter(r => r.visible).length, highlight: () => ({pin: pin.visible, ring: ring.visible, mode: settings.highlight}), settings, applySettings, setQuality, tier: () => tier, gov, tufts, U, freeze(on = true) { frozen = on; }
 };

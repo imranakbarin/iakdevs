@@ -190,7 +190,7 @@ export const CAST = [
   {id: 'nell', wake: 7, sleep: 19.5, name: 'Nurse Nell', home: 'c11', coat: 'white', hat: 'bonnet', round: [['school', 22], ['cafe', 18], ['c4', 10], ['c11', 50]], weekend: [['cafe', 30], ['c4', 10], ['c11', 70]]},
   {id: 'otto', wake: 6, sleep: 19.5, name: 'Otto the stationmaster', home: 'c12', coat: 'blue', hat: 'cap', round: [['station', 90], ['cafe', 14], ['station', 60], ['c12', 40]]},
   {id: 'bea', wake: 8, sleep: 20, name: 'Bea the bandleader', home: 'c13', coat: 'yellow', hat: 'bow', round: [['toys', 20], ['platform:central', 0, 'ride:east'], ['platform:east', 0, 'ride:central'], ['cafe', 20], ['bakery', 12], ['c13', 50]]},
-  {id: 'finn', wake: 6, sleep: 20, name: 'Finn the fisherman', home: 'c14', coat: 'sky', hat: 'flat', round: [['hut', 15], ['pier', 80], ['hut', 20], ['bakery', 10], ['pier', 60], ['hut', 20], ['c14', 45]]},
+  {id: 'finn', wake: 6, sleep: 20, name: 'Finn the fisherman', home: 'hut', coat: 'sky', hat: 'flat', round: [['hut', 15], ['pier', 80], ['hut', 20], ['bakery', 10], ['pier', 60], ['hut', 45]]},
   {id: 'june', wake: 8, sleep: 20, name: 'Auntie June', home: 'c15', coat: 'purple', hat: 'bun', round: [['bakery', 14], ['platform:central', 0, 'ride:farm'], ['farm', 12], ['platform:farm', 0, 'ride:central'], ['cafe', 30], ['post', 10], ['c15', 60]]},
   {id: 'gill', wake: 6.5, sleep: 19.5, name: 'Mrs Gill the fishmonger', home: 'c14', coat: 'teal', hat: 'bun', round: [['hut', 25], ['cafe', 18], ['bakery', 10], ['hut', 30], ['c14', 45]]},
   {id: 'apple', wake: 6.5, sleep: 19.5, name: 'Mr Apple the greengrocer', home: 'c11', coat: 'green', hat: 'cap', round: [['platform:farm', 0, 'ride:central'], ['bakery', 10], ['cafe', 16], ['platform:central', 0, 'ride:farm'], ['farm', 30], ['c11', 45]]},
