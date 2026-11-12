@@ -438,7 +438,7 @@ function sync(dt) {
   { const k = JSON.stringify(sim.effects); if (k !== fxKey) { fxKey = k; if (townFx) scene.remove(townFx); townFx = buildTownEffects(sim.effects, sim.graph, built.material); scene.add(townFx); } }
   if (sagaStore && (sim.sagaLog.length !== sagaSaved || Math.abs(sim.clock - sagaSavedAt) > 30)) { sagaSaved = sim.sagaLog.length; sagaSavedAt = sim.clock; saveSaga(sagaStore, sim.sagaState()); }   // (and every half minute, so coins earned are kept)
   updateFreight(); refreshTrack(); if (paperMode && paperMode !== 'photo' && paperMode !== 'fishing' && paperMode !== 'sail' && paperMode !== 'chest' && Math.abs(sim.clock - paperAt) > 1) { paperAt = sim.clock; renderPaper(); }
-  { trainCars[0].localToWorld(v3b.set(0, .66, .36)); const moving = Math.abs(sim.train.v) > .1;   // the engine's smoke: more when it is working
+  { trainCars[0].localToWorld(v3b.set(0, .68, .48)); const moving = Math.abs(sim.train.v) > .1;   // the engine's smoke: more when it is working
     smoke.update(dt, {x: v3b.x, y: v3b.y, z: v3b.z, vx: windNow.x * .14, vz: windNow.z * .14}, moving ? 5 : 1.2);
     smoke.puffs.forEach((p, i) => { const z = smoke.size(p); smokeM.makeScale(z, z, z).setPosition(p.x, p.y, p.z); smokeMesh.setMatrixAt(i, smokeM); }); smokeMesh.instanceMatrix.needsUpdate = true; }
   fest.update(dt, time, {weekday: sim.weekday, hour: sim.hour}); wild.update(dt, time, {hour: sim.hour, day: sim.day, rain: sim.weather.rain, night: nightNow, dist: view.dist, festival: !!sim.festival, eco: sim.eco}); moveCritters(dt); if (!sailing) { boat.position.y = -.02 + Math.sin(time * 1.3) * .022; boat.rotation.z = Math.sin(time * 1.1) * .03; }
