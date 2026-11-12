@@ -8,7 +8,9 @@ import {CAST, VEHICLES, BUS_LINES, STATIONS, BUILDINGS, DAY, LAMPS, FREIGHT, MAR
 import {dwarfsOut} from './wildlife.mjs';
 import {GOLDEN_COINS} from './angling.mjs';
 import {festivalAt, FEST} from './festival.mjs';
-import {newEco, stepEco, eatAt, deliver, peace as ecoPeace, summary as ecoSummary} from './ecology.mjs';
+import {newEco, newDay, stepEco, eatAt, deliver, peace as ecoPeace, summary as ecoSummary} from './ecology.mjs';
+import {record as chronicleRecord, push as chroniclePush, clean as chronicleClean, chain as chronicleChain, headline as chronicleHeadline, followUp as chronicleFollow, FOLLOW} from './chronicle.mjs';
+import {pick as directorPick} from './director.mjs';
 import {newHunt, start as huntStart, answer as huntAnswer, clueNow, mapOf} from './treasure.mjs';
 import {upgradeOf, canBuy, cleanChest, balance as chestBalance} from './chest.mjs';
 import {buildGraph, along, leftOf} from './graph.mjs';
@@ -231,6 +233,9 @@ export function createSim(seed = 7, opts = {}) {
     // a junction ahead: take its lock before going in (and only if there is room beyond it), else stop short
     const b = v.route.bounds;
     if (v.held && v.s > v.held.s0 + JUNCTION) { if (holders.get(v.held.node) === v) holders.delete(v.held.node); v.held = null; }
+    if (v.held) for (let i = 1; i < b.length; i++) if (v.s < b[i].s0 + JUNCTION) {   // (a short street: the next junction is already close, so let go of the last one and take the next)
+      if (graph.lane(b[i - 1].lane).to !== v.held.node && v.s > b[i].s0 - JUNCTION - .7) { if (holders.get(v.held.node) === v) holders.delete(v.held.node); v.held = null; } break;
+    }
     if (!v.held) for (let i = 1; i < b.length; i++) if (v.s < b[i].s0 + JUNCTION) {
       const entry = b[i].s0 - JUNCTION, node = graph.lane(b[i - 1].lane).to;
       if (v.s > entry - .7 && v.ghost <= 0) {
@@ -378,7 +383,7 @@ export function createSim(seed = 7, opts = {}) {
   const market = {open: false, visits: 0, opens: 0, next: 0};
   const shoppersNow = () => residents.filter(r => !VENDORS.includes(r.id) && (r.at === 'market' || r.target === 'market')).length;
   function stepMarket() {
-    const d = Math.floor(clock / DAY); if (d !== dayIdx) { if (d > dayIdx) days[d] = snap(); dayIdx = d; stepSaga(d); weekday = (startDay + d) % 7; for (const r of residents) r.step = 0; }
+    const d = Math.floor(clock / DAY); if (d !== dayIdx) { if (d > dayIdx) { closeDay(dayIdx); days[d] = snap(); } dayIdx = d; stepSaga(d); weekday = (startDay + d) % 7; for (const r of residents) r.step = 0; }
     const base = MARKET.days[weekday], cfg = base && {...base, to: base.to + (effects.market === 'longer' ? 2 : 0)}, want = !!cfg && hour >= cfg.from && hour < cfg.to; market.cfg = cfg || null;
     if (want && !market.open) { market.open = true; market.opens++; market.next = clock + 4; for (const id of VENDORS) { const v = resident(id); if (v && v.state !== 'riding' && !v.onPlatform && !v.carrying) { v.errands.unshift(['market', Math.max(10, (cfg.to - hour) * 20), 'vend']); v.until = Math.min(v.until, clock + .5 + VENDORS.indexOf(id)); } }
       if (!story.current) story.current = {id: 'marketday', title: cfg.name + ': the stalls are open until ' + cfg.to + ':00', headline: null, start: clock, end: clock + 30}; }
@@ -488,7 +493,11 @@ export function createSim(seed = 7, opts = {}) {
     sagaLog.push({day: dayIdx, type: 'wedding', text: first(a) + ' and ' + first(b) + ' got married'}); announce('Wedding bells! ' + a.def.name + ' and ' + b.def.name + ' are getting married at the café'); weddingPlan = null;
   }
   // Small stories: every so often, if the cast and the hour and the weather allow, one of them sends a few residents on errands.
-  const story = {current: null, last: {}, count: {}, nextAt: 20, pending: null, log: []};
+  const story = {current: null, last: {}, count: {}, nextAt: 20, pending: null, log: [], causes: []};
+  // the chronicle: each finished day is written down (what the land did, what the town told) and gives tomorrow's story a head start
+  const chronicle = chronicleClean(opts.saga && opts.saga.chronicle); let followUp = chronicle.length ? chronicleFollow(chronicle[chronicle.length - 1]) : null;
+  const liveRecord = () => chronicleRecord(dayIdx, season || 'summer', eco.today, {stories: story.log.slice((days[dayIdx] || days[0] || {stories: 0}).stories || 0), peace: ecoPeace(eco, moodNow()), deliveries: ecoLog.length});
+  function closeDay(d) { const rec = liveRecord(); rec.day = d; chronicle.splice(0, chronicle.length, ...chroniclePush(chronicle, rec)); followUp = chronicleFollow(rec); eco.today = newDay(); }
   const awake = r => r.state === 'inside' && !r.onPlatform && inWindow(hour, r.def.wake ?? 6.5, (r.def.sleep ?? 20.5) - .5 + (festivalAt(weekday, hour) ? 2.5 : 0)) && r.errands.length === 0;
   const resident = id => residents.find(r => r.id === id);
   const fits = (s, forced) => (s.weekday === undefined || s.weekday === weekday) && (!s.effect || effects[s.effect[0]] === s.effect[1]) && (!s.season || !season || s.season === season) && (!s.days || (s.days === 'weekend') === (weekday >= 5)) && (forced || inWindow(hour, s.hours[0], s.hours[1])) && (s.wet === 'wet' ? weather.rain > .4 : s.wet === 'dry' ? weather.rain < .3 : true) && (forced || s.relaxed ? s.go.filter(([who]) => awake(resident(who))).length >= Math.ceil(s.go.length / 2) : s.go.every(([who]) => awake(resident(who))));   // the news will do with half the cast
@@ -509,7 +518,8 @@ export function createSim(seed = 7, opts = {}) {
     }
     let ok = STORIES.filter(s => !s.news && clock - (story.last[s.id] ?? -1e9) > 180 && fits(s));
     if (weekday >= 5 && rnd() < .7) { const we = ok.filter(s => s.days === 'weekend'); if (we.length) ok = we; }   // the weekend's own stories come first
-    if (ok.length) { const least = Math.min(...ok.map(x => story.count[x.id] || 0)), pool = ok.filter(x => (story.count[x.id] || 0) === least); startStory(pool[Math.floor(rnd() * pool.length)]); }   // favour the ones seen least
+    if (followUp && !ok.some(x => x.id === followUp)) { const f = STORIES.find(x => x.id === followUp); if (f && fits(f)) ok.push(f); }
+    if (ok.length) { const least = Math.min(...ok.map(x => story.count[x.id] || 0)), s = directorPick(ok, {eco, followUp, count: story.count, least}, rnd); if (s) { story.causes.push({id: s.id, day: dayIdx, needed: !!s.needs, held: s.needs ? !!s.needs(eco) : true, followed: followUp === s.id}); if (followUp === s.id) followUp = null; startStory(s); } }   // the land's own stories first, then the ones seen least
   }
   function stage(id, headline) { story.pending = {id, headline, until: clock + 150}; story.nextAt = Math.min(story.nextAt, clock + 1); }
   function update(dt) {
@@ -534,7 +544,7 @@ export function createSim(seed = 7, opts = {}) {
     const d = dayIdx; if (which === 'yesterday' && d < 1) return null;
     const start = which === 'today' ? days[d] || days[0] : days[d - 1], end = which === 'today' ? snap() : days[d], name = DAYS[which === 'today' ? weekday : (weekday + 6) % 7], nextDay = which === 'today' ? (weekday + 1) % 7 : weekday;
     const titles = [...new Set(story.log.slice(start.stories, end.stories).map(id => (STORIES.find(x => x.id === id) || {}).title).filter(Boolean))], mk = MARKET.days[which === 'today' ? weekday : (weekday + 6) % 7];
-    const tm = MARKET.days[nextDay], e = edition({dayName: name, start, end, titles, marketName: mk && mk.name, tomorrow: {dayName: DAYS[nextDay], market: tm && tm.name, weekend: nextDay >= 5, festival: nextDay === FEST.weekday}, festival: (which === 'today' ? weekday : (weekday + 6) % 7) === FEST.weekday}); e.which = which; return e;
+    const tm = MARKET.days[nextDay], e = edition({dayName: name, start, end, titles, marketName: mk && mk.name, tomorrow: {dayName: DAYS[nextDay], market: tm && tm.name, weekend: nextDay >= 5, festival: nextDay === FEST.weekday}, festival: (which === 'today' ? weekday : (weekday + 6) % 7) === FEST.weekday}); e.which = which; const rec = which === 'today' ? liveRecord() : chronicle.find(r => r.day === dayIdx - 1); if (rec) { e.chain = chronicleChain(rec); e.chainHeadline = chronicleHeadline(rec, chronicle.find(r => r.day === rec.day - 1)); } if (which === 'today' && followUp) e.chainNext = FOLLOW[followUp]; else if (which === 'yesterday') { const fu = rec && chronicleFollow(rec); if (fu) e.chainNext = FOLLOW[fu]; } return e;
   }
-  return {eco, ecoLog, ecoSummary: () => ecoSummary(eco), get peace() { return ecoPeace(eco, moodNow()); }, get festival() { return festivalAt(weekday, hour); }, hunt, huntBegin, huntTap, huntClue: () => clueNow(hunt), angle, sea, sailEvent, buy, chest, chestState, get chestCoins() { return chestBalance(chestState()); }, wild, get day() { return dayIdx; }, paper, days, graph, residents, vehicles, stops, train, weather, season, lamps, market, fishing, effects, election, mystery, accuse, castVote(id) { if (!election.open || election.you || !election.q.options.some(o => o.id === id)) return false; election.you = id; return true; }, sagaLog, babies, sagaState() { return {chest: chestState(), effects, ages: Object.fromEntries(residents.map(r => [r.id, r.age])), marriages: residents.filter(r => r.spouse && r.id < r.spouse).map(r => [r.id, r.spouse]), babies}; }, cargo, get incident() { return incident; }, incidentLog, trigger(type) { if (!incident) startIncident(type); return incident; }, setEvents(on) { eventsOn = !!on; }, riders, freightLog, freightStats: stats, sendParcel, stationOf, signalFor, timetable, get weekday() { return weekday; }, get dayName() { return DAYS[weekday]; }, needsStats, get townMood() { return residents.reduce((a, r) => a + r.mood.score, 0) / residents.length; }, setBusy(k) { busy = Math.max(.2, Math.min(3, +k || 1)); }, get busy() { return busy; }, get lampsTended() { return tended; }, story, stage, update, get clock() { return clock; }, get hour() { return hour; }, setHour(h) { clock = ((h - 6 + 24) % 24) / 24 * DAY; hour = hourOf(clock); snapLamps(); }, dispatchFire() { const f = vehicles.find(v => v.id === 'fire'); if (f) f.call = 1; }, doorIds: BUILDINGS.filter(b => b.door).map(b => b.id)};
+  return {chronicle, get followUp() { return followUp; }, chronicleNow: liveRecord, eco, ecoLog, ecoSummary: () => ecoSummary(eco), get peace() { return ecoPeace(eco, moodNow()); }, get festival() { return festivalAt(weekday, hour); }, hunt, huntBegin, huntTap, huntClue: () => clueNow(hunt), angle, sea, sailEvent, buy, chest, chestState, get chestCoins() { return chestBalance(chestState()); }, wild, get day() { return dayIdx; }, paper, days, graph, residents, vehicles, stops, train, weather, season, lamps, market, fishing, effects, election, mystery, accuse, castVote(id) { if (!election.open || election.you || !election.q.options.some(o => o.id === id)) return false; election.you = id; return true; }, sagaLog, babies, sagaState() { return {chest: chestState(), chronicle: chronicle.slice(), effects, ages: Object.fromEntries(residents.map(r => [r.id, r.age])), marriages: residents.filter(r => r.spouse && r.id < r.spouse).map(r => [r.id, r.spouse]), babies}; }, cargo, get incident() { return incident; }, incidentLog, trigger(type) { if (!incident) startIncident(type); return incident; }, setEvents(on) { eventsOn = !!on; }, riders, freightLog, freightStats: stats, sendParcel, stationOf, signalFor, timetable, get weekday() { return weekday; }, get dayName() { return DAYS[weekday]; }, needsStats, get townMood() { return residents.reduce((a, r) => a + r.mood.score, 0) / residents.length; }, setBusy(k) { busy = Math.max(.2, Math.min(3, +k || 1)); }, get busy() { return busy; }, get lampsTended() { return tended; }, story, stage, update, get clock() { return clock; }, get hour() { return hour; }, setHour(h) { clock = ((h - 6 + 24) % 24) / 24 * DAY; hour = hourOf(clock); snapLamps(); }, dispatchFire() { const f = vehicles.find(v => v.id === 'fire'); if (f) f.call = 1; }, doorIds: BUILDINGS.filter(b => b.door).map(b => b.id)};
 }
