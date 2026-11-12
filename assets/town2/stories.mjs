@@ -56,6 +56,16 @@ export const STORIES = [
   {id: 'dwarflights', relaxed: true, title: 'Granny Moss and Mrs Pott watch for lights on Dwarf Rock', hours: [18, 21], wet: 'dry', go: [['moss', [['hut', 40]]], ['pott', [['hut', 40]]]]},
   {id: 'gardentour', relaxed: true, title: "Ivy shows Auntie June and Mrs Pott round her garden", hours: [10, 15], wet: 'dry', go: [['june', [['c9', 35]]], ['pott', [['c9', 35]]], ['ivy', [['c9', 35]]]]},
   {id: 'lanternfest', relaxed: true, festival: true, weekday: 5, title: 'The Lantern Festival: lanterns, paper boats and fireworks at the harbour', hours: [18.5, 21.8], go: [['salt', [['hut', 60]]], ['finn', [['hut', 60]]], ['gill', [['hut', 60]]], ['moss', [['hut', 60]]], ['pott', [['hut', 60]]], ['june', [['hut', 60]]], ['bea', [['hut', 60]]], ['dot', [['hut', 60]]], ['dash', [['hut', 60]]], ['crumb', [['hut', 60]]]]},
+  // stories the land has earned: the story director (director.mjs) only tells these when their `needs` hold, and then three times as readily
+  {id: 'honeycakes', relaxed: true, hours: [8, 17], title: 'The bees were busy: Farmer Hay brings honey to the café and Mr Crumb bakes honey cakes', needs: e => e.honey >= 2.4 && e.bees >= .55, go: [['hay', [['cafe', 14], ['bakery', 14]]], ['crumb', [['cafe', 25]]]]},
+  {id: 'plainrolls', relaxed: true, hours: [8, 17], title: 'No eggs today: Mr Crumb bakes plain rolls and asks Farmer Hay to hurry the hens', needs: e => e.today.swaps >= 1, go: [['hay', [['bakery', 20]]], ['crumb', [['farm', 25]]]]},
+  {id: 'henhelp', relaxed: true, hours: [8, 15], wet: 'dry', title: 'The bakery ran short of eggs yesterday: Dot and Dash help Farmer Hay with the hens', needs: () => false, go: [['hay', [['farm', 30]]], ['dot', [['farm', 30]]], ['dash', [['farm', 30]]]]},
+  {id: 'cowhelp', relaxed: true, hours: [8, 15], wet: 'dry', title: 'The café ran short of milk yesterday: Dot and Dash help Farmer Hay with the cows', needs: () => false, go: [['hay', [['barn', 30]]], ['dot', [['barn', 30]]], ['dash', [['barn', 30]]]]},
+  {id: 'eggfeast', relaxed: true, hours: [9, 17], title: 'Plenty of eggs at last: custard tarts at the bakery', needs: e => e.pantry.eggs >= 5 && e.today.swaps === 0 && e.today.meals >= 3, go: [['crumb', [['cafe', 20]]], ['pott', [['bakery', 25]]]]},
+  {id: 'bloomwalk', relaxed: true, hours: [10, 16], wet: 'dry', title: 'The wildflowers are in bloom: Ivy and Auntie June walk out to the farm to see the bees', needs: e => e.flowers >= .8, go: [['ivy', [['farm', 35]]], ['june', [['farm', 35]]]]},
+  {id: 'seaquiet', relaxed: true, hours: [9, 17], title: 'The sea is resting: Captain Salt mends his nets at the café while the fish come back', needs: e => e.sea < .45 || e.rest, go: [['salt', [['cafe', 40]]], ['finn', [['cafe', 40]]]]},
+  {id: 'greatcatch', relaxed: true, hours: [11, 17], title: 'A great catch! Everyone comes to the café for fresh fish', needs: e => e.sea > .8 && e.today.caught >= 5, go: [['bea', [['cafe', 30]]], ['moss', [['cafe', 30]]]]},
+  {id: 'mousetrouble', relaxed: true, hours: [9, 17], title: 'Mice in the barn: Farmer Hay calls Constable Bell', needs: e => e.pests > .55, go: [['hay', [['barn', 30]]], ['bell', [['barn', 20]]]]}
 ].concat(LIFE_STORIES);
 
 // Which story a headline calls up: keywords first, then its category. Rain and fire are staged too.

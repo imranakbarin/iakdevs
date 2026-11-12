@@ -7,7 +7,7 @@ export function edition(d) {
   const fish = diff('fishCaught'), sold = diff('fishSold'), coins = diff('coins'), delivered = diff('delivered'), rides = diff('ridden'), visits = diff('marketVisits'), rainMin = Math.round(diff('rain') / 20 * 60);
   const rain = rainMin < 20 ? 'Dry all day' : rainMin < 240 ? 'Some rain (' + Math.round(rainMin / 60 * 10) / 10 + ' hours)' : 'A wet day (' + Math.round(rainMin / 60) + ' hours of rain)';
   items.push('Weather: ' + rain + '.');
-  if (fish || sold) items.push('The harbour: ' + plural(fish, 'fish') + ' caught, ' + sold + ' sold in town for ' + plural(coins, 'coin') + '.');
+  if (fish || sold) items.push('The harbour: ' + plural(fish, 'fish', 'fish') + ' caught, ' + sold + ' sold in town for ' + plural(coins, 'coin') + '.');
   if (delivered || rides) items.push('Goods and travel: ' + plural(delivered, 'delivery', 'deliveries') + ', ' + plural(rides, 'train journey', 'train journeys') + '.');
   if (visits) items.push((d.marketName || 'The market') + ': ' + plural(visits, 'visit') + ' to the stalls.');
   if (d.titles && d.titles.length) items.push('Stories: ' + d.titles.slice(0, 4).join('; ') + (d.titles.length > 4 ? '; and ' + (d.titles.length - 4) + ' more' : '') + '.');

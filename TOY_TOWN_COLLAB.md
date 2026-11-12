@@ -1398,3 +1398,14 @@ A `START` does not prohibit parallel edits. Avoid stepping on each other's uncom
 - **Tests**: logic and browser suites pass (93 draw calls); close-ups of every garden in summer, and of the orchard, water garden and pavilion in winter and spring, checked by hand.
 - **Not verified**: a real phone; autumn gardens (only the code path); the pick-up and taxi near-touch.
 
+
+### 2026-11-12 · Claude · START (new storybook town, follow-up 24: the story director and the town chronicle (ecosystem phases D and E))
+- **Base**: master e61b3dc. **Request (owner)**: "GO AHEAD" with the ecosystem plan (one thing depends on another; a beautiful story every day with a cause). **Plan**: `chronicle.mjs` (pure): each day is closed into a record (weather, bloom, bees, honey, eggs, milk, catches, sea, shortages, stories) and turned into a cause chain for the paper ("rain -> the meadow bloomed -> the bees were busy -> honey cakes at the café"), a headline, and a follow-up for the next morning; `director.mjs` (pure): chooses the day's stories by the state of the land (stories get `needs` conditions: honey cakes, plain rolls, plenty of eggs, a bloom walk, a resting sea, mice in the barn) with the follow-up boosted; the chronicle is saved with the saga so the town remembers; the paper's Today/Yesterday pages show "How it happened". Then phase F (player influence) as its own PR.
+
+### 2026-11-12 · Claude · DONE (new storybook town, follow-up 24: the story director and the town chronicle)
+- **Request (owner)**: "GO AHEAD" on the ecosystem plan (phases D and E). **Done**: spec section 4f. New `chronicle.mjs` and `director.mjs` (pure), nine land-earned stories in `stories.mjs`, chronicle saved with the saga, "The Town Chronicle" on the paper (Today and Yesterday). Egg supply retuned (.016/s, a bake uses .6 of an egg) so the bakery runs short only now and then.
+- **Bugs found on the way**: a vehicle on a short street kept the lock of the previous junction and drove through traffic at the next one (a farm cart and a bus, 0.03 apart); fixed in `sim.mjs`. A plural ("6 fishs") in the paper.
+- **Tests**: new logic block (chain, headlines, follow-ups, damaged saves, director weights, an 8-day sim, saga round trip); older statistical tests loosened where the new stories shift the random sequence (a crowd peak of 12, the mystery test runs 2.2 days, the 'ghost' vehicles are exempt from the overlap check).
+- **Not verified**: a real phone; autumn and winter chains were only read in logic; whether the nine new stories feel varied after many weeks (only eight days were soaked).
+- **Still to come**: F) player influence (plant flowers, feed hens, rest the sea, beehive).
+

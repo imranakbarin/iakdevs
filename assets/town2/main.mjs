@@ -310,7 +310,13 @@ function renderPaper() {
     if (m.feedback) paperEl.append(el('p', m.feedback)); if (!m.over) { const sel_ = el('select'); sel_.setAttribute('aria-label', 'Who did it?'); for (const r of sim.residents) { if (m.wrong.includes(r.id)) continue; const o = el('option', r.def.name); o.value = r.id; sel_.append(o); } const b = el('button', 'Accuse'); b.addEventListener('click', () => { sim.accuse(sel_.value); renderPaper(); }); const row = el('div', undefined, 'tabs'); row.append(sel_, b); paperEl.append(row, el('p', 'You may be wrong twice. The residents\' journals show who was where.')); }
     return; }
   const tabs = hallTabs();
-  const e = sim.paper(paperMode) || sim.paper('today'); paperEl.append(tabs, el('h2', e.title), el('h3', e.date + ': ' + e.headline)); for (const it of e.items) paperEl.append(el('p', it));
+  const e = sim.paper(paperMode) || sim.paper('today'); paperEl.append(tabs, el('h2', e.title), el('h3', e.date + ': ' + e.headline));
+  if (e.chain && e.chain.length) {   // the chronicle: how the day came about, link by link, and what the town will do about it
+    paperEl.append(el('h3', 'The Town Chronicle' + (e.chainHeadline ? ': ' + e.chainHeadline : '')));
+    e.chain.forEach((t, i) => paperEl.append(el('p', (i ? '\u21b3 ' : '') + t.charAt(0).toUpperCase() + t.slice(1) + '.')));
+    if (e.chainNext) paperEl.append(el('p', 'Tomorrow: ' + e.chainNext + '.'));
+  }
+  for (const it of e.items) paperEl.append(el('p', it));
 }
 function openPaper(mode) { paperMode = mode; paperEl.classList.add('on'); if (paperBtn) paperBtn.setAttribute('aria-expanded', 'true'); panelEl.classList.remove('on'); renderPaper(); }
 function closePaper() { paperMode = null; paperEl.classList.remove('on'); if (paperBtn) paperBtn.setAttribute('aria-expanded', 'false'); }

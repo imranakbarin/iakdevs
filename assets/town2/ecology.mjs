@@ -17,7 +17,7 @@ export function stepEco(e, dt, ctx) {
   const bloomTarget = clamp(e.meadow * S.bloom * (rain > .7 ? .85 : 1) + e.boost.flowers, 0, 1); e.flowers += (bloomTarget - e.flowers) * Math.min(1, dt * .004);
   const beeTarget = clamp((.1 + e.flowers * .9) * S.bee * (rain > .6 ? .7 : 1), FLOOR.bees, 1); e.bees += (beeTarget - e.bees) * Math.min(1, dt * .003);
   const honey = e.bees * e.flowers * dt * .004; e.honey = Math.min(CAP.honey, e.honey + honey); e.today.honey += honey;
-  const fed = clamp(e.meadow * .8 + e.boost.hens + .15), eggs = fed * dt * .011, milk = clamp(e.meadow * .9 + .1) * dt * .016;
+  const fed = clamp(e.meadow * .8 + e.boost.hens + .15), eggs = fed * dt * .016, milk = clamp(e.meadow * .9 + .1) * dt * .016;
   const e0 = e.farm.eggs, m0 = e.farm.milk; e.farm.eggs = Math.min(CAP.eggs, e.farm.eggs + eggs); e.farm.milk = Math.min(CAP.milk, e.farm.milk + milk); e.today.eggs += e.farm.eggs - e0; e.today.milk += e.farm.milk - m0;
   if (ctx.catches) e.sea = Math.max(FLOOR.sea, e.sea - ctx.catches * .008); e.sea = clamp(e.sea + dt * .00045 * (e.rest ? 2.2 : 1) * (1 - e.sea), FLOOR.sea, 1);
   e.pests = clamp(e.pests + dt * (.0004 - (ctx.cats || 0) * .00022 * (e.pests > .25 ? 1 : .3)), FLOOR.pests, .9);
@@ -28,7 +28,7 @@ export function stepEco(e, dt, ctx) {
 // the cook made do with something plainer (the hunger relief is smaller).
 export function eatAt(e, place) {
   const p = e.pantry, d = e.today; d.meals++;
-  if (place === 'bakery') { if (p.eggs >= 1 && p.milk >= .25) { p.eggs -= 1; p.milk -= .25; return {ok: true, swap: false}; } d.swaps++; d.shortages[p.eggs < 1 ? 'eggs' : 'milk'] = true; return {ok: true, swap: true, lacks: p.eggs < 1 ? 'eggs' : 'milk'}; }
+  if (place === 'bakery') { if (p.eggs >= .6 && p.milk >= .25) { p.eggs -= .6; p.milk -= .25; return {ok: true, swap: false}; } d.swaps++; d.shortages[p.eggs < .6 ? 'eggs' : 'milk'] = true; return {ok: true, swap: true, lacks: p.eggs < 1 ? 'eggs' : 'milk'}; }
   if (place === 'cafe') { if (p.milk >= .25) { p.milk -= .25; if (p.honey >= .5) p.honey -= .5; return {ok: true, swap: false}; } d.swaps++; d.shortages.milk = true; return {ok: true, swap: true, lacks: 'milk'}; }
   return {ok: true, swap: false};
 }
