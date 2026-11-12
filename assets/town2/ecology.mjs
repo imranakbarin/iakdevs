@@ -8,15 +8,15 @@ export const CAP = {honey: 12, eggs: 14, milk: 12};
 const SEASON = {spring: {grow: 1.2, bloom: 1.0, bee: 1}, summer: {grow: 1.0, bloom: 1.2, bee: 1}, autumn: {grow: .55, bloom: .45, bee: .6}, winter: {grow: .12, bloom: 0, bee: .25}};
 export const newEco = () => ({meadow: .6, flowers: .5, bees: .5, honey: 2, farm: {eggs: 3, milk: 3}, pantry: {eggs: 4, milk: 4, honey: 1}, sea: .8, pests: .3, rest: false, boost: {flowers: 0, hens: 0}, today: newDay()});
 // what happened today (reset at the end of each day; the story director reads it)
-export const newDay = () => ({rain: 0, secs: 0, eggs: 0, milk: 0, honey: 0, caught: 0, shortages: {}, swaps: 0, meals: 0, bloomPeak: 0, beesPeak: 0, seaLow: 1});
+export const newDay = () => ({cared: [], rain: 0, secs: 0, eggs: 0, milk: 0, honey: 0, caught: 0, shortages: {}, swaps: 0, meals: 0, bloomPeak: 0, beesPeak: 0, seaLow: 1});
 // ctx: {season, rain 0..1, cats (how many mousers), catches (fish taken since the last step), dayFraction (unused)}
 export function stepEco(e, dt, ctx) {
   const S = SEASON[ctx.season] || SEASON.summer, rain = clamp(ctx.rain || 0);
   e.boost.flowers = Math.max(0, e.boost.flowers - dt / 1440); e.boost.hens = Math.max(0, e.boost.hens - dt / 960);   // a planting or a feed counts for about three days
   e.meadow = clamp(e.meadow + dt * (.0016 * S.grow * (.45 + rain * 1.2) * (1 - e.meadow) - .0003 * (S.grow < .3 ? 1.5 : .25) * e.meadow), FLOOR.meadow, 1);
   const bloomTarget = clamp(e.meadow * S.bloom * (rain > .7 ? .85 : 1) + e.boost.flowers, 0, 1); e.flowers += (bloomTarget - e.flowers) * Math.min(1, dt * .004);
-  const beeTarget = clamp((.1 + e.flowers * .9) * S.bee * (rain > .6 ? .7 : 1), FLOOR.bees, 1); e.bees += (beeTarget - e.bees) * Math.min(1, dt * .003);
-  const honey = e.bees * e.flowers * dt * .004; e.honey = Math.min(CAP.honey, e.honey + honey); e.today.honey += honey;
+  const beeTarget = clamp((.1 + e.flowers * .9) * S.bee * (rain > .6 ? .7 : 1), FLOOR.bees, 1); e.bees += (beeTarget - e.bees) * Math.min(1, dt * .003); if (ctx.hive) e.bees = Math.max(e.bees, .45);   // (a beehive keeps the bees from dwindling)
+  const honey = e.bees * e.flowers * dt * .004 * (ctx.hive ? 1.5 : 1); e.honey = Math.min(CAP.honey, e.honey + honey); e.today.honey += honey;
   const fed = clamp(e.meadow * .8 + e.boost.hens + .15), eggs = fed * dt * .016, milk = clamp(e.meadow * .9 + .1) * dt * .016;
   const e0 = e.farm.eggs, m0 = e.farm.milk; e.farm.eggs = Math.min(CAP.eggs, e.farm.eggs + eggs); e.farm.milk = Math.min(CAP.milk, e.farm.milk + milk); e.today.eggs += e.farm.eggs - e0; e.today.milk += e.farm.milk - m0;
   if (ctx.catches) e.sea = Math.max(FLOOR.sea, e.sea - ctx.catches * .008); e.sea = clamp(e.sea + dt * .00045 * (e.rest ? 2.2 : 1) * (1 - e.sea), FLOOR.sea, 1);
@@ -45,3 +45,12 @@ export const summary = e => ({
   meadow: label(e.meadow, ['bare', 'thin', 'green', 'lush']), flowers: label(e.flowers, ['no flowers', 'a few flowers', 'in bloom', 'a riot of flowers']), bees: label(e.bees, ['few bees', 'some bees', 'busy bees', 'buzzing']),
   sea: label(e.sea, ['quiet', 'thin', 'good', 'teeming']), pests: label(e.pests, ['no mice', 'a few mice', 'some mice', 'mice about'])
 });
+
+// What a visitor can do for the land: plant flowers or feed the hens (each once a day), or rest the sea (a switch). Returns {ok, text, why}.
+export function care(e, kind) {
+  const d = e.today, did = k => d.cared.includes(k);
+  if (kind === 'rest') { e.rest = !e.rest; return {ok: true, text: e.rest ? 'The fishermen will leave the sea to rest' : 'The fishermen may fish again'}; }
+  if (kind === 'flowers') { if (did('flowers')) return {ok: false, why: 'Flowers were planted today: try tomorrow'}; d.cared.push('flowers'); e.boost.flowers = Math.min(.6, e.boost.flowers + .45); return {ok: true, text: 'You planted flowers: the meadow will bloom and the bees will come'}; }
+  if (kind === 'hens') { if (did('hens')) return {ok: false, why: 'The hens were fed today: try tomorrow'}; d.cared.push('hens'); e.boost.hens = Math.min(.6, e.boost.hens + .5); return {ok: true, text: 'You scattered grain: the hens will lay more eggs'}; }
+  return {ok: false, why: 'unknown'};
+}

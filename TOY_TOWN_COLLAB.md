@@ -1419,3 +1419,12 @@ A `START` does not prohibit parallel edits. Avoid stepping on each other's uncom
 - **Slip caught on the way**: a scripted edit matched the wrong `STATIONS.forEach` and cut the railway function out of build.mjs; it was restored from git and re-applied to the right place before anything was committed.
 - **Not verified**: a real phone; autumn and winter trees; every halt up close (only one); the train smoke still comes from the old funnel position.
 
+
+### 2026-11-12 · Claude · START (new storybook town, follow-up 26: you can look after the land (ecosystem phase F))
+- **Base**: master 3cdc17a. **Request (owner)**: "lets do" (phase F). **Plan**: in Nature, "Plant flowers" and "Feed the hens" (once a day each) and "Rest the sea" (a switch the fishermen obey); a "Beehive" for the chest (a steadier bee population and more honey); what you did is written in the chronicle's cause chain.
+
+### 2026-11-12 · Claude · DONE (new storybook town, follow-up 26: look after the land)
+- **Done**: spec 4h; `care()` in `ecology.mjs`/`sim.mjs`, three buttons in Nature, a beehive in the chest, the chronicle mentions what you did. Logic test (once-a-day, rest day, hive through winter, chronicle) and browser suite pass.
+- **Not verified**: a real phone; the hive has no new model (the wildflower field already has hives); buttons are plain-styled.
+- **Ecosystem plan A-F is now complete.**
+

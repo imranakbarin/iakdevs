@@ -5,6 +5,7 @@ export const UPGRADES = [
   {id: 'pierlights', name: 'Lights along the pier', cost: 25, blurb: 'A row of warm lights, lovely at night'},
   {id: 'fountain', name: 'A fountain on a new lawn', cost: 30, blurb: 'A stone fountain with benches in a quiet corner'},
   {id: 'secondboat', name: 'A second boat', cost: 40, blurb: 'Another boat moored beside the pier'},
+  {id: 'beehive', name: 'A beehive for the bees', cost: 20, blurb: 'A hive that keeps the bees from dwindling and makes more honey'},
   {id: 'lighthouse', name: 'A lighthouse on Dwarf Rock', cost: 60, blurb: 'A beam sweeps the sea at night'}
 ];
 export const upgradeOf = id => UPGRADES.find(u => u.id === id);
