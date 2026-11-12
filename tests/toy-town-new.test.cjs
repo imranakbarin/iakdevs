@@ -429,6 +429,14 @@ const root = path.join(__dirname, '..'), mod = f => import('file://' + path.join
       for (const k of ['meadow', 'flowers', 'bees', 'sea']) assert.ok(sw.eco[k] >= 0 && sw.eco[k] <= 1, k + ' in range'); assert.ok(sw.eco.pantry.eggs >= 0 && sw.eco.pantry.milk >= 0 && sw.eco.pantry.honey >= 0, 'the pantry never goes negative'); assert.ok(sw.ecoSummary().meadow && sw.peace > 0 && sw.peace <= 1, 'the sim reports the land and its peace');
       const sr = S.createSim(7, {events: false, season: 'summer'}), sc = S.createSim(7, {events: false, season: 'summer'}); sr.eco.sea = .2; for (let i = 0; i < 20 * 300; i++) { sr.update(.05); sc.update(.05); sr.eco.sea = Math.min(sr.eco.sea, .25); } assert.ok(sr.fishing.caught < sc.fishing.caught * .5 + 1, 'a poor sea is left alone (' + sr.fishing.caught + ' caught vs ' + sc.fishing.caught + ')'); }
   }
+  // follow-up 22: walking you can believe: strides follow the distance covered, legs settle when it stops
+  { const G = await mod('gait.mjs'); const g = G.newGait(); let x = 0; for (let i = 0; i < 40; i++) { x += .5 * .05; G.stepGait(g, .05, x, 0, {k: 17, vref: .5}); }
+    assert.ok(g.walk > .95 && g.amp > .9 && g.amp < 1.1, 'a person walking at normal speed is at full stride (walk ' + g.walk.toFixed(2) + ', amp ' + g.amp.toFixed(2) + ')');
+    const ph = g.phase; assert.ok(Math.abs(ph - (x - .025) * 17) < 1e-6, 'the legs turn with the distance covered, not with the clock');
+    for (let i = 0; i < 60; i++) G.stepGait(g, .05, x, 0, {k: 17, vref: .5}); assert.ok(g.walk < .02 && g.amp < .02 && g.phase === ph, 'standing still: the legs settle and the phase stops');
+    const f = G.newGait(); let y = 0; for (let i = 0; i < 40; i++) { y += 1.2 * .05; G.stepGait(f, .05, y, 0, {k: 17, vref: .5}); } assert.ok(f.amp > 1.3 && f.amp <= 1.5, 'running takes longer strides (amp ' + f.amp.toFixed(2) + ')');
+    const j = G.newGait(); G.stepGait(j, .05, 0, 0); G.stepGait(j, .05, 50, 0); assert.ok(j.phase < 20, 'a jump in position (time travel) does not spin the legs');
+    const Q = await mod('quality.mjs'); assert.ok(Q.PROFILE.low.life === 1, 'pets and hens also show on the low picture tier (phones)'); }
   // the page and its modules exist and the old town redirects to it on request
   for (const f of ['def.mjs', 'curve.mjs', 'graph.mjs', 'sim.mjs', 'build.mjs', 'main.mjs']) assert.ok(fs.existsSync(path.join(root, 'assets/town2', f)), f + ' exists');
   const page = fs.readFileSync(path.join(root, 'toy-town-new.html'), 'utf8'); assert.match(page, /assets\/town2\/main\.mjs/);

@@ -2,9 +2,11 @@
 // and the butterflies; main.mjs builds it once and calls `update` every frame. The sea creatures and the dwarfs are pure functions of time (wildlife.mjs).
 import * as THREE from 'three';
 import {ISLAND, BUILDINGS, heightAt, rand} from './def.mjs';
-import {buildPet, buildHen, buildDolphin, buildWhale, buildDrops, buildButterflies, buildMeadow, buildGardens, buildBorders, buildIslet, buildDwarf} from './wild3d.mjs';
+import {buildPet, buildHen, buildChick, buildDolphin, buildWhale, buildDrops, buildButterflies, buildMeadow, buildGardens, buildBorders, buildIslet, buildDwarf} from './wild3d.mjs';
 import {PETS, HENS, DOLPHINS, WHALES, ISLET, DWARFS, ground, makeWalker, wanderStep, followStep, doorstep, dolphinPose, whalePose, dwarfsOut, dwarfWindow, dwarfPose} from './wildlife.mjs';
-import {PLOTS, COOP} from './garden.mjs';
+import {PLOTS, COOP, clearance} from './garden.mjs';
+import {newGait, stepGait} from './gait.mjs';
+import {setGait} from './limbs.mjs';
 
 const TAU = Math.PI * 2, clamp = (a, v, b) => Math.max(a, Math.min(b, v));
 export function createWildlife({scene, sim, people, material, season, lite = false}) {
@@ -12,17 +14,20 @@ export function createWildlife({scene, sim, people, material, season, lite = fal
   scene.add(gardens, borders, islet, meadow);
   let seed = 100; const rnd = () => rand(seed++);
   const pick = [];   // everything a visitor can tap: {g, describe()}
-  const holder = g => { const o = new THREE.Group(); o.add(g); scene.add(o); return o; };
+  const holder = g => { const o = new THREE.Group(); o.add(g); scene.add(o); if (g.userData.limbMesh) o.userData.limbMesh = g.userData.limbMesh; return o; };
   const ownerName = id => (sim.residents.find(r => r.id === id) || {def: {name: 'its owner'}}).def.name;
 
-  /* ---- hens in the yard ---- */
-  const hens = HENS.map((h, k) => {
-    const g = holder(buildHen(h.kind, h.coat, material)), w = makeWalker(COOP.x + (rand(k + 5) - .5) * COOP.r, COOP.z + (rand(k + 9) - .3) * COOP.r * .8, k * 3 + 400);
-    const a = {kind: h.kind, def: h, g, w, k, describe: () => ({title: h.name + (h.kind === 'hen' ? ' the hen' : ''), lines: [h.kind === 'hen' ? 'Scratching and pecking in the hen yard' : 'Struts about the yard and crows at dawn', w.anim === 'peck' ? 'Busy pecking' : 'Out for a stroll', hensIn() ? 'Shut in the coop for the night' : 'Lays eggs for the café']})};
-    pick.push(a); return a;
-  });
+  /* ---- hens: half in the coop yard, half scratching about the farmyard by the barn, with a few chicks ---- */
   const house = {x: COOP.x, z: COOP.z - COOP.r * .5}, hensIn = () => sim.hour >= 19.6 || sim.hour < 6.2;
   const henFree = (x, z) => Math.hypot(x - COOP.x, z - COOP.z) < COOP.r * .8 && Math.hypot(x - house.x, z - house.z) > .5 && Math.hypot(x - COOP.x - COOP.r * .4 * 0, z - COOP.z - COOP.r * .4) > .2;
+  const farmDoor = doorstep('farm'), farmYard = (() => { let best = {x: farmDoor.x, z: farmDoor.z, c: -1}; for (let r = 1.2; r <= 2.8; r += .2) for (let k = 0; k < 24; k++) { const x = farmDoor.x + Math.cos(k / 24 * TAU) * r, z = farmDoor.z + Math.sin(k / 24 * TAU) * r, c = clearance(x, z) - Math.hypot(x - farmDoor.x, z - farmDoor.z) * .12; if (c > best.c) best = {x, z, c}; } return {cx: best.x, cz: best.z, r: Math.max(.7, Math.min(1.3, best.c + .5))}; })();
+  const YARDS = [{cx: COOP.x, cz: COOP.z, r: COOP.r * .8, free: henFree}, {...farmYard, free: (x, z) => Math.hypot(x - farmYard.cx, z - farmYard.cz) < farmYard.r && clearance(x, z) > .18}];
+  const hens = HENS.map((h, k) => {
+    const yard = YARDS[k % 2], g = holder(buildHen(h.kind, h.coat, material)), w = makeWalker(yard.cx + (rand(k + 5) - .5) * yard.r, yard.cz + (rand(k + 9) - .3) * yard.r * .8, k * 3 + 400);
+    const a = {kind: h.kind, def: h, g, w, k, yard, gait: newGait(), describe: () => ({title: h.name + (h.kind === 'hen' ? ' the hen' : ''), lines: [h.kind === 'hen' ? 'Scratching and pecking about the yard' : 'Struts about the yard and crows at dawn', w.anim === 'peck' ? 'Busy pecking' : 'Out for a stroll', hensIn() ? 'Roosting in the henhouse for the night' : 'Lays eggs for the bakery and the café'].filter(Boolean)})};
+    pick.push(a); return a;
+  });
+  for (let k = 0; k < 4; k++) { const yard = YARDS[1], g = holder(buildChick(material)), w = makeWalker(yard.cx + (rand(k + 50) - .5) * yard.r, yard.cz + (rand(k + 60) - .5) * yard.r, k * 7 + 700), a = {kind: 'chick', def: {name: 'A chick'}, g, w, k: k + 20, yard, gait: newGait(), describe: () => ({title: 'A chick', lines: ['Peeping after the hens', w.anim === 'peck' ? 'Busy pecking' : 'Out for a scamper']})}; pick.push(a); hens.push(a); }
 
   /* ---- dogs and cats ---- */
   const pets = PETS.map((p, k) => {
@@ -53,20 +58,22 @@ export function createWildlife({scene, sim, people, material, season, lite = fal
     wanderStep(w, dt, rnd, {cx: home.x, cz: home.z, radius: 2.6, free: gr.free, speed: .26, pause: [4, 14], idles: ['sit', 'sit', 'groom', 'idle']});
   }
   function updateHen(a, dt, ctx) {
-    const w = a.w; a.g.visible = !hensIn() && ctx.dist < 80 && lifeOn; if (hensIn()) return;
-    wanderStep(w, dt, rnd, {cx: COOP.x, cz: COOP.z, radius: COOP.r * .8, free: henFree, speed: a.kind === 'rooster' ? .24 : .2, pause: [1, 4.5], idles: ['peck', 'peck', 'peck', 'idle']});
+    const w = a.w, y = a.yard; a.g.visible = !hensIn() && ctx.dist < 110 && lifeOn && !(lite && a.kind === 'chick'); if (hensIn()) return;   // (the light version for TVs leaves the chicks out: every animal is a draw call)
+    wanderStep(w, dt, rnd, {cx: y.cx, cz: y.cz, radius: y.r, free: y.free, speed: a.kind === 'rooster' ? .26 : a.kind === 'chick' ? .24 : .22, pause: a.kind === 'chick' ? [.4, 2.5] : [1, 4.5], idles: ['peck', 'peck', 'peck', 'idle']});
   }
-  const poseOn = (a, time) => {
-    const w = a.w, g = a.g; let bob = 0, pitch = 0, sy = 1, sz = 1;
+  const GAIT = {dog: {k: 22, vref: .5}, cat: {k: 26, vref: .26}, hen: {k: 62, vref: .22}, rooster: {k: 52, vref: .26}, chick: {k: 90, vref: .24}};
+  const poseOn = (a, time, dt) => {
+    const w = a.w, g = a.g; let bob = 0, pitch = 0, sy = 1, sz = 1, head = 0; const gt = a.gait || (a.gait = newGait()), moving = w.anim === 'walk' || w.anim === 'run';
+    stepGait(gt, dt, w.x, w.z, {...GAIT[a.kind], v0: .04});
     switch (w.anim) {
-      case 'walk': bob = Math.abs(Math.sin(time * 8 + a.k)) * .012; pitch = Math.sin(time * 8 + a.k) * .05; break;
-      case 'run': bob = Math.abs(Math.sin(time * 13 + a.k)) * .03; pitch = Math.sin(time * 13 + a.k) * .13; break;
-      case 'peck': pitch = .15 + Math.max(0, Math.sin(time * 5 + a.k * 2)) * .85; bob = -.006; break;
-      case 'sit': pitch = a.kind === 'dog' ? -.6 : -.5; bob = -.014; break;
-      case 'groom': pitch = -.3 + Math.sin(time * 6 + a.k) * .09; bob = -.012; break;
-      case 'sleep': sy = .58; sz = 1.08; bob = -.012; break;
-      default: sy = 1 + Math.sin(time * 2 + a.k) * .02;
+      case 'walk': case 'run': bob = Math.abs(Math.sin(gt.phase)) * (a.kind === 'dog' ? .014 : a.kind === 'cat' ? .006 : .006) * gt.amp; pitch = Math.sin(gt.phase * 2) * .03 * gt.amp; break;
+      case 'peck': head = .35 + Math.max(0, Math.sin(time * 5 + a.k * 2)) * .85; pitch = .1; break;   // the head dips right down, the body tips a little
+      case 'sit': pitch = a.kind === 'dog' ? -.6 : -.5; bob = -.014; head = -.12; break;
+      case 'groom': pitch = -.3; head = .5 + Math.sin(time * 6 + a.k) * .35; bob = -.012; break;
+      case 'sleep': sy = .58; sz = 1.08; bob = -.012; head = .5; break;
+      default: sy = 1 + Math.sin(time * 2 + a.k) * .02; head = Math.sin(time * .7 + a.k) * .06;
     }
+    if (g.userData.limbMesh) setGait(g.userData.limbMesh, gt, head);
     g.position.set(w.x, heightAt(w.x, w.z) + bob, w.z); g.rotation.set(pitch, w.hd, 0, 'YXZ'); g.scale.set(1, sy, sz);
   };
 
@@ -92,9 +99,9 @@ export function createWildlife({scene, sim, people, material, season, lite = fal
   let fliesMax = 14, forced = null, lifeOn = true, ecoNow = null, flowersBase = 800;
 
   function update(dt, time, ctx) {
-    const near = ctx.dist < 80 && lifeOn;
-    for (const a of pets) { a.g.visible = near; if (a.kind === 'dog') updateDog(a, dt, ctx); else updateCat(a, dt, ctx); poseOn(a, time); }
-    for (const a of hens) { updateHen(a, dt, ctx); if (a.g.visible) poseOn(a, time); }
+    const near = ctx.dist < 110 && lifeOn;
+    for (const a of pets) { a.g.visible = near; if (a.kind === 'dog') updateDog(a, dt, ctx); else updateCat(a, dt, ctx); poseOn(a, time, dt); }
+    for (const a of hens) { updateHen(a, dt, ctx); if (a.g.visible) poseOn(a, time, dt); }
     // dolphins and whales, and the drops they throw up
     let nd = 0;
     for (const a of dolphins) {

@@ -7,6 +7,7 @@ import {along} from './graph.mjs';
 import {ISLAND, POND, NODES, heightAt, shore, rand, BUILDINGS, PIER} from './def.mjs';
 import {PLOTS, BLOOM, inGarden, freeSpot} from './garden.mjs';
 import {ISLET, ground} from './wildlife.mjs';
+import {limb, limbMesh, limbMaterial} from './limbs.mjs';
 
 const TAU = Math.PI * 2;
 const coneCache = new Map();
@@ -14,6 +15,8 @@ const cone2 = (b, r, h, colour, o = {}) => { const key = r + ':' + h + ':' + (o.
 const polyCache = new Map();
 // low-poly buds and mounds: an octahedron (8 triangles) or a flattened icosahedron (20) instead of a smooth sphere (48 and up): faceted like the rocks, and far cheaper
 const poly = (b, kind, r, colour, o = {}) => { const key = kind + r; if (!polyCache.has(key)) { const g = (kind === 'oct' ? new THREE.OctahedronGeometry(r, 0) : new THREE.IcosahedronGeometry(r, 0)).toNonIndexed(); g.deleteAttribute('uv'); polyCache.set(key, g); } return b.add(polyCache.get(key), colour, o); };
+// an animal with limbs: its own material (its own gait), the mesh kept on the group for `setGait`
+const finishL = (b, scale) => { const m = limbMesh(b, limbMaterial()); m.castShadow = false; const g = new THREE.Group(); g.add(m); g.scale.setScalar(scale); g.userData.limbMesh = m; return g; };
 const finish = (b, material, scale) => { const m = b.mesh(material); m.castShadow = false; const g = new THREE.Group(); g.add(m); g.scale.setScalar(scale); return g; };
 
 /* ---------------- pets ---------------- */
@@ -25,39 +28,52 @@ export function buildPet(kind, coat, material) {
     const [c, l, d] = DOG[coat] || DOG.brown;
     b.sph(.075, c, {y: .15, sx: .92, sy: .86, sz: 1.55}); b.sph(.058, l, {y: .125, z: .06, sx: .9, sy: .7, sz: 1.2});
     if (coat === 'spotted') { b.sph(.05, d, {x: .045, y: .185, z: -.02, sx: .5, sy: .45, sz: .7}); b.sph(.045, d, {x: -.04, y: .17, z: .08, sx: .5, sy: .45, sz: .6}); }
-    for (const sx of [-1, 1]) for (const z of [-.075, .08]) { b.cyl(.019, .016, .1, c, {x: sx * .04, z, seg: 6}); b.sph(.022, l, {x: sx * .04, y: .006, z: z + .008, sz: 1.3, seg: 6}); }
-    b.sph(.06, c, {y: .23, z: .13, seg: 10}); b.sph(.034, l, {y: .215, z: .185, sz: 1.2, seg: 8}); b.sph(.014, '#222', {y: .226, z: .22, seg: 6});
-    for (const sx of [-1, 1]) { b.sph(.011, '#111', {x: sx * .03, y: .245, z: .17, seg: 5}); b.sph(.028, d, {x: sx * .052, y: .235, z: .115, sx: .45, sy: 1.15, sz: .8, rz: sx * .35, seg: 6}); }
-    cone2(b, .016, .1, c, {y: .2, z: -.13, rx: -1.0, seg: 5});
-    b.cyl(.018, .018, .02, '#d94a3a', {y: .195, z: .1, seg: 8});   // a red collar
-    return finish(b, material, 1.4);
+    for (const sx of [-1, 1]) for (const z of [-.075, .08]) { const off = (z > 0 ? sx < 0 : sx > 0) ? 0 : Math.PI; limb(b, 1, [sx * .04, .115, z], off, .8, .022, () => { b.cyl(.019, .016, .1, c, {x: sx * .04, z, seg: 6}); b.sph(.022, l, {x: sx * .04, y: .006, z: z + .008, sz: 1.3, seg: 6}); }); }
+    limb(b, 3, [0, .2, .11], 0, .22, 0, () => {
+      b.sph(.06, c, {y: .23, z: .13, seg: 10}); b.sph(.034, l, {y: .215, z: .185, sz: 1.2, seg: 8}); b.sph(.014, '#222', {y: .226, z: .22, seg: 6});
+      for (const sx of [-1, 1]) { b.sph(.011, '#111', {x: sx * .03, y: .245, z: .17, seg: 5}); b.sph(.028, d, {x: sx * .052, y: .235, z: .115, sx: .45, sy: 1.15, sz: .8, rz: sx * .35, seg: 6}); }
+      b.cyl(.018, .018, .02, '#d94a3a', {y: .195, z: .1, seg: 8});   // a red collar
+    });
+    limb(b, 4, [0, .19, -.12], 0, .6, 0, () => cone2(b, .016, .1, c, {y: .2, z: -.13, rx: -1.0, seg: 5}));
+    return finishL(b, 1.4);
   }
   const [c, l] = CAT[coat] || CAT.ginger;   // cat
   b.sph(.058, c, {y: .1, sx: .85, sy: .85, sz: 1.7}); b.sph(.045, l, {y: .085, z: .05, sx: .85, sy: .7, sz: 1.2});
-  for (const sx of [-1, 1]) for (const z of [-.055, .06]) b.cyl(.013, .012, .07, c, {x: sx * .03, z, seg: 6});
-  b.sph(.046, c, {y: .15, z: .1, seg: 10}); b.sph(.022, l, {y: .14, z: .138, sx: 1.1, seg: 6}); b.sph(.008, '#e88', {y: .146, z: .157, seg: 5});
-  for (const sx of [-1, 1]) { cone2(b, .017, .04, c, {x: sx * .026, y: .2, z: .09, seg: 4}); b.sph(.01, '#7fdc6a', {x: sx * .02, y: .16, z: .138, seg: 5}); }
-  b.tube([[0, .1, -.1], [0, .13, -.17], [0, .2, -.19], [0, .26, -.15]], .011, c);
+  for (const sx of [-1, 1]) for (const z of [-.055, .06]) { const off = (z > 0 ? sx < 0 : sx > 0) ? 0 : Math.PI; limb(b, 1, [sx * .03, .08, z], off, .75, .014, () => { b.cyl(.013, .012, .07, c, {x: sx * .03, z, seg: 6}); b.sph(.014, l, {x: sx * .03, y: .005, z: z + .006, sz: 1.3, seg: 5}); }); }
+  limb(b, 3, [0, .13, .08], 0, .18, 0, () => {
+    b.sph(.046, c, {y: .15, z: .1, seg: 10}); b.sph(.022, l, {y: .14, z: .138, sx: 1.1, seg: 6}); b.sph(.008, '#e88', {y: .146, z: .157, seg: 5});
+    for (const sx of [-1, 1]) { cone2(b, .017, .04, c, {x: sx * .026, y: .2, z: .09, seg: 4}); b.sph(.01, '#7fdc6a', {x: sx * .02, y: .16, z: .138, seg: 5}); }
+  });
+  limb(b, 4, [0, .1, -.1], 0, .5, 0, () => b.tube([[0, .1, -.1], [0, .13, -.17], [0, .2, -.19], [0, .26, -.15]], .011, c));
   if (coat === 'tabby') for (const z of [-.04, .0, .04]) b.box(.11, .01, .012, '#5d4630', {y: .152, z, r: .003});
   if (coat === 'ginger' || coat === 'grey') b.sph(.02, '#ffffff', {y: .06, z: .12, sx: 1.2, seg: 5});
-  return finish(b, material, 1.35);
+  return finishL(b, 1.35);
 }
 
 /* ---------------- hens ---------------- */
 const HEN = {brown: ['#b5742f', '#d89a55', '#7d4a1d'], white: ['#fffaf0', '#ffffff', '#e4d9c0'], speckled: ['#8a7a68', '#b4a590', '#5a4d40'], gold: ['#e0b040', '#f2d680', '#b8862a'], red: ['#a83a22', '#d86a38', '#2d6a4a']};
 export function buildHen(kind, coat, material) {
-  const b = new Bag(), [c, l, d] = HEN[coat] || HEN.brown, big = kind === 'rooster', s = big ? 1.6 : 1.25;
+  const b = new Bag(), [c, l, d] = HEN[coat] || HEN.brown, big = kind === 'rooster', s = big ? 2.4 : 1.9, up = big ? .02 : 0;
   b.sph(.058, c, {y: .1, sx: .9, sy: .92, sz: 1.2}); b.sph(.046, l, {y: .1, z: .042, seg: 8});
   for (const sx of [-1, 1]) b.sph(.04, d, {x: sx * .05, y: .11, z: -.012, sx: .35, sy: .75, sz: 1.15, seg: 6});
-  b.sph(.03, c, {y: .185 + (big ? .02 : 0), z: .07, seg: 8}); b.sph(.011, '#d92b2b', {y: .22 + (big ? .02 : 0), z: .068, sx: .6, sy: 1.4, seg: 5});
-  cone2(b, .011, .035, '#f2a33a', {y: .18 + (big ? .02 : 0), z: .1, rx: Math.PI / 2, seg: 5}); b.sph(.009, '#d92b2b', {y: .16 + (big ? .02 : 0), z: .088, seg: 4}); b.sph(.006, '#111', {x: .02, y: .19 + (big ? .02 : 0), z: .082, seg: 4}); b.sph(.006, '#111', {x: -.02, y: .19 + (big ? .02 : 0), z: .082, seg: 4});
-  if (big) { [[-.25, '#2d6a4a'], [0, '#d94a2b'], [.25, '#f2a33a']].forEach(([a, k]) => cone2(b, .02, .13, k, {y: .18, z: -.09, rx: -.9, rz: a, seg: 5})); }
-  else cone2(b, .03, .08, d, {y: .14, z: -.07, rx: -.8, seg: 5});
+  limb(b, 3, [0, .13, .045], 0, .42, 0, () => {   // the head: it nods as the hen walks and dips right down to peck
+    b.sph(.03, c, {y: .185 + up, z: .07, seg: 8}); b.sph(.011, '#d92b2b', {y: .22 + up, z: .068, sx: .6, sy: 1.4, seg: 5});
+    cone2(b, .011, .035, '#f2a33a', {y: .18 + up, z: .1, rx: Math.PI / 2, seg: 5}); b.sph(.009, '#d92b2b', {y: .16 + up, z: .088, seg: 4}); b.sph(.006, '#111', {x: .02, y: .19 + up, z: .082, seg: 4}); b.sph(.006, '#111', {x: -.02, y: .19 + up, z: .082, seg: 4});
+  });
+  limb(b, 4, [0, .13, -.07], 0, .14, 0, () => {
+    if (big) { [[-.25, '#2d6a4a'], [0, '#d94a2b'], [.25, '#f2a33a']].forEach(([a, k]) => cone2(b, .02, .13, k, {y: .18, z: -.09, rx: -.9, rz: a, seg: 5})); }
+    else cone2(b, .03, .08, d, {y: .14, z: -.07, rx: -.8, seg: 5});
+  });
   if (coat === 'speckled') for (let k = 0; k < 6; k++) b.sph(.009, '#ffffff', {x: (rand(k + 3) - .5) * .09, y: .11 + rand(k + 5) * .05, z: (rand(k + 7) - .5) * .08, seg: 4});
-  for (const sx of [-1, 1]) b.cyl(.006, .006, .055, '#f2a33a', {x: sx * .02, z: .0, seg: 4});
-  return finish(b, material, s);
+  for (const sx of [-1, 1]) limb(b, 1, [sx * .022, .065, 0], sx < 0 ? 0 : Math.PI, .95, .016, () => { b.cyl(.009, .008, .06, '#f2a33a', {x: sx * .022, z: 0, seg: 5}); b.box(.03, .008, .035, '#f2a33a', {x: sx * .022, y: .0, z: .012}); });
+  return finishL(b, s);
 }
-export function buildChick(material) { const b = new Bag(); b.sph(.03, '#ffe066', {y: .04, seg: 8}); b.sph(.02, '#ffe066', {y: .075, z: .025, seg: 8}); cone2(b, .007, .016, '#f2a33a', {y: .075, z: .045, rx: Math.PI / 2, seg: 4}); return finish(b, material, 1); }
+export function buildChick(material) {
+  const b = new Bag(); b.sph(.03, '#ffe066', {y: .05, seg: 8});
+  limb(b, 3, [0, .07, .02], 0, .4, 0, () => { b.sph(.02, '#ffe066', {y: .085, z: .025, seg: 8}); cone2(b, .007, .016, '#f2a33a', {y: .085, z: .045, rx: Math.PI / 2, seg: 4}); b.sph(.005, '#111', {x: .012, y: .09, z: .038, seg: 4}); b.sph(.005, '#111', {x: -.012, y: .09, z: .038, seg: 4}); });
+  for (const sx of [-1, 1]) limb(b, 1, [sx * .012, .03, 0], sx < 0 ? 0 : Math.PI, 1.1, .01, () => b.cyl(.004, .004, .03, '#f2a33a', {x: sx * .012, seg: 4}));
+  return finishL(b, 1.7);
+}
 
 /* ---------------- sea creatures ---------------- */
 export function buildDolphin(material) {
