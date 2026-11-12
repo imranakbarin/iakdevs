@@ -221,7 +221,7 @@ export function createSim(seed = 7, opts = {}) {
     // keep a gap from whoever is just ahead and going my way (or across my path)
     for (const o of vehicles) if (o !== v && o.state !== 'parked') {
       const dx = o.x - v.x, dz = o.z - v.z, f = dx * v.tx + dz * v.tz, lat = Math.abs(dx * v.tz - dz * v.tx), dot = o.tx * v.tx + o.tz * v.tz;
-      if (f > 0 && f < 2.2 && lat < .34 && dot > -.2) want = Math.min(want, Math.max(0, (f - .62) / 1.2) * def.speed);
+      if (f > 0 && f < 2.8 && lat < .34 && dot > -.2) { const gap = .62 + (o.def.kind === 'horsecart' || def.kind === 'horsecart' ? .6 : 0); want = Math.min(want, Math.max(0, (f - gap) / 1.2) * def.speed); }
     }
     for (const r of residents) if (r.state === 'walking') {   // somebody in the road just ahead: wait for them
       const dx = r.x - v.x, dz = r.z - v.z, f = dx * v.tx + dz * v.tz, side = Math.abs(dx * v.tz - dz * v.tx);

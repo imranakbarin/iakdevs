@@ -61,6 +61,8 @@ export class Bag {
   mesh(material) { for (const p of this.parts) if (!p.attributes.sway) p.setAttribute('sway', new THREE.BufferAttribute(new Float32Array(p.attributes.position.count), 1)); const g = mergeGeometries(this.parts, false); g.computeBoundingSphere(); const m = new THREE.Mesh(g, material); this.parts = []; return m; }
 }
 const WARM = '#ffcf70';
+const cone2h = (b, r, h, colour, o = {}) => b.cone(r, h, colour, {...o, seg: 6});
+const cone2c = (b, r, h, colour, o = {}) => { const g = new THREE.ConeGeometry(r, h, o.seg || 6).toNonIndexed(); g.deleteAttribute('uv'); return b.add(g, colour, o); };
 // Shared shader inputs: time, the wind, and how much of each effect the current picture quality allows (see quality.mjs).
 export const U = {time: {value: 0}, wind: {value: new THREE.Vector2(.8, .3)}, sway: {value: 1}, waves: {value: 1}, foam: {value: 1}};
 // Foliage leans and flutters in the wind: a per-vertex `sway` weight (0 for everything that stands still) moves the vertex along the wind.
@@ -262,13 +264,24 @@ const BUILD = {
     for (const dx of [-.5, .5]) lampSmall(b, dx, 1.3);
   },
   barn(b) {
-    b.box(1.9, .95, 1.5, 'red', {r: .1}); b.box(.06, .95, 1.5, 'white', {x: -.95, r: .02}); b.box(.06, .95, 1.5, 'white', {x: .95, r: .02});
-    b.gable(2.0, .78, 1.7, 'brown', {y: .92}); b.box(2.1, .05, .12, 'cream', {y: 1.68, r: .02});
-    b.box(.9, .75, .07, 'cream', {z: .76, r: .04}); for (const s of [-1, 1]) { b.box(.4, .72, .08, 'white', {x: s * .22, z: .765, r: .03}); b.box(.034, .74, .09, 'red', {x: s * .22, z: .765, rz: .0}); } b.box(.034, .74, .09, 'red', {z: .77});
-    b.box(.9, .06, .09, 'red', {x: 0, y: .38, z: .78, rz: .0}); b.sph(.05, 'gold', {y: 1.0, z: .78, seg: 8}); roundWin(b, 0, 1.28, .84, .14);
-    b.cyl(.34, .34, 1.5, 'cream', {x: 1.45, z: -.2, seg: 20}); b.dome(.34, 'slate', {x: 1.45, y: 1.5, z: -.2}); b.cyl(.36, .36, .04, 'red', {x: 1.45, y: .3, z: -.2, seg: 20}); b.cyl(.36, .36, .04, 'red', {x: 1.45, y: .8, z: -.2, seg: 20});
-    for (let k = 0; k < 4; k++) b.cyl(.2, .2, .26, 'yellow', {x: -.3 + k * .0, y: .02, z: 1.35, rz: Math.PI / 2, ry: 0, centre: false, seg: 14, sx: 1, sz: 1}); b.cyl(.2, .2, .26, 'gold', {x: .6, z: 1.2, seg: 14}); b.cyl(.2, .2, .26, 'gold', {x: .6, y: .26, z: 1.2, seg: 14});
-    tub(b, -1.1, 1.0, 'yellow');
+    // a proper red barn: white corner boards, a gambrel roof, big braced doors, a hayloft with a hoist, a cupola with a weathervane, a lean-to, two silos and a stack of hay
+    b.box(1.9, .95, 1.5, 'red', {r: .1}); for (const sx of [-1, 1]) for (const sz of [-1, 1]) b.box(.07, .95, .07, 'white', {x: sx * .93, z: sz * .73, r: .015});
+    b.box(1.94, .06, 1.54, 'white', {y: .9, r: .02});
+    b.gable(2.0, .5, 1.75, '#7a4a30', {y: .92}); b.gable(2.0, .46, 1.0, '#8a5a3c', {y: 1.38}); b.box(2.08, .05, .1, 'cream', {y: 1.83, r: .02});
+    b.box(.9, .75, .07, 'cream', {z: .76, r: .04}); for (const s_ of [-1, 1]) { b.box(.4, .72, .08, 'white', {x: s_ * .22, z: .765, r: .03}); b.box(.034, .74, .09, 'red', {x: s_ * .22, z: .765}); for (const a of [.7, -.7]) b.box(.03, .84, .09, 'red', {x: s_ * .22, y: .36, z: .77, rz: a, centre: true}); } b.box(.034, .74, .09, 'red', {z: .77});
+    b.box(.5, .36, .06, 'cream', {y: 1.0, z: .6, r: .03}); b.box(.36, .26, .08, 'wood', {y: 1.04, z: .63, r: .02}); b.box(.03, .3, .09, 'white', {y: 1.02, z: .64}); b.box(.4, .03, .09, 'white', {y: 1.16, z: .64});   // the hayloft door
+    b.box(.05, .05, .42, 'wood', {y: 1.52, z: .8}); b.cyl(.025, .025, .22, 'slate', {y: 1.3, z: .98, seg: 6}); b.sph(.03, 'gold', {y: 1.3, z: .98, seg: 6});   // the hoist
+    b.box(.2, .17, .2, 'cream', {y: 1.84, r: .03}); b.cone(.17, .17, 'red', {y: 2.0, seg: 4, ry: Math.PI / 4}); b.cyl(.01, .01, .24, 'black', {y: 2.15, seg: 4}); b.box(.2, .05, .02, 'black', {y: 2.3, z: 0}); b.cone(.04, .08, 'black', {x: .12, y: 2.31, rz: -Math.PI / 2, seg: 4});   // the cupola and weathervane
+    b.push(-1.25, 0, -.2); b.box(.6, .5, 1.1, '#b5442f', {r: .06}); b.box(.7, .05, 1.2, '#7a4a30', {y: .52, rz: .18, r: .02}); b.box(.3, .3, .05, 'wood', {y: .0, z: .56}); b.pop();   // a lean-to shed on the side
+    b.cyl(.34, .34, 1.9, '#d8d4c8', {x: 1.45, z: -.2, seg: 20}); b.dome(.34, 'slate', {x: 1.45, y: 1.9, z: -.2}); b.sph(.04, 'gold', {x: 1.45, y: 2.26, z: -.2, seg: 6}); for (const y of [.35, .8, 1.25, 1.7]) b.cyl(.36, .36, .04, 'slate', {x: 1.45, y, z: -.2, seg: 20});
+    b.cyl(.012, .012, 1.6, 'slate', {x: 1.45, y: .2, z: .15, seg: 4}); for (let k = 0; k < 8; k++) b.box(.16, .015, .015, 'slate', {x: 1.45, y: .3 + k * .2, z: .15});   // a ladder up the silo
+    b.cyl(.24, .24, 1.2, '#cfcabb', {x: 1.2, z: -.75, seg: 16}); b.dome(.24, 'slate', {x: 1.2, y: 1.2, z: -.75}); for (const y of [.4, .9]) b.cyl(.26, .26, .03, 'slate', {x: 1.2, y, z: -.75, seg: 16});
+    // hay bales: a stack by the door, and a round bale
+    for (let k = 0; k < 3; k++) b.box(.34, .2, .22, '#e0b84a', {x: -.5 + k * .36, y: 0, z: 1.2, r: .03, ry: .05 * k});   for (let k = 0; k < 2; k++) b.box(.34, .2, .22, '#e8c458', {x: -.32 + k * .36, y: .2, z: 1.2, r: .03});   b.box(.34, .2, .22, '#e0b84a', {x: -.14, y: .4, z: 1.2, r: .03});
+    b.cyl(.2, .2, .26, '#d9a83a', {x: .7, y: 0, z: 1.25, seg: 14, rz: Math.PI / 2, centre: false}); b.cyl(.2, .2, .26, '#e0b84a', {x: 1.05, z: 1.12, seg: 14});
+    // a trough, churns by the door and a wheelbarrow
+    b.box(.5, .12, .16, 'wood', {x: -1.3, y: 0, z: 1.1, r: .02}); b.box(.44, .03, .12, '#6fcdea', {x: -1.3, y: .11, z: 1.1}); for (const x of [.25, .38]) { b.cyl(.045, .045, .12, 'white', {x, y: 0, z: .92, seg: 8}); b.cyl(.046, .046, .02, 'blue', {x, y: .12, z: .92, seg: 8}); }
+    b.push(1.0, 0, .98, -.5); b.box(.2, .06, .3, 'wood', {y: .09, r: .01}); for (const sx of [-1, 1]) b.box(.02, .02, .3, 'wood', {x: sx * .09, y: .1, z: -.28}); b.cyl(.05, .05, .03, 'black', {y: .05, z: .17, rz: Math.PI / 2, centre: true, seg: 8}); b.pop();
   },
   garage(b) {
     b.box(2.0, .9, 1.4, 'sky', {r: .1}); b.box(2.14, .12, 1.54, 'white', {y: .88, r: .05}); b.box(2.0, .08, 1.4, 'red', {y: 1.0, r: .03});
@@ -482,11 +495,26 @@ function pier(bag) {
 }
 
 /* ---------------- the whole static town ---------------- */
+
+// The farmyard round Hay Farm: a vegetable field behind the house with rows of crops and a scarecrow, a well, a haystack, a mailbox and crates of apples.
+function farmYard(b) {
+  b.box(2.3, .04, 1.0, '#6b4a30', {z: -1.9, r: .01});
+  for (let row = 0; row < 5; row++) { const z = -1.55 - row * .17; b.box(2.2, .05, .06, '#5a3d28', {z, y: .04, r: .01});
+    for (let k = 0; k < 9; k++) { const x = -.95 + k * .24 + (row % 2) * .08; if (row < 2) b.sph(.065, k % 2 ? 'leaf' : 'leafLight', {x, y: .09, z, sy: .8, seg: 7, sway: .3}); else if (row < 4) { b.cyl(.012, .016, .1, '#e87a2b', {x, y: .04, z, seg: 5}); cone2h(b, .05, .12, 'leaf', {x, y: .1, z}); } else { b.cyl(.012, .016, .3, 'leaf', {x, y: .04, z, seg: 5, sway: .8}); b.cone(.03, .1, '#e8c458', {x, y: .34, z, seg: 5, sway: .8}); } } }
+  for (const dx of [-1.2, 1.2]) for (let k = 0; k < 6; k++) b.cyl(.014, .018, .28, 'wood', {x: dx, z: -1.45 - k * .19, seg: 5});
+  for (let k = 0; k < 7; k++) b.cyl(.014, .018, .28, 'wood', {x: -1.2 + k * .4, z: -2.45, seg: 5});
+  b.box(2.4, .03, .03, 'wood', {y: .14, z: -2.45}); b.box(2.4, .03, .03, 'wood', {y: .22, z: -2.45});
+  b.cyl(.014, .014, .62, 'wood', {x: .6, y: .04, z: -1.9, seg: 5}); b.box(.5, .03, .03, 'wood', {x: .6, y: .45, z: -1.9}); b.sph(.07, '#e8d29a', {x: .6, y: .7, z: -1.9, seg: 8}); cone2h(b, .1, .1, '#8a5a3c', {x: .6, y: .8, z: -1.9}); b.box(.3, .22, .02, '#b5442f', {x: .6, y: .34, z: -1.9, r: .005});   // the scarecrow
+  b.cyl(.26, .3, .32, '#bdb4a2', {x: 1.5, z: .1, seg: 14}); b.cyl(.2, .2, .02, '#3d6f8f', {x: 1.5, y: .32, z: .1, seg: 14}); for (const sz of [-1, 1]) b.cyl(.015, .015, .5, 'wood', {x: 1.5, y: .32, z: .1 + sz * .24, seg: 5}); b.gable(.62, .2, .6, '#7a4a30', {x: 1.5, y: .8, z: .1, ry: Math.PI / 2}); b.cyl(.01, .01, .3, 'slate', {x: 1.5, y: .56, z: .1, seg: 4, rz: Math.PI / 2}); b.cyl(.05, .04, .08, 'wood', {x: 1.5, y: .46, z: .1, seg: 8});   // the well
+  cone2h(b, .32, .5, '#d9b94a', {x: -1.6, y: 0, z: -.9}); b.cyl(.03, .03, .1, 'wood', {x: -1.6, y: .5, z: -.9, seg: 4});   // a haystack
+  b.cyl(.015, .015, .5, 'wood', {x: .95, z: 1.25, seg: 5}); b.box(.2, .13, .3, '#d94a3a', {x: .95, y: .5, z: 1.25, r: .04}); b.box(.1, .03, .02, 'white', {x: .95, y: .6, z: 1.38});   // the mailbox
+  for (let k = 0; k < 3; k++) { b.box(.26, .12, .2, 'wood', {x: -1.4 + k * .3, y: 0, z: .75, r: .01}); for (let m = 0; m < 3; m++) b.sph(.045, 'red', {x: -1.46 + k * .3 + m * .06, y: .13, z: .75, seg: 6}); }
+}
 export function buildTown(graph, season = 'summer') {
   setSeason(season);
   const bag = new Bag(), anim = {}, material = toyMaterial();
   roads(bag, graph); scenery(bag, graph); railway(bag, graph); paddock(bag); pond(bag); pier(bag);
-  for (const def of BUILDINGS) { const local = {}; bag.push(def.x, heightAt(def.x, def.z), def.z, def.ry, def.scale || 1); BUILD[def.type](bag, def, local); bag.pop(); for (const k in local) anim[k] = {...local[k], def}; }
+  for (const def of BUILDINGS) { const local = {}; bag.push(def.x, heightAt(def.x, def.z), def.z, def.ry, def.scale || 1); BUILD[def.type](bag, def, local); if (def.id === 'farm') farmYard(bag); bag.pop(); for (const k in local) anim[k] = {...local[k], def}; }
   const town = bag.mesh(material); town.castShadow = true; town.receiveShadow = true;
   const glow = bag.glowMesh(new THREE.MeshBasicMaterial({vertexColors: true, transparent: true, opacity: 0, depthWrite: false, fog: false})); glow.visible = false; glow.renderOrder = 2;
   const ground = terrain(graph);
@@ -548,8 +576,37 @@ export function buildVehicle(def, material) {
     b.cone(.09, .2, 'crust', {y: .52, z: -.1, rx: Math.PI, seg: 10}); b.sph(.085, 'pink', {y: .5, z: -.1, seg: 10}); b.sph(.07, 'white', {y: .58, z: -.1, seg: 10}); b.sph(.03, 'red', {y: .66, z: -.1, seg: 6}); wheels([-.16, .16], [-.2, .2], .075); face(.14, .3, .08); }
   else if (def.kind === 'fire') { b.box(.38, .26, .8, c, {y: .1, r: .07}); b.box(.34, .22, .24, c, {y: .1, z: .3, r: .06}); b.box(.3, .1, .02, '#bfe6f7', {y: .26, z: .425, r: .01}); b.box(.3, .03, .5, 'white', {y: .37, z: -.1, r: .01});
     for (const x of [-.09, .09]) b.box(.03, .04, .6, 'yellow', {x, y: .42, z: -.1, rz: 0}); for (let k = 0; k < 6; k++) b.box(.2, .02, .022, 'yellow', {y: .43, z: -.38 + k * .1}); b.sph(.045, 'gold', {y: .4, z: .38, seg: 8}); b.box(.18, .05, .09, 'blue', {y: .38, z: .22, r: .02}); wheels([-.18, .18], [-.28, .28], .08); face(.14, .425, .1); }
-  else { b.box(.36, .17, .62, c, {y: .09, r: .07}); b.box(.3, .15, .3, c, {y: .24, z: -.04, r: .06}); b.box(.31, .09, .26, '#bfe6f7', {y: .27, z: -.04, r: .03}); b.box(.26, .09, .31, '#bfe6f7', {y: .27, z: -.04, r: .03}); if (def.id === 'taxi') { b.box(.14, .06, .08, 'white', {y: .39, z: -.04, r: .02}); for (let k = 0; k < 5; k++) for (const s of [-1, 1]) b.box(.01, .035, .06, k % 2 ? 'black' : 'white', {x: s * .181, y: .16, z: -.24 + k * .12}); } wheels([-.17, .17], [-.2, .2], .08); face(.15, .31, .1); for (const s of [-1, 1]) b.sph(.03, 'red', {x: s * .11, y: .17, z: -.31, seg: 8}); }
-  const m = b.mesh(material); m.castShadow = true; const g = new THREE.Group(); g.add(m); g.scale.setScalar(1.05); return g;
+  else if (def.kind === 'horsecart') {
+    // a farm cart with a sturdy brown horse: the horse in front (+z), the cart behind, shafts between them
+    const brown = '#8a5a3c', dark = '#3a2a20';
+    b.sph(.15, brown, {y: .33, z: .62, sx: .95, sy: .85, sz: 1.9, seg: 12}); b.sph(.12, brown, {y: .35, z: .86, seg: 10});
+    b.cyl(.065, .085, .26, brown, {y: .4, z: .98, rx: -.75, seg: 8}); b.sph(.075, brown, {y: .6, z: 1.08, sz: 1.35, seg: 10}); b.sph(.05, '#d9b98a', {y: .56, z: 1.17, sz: 1.2, seg: 8}); b.sph(.012, 'black', {x: .035, y: .63, z: 1.12, seg: 4}); b.sph(.012, 'black', {x: -.035, y: .63, z: 1.12, seg: 4});
+    for (const sx of [-1, 1]) { b.cone(.02, .06, brown, {x: sx * .035, y: .7, z: 1.03, seg: 4}); for (const z of [.48, .76]) { b.cyl(.026, .02, .27, brown, {x: sx * .085, y: .0, z, seg: 6}); b.cyl(.03, .03, .03, dark, {x: sx * .085, y: .0, z, seg: 6}); } }
+    b.box(.04, .22, .1, dark, {y: .52, z: .96, rx: -.7}); cone2c(b, .035, .13, dark, {y: .38, z: .33, rx: .9}); b.cyl(.1, .1, .05, '#b5532f', {y: .44, z: .84, rx: Math.PI / 2 - .2, seg: 12});   // mane, tail and the red collar
+    for (const sx of [-1, 1]) b.box(.012, .012, .68, '#7a5230', {x: sx * .1, y: .34, z: .1, rx: .12});   // the shafts
+    b.box(.34, .06, .56, '#a3744a', {y: .22, z: -.18, r: .02}); for (const sx of [-1, 1]) b.box(.03, .14, .56, '#8a5a3c', {x: sx * .18, y: .28, z: -.18, r: .01}); b.box(.34, .14, .03, '#8a5a3c', {y: .28, z: -.46, r: .01}); b.box(.34, .12, .03, '#8a5a3c', {y: .28, z: .1, r: .01});
+    for (const sx of [-1, 1]) { b.cyl(.14, .14, .04, '#7a5230', {x: sx * .2, y: .14, z: -.2, rz: Math.PI / 2, centre: true, seg: 14}); for (let k = 0; k < 3; k++) b.box(.02, .26, .02, '#a3744a', {x: sx * .225, y: .14, z: -.2, rx: k * Math.PI / 3, centre: true}); b.cyl(.03, .03, .05, 'slate', {x: sx * .2, y: .14, z: -.2, rz: Math.PI / 2, centre: true, seg: 8}); }
+    b.box(.26, .05, .13, '#6b4423', {y: .4, z: .02}); b.box(.26, .1, .03, '#6b4423', {y: .44, z: .06});   // the driver's seat
+    for (const [x, z] of [[-.07, -.34], [.07, -.34], [-.07, -.2], [.07, -.2]]) { b.cyl(.045, .045, .13, 'white', {x, y: .25, z, seg: 8}); b.cyl(.046, .046, .02, 'blue', {x, y: .38, z, seg: 8}); }
+    b.box(.2, .12, .16, '#e0b84a', {y: .25, z: -.04, r: .02});
+  }
+  else if (def.kind === 'pickup') {
+    // a 1950s pick-up: rounded cab, long open bed, big fenders, chrome grille and round lamps; two tones
+    b.box(.34, .13, .72, c, {y: .1, r: .05}); b.sph(.1, c, {x: .17, y: .16, z: .2, sx: .3, sy: .9, sz: 1.5, seg: 8}); b.sph(.1, c, {x: -.17, y: .16, z: .2, sx: .3, sy: .9, sz: 1.5, seg: 8}); b.sph(.1, c, {x: .17, y: .16, z: -.2, sx: .3, sy: .9, sz: 1.5, seg: 8}); b.sph(.1, c, {x: -.17, y: .16, z: -.2, sx: .3, sy: .9, sz: 1.5, seg: 8});
+    b.box(.3, .2, .24, 'cream', {y: .22, z: .1, r: .06}); b.box(.31, .09, .2, '#bfe6f7', {y: .28, z: .1, r: .03}); b.box(.26, .1, .02, '#bfe6f7', {y: .27, z: .22, r: .01});
+    b.box(.34, .13, .3, c, {y: .1, z: .38, r: .05}); b.box(.26, .08, .03, '#c8c8c8', {y: .13, z: .54}); b.box(.2, .04, .02, '#c8c8c8', {y: .18, z: .535});
+    for (const sx of [-1, 1]) { b.sph(.03, '#fff8d8', {x: sx * .12, y: .21, z: .53, seg: 8}); b.box(.03, .14, .46, '#8a5a3c', {x: sx * .165, y: .16, z: -.26, r: .01}); } b.box(.3, .03, .46, '#a3744a', {y: .13, z: -.26}); b.box(.3, .12, .03, '#8a5a3c', {y: .16, z: -.5});
+    for (const k of [-.05, .05]) b.cyl(.04, .04, .11, 'white', {x: k, y: .17, z: -.2, seg: 8}); b.box(.2, .1, .18, '#e0b84a', {y: .16, z: -.38, r: .02});
+    wheels([-.17, .17], [-.24, .24], .085); for (const s of [-1, 1]) b.sph(.025, '#d94a3a', {x: s * .13, y: .15, z: -.5, seg: 6});
+  }
+  else { // a 1950s saloon: swept fenders over cream whitewall tyres, a rounded cabin, little tail fins, chrome bumpers and big round lamps
+    b.box(.34, .12, .66, c, {y: .1, r: .05}); for (const x of [-.17, .17]) for (const z of [-.2, .2]) b.sph(.095, c, {x, y: .15, z, sx: .35, sy: .95, sz: 1.6, seg: 8});
+    b.sph(.17, 'cream', {y: .27, z: -.03, sx: 1.0, sy: .62, sz: 1.35, seg: 12}); b.box(.27, .075, .24, '#bfe6f7', {y: .27, z: -.03, r: .03}); b.box(.22, .075, .3, '#bfe6f7', {y: .27, z: -.03, r: .03});
+    for (const s of [-1, 1]) { b.box(.04, .09, .13, c, {x: s * .155, y: .27, z: -.31, rz: s * .15, r: .01}); b.sph(.032, '#fff8d8', {x: s * .11, y: .15, z: .335, seg: 8}); b.sph(.018, 'black', {x: s * .11, y: .15, z: .36, seg: 6}); b.sph(.022, 'red', {x: s * .12, y: .17, z: -.33, seg: 6}); }
+    b.box(.3, .035, .03, '#d8d8d8', {y: .08, z: .34, r: .012}); b.box(.3, .035, .03, '#d8d8d8', {y: .08, z: -.34, r: .012}); b.box(.2, .04, .02, '#d8d8d8', {y: .14, z: .335});
+    if (def.id === 'taxi' || def.id === 'taxi2') { b.box(.14, .06, .08, 'white', {y: .4, z: -.04, r: .02}); for (let k = 0; k < 5; k++) for (const s of [-1, 1]) b.box(.01, .03, .06, k % 2 ? 'black' : 'white', {x: s * .175, y: .15, z: -.24 + k * .12}); }
+    wheels([-.17, .17], [-.2, .2], .08); }
+  const m = b.mesh(material); m.castShadow = true; if (def.kind === 'horsecart') m.position.z = -.33; const g = new THREE.Group(); g.add(m); g.scale.setScalar(1.05); return g;   // (the cart's origin is the middle of horse and cart together)
 }
 /* ---------------- more moving things: train, boat, farm animals, ducks ---------------- */
 // The little train: an engine with a funnel and two coaches, facing +z, length about 1.9.

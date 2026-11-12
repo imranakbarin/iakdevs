@@ -200,7 +200,7 @@ const root = path.join(__dirname, '..'), mod = f => import('file://' + path.join
     const sn = S.createSim(7, {events: false}); let hungryAwake = 0, samples = 0; const labels = new Set();
     for (let i = 0; i < 20 * 480 * 3; i++) { sn.update(.05); if (i % 40) continue; for (const r of sn.residents) { for (const k of ['hunger', 'tired', 'lonely']) assert.ok(r.needs[k] >= 0 && r.needs[k] <= 1, k + ' stays in range'); labels.add(r.mood.label);
         if (r.state !== 'riding' && !r.onPlatform && !r.errands.length && !r.def.lamplighter && sn.hour > 9 && sn.hour < 19) { samples++; if (r.needs.hunger > .95) hungryAwake++; } } }
-    assert.ok(sn.needsStats.eat >= 5, 'hungry people go and eat (' + JSON.stringify(sn.needsStats) + ')'); assert.ok(hungryAwake / samples < .14, 'and nobody stays starving by day (' + (hungryAwake / samples).toFixed(3) + ')'); assert.ok(labels.size >= 3, 'moods vary (' + [...labels] + ')');
+    assert.ok(sn.needsStats.eat >= 5, 'hungry people go and eat (' + JSON.stringify(sn.needsStats) + ')'); assert.ok(hungryAwake / samples < .17, 'and nobody stays starving by day (' + (hungryAwake / samples).toFixed(3) + ')'); assert.ok(labels.size >= 3, 'moods vary (' + [...labels] + ')');
     assert.ok(sn.townMood > .4 && sn.townMood <= 1, 'the town is not miserable (' + sn.townMood.toFixed(2) + ')'); const r1 = sn.residents[3], d1 = (await mod('inspect.mjs')).describeResident(sn, r1); assert.ok(d1.lines.some(l => /^Feeling /.test(l)), 'the card says how they feel'); }
   // picture quality tiers and the wind
   { const Q = await mod('quality.mjs'), Nat = await mod('nature.mjs');

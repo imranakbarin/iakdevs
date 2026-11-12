@@ -214,6 +214,9 @@ export const VEHICLES = [
   {id: 'milk', kind: 'float', name: 'the milk float', colour: 'white', speed: .7, plan: 'round', targets: ['c2', 'c4', 'c6', 'c10', 'c11', 'c14'], home: 'barn', from: 5.5, to: 10.5},
   {id: 'tractor', kind: 'tractor', name: 'the tractor', colour: 'green', speed: .55, plan: 'wander', targets: ['farm', 'barn', 'mill', 'c14', 'hut', 'school'], home: 'barn', from: 9.5, to: 17},
   {id: 'icecream', kind: 'icecream', name: 'the ice-cream van', colour: 'pink', speed: .8, plan: 'stops', targets: ['cafe', 'post', 'toys', 'school', 'hut', 'station'], home: 'garage', from: 13, to: 18.5},
+  {id: 'farmcart', kind: 'horsecart', name: "Farmer Hay's horse cart", colour: 'brown', speed: .5, plan: 'round', targets: ['bakery', 'cafe', 'market', 'c2', 'c4', 'c10', 'c11', 'farm'], home: 'barn', from: 6, to: 15},
+  {id: 'pickup', kind: 'pickup', name: "the farm pick-up", colour: 'teal', speed: .85, plan: 'wander', targets: ['farm', 'market', 'mill', 'hut', 'barn', 'c14'], home: 'barn', from: 8, to: 18},
+  {id: 'oldcar', kind: 'car', name: 'the blue saloon', colour: 'blue', speed: 1.0, plan: 'taxi', home: 'garage', from: 8, to: 20},
   {id: 'fire', kind: 'fire', name: 'the fire engine', colour: 'red', speed: 1.35, plan: 'call', home: 'fire', from: -1, to: -1, onCall: true}
 ];
 // Freight: things that need moving across town, made automatically by day. Each is picked up at `from` by one of `pick` (who walks it to the platform of the
