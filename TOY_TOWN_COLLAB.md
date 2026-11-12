@@ -1319,3 +1319,9 @@ A `START` does not prohibit parallel edits. Avoid stepping on each other's uncom
 
 ### 2026-11-12 · Claude · START (new storybook town, follow-up 20: realism, the farm, the 1950s, and a living ecosystem)
 - **Base**: master 6045a18. **Request (owner)**: "do all": (1) an ecosystem where things depend on each other (weather, meadow, bees, animals, eggs, milk, fish, bakery, moods) with a story director that makes a story with a cause every day; (2) revamp the gardens and the puddles; (3) the falling weather (rain, snow, leaves) does not look real; (4) a better farm and barn; (5) carts, horse carts and other things from the 1950s or before. **Plan**, one PR each: A) weather, puddles and gardens; B) the farm, the barn and vintage vehicles including horse carts; C) the ecosystem core and its visible signs; D) interdependence in the bakery, café and market; E) the story director and chronicle; F) player influence and tuning.
+
+### 2026-11-12 · Claude · DONE (new storybook town, follow-up 20A: weather, puddles and gardens)
+- **Request (owner)**: revamp the gardens and the puddles; the weather that falls from above does not look realistic. **Done**: see the spec (Weather you can believe in, Formal gardens). The old rain, puddle and fall builders in `build.mjs` stay for summer's fireflies and as a fallback.
+- **Tests**: logic and browser suites pass (screenshots checked by hand: rain, snow, leaves, the gardens).
+- **Not verified**: a real phone (the rain draws 1700 line segments and the snow 1500 points; the lite tier does not thin them yet).
+- **Next in this follow-up**: B) farm, barn and vintage vehicles including horse carts; C) ecosystem core; D) interdependence; E) story director; F) player influence.

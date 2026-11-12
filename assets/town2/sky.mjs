@@ -37,7 +37,7 @@ export function skyAt(hour, rain = 0, season = 'summer') {
   const pos = sunPos.map((v, k) => lerp(v, moonPos[k], dark));
   return {
     hour: h, dark, sky, fog: sky, sea: mix(mix(a[7], b[7], t), '#6f8794', r * .5),
-    hemiSky: mix(a[2], b[2], t), hemiGround: mix(a[3], b[3], t), hemiI: lerp(a[4], b[4], t) * (1 - .12 * r),
+    hemiSky: mix(a[2], b[2], t), hemiGround: mix(a[3], b[3], t), hemiI: lerp(a[4], b[4], t) * (1 - .26 * r),
     sunColor: mix(a[5], b[5], t), sunI: lerp(a[6], b[6], t) * (1 - .6 * r) * (1 - (1 - sunK) * day), sunPos: [pos[0], pos[1] * (1 - (1 - lowK) * day), pos[2]], season,
     glow: Math.max(clamp01((dark - .15) / .5), r * .3),   // windows and lanterns: lit from dusk to dawn, and a little in heavy rain
     stars: clamp01((dark - .6) / .4) * (1 - r), night: dark
