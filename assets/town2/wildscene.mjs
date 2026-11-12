@@ -107,6 +107,7 @@ export function createWildlife({scene, sim, people, material, season, lite = fal
     // the dwarfs
     let out = dwarfsOut(ctx.day, ctx.hour), win = out && dwarfWindow(out.day), dur = win ? (win.to - win.from) * 20 : 0;
     if (forced) { dur = 200; out = {n: forced.n, u: forced.u, day: ctx.day}; }
+    else if (ctx.festival) { dur = 200; out = {n: 3, u: .25 + ((time * .02) % .55), day: ctx.day}; }   // (the dwarfs come out for the Lantern Festival)
     let nl = 0;
     for (const a of dwarfs) {
       const p = out && a.i < out.n ? dwarfPose(a.i, out.u * dur, dur) : {inside: true};
