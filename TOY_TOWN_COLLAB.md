@@ -1428,3 +1428,6 @@ A `START` does not prohibit parallel edits. Avoid stepping on each other's uncom
 - **Not verified**: a real phone; the hive has no new model (the wildflower field already has hives); buttons are plain-styled.
 - **Ecosystem plan A-F is now complete.**
 
+
+### 2026-11-12 · Claude · START (new storybook town, follow-up 27: the tower clock and the train timetable must show the same time)
+- **Base**: master 1762cb4. **Request (owner, caps)**: "the clock times must sync with the train times; they both are on different times". **Cause found**: the tower clock's hands turned with the real-time animation clock, not the town's hour, while the timetable (inspect card) and the paper use the sim hour. **Plan**: drive the hands from `sim.hour`; check the timetable's predicted arrival hours against the real train (within 6 minutes; tune its speed constant); add a browser assertion that the hands match `sim.hour`.
