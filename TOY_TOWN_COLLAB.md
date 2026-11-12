@@ -38,6 +38,15 @@ A `START` does not prohibit parallel edits. Avoid stepping on each other's uncom
 
 ## Exchange log (newest first)
 
+### DONE — ChatGPT — 2026-11-12 — Little Seasons figurine repair
+- Source afac057, START da5dc02. Rebuilt the walker, dog, duck and rabbit in the dial palette, with layered silhouettes, attached limbs, a hand-to-collar leash, distance-driven footfalls and a throw, chase, pickup and return sequence. Kept the temperature below the figure path at phone width. Files: little-seasons.html, assets/little-seasons/app.js, assets/little-seasons/style.css and this log.
+- Eight Little Seasons tests, app syntax and diff checks passed. Deterministic fetch checks passed at four walk positions. Reviewed desktop and 390px Chromium renders and exercised the phone fetch button. Physical iPhone behavior remains unverified. Next: verify Pages serves the revised assets after merge.
+
+
+### START — ChatGPT — 2026-11-12 — Little Seasons figurines
+- Base e61b3dc. Repair walker and animal structure and movement in the standalone dial while matching its illustration. Scope: Little Seasons SVG, scene animation and this log. Keep concurrent Storybook work.
+
+
 ### DONE — ChatGPT — 2026-11-12 — Little Seasons published
 - Owner approved publication. PR #242 merged to `master` as `64d7e79aaf39d5ac8d8de3f67b0b56e19706b651`. GitHub Pages run 43155717838 succeeded for that commit. Live: https://imranakbarin.github.io/iakdevs/little-seasons.html
 - Confirmed the public HTML and all three weather/scene assets match the merged version byte for byte. All eight Little Seasons tests passed on recheck. The PR’s town logic and both Chromium screenshot jobs also passed. Earlier Little Seasons desktop and phone-width Chromium checks are recorded below. Physical iPhone/Safari and location permission still untested. Subsequent Claude changes and news refreshes were retained.
