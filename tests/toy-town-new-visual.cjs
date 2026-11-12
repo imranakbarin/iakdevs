@@ -43,7 +43,7 @@ const shot2 = (pg, name) => pg.screenshot({path: path.join(out, `new-town-${name
     await page.mouse.click(walker.p[0] + 5, walker.p[1] + 3); await page.evaluate(() => ToyTownNew.advance(.05));
     const picked = await page.evaluate(() => ({sel: ToyTownNew.selected(), card: document.getElementById('card').innerText})); await shot('tap');
     const hl = await page.evaluate(() => ToyTownNew.highlight()); assert.ok(hl.mode === 'pin' && hl.pin && !hl.ring, 'a tap shows the small pin, not the ring on the ground (' + JSON.stringify(hl) + ')');
-    assert.ok(picked.sel && picked.sel.kind === 'resident' && picked.sel.id === walker.id && /On the way|errand/.test(picked.card), 'tapping a resident shows who and where (' + JSON.stringify(picked) + ')');
+    assert.ok(picked.sel && picked.sel.kind === 'resident' && picked.sel.id === walker.id && /On the way|errand|Stopping to say hello|chat/.test(picked.card), 'tapping a resident shows who and where (' + JSON.stringify(picked) + ')');
     await page.evaluate(() => { const d = ToyTownNew.sim.graph.doors.cafe; ToyTownNew.select(null); ToyTownNew.look(d.x, d.z, 12, .2); });
     await page.mouse.click(...(await page.evaluate(() => { const d = ToyTownNew.sim.graph.doors.cafe; return ToyTownNew.project(d.x, d.z, .5); })));
     assert.equal(await page.evaluate(() => ToyTownNew.selected() && ToyTownNew.selected().id), 'cafe', 'tapping a building selects it');

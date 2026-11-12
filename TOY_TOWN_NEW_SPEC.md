@@ -207,6 +207,10 @@ the stamp is stale. If the page cannot start, its panel now shows the real error
 
 `ecology.mjs` is a small pure model, `sim.eco`: meadow, flowers, bees, honey, farm eggs/milk, the bakery/café/market pantry, the sea and pests. Rain and season grow the meadow; the meadow grows flowers, flowers feed bees, bees make honey; the meadow also feeds hens and cows. The horse cart and the pick-up carry eggs, milk and honey from the farm to the bakery, café and market; the bakery uses an egg and some milk per meal and serves a plain roll (and notes it) when the pantry is empty. Each catch lowers the sea; it regrows slowly, and fishermen stay ashore when the sea is poor (or `eco.rest`). Everything is bounded (`FLOOR`, `CAP`) so nothing collapses. Visible signs: dolphin pod size and whales follow the sea, meadow flower count follows the bloom, bees buzz when it is dry and bright; the Nature panel shows "The land". Player-influence hooks (`eco.boost.flowers/hens`, `eco.rest`) exist and are tested; their UI comes in a later release.
 
+## 4c. Laid-stone roads and the square
+
+Every street, the ring road and the junction patches are paved with individual setts (`settRibbon`, `settDisc` in `build.mjs`): small quads in their own shade, laid in courses with staggered joints over a darker grout layer, merged into the ground geometry (no extra draw calls, about +40k triangles). The square is sand-coloured setts in rings round the clock tower with two darker bands; the ring road and streets are grey. There are no painted dashes any more (the zebra crossings stay). The grout discs of the square are built in thin rings so they follow the lie of the ground (one big disc poked through the setts on the slope). Spring petals are small (150 of .13 x .10) so they no longer read as paper.
+
 ## 5. Art rules
 
 - Fat, rounded, slightly wonky. No sharp corners: `bag.box` is a rounded box; roofs overhang.
