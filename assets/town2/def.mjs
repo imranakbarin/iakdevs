@@ -3,10 +3,10 @@
 // Everything about the town that is a matter of design lives here, so adding a house or a resident is a data edit.
 
 export const PALETTE = {
-  red: '#e2473b', yellow: '#f7c93e', blue: '#3f8fd6', sky: '#8fd0f2', green: '#58b368', leaf: '#3f9e58', leafLight: '#58b368', lime: '#a5d86a',
-  cream: '#fff3d6', white: '#ffffff', pink: '#f59ac1', orange: '#f28b3c', purple: '#9a7fe0', teal: '#35b8ad',
-  brown: '#8a5a3c', crust: '#c98a4b', wood: '#b07a4a', stone: '#d9cdb8', slate: '#5d6b7a', road: '#8f8a86', kerb: '#f4ead6',
-  grass: '#8fd16a', grassDark: '#74bd58', sand: '#f3e2b0', sea: '#5cc4e8', gold: '#f2c14e', black: '#2b2f36'
+  red: '#d65f50', yellow: '#ebc363', blue: '#5b91b9', sky: '#a8d2d9', green: '#65a67d', leaf: '#57986b', leafLight: '#77b687', lime: '#adc987',
+  cream: '#f9ead1', white: '#fff9ef', pink: '#df9eb2', orange: '#d99861', purple: '#a58cc3', teal: '#55aa9d',
+  brown: '#8a654e', crust: '#c58e61', wood: '#ab8260', stone: '#d8c9b0', slate: '#647884', road: '#918f88', kerb: '#ecdfc9',
+  grass: '#9ac27b', grassDark: '#81ad6b', sand: '#eed8ac', sea: '#68aec3', gold: '#eac36e', black: '#333940'
 };
 
 import {curve} from './curve.mjs';

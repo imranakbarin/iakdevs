@@ -11,10 +11,10 @@ const smooth = (a, b, v) => { const t = clamp01((v - a) / (b - a)); return t * t
 const K = [
   [0,    '#1a2a4d', '#6f86c9', '#3b4d78', .95, '#b9c9ff', .6, '#2f6e9a'],
   [4.6,  '#1a2a4d', '#6f86c9', '#3b4d78', .95, '#b9c9ff', .6, '#2f6e9a'],
-  [5.3,  '#f6c4a8', '#ffe9d9', '#c8ad9c', 1.4, '#ffdcb0', 1.8, '#62c0de'],
-  [6.5,  '#bfe9fb', '#ffffff', '#b8d8a0', 1.55, '#fff4dc', 2.1, '#5cc4e8'],
-  [16.4, '#bfe9fb', '#ffffff', '#b8d8a0', 1.55, '#fff4dc', 2.1, '#5cc4e8'],
-  [18.4, '#f6b088', '#ffdcc0', '#c4a28e', 1.3, '#ffb878', 1.6, '#6fb0cc'],
+  [5.3,  '#f4c7ac', '#fff0df', '#c3b8a1', 1.15, '#ffdbac', 1.65, '#7aabb7'],
+  [6.5,  '#d2e7e8', '#fff9eb', '#b6c0a7', 1.22, '#ffedce', 1.82, '#6eb2c5'],
+  [16.4, '#d2e7e8', '#fff9eb', '#b6c0a7', 1.22, '#ffedce', 1.82, '#6eb2c5'],
+  [18.4, '#edb99f', '#ffe3cb', '#c2ac98', 1.16, '#ffbd8f', 1.56, '#75aabd'],
   [19.9, '#314070', '#8794cc', '#44507a', 1.05, '#b0c0ff', .55, '#33729c'],
   [21.4, '#1a2a4d', '#6f86c9', '#3b4d78', .95, '#b9c9ff', .6, '#2f6e9a'],
   [24,   '#1a2a4d', '#6f86c9', '#3b4d78', .95, '#b9c9ff', .6, '#2f6e9a']
@@ -24,7 +24,7 @@ export const SEASONS = ['spring', 'summer', 'autumn', 'winter'];
 // Northern-hemisphere seasons by calendar month (Dec-Feb winter, Mar-May spring, Jun-Aug summer, Sep-Nov autumn).
 export const seasonOf = (date = new Date()) => { const m = date.getMonth(); return m === 11 || m < 2 ? 'winter' : m < 5 ? 'spring' : m < 8 ? 'summer' : 'autumn'; };
 // How a season tints the day: sky colour and how much, the sun's strength and height.
-const TINT = {spring: ['#c8f0f2', .1, 1, 1], summer: ['#bfe9fb', 0, 1, 1], autumn: ['#f1d9a8', .12, .97, .92], winter: ['#d4e2ee', .18, .86, .76]};
+const TINT = {spring: ['#e0eee3', .08, 1, 1], summer: ['#d2e7e8', 0, 1, 1], autumn: ['#efdbb8', .12, .97, .92], winter: ['#d4e3e7', .18, .86, .76]};
 
 export function skyAt(hour, rain = 0, season = 'summer') {
   const h = ((hour % 24) + 24) % 24; let i = 0; while (i < K.length - 2 && h >= K[i + 1][0]) i++;

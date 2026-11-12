@@ -79,10 +79,10 @@ export function windify(mat) {
 const SHORE_GLSL = `float shoreAt(vec2 p) { float a = atan(p.y, p.x); return length(p / vec2(${ISLAND.rx.toFixed(2)}, ${ISLAND.rz.toFixed(2)})) + .028 * sin(a * 5. + .6) + .018 * sin(a * 9. - 1.1); }`;
 const WAVE_FRAG = `float w1 = sin(vW.x * 1.3 + uTime * .7 + sin(vW.y * .9 + uTime * .3) * 1.5), w2 = sin(vW.y * 1.7 - uTime * .9 + sin(vW.x * 1.1) * 1.2);
   float glint = smoothstep(.86, 1., sin(vW.x * 1.7 + vW.y * 1.3 + uTime * 1.1) * sin(vW.x * 1.3 - vW.y * 2.1 - uTime * .9));
-  diffuseColor.rgb *= 1. + uWaves * .06 * w1 * w2; diffuseColor.rgb += uWaves * glint * .06;`;
+  diffuseColor.rgb *= 1. + uWaves * (.038 * w1 * w2 + .024 * sin(vW.x * .65 + uTime * .44) * sin(vW.y * .8 - uTime * .35)); diffuseColor.rgb += uWaves * glint * .042;`;
 const FOAM_FRAG = `float sh = shoreAt(vW), ang = atan(vW.y, vW.x), edge = .952 + .012 * sin(uTime * .9 + ang * 6.) + .006 * sin(uTime * 1.7 + ang * 13.);
   float f1 = smoothstep(edge + .012, edge - .012, sh) * smoothstep(.895, .915, sh) * .85, f2 = (1. - smoothstep(0., .008, abs(sh - (.985 + .02 * sin(uTime * .8))))) * .45;
-  float foam = clamp(f1 + f2 * (1. - f1), 0., 1.) * uFoam; diffuseColor.rgb = mix(diffuseColor.rgb, vec3(1.), foam * .9); diffuseColor.a = max(diffuseColor.a, foam * .85);`;
+  float foam = clamp(f1 + f2 * (1. - f1), 0., 1.) * uFoam; diffuseColor.rgb = mix(diffuseColor.rgb, vec3(.93, .98, .96), foam * .72); diffuseColor.a = max(diffuseColor.a, foam * .74);`;
 export function waterify(mat, foam) {
   mat.onBeforeCompile = sh => {
     sh.uniforms.uTime = U.time; sh.uniforms.uWaves = U.waves; sh.uniforms.uFoam = U.foam;

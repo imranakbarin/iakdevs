@@ -7,8 +7,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700&display=swap" rel="stylesheet">
 <style>
-:root{--ink:#3c4654;--paper:rgba(255,253,245,.82)}
-html,body{margin:0;height:100%;overflow:hidden;background:#bfe9fb;font-family:Nunito,system-ui,sans-serif;color:var(--ink)}
+:root{--ink:#404b4a;--paper:rgba(250,247,237,.88)}
+html,body{margin:0;height:100%;overflow:hidden;background:#d2e7e8;font-family:Nunito,system-ui,sans-serif;color:var(--ink)}
 canvas{display:block;width:100vw;height:100vh;touch-action:none;cursor:grab}
 canvas:active{cursor:grabbing}
 #chip{position:fixed;left:calc(12px + env(safe-area-inset-left,0px));top:calc(12px + env(safe-area-inset-top,0px));padding:6px 12px;border-radius:999px;background:var(--paper);font:600 13px/1.3 Nunito,system-ui,sans-serif}
@@ -17,7 +17,7 @@ canvas:active{cursor:grabbing}
 #story{position:fixed;left:50%;transform:translateX(-50%);top:calc(52px + env(safe-area-inset-top,0px));max-width:min(86vw,560px);padding:6px 14px;border-radius:14px;background:var(--paper);font:600 13px/1.35 Nunito,system-ui,sans-serif;text-align:center;opacity:0;transition:opacity .6s;pointer-events:none}
 #story small{display:block;font-weight:400;opacity:.8}
 #goal{position:fixed;left:12px;bottom:calc(52px + env(safe-area-inset-bottom,0px));padding:6px 12px;border:0;border-radius:999px;background:var(--paper);color:inherit;font:700 12px/1.3 Nunito,system-ui,sans-serif;box-shadow:0 2px 8px #0003;cursor:pointer;max-width:130px;white-space:nowrap}
-#guideTip{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(100px + env(safe-area-inset-bottom,0px));padding:8px 16px;border-radius:14px;background:#ffd84a;color:#3a2a10;font:700 13px/1.35 Nunito,system-ui,sans-serif;box-shadow:0 3px 12px #0004;opacity:0;pointer-events:none;transition:opacity .5s;text-align:center;max-width:min(86vw,420px)}
+#guideTip{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(100px + env(safe-area-inset-bottom,0px));padding:8px 16px;border-radius:14px;background:#f4d9a1;color:#493b31;font:700 13px/1.35 Nunito,system-ui,sans-serif;box-shadow:0 3px 12px #0004;opacity:0;pointer-events:none;transition:opacity .5s;text-align:center;max-width:min(86vw,420px)}
 #guideTip.on{opacity:1}
 html.ui-off #goal,html.ui-off #guideTip{display:none}
 #story.on{opacity:1;pointer-events:auto;cursor:pointer}
@@ -32,7 +32,7 @@ html.ui-off #goal,html.ui-off #guideTip{display:none}
 #stack{position:fixed;left:calc(12px + env(safe-area-inset-left,0px));top:calc(48px + env(safe-area-inset-top,0px));display:flex;flex-direction:column;align-items:flex-start;gap:6px;max-width:min(78vw,360px)}
 #track{display:none;padding:5px 10px;border-radius:12px;background:#fff0b8;font:600 12px/1.35 Nunito,system-ui,sans-serif;color:#3c4654}
 #track.on{display:block}
-#jobs{max-width:100%;padding:5px 10px;border-radius:12px;background:var(--paper);font:400 12px/1.35 Nunito,system-ui,sans-serif;cursor:pointer}
+#jobs{max-width:100%;padding:5px 10px;border-radius:12px;background:rgba(250,247,237,.72);font:400 11px/1.4 Nunito,system-ui,sans-serif;cursor:pointer}
 #jobs b{display:block;font-weight:700}
 #jobs span{display:none}
 #jobs.open span{display:block}
@@ -81,57 +81,63 @@ html.ui-off #set,html.ui-off #panel,html.ui-off #paperBtn,html.ui-off #photoBtn,
 #panel .seg button{min-height:44px}
 #seasons a{display:inline-block;min-width:30px;min-height:30px;line-height:30px;text-align:center;margin-left:2px}
 }
-#grade{position:fixed;inset:0;pointer-events:none;opacity:0;transition:opacity .6s;background:radial-gradient(ellipse at 50% 46%,rgba(0,0,0,0) 58%,rgba(20,24,44,.2) 100%),linear-gradient(var(--tint,transparent),var(--tint,transparent))}
+#grade{position:fixed;inset:0;pointer-events:none;opacity:0;transition:opacity .6s;background:radial-gradient(ellipse at 52% 44%,rgba(0,0,0,0) 52%,rgba(39,46,47,.13) 100%),linear-gradient(var(--tint,transparent),var(--tint,transparent))}
+#chip,#story,#card,#paper,#panel,#goal{box-shadow:0 5px 18px rgba(39,58,57,.1);border:1px solid rgba(255,255,255,.28)}
+#chip a:hover,#chip a:focus-visible{color:#8b6550;text-decoration:underline}
+#story.on:hover{background:rgba(255,251,235,.96)}
+#snd:focus-visible,#set:focus-visible,#paperBtn:focus-visible,#photoBtn:focus-visible,#goal:focus-visible,#story:focus-visible{outline:3px solid #6a9a83;outline-offset:3px}
+@media(prefers-reduced-motion:reduce){#story,#guideTip,#grade,#card,#toast{transition:none}}
 #dbg{position:fixed;left:calc(8px + env(safe-area-inset-left,0px));bottom:calc(8px + env(safe-area-inset-bottom,0px));padding:3px 8px;border-radius:8px;background:rgba(0,0,0,.6);color:#fff;font:600 11px/1.3 ui-monospace,Menlo,Consolas,monospace;pointer-events:none;z-index:9}
 html.ui-off #stack,html.ui-off #jobs,html.ui-off #toast,html.ui-off #snd,html.ui-off #chip,html.ui-off #hint,html.ui-off #story,html.ui-off #card{display:none}
 </style>
-<script type="importmap" data-stamp="8c822024df">
+<script type="importmap" data-stamp="a76d9e08cd">
 {"imports":{
   "three":"https://cdn.jsdelivr.net/npm/three@0.187.0/build/three.module.js",
   "three/addons/":"https://cdn.jsdelivr.net/npm/three@0.187.0/examples/jsm/",
-  "./assets/town2/album.mjs":"./assets/town2/album.mjs?v=8c822024df",
-  "./assets/town2/angling.mjs":"./assets/town2/angling.mjs?v=8c822024df",
-  "./assets/town2/build.mjs":"./assets/town2/build.mjs?v=8c822024df",
-  "./assets/town2/chest.mjs":"./assets/town2/chest.mjs?v=8c822024df",
-  "./assets/town2/chronicle.mjs":"./assets/town2/chronicle.mjs?v=8c822024df",
-  "./assets/town2/curve.mjs":"./assets/town2/curve.mjs?v=8c822024df",
-  "./assets/town2/def.mjs":"./assets/town2/def.mjs?v=8c822024df",
-  "./assets/town2/director.mjs":"./assets/town2/director.mjs?v=8c822024df",
-  "./assets/town2/ecology.mjs":"./assets/town2/ecology.mjs?v=8c822024df",
-  "./assets/town2/events.mjs":"./assets/town2/events.mjs?v=8c822024df",
-  "./assets/town2/festival.mjs":"./assets/town2/festival.mjs?v=8c822024df",
-  "./assets/town2/festscene.mjs":"./assets/town2/festscene.mjs?v=8c822024df",
-  "./assets/town2/gait.mjs":"./assets/town2/gait.mjs?v=8c822024df",
-  "./assets/town2/garden.mjs":"./assets/town2/garden.mjs?v=8c822024df",
-  "./assets/town2/graph.mjs":"./assets/town2/graph.mjs?v=8c822024df",
-  "./assets/town2/guide.mjs":"./assets/town2/guide.mjs?v=8c822024df",
-  "./assets/town2/inspect.mjs":"./assets/town2/inspect.mjs?v=8c822024df",
-  "./assets/town2/limbs.mjs":"./assets/town2/limbs.mjs?v=8c822024df",
-  "./assets/town2/lives.mjs":"./assets/town2/lives.mjs?v=8c822024df",
-  "./assets/town2/memory.mjs":"./assets/town2/memory.mjs?v=8c822024df",
-  "./assets/town2/mystery.mjs":"./assets/town2/mystery.mjs?v=8c822024df",
-  "./assets/town2/nature.mjs":"./assets/town2/nature.mjs?v=8c822024df",
-  "./assets/town2/needs.mjs":"./assets/town2/needs.mjs?v=8c822024df",
-  "./assets/town2/paper.mjs":"./assets/town2/paper.mjs?v=8c822024df",
-  "./assets/town2/quality.mjs":"./assets/town2/quality.mjs?v=8c822024df",
-  "./assets/town2/quests.mjs":"./assets/town2/quests.mjs?v=8c822024df",
-  "./assets/town2/saga.mjs":"./assets/town2/saga.mjs?v=8c822024df",
-  "./assets/town2/sail.mjs":"./assets/town2/sail.mjs?v=8c822024df",
-  "./assets/town2/settings.mjs":"./assets/town2/settings.mjs?v=8c822024df",
-  "./assets/town2/sim.mjs":"./assets/town2/sim.mjs?v=8c822024df",
-  "./assets/town2/sky.mjs":"./assets/town2/sky.mjs?v=8c822024df",
-  "./assets/town2/smoke.mjs":"./assets/town2/smoke.mjs?v=8c822024df",
-  "./assets/town2/sound.mjs":"./assets/town2/sound.mjs?v=8c822024df",
-  "./assets/town2/stories.mjs":"./assets/town2/stories.mjs?v=8c822024df",
-  "./assets/town2/track.mjs":"./assets/town2/track.mjs?v=8c822024df",
-  "./assets/town2/treasure.mjs":"./assets/town2/treasure.mjs?v=8c822024df",
-  "./assets/town2/vote.mjs":"./assets/town2/vote.mjs?v=8c822024df",
-  "./assets/town2/weather.mjs":"./assets/town2/weather.mjs?v=8c822024df",
-  "./assets/town2/weather3d.mjs":"./assets/town2/weather3d.mjs?v=8c822024df",
-  "./assets/town2/welcome.mjs":"./assets/town2/welcome.mjs?v=8c822024df",
-  "./assets/town2/wild3d.mjs":"./assets/town2/wild3d.mjs?v=8c822024df",
-  "./assets/town2/wildlife.mjs":"./assets/town2/wildlife.mjs?v=8c822024df",
-  "./assets/town2/wildscene.mjs":"./assets/town2/wildscene.mjs?v=8c822024df"
+  "./assets/town2/album.mjs":"./assets/town2/album.mjs?v=a76d9e08cd",
+  "./assets/town2/angling.mjs":"./assets/town2/angling.mjs?v=a76d9e08cd",
+  "./assets/town2/build.mjs":"./assets/town2/build.mjs?v=a76d9e08cd",
+  "./assets/town2/charm.mjs":"./assets/town2/charm.mjs?v=a76d9e08cd",
+  "./assets/town2/chest.mjs":"./assets/town2/chest.mjs?v=a76d9e08cd",
+  "./assets/town2/chronicle.mjs":"./assets/town2/chronicle.mjs?v=a76d9e08cd",
+  "./assets/town2/curve.mjs":"./assets/town2/curve.mjs?v=a76d9e08cd",
+  "./assets/town2/def.mjs":"./assets/town2/def.mjs?v=a76d9e08cd",
+  "./assets/town2/director.mjs":"./assets/town2/director.mjs?v=a76d9e08cd",
+  "./assets/town2/ecology.mjs":"./assets/town2/ecology.mjs?v=a76d9e08cd",
+  "./assets/town2/events.mjs":"./assets/town2/events.mjs?v=a76d9e08cd",
+  "./assets/town2/festival.mjs":"./assets/town2/festival.mjs?v=a76d9e08cd",
+  "./assets/town2/festscene.mjs":"./assets/town2/festscene.mjs?v=a76d9e08cd",
+  "./assets/town2/gait.mjs":"./assets/town2/gait.mjs?v=a76d9e08cd",
+  "./assets/town2/garden.mjs":"./assets/town2/garden.mjs?v=a76d9e08cd",
+  "./assets/town2/graph.mjs":"./assets/town2/graph.mjs?v=a76d9e08cd",
+  "./assets/town2/guide.mjs":"./assets/town2/guide.mjs?v=a76d9e08cd",
+  "./assets/town2/inspect.mjs":"./assets/town2/inspect.mjs?v=a76d9e08cd",
+  "./assets/town2/limbs.mjs":"./assets/town2/limbs.mjs?v=a76d9e08cd",
+  "./assets/town2/lives.mjs":"./assets/town2/lives.mjs?v=a76d9e08cd",
+  "./assets/town2/memory.mjs":"./assets/town2/memory.mjs?v=a76d9e08cd",
+  "./assets/town2/mystery.mjs":"./assets/town2/mystery.mjs?v=a76d9e08cd",
+  "./assets/town2/nature.mjs":"./assets/town2/nature.mjs?v=a76d9e08cd",
+  "./assets/town2/needs.mjs":"./assets/town2/needs.mjs?v=a76d9e08cd",
+  "./assets/town2/paper.mjs":"./assets/town2/paper.mjs?v=a76d9e08cd",
+  "./assets/town2/quality.mjs":"./assets/town2/quality.mjs?v=a76d9e08cd",
+  "./assets/town2/quests.mjs":"./assets/town2/quests.mjs?v=a76d9e08cd",
+  "./assets/town2/saga.mjs":"./assets/town2/saga.mjs?v=a76d9e08cd",
+  "./assets/town2/sail.mjs":"./assets/town2/sail.mjs?v=a76d9e08cd",
+  "./assets/town2/settings.mjs":"./assets/town2/settings.mjs?v=a76d9e08cd",
+  "./assets/town2/sim.mjs":"./assets/town2/sim.mjs?v=a76d9e08cd",
+  "./assets/town2/sky.mjs":"./assets/town2/sky.mjs?v=a76d9e08cd",
+  "./assets/town2/smoke.mjs":"./assets/town2/smoke.mjs?v=a76d9e08cd",
+  "./assets/town2/sound.mjs":"./assets/town2/sound.mjs?v=a76d9e08cd",
+  "./assets/town2/stories.mjs":"./assets/town2/stories.mjs?v=a76d9e08cd",
+  "./assets/town2/track.mjs":"./assets/town2/track.mjs?v=a76d9e08cd",
+  "./assets/town2/treasure.mjs":"./assets/town2/treasure.mjs?v=a76d9e08cd",
+  "./assets/town2/vote.mjs":"./assets/town2/vote.mjs?v=a76d9e08cd",
+  "./assets/town2/weather.mjs":"./assets/town2/weather.mjs?v=a76d9e08cd",
+  "./assets/town2/weather3d.mjs":"./assets/town2/weather3d.mjs?v=a76d9e08cd",
+  "./assets/town2/welcome.mjs":"./assets/town2/welcome.mjs?v=a76d9e08cd",
+  "./assets/town2/wild3d.mjs":"./assets/town2/wild3d.mjs?v=a76d9e08cd",
+  "./assets/town2/wildlife.mjs":"./assets/town2/wildlife.mjs?v=a76d9e08cd",
+  "./assets/town2/wildscene.mjs":"./assets/town2/wildscene.mjs?v=a76d9e08cd"
 }}
 </script>
 </head>
@@ -153,7 +159,7 @@ html.ui-off #stack,html.ui-off #jobs,html.ui-off #toast,html.ui-off #snd,html.ui
 <div id="fail"><div>The new town could not start.<br><a href="toy-town.html">Open the current town</a>, or try a hard refresh (Ctrl+F5).<br><small id="why"></small><br><small>If it mentions WebGL, turn on hardware acceleration in the browser's settings (in Edge: edge://settings/system).</small></div></div>
 <script>if(/[?&]clean=1\b/.test(location.search))document.documentElement.classList.add('ui-off');</script>
 <script type="module">
-  import('./assets/town2/main.mjs?v=8c822024df').catch(e => { console.error(e); document.getElementById('why').textContent = (e && (e.name + ': ' + e.message)) || String(e); document.getElementById('fail').style.display = 'flex'; });
+  import('./assets/town2/main.mjs?v=a76d9e08cd').catch(e => { console.error(e); document.getElementById('why').textContent = (e && (e.name + ': ' + e.message)) || String(e); document.getElementById('fail').style.display = 'flex'; });
 </script>
 </body>
 </html>
