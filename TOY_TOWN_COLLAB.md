@@ -1360,3 +1360,6 @@ A `START` does not prohibit parallel edits. Avoid stepping on each other's uncom
 - **Tests**: new logic block (bounds over 30 days per season, boost, rest day, floor, eatAt, deliver, peace, sim deliveries, poor-sea fishing vs control).
 - **Not verified**: browser screenshot of bees/pod size (see next entry if added); real phone.
 - **Still to come**: D) interdependence stories; E) story director + chronicle; F) player influence UI.
+
+### 2026-11-12 · Claude · START (new storybook town, follow-up 21: a cleaner city centre with laid-stone roads)
+- **Base**: master 1fb46f0. **Request (owner, with a phone screenshot)**: "City centre is not cleaner and the roads are not proper laid stone roads in the centre of city; make things better." **Plan**: stone setts (running-bond cobbles, concentric round the clock tower) for the square, the ring road and the inner ends of the streets, with a stone kerb and no painted dashes there; tidier centre (smaller, fewer petals; less clutter round the square); keep draw calls (setts go into the merged ground geometry). Next in the ecosystem plan after this: D) interdependence stories, E) story director, F) player influence.
