@@ -1363,3 +1363,9 @@ A `START` does not prohibit parallel edits. Avoid stepping on each other's uncom
 
 ### 2026-11-12 · Claude · START (new storybook town, follow-up 21: a cleaner city centre with laid-stone roads)
 - **Base**: master 1fb46f0. **Request (owner, with a phone screenshot)**: "City centre is not cleaner and the roads are not proper laid stone roads in the centre of city; make things better." **Plan**: stone setts (running-bond cobbles, concentric round the clock tower) for the square, the ring road and the inner ends of the streets, with a stone kerb and no painted dashes there; tidier centre (smaller, fewer petals; less clutter round the square); keep draw calls (setts go into the merged ground geometry). Next in the ecosystem plan after this: D) interdependence stories, E) story director, F) player influence.
+
+### 2026-11-12 · Claude · DONE (new storybook town, follow-up 21: laid-stone roads and a cleaner centre)
+- **Request (owner)**: the city centre is not clean and the roads should be proper laid stone. **Done**: spec section 4c. Setts for the square (sand rings and bands round the tower), the ring road, all streets and junctions; painted dashes removed; spring petals smaller and fewer.
+- **Tests**: logic and browser suites pass (91 calls, 632k triangles); phone-size and desktop screenshots checked by hand.
+- **Not verified**: a real phone; the lite tier still draws all setts (they are static geometry, so cheap).
+

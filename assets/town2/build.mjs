@@ -379,29 +379,69 @@ function disc(parts, x, z, r0, r1, colour, lift, seg = 40) {
     for (const v of [P4[0], P4[2], P4[1], P4[0], P4[3], P4[2]]) { pos.push(...v); colr.push(c.r, c.g, c.b); nor.push(0, 1, 0); } }
   const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); g.setAttribute('normal', new THREE.Float32BufferAttribute(nor, 3)); g.setAttribute('color', new THREE.Float32BufferAttribute(colr, 3)); parts.push(g);
 }
+// Laid stone: a road or square paved with setts. Each stone is its own little quad in its own shade (a darker "grout" road/disc lies under them), laid in courses with the joints staggered like brickwork.
+const SETT_STREET = ['#a49e94', '#b4ada1', '#958f87', '#beb6a7', '#a9a195', '#9b958b', '#b0a89b'], SETT_SQUARE = ['#e9dab8', '#dfcea9', '#f0e3c6', '#d8c6a2', '#ebdcbd', '#e2d1ac'], SETT_BAND = ['#b78f6b', '#c19b76', '#af8560'], SETT_RING = ['#8f8a84', '#9d978f', '#857f78', '#a39d94'];
+const GROUT = '#7f786c', GROUT_SQUARE = '#c9b78f';
+function stoneBuf() { return {pos: [], colr: [], nor: []}; }
+function stone(buf, P, colour, shade) {
+  const c = col(colour).clone().offsetHSL(0, 0, shade);
+  // face the quad up whichever way it was wound
+  const ux = P[1][0] - P[0][0], uy = P[1][1] - P[0][1], uz = P[1][2] - P[0][2], vx = P[3][0] - P[0][0], vy = P[3][1] - P[0][1], vz = P[3][2] - P[0][2];
+  const order = (uz * vx - ux * vz) >= 0 ? [0, 1, 2, 0, 2, 3] : [0, 2, 1, 0, 3, 2];
+  for (const i of order) { buf.pos.push(...P[i]); buf.colr.push(c.r, c.g, c.b); buf.nor.push(0, 1, 0); }
+}
+function flushStones(parts, buf) {
+  if (!buf.pos.length) return;
+  const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(buf.pos, 3)); g.setAttribute('normal', new THREE.Float32BufferAttribute(buf.nor, 3)); g.setAttribute('color', new THREE.Float32BufferAttribute(buf.colr, 3)); parts.push(g);
+}
+// Courses of setts across a road: `from`/`to` are offsets from the centre line, s0..s1 the stretch along it.
+function settRibbon(parts, L, from, to, s0, s1, pal, seed, {len = .19, row = .115, gap = .016, lift = .033} = {}) {
+  const buf = stoneBuf(), rows = Math.max(1, Math.round((s1 - s0) / row)), rh = (s1 - s0) / rows;
+  const at = (s, off) => { const q = along(L, s), [lx, lz] = leftOf(q.tx, q.tz), x = q.x + lx * off, z = q.z + lz * off; return [x, heightAt(x, z) + lift, z]; };
+  const cols = Math.max(1, Math.round((to - from) / len)), cw = (to - from) / cols;
+  for (let r = 0; r < rows; r++) {
+    const sa = s0 + r * rh + gap / 2, sb = s0 + (r + 1) * rh - gap / 2;
+    for (let k = r % 2 ? -1 : 0; k <= cols; k++) {   // odd courses start half a stone in
+      let a = from + (k + (r % 2 ? .5 : 0)) * cw, b = a + cw; a = Math.max(a, from); b = Math.min(b, to); if (b - a < gap * 2) continue;
+      stone(buf, [at(sa, a + gap / 2), at(sa, b - gap / 2), at(sb, b - gap / 2), at(sb, a + gap / 2)], pal[Math.floor(rand(seed + r * 31 + k * 7) * pal.length)], (rand(seed + r * 13 + k * 5 + 3) - .5) * .05);
+    }
+  }
+  flushStones(parts, buf);
+}
+// Rings of setts round a centre (the square and the ring road): each ring is a course, the joints staggered. `pick(r, ring)` may choose a palette per ring.
+function settDisc(parts, cx, cz, r0, r1, pick, seed, {len = .2, row = .115, gap = .016, lift = .02} = {}) {
+  const buf = stoneBuf(), rings = Math.max(1, Math.round((r1 - r0) / row)), rh = (r1 - r0) / rings;
+  const at = (r, t) => { const x = cx + Math.cos(t) * r, z = cz + Math.sin(t) * r; return [x, heightAt(x, z) + lift, z]; };
+  for (let i = 0; i < rings; i++) {
+    const ra = r0 + i * rh + gap / 2, rb = r0 + (i + 1) * rh - gap / 2, rm = (ra + rb) / 2, n = Math.max(6, Math.round(TAU * rm / len)), dt = TAU / n, pal = pick(rm, i);
+    for (let k = 0; k < n; k++) { const t0 = (k + (i % 2 ? .5 : 0)) * dt, ga = gap / rm / 2; stone(buf, [at(ra, t0 + ga), at(rb, t0 + ga), at(rb, t0 + dt - ga), at(ra, t0 + dt - ga)], pal[Math.floor(rand(seed + i * 17 + k * 3) * pal.length)], (rand(seed + i * 11 + k * 7 + 1) - .5) * .05); }
+  }
+  flushStones(parts, buf);
+}
 function roads(bag, graph) {
   const w = ROAD.width / 2, parts = bag.parts, R = SQUARE.ring;
   // the square: paving out to the shopfronts, the ring road, the green in the middle
-  disc(parts, SQUARE.x, SQUARE.z, 0, 6.1, '#f1e2c2', .012, 64);
-  for (let k = 0; k < 5; k++) disc(parts, SQUARE.x, SQUARE.z, 3.25 + k * .55, 3.3 + k * .55, '#e3d0a8', .016, 64);
-  disc(parts, SQUARE.x, SQUARE.z, R - w, R + w, 'road', .03, 64); disc(parts, SQUARE.x, SQUARE.z, R - w - .1, R - w, 'kerb', .045, 64); disc(parts, SQUARE.x, SQUARE.z, R + w, R + w + .1, 'kerb', .045, 64);
-  disc(parts, SQUARE.x, SQUARE.z, 0, R - w - .1, 'grass', .04, 48);
-  const dash = (L, s0, s1) => { for (let s = s0; s + .3 < s1; s += .7) ribbon(parts, L, -.025, .025, 'white', .038, s, s + .32, .16); };
+  for (let r = 0; r < 6.1; r += .4) disc(parts, SQUARE.x, SQUARE.z, r, Math.min(6.1, r + .4), GROUT_SQUARE, .012, 64);   // (in thin rings, so the paving follows the lie of the ground)
+  settDisc(parts, SQUARE.x, SQUARE.z, R + w + .1, 6.1, (r, i) => (r > 3.9 && r < 4.15) || (r > 5.2 && r < 5.45) ? SETT_BAND : SETT_SQUARE, 101, {lift: .022});   // sand-coloured setts in rings round the tower, two darker bands
+  disc(parts, SQUARE.x, SQUARE.z, R - w, R + w, GROUT, .03, 64);
+  settDisc(parts, SQUARE.x, SQUARE.z, R - w, R + w, () => SETT_RING, 202, {lift: .034});   // the ring road in grey setts
+  disc(parts, SQUARE.x, SQUARE.z, R - w - .1, R - w, 'kerb', .045, 64); disc(parts, SQUARE.x, SQUARE.z, R + w, R + w + .1, 'kerb', .045, 64);
+  for (let r = 0; r < R - w - .1; r += .4) disc(parts, SQUARE.x, SQUARE.z, r, Math.min(R - w - .1, r + .4), 'grass', .04, 48);
   const m = w + .12;   // where a road's own markings start and stop, clear of the junction at each end
   for (const e of graph.edges) {
     const L = e.line;
-    if (e.kind === 'ring') { dash(L, .15, L.length - .15); continue; }
-    ribbon(parts, L, -w, w, 'road', .028, 0, L.length);
+    if (e.kind === 'ring') continue;   // (the ring road itself is the disc of setts above)
+    ribbon(parts, L, -w, w, GROUT, .028, 0, L.length);
+    settRibbon(parts, L, -w, w, e.kind === 'spoke' ? m : w + .02, L.length - (e.kind === 'spoke' ? w + .02 : w + .02), SETT_STREET, 300 + (e.id || '').length * 97 + Math.round(L.length * 10), {lift: .033});
     const a = e.kind === 'spoke' ? m : 1.0, b = L.length - (e.kind === 'spoke' ? m : 1.0);
     ribbon(parts, L, w, w + .1, 'kerb', .044, a, b); ribbon(parts, L, -w - .1, -w, 'kerb', .044, a, b);
     ribbon(parts, L, ROAD.pave - .15, ROAD.pave + .17, '#ead9b8', .02, a + .3, b - .3); ribbon(parts, L, -ROAD.pave - .17, -ROAD.pave + .15, '#ead9b8', .02, a + .3, b - .3);
-    dash(L, a + .4, b - .4);
     if (e.kind === 'spoke') {   // a zebra crossing where the street meets the square
       const z0 = along(L, m + .75), [lx, lz] = leftOf(z0.tx, z0.tz); for (let k = -2; k <= 2; k++) { const cx = z0.x + lx * k * .17, cz = z0.z + lz * k * .17, y = heightAt(cx, cz) + .037, hw = .055, hl = .2, pts = [[-hw, -hl], [hw, -hl], [hw, hl], [-hw, hl]].map(([a2, b2]) => [cx + lx * a2 + z0.tx * b2, y, cz + lz * a2 + z0.tz * b2]); const c = col('white'), pos = [], colr = [], nor = []; for (const v of [pts[0], pts[1], pts[2], pts[0], pts[2], pts[3]]) { pos.push(...v); colr.push(c.r, c.g, c.b); nor.push(0, 1, 0); } const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); g.setAttribute('normal', new THREE.Float32BufferAttribute(nor, 3)); g.setAttribute('color', new THREE.Float32BufferAttribute(colr, 3)); parts.push(g); }
     }
   }
   // a round patch where each spoke meets the outer ring, so the junction has no seams
-  for (const n of Object.values(graph.nodes)) if (n.id.startsWith('out')) disc(parts, n.p[0], n.p[1], 0, w + .02, 'road', .0285, 20);
+  for (const n of Object.values(graph.nodes)) if (n.id.startsWith('out')) { disc(parts, n.p[0], n.p[1], 0, w + .02, GROUT, .0285, 20); settDisc(parts, n.p[0], n.p[1], 0, w + .02, () => SETT_STREET, 400 + Math.round(n.p[0] * 13), {lift: .0335, row: .11, len: .17}); }
 }
 function tree(b, kind, seed) {
   const r = k => rand(seed * 13 + k);
