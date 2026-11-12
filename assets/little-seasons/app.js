@@ -1,7 +1,7 @@
 (()=>{'use strict';
 const M=window.LittleSeasons,$=id=>document.getElementById(id),NS='http://www.w3.org/2000/svg';
 const state={place:M.locations.sanford,data:null,mode:'live',status:'loading',failed:false,fahrenheit:false,season:'spring',temperature:8,weather:'clear',night:false,paused:matchMedia('(prefers-reduced-motion: reduce)').matches,phase:0,house:null,fetchStart:-99,treeStart:-99,pondStart:-99};
-let requestId=0,controller=null,last=0,frameId=0,walkerX=0;
+let requestId=0,controller=null,last=0,frameId=0,walkTime=0,walkDistance=0;
 const set=(id,attr,v)=>$(id).setAttribute(attr,String(v));
 function el(name,attrs,parent){const e=document.createElementNS(NS,name);for(const [k,v] of Object.entries(attrs))e.setAttribute(k,v);parent.appendChild(e);return e;}
 function text(id,value){$(id).textContent=value;}
@@ -62,7 +62,7 @@ function action(name){
  if(name==='house'){state.house=!(state.house===null?state.night:state.house);say(state.house?'A warm light in the window. Someone’s home.':'Lights out. The cottage settles down.');}
  if(name==='tree'){state.treeStart=state.phase;say(state.season==='winter'?'A small shiver runs through the bare branches.':'A little breeze, a little shower of leaves.');}
  if(name==='pond'){state.pondStart=state.phase;say(state.temperature<=0?'The pond is frozen. The ducks are keeping warm.':'A few crumbs, and the ducks paddle over.');}
- if(name==='dog'){state.fetchStart=state.phase;say('One throw. One very happy dog.');}
+ if(name==='dog'&&state.phase-state.fetchStart>=fetchDuration){state.fetchStart=state.phase;say('One throw. One very happy dog.');}
  if(state.paused){draw(state.phase);say('Motion is paused. Resume motion to watch the little world respond.');}
 }
 document.querySelectorAll('[data-action]').forEach(e=>{e.addEventListener('click',()=>action(e.dataset.action));if(e.namespaceURI===NS)e.addEventListener('keydown',event=>{if(event.key==='Enter'||event.key===' '){event.preventDefault();action(e.dataset.action);}});});
@@ -76,20 +76,107 @@ $('locate').addEventListener('click',()=>{
 });
 function syncPause(){text('play',state.paused?'Resume motion':'Pause motion');$('play').setAttribute('aria-pressed',String(!state.paused));}
 $('play').addEventListener('click',()=>{state.paused=!state.paused;syncPause();});
+const fetchDuration = 4.8;
+
+function footfall(distance, stride, offset, lift, weight) {
+ const phase = (distance / stride + offset) % 1;
+ const stance = .62;
+ if (phase < stance) return { x: (stance / 2 - phase) * stride * weight, lift: 0 };
+ const swing = (phase - stance) / (1 - stance);
+ return {
+  x: (swing - .5) * stance * stride * weight,
+  lift: Math.sin(swing * Math.PI) * lift * weight,
+ };
+}
+
+function poseLeg(id, hip, hipY, foot, ankleY, kneeBend, boot) {
+ const x = hip + foot.x;
+ const y = ankleY - foot.lift;
+ set(id, 'd', `M${hip} ${hipY}Q${(x + hip) / 2 + kneeBend} ${(y + hipY) / 2} ${x} ${y}`);
+ if (boot) set(boot, 'transform', `translate(${foot.x} ${-foot.lift})`);
+}
+
+function ease(t) {
+ const n = Math.max(0, Math.min(1, t));
+ return n * n * (3 - 2 * n);
+}
+
+function drawFigurines(p) {
+ const age = p - state.fetchStart;
+ const fetching = age >= 0 && age < fetchDuration;
+ const angle = walkTime * .235;
+ const direction = Math.sin(angle) >= 0 ? 1 : -1;
+ const walkSpeed = 55 * .235 * Math.abs(Math.sin(angle));
+ const personX = 175 - 55 * Math.cos(angle);
+ const dogHome = personX + 45;
+ const personY = 453;
+ const dogY = 453;
+ const personFacing = fetching ? 1 : direction;
+ const strideWeight = fetching ? 0 : Math.min(1, walkSpeed / 5);
+ const bob = .85 * strideWeight * Math.cos(walkDistance * Math.PI / 5.2);
+ const throwMotion = fetching && age < .8 ? Math.sin(age / .8 * Math.PI) : 0;
+ const armAngle = (personFacing < 0 ? 83 : 0)
+  + Math.sin(walkDistance * Math.PI / 10.4) * 5 * strideWeight - 52 * throwMotion;
+
+ set('person', 'transform', `translate(${personX} ${personY}) scale(${personFacing} 1)`);
+ set('person-upper', 'transform', `translate(0 ${bob})`);
+ set('person-arm', 'transform', `rotate(${armAngle} -4 -40)`);
+ set('person-shadow', 'cx', personX);
+ poseLeg('person-leg-far', -4, -26 + bob, footfall(walkDistance, 20.8, .5, 4.8, strideWeight), -4, 1.2, 'person-boot-far');
+ poseLeg('person-leg-near', 3, -26 + bob, footfall(walkDistance, 20.8, 0, 4.8, strideWeight), -4, 1.2, 'person-boot-near');
+
+ const run = fetching ? (age < 2.25 ? ease((age - .25) / 2) : 1 - ease((age - 2.55) / 2.25)) : 0;
+ const runLength = Math.min(75, 294 - dogHome);
+ const dogX = dogHome + run * runLength;
+ const pickup = ease((age - 2.25) / .13);
+ const turn = ease((age - 2.38) / .17);
+ const dogFacing = fetching ? 1 - 2 * turn : direction;
+ const dogTravel = fetching ? (age < 2.45 ? run : 2 - run) * runLength : walkDistance;
+ const dogWeight = fetching ? (age < .25 ? 0 : Math.min(1, Math.abs(Math.sin((age - .25) * Math.PI / 2.25)) * 2)) : strideWeight;
+ const dogBob = -Math.abs(Math.sin(dogTravel * Math.PI / 13)) * 1.8 * dogWeight;
+ set('dog', 'transform', `translate(${dogX} ${dogY}) scale(${dogFacing} 1)`);
+ set('dog-body', 'transform', `translate(0 ${dogBob})`);
+ set('dog-tail', 'transform', `rotate(${Math.sin(p * (fetching ? 13 : 7)) * 18} -18 -19)`);
+ set('dog-shadow', 'cx', dogX);
+ poseLeg('dog-hind-far', -12, -16 + dogBob, footfall(dogTravel, 13, 0, 3.2, dogWeight), -2, 1.2);
+ poseLeg('dog-fore-far', 9, -16 + dogBob, footfall(dogTravel, 13, .5, 3.2, dogWeight), -2, -1.2);
+ poseLeg('dog-hind-near', -11, -15 + dogBob, footfall(dogTravel, 13, .5, 3.2, dogWeight), -2, 1.2);
+ poseLeg('dog-fore-near', 12, -15 + dogBob, footfall(dogTravel, 13, 0, 3.2, dogWeight), -2, -1.2);
+
+ const arm = armAngle * Math.PI / 180;
+ const handX = personX + personFacing * (-4 + 17 * Math.cos(arm) - 10 * Math.sin(arm));
+ const handY = personY - 40 + bob + 17 * Math.sin(arm) + 10 * Math.cos(arm);
+ const collarX = dogX + 15 * dogFacing;
+ const collarY = dogY - 19 + dogBob;
+ set('dog-leash', 'd', `M${handX} ${handY}Q${(handX + collarX) / 2} ${Math.max(handY, collarY) + 8} ${collarX} ${collarY}`);
+ set('dog-leash', 'opacity', fetching ? 0 : 1);
+ set('walker-hit', 'x', personX - 18);
+ set('walker-hit', 'width', Math.max(106, dogX - personX + 51));
+
+ set('fetch-ball', 'opacity', fetching ? 1 : 0);
+ if (fetching) {
+  const flight = Math.min(1, age / 1.15);
+  const landingX = dogHome + runLength + 28;
+  const carrying = age >= 2.25;
+  const muzzleX = dogX + 28 * dogFacing;
+  set('fetch-ball', 'cx', carrying ? muzzleX : handX + (landingX - handX) * flight);
+  set('fetch-ball', 'cy', carrying
+   ? dogY - 4 + (-18 + dogBob) * pickup
+   : handY + (dogY - 4 - handY) * flight - 38 * Math.sin(Math.PI * flight));
+ }
+}
+
 function draw(p){
  const wind=state.mode==='live'&&M.finite(state.data?.current.wind_speed_10m)?Math.min(2.5,.3+state.data.current.wind_speed_10m/15):.8;
  const light=state.house===null?state.night:state.house;set('windowLight','opacity',light?.96:.1);set('lantern-glow','opacity',light?.85:0);set('chimney-smoke','opacity',state.temperature<15?.65:.15);set('chimney-smoke','transform',`translate(${Math.sin(p*.7)*3} ${-p*2%9})`);
  set('sun','transform',`translate(445 155)`);set('clouds','transform',`translate(${Math.sin(p*.045)*36} 8)`);set('mill-blades','transform',`rotate(${p*12*wind})`);
  const shakeAge=p-state.treeStart,shake=shakeAge<2?Math.sin(shakeAge*23)*(1-shakeAge/2)*4:Math.sin(p*1.4)*wind*.8;
  for(const id of ['canopy','leaves','blossoms'])set(id,'transform',`rotate(${shake} 275 390)`);
- // Walk along the path, pause at both ends, and match footfalls to travelled distance.
- const cycle=p%34,walking=cycle<13||(cycle>17&&cycle<30);walkerX=cycle<13?-15+cycle*5:cycle<17?50:cycle<30?50-(cycle-17)*5:-15;
- const gait=walking?Math.sin(p*6):0;set('walker','transform',`translate(${walkerX} ${Math.abs(gait)*.6})`);set('walker-hit','transform',`translate(${walkerX} 0)`);
- set('leg-left','transform',`rotate(${gait*16} 122 429)`);set('leg-right','transform',`rotate(${-gait*16} 131 429)`);set('person-arms','transform',`rotate(${-gait*5} 126 408)`);
- const fetchAge=p-state.fetchStart,fetching=fetchAge>=0&&fetchAge<5.5,fetchOffset=fetching?Math.sin(fetchAge/5.5*Math.PI)*78:0;
- set('dog-leash','opacity',fetching?0:1);set('dog','transform',`translate(${fetchOffset} ${fetching?-Math.abs(Math.sin(fetchAge*10))*3:0})`);set('dog-tail','transform',`rotate(${Math.sin(p*(fetching?14:7))*20} 199 428)`);set('dog-front','transform',`rotate(${Math.sin(p*(fetching?13:6))*(walking||fetching?10:0)} 186 436)`);
- set('fetch-ball','opacity',fetching?1:0);set('fetch-ball','cx',192+walkerX+fetchOffset+12);set('fetch-ball','cy',fetching&&fetchAge<2?427-Math.sin(fetchAge/2*Math.PI)*43:427);
- const pondAge=p-state.pondStart;set('floating-ducks','transform',`translate(${pondAge<5?Math.sin(Math.min(pondAge/3,1)*Math.PI/2)*18:Math.sin(p*.28)*20} ${Math.sin(p*1.5)*.7})`);
+ drawFigurines(p);
+ const pondAge = p - state.pondStart;
+ const feeding = (state.temperature > 0 ? 1 : 0) * ease(pondAge / 2.2) * (1 - ease((pondAge - 3.2) / 2.2));
+ const drift = Math.sin(p * .28) * 20;
+ set('floating-ducks', 'transform', `translate(${440 + drift * (1 - feeding) + 18 * feeding} ${436 + Math.sin(p * 1.5) * .7})`);
  rings.forEach((e,i)=>{const a=(pondAge-i*.3);const visible=a>=0&&a<2.7&&state.temperature>0;e.setAttribute('rx',Math.max(0,a*21));e.setAttribute('ry',Math.max(0,a*4));e.setAttribute('opacity',visible?Math.max(0,.7-a*.25):0);});crumbs.forEach((e,i)=>e.setAttribute('opacity',pondAge>=0&&pondAge<4&&state.temperature>0?Math.max(0,1-pondAge/4-i*.02):0));
  set('water-shimmer','transform',`translate(${Math.sin(p)*4} 0)`);set('bunny','transform',`translate(${74+Math.sin(p*.14)*8} ${419-Math.max(0,Math.sin(p*1.7))*(p%18<3?5:0)})`);
  stars.forEach((e,i)=>e.setAttribute('opacity',state.night&&state.weather==='clear'?.4+Math.sin(p+i)**2*.45:0));birds.forEach((e,i)=>{e.setAttribute('opacity',state.night?.1:state.weather==='rain'?.2:.8);e.setAttribute('transform',`translate(${(p*(10+i*2)+i*147)%760-80} ${166+i*21+Math.sin(p*2+i)*3}) scale(.65)`);});
@@ -98,7 +185,20 @@ function draw(p){
  butterflies.forEach((e,i)=>{e.style.display=state.night||state.weather==='rain'||state.season==='winter'?'none':'';e.setAttribute('transform',`translate(${60+i*126+Math.sin(p*.7+i)*20} ${353+i%2*32+Math.cos(p*.9+i)*14}) scale(${.8+Math.sin(p*9+i)*.16} .8)`);});
  fireflies.forEach((e,i)=>{e.setAttribute('opacity',state.night&&state.season!=='winter'&&state.weather!=='rain'?Math.max(0,Math.sin(p*1.5+i*2.3))*.8:0);e.setAttribute('cx',35+i*61%525+Math.sin(p*.8+i)*7);e.setAttribute('cy',310+i*59%130+Math.cos(p*.8+i)*7);});
 }
-function frame(ms){const dt=last?Math.min((ms-last)/1000,.05):0;last=ms;if(!state.paused)state.phase+=dt;draw(state.phase);frameId=requestAnimationFrame(frame);}
+function frame(ms) {
+ const dt = last ? Math.min((ms - last) / 1000, .05) : 0;
+ last = ms;
+ if (!state.paused) {
+  state.phase += dt;
+  if (state.phase - state.fetchStart >= fetchDuration) {
+   const before = Math.cos(walkTime * .235);
+   walkTime += dt;
+   walkDistance += 55 * Math.abs(before - Math.cos(walkTime * .235));
+  }
+ }
+ draw(state.phase);
+ frameId = requestAnimationFrame(frame);
+}
 document.addEventListener('visibilitychange',()=>{if(document.hidden){cancelAnimationFrame(frameId);}else{last=0;frameId=requestAnimationFrame(frame);renderData();if(!state.data||M.freshness(state.data)==='stale')refresh();}});
 setInterval(()=>{if(!document.hidden)refresh();},600000);setInterval(()=>{if(!document.hidden)renderData();},60000);
 syncPause();refresh();frameId=requestAnimationFrame(frame);

@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><title>Little Seasons — A world that follows yours</title><meta name="description" content="A tiny interactive weather world. Real local weather, changing daylight, a cottage, and a person and dog with time to wander."><meta name="theme-color" content="#f1f0e6"><link rel="stylesheet" href="assets/little-seasons/style.css?v=20261112a"></head>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><title>Little Seasons — A world that follows yours</title><meta name="description" content="A tiny interactive weather world. Real local weather, changing daylight, a cottage, and a person and dog with time to wander."><meta name="theme-color" content="#f1f0e6"><link rel="stylesheet" href="assets/little-seasons/style.css?v=20261112b"></head>
 <body><main>
 <header class="topbar"><a class="brand" href="little-seasons.html"><span class="brand-mark">✳</span> little seasons<span class="edition">A LIVING WEATHER WORLD</span></a><a class="town-link" href="toy-town.html">Back to Toy Town ↗</a></header>
 <div class="world-layout"><section class="world-column" aria-label="Your little world"><div class="world-meta"><span id="scene-place">SANFORD, FLORIDA</span><span id="scene-mode">CONNECTING TO WEATHER</span></div><div class="dial"><div class="face"><svg id="scene" viewBox="0 0 600 600" role="group" aria-label="Interactive little world. Tap the cottage, tree, pond or person and dog."><defs><radialGradient id="sky"><stop stop-color="#d9eee0"/><stop offset="1" stop-color="#9fcbd2"/></radialGradient><clipPath id="round"><circle cx="300" cy="300" r="299"/></clipPath>
@@ -90,8 +90,12 @@
   <g stroke="#597f6f" stroke-width="2.5" stroke-linecap="round" fill="none">
     <path d="M557 444q-1-27 10-39m-11 30-12-22m19 22 12-16M321 439q-2-23-12-35m12 28 11-18"/>
   </g>
-  <g id="floating-ducks" fill="#f3e1b2" stroke="#6e8071" stroke-width="1.4">
-    <path d="M429 428q13 8 24 0l-2-5-8 2-4-7-5 2-2 7Z"/><circle cx="435" cy="420" r="2" fill="#536b61"/>
+  <g id="floating-ducks" transform="translate(440 436)" stroke="#526e60" stroke-width="1.5" stroke-linejoin="round">
+    <path d="M-21 3q18 5 40 0" fill="none" stroke="#eef5db" stroke-width="1.2"/>
+    <path d="M-16-6q6 4 13 1l5-5q-1-10 6-11 8-1 9 7l5 2-6 3q-2 12-16 11-11 0-16-8Z" fill="#f0e0b1"/>
+    <path d="M-8-5q8-4 15-1-4 6-13 5" fill="#d9be91" stroke-width="1"/>
+    <path d="m16-14 7 2-7 3" fill="#bd885b" stroke-width="1"/>
+    <circle cx="12" cy="-16" r="1" fill="#324f46" stroke="none"/>
   </g>
 </g>
 <g id="water-shimmer" fill="none" stroke="#f5f8e3" stroke-width="2.3" stroke-linecap="round" opacity=".5">
@@ -102,25 +106,58 @@
 <path d="M27 403h58v-20H27Z" fill="#b88463"/><path d="M23 383h66M30 390h52" stroke="#e6c9a0" stroke-width="4"/><path d="M33 400v15m46-15v15" stroke="#546e5d" stroke-width="4"/>
 <g transform="translate(544 380)"><path d="M0 12V-30" stroke="#6e7969" stroke-width="4"/><path d="M-9-30h18l-3-14H-6Z" fill="#e3cda0" stroke="#627466" stroke-width="2"/><circle id="lantern-glow" cy="-36" r="32" fill="url(#lampAura)" opacity="0"/></g>
 <g transform="translate(345 403)"><path d="M0 0v-23" stroke="#677764" stroke-width="3"/><path d="M-10-23v-12q11-10 22 0v12Z" fill="#af7966" stroke="#667664" stroke-width="2"/><path d="M3-32h9v-10" stroke="#ead3ad" stroke-width="2"/></g>
-<g id="bunny" transform="translate(74 419)" fill="#dfcead" stroke="#6a7c68" stroke-width="1.3"><ellipse rx="10" ry="6"/><ellipse cx="8" cy="-5" rx="6" ry="6"/><path d="M7-9q-6-17-1-16l5 15m1 0q-1-18 3-14l1 15"/><circle cx="11" cy="-6" r="1" fill="#304d43"/></g>
-</g><g id="walker" class="line">
-  <ellipse cx="162" cy="457" rx="45" ry="4" stroke="none" fill="#315d52" opacity=".18"/>
-  <g id="person">
-    <circle cx="126" cy="390" r="7" fill="#365e61"/>
-    <path d="M119 395q7 7 14 0l5 34-24 0Z" fill="#b48c72" stroke="#365e61" stroke-width="2.5"/>
-    <path d="M122 405l8 0" stroke="#f5d9b0" stroke-width="2"/>
-    <g id="person-arms"><path d="M121 408l-10 14m23-13 11 11" stroke-width="3.3"/></g>
-    <g id="leg-left"><path d="M120 429l-7 22" stroke-width="3.6"/><path d="M107 451h8" stroke-width="3"/></g>
-    <g id="leg-right"><path d="M131 429l9 22" stroke-width="3.6"/><path d="M137 451h8" stroke-width="3"/></g>
-    <path d="M132 410q8 4 13 8" stroke="#d5c1a1" stroke-width="2.5"/>
+<g id="bunny" transform="translate(74 419)" stroke="#587365" stroke-width="1.4" stroke-linejoin="round">
+  <ellipse cx="1" cy="1" rx="14" ry="2.8" fill="#315d52" opacity=".17" stroke="none"/>
+  <circle cx="-10" cy="-8" r="4" fill="#ede2c4"/>
+  <path d="M-9-2q-5-5-1-10 5-7 14-2l3-3q-5-14-1-14 4 0 5 11 3-11 6-9 3 2-3 12 5 2 5 7 0 4-7 5l2 3q-1 2-6 1H-9Z" fill="#dfcead"/>
+  <path d="M-6-2q-3-5 2-8m11-9-1-8" fill="none" stroke="#9d8d74"/>
+  <circle cx="14" cy="-12" r="1" fill="#304d43" stroke="none"/>
+</g>
+</g>
+<g id="walker" fill="none" stroke="#365e57" stroke-linecap="round" stroke-linejoin="round">
+  <ellipse id="person-shadow" cx="140" cy="454" rx="15" ry="3.1" fill="#315d52" opacity=".22" stroke="none"/>
+  <ellipse id="dog-shadow" cx="185" cy="454" rx="23" ry="2.8" fill="#315d52" opacity=".19" stroke="none"/>
+  <path id="dog-leash" d="M151 422Q162 439 181 430" stroke="#776d59" stroke-width="1.35"/>
+  <g id="person" transform="translate(140 453)">
+    <path id="person-leg-far" d="M-4-26Q-4-14-5-4" stroke="#4b6567" stroke-width="6"/>
+    <path id="person-boot-far" d="M-7-5h5l3 3v1h-8Z" fill="#476763" stroke-width="1.2"/>
+    <path id="person-leg-near" d="M3-26Q3-14 3-4" stroke="#576f70" stroke-width="6.5"/>
+    <path id="person-boot-near" d="M1-5h5l3 3v1H1Z" fill="#355550" stroke-width="1.2"/>
+    <g id="person-upper">
+      <path d="M-8-46q7-5 14 1l5 23q-10 4-22 0Z" fill="#bb8b6b" stroke-width="1.9"/>
+      <path d="M3-43v17m-10-5 5-1" stroke="#e9bc92" stroke-width="1.3"/>
+      <path d="M-5-48v-5h8v6Z" fill="#ddaf89" stroke-width="1.3"/>
+      <path d="M-9-47q5 4 14 0l2 4q-8 4-15 0l-4 9-4-2 5-10Z" fill="#789281" stroke-width="1.25"/>
+      <path d="M-9-59q0-8 9-8 8 0 9 7l2 4-3 1q0 6-7 6-9 0-10-10Z" fill="#e3b994" stroke-width="1.6"/>
+      <path d="M-10-58q-3-4 0-9 5-6 13-4 6 1 7 7l-2 2q-8-3-13 2l-1 4Z" fill="#587a70" stroke-width="1.5"/>
+      <path d="M-6-64q6-2 14 0" stroke="#a2b29a" stroke-width="1.2"/>
+      <circle cx="5" cy="-58" r="1.1" fill="#304d43" stroke="none"/>
+      <g id="person-arm">
+        <path d="M-4-40Q-3-34 7-32L13-30" stroke-width="6"/>
+        <path d="M-4-40Q-3-34 7-32L11-31" stroke="#c69775" stroke-width="4"/>
+        <circle cx="13" cy="-30" r="2.4" fill="#e3b994" stroke-width="1.1"/>
+      </g>
+    </g>
   </g>
-  <path id="dog-leash" d="M145 421q14-10 24 2" stroke="#8a8f76" stroke-width="1.5"/>
-  <g id="dog">
-    <path d="M171 430h26l8 13-8 2-5-11h-13l-6 11-8-2Z" fill="#b6a18c" stroke="#365e61" stroke-width="2.6"/>
-    <path d="M171 430l-8-10-10 5 10 9" fill="#c8b39d" stroke="#365e61" stroke-width="2.5"/>
-    <path id="dog-tail" d="M199 428l10-12" stroke="#365e61" stroke-width="3"/>
-    <path id="dog-front" d="M193 435l1 11M179 436l-4 10" stroke-width="2.5"/>
-    <circle cx="160" cy="426" r="2" fill="#365e61" stroke="none"/>
+  <g id="dog" transform="translate(185 453)">
+    <g stroke="#657c6c" stroke-width="3.8">
+      <path id="dog-hind-far" d="M-12-16Q-12-7-12-2"/>
+      <path id="dog-fore-far" d="M9-16Q9-7 9-2"/>
+    </g>
+    <g id="dog-body">
+      <path id="dog-tail" d="M-18-19q-8 0-10-10" stroke-width="3.5"/>
+      <path d="M-18-20q4-5 13-3l13 2 4-8 9 4-5 13q-7 4-19 2l-13-2q-5-2-2-8Z" fill="#bd9c78" stroke-width="1.9"/>
+      <path d="M-13-22q8-3 13 1-2 7-9 7-5-1-4-8Z" fill="#a6795c" stroke="none"/>
+      <path d="M9-27q3-7 10-6 6 0 8 7l4 2q1 4-6 5l-10-2Z" fill="#d9bc96" stroke-width="1.8"/>
+      <path d="M14-31q-6 1-6 7l4 4q5-2 5-9Z" fill="#a5795e" stroke-width="1.3"/>
+      <path d="m11-20 8 3" stroke="#688878" stroke-width="2.6"/>
+      <circle cx="23" cy="-27" r="1.1" fill="#304d43" stroke="none"/>
+      <circle cx="30" cy="-24" r="1.35" fill="#365e57" stroke="none"/>
+    </g>
+    <g stroke="#7c6d55" stroke-width="4.4">
+      <path id="dog-hind-near" d="M-11-15Q-11-7-11-2"/>
+      <path id="dog-fore-near" d="M12-15Q12-7 12-2"/>
+    </g>
   </g>
 </g>
 <g id="wildlife" class="line"></g><g id="chimney-smoke" fill="none" stroke="#78918f" stroke-width="3" stroke-linecap="round"><path d="M490 213q-15-13 0-25t0-25" opacity=".4"/><path d="M497 206q-10-10 1-23" opacity=".25"/></g><g id="flowers"></g><g id="ground" class="line"><path d="M0 458h600M55 451l5-8 5 8m170 0 4-7 4 7m40-4 5-9 4 9"/></g>
@@ -149,7 +186,7 @@
 <rect data-action="house" x="354" y="292" width="176" height="111" rx="12" tabindex="0" role="button" aria-label="Turn the cottage lights on or off"/>
 <ellipse data-action="tree" cx="270" cy="270" rx="85" ry="85" tabindex="0" role="button" aria-label="Shake the tree"/>
 <ellipse data-action="pond" cx="440" cy="438" rx="122" ry="31" tabindex="0" role="button" aria-label="Feed the ducks in the pond"/>
-<rect id="walker-hit" data-action="dog" x="88" y="379" width="142" height="78" rx="10" tabindex="0" role="button" aria-label="Play fetch with the dog"/>
+<rect id="walker-hit" data-action="dog" x="118" y="379" width="106" height="78" rx="10" tabindex="0" role="button" aria-label="Play fetch with the dog"/>
 </g></g></svg><div id="readout"><div id="temp">—°</div><div id="state">WAITING FOR WEATHER</div></div></div></div>
 <div class="scene-caption"><span class="tiny-star">✳</span><p id="scene-story" role="status">A little cottage. A good dog. A world waiting for you.</p></div>
 <div class="interaction-bar" aria-label="Play with the world"><button data-action="dog">Play fetch <span>↗</span></button><button data-action="pond">Feed ducks <span>≈</span></button><button data-action="tree">Shake tree <span>✳</span></button><button data-action="house">Cottage lights <span>☼</span></button></div>
@@ -164,4 +201,4 @@
 <details id="playground"><summary>Make your own little season <span>+</span></summary><div class="playground-inner"><p>Preview a different world. Live weather stays a tap away.</p><nav class="seasons" aria-label="Preview a season"><button data-season="spring">Spring</button><button data-season="summer">Summer</button><button data-season="autumn">Autumn</button><button data-season="winter">Winter</button></nav><label for="temperature">Temperature <output id="slider-value">8°C</output></label><input id="temperature" type="range" min="-15" max="40" value="8"><div class="preview-row"><label for="preview-weather">Weather</label><select id="preview-weather"><option value="clear">Clear sky</option><option value="rain">Rain</option><option value="snow">Snow</option><option value="fog">Fog</option></select><button id="day-night">Try night</button></div><button id="live" class="return-live">Return to live weather ↗</button></div></details>
 </aside></div>
 <footer class="page-footer"><span>Small moments. Real weather.</span><div><button id="play" aria-pressed="true">Pause motion</button><span class="footer-dot">·</span><span>Tap the world to discover it</span></div></footer>
-</main><script src="assets/little-seasons/model.js?v=20261112a"></script><script src="assets/little-seasons/app.js?v=20261112a"></script></body></html>
+</main><script src="assets/little-seasons/model.js?v=20261112a"></script><script src="assets/little-seasons/app.js?v=20261112b"></script></body></html>
