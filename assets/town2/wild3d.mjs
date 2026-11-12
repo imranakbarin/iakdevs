@@ -125,35 +125,56 @@ export function buildMeadow(season, max = 800) {
 const flower = (b, x, y, z, colour, h = .16, r = .035, o = {}) => { b.cyl(.006, .008, h, 'leaf', {x, y, z, seg: 4, sway: .9}); poly(b, 'oct', r * 1.15, colour, {x, y: y + h, z, sy: .8, sway: .9}); if (o.petals) for (let k = 0; k < 4; k++) { const a = k / 4 * TAU; poly(b, 'oct', r * .7, colour, {x: x + Math.cos(a) * r * 1.2, y: y + h, z: z + Math.sin(a) * r * 1.2, sy: .5, sway: .9}); } };
 const bush = (b, x, y, z, r, colour = 'leaf') => poly(b, 'ico', r * 1.1, colour, {x, y: y + r * .6, z, sy: .8, sway: .5});
 const ring = (b, p, y0, r, gapAt, colour = 'stone') => { const n = Math.round(r * TAU / .2); for (let k = 0; k < n; k++) { const a = k / n * TAU; if (Math.abs(Math.atan2(Math.sin(a - gapAt), Math.cos(a - gapAt))) < .3) continue; const x = p.x + Math.cos(a) * r, z = p.z + Math.sin(a) * r; b.box(.11 + (k % 3) * .02, .06, .08, k % 3 ? colour : '#cbbfa8', {x, y: heightAt(x, z), z, ry: a + k, r: .01}); } };
+
+const DECO = ['roses', 'tulips', 'lavender', 'sunflowers', 'herbs', 'meadow'];
+// A formal garden: a low box hedge all round with an opening towards the town, a gravel path in a cross, four beds (one colour in each) and a feature in the middle.
+function formalGarden(b, p, S, winter, cs, R, pick, gap, y0) {
+  const r = p.r, ca = Math.cos(gap), sa = Math.sin(gap), at = (u, v) => [p.x + u * ca - v * sa, p.z + u * sa + v * ca], gy = (x, z) => heightAt(x, z);
+  // the lawn inside and the hedge round it
+  b.cyl(r, r + .02, .03, winter ? '#e8eef0' : '#79bf58', {x: p.x, y: y0, z: p.z, seg: 28});
+  const n = Math.round(r * TAU / .3);
+  for (let k = 0; k < n; k++) { const a = k / n * TAU; if (Math.abs(Math.atan2(Math.sin(a - gap), Math.cos(a - gap))) < .34) continue; const x = p.x + Math.cos(a) * r * .97, z = p.z + Math.sin(a) * r * .97; b.box(.3, .24, .2, winter ? (k % 2 ? '#e8f0ea' : '#7da58c') : k % 2 ? 'leaf' : 'leafLight', {x, y: gy(x, z), z, ry: -a + Math.PI / 2, r: .07, sway: .2}); }
+  // the gravel cross
+  for (const [w, d] of [[.2, r * 1.9], [r * 1.9, .2]]) { const [cx, cz] = at(0, 0); b.box(w, .02, d, winter ? '#dfe5e8' : '#e9d9b0', {x: cx, y: y0 + .03, z: cz, ry: -gap, r: .005}); }
+  // four beds, a colour each, round the middle
+  const pal = cs.length ? cs : ['#ffffff'];
+  for (let q = 0; q < 4; q++) {
+    const u = (q % 2 ? 1 : -1) * r * .5, v = (q < 2 ? 1 : -1) * r * .5, [bx, bz] = at(u, v), rb = r * .34, col = pal[q % pal.length], col2 = pal[(q + 1) % pal.length];
+    b.cyl(rb, rb + .02, .05, winter ? '#ece8e0' : '#5d4030', {x: bx, y: y0, z: bz, seg: 16}); const st = [['#cbbfa8', '#b9ad96']]; for (let k = 0; k < 14; k++) { const a = k / 14 * TAU; b.box(.1, .05, .07, k % 2 ? st[0][0] : st[0][1], {x: bx + Math.cos(a) * rb, y: gy(bx, bz) + .01, z: bz + Math.sin(a) * rb, ry: -a, r: .01}); }
+    if (winter) { for (let k = 0; k < 4; k++) poly(b, 'ico', .1, k % 2 ? '#ffffff' : '#9fb4a8', {x: bx + (R(q * 9 + k) - .5) * rb, y: y0 + .05, z: bz + (R(q * 9 + k + 3) - .5) * rb, sy: .5}); continue; }
+    const yy = y0 + .04;
+    if (p.kind === 'roses') { for (let k = 0; k < 4; k++) { const a = k / 4 * TAU + q, x = bx + Math.cos(a) * rb * .5, z = bz + Math.sin(a) * rb * .5; poly(b, 'ico', .13, 'leaf', {x, y: yy + .08, z, sy: .8, sway: .4}); for (let f = 0; f < 5; f++) poly(b, 'oct', .045, f % 3 ? col : col2, {x: x + (R(q + k + f) - .5) * .2, y: yy + .17 + R(q * 3 + f) * .08, z: z + (R(q + f + 9) - .5) * .2, sway: .6}); } }
+    else if (p.kind === 'tulips') { for (let row = -2; row <= 2; row++) for (let c2 = -2; c2 <= 2; c2++) { const x = bx + c2 * .13, z = bz + row * .13; if (Math.hypot(x - bx, z - bz) > rb * .88) continue; b.cyl(.006, .008, .13, 'leaf', {x, y: yy, z, seg: 4, sway: .9}); cone2(b, .04, .07, (row + c2) % 2 ? col : col2, {x, y: yy + .17, z, rx: Math.PI, seg: 6, sway: .9}); } }
+    else if (p.kind === 'lavender') { for (let row = -2; row <= 2; row++) for (let c2 = -2; c2 <= 2; c2++) { const x = bx + c2 * .12, z = bz + row * .14; if (Math.hypot(x - bx, z - bz) > rb * .88) continue; poly(b, 'ico', .07, 'leaf', {x, y: yy + .04, z, sy: .8}); cone2(b, .035, .18, col, {x, y: yy + .2, z, seg: 5, sway: .9}); } }
+    else if (p.kind === 'sunflowers') { for (let k = 0; k < 5; k++) { const a = k / 5 * TAU + q, x = bx + Math.cos(a) * rb * .45, z = bz + Math.sin(a) * rb * .45, h = .42 + R(q * 5 + k) * .16; b.cyl(.012, .018, h, 'leaf', {x, y: yy, z, seg: 5, sway: .8}); b.cyl(.085, .085, .02, col, {x, y: yy + h, z, rx: .5, seg: 12, sway: 1}); b.sph(.045, '#6b4423', {x, y: yy + h + .01, z: z + .012, seg: 8, sway: 1}); } }
+    else if (p.kind === 'herbs') { for (let ring2 = 0; ring2 < 2; ring2++) for (let k = 0; k < 4 + ring2 * 3; k++) { const a = k / (4 + ring2 * 3) * TAU, rr = (.25 + ring2 * .3) * rb * 1.6, x = bx + Math.cos(a) * rr, z = bz + Math.sin(a) * rr; poly(b, 'ico', .07 - ring2 * .01, ['leaf', 'lime', 'leafLight'][(k + ring2) % 3], {x, y: yy + .05, z, sy: .8, sway: .4}); if (k % 3 === 0) poly(b, 'oct', .03, col, {x, y: yy + .14, z}); } }
+    else { for (let k = 0; k < 14; k++) { const a = R(q * 20 + k) * TAU, rr = Math.sqrt(R(q * 20 + k + 5)) * rb * .85, x = bx + Math.cos(a) * rr, z = bz + Math.sin(a) * rr; b.cyl(.006, .008, .1 + R(k) * .1, 'leaf', {x, y: yy, z, seg: 4, sway: .9}); poly(b, 'oct', .045, k % 2 ? col : col2, {x, y: yy + .1 + R(k) * .1, z, sway: .9}); } }
+  }
+  // a feature in the middle, by kind
+  const [mx, mz] = at(0, 0), my = gy(mx, mz) + .03;
+  if (p.kind === 'roses') { const A = at(-.22, 0), B = at(-.1, 0), C = at(.1, 0), D = at(.22, 0); for (const q2 of [A, D]) b.cyl(.02, .02, .55, 'white', {x: q2[0], y: my, z: q2[1], seg: 6}); b.tube([[A[0], my + .55, A[1]], [B[0], my + .74, B[1]], [C[0], my + .74, C[1]], [D[0], my + .55, D[1]]], .018, 'white'); for (let k = 0; k < 6; k++) { const f = k / 5, px = A[0] + (D[0] - A[0]) * f, pz = A[1] + (D[1] - A[1]) * f; poly(b, 'oct', .04, k % 2 ? '#f59ac1' : '#e2473b', {x: px, y: my + .74 - Math.sin(f * Math.PI) * .0 - .03 * Math.abs(f - .5), z: pz}); } }
+  else if (p.kind === 'tulips') { b.cyl(.07, .1, .22, 'stone', {x: mx, y: my, z: mz, seg: 10}); b.cyl(.15, .1, .05, 'stone', {x: mx, y: my + .22, z: mz, seg: 12}); b.cyl(.12, .12, .02, '#6fcdea', {x: mx, y: my + .27, z: mz, seg: 12}); }
+  else if (p.kind === 'lavender') { const [bx, bz] = at(0, .0); b.push(bx, my, bz, -gap + Math.PI / 2); b.box(.5, .05, .18, 'wood', {y: .2, r: .01}); b.box(.5, .2, .04, 'wood', {y: .24, z: -.08, r: .01}); for (const sx of [-.2, .2]) b.box(.04, .2, .14, 'slate', {x: sx}); b.pop(); }
+  else if (p.kind === 'sunflowers') { b.cyl(.012, .012, .5, 'wood', {x: mx, y: my, z: mz, seg: 5}); b.box(.3, .02, .02, 'wood', {x: mx, y: my + .36, z: mz}); b.sph(.05, '#e8d29a', {x: mx, y: my + .52, z: mz, seg: 8}); cone2(b, .075, .08, '#8a5a3c', {x: mx, y: my + .6, z: mz, seg: 8}); }
+  else if (p.kind === 'herbs') { b.cyl(.04, .05, .1, 'stone', {x: mx, y: my, z: mz, seg: 10}); b.cyl(.09, .09, .02, 'stone', {x: mx, y: my + .1, z: mz, seg: 12}); b.box(.1, .01, .02, 'gold', {x: mx, y: my + .125, z: mz, ry: .6}); }
+  else { for (const [dx, dz] of [[-.12, -.05], [.1, .06]]) { const [hx, hz] = at(dx, dz); b.box(.17, .12, .17, 'white', {x: hx, y: my, z: hz, r: .02}); b.box(.17, .1, .17, 'white', {x: hx, y: my + .12, z: hz, r: .02}); b.box(.19, .03, .19, 'gold', {x: hx, y: my + .22, z: hz, r: .01}); } }
+}
 export function buildGardens(season, material) {
   const b = new Bag(), glass = [], bloom = BLOOM[season], winter = season === 'winter', S = winter ? .5 : 1;
   for (const p of PLOTS) {
     const y = heightAt(p.x, p.z) + .01, r = p.r, R = k => rand(p.seed * 17 + k), pick = (cs, k) => cs[Math.floor(R(k) * cs.length)], cs = bloom[p.kind] || bloom.meadow;
     const gap = Math.atan2(-p.z, -p.x);   // the opening of the border faces the middle of the town
-    if (p.kind !== 'coop') {
+    const deco = DECO.includes(p.kind);
+    if (deco) formalGarden(b, p, S, winter, cs, R, pick, gap, y);
+    else if (p.kind !== 'coop') {
       b.cyl(r, r + .03, .035, winter ? '#ece8e0' : '#6e4c32', {x: p.x, y, z: p.z, seg: 28}); ring(b, p, y, r, gap);
       if (p.kind !== 'greenhouse' && p.kind !== 'allotment') for (let k = 0, m = Math.round(r * r * 15); k < m; k++) { const a = R(k + 200) * TAU, rr = Math.sqrt(R(k + 300)) * r * .93; poly(b, 'ico', .09 + R(k + 400) * .05, winter ? (k % 2 ? '#dfe9ee' : '#9fb4a8') : k % 3 ? 'leaf' : 'leafLight', {x: p.x + Math.cos(a) * rr, y: y + .035, z: p.z + Math.sin(a) * rr, sy: .6, sway: .4}); }
     }
-    if (p.kind === 'roses') {
-      for (let k = 0; k < 11; k++) { const a = k / 11 * TAU + .3, rr = r * (k % 2 ? .38 : .68), x = p.x + Math.cos(a) * rr, z = p.z + Math.sin(a) * rr; bush(b, x, y, z, .17 * S + .05); if (!winter) for (let f = 0; f < 6; f++) poly(b, 'oct', .042, pick(cs, k * 4 + f), {x: x + (R(k + f) - .5) * .22, y: y + .2 + R(k * 3 + f) * .1, z: z + (R(k + f + 9) - .5) * .22, sway: .6}); }
-      for (const sx of [-1, 1]) { b.cyl(.02, .02, .55, 'white', {x: p.x + sx * .33, y, z: p.z, seg: 6}); } b.tube([[p.x - .33, y + .55, p.z], [p.x - .16, y + .72, p.z], [p.x + .16, y + .72, p.z], [p.x + .33, y + .55, p.z]], .018, 'white');
-      if (!winter) for (let k = 0; k < 7; k++) b.sph(.03, pick(cs, k + 40), {x: p.x + (k - 3) * .1, y: y + .7 + Math.abs(k - 3) * -.03 + .02, z: p.z + (R(k) - .5) * .05, seg: 6});
-    } else if (p.kind === 'tulips') {
-      for (let row = -4; row <= 4; row++) for (let k = -6; k <= 6; k++) { const x = p.x + k * .14, z = p.z + row * .14; if (Math.hypot(x - p.x, z - p.z) > r * .86) continue; if (winter) { b.sph(.03, 'white', {x, y: y + .03, z, sy: .6, seg: 5}); continue; } b.cyl(.006, .008, .13, 'leaf', {x, y, z, seg: 4, sway: .9}); cone2(b, .04, .07, cs[(row + 4) % cs.length], {x, y: y + .17, z, rx: Math.PI, seg: 6, sway: .9}); }
-    } else if (p.kind === 'lavender') {
-      for (let row = -4; row <= 4; row++) for (let k = -6; k <= 6; k++) { const x = p.x + k * .13, z = p.z + row * .16 + Math.sin(k * .5) * .05; if (Math.hypot(x - p.x, z - p.z) > r * .86) continue; bush(b, x, y, z, .075 + R(row * 9 + k + 20) * .02, winter ? '#9fb4a8' : 'leaf'); if (!winter) cone2(b, .035, .18, pick(cs, row * 9 + k + 60), {x, y: y + .2, z, seg: 5, sway: .9}); }
-    } else if (p.kind === 'sunflowers') {
-      for (let k = 0; k < 15; k++) { const a = k * 2.4 + R(1), rr = Math.sqrt((k + .5) / 15) * r * .8, x = p.x + Math.cos(a) * rr, z = p.z + Math.sin(a) * rr, h = (.38 + R(k + 5) * .18) * S; b.cyl(.012, .018, h, 'leaf', {x, y, z, seg: 5, sway: .8}); b.cyl(.075 * S + .02, .075 * S + .02, .02, winter ? '#d8e4f2' : pick(cs, k), {x, y: y + h, z, rx: .5, seg: 12, sway: 1}); b.sph(.045 * S + .01, '#6b4423', {x, y: y + h + .01, z: z + .012, seg: 8, sway: 1}); }
+    if (deco) {   // (drawn above)
     } else if (p.kind === 'allotment') {
       for (const dz of [-.42, .0, .42]) { const z0 = p.z + dz; b.box(r * 1.2, .09, .3, '#8a5a3c', {x: p.x - r * .05, y, z: z0, r: .02}); b.box(r * 1.15, .03, .24, '#4a3324', {x: p.x - r * .05, y: y + .09, z: z0}); for (let k = 0; k < 5; k++) { const x = p.x - r * .5 + k * r * .23; if (winter) b.sph(.05, 'white', {x, y: y + .11, z: z0, sy: .5, seg: 6}); else if ((k + dz * 3) % 2 > .5) bush(b, x, y + .08, z0, .075, k % 2 ? 'lime' : 'leaf'); else cone2(b, .03, .1, 'leaf', {x, y: y + .17, z: z0, seg: 5, sway: .6}); } }
       b.cyl(.012, .012, .5, 'wood', {x: p.x + r * .6, y, z: p.z, seg: 5}); b.box(.3, .02, .02, 'wood', {x: p.x + r * .6, y: y + .36, z: p.z}); b.sph(.05, '#e8d29a', {x: p.x + r * .6, y: y + .52, z: p.z, seg: 8}); cone2(b, .075, .08, '#8a5a3c', {x: p.x + r * .6, y: y + .6, z: p.z, seg: 8});
       if (season === 'autumn') for (let k = 0; k < 4; k++) b.sph(.07, '#f28b3c', {x: p.x - r * .5 + k * .3, y: y + .12, z: p.z + .62, sy: .8, seg: 8});
-    } else if (p.kind === 'herbs') {
-      for (let ring_ = 0; ring_ < 3; ring_++) for (let k = 0; k < 4 + ring_ * 3; k++) { const a = k / (4 + ring_ * 3) * TAU + ring_, rr = (.25 + ring_ * .25) * r * 1.1, x = p.x + Math.cos(a) * rr, z = p.z + Math.sin(a) * rr; bush(b, x, y + ring_ * .025, z, .06 + (2 - ring_) * .015, ['leaf', 'lime', 'leafLight'][(k + ring_) % 3]); if (!winter && k % 3 === 0) b.sph(.018, pick(cs, k + ring_ * 5), {x, y: y + .13 + ring_ * .03, z, seg: 5}); }
-      b.cyl(.04, .05, .1, 'stone', {x: p.x, y, z: p.z, seg: 10}); b.cyl(.08, .08, .02, 'stone', {x: p.x, y: y + .1, z: p.z, seg: 12});
-    } else if (p.kind === 'meadow') {
-      for (let k = 0; k < 60; k++) { const a = R(k) * TAU, rr = Math.sqrt(R(k + 30)) * r * .88; if (winter) { if (k % 3 === 0) b.sph(.03, 'white', {x: p.x + Math.cos(a) * rr, y: y + .03, z: p.z + Math.sin(a) * rr, sy: .6, seg: 5}); continue; } flower(b, p.x + Math.cos(a) * rr, y, p.z + Math.sin(a) * rr, pick(cs, k + 70), .1 + R(k + 50) * .12, .028 + R(k + 60) * .012, {petals: k % 4 === 0}); }
-      for (const [dx, dz] of [[-.35, -.25], [-.18, -.3]]) { b.box(.17, .12, .17, 'white', {x: p.x + dx, y, z: p.z + dz, r: .02}); b.box(.17, .1, .17, 'white', {x: p.x + dx, y: y + .12, z: p.z + dz, r: .02}); b.box(.19, .03, .19, 'gold', {x: p.x + dx, y: y + .22, z: p.z + dz, r: .01}); b.box(.05, .03, .02, 'black', {x: p.x + dx, y: y + .06, z: p.z + dz + .09}); }
     } else if (p.kind === 'greenhouse') {
       const w = r * 1.05, d = r * .85, h = .42, hh = .28;
       b.box(w, .06, d, 'stone', {x: p.x, y, z: p.z, r: .015});

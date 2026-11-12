@@ -20,6 +20,7 @@ import {PETS} from './wildlife.mjs';
 import {createFestival} from './festscene.mjs';
 import {newBoat, stepBoat, sightings, MOOR} from './sail.mjs';
 import {buildDrops, buildUpgrades} from './wild3d.mjs';
+import {buildRain as buildRain2, buildPuddles as buildPuddles2, buildSplashes, buildFallingThings} from './weather3d.mjs';
 import {UPGRADES, canBuy, balance as chestBal} from './chest.mjs';
 import {newBite, markerAt, reel as angleReel, message as angleMessage} from './angling.mjs';
 const PLOT_COUNT = PLOTS.length;
@@ -61,9 +62,10 @@ const marketDef = BUILDINGS.find(b => b.id === 'market'), rods = new Map(), BROL
 const seasonDecor = buildSeasonDecor(season, sim.graph, built.material); scene.add(seasonDecor); let townFx = null, fxKey = '', upg = null, upgKey = '';
 const umbrellas = buildUmbrellas(); scene.add(umbrellas); const flames = buildFlames(), debris = buildDebris(); scene.add(flames, debris); const fireSmoke = createSmoke(16, 3.2), fireSmokeMesh = new THREE.InstancedMesh(new THREE.SphereGeometry(1, 8, 6), new THREE.MeshLambertMaterial({color: '#4a4a52', transparent: true, opacity: .75, depthWrite: false}), 16); fireSmokeMesh.frustumCulled = false; fireSmokeMesh.visible = false; scene.add(fireSmokeMesh); const fireM = new THREE.Matrix4();
 sim.residents.forEach((r, i) => { const g = buildResident(r.def, i, built.material); if (r.id === 'finn' || r.id === 'salt') { const rod = buildRod(); g.add(rod); rods.set(r.id, rod); } scene.add(g); people.set(r.id, g); });
-const rain = buildRain(); scene.add(rain);
-const fall = buildFall(season); scene.add(fall);
-const puddles = buildPuddles(sim.graph); if (season !== 'winter') scene.add(puddles);   // (in winter the rain is snow)
+const rain = buildRain2(); scene.add(rain);
+const fall = buildFallingThings(season) || buildFall(season); scene.add(fall);
+const puddles = buildPuddles2(sim.graph); if (season !== 'winter') scene.add(puddles);   // (in winter the rain is snow)
+const splashes = buildSplashes(puddles.userData.spots); if (season !== 'winter') scene.add(splashes);
 const lampDrawn = sim.lamps.map(() => -1);
 sim.vehicles.forEach(v => { const g = buildVehicle(v.def, built.material); scene.add(g); cars.set(v.id, g); });
 
@@ -117,7 +119,7 @@ function fit() { const a = innerWidth / innerHeight; view.tdist = view.dist = cl
 function resize() { renderer.setSize(innerWidth, innerHeight, false); camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix(); }
 function placeCamera() {
   const c = Math.cos(TILT), s = Math.sin(TILT);
-  scene.fog.near = view.dist + 40; scene.fog.far = view.dist + 190;   // (haze starts beyond the island however far the camera is: a fixed distance washed the whole town out on a tall phone screen)
+  { const rr = sim.weather.rain || 0; scene.fog.near = view.dist + 40 - rr * 26; scene.fog.far = view.dist + 190 - rr * 100; }   // (haze starts beyond the island however far the camera is: a fixed distance washed the whole town out on a tall phone screen)
   camera.position.set(view.x + Math.sin(view.yaw) * c * view.dist, s * view.dist, view.z + Math.cos(view.yaw) * c * view.dist); camera.lookAt(view.x, .6, view.z);
 }
 const pointers = new Map(); let gesture = null, follow = null;
@@ -372,7 +374,7 @@ let nightNow = 0, sagaSaved = 0, sagaSavedAt = 0, flood = 0, shadowsNear = true,
 // The light follows the hour: sky, fog, sea, sun or moon, lit windows and lanterns, stars.
 function weatherLight() {
   const L = skyAt(sim.hour, sim.weather.rain, season);
-  scene.background.set(L.sky); nightNow = L.night;
+  scene.background.set(L.sky); scene.fog.color.set(L.sky); nightNow = L.night;
   if (dome.visible) { const u = dome.userData.u, r = clamp(0, sim.weather.rain, 1); u.uBottom.value.set(L.sky); u.uTop.value.set(mix(mix(L.sky, '#4f9fe2', (1 - L.night) * (1 - r) * .55), '#060c22', L.night * .55)); u.uSun.value.set(L.sunPos[0], Math.max(.02, L.sunPos[1]), L.sunPos[2]); u.uGlow.value = Math.max(0, Math.min(1, (1.8 - L.sunI) / 1.0)) * (1 - L.night) * (1 - r); u.uGlowColor.value.set(L.sunColor); } scene.fog.color.set(L.fog); seaMat.color.set(L.sea); if (gradeEl) { const warm = Math.max(0, Math.min(1, (1.6 - L.sunI) / .9)) * (1 - L.night), cool = L.night; gradeEl.style.setProperty('--tint', cool > .3 ? 'rgba(40,60,140,' + (cool * .12).toFixed(3) + ')' : 'rgba(255,150,70,' + (warm * .1).toFixed(3) + ')'); }
   { const k = (.05 + clamp(0, (1.55 - L.hemiI) / .55, 1) * .28) * (1 - .4 * L.night);   // water holds its colour when the light is low
     seaMat.emissive.set(L.sea).multiplyScalar(k); built.shallows.material.color.set(mix(L.sea, '#d8fff6', .5)); built.shallows.material.emissive.set(L.sea).multiplyScalar(k * 1.3); }
@@ -381,14 +383,14 @@ function weatherLight() {
   const gm = built.glow.material; gm.opacity = L.glow; built.glow.visible = L.glow > .02;
   { const o = L.night > .5 && !lite ? (L.night - .5) * 2 * (1 - clamp(0, sim.weather.rain * 1.4, 1)) * .6 : 0; moonPath.visible = o > .02; if (o > .02) { const dx = L.sunPos[0], dz = L.sunPos[2], d = Math.hypot(dx, dz) || 1; moonPath.material.opacity = o * (.85 + .15 * Math.sin(time * 1.3)); moonPath.rotation.y = Math.atan2(dx, dz) + Math.PI; moonPath.position.set(dx / d * 40, ISLAND.sea + .03, dz / d * 40); } }
   sky.visible = L.stars > .02; sky.userData.stars.material.opacity = L.stars; sky.userData.moon.material.opacity = L.stars * .95;
-  { const r = sim.weather.rain; { let n = 0; if (r > .25) sim.residents.forEach((q, i) => { const g = people.get(q.id); if (g.visible && q.state === 'walking') umbrellas.userData.set(n++, g.position.x, g.position.y, g.position.z, g.rotation.y, BROLLY[i % BROLLY.length]); }); umbrellas.userData.show(n); } rain.position.set(view.x, 0, view.z); rain.userData.update(time, season === 'winter' || r < .02 ? 0 : r);
+  { const r = sim.weather.rain; { let n = 0; if (r > .25) sim.residents.forEach((q, i) => { const g = people.get(q.id); if (g.visible && q.state === 'walking') umbrellas.userData.set(n++, g.position.x, g.position.y, g.position.z, g.rotation.y, BROLLY[i % BROLLY.length]); }); umbrellas.userData.show(n); } rain.position.set(view.x, 0, view.z); rain.userData.update(time, season === 'winter' || r < .02 ? 0 : r, windNow); splashes.userData.update(time, season === 'winter' || r < .02 ? 0 : r, view.x, view.z, lastDt);
     const day = 1 - L.night, amount = season === 'winter' ? Math.max(.25, r) : season === 'summer' ? (L.night > .5 ? .7 * (1 - r) : 0) : (season === 'autumn' ? .5 : .4) * day * (1 - r * .7);
     fall.position.set(view.x, 0, view.z); fall.userData.update(time, amount, windNow);
     sound.update({wild: {...wild.soundState(), bang: fest.bang()}, dark: L.night, rain: r, season, hour: sim.hour, trainMoving: Math.abs(sim.train.v) > .1, trainAt: sim.train.at, zoom: 1 - clamp(0, (view.dist - 7) / 50, 1)}, 0.0001 + lastDt); }
   // the street lamps, one by one as the lamplighter reaches them (faint in daylight, bright after dark), and the puddles
   built.lampGlow.material.opacity = .4 + .55 * L.night;
   sim.lamps.forEach((l, i) => { const v = Math.round(l.lit * 20) / 20; if (v !== lampDrawn[i]) { lampDrawn[i] = v; built.lampGlow.userData.set(i, v); } });
-  puddles.userData.set(sim.weather.wet);
+  puddles.userData.set(sim.weather.wet); puddles.userData.tint(L.sky, sim.weather.wet);
   sky.position.copy(camera.position); dome.position.copy(camera.position); document.body.style.background = L.sky; return L;
 }
 let lastDt = 0;
