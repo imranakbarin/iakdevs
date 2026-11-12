@@ -712,8 +712,14 @@ export function buildMarketGoods(def, material) {
 
 // A fishing rod for the fishermen: held out over the water, a thin line down to a red float. Hidden until they stand on the pier.
 export function buildRod() {
-  const g = new THREE.Group(), pole = new THREE.Mesh(new THREE.CylinderGeometry(.006, .01, .5, 6), new THREE.MeshBasicMaterial({color: '#8a5a3c'})), line = new THREE.Mesh(new THREE.CylinderGeometry(.0025, .0025, .4, 4), new THREE.MeshBasicMaterial({color: '#ffffff'})), bob = new THREE.Mesh(new THREE.SphereGeometry(.022, 8, 6), new THREE.MeshBasicMaterial({color: '#e2473b'}));
-  pole.position.set(0, .3, .22); pole.rotation.x = Math.PI / 2 - .6; line.position.set(0, .1, .46); bob.position.set(0, -.1, .46); g.add(pole, line, bob); g.visible = false; g.userData.bob = bob; return g;
+  // A proper fishing rod: a pole from the hand out over the water, a long line down to a red float, a ring of ripples round it and a little bucket of fish.
+  const g = new THREE.Group(), mat = c => new THREE.MeshBasicMaterial({color: c}), Y = new THREE.Vector3(0, 1, 0);
+  const seg = (a, b, r, c) => { const A = new THREE.Vector3(...a), B = new THREE.Vector3(...b), d = B.clone().sub(A), m = new THREE.Mesh(new THREE.CylinderGeometry(r, r, d.length(), 5), mat(c)); m.position.copy(A).add(B).multiplyScalar(.5); m.quaternion.setFromUnitVectors(Y, d.normalize()); return m; };
+  const tip = [0, .66, .62], hand = [0, .26, .12], bobAt = [0, -.34, .86];
+  const pole = seg(hand, tip, .02, '#8a5a3c'), line = seg(tip, bobAt, .006, '#ffffff'), bob = new THREE.Mesh(new THREE.SphereGeometry(.035, 8, 6), mat('#e2473b'));
+  bob.position.set(...bobAt); const ring = new THREE.Mesh(new THREE.RingGeometry(.05, .065, 20).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({color: '#ffffff', transparent: true, opacity: .8, depthWrite: false})); ring.position.set(bobAt[0], bobAt[1] + .02, bobAt[2]);
+  const bucket = new THREE.Group(); bucket.position.set(.22, -.0, .02); bucket.add(new THREE.Mesh(new THREE.CylinderGeometry(.055, .045, .09, 10), mat('#7c8a96')), (() => { const f = new THREE.Mesh(new THREE.SphereGeometry(.03, 6, 4), mat('#7fb5d6')); f.position.set(0, .06, 0); return f; })());
+  g.add(pole, line, bob, ring, bucket); g.visible = false; g.userData = {bob, line, ring, bobAt, tipAt: tip}; return g;
 }
 
 // All the umbrellas in one instanced mesh (white canopies tinted per instance), so a rainy crowd costs one draw call, not one each.

@@ -34,7 +34,7 @@ canvas:active{cursor:grabbing}
 #jobs.open span{display:block}
 #toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(120px + env(safe-area-inset-bottom,0px));max-width:min(88vw,420px);padding:8px 14px;border-radius:14px;background:var(--paper);font:600 13px/1.35 Nunito,system-ui,sans-serif;text-align:center;opacity:0;transition:opacity .3s;pointer-events:none}
 #toast.on{opacity:1}
-#card #send,#card #journalBtn{position:static;width:auto;height:auto;margin-top:6px;padding:5px 10px;border-radius:10px;background:#ffd54a;color:#3c4654;font:700 12px/1.2 Nunito,system-ui,sans-serif}
+#card #send,#card #journalBtn,#card #fishBtn{position:static;width:auto;height:auto;margin-top:6px;padding:5px 10px;border-radius:10px;background:#ffd54a;color:#3c4654;font:700 12px/1.2 Nunito,system-ui,sans-serif}
 #fail{position:fixed;inset:0;display:none;align-items:center;justify-content:center;padding:24px;text-align:center;background:#bfe9fb;line-height:1.6}
 #fail small{opacity:.75}
 #set{position:fixed;right:calc(12px + env(safe-area-inset-right,0px));top:calc(54px + env(safe-area-inset-top,0px));width:34px;height:34px;border:0;border-radius:50%;background:var(--paper);font-size:17px;line-height:1;cursor:pointer;padding:0}
@@ -50,7 +50,8 @@ canvas:active{cursor:grabbing}
 #panel .seg{display:flex;gap:4px}
 #panel .seg button{flex:1;min-height:36px;border:0;border-radius:9px;background:#e9edf2;color:#3c4654;font:700 12px/1 Nunito,system-ui,sans-serif;cursor:pointer}
 #panel .seg button.on{background:#ffd54a}
-#card #journalBtn{margin-left:6px}
+#card #journalBtn,#card #fishBtn{margin-left:6px}
+#fishbar{position:relative;height:22px;margin:8px 0;border-radius:11px;background:#d9e8f2;overflow:hidden}#fishbar i{position:absolute;top:0;bottom:0;background:#8fd16a;opacity:.85}#fishbar b{position:absolute;top:2px;width:6px;height:18px;margin-left:-3px;border-radius:3px;background:#e2473b}
 html.ui-off #set,html.ui-off #panel,html.ui-off #paperBtn,html.ui-off #photoBtn,html.ui-off #paper{display:none}
 @media (max-width:560px){
 #chip,#stack{box-sizing:border-box;max-width:calc(100vw - 80px)}
@@ -72,7 +73,7 @@ html.ui-off #set,html.ui-off #panel,html.ui-off #paperBtn,html.ui-off #photoBtn,
 #paper,#panel{top:calc(220px + env(safe-area-inset-top,0px))}
 #paper .tabs button{min-height:44px}
 #card button{width:44px;height:44px;right:0;top:0}
-#card #send,#card #journalBtn{min-height:44px;padding:10px 14px}
+#card #send,#card #journalBtn,#card #fishBtn{min-height:44px;padding:10px 14px}
 #panel .seg button{min-height:44px}
 #seasons a{display:inline-block;min-width:30px;min-height:30px;line-height:30px;text-align:center;margin-left:2px}
 }
@@ -80,37 +81,38 @@ html.ui-off #set,html.ui-off #panel,html.ui-off #paperBtn,html.ui-off #photoBtn,
 #dbg{position:fixed;left:calc(8px + env(safe-area-inset-left,0px));bottom:calc(8px + env(safe-area-inset-bottom,0px));padding:3px 8px;border-radius:8px;background:rgba(0,0,0,.6);color:#fff;font:600 11px/1.3 ui-monospace,Menlo,Consolas,monospace;pointer-events:none;z-index:9}
 html.ui-off #stack,html.ui-off #jobs,html.ui-off #toast,html.ui-off #snd,html.ui-off #chip,html.ui-off #hint,html.ui-off #story,html.ui-off #card{display:none}
 </style>
-<script type="importmap" data-stamp="b498ab41ee">
+<script type="importmap" data-stamp="ae5824521f">
 {"imports":{
   "three":"https://cdn.jsdelivr.net/npm/three@0.187.0/build/three.module.js",
   "three/addons/":"https://cdn.jsdelivr.net/npm/three@0.187.0/examples/jsm/",
-  "./assets/town2/build.mjs":"./assets/town2/build.mjs?v=b498ab41ee",
-  "./assets/town2/curve.mjs":"./assets/town2/curve.mjs?v=b498ab41ee",
-  "./assets/town2/def.mjs":"./assets/town2/def.mjs?v=b498ab41ee",
-  "./assets/town2/events.mjs":"./assets/town2/events.mjs?v=b498ab41ee",
-  "./assets/town2/garden.mjs":"./assets/town2/garden.mjs?v=b498ab41ee",
-  "./assets/town2/graph.mjs":"./assets/town2/graph.mjs?v=b498ab41ee",
-  "./assets/town2/inspect.mjs":"./assets/town2/inspect.mjs?v=b498ab41ee",
-  "./assets/town2/lives.mjs":"./assets/town2/lives.mjs?v=b498ab41ee",
-  "./assets/town2/memory.mjs":"./assets/town2/memory.mjs?v=b498ab41ee",
-  "./assets/town2/mystery.mjs":"./assets/town2/mystery.mjs?v=b498ab41ee",
-  "./assets/town2/nature.mjs":"./assets/town2/nature.mjs?v=b498ab41ee",
-  "./assets/town2/needs.mjs":"./assets/town2/needs.mjs?v=b498ab41ee",
-  "./assets/town2/paper.mjs":"./assets/town2/paper.mjs?v=b498ab41ee",
-  "./assets/town2/quality.mjs":"./assets/town2/quality.mjs?v=b498ab41ee",
-  "./assets/town2/saga.mjs":"./assets/town2/saga.mjs?v=b498ab41ee",
-  "./assets/town2/settings.mjs":"./assets/town2/settings.mjs?v=b498ab41ee",
-  "./assets/town2/sim.mjs":"./assets/town2/sim.mjs?v=b498ab41ee",
-  "./assets/town2/sky.mjs":"./assets/town2/sky.mjs?v=b498ab41ee",
-  "./assets/town2/smoke.mjs":"./assets/town2/smoke.mjs?v=b498ab41ee",
-  "./assets/town2/sound.mjs":"./assets/town2/sound.mjs?v=b498ab41ee",
-  "./assets/town2/stories.mjs":"./assets/town2/stories.mjs?v=b498ab41ee",
-  "./assets/town2/track.mjs":"./assets/town2/track.mjs?v=b498ab41ee",
-  "./assets/town2/vote.mjs":"./assets/town2/vote.mjs?v=b498ab41ee",
-  "./assets/town2/weather.mjs":"./assets/town2/weather.mjs?v=b498ab41ee",
-  "./assets/town2/wild3d.mjs":"./assets/town2/wild3d.mjs?v=b498ab41ee",
-  "./assets/town2/wildlife.mjs":"./assets/town2/wildlife.mjs?v=b498ab41ee",
-  "./assets/town2/wildscene.mjs":"./assets/town2/wildscene.mjs?v=b498ab41ee"
+  "./assets/town2/angling.mjs":"./assets/town2/angling.mjs?v=ae5824521f",
+  "./assets/town2/build.mjs":"./assets/town2/build.mjs?v=ae5824521f",
+  "./assets/town2/curve.mjs":"./assets/town2/curve.mjs?v=ae5824521f",
+  "./assets/town2/def.mjs":"./assets/town2/def.mjs?v=ae5824521f",
+  "./assets/town2/events.mjs":"./assets/town2/events.mjs?v=ae5824521f",
+  "./assets/town2/garden.mjs":"./assets/town2/garden.mjs?v=ae5824521f",
+  "./assets/town2/graph.mjs":"./assets/town2/graph.mjs?v=ae5824521f",
+  "./assets/town2/inspect.mjs":"./assets/town2/inspect.mjs?v=ae5824521f",
+  "./assets/town2/lives.mjs":"./assets/town2/lives.mjs?v=ae5824521f",
+  "./assets/town2/memory.mjs":"./assets/town2/memory.mjs?v=ae5824521f",
+  "./assets/town2/mystery.mjs":"./assets/town2/mystery.mjs?v=ae5824521f",
+  "./assets/town2/nature.mjs":"./assets/town2/nature.mjs?v=ae5824521f",
+  "./assets/town2/needs.mjs":"./assets/town2/needs.mjs?v=ae5824521f",
+  "./assets/town2/paper.mjs":"./assets/town2/paper.mjs?v=ae5824521f",
+  "./assets/town2/quality.mjs":"./assets/town2/quality.mjs?v=ae5824521f",
+  "./assets/town2/saga.mjs":"./assets/town2/saga.mjs?v=ae5824521f",
+  "./assets/town2/settings.mjs":"./assets/town2/settings.mjs?v=ae5824521f",
+  "./assets/town2/sim.mjs":"./assets/town2/sim.mjs?v=ae5824521f",
+  "./assets/town2/sky.mjs":"./assets/town2/sky.mjs?v=ae5824521f",
+  "./assets/town2/smoke.mjs":"./assets/town2/smoke.mjs?v=ae5824521f",
+  "./assets/town2/sound.mjs":"./assets/town2/sound.mjs?v=ae5824521f",
+  "./assets/town2/stories.mjs":"./assets/town2/stories.mjs?v=ae5824521f",
+  "./assets/town2/track.mjs":"./assets/town2/track.mjs?v=ae5824521f",
+  "./assets/town2/vote.mjs":"./assets/town2/vote.mjs?v=ae5824521f",
+  "./assets/town2/weather.mjs":"./assets/town2/weather.mjs?v=ae5824521f",
+  "./assets/town2/wild3d.mjs":"./assets/town2/wild3d.mjs?v=ae5824521f",
+  "./assets/town2/wildlife.mjs":"./assets/town2/wildlife.mjs?v=ae5824521f",
+  "./assets/town2/wildscene.mjs":"./assets/town2/wildscene.mjs?v=ae5824521f"
 }}
 </script>
 </head>
@@ -125,14 +127,14 @@ html.ui-off #stack,html.ui-off #jobs,html.ui-off #toast,html.ui-off #snd,html.ui
 <div id="panel" role="group" aria-label="Pace and balance"><b>Speed of the day</b><div class="seg" data-key="speed"><button data-v="0.5">½×</button><button data-v="1">1×</button><button data-v="2">2×</button><button data-v="4">4×</button></div><b>How much work for the train</b><div class="seg" data-key="busy"><button data-v="quiet">Quiet</button><button data-v="normal">Normal</button><button data-v="busy">Busy</button></div><b>Highlight what I tap</b><div class="seg" data-key="highlight"><button data-v="pin">Pin</button><button data-v="ring">Ring</button><button data-v="off">None</button></div><b>Picture quality</b><div class="seg" data-key="quality"><button data-v="auto">Auto</button><button data-v="low">Low</button><button data-v="medium">Med</button><button data-v="high">High</button></div><b>Emergencies (fires, storms, lost children)</b><div class="seg" data-key="events"><button data-v="true">On</button><button data-v="false">Off</button></div><b>Stories from today's news</b><div class="seg" data-key="news"><button data-v="true">On</button><button data-v="false">Off</button></div></div>
 <div id="grade" aria-hidden="true"></div>
 <div id="story" aria-live="polite"></div>
-<div id="card" aria-live="polite"><button aria-label="Close">×</button><b></b><div></div><button id="send" hidden>Send a parcel from here…</button><button id="journalBtn" hidden>Journal</button></div>
+<div id="card" aria-live="polite"><button aria-label="Close">×</button><b></b><div></div><button id="send" hidden>Send a parcel from here…</button><button id="journalBtn" hidden>Journal</button><button id="fishBtn" hidden>Fish with them 🎣</button></div>
 <div id="stack"><div id="jobs" title="Tap to open or close"></div><div id="track" aria-live="polite"></div></div>
 <div id="toast" aria-live="polite"></div>
 <div id="hint"><span class="long">Tap anyone or anything · drag to explore · pinch or scroll to zoom · twist (or right-drag, Q/E) to turn</span><span class="short">Tap anyone or anything · drag · pinch to zoom · twist to turn</span></div>
 <div id="fail"><div>The new town could not start.<br><a href="toy-town.html">Open the current town</a>, or try a hard refresh (Ctrl+F5).<br><small id="why"></small><br><small>If it mentions WebGL, turn on hardware acceleration in the browser's settings (in Edge: edge://settings/system).</small></div></div>
 <script>if(/[?&]clean=1\b/.test(location.search))document.documentElement.classList.add('ui-off');</script>
 <script type="module">
-  import('./assets/town2/main.mjs?v=b498ab41ee').catch(e => { console.error(e); document.getElementById('why').textContent = (e && (e.name + ': ' + e.message)) || String(e); document.getElementById('fail').style.display = 'flex'; });
+  import('./assets/town2/main.mjs?v=ae5824521f').catch(e => { console.error(e); document.getElementById('why').textContent = (e && (e.name + ': ' + e.message)) || String(e); document.getElementById('fail').style.display = 'flex'; });
 </script>
 </body>
 </html>
