@@ -87,7 +87,9 @@ export function createWildlife({scene, sim, people, material, season, lite = fal
 
   /* ---- butterflies ---- */
   const flowerPlots = PLOTS.filter(p => p.kind !== 'coop' && p.kind !== 'greenhouse' && p.kind !== 'allotment'), flies = buildButterflies(14); scene.add(flies);
-  let fliesMax = 14, forced = null, lifeOn = true;
+  // bees: little striped dots that circle the beds in daylight, as many as the hives can spare
+  const bees = new THREE.InstancedMesh(new THREE.SphereGeometry(.035, 6, 4), new THREE.MeshBasicMaterial({color: '#f2c14e'}), 18); bees.frustumCulled = false; bees.count = 0; scene.add(bees); const bm = new THREE.Matrix4(), bq = new THREE.Quaternion(), bp = new THREE.Vector3(), bs = new THREE.Vector3(1, 1, 1);
+  let fliesMax = 14, forced = null, lifeOn = true, ecoNow = null, flowersBase = 800;
 
   function update(dt, time, ctx) {
     const near = ctx.dist < 80 && lifeOn;
@@ -100,6 +102,7 @@ export function createWildlife({scene, sim, people, material, season, lite = fal
       if (p.splash > 0) for (let j = 0; j < 6; j++) { const ang = j / 6 * TAU + a.i, r = (1 - p.splash) * .5 + .12, h = Math.sin((1 - p.splash) * Math.PI) * .38; drops.userData.set(nd++, p.x + Math.cos(ang) * r, ISLAND.sea + h, p.z + Math.sin(ang) * r, .04 * (.4 + p.splash)); }
     }
     for (const a of whales) {
+      if (ecoNow && ecoNow.sea < .55) { a.g.visible = false; continue; }   // the whales only come to a rich sea
       const p = whalePose(a.i, time); if (a.i === 0) whaleSpout = p.spout; a.g.position.set(p.x, ISLAND.sea + p.y, p.z); a.g.rotation.set(p.pitch, p.hd, 0, 'YXZ'); a.g.visible = p.up > .02;
       if (p.spout > .02) { const hx = p.x + Math.sin(p.hd) * .9 * a.wd.size, hz = p.z + Math.cos(p.hd) * .9 * a.wd.size; for (let j = 0; j < 8; j++) { const u = (time * 1.1 + j / 8) % 1; drops.userData.set(nd++, hx + Math.sin(j * 2.1) * u * .32, ISLAND.sea + .4 + u * 1.25 * p.spout * a.wd.size - u * u * .3, hz + Math.cos(j * 2.1) * u * .32, .07 * (1 - u * .7) * a.wd.size * (.5 + p.spout)); } }
     }
@@ -121,6 +124,9 @@ export function createWildlife({scene, sim, people, material, season, lite = fal
     if (gl) { gl.material.opacity = lit; gl.visible = lit > .02; }
     islet.userData.innerMat.opacity = clamp(0, (ctx.night * .5 + (out ? .35 : 0) + .04) * (.82 + .18 * Math.sin(time * 6.3) * Math.sin(time * 2.7 + 1)), .95);
     gem.visible = sim.wild.gems > 0; if (gem.visible) { gem.position.set(gemSpot.x + .35, heightAt(gemSpot.x, gemSpot.z) + .14 + Math.sin(time * 2.2) * .03, gemSpot.z + .25); gem.rotation.y = time * 1.6; }
+    if (ctx.eco) { ecoNow = ctx.eco; const sea = ctx.eco.sea, pod = sea > .7 ? 3 : sea > .45 ? 2 : 1; dolphins.forEach(a => { a.g.visible = a.i < pod; });   // the richer the sea, the bigger the pod
+      meadow.userData.show(Math.round(flowersBase * (.2 + .8 * ctx.eco.flowers)));
+      const nb = ctx.night < .3 && ctx.rain < .3 && lifeOn ? Math.round(ctx.eco.bees * 18) : 0; for (let i = 0; i < nb; i++) { const p = flowerPlots[i % flowerPlots.length], tt = time * 1.3 + i * 2.1; bees.setMatrixAt(i, bm.compose(bp.set(p.x + Math.sin(tt) * p.r * .7, heightAt(p.x, p.z) + .22 + Math.sin(tt * 3 + i) * .07, p.z + Math.cos(tt * 1.3) * p.r * .6), bq, bs)); } bees.count = nb; bees.instanceMatrix.needsUpdate = true; }
     // butterflies: by day, in the warm seasons, when it is dry
     const want = ctx.night < .3 && ctx.rain < .2 ? ({spring: 8, summer: 14, autumn: 5, winter: 0}[season] || 0) : 0, n = Math.min(want, fliesMax);
     for (let i = 0; i < n; i++) { const p = flowerPlots[i % flowerPlots.length], tt = time * .5 + i * 1.7, x = p.x + Math.sin(tt) * p.r * .85 + Math.sin(tt * 3.1 + i) * .08, z = p.z + Math.sin(tt * 2) * p.r * .55 + Math.cos(tt * 2.3 + i) * .08, dx = Math.cos(tt) * p.r * .85, dz = Math.cos(tt * 2) * p.r * 1.1; flies.userData.set(i, x, heightAt(x, z) + .3 + Math.sin(tt * 4 + i) * .06 + (i % 3) * .08, z, Math.atan2(dx, dz), time * 14 + i * 2); }
@@ -129,5 +135,5 @@ export function createWildlife({scene, sim, people, material, season, lite = fal
   // what the sound should know: who is out and what they are doing (see sound.mjs, wildDue)
   const soundState = () => ({hens: lifeOn && hens.some(a => a.g.visible), dogRun: lifeOn && pets.some(a => a.kind === 'dog' && (a.w.anim === 'run' || a.w.anim === 'walk')), cats: lifeOn && pets.some(a => a.kind === 'cat' && a.w.anim !== 'sleep'), leap: dolphins.some(a => a.p && a.p.leap > .05), spout: whales[0].g.visible && whaleSpout > .2, dwarfs: dwarfs.filter(a => a.g.visible).length});
   let whaleSpout = 0;
-  return {soundState, pick, update, hens, pets, dwarfs, meadow, gardens, borders, islet, forceDwarfs(n, u = .3) { forced = n ? {n, u} : null; }, setQuality(p) { meadow.userData.show(p.flowers); fliesMax = p.flies; lifeOn = p.life !== 0; }, dwarfsOut: ctx => dwarfsOut(ctx.day, ctx.hour)};
+  return {soundState, pick, update, hens, pets, dwarfs, meadow, gardens, borders, islet, forceDwarfs(n, u = .3) { forced = n ? {n, u} : null; }, setQuality(p) { flowersBase = p.flowers; meadow.userData.show(p.flowers); fliesMax = p.flies; lifeOn = p.life !== 0; }, dwarfsOut: ctx => dwarfsOut(ctx.day, ctx.hour)};
 }

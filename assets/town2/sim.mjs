@@ -8,6 +8,7 @@ import {CAST, VEHICLES, BUS_LINES, STATIONS, BUILDINGS, DAY, LAMPS, FREIGHT, MAR
 import {dwarfsOut} from './wildlife.mjs';
 import {GOLDEN_COINS} from './angling.mjs';
 import {festivalAt, FEST} from './festival.mjs';
+import {newEco, stepEco, eatAt, deliver, peace as ecoPeace, summary as ecoSummary} from './ecology.mjs';
 import {newHunt, start as huntStart, answer as huntAnswer, clueNow, mapOf} from './treasure.mjs';
 import {upgradeOf, canBuy, cleanChest, balance as chestBalance} from './chest.mjs';
 import {buildGraph, along, leftOf} from './graph.mjs';
@@ -174,7 +175,7 @@ export function createSim(seed = 7, opts = {}) {
       if (r.target && r.target.startsWith('lamp')) { tendLamp(r); return; }
       const round = roundOf(r), stay = r.stay ?? round[r.step][1], act = r.act; r.act = null;
       r.state = 'inside'; r.at = r.target; r.target = null; r.route = null; r.until = clock + stay * (.8 + rnd() * .4); if (r.stay === null && r.at === round[r.step][0]) r.step = (r.step + 1) % round.length; r.stay = null;
-      r.onPlatform = r.at.startsWith('platform:') || r.at === 'market' || r.at === 'pier'; if (r.at === 'market') { market.visits++; if (market.open && fishing.stock > 0 && !VENDORS.includes(r.id)) { fishing.stock--; fishing.sold++; fishing.coins += FISH.price; } } needsArrive(r.needs, r.at, r.def.home); remember(r); if (act) doAct(r, act);
+      r.onPlatform = r.at.startsWith('platform:') || r.at === 'market' || r.at === 'pier'; if (r.at === 'market') { market.visits++; if (market.open && fishing.stock > 0 && !VENDORS.includes(r.id)) { fishing.stock--; fishing.sold++; fishing.coins += FISH.price; } } { const hb0 = r.needs.hunger; needsArrive(r.needs, r.at, r.def.home); if ((r.at === 'bakery' || r.at === 'cafe') && hb0 > .35) { const m = eatAt(eco, r.at); if (m.swap) { r.needs.hunger = Math.max(r.needs.hunger, hb0 * .45); note(r, r.at === 'bakery' ? 'The bakery had no ' + m.lacks + ' today: just a plain roll' : 'The café had no ' + m.lacks + ' for the cocoa today'); } else if (hb0 > .5) note(r, r.at === 'bakery' ? 'Had a fresh bake from the farm eggs at the bakery' : 'Had a treat at the café'); } } remember(r); if (act) doAct(r, act);
     }
   }
   // ---- Vehicles
@@ -221,7 +222,7 @@ export function createSim(seed = 7, opts = {}) {
     // keep a gap from whoever is just ahead and going my way (or across my path)
     for (const o of vehicles) if (o !== v && o.state !== 'parked') {
       const dx = o.x - v.x, dz = o.z - v.z, f = dx * v.tx + dz * v.tz, lat = Math.abs(dx * v.tz - dz * v.tx), dot = o.tx * v.tx + o.tz * v.tz;
-      if (f > 0 && f < 2.2 && lat < .34 && dot > -.2) want = Math.min(want, Math.max(0, (f - .62) / 1.2) * def.speed);
+      if (f > 0 && f < 2.8 && lat < .34 && dot > -.2) { const gap = .62 + (o.def.kind === 'horsecart' || def.kind === 'horsecart' ? .6 : 0); want = Math.min(want, Math.max(0, (f - gap) / 1.2) * def.speed); }
     }
     for (const r of residents) if (r.state === 'walking') {   // somebody in the road just ahead: wait for them
       const dx = r.x - v.x, dz = r.z - v.z, f = dx * v.tx + dz * v.tz, side = Math.abs(dx * v.tz - dz * v.tx);
@@ -326,11 +327,12 @@ export function createSim(seed = 7, opts = {}) {
   function boardAt(id) { for (const r of residents) if (r.state === 'inside' && r.onPlatform && r.rideTo && r.at === 'platform:' + id && r.rideTo !== id && riders.length < train.seats) { r.state = 'riding'; r.onPlatform = false; riders.push(r); } }
 
   // Fishing: whoever stands at the end of the pier catches a fish every so often (fewer in rain); the fish wait at the hut until somebody carries a basket to town, and the town pays for them.
+  const eco = newEco(); let ecoCatches = 0; { const sw = {spring: .55, summer: .7, autumn: .55, winter: .25}[season]; if (sw) { eco.meadow = sw; eco.flowers = sw * ({spring: .9, summer: 1, autumn: .4, winter: 0}[season] ?? 1); } }   // (the land starts the way the season finds it)
   const fishing = {stock: 0, caught: 0, sold: 0, coins: 0, player: 0, golden: 0, bonus: 0};   // (player: caught by the visitor in the fishing game; bonus: coins from golden fish, kept apart from the sales)
   // Fishing is a job, not a chance: Finn goes out to the end of the pier in the morning and Captain Salt in the afternoon (not in heavy rain or an emergency), so by day somebody is always fishing.
   const SHIFTS = [['finn', 7, 14], ['salt', 11, 17.5]];
   // The visitor's catch from the fishing game goes to the harbour stall like anybody's; a golden fish is worth a bonus.
-  function angle(kind) { if (kind !== 'fish' && kind !== 'golden') return false; fishing.stock++; fishing.caught++; fishing.player++; if (kind === 'golden') { fishing.golden++; fishing.bonus += GOLDEN_COINS; sagaLog.push({day: dayIdx, type: 'fish', text: 'A golden fish was caught off the pier'}); } return true; }
+  function angle(kind) { if (kind !== 'fish' && kind !== 'golden') return false; fishing.stock++; fishing.caught++; ecoCatches++; eco.today.caught++; fishing.player++; if (kind === 'golden') { fishing.golden++; fishing.bonus += GOLDEN_COINS; sagaLog.push({day: dayIdx, type: 'fish', text: 'A golden fish was caught off the pier'}); } return true; }
   // The sea log: what the visitor has seen from the boat. Each event (a leap, a spout, a landing) counts once; the first landing of a day brings a gem worth ten coins.
   const sea = {trips: 0, dolphins: 0, whales: 0, islet: 0, dwarfs: 0, bonus: 0, keys: new Set(), landedDays: new Set()};
   function sailEvent(ev) {
@@ -356,15 +358,21 @@ export function createSim(seed = 7, opts = {}) {
     const r = huntAnswer(hunt, where); if (r.kind === 'done') { sagaLog.push({day: dayIdx, type: 'hunt', text: 'The treasure map was solved: ' + r.reward + ' coins for the chest'}); announce('The dwarfs\' treasure! ' + r.reward + ' coins for the town chest.'); }
     return r;
   }
+  // The land: the stocks move with the weather; the horse cart and the pick-up hand the farm's eggs and milk and the hive's honey to the bakery, the café and the market.
+  function stepEcology(dt) {
+    stepEco(eco, dt, {season: season || 'summer', rain: weather.rain, cats: 4, catches: ecoCatches}); ecoCatches = 0;
+    for (const v of vehicles) if ((v.def.kind === 'horsecart' || v.def.kind === 'pickup') && v.wait > 0 && v.target && v.target.id) { const key = v.target.id + ':' + v.stopsMade; if (v.lastDeliv !== key) { v.lastDeliv = key; const r = deliver(eco, v.target.id); if (r && (r.eggs + r.milk + r.honey) > .5) ecoLog.push({day: dayIdx, kind: 'delivery', place: v.target.id, ...r, by: v.def.id}); } }
+  }
+  const ecoLog = [];
   function stepFishers() {
     for (const [id, from, to] of SHIFTS) {
-      const r = resident(id); if (!r) continue; const on = hour >= from && hour < to && weather.rain < .6 && !incident;
+      const r = resident(id); if (!r) continue; const on = hour >= from && hour < to && weather.rain < .6 && !incident && eco.sea > .3 && !eco.rest;
       if (r.state === 'inside' && r.at === 'pier' && !on && r.errands.length === 0) r.until = Math.min(r.until, clock + .5);   // the shift is over: home to the hut
       if (on && r.state === 'inside' && r.at !== 'pier' && !r.onPlatform && !r.carrying && !r.lampJob && r.errands.length === 0 && r.target === null) { r.errands.unshift(['pier', Math.max(30, Math.min(110, (to - hour) * 20)), 'fish']); r.until = Math.min(r.until, clock + .5); }
     }
   }
   function stepFishing(dt) {
-    for (const r of residents) if (r.state === 'inside' && r.at === 'pier') { r.fishAcc = (r.fishAcc || 0) + dt; if (r.fishAcc >= FISH.every) { r.fishAcc = 0; if (rnd() < .85 - weather.rain * .4) { fishing.stock++; fishing.caught++; r.caught = (r.caught || 0) + 1; note(r, 'Caught a fish'); } } }
+    for (const r of residents) if (r.state === 'inside' && r.at === 'pier') { r.fishAcc = (r.fishAcc || 0) + dt; if (r.fishAcc >= FISH.every) { r.fishAcc = 0; if (rnd() < .85 - weather.rain * .4) { fishing.stock++; fishing.caught++; ecoCatches++; eco.today.caught++; r.caught = (r.caught || 0) + 1; note(r, 'Caught a fish'); } } }
   }
   // Market day: every third day the stalls are open from 9 to 15, and people drop by (standing at the stalls) all through it.
   const market = {open: false, visits: 0, opens: 0, next: 0};
@@ -513,7 +521,7 @@ export function createSim(seed = 7, opts = {}) {
     }
     for (const r of residents) stepResident(r, dt);
     for (const v of vehicles) stepVehicle(v, dt);
-    releaseLocks(); stepTrain(dt); if (train.wait > .8 && train.at) boardAt(train.at); carryRiders(); stepFreight(); stepFishers(); stepFishing(dt); stepMarket(); stepIncidents(); stepWild(); stepWedding(); stepVote(); stepMystery(); weather.update(dt); stepStories(); stepLamps(dt);
+    releaseLocks(); stepTrain(dt); if (train.wait > .8 && train.at) boardAt(train.at); carryRiders(); stepFreight(); stepEcology(dt); stepFishers(); stepFishing(dt); stepMarket(); stepIncidents(); stepWild(); stepWedding(); stepVote(); stepMystery(); weather.update(dt); stepStories(); stepLamps(dt);
   }
   // The day's ledger: a snapshot of the counters at the start of every day, so the paper can say what happened between two of them.
   let rainSeconds = 0; const days = [];
@@ -528,5 +536,5 @@ export function createSim(seed = 7, opts = {}) {
     const titles = [...new Set(story.log.slice(start.stories, end.stories).map(id => (STORIES.find(x => x.id === id) || {}).title).filter(Boolean))], mk = MARKET.days[which === 'today' ? weekday : (weekday + 6) % 7];
     const tm = MARKET.days[nextDay], e = edition({dayName: name, start, end, titles, marketName: mk && mk.name, tomorrow: {dayName: DAYS[nextDay], market: tm && tm.name, weekend: nextDay >= 5, festival: nextDay === FEST.weekday}, festival: (which === 'today' ? weekday : (weekday + 6) % 7) === FEST.weekday}); e.which = which; return e;
   }
-  return {get festival() { return festivalAt(weekday, hour); }, hunt, huntBegin, huntTap, huntClue: () => clueNow(hunt), angle, sea, sailEvent, buy, chest, chestState, get chestCoins() { return chestBalance(chestState()); }, wild, get day() { return dayIdx; }, paper, days, graph, residents, vehicles, stops, train, weather, season, lamps, market, fishing, effects, election, mystery, accuse, castVote(id) { if (!election.open || election.you || !election.q.options.some(o => o.id === id)) return false; election.you = id; return true; }, sagaLog, babies, sagaState() { return {chest: chestState(), effects, ages: Object.fromEntries(residents.map(r => [r.id, r.age])), marriages: residents.filter(r => r.spouse && r.id < r.spouse).map(r => [r.id, r.spouse]), babies}; }, cargo, get incident() { return incident; }, incidentLog, trigger(type) { if (!incident) startIncident(type); return incident; }, setEvents(on) { eventsOn = !!on; }, riders, freightLog, freightStats: stats, sendParcel, stationOf, signalFor, timetable, get weekday() { return weekday; }, get dayName() { return DAYS[weekday]; }, needsStats, get townMood() { return residents.reduce((a, r) => a + r.mood.score, 0) / residents.length; }, setBusy(k) { busy = Math.max(.2, Math.min(3, +k || 1)); }, get busy() { return busy; }, get lampsTended() { return tended; }, story, stage, update, get clock() { return clock; }, get hour() { return hour; }, setHour(h) { clock = ((h - 6 + 24) % 24) / 24 * DAY; hour = hourOf(clock); snapLamps(); }, dispatchFire() { const f = vehicles.find(v => v.id === 'fire'); if (f) f.call = 1; }, doorIds: BUILDINGS.filter(b => b.door).map(b => b.id)};
+  return {eco, ecoLog, ecoSummary: () => ecoSummary(eco), get peace() { return ecoPeace(eco, moodNow()); }, get festival() { return festivalAt(weekday, hour); }, hunt, huntBegin, huntTap, huntClue: () => clueNow(hunt), angle, sea, sailEvent, buy, chest, chestState, get chestCoins() { return chestBalance(chestState()); }, wild, get day() { return dayIdx; }, paper, days, graph, residents, vehicles, stops, train, weather, season, lamps, market, fishing, effects, election, mystery, accuse, castVote(id) { if (!election.open || election.you || !election.q.options.some(o => o.id === id)) return false; election.you = id; return true; }, sagaLog, babies, sagaState() { return {chest: chestState(), effects, ages: Object.fromEntries(residents.map(r => [r.id, r.age])), marriages: residents.filter(r => r.spouse && r.id < r.spouse).map(r => [r.id, r.spouse]), babies}; }, cargo, get incident() { return incident; }, incidentLog, trigger(type) { if (!incident) startIncident(type); return incident; }, setEvents(on) { eventsOn = !!on; }, riders, freightLog, freightStats: stats, sendParcel, stationOf, signalFor, timetable, get weekday() { return weekday; }, get dayName() { return DAYS[weekday]; }, needsStats, get townMood() { return residents.reduce((a, r) => a + r.mood.score, 0) / residents.length; }, setBusy(k) { busy = Math.max(.2, Math.min(3, +k || 1)); }, get busy() { return busy; }, get lampsTended() { return tended; }, story, stage, update, get clock() { return clock; }, get hour() { return hour; }, setHour(h) { clock = ((h - 6 + 24) % 24) / 24 * DAY; hour = hourOf(clock); snapLamps(); }, dispatchFire() { const f = vehicles.find(v => v.id === 'fire'); if (f) f.call = 1; }, doorIds: BUILDINGS.filter(b => b.door).map(b => b.id)};
 }
