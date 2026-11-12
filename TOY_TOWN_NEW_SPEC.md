@@ -211,6 +211,10 @@ the stamp is stale. If the page cannot start, its panel now shows the real error
 
 Every street, the ring road and the junction patches are paved with individual setts (`settRibbon`, `settDisc` in `build.mjs`): small quads in their own shade, laid in courses with staggered joints over a darker grout layer, merged into the ground geometry (no extra draw calls, about +40k triangles). The square is sand-coloured setts in rings round the clock tower with two darker bands; the ring road and streets are grey. There are no painted dashes any more (the zebra crossings stay). The grout discs of the square are built in thin rings so they follow the lie of the ground (one big disc poked through the setts on the slope). Spring petals are small (150 of .13 x .10) so they no longer read as paper.
 
+## 4d. Walking
+
+People, dogs, cats, hens, chicks and the farm horse (and its cart wheels) have limbs. Each is still ONE merged mesh and one draw call: every vertex of a leg, arm, head or tail carries a pivot and a kind (`limbs.mjs`), and a small vertex shader swings it from the walker's gait (`gait.mjs`, pure and tested). The stride is driven by the distance covered (so feet never skate), its length grows with speed (running people and trotting dogs take longer strides), and the legs settle when the walker stops. People: legs in opposite phase to arms, a step bob, a small lean and sway. Dogs, cats and the horse: legs in diagonal pairs with a foot lift, the head nods, the tail wags faster on the move. Hens: quick short steps, the head nods, and a peck dips the head (not the whole body). Hens (6, bigger than before) and four chicks live in two yards: the coop yard and a run by the farm door. The animals were hidden at the default phone zoom (the camera is 92 units out there and the cut-off was 80) and on the low picture tier; both are fixed (the cut-off is 110, `life` is on for low). The light version for TVs leaves out the chicks.
+
 ## 5. Art rules
 
 - Fat, rounded, slightly wonky. No sharp corners: `bag.box` is a rounded box; roofs overhang.

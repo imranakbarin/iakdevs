@@ -1369,3 +1369,13 @@ A `START` does not prohibit parallel edits. Avoid stepping on each other's uncom
 - **Tests**: logic and browser suites pass (91 calls, 632k triangles); phone-size and desktop screenshots checked by hand.
 - **Not verified**: a real phone; the lite tier still draws all setts (they are static geometry, so cheap).
 
+
+### 2026-11-12 · Claude · START (new storybook town, follow-up 22: natural walking for people, horses, dogs and cats; hens you can see)
+- **Base**: master d9ea763. **Request (owner)**: "Fix the walking of all the things in town, they are very unattractive and not natural, from horse, dog, cat and humans, and I don't see any hens." **Plan**: animals get real limbs (legs swing in diagonal pairs, head and tail move, speed-matched stride, body bob) via a small vertex shader on one mesh each (no extra draw calls); the horse of the farm cart gets a walking gait; people get a proper swing (legs, arms, bob, lean) matched to their speed; hens: more of them, bigger, scratching about the farmyard in view and following the barn, with chicks. Tests: pose maths in logic, screenshots for the walking poses.
+
+### 2026-11-12 · Claude · DONE (new storybook town, follow-up 22: natural walking, hens you can see)
+- **Request (owner)**: walking of people, horse, dog and cat looks unnatural; no hens visible. **Done**: spec section 4d. New `gait.mjs` (pure, tested) and `limbs.mjs` (per-vertex limb pivots and a vertex shader; one mesh per walker); people have legs and swinging arms; dogs, cats, hens, chicks and the horse (legs, head, tail, wheels) walk with real gaits. Root cause of "no hens": the wildlife was hidden above camera distance 80 (a phone's default is 92) and on the low tier. Hens bigger, two yards, four chicks.
+- **Tests**: new logic block for the gait; browser suite updated (ten hens and chicks in their yards); a throwaway side-on gallery of the poses at four phases was checked by hand (not committed); real-time gait values read back from the page.
+- **Bugs caught**: `clamp` argument order in gait.mjs (stride amplitude was unbounded), found by the new test.
+- **Not verified**: a real phone; the horse's gait at speed (it moves slowly); sitting and sleeping poses of animals were only lightly checked. Draw calls at the default view 95 (limit 100).
+

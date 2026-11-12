@@ -5,6 +5,7 @@
 import * as THREE from 'three';
 import {RoundedBoxGeometry} from 'three/addons/geometries/RoundedBoxGeometry.js';
 import {mergeGeometries} from 'three/addons/utils/BufferGeometryUtils.js';
+import {limb, limbMesh, limbMaterial} from './limbs.mjs';
 import {PALETTE as P, ISLAND, SQUARE, ROAD, ROADS, OUTER, LOOP, BUILDINGS, LAMPS, TREES, BUS_LINES, STATIONS, PADDOCK, POND, PIER, HILL, BUILD_SCALE, CARGO_COLOURS, heightAt, shore, rand, doorOf, building, loopPt} from './def.mjs';
 import {along, leftOf} from './graph.mjs';
 import {inGarden} from './garden.mjs';
@@ -584,9 +585,11 @@ export function buildTown(graph, season = 'summer') {
 /* ---------------- residents and vehicles ---------------- */
 const SKIN = ['#f6cfa6', '#e0a878', '#b9804f', '#8c5a3a'];
 export function buildResident(def, i, material) {
-  const b = new Bag(), coat = def.coat, skin = SKIN[i % 4];
+  const b = new Bag(), coat = def.coat, skin = SKIN[i % 4], UP = .05;   // (the body stands UP on its legs)
+  for (const s of [-1, 1]) limb(b, 1, [s * .05, .17, 0], s < 0 ? 0 : Math.PI, .62, .04, () => { b.cyl(.026, .03, .15, '#3a3f4a', {x: s * .05, y: .03, seg: 7}); b.sph(.045, '#2c3038', {x: s * .05, y: .03, z: .03, sy: .6, sz: 1.35, seg: 8}); });   // legs and shoes swing from the hips
+  b.push(0, UP, 0);
   b.cyl(.085, .115, .2, coat, {y: .045, seg: 12}); b.sph(.115, coat, {y: .06, sy: .5, seg: 12}); b.sph(.09, coat, {y: .25, sy: .7, seg: 12});
-  for (const s of [-1, 1]) { b.sph(.045, '#3a3f4a', {x: s * .05, y: .03, z: .03, sy: .6, sz: 1.3, seg: 8}); b.sph(.04, coat, {x: s * .115, y: .19, sy: 1.5, seg: 8}); b.sph(.03, skin, {x: s * .12, y: .12, seg: 8}); }
+  for (const s of [-1, 1]) limb(b, 1, [s * .105, .3, 0], s < 0 ? Math.PI : 0, .6, 0, () => { b.sph(.04, coat, {x: s * .115, y: .19, sy: 1.5, seg: 8}); b.sph(.03, skin, {x: s * .12, y: .12, seg: 8}); });   // arms swing from the shoulders, against the legs
   b.sph(.1, skin, {y: .385, seg: 14}); for (const s of [-1, 1]) { b.sph(.014, 'black', {x: s * .036, y: .4, z: .09, seg: 6}); b.sph(.02, '#f4a0a0', {x: s * .06, y: .365, z: .078, sz: .4, seg: 6}); } b.sph(.014, darken(skin, .15), {y: .378, z: .1, seg: 6});
   const H = {
     chef() { b.cyl(.085, .08, .1, 'white', {y: .45, seg: 12}); b.sph(.105, 'white', {y: .58, sy: .7, seg: 12}); },
@@ -601,7 +604,7 @@ export function buildResident(def, i, material) {
   };
   (H[def.hat] || H.cap)();
   if (def.lamplighter) { b.cyl(.012, .012, .8, 'wood', {x: .18, y: .02, z: .03, rz: -.08, seg: 6}); b.cyl(.025, .02, .05, 'slate', {x: .21, y: .79, z: .03, seg: 6}); b.sph(.03, 'gold', {x: .21, y: .86, z: .03, seg: 6}); }   // his long lighting pole
-  const m = b.mesh(material); m.castShadow = true; const g = new THREE.Group(); g.add(m); g.scale.setScalar(def.small ? .8 : 1.06); g.visible = false; return g;
+  b.pop(); const m = limbMesh(b, limbMaterial()); m.castShadow = true; const g = new THREE.Group(); g.add(m); g.userData.limbMesh = m; g.scale.setScalar(def.small ? .8 : 1.06); g.visible = false; return g;
 }
 export function buildVehicle(def, material) {
   const b = new Bag(), c = def.colour, wheels = (xs, zs, r = .085) => { for (const x of xs) for (const z of zs) { b.cyl(r, r, .07, 'black', {x, y: r, z, rz: Math.PI / 2, centre: true, seg: 14}); b.cyl(r * .5, r * .5, .075, 'cream', {x, y: r, z, rz: Math.PI / 2, centre: true, seg: 10}); } };
@@ -620,12 +623,15 @@ export function buildVehicle(def, material) {
     // a farm cart with a sturdy brown horse: the horse in front (+z), the cart behind, shafts between them
     const brown = '#8a5a3c', dark = '#3a2a20';
     b.sph(.15, brown, {y: .33, z: .62, sx: .95, sy: .85, sz: 1.9, seg: 12}); b.sph(.12, brown, {y: .35, z: .86, seg: 10});
-    b.cyl(.065, .085, .26, brown, {y: .4, z: .98, rx: -.75, seg: 8}); b.sph(.075, brown, {y: .6, z: 1.08, sz: 1.35, seg: 10}); b.sph(.05, '#d9b98a', {y: .56, z: 1.17, sz: 1.2, seg: 8}); b.sph(.012, 'black', {x: .035, y: .63, z: 1.12, seg: 4}); b.sph(.012, 'black', {x: -.035, y: .63, z: 1.12, seg: 4});
-    for (const sx of [-1, 1]) { b.cone(.02, .06, brown, {x: sx * .035, y: .7, z: 1.03, seg: 4}); for (const z of [.48, .76]) { b.cyl(.026, .02, .27, brown, {x: sx * .085, y: .0, z, seg: 6}); b.cyl(.03, .03, .03, dark, {x: sx * .085, y: .0, z, seg: 6}); } }
-    b.box(.04, .22, .1, dark, {y: .52, z: .96, rx: -.7}); cone2c(b, .035, .13, dark, {y: .38, z: .33, rx: .9}); b.cyl(.1, .1, .05, '#b5532f', {y: .44, z: .84, rx: Math.PI / 2 - .2, seg: 12});   // mane, tail and the red collar
+    limb(b, 3, [0, .42, .9], 0, .16, 0, () => {   // the head and neck nod with each step
+      b.cyl(.065, .085, .26, brown, {y: .4, z: .98, rx: -.75, seg: 8}); b.sph(.075, brown, {y: .6, z: 1.08, sz: 1.35, seg: 10}); b.sph(.05, '#d9b98a', {y: .56, z: 1.17, sz: 1.2, seg: 8}); b.sph(.012, 'black', {x: .035, y: .63, z: 1.12, seg: 4}); b.sph(.012, 'black', {x: -.035, y: .63, z: 1.12, seg: 4});
+      for (const sx of [-1, 1]) b.cone(.02, .06, brown, {x: sx * .035, y: .7, z: 1.03, seg: 4}); b.box(.04, .22, .1, dark, {y: .52, z: .96, rx: -.7});
+    });
+    for (const sx of [-1, 1]) for (const z of [.48, .76]) { const off = (z > .6 ? sx < 0 : sx > 0) ? 0 : Math.PI; limb(b, 1, [sx * .085, .27, z], off, .42, .05, () => { b.cyl(.026, .02, .27, brown, {x: sx * .085, y: .0, z, seg: 6}); b.cyl(.03, .03, .03, dark, {x: sx * .085, y: .0, z, seg: 6}); }); }   // diagonal pairs of legs
+    limb(b, 4, [0, .38, .33], 0, .35, 0, () => cone2c(b, .035, .13, dark, {y: .38, z: .33, rx: .9})); b.cyl(.1, .1, .05, '#b5532f', {y: .44, z: .84, rx: Math.PI / 2 - .2, seg: 12});   // mane, tail and the red collar
     for (const sx of [-1, 1]) b.box(.012, .012, .68, '#7a5230', {x: sx * .1, y: .34, z: .1, rx: .12});   // the shafts
     b.box(.34, .06, .56, '#a3744a', {y: .22, z: -.18, r: .02}); for (const sx of [-1, 1]) b.box(.03, .14, .56, '#8a5a3c', {x: sx * .18, y: .28, z: -.18, r: .01}); b.box(.34, .14, .03, '#8a5a3c', {y: .28, z: -.46, r: .01}); b.box(.34, .12, .03, '#8a5a3c', {y: .28, z: .1, r: .01});
-    for (const sx of [-1, 1]) { b.cyl(.14, .14, .04, '#7a5230', {x: sx * .2, y: .14, z: -.2, rz: Math.PI / 2, centre: true, seg: 14}); for (let k = 0; k < 3; k++) b.box(.02, .26, .02, '#a3744a', {x: sx * .225, y: .14, z: -.2, rx: k * Math.PI / 3, centre: true}); b.cyl(.03, .03, .05, 'slate', {x: sx * .2, y: .14, z: -.2, rz: Math.PI / 2, centre: true, seg: 8}); }
+    for (const sx of [-1, 1]) limb(b, 7, [sx * .2, .14, -.2], 0, .6, 0, () => { b.cyl(.14, .14, .04, '#7a5230', {x: sx * .2, y: .14, z: -.2, rz: Math.PI / 2, centre: true, seg: 14}); for (let k = 0; k < 3; k++) b.box(.02, .26, .02, '#a3744a', {x: sx * .225, y: .14, z: -.2, rx: k * Math.PI / 3, centre: true}); b.cyl(.03, .03, .05, 'slate', {x: sx * .2, y: .14, z: -.2, rz: Math.PI / 2, centre: true, seg: 8}); });   // the wheels turn
     b.box(.26, .05, .13, '#6b4423', {y: .4, z: .02}); b.box(.26, .1, .03, '#6b4423', {y: .44, z: .06});   // the driver's seat
     for (const [x, z] of [[-.07, -.34], [.07, -.34], [-.07, -.2], [.07, -.2]]) { b.cyl(.045, .045, .13, 'white', {x, y: .25, z, seg: 8}); b.cyl(.046, .046, .02, 'blue', {x, y: .38, z, seg: 8}); }
     b.box(.2, .12, .16, '#e0b84a', {y: .25, z: -.04, r: .02});
@@ -646,7 +652,7 @@ export function buildVehicle(def, material) {
     b.box(.3, .035, .03, '#d8d8d8', {y: .08, z: .34, r: .012}); b.box(.3, .035, .03, '#d8d8d8', {y: .08, z: -.34, r: .012}); b.box(.2, .04, .02, '#d8d8d8', {y: .14, z: .335});
     if (def.id === 'taxi' || def.id === 'taxi2') { b.box(.14, .06, .08, 'white', {y: .4, z: -.04, r: .02}); for (let k = 0; k < 5; k++) for (const s of [-1, 1]) b.box(.01, .03, .06, k % 2 ? 'black' : 'white', {x: s * .175, y: .15, z: -.24 + k * .12}); }
     wheels([-.17, .17], [-.2, .2], .08); }
-  const m = b.mesh(material); m.castShadow = true; if (def.kind === 'horsecart') m.position.z = -.33; const g = new THREE.Group(); g.add(m); g.scale.setScalar(1.05); return g;   // (the cart's origin is the middle of horse and cart together)
+  const walks = def.kind === 'horsecart', m = walks ? limbMesh(b, limbMaterial()) : b.mesh(material); m.castShadow = true; if (walks) m.position.z = -.33; const g = new THREE.Group(); g.add(m); if (walks) g.userData.limbMesh = m; g.scale.setScalar(1.05); return g;   // (the cart's origin is the middle of horse and cart together)
 }
 /* ---------------- more moving things: train, boat, farm animals, ducks ---------------- */
 // The little train: an engine with a funnel and two coaches, facing +z, length about 1.9.

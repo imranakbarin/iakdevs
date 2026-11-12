@@ -15,6 +15,8 @@ import {journalLines, natureReport} from './paper.mjs';
 import {load as loadSettings, save as saveSettings, stepsFor, BUSY_FACTOR} from './settings.mjs';
 import {newsStory} from './stories.mjs';
 import {createWildlife} from './wildscene.mjs';
+import {newGait, stepGait} from './gait.mjs';
+import {setGait} from './limbs.mjs';
 import {COOP, PLOTS} from './garden.mjs';
 import {PETS} from './wildlife.mjs';
 import {createFestival} from './festscene.mjs';
@@ -402,11 +404,12 @@ function sync(dt) {
   sim.train.stations.forEach((st, i) => signals.userData.set(i, sim.signalFor(st.id) === 'red'));
   for (const r of sim.residents) {
     const g = people.get(r.id); g.visible = r.state === 'walking' || r.onPlatform; if (!g.visible) continue;
-    const step = time * (r.lampJob ? 16 : r.hurry ? 14 : 9) + r.speed * 40, y = heightAt(r.x, r.z);
+    const gt = g.userData.gait || (g.userData.gait = newGait()); stepGait(gt, dt, r.x, r.z, {k: 17, vref: .5, v0: .05}); setGait(g.userData.limbMesh, gt); g.rotation.order = 'YXZ';
+    const y = heightAt(r.x, r.z);
     const standing = r.state !== 'walking', chat = !standing && r.pause > 0 && r.look;   // (standing: waiting on a platform, a step up from the ground)
     const onPier = r.at === 'pier' && r.state === 'inside', stall = r.at === 'market' && r.state === 'inside' && sim.market.open && VENDORS.includes(r.id);
     if (stall) { const m = marketDef, lx = [-1.12, 0, 1.12][VENDORS.indexOf(r.id)] ?? 0, lz = -.25, c = Math.cos(m.ry), sn = Math.sin(m.ry), sc = m.scale || 1; r.tx = Math.sin(m.ry); r.tz = Math.cos(m.ry); g.position.set(m.x + (lx * c + lz * sn) * sc, heightAt(m.x, m.z) + .1, m.z + (-lx * sn + lz * c) * sc); g.rotation.set(0, m.ry, 0); }
-    else g.position.set(r.x, onPier ? .24 : y + (standing ? .19 : .02 + (chat ? Math.abs(Math.sin(time * 7)) * .025 : Math.abs(Math.sin(step)) * .035)), r.z); g.rotation.set(0, chat ? Math.atan2(r.look.x - r.x, r.look.z - r.z) : Math.atan2(r.tx, r.tz), chat || standing ? 0 : Math.sin(step) * .09);
+    else g.position.set(r.x, onPier ? .24 : y + (standing ? .19 : .02 + (chat ? Math.sin(time * 2.2 + r.speed * 9) * .004 + .004 : Math.abs(Math.sin(gt.phase)) * .03 * gt.amp)), r.z); g.rotation.set(standing || chat ? 0 : .05 * gt.amp, chat ? Math.atan2(r.look.x - r.x, r.look.z - r.z) : Math.atan2(r.tx, r.tz) + (standing ? 0 : Math.sin(gt.phase) * .05 * gt.amp), chat || standing ? 0 : Math.sin(gt.phase) * .035 * gt.amp);   // (a step is a bob, a lean forward and a little sway side to side)
     if (onPier) g.rotation.y = Math.PI / 2;   // facing out to sea
     const rod = rods.get(r.id); if (rod) { rod.visible = onPier; if (onPier) { const U_ = rod.userData, ca = (r.caught || 0) !== (rodSeen.get(r.id) ?? (r.caught || 0)); if (ca) rodTug.set(r.id, time); rodSeen.set(r.id, r.caught || 0); const k = time - (rodTug.get(r.id) ?? -9), tug = k < 1.2 ? Math.sin(k * 14) * (1 - k / 1.2) : 0;   // a catch makes the float duck and the ripples spread
         U_.bob.position.y = U_.bobAt[1] + Math.sin(time * 2.3 + r.speed * 9) * .012 - Math.max(0, tug) * .08; U_.ring.scale.setScalar(1 + (k < 1.2 ? k * 2.2 : 0) + .15 * Math.sin(time * 2.3)); U_.ring.material.opacity = k < 1.2 ? .9 * (1 - k / 1.2) + .15 : .3; } }
@@ -415,7 +418,8 @@ function sync(dt) {
   for (const v of sim.vehicles) {
     const g = cars.get(v.id); g.visible = v.state !== 'parked'; if (!g.visible) continue;
     const y = heightAt(v.x, v.z), ahead = heightAt(v.x + v.tx * .3, v.z + v.tz * .3);
-    g.position.set(v.x, y + .035 + (v.v > .05 ? Math.abs(Math.sin(time * 14 + v.s)) * .008 : 0), v.z); g.rotation.set(-Math.atan2(ahead - y, .3), Math.atan2(v.tx, v.tz), 0, 'YXZ');
+    if (g.userData.limbMesh) { const gt = g.userData.gait || (g.userData.gait = newGait()); stepGait(gt, dt, v.x, v.z, {k: 11.5, vref: .5, v0: .04}); setGait(g.userData.limbMesh, gt, v.v > .05 ? 0 : .25); }
+    g.position.set(v.x, y + .035 + (g.userData.limbMesh ? Math.abs(Math.sin(g.userData.gait.phase)) * .006 * g.userData.gait.amp : v.v > .05 ? Math.abs(Math.sin(time * 14 + v.s)) * .008 : 0), v.z); g.rotation.set(-Math.atan2(ahead - y, .3), Math.atan2(v.tx, v.tz), 0, 'YXZ');
   }
   trainCars.forEach((c, k) => { const q = along(loop, sim.train.s - k * sim.train.gap), y = heightAt(q.x, q.z) + .06; c.position.set(q.x, y, q.z); c.rotation.y = Math.atan2(q.tx, q.tz); c.updateMatrixWorld(true); });   // the cars follow the head round the loop
   { const inc = sim.incident, fire = inc && inc.type === 'fire', d = fire && BUILDINGS.find(b => b.id === inc.target);
@@ -500,6 +504,7 @@ window.ToyTownNew = {
   project(x, z, y = .4) { const r = canvas.getBoundingClientRect(); camera.updateMatrixWorld(); v3.set(x, heightAt(x, z) + y, z).project(camera); return [(v3.x * .5 + .5) * r.width + r.left, (-v3.y * .5 + .5) * r.height + r.top]; },
   setWeather(kind, seconds = 600) { sim.weather.force(kind, seconds); },
   critterList: () => critters, coop: COOP, plots: PLOT_COUNT,
+  gait: id => { const g = people.get(id) || cars.get(id); const t = g && g.userData.gait; return t ? {phase: t.phase, amp: t.amp, walk: t.walk, speed: t.speed} : null; },
   wild: {update: wild.update, hens: wild.hens, pets: wild.pets, dwarfs: wild.dwarfs, islet: wild.islet, meadow: wild.meadow, gardens: wild.gardens, borders: wild.borders, out: () => wild.dwarfsOut({day: sim.day, hour: sim.hour}), forceDwarfs: (n, u) => wild.forceDwarfs(n, u), pick: wild.pick},
   sail: {start: () => startSailing(), stop: () => stopSailing(), boat: () => sailing, tapSea(x, z) { if (sailing) sailing.target = {x, z}; }, sim: () => sim.sea}, fest, festival: () => sim.festival, chest: {state: () => sim.chestState(), buy: id => sim.buy(id), upg: () => upg}, fishGame, angle: k => sim.angle(k), openFishing() { Object.assign(fishGame, {phase: 'idle', bite: null, msg: '', last: null}); openPaper('fishing'); },
   fxState: () => ({flames: flames.visible, debris: debris.count, flood: +flood.toFixed(2), decor: seasonDecor.children.length, townFx: townFx ? townFx.children.length : 0}), photo: o => { photoRaw = null; photoStyle = (o && o.style) || 'postcard'; grabPhoto(); if (o && o.caption) photoCaption = o.caption; const c = composePhoto(), url = c.toDataURL('image/jpeg', .92), d = c.getContext('2d').getImageData(0, Math.round(c.height * .82), c.width, Math.round(c.height * .17)).data; let dark = 0; for (let i = 0; i < d.length; i += 4) if (d[i] < 120) dark++; return {w: c.width, h: c.height, rawW: photoRaw.width, rawH: photoRaw.height, url: url.slice(0, 40), len: url.length, dark}; }, paperText: () => (paperEl ? paperEl.textContent : ''), openPaper, closePaper, seasonDecor: () => seasonDecor.children.length, rodsOut: () => [...rods.values()].filter(r => r.visible).length, highlight: () => ({pin: pin.visible, ring: ring.visible, mode: settings.highlight}), settings, applySettings, setQuality, tier: () => tier, gov, tufts, U, freeze(on = true) { frozen = on; }
