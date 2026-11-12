@@ -242,16 +242,27 @@ const BUILD = {
     tub(b, -.62, .85, 'red'); tub(b, .62, .85, 'yellow');
     b.cyl(.02, .02, .34, 'wood', {x: .42, z: 1.3, seg: 6}); b.box(.16, .11, .1, 'red', {x: .42, y: .32, z: 1.3, r: .03});
   },
-  station(b, def, anim) {
-    b.box(2.3, 1.0, 1.3, 'cream', {r: .1}); b.box(2.46, .12, 1.46, 'teal', {y: .98, r: .05}); b.gable(2.2, .5, 1.3, 'red', {y: 1.1});
-    b.box(.6, 1.7, .6, 'cream', {x: -.78, z: -.1, r: .08}); b.cone(.46, .5, 'teal', {x: -.78, y: 1.72, z: -.1, seg: 4, ry: Math.PI / 4}); b.sph(.07, 'gold', {x: -.78, y: 2.28, z: -.1, seg: 8});
-    b.cyl(.2, .2, .05, 'gold', {x: -.78, y: 1.2, z: .22, rx: Math.PI / 2, centre: true, seg: 22}); b.cyl(.17, .17, .055, 'white', {x: -.78, y: 1.2, z: .225, rx: Math.PI / 2, centre: true, seg: 22}); b.box(.02, .13, .02, 'black', {x: -.78, y: 1.2, z: .26}); b.box(.1, .02, .02, 'black', {x: -.73, y: 1.2, z: .26});
-    for (const x of [-.2, .3]) { b.box(.34, .46, .06, 'white', {x, y: .34, z: .67, r: .04}); b.box(.26, .38, .07, '#bfe6f7', {x, y: .38, z: .675, r: .03}); }
-    door(b, .85, .66, 'red', .38, .64); b.box(2.2, .06, .5, 'blue', {y: .9, z: .85, r: .02});
-    for (let k = 0; k < 9; k++) b.box(.246, .05, .52, k % 2 ? 'white' : 'red', {x: -1.0 + k * .25, y: .9, z: .9, rx: .28, r: .015});
-    for (const x of [-.9, .9]) b.cyl(.045, .05, .9, 'white', {x, z: 1.1, seg: 8});
-    b.box(1.0, .22, .04, 'white', {x: .35, y: .75, z: .686, r: .02}); b.box(.9, .15, .045, 'blue', {x: .35, y: .78, z: .69, r: .015});
-    bench(b, -.5, 1.28, 0); b.cyl(.14, .14, .5, 'slate', {x: 1.15, z: 1.2, seg: 12}); b.cyl(.14, .14, .06, 'red', {x: 1.15, y: .5, z: 1.2, seg: 12});
+  station(b, def, anim) {   // a brick station with a clock, wings, a tiled roof, a long platform canopy on iron posts, lamps, trolleys and flowers (front is +z, the platform side)
+    const brick = '#b5543a', cream = '#efe3c6';
+    b.box(3.1, .1, 1.7, 'stone', {z: .1, r: .02});
+    b.box(1.5, 1.05, 1.1, brick, {y: .08, r: .06}); for (const x of [-.75, .75]) for (const z of [-.55, .55]) b.box(.1, 1.05, .1, cream, {x, y: .08, z, r: .02});   // the main hall and its corner stones
+    b.box(1.56, .05, 1.16, cream, {y: .52, r: .01}); b.box(1.56, .07, 1.16, cream, {y: 1.1, r: .02});   // string courses
+    for (const sx of [-1, 1]) { b.box(.8, .72, .9, brick, {x: sx * 1.12, y: .08, r: .05}); b.box(.86, .06, .96, cream, {x: sx * 1.12, y: .78, r: .02}); b.gable(.84, .32, .88, '#6b4a5a', {x: sx * 1.12, y: .84, ry: Math.PI / 2}); b.box(.12, .3, .12, '#8a4a3a', {x: sx * 1.12 + .2, y: .9, z: -.2, r: .02}); b.box(.16, .04, .16, 'cream', {x: sx * 1.12 + .2, y: 1.2, z: -.2}); }
+    b.gable(1.56, .62, 1.16, '#6b4a5a', {y: 1.17}); b.box(1.6, .04, .04, 'gold', {y: 1.78, r: .01}); b.cone(.12, .26, '#2c6a6a', {x: 0, y: 1.78, z: -.25, seg: 8}); b.sph(.035, 'gold', {y: 2.06, z: -.25, seg: 8}); b.cyl(.01, .01, .26, 'slate', {y: 2.06, z: -.25, seg: 5}); b.box(.12, .04, .02, 'slate', {y: 2.24, z: -.25});   // the roof, a ridge, a bell turret and a weather vane
+    b.box(.5, .62, .24, brick, {y: .08, z: .62, r: .04}); b.gable(.54, .34, .26, '#6b4a5a', {y: .7, z: .62, ry: 0}); b.cyl(.19, .19, .05, 'gold', {y: .92, z: .76, rx: Math.PI / 2, centre: true, seg: 22}); b.cyl(.16, .16, .055, 'white', {y: .92, z: .765, rx: Math.PI / 2, centre: true, seg: 22}); b.box(.02, .12, .02, 'black', {y: .92, z: .8}); b.box(.09, .02, .02, 'black', {x: .04, y: .92, z: .8});   // the porch gable with its clock
+    door(b, 0, .74, '#2c6a6a', .38, .56); for (let k = 0; k < 3; k++) b.box(.5 + k * .1, .035, .12, 'stone', {y: .02 + k * .03, z: .86 + (2 - k) * .07, r: .01});
+    for (const x of [-.52, .52]) { win(b, x, .78, .56, .26, .38); b.cyl(.15, .15, .05, 'white', {x, y: .84, z: .55, rx: Math.PI / 2, centre: true, sz: .5, seg: 10}); }
+    for (const sx of [-1, 1]) win(b, sx * 1.12, .62, .44, .28, .3, {flowers: sx > 0 ? 1 : 3});
+    // the canopy: a sloping roof on iron posts with brackets, a scalloped valance and the lamps and luggage under it
+    for (const sx of [-1, 1]) { const cx = sx * 1.03; b.box(1.06, .05, .62, '#2c6a6a', {x: cx, y: .96, z: 1.2, rx: .1, r: .01}); for (let k = 0; k < 5; k++) b.box(.19, .1, .02, k % 2 ? '#2c6a6a' : cream, {x: cx - .42 + k * .21, y: .88, z: 1.5, r: .006});
+      for (let k = 0; k < 3; k++) { const x = cx - .48 + k * .48; b.cyl(.02, .025, .88, '#2c3038', {x, y: .08, z: 1.46, seg: 7}); b.box(.03, .03, .22, '#2c3038', {x, y: .84, z: 1.38, rx: .5}); b.box(.1, .06, .03, '#2c3038', {x, y: .08, z: 1.46}); } }
+    b.box(3.0, .02, .55, '#efe0be', {y: .1, z: 1.22}); b.box(3.0, .02, .05, 'yellow', {y: .11, z: 1.5});
+    bench(b, -1.05, 1.22, 0); bench(b, 1.05, 1.22, 0); lamp(b, -.35, 1.15); lamp(b, .35, 1.15);
+    b.box(.3, .03, .18, '#8a5a3c', {x: 1.4, y: .21, z: 1.05, r: .01}); b.box(.02, .22, .02, '#2c3038', {x: 1.27, y: .1, z: 1.05}); for (const x of [1.3, 1.5]) b.cyl(.04, .04, .02, 'black', {x, y: .06, z: 1.15, rz: Math.PI / 2, centre: true, seg: 8}); b.box(.2, .12, .14, '#a3744a', {x: 1.4, y: .24, z: 1.05, r: .02}); b.box(.14, .1, .12, '#6b8aa8', {x: 1.44, y: .36, z: 1.05, r: .02});   // a luggage trolley with a case and a trunk
+    for (const x of [-1.5, -1.4, -1.45]) b.cyl(.045, .04, .15, 'white', {x, y: .1, z: 1.2 + (x > -1.42 ? .06 : 0), seg: 8});   // milk churns
+    b.box(.52, .22, .03, 'white', {x: -.15, y: .5, z: .69, r: .01}); b.box(.46, .15, .035, '#2c6a6a', {x: -.15, y: .52, z: .7, r: .01});   // the name board over the hall door
+    tub(b, -.35, .95); tub(b, .35, .95, 'pink'); tub(b, -1.45, 1.1, 'yellow'); tub(b, 1.45, 1.1, 'red');
+    b.cyl(.14, .14, .5, 'slate', {x: 1.5, z: 1.45, seg: 12}); b.cyl(.14, .14, .06, 'red', {x: 1.5, y: .5, z: 1.45, seg: 12});
   },
   school(b) {
     b.box(2.4, .95, 1.35, 'red', {r: .1}); b.box(2.54, .1, 1.5, 'cream', {y: .93, r: .05}); b.gable(2.2, .5, 1.3, 'slate', {y: 1.03});
@@ -444,15 +455,43 @@ function roads(bag, graph) {
   // a round patch where each spoke meets the outer ring, so the junction has no seams
   for (const n of Object.values(graph.nodes)) if (n.id.startsWith('out')) { disc(parts, n.p[0], n.p[1], 0, w + .02, GROUT, .0285, 20); settDisc(parts, n.p[0], n.p[1], 0, w + .02, () => SETT_STREET, 400 + Math.round(n.p[0] * 13), {lift: .0335, row: .11, len: .17}); }
 }
+// A leafy crown: many overlapping leaf blobs in slightly different greens (more of them low down, fewer at the top), over a shadowed core, so the outline is soft and
+// uneven and the shading varies like real foliage instead of one big ball.
+export function crown(b, cx, cy, cz, R, cols, seed, n = 11, o = {}) {
+  const r = k => rand(seed * 29 + k), sy = o.sy ?? .88;
+  b.sph(R * .62, darken(cols[0], .2), {x: cx, y: cy - R * .1, z: cz, sy, seg: 10, sway: .4});
+  for (let k = 0; k < n; k++) {
+    const a = r(k) * TAU + k * 2.4, v = (r(k + 40) - .3) * 1.55, d = R * (.4 + r(k + 80) * .5), rr = R * (.34 + r(k + 120) * .26);
+    b.sph(rr, cols[k % cols.length], {x: cx + Math.cos(a) * Math.cos(v) * d, y: cy + Math.sin(v) * d * (o.sy ?? .8), z: cz + Math.sin(a) * Math.cos(v) * d, sy, seg: 9, sway: .45 + Math.max(0, v) * .5});
+  }
+}
+// A trunk that flares at the root, leans a little and sends a branch or two up into the crown.
+function trunk(b, h, r0, seed, colour = 'brown', branches = 2) {
+  const r = k => rand(seed * 17 + k), lean = (r(1) - .5) * .12;
+  b.cyl(r0 * .8, r0 * 1.05, h * .5, colour, {seg: 9}); b.cyl(r0 * .62, r0 * .8, h * .55, colour, {y: h * .45, x: lean * .5, seg: 9});
+  for (let k = 0; k < 3; k++) { const a = k / 3 * TAU + r(k + 4); cone2c(b, r0 * .55, h * .3, colour, {x: Math.cos(a) * r0 * .9, y: h * .12, z: Math.sin(a) * r0 * .9, rz: -Math.cos(a) * .9, rx: Math.sin(a) * .9, seg: 5}); }   // the roots
+  for (let k = 0; k < branches; k++) { const a = r(k + 9) * TAU; b.tube([[lean * .5, h * .7, 0], [lean + Math.cos(a) * .12, h * .9, Math.sin(a) * .12], [lean + Math.cos(a) * .3, h * 1.12, Math.sin(a) * .3]], r0 * .26, colour); }
+}
 function tree(b, kind, seed) {
-  const r = k => rand(seed * 13 + k);
-  if (kind === 'bush') { for (let k = 0; k < 3; k++) b.sph(.3 - k * .04, k % 2 ? 'leaf' : 'leafLight', {x: (r(k) - .5) * .4, y: .2 + k * .05, z: (r(k + 5) - .5) * .4, sy: .8, seg: 10, sway: .3}); for (let k = 0; k < 4; k++) b.sph(.05, ['pink', 'white', 'yellow', 'red'][k], {x: (r(k + 9) - .5) * .5, y: .38 + r(k) * .1, z: (r(k + 12) - .5) * .5, seg: 6}); return; }
-  if (kind === 'pine') { b.cyl(.07, .1, .4, 'brown', {seg: 7}); const snow = SEASONAL.leafLight === '#e4eef5'; [[.5, .5, .55], [.4, 1.0, .52], [.3, 1.45, .46], [.2, 1.8, .4]].forEach(([rr, y, h], k) => { b.cone(rr, h, k % 2 ? '#2f7d4f' : '#3a8c58', {y, seg: 9, sway: .5 + k * .15}); if (snow) b.cone(rr * .72, h * .55, '#ffffff', {y: y + h * .42, seg: 9, sway: .5}); }); return; }
-  if (kind === 'birch') { b.cyl(.05, .07, 1.0, '#f1ece0', {seg: 7}); for (let k = 0; k < 5; k++) b.box(.1, .025, .1, '#3a3a3a', {y: .2 + k * .17, r: .01, ry: k}); [[.34, .95, 0, 0], [.3, 1.25, .16, .08], [.28, 1.2, -.18, -.06], [.24, 1.55, .0, .04]].forEach(([rr, y, dx, dz], k) => b.sph(rr, k % 2 ? 'leafLight' : lighten('leaf', .12), {x: dx, y, z: dz, sy: 1.1, seg: 12, sway: .5 + k * .15})); return; }
-  if (kind === 'tall') { b.cyl(.08, .11, .5, 'brown', {seg: 8}); [[.42, .62, 'leaf', .4], [.34, 1.08, SEASONAL.blossom ? lighten('leaf', .14) : 'leafLight', .7], [.24, 1.46, 'leaf', 1]].forEach(([s, y, c, w]) => b.sph(s, c, {y, sy: 1.15, seg: 12, sway: w})); return; }
-  b.cyl(.1, .14, .62, 'brown', {seg: 8}); const deep = SEASONAL.blossom ? 'blossom' : 'leaf';   // (in spring the whole crown is blossom, not pink with a green cap)
-  b.sph(.62, 'leafLight', {y: 1.0, seg: 18, sway: .6}); b.sph(.45, deep, {x: .34, y: .84, z: .12, seg: 16, sway: .5}); b.sph(.42, lighten('leafLight', .12), {x: -.3, y: 1.1, z: -.1, seg: 16, sway: .8}); b.sph(.36, deep, {x: .05, y: 1.4, z: .1, seg: 14, sway: 1});
-  if (kind === 'apple') for (let k = 0; k < 9; k++) { const a = r(k) * TAU, v = r(k + 20) * 1.1 - .2; b.sph(.065, 'red', {x: Math.cos(a) * Math.cos(v) * .6, y: 1.0 + Math.sin(v) * .6, z: Math.sin(a) * Math.cos(v) * .6, seg: 8}); }
+  const r = k => rand(seed * 13 + k), blossom = SEASONAL.blossom, snow = SEASONAL.leafLight === '#e4eef5';
+  if (kind === 'bush') { const cols = ['leaf', 'leafLight', lighten('leaf', .14)]; crown(b, 0, .2, 0, .34, cols, seed, 7, {sy: .72}); for (let k = 0; k < 5; k++) b.sph(.04, ['pink', 'white', 'yellow', 'red', 'pink'][k], {x: (r(k + 9) - .5) * .5, y: .3 + r(k) * .12, z: (r(k + 12) - .5) * .5, seg: 6}); return; }
+  if (kind === 'pine') {
+    b.cyl(.05, .1, .55, 'brown', {seg: 8}); const tiers = 6, cols = ['#2a6f45', '#2f7d4f', '#3a8c58'];
+    for (let k = 0; k < tiers; k++) { const t = k / (tiers - 1), rr = .56 * (1 - t * .78) + (r(k) - .5) * .05, y = .38 + t * 1.5, h = .5 - t * .1;
+      b.cone(rr, h, cols[k % 3], {y, x: (r(k + 3) - .5) * .05, z: (r(k + 6) - .5) * .05, ry: r(k + 9) * 3, seg: 11, sway: .45 + t * .5}); b.cone(rr * .78, h * .8, cols[(k + 1) % 3], {y: y + h * .35, ry: r(k + 12) * 3, seg: 11, sway: .5 + t * .5});
+      if (snow) b.cone(rr * .7, h * .5, '#ffffff', {y: y + h * .5, seg: 11, sway: .5}); }
+    return;
+  }
+  if (kind === 'birch') {
+    b.cyl(.045, .065, 1.1, '#f1ece0', {seg: 8}); for (let k = 0; k < 7; k++) b.box(.09, .02, .09, '#3a3a3a', {y: .15 + k * .14, r: .008, ry: k * 1.7, x: Math.cos(k) * .03, z: Math.sin(k) * .03});
+    b.tube([[0, .8, 0], [.14, 1.0, .05], [.24, 1.18, .08]], .018, '#e4ddd0'); b.tube([[0, .9, 0], [-.12, 1.1, -.06], [-.2, 1.3, -.1]], .016, '#e4ddd0');
+    const cols = [lighten('leaf', .12), 'leafLight', lighten('leafLight', .1)]; for (let k = 0; k < 8; k++) b.sph(.2 - (k % 3) * .02, cols[k % 3], {x: (r(k) - .5) * .5, y: 1.0 + r(k + 5) * .6, z: (r(k + 9) - .5) * .5, sy: 1.25, seg: 9, sway: .5 + k * .08});
+    return;
+  }
+  if (kind === 'tall') { trunk(b, .62, .1, seed, 'brown', 2); crown(b, 0, 1.12, 0, .5, ['leaf', blossom ? lighten('leaf', .14) : 'leafLight', lighten('leaf', .1)], seed, 10, {sy: 1.2}); return; }
+  trunk(b, .68, .12, seed); const deep = blossom ? 'blossom' : 'leaf', light = blossom ? lighten('blossom', .18) : 'leafLight';   // (in spring the whole crown is blossom, not pink with a green cap)
+  crown(b, 0, 1.0, 0, .66, [light, deep, lighten(light, .1), deep, light], seed, 13);
+  if (kind === 'apple') for (let k = 0; k < 10; k++) { const a = r(k) * TAU, v = r(k + 20) * 1.1 - .2; b.sph(.055, 'red', {x: Math.cos(a) * Math.cos(v) * .62, y: 1.0 + Math.sin(v) * .55, z: Math.sin(a) * Math.cos(v) * .62, seg: 7}); }
 }
 function scenery(bag, graph) {
   const onGround = (x, z, f, ry = 0, s = 1) => { bag.push(x, heightAt(x, z), z, ry, s); f(bag); bag.pop(); };
@@ -500,14 +539,24 @@ function railway(bag, graph) {
   for (const o of [-.19, .19]) { ribbon(parts, loop, o - .035, o + .035, '#4a525e', .05, 0, L, .25); ribbon(parts, loop, o - .012, o + .012, '#aab4c0', .058, 0, L, .25); }
   const colours = ['red', 'blue', 'green', 'yellow'];
   for (const st of STATIONS) { const q = signalSpot(graph, st); bag.push(q.x, heightAt(q.x, q.z), q.z, q.ry); bag.cyl(.032, .04, .72, 'slate', {seg: 8}); bag.box(.13, .2, .1, 'black', {y: .66, r: .03}); bag.box(.05, .05, .06, 'white', {y: .54, z: .0, r: .01}); bag.pop(); }
+  const WALL = ['#b5543a', '#e8d9b0', '#9a7a52', '#b9c6d2', '#d6a85a', '#a0604a'], ROOF = ['#5a4a5a', '#c8473b', '#3a6a6a', '#6a5a4a', '#4a5a7a', '#7a4a3a'];
   STATIONS.forEach((st, i) => {
-    const p = loopPt(st.t), s0 = graph.loopS(p[0], p[1]), q = along(loop, s0), x = q.x, z = q.z, y = heightAt(x, z), ry = Math.atan2(q.tx, q.tz), c = colours[i % 4];
+    const p = loopPt(st.t), s0 = graph.loopS(p[0], p[1]), q = along(loop, s0), x = q.x, z = q.z, y = heightAt(x, z), ry = Math.atan2(q.tx, q.tz), c = colours[i % 4], wall = WALL[i % 6], roof = ROOF[i % 6];
     bag.push(x, y, z, ry);   // local +z runs along the track the way the train goes, local +x is outwards, -x towards the town
     bag.box(.85, .17, 3.6, 'stone', {x: -.95, r: .03}); bag.box(.14, .02, 3.6, 'yellow', {x: -.62, y: .17}); bag.box(.6, .02, 3.5, '#efe0be', {x: -1.05, y: .17});
-    for (const dz of [-1.5, 1.5]) { bag.cyl(.03, .035, .95, 'slate', {x: -1.2, y: .17, z: dz, seg: 6}); }
-    bag.box(.7, .06, 3.4, c, {x: -1.2, y: 1.1, r: .025}); bag.box(.5, .04, 3.3, lighten(c, .25), {x: -1.2, y: 1.15, r: .02});   // a little shelter roof
-    bag.box(.3, .2, 1.1, 'wood', {x: -1.35, y: .17, z: .1, r: .03}); bag.box(.34, .05, 1.2, 'wood', {x: -1.35, y: .4, z: .1, r: .02});   // a bench
+    for (let k = 0; k < 12; k++) bag.box(.03, .022, .5, '#cbbf9f', {x: -.76, y: .172, z: -1.65 + k * .3});   // the textured warning strip along the edge
+    // the station hut on the platform's back edge: walls, a tiled roof with eaves, a chimney, a door and windows facing the track, a lamp, a name board
+    bag.box(.62, .56, 1.5, wall, {x: -1.5, y: .17, r: .04}); bag.box(.7, .04, 1.6, 'cream', {x: -1.5, y: .7, r: .015});
+    bag.gable(1.62, .34, .74, roof, {x: -1.5, y: .74, ry: Math.PI / 2}); bag.box(.1, .3, .1, '#8a4a3a', {x: -1.62, y: .8, z: -.4, r: .015}); bag.box(.14, .035, .14, 'cream', {x: -1.62, y: 1.1, z: -.4});
+    bag.push(-1.17, .17, 0, Math.PI / 2); door(bag, .0, .0, 'red', .3, .46); win(bag, -.48, .46, .0, .24, .26, {flowers: i}); win(bag, .48, .46, .0, .24, .26, {shutters: '#2c6a6a'}); bag.pop();
+    if (i % 2) { bag.box(.5, .3, .6, wall, {x: -1.5, y: .73, z: .0, r: .03}); bag.gable(.66, .22, .5, roof, {x: -1.5, y: 1.03, ry: Math.PI / 2}); }   // every other halt has a little upper room (the signalman's lookout)
+    for (const dz of [-1.5, 1.5]) { bag.cyl(.03, .035, .95, 'slate', {x: -1.2, y: .17, z: dz, seg: 6}); bag.box(.05, .05, .05, '#2c3038', {x: -1.2, y: 1.08, z: dz}); }
+    bag.box(.7, .06, 1.2, c, {x: -1.15, y: 1.1, z: 1.12, r: .025}); bag.box(.5, .04, 1.1, lighten(c, .25), {x: -1.15, y: 1.15, z: 1.12, r: .02});   // a little shelter roof
+    bag.box(.3, .2, 1.0, 'wood', {x: -1.0, y: .17, z: 1.1, r: .03}); bag.box(.34, .05, 1.1, 'wood', {x: -1.0, y: .4, z: 1.1, r: .02});   // a bench
     bag.cyl(.025, .03, 1.2, 'slate', {x: -.75, y: .17, z: 1.85, seg: 6}); bag.box(.06, .42, .7, c, {x: -.75, y: 1.0, z: 1.85, r: .02}); bag.box(.07, .3, .55, 'white', {x: -.75, y: 1.06, z: 1.85, r: .02});   // the station sign
+    bag.cyl(.02, .025, .9, '#2c3038', {x: -.8, y: .17, z: -1.5, seg: 6}); bag.box(.14, .18, .14, '#fff4c4', {x: -.8, y: 1.05, z: -1.5, r: .03}); bag.cone(.13, .1, '#2c3038', {x: -.8, y: 1.23, z: -1.5, seg: 4, ry: Math.PI / 4});   // a lamp
+    for (let k = 0; k < 9; k++) { const zz = -1.7 + k * .42; bag.cyl(.016, .02, .3, 'wood', {x: -2.0, y: .0, z: zz, seg: 5}); } bag.box(.02, .02, 3.5, '#a3744a', {x: -2.0, y: .12}); bag.box(.02, .02, 3.5, '#a3744a', {x: -2.0, y: .24});   // a fence behind
+    bag.cyl(.07, .06, .16, 'slate', {x: -1.2, y: .17, z: -.9, seg: 8}); for (let k = 0; k < 3; k++) { bag.cyl(.045, .04, .09, 'orange', {x: -.9, y: .17, z: .8 + k * .12 - .36, seg: 8}); bag.sph(.05, ['red', 'yellow', 'pink'][(k + i) % 3], {x: -.9, y: .3, z: .8 + k * .12 - .36, seg: 7}); }
     bag.pop();
   });
 }
@@ -658,23 +707,50 @@ export function buildVehicle(def, material) {
 // The little train: an engine with a funnel and two coaches, facing +z, length about 1.9.
 // The train: an engine and three coaches, each its own small mesh so they can follow the curve of the loop. Each car's origin is its middle and its front is +z.
 export function buildTrain(material) {
-  const car = f => { const b = new Bag(); f(b); const m = b.mesh(material); m.castShadow = true; const g = new THREE.Group(); g.add(m); g.scale.setScalar(.95); return g; };
-  const engine = car(b => {
-    b.push(0, 0, -.42);
-    b.box(.4, .3, .62, 'red', {y: .08, z: .5, r: .08}); b.cyl(.2, .2, .55, 'red', {y: .14, z: .55, rx: Math.PI / 2, centre: false, seg: 18}); b.box(.42, .34, .3, 'red', {y: .1, z: .1, r: .06}); b.box(.46, .04, .34, 'yellow', {y: .44, z: .1, r: .02});
-    b.cyl(.06, .08, .22, 'black', {y: .36, z: .78, seg: 10}); b.cyl(.1, .06, .05, 'gold', {y: .58, z: .78, seg: 10}); b.sph(.075, 'gold', {y: .46, z: .6, seg: 8});
-    for (const s of [-1, 1]) { for (const z of [.0, .3, .72]) { b.cyl(.09, .09, .06, 'black', {x: s * .2, y: .09, z, rz: Math.PI / 2, centre: true, seg: 14}); b.cyl(.045, .045, .065, 'cream', {x: s * .2, y: .09, z, rz: Math.PI / 2, centre: true, seg: 10}); } b.box(.025, .03, .8, 'slate', {x: s * .2, y: .09, z: .35, r: .01}); }
-    b.sph(.05, '#fff4c4', {y: .24, z: .83, seg: 8}); b.box(.2, .03, .03, 'white', {y: .13, z: .84, r: .01});
+  const car = f => { const b = new Bag(); f(b); const m = limbMesh(b, limbMaterial()); m.castShadow = true; const g = new THREE.Group(); g.add(m); g.userData.limbMesh = m; g.scale.setScalar(.95); return g; };
+  // one wheel: black tyre, painted centre, spokes and a brass hub; it turns with the distance covered (gear: how many turns per unit of the walking cycle, set by its size)
+  const wheel = (b, x, y, z, r, tint = '#b8322a', gear = 1) => limb(b, 7, [x, y, z], 0, gear, 0, () => {
+    const s = Math.sign(x) || 1; b.cyl(r, r, .034, 'black', {x, y, z, rz: Math.PI / 2, centre: true, seg: 18}); b.cyl(r * .86, r * .86, .04, tint, {x: x + s * .004, y, z, rz: Math.PI / 2, centre: true, seg: 18});
+    for (let k = 0; k < 4; k++) b.box(.012, r * 1.62, r * .16, '#f1e4c4', {x: x + s * .024, y, z, rx: k * Math.PI / 4, centre: true}); b.cyl(r * .3, r * .3, .05, 'gold', {x: x + s * .02, y, z, rz: Math.PI / 2, centre: true, seg: 10}); });
+  const engine = car(b => {   // a little tank engine: boiler, side tanks, cab, funnel and dome, driving wheels with rods
+    b.push(0, 0, -.02);
+    b.box(.4, .05, 1.0, '#2c3038', {y: .1, r: .015});   // the frame
+    b.cyl(.145, .145, .62, '#b8322a', {y: .3, z: .18, rx: Math.PI / 2, centre: true, seg: 22});   // the boiler
+    for (const z of [-.05, .2, .45]) b.torus(.147, .011, 'gold', {y: .3, z, ry: Math.PI / 2 * 0, rx: Math.PI / 2 * 0});
+    b.cyl(.15, .15, .15, '#2b2f36', {y: .3, z: .5, rx: Math.PI / 2, centre: true, seg: 22}); b.cyl(.115, .115, .02, '#3d424c', {y: .3, z: .585, rx: Math.PI / 2, centre: true, seg: 18}); b.sph(.014, 'gold', {y: .3, z: .6, seg: 6});   // smokebox and its door
+    for (const sx of [-1, 1]) { b.box(.1, .15, .5, '#a82a24', {x: sx * .16, y: .2, z: .2, r: .05}); b.box(.105, .025, .52, 'gold', {x: sx * .16, y: .285, z: .2, r: .01}); }   // the side tanks
+    b.cyl(.035, .048, .2, '#1d2026', {y: .4, z: .5, seg: 10}); b.cyl(.068, .042, .05, '#1d2026', {y: .575, z: .5, seg: 12}); b.cyl(.071, .071, .012, 'gold', {y: .625, z: .5, seg: 12});   // the funnel, flared, with a brass rim
+    b.sph(.062, 'gold', {y: .45, z: .26, sy: .85, seg: 12}); b.cyl(.015, .02, .06, 'gold', {y: .5, z: .26, seg: 6}); b.sph(.035, '#a8842a', {y: .47, z: .04, sy: .9, seg: 9});   // steam dome and sand dome
+    b.sph(.042, '#fff4c4', {y: .38, z: .6, seg: 8}); b.cyl(.05, .05, .02, 'black', {y: .38, z: .585, rx: Math.PI / 2, centre: true, seg: 10});   // the headlamp
+    b.box(.36, .36, .34, '#c4423a', {y: .1, z: -.38, r: .03}); b.cyl(.2, .2, .4, '#e9dcc0', {y: .46, z: -.38, rx: Math.PI / 2, centre: true, seg: 14, sz: .5}); b.box(.4, .03, .38, 'slate', {y: .45, z: -.38, r: .01});   // the cab with its arched roof
+    for (const sx of [-1, 1]) { b.box(.02, .17, .15, '#bfe6f7', {x: sx * .182, y: .3, z: -.38, r: .008}); b.box(.024, .02, .17, 'gold', {x: sx * .183, y: .39, z: -.38}); }
+    b.box(.26, .22, .02, '#bfe6f7', {y: .3, z: -.55, r: .008}); b.box(.3, .12, .2, '#22262c', {y: .1, z: -.58, r: .02}); b.sph(.07, '#15181c', {y: .24, z: -.58, sy: .6, seg: 8});   // the back, a bunker of coal
+    for (const sx of [-1, 1]) { b.box(.03, .018, 1.0, '#cbd3dc', {x: sx * .205, y: .17, z: .1}); b.box(.08, .1, .22, '#2c3038', {x: sx * .2, y: .13, z: .46, r: .02}); }   // running boards and the cylinders
+    b.box(.3, .02, .15, '#2c3038', {y: .09, z: .66, rx: -.35}); for (let k = 0; k < 4; k++) b.box(.015, .02, .15, '#6b727c', {x: -.1 + k * .066, y: .1, z: .66, rx: -.35});   // the cowcatcher
+    for (const sx of [-1, 1]) for (const z of [.74, -.64]) { b.cyl(.025, .025, .05, '#2c3038', {x: sx * .13, y: .13, z, rx: Math.PI / 2, centre: true, seg: 8}); b.cyl(.04, .04, .012, '#cbd3dc', {x: sx * .13, y: .13, z: z + Math.sign(z) * .03, rx: Math.PI / 2, centre: true, seg: 10}); }   // buffers
+    for (const sx of [-1, 1]) { for (const z of [-.34, -.1, .14]) wheel(b, sx * .2, .1, z, .1, '#b8322a', 1); wheel(b, sx * .2, .06, .46, .062, '#2c3038', 1.6);
+      limb(b, 8, [sx * .222, .1, -.1], 0, 1, .035, () => b.box(.014, .022, .5, '#cbd3dc', {x: sx * .222, y: .1, z: -.1, r: .004}));   // the coupling rod
+    }
     b.pop();
   });
-  const coach = c => car(b => { const z = 0; b.box(.44, .32, .8, c, {y: .1, z, r: .08}); b.box(.46, .05, .82, 'cream', {y: .42, z, r: .02}); for (const s of [-1, 1]) for (const k of [-1, 0, 1]) b.box(.02, .13, .17, '#bfe6f7', {x: s * .222, y: .27, z: z + k * .24, r: .01}); for (const s of [-1, 1]) for (const zz of [-.28, .28]) { b.cyl(.08, .08, .05, 'black', {x: s * .21, y: .08, z: z + zz, rz: Math.PI / 2, centre: true, seg: 12}); } b.box(.2, .06, .1, 'slate', {y: .22, z: z + .42, r: .02}); });
-  const wagon = car(b => {   // an open goods wagon: a flat bed with low wooden sides, so the cargo in it shows
-    b.box(.46, .08, .86, 'slate', {y: .1, r: .02}); b.box(.44, .05, .84, '#8a5a3c', {y: .17, r: .01});
-    for (const s of [-1, 1]) { b.box(.03, .14, .86, '#b07a4a', {x: s * .22, y: .2, r: .01}); }
-    for (const z of [-.43, .43]) b.box(.46, .14, .03, '#b07a4a', {y: .2, z, r: .01});
-    for (const s of [-1, 1]) for (const zz of [-.28, .28]) b.cyl(.08, .08, .05, 'black', {x: s * .21, y: .08, z: zz, rz: Math.PI / 2, centre: true, seg: 12});
+  const coach = c => car(b => {   // a carriage: two-tone body, an arched roof with a clerestory, framed windows, doors, end rails, buffers, bogies
+    b.box(.4, .06, .86, '#2c3038', {y: .09, r: .01}); b.box(.44, .1, .84, c, {y: .13, r: .03}); b.box(.43, .2, .84, '#efe3c6', {y: .23, r: .03});
+    b.cyl(.215, .215, .86, 'cream', {y: .4, rx: Math.PI / 2, centre: true, seg: 16, sz: .42}); b.box(.12, .03, .5, '#d8cdb2', {y: .5}); for (const z of [-.18, .18]) b.cyl(.022, .022, .05, '#2c3038', {y: .52, z, seg: 8});
+    for (const s of [-1, 1]) { for (const k of [-1, 0, 1]) { const z = k * .25; b.box(.02, .13, .15, '#bfe6f7', {x: s * .221, y: .28, z, r: .01}); b.box(.024, .015, .17, 'white', {x: s * .222, y: .355, z}); b.box(.024, .015, .17, 'white', {x: s * .222, y: .205, z}); }
+      b.box(.022, .26, .12, c, {x: s * .222, y: .22, z: .39, r: .01}); b.box(.026, .015, .015, 'gold', {x: s * .224, y: .24, z: .36}); b.box(.022, .26, .12, c, {x: s * .222, y: .22, z: -.39, r: .01}); }
+    for (const z of [-.46, .46]) { for (const s of [-1, 1]) { b.cyl(.025, .025, .05, '#2c3038', {x: s * .13, y: .14, z: z + Math.sign(z) * .02, rx: Math.PI / 2, centre: true, seg: 8}); b.cyl(.04, .04, .012, '#cbd3dc', {x: s * .13, y: .14, z: z + Math.sign(z) * .05, rx: Math.PI / 2, centre: true, seg: 10}); b.cyl(.01, .01, .1, '#cbd3dc', {x: s * .19, y: .24, z: z + Math.sign(z) * .02, seg: 5}); } b.box(.4, .012, .012, '#cbd3dc', {y: .33, z: z + Math.sign(z) * .02}); }
+    for (const s of [-1, 1]) for (const zz of [-.28, .28]) wheel(b, s * .21, .075, zz, .065, '#2c3038', 1.5);
+    for (const zz of [-.28, .28]) b.box(.02, .02, .02, '#2c3038', {y: .075, z: zz}); b.box(.34, .03, .18, '#2c3038', {y: .06, z: -.28}); b.box(.34, .03, .18, '#2c3038', {y: .06, z: .28});
   });
-  return [engine, coach('yellow'), coach('blue'), wagon];
+  const wagon = car(b => {   // an open goods wagon: a flat bed with planked wooden sides, stanchions and buffers, so the cargo in it shows
+    b.box(.44, .06, .86, '#2c3038', {y: .09, r: .01}); b.box(.43, .045, .84, '#8a5a3c', {y: .15, r: .01});
+    for (const s of [-1, 1]) for (let k = 0; k < 2; k++) b.box(.028, .06, .84, k ? '#b07a4a' : '#a06a3c', {x: s * .212, y: .195 + k * .062, r: .008});
+    for (const z of [-.42, .42]) for (let k = 0; k < 2; k++) b.box(.43, .06, .028, k ? '#b07a4a' : '#a06a3c', {y: .195 + k * .062, z, r: .008});
+    for (const s of [-1, 1]) for (const z of [-.42, 0, .42]) b.box(.03, .16, .03, '#2c3038', {x: s * .216, y: .14, z});
+    for (const z of [-.46, .46]) for (const s of [-1, 1]) { b.cyl(.025, .025, .05, '#2c3038', {x: s * .13, y: .12, z: z + Math.sign(z) * .02, rx: Math.PI / 2, centre: true, seg: 8}); b.cyl(.04, .04, .012, '#cbd3dc', {x: s * .13, y: .12, z: z + Math.sign(z) * .05, rx: Math.PI / 2, centre: true, seg: 10}); }
+    for (const s of [-1, 1]) for (const zz of [-.28, .28]) wheel(b, s * .21, .07, zz, .06, '#2c3038', 1.6);
+  });
+  return [engine, coach('#2d6aa8'), coach('#e0a93a'), wagon];
 }
 export function buildBoat(material) {
   const b = new Bag();
