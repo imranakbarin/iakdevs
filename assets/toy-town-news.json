@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generated_at": "2026-11-11T22:45:05.981Z",
+  "generated_at": "2026-11-12T03:51:53.814Z",
   "status": "ok",
   "successful_sources": [
     "BBC News",
@@ -24,12 +24,12 @@
       "published_at": "2026-11-11T19:32:59.000Z"
     },
     {
-      "title": "Toby Jones stars in film about UK Mars mission",
-      "url": "https://www.bbc.co.uk/news/articles/cqm2l304w0x9o?at_medium=RSS&at_campaign=rss",
-      "source": "BBC Science",
+      "title": "Curiosity Blog, Sols 5063-5069 Rocks and Chips",
+      "url": "https://science.nasa.gov/blog/curiosity-blog-sols-5063-5069-rocks-and-chips/",
+      "source": "NASA",
       "category": "Science",
       "tone": "light",
-      "published_at": "2026-11-11T14:10:11.000Z"
+      "published_at": "2026-11-12T00:41:35.000Z"
     },
     {
       "title": "Author says there were 'real concerns' about David Walliams within publishing industry",
@@ -40,20 +40,20 @@
       "published_at": "2026-11-11T20:40:47.000Z"
     },
     {
-      "title": "Arsenal join Scott chase - Thursday's gossip",
-      "url": "https://www.bbc.co.uk/sport/football/articles/c62l51xyl98no?at_medium=RSS&at_campaign=rss",
+      "title": "Andreeva wins 11 games in a row to thrash Sabalenka at WTA Finals",
+      "url": "https://www.bbc.co.uk/sport/tennis/articles/cq1md03gz0zvo?at_medium=RSS&at_campaign=rss",
       "source": "BBC Sport",
       "category": "Sport",
       "tone": "light",
-      "published_at": "2026-11-11T21:38:01.000Z"
+      "published_at": "2026-11-12T00:48:23.000Z"
     },
     {
-      "title": "T-Mobile illegally imposed 50GB cap on low-income home Internet plan, NY says",
-      "url": "https://arstechnica.com/tech-policy/2026/11/t-mobile-illegally-imposed-50-gb-cap-on-low-income-home-internet-plan-ny-says/",
+      "title": "CEO Jensen Huang's job is suddenly on the line at Nvidia",
+      "url": "https://arstechnica.com/gadgets/2026/11/ceo-jensen-huangs-job-is-suddenly-on-the-line-at-nvidia/",
       "source": "Ars Technica",
       "category": "Technology",
       "tone": "light",
-      "published_at": "2026-11-11T20:32:21.000Z"
+      "published_at": "2026-11-11T23:10:17.000Z"
     },
     {
       "title": "Poundland set for more time to secure a rescue deal as emergency talks continue",
@@ -61,15 +61,15 @@
       "source": "BBC Business",
       "category": "Business",
       "tone": "light",
-      "published_at": "2026-11-11T22:08:56.000Z"
+      "published_at": "2026-11-12T00:49:05.000Z"
     },
     {
-      "title": "African writing award probe finds 'no evidence' winning story was AI generated",
-      "url": "https://www.bbc.co.uk/news/articles/cmglr260z7eko?at_medium=RSS&at_campaign=rss",
+      "title": "Australian teen missing in bush for six days rescued alive",
+      "url": "https://www.bbc.co.uk/news/articles/ckvg25zmppglo?at_medium=RSS&at_campaign=rss",
       "source": "BBC News",
       "category": "World",
       "tone": "light",
-      "published_at": "2026-11-11T20:00:54.000Z"
+      "published_at": "2026-11-12T02:40:18.000Z"
     },
     {
       "title": "For Centuries, Visitors Walked Right by 280 Unseen Ice Age Cave Paintings",
@@ -80,12 +80,12 @@
       "published_at": "2026-11-11T19:30:10.000Z"
     },
     {
-      "title": "APOD: 2026 November 11 – NGC 4449: Small Galaxy, Big Impact",
-      "url": "https://science.nasa.gov/image-article/apod-2026-november-11-ngc-4449-small-galaxy-big-impact/",
-      "source": "NASA",
+      "title": "Significant drop in levels of toxic 'forever' chemicals in England's rivers",
+      "url": "https://www.bbc.co.uk/news/articles/cmze75r55g3jo?at_medium=RSS&at_campaign=rss",
+      "source": "BBC Science",
       "category": "Science",
       "tone": "light",
-      "published_at": "2026-11-11T05:05:00.000Z"
+      "published_at": "2026-11-12T00:12:59.000Z"
     }
   ]
 }
