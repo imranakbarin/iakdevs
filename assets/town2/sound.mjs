@@ -22,10 +22,26 @@ export function chimeDue(prev, now) {
   return ((h + 11) % 12) + 1;
 }
 
+// The voices of the new life: hens clucking in the yard, a dog barking, a cat mewing, dolphins chirping as they leap, the whale's song as she blows,
+// the dwarfs' chime as they come out and the tink of their picks. Pure: `s` is what is happening ({zoom 0..1, hens, dogRun, cats, leap, spout, dwarfs}), `t` the timers
+// (newWildTimers()), and the result is a list of [cue, volume]. The ones on the ground are only heard when the camera is close.
+export const newWildTimers = () => ({hen: 2, dog: 9, cat: 16, tink: 3, leap: false, spout: false, dwarfs: 0});
+export function wildDue(s, t, dt, rnd = Math.random) {
+  const out = [], near = clamp01(s.zoom ?? .5);
+  if ((t.hen -= dt) <= 0) { t.hen = 3 + rnd() * 6; if (s.hens && near > .3) out.push(['cluck', .4 + .6 * near]); }
+  if ((t.dog -= dt) <= 0) { t.dog = 14 + rnd() * 20; if (s.dogRun && near > .45) out.push(['bark', .4 + .6 * near]); }
+  if ((t.cat -= dt) <= 0) { t.cat = 25 + rnd() * 35; if (s.cats && near > .55) out.push(['meow', .4 + .6 * near]); }
+  if (s.leap && !t.leap) out.push(['dolphin', .45 + .55 * near]); t.leap = !!s.leap;
+  if (s.spout && !t.spout) out.push(['whale', .5 + .3 * near]); t.spout = !!s.spout;
+  if ((s.dwarfs || 0) > t.dwarfs) out.push(['dwarf', .7]); t.dwarfs = s.dwarfs || 0;
+  if ((t.tink -= dt) <= 0) { t.tink = 2.5 + rnd() * 3.5; if (s.dwarfs && near > .3) out.push(['tink', .4 + .5 * near]); }
+  return out;
+}
+
 export function createSound(opts = {}) {
   const AC = opts.AudioContext || (typeof window !== 'undefined' ? window.AudioContext || window.webkitAudioContext : null), rnd = opts.random || Math.random;
   const me = {enabled: false, supported: !!AC, started: 0};
-  let ctx = null, master = null, gains = {}, noise = null, nextChirp = 1, nextCricket = 1, lastHour = null, wasMoving = false, lastAt = null;
+  const wildTimers = newWildTimers(); let ctx = null, master = null, gains = {}, noise = null, nextChirp = 1, nextCricket = 1, lastHour = null, wasMoving = false, lastAt = null;
 
   function noiseBuffer() { const n = ctx.sampleRate * 2, b = ctx.createBuffer(1, n, ctx.sampleRate), d = b.getChannelData(0); for (let i = 0; i < n; i++) d[i] = rnd() * 2 - 1; return b; }
   function bed(type, freq, q, lfoRate) {   // a looped noise through a filter into its own gain; an LFO makes it breathe
@@ -52,6 +68,13 @@ export function createSound(opts = {}) {
   me.bell = n => { const t0 = ctx.currentTime; for (let i = 0; i < Math.min(12, n); i++) { const t = t0 + i * .9; for (const [m, p] of [[1, .09], [2.76, .04], [5.4, .02]]) tone(523 * m, t, 2.2 / m ** .3, p); } };
   me.whistle = () => { const t = ctx.currentTime; tone(660, t, .32, .05, {to: 700}); tone(880, t + .36, .5, .05, {to: 860}); };
   me.stationBell = () => { const t = ctx.currentTime; for (let i = 0; i < 4; i++) { tone(1175, t + i * .42, .38, .05); tone(880, t + i * .42 + .2, .3, .035); } };   // ding-dong as the train pulls in
+  me.cluck = (v = 1) => { const t = ctx.currentTime, f = 480 + rnd() * 120, n = 2 + Math.floor(rnd() * 3); for (let i = 0; i < n; i++) tone(f * (1 - i * .04), t + i * .075, .06, .035 * v, {type: 'square', to: f * .7}); };
+  me.bark = (v = 1) => { const t = ctx.currentTime; for (let i = 0; i < 2; i++) tone(320, t + i * .22, .13, .06 * v, {type: 'sawtooth', to: 170}); };
+  me.meow = (v = 1) => { const t = ctx.currentTime; tone(620, t, .22, .035 * v, {to: 1020}); tone(1020, t + .22, .3, .03 * v, {to: 640}); };
+  me.dolphin = (v = 1) => { const t = ctx.currentTime; for (let i = 0; i < 3; i++) tone(1800 + i * 150, t + i * .1, .09, .03 * v, {to: 3200}); };
+  me.whale = (v = 1) => { const t = ctx.currentTime; tone(120, t, 3.6, .06 * v, {to: 70}); tone(180, t + .3, 3, .03 * v, {to: 105}); };
+  me.dwarf = (v = 1) => { const t = ctx.currentTime; [988, 784, 659].forEach((f, i) => tone(f, t + i * .16, .7, .035 * v, {type: 'triangle'})); };
+  me.tink = (v = 1) => { const t = ctx.currentTime; tone(2200, t, .08, .03 * v, {type: 'triangle'}); tone(3100, t + .11, .06, .02 * v, {type: 'triangle'}); };
   me.blip = () => { if (!me.enabled) return; const t = ctx.currentTime; tone(880, t, .09, .04, {to: 1320}); };
 
   me.toggle = on => {
@@ -68,6 +91,7 @@ export function createSound(opts = {}) {
     if ((nextChirp -= dt) <= 0) { nextChirp = plan.birds > .02 ? (.8 + rnd() * 2.4) / plan.birds : 2; if (plan.birds > .02) me.chirp(); }
     if ((nextCricket -= dt) <= 0) { nextCricket = plan.crickets > .02 ? (.35 + rnd() * .5) / plan.crickets : 2; if (plan.crickets > .02) me.cricket(); }
     if (lastHour !== null) { const n = chimeDue(lastHour, s.hour); if (n) me.bell(n); } lastHour = s.hour;
+    if (s.wild) for (const [name, v] of wildDue(s.wild, wildTimers, dt, rnd)) me[name](v);
     if (s.trainMoving && !wasMoving) me.whistle(); wasMoving = !!s.trainMoving;
     if (s.trainAt && !lastAt) me.stationBell(); lastAt = s.trainAt || null;
   };

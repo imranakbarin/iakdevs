@@ -139,7 +139,7 @@ input[type=range]{width:80px;accent-color:#E63B2E}
 <canvas id="c" aria-label="Endlessly scrolling art landscape inspired by traditional painting"></canvas>
 <div class="ui"><div class="bar" id="scene-controls">
   <h1>Infinite scroll</h1>
-<select id="mode" aria-label="Experience"><option value="home">⌂ Today</option><option value="art" selected>World art</option><option value="road">Road trip</option><option value="zen">Zen garden</option><option value="cozy">Cozy Worlds</option><option value="mushroom">Mushroom Island</option><option value="pip">Pip Run</option><option value="town">Toy Town</option></select>
+<select id="mode" aria-label="Experience"><option value="home">⌂ Today</option><option value="art" selected>World art</option><option value="road">Road trip</option><option value="zen">Zen garden</option><option value="cozy">Cozy Worlds</option><option value="mushroom">Mushroom Island</option><option value="pip">Pip Run</option><option value="town">Toy Town</option><option value="town2">Toy Town Storybook</option></select>
   <input id="sty" type="hidden" value="gond">
   <select id="place" aria-label="Road trip place" hidden><option value="auto">Places · Auto</option><option value="0">Mountain pass</option><option value="1">Desert highway</option><option value="2">Forest trail</option><option value="3">Coastal drive</option><option value="4">City outskirts</option></select>
 <button id="traffic" hidden aria-pressed="true">Traffic on</button>
@@ -2207,6 +2207,7 @@ function openCozy(){
  cozyPromise.then(()=>{if(modeBtn.value==='cozy')CozyWorlds.mount(document.getElementById('cozy-host'),{onMotionChange(value){playing=value;syncPlay();},onExperienceChange(value){modeBtn.value=value;modeBtn.onchange();}});}).catch(()=>{if(modeBtn.value==='cozy')document.getElementById('cozy-host').innerHTML='<p class="cozy-error">The scene could not load. Please refresh.</p>';cozyPromise=null;});
 }
 modeBtn.onchange=()=>{
+ if(modeBtn.value==='town2'){location.href='toy-town-new.html';return;}   // the storybook town is its own page (the classic Toy Town stays as it is)
  const road=modeBtn.value==='road',zen=modeBtn.value==='zen',cozy=modeBtn.value==='cozy',mushroom=modeBtn.value==='mushroom',pip=modeBtn.value==='pip',town=modeBtn.value==='town',wasZen=document.body.classList.contains('zen-mode');
  if(!cozy&&window.CozyWorlds)CozyWorlds.dispose();document.body.classList.toggle('cozy-mode',cozy);if(cozy)openCozy();
  document.body.classList.toggle('mushroom-mode',mushroom);
