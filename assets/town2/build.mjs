@@ -13,8 +13,8 @@ import {inGarden} from './garden.mjs';
 // Seasons recolour the foliage and the grass (and nothing else) when the town is built.
 const SEASONAL = {}, SEASON_COLOURS = {
   summer: {},
-  spring: {leaf: '#4fbf70', leafLight: '#f6bdd2', blossom: '#e98fb0', grass: '#9ad96e', grassDark: '#82c862'},
-  autumn: {leaf: '#d9822b', leafLight: '#e8b83a', grass: '#b9c45c', grassDark: '#a5b04e'},
+  spring: {leaf: '#74ad83', leafLight: '#e8b7c9', blossom: '#dea4b9', grass: '#a2c88c', grassDark: '#86b578'},
+  autumn: {leaf: '#c38a53', leafLight: '#d3b476', grass: '#b4bb81', grassDark: '#9baa70'},
   winter: {leaf: '#3d7a5a', leafLight: '#e4eef5', grass: '#eef4f8', grassDark: '#d6e4ee'}
 };
 export function setSeason(name) { for (const k in SEASONAL) delete SEASONAL[k]; Object.assign(SEASONAL, SEASON_COLOURS[name] || {}); }
@@ -79,10 +79,10 @@ export function windify(mat) {
 const SHORE_GLSL = `float shoreAt(vec2 p) { float a = atan(p.y, p.x); return length(p / vec2(${ISLAND.rx.toFixed(2)}, ${ISLAND.rz.toFixed(2)})) + .028 * sin(a * 5. + .6) + .018 * sin(a * 9. - 1.1); }`;
 const WAVE_FRAG = `float w1 = sin(vW.x * 1.3 + uTime * .7 + sin(vW.y * .9 + uTime * .3) * 1.5), w2 = sin(vW.y * 1.7 - uTime * .9 + sin(vW.x * 1.1) * 1.2);
   float glint = smoothstep(.86, 1., sin(vW.x * 1.7 + vW.y * 1.3 + uTime * 1.1) * sin(vW.x * 1.3 - vW.y * 2.1 - uTime * .9));
-  diffuseColor.rgb *= 1. + uWaves * .06 * w1 * w2; diffuseColor.rgb += uWaves * glint * .06;`;
+  diffuseColor.rgb *= 1. + uWaves * (.038 * w1 * w2 + .024 * sin(vW.x * .65 + uTime * .44) * sin(vW.y * .8 - uTime * .35)); diffuseColor.rgb += uWaves * glint * .042;`;
 const FOAM_FRAG = `float sh = shoreAt(vW), ang = atan(vW.y, vW.x), edge = .952 + .012 * sin(uTime * .9 + ang * 6.) + .006 * sin(uTime * 1.7 + ang * 13.);
   float f1 = smoothstep(edge + .012, edge - .012, sh) * smoothstep(.895, .915, sh) * .85, f2 = (1. - smoothstep(0., .008, abs(sh - (.985 + .02 * sin(uTime * .8))))) * .45;
-  float foam = clamp(f1 + f2 * (1. - f1), 0., 1.) * uFoam; diffuseColor.rgb = mix(diffuseColor.rgb, vec3(1.), foam * .9); diffuseColor.a = max(diffuseColor.a, foam * .85);`;
+  float foam = clamp(f1 + f2 * (1. - f1), 0., 1.) * uFoam; diffuseColor.rgb = mix(diffuseColor.rgb, vec3(.93, .98, .96), foam * .72); diffuseColor.a = max(diffuseColor.a, foam * .74);`;
 export function waterify(mat, foam) {
   mat.onBeforeCompile = sh => {
     sh.uniforms.uTime = U.time; sh.uniforms.uWaves = U.waves; sh.uniforms.uFoam = U.foam;
@@ -392,7 +392,7 @@ function disc(parts, x, z, r0, r1, colour, lift, seg = 40) {
   const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); g.setAttribute('normal', new THREE.Float32BufferAttribute(nor, 3)); g.setAttribute('color', new THREE.Float32BufferAttribute(colr, 3)); parts.push(g);
 }
 // Laid stone: a road or square paved with setts. Each stone is its own little quad in its own shade (a darker "grout" road/disc lies under them), laid in courses with the joints staggered like brickwork.
-const SETT_STREET = ['#a49e94', '#b4ada1', '#958f87', '#beb6a7', '#a9a195', '#9b958b', '#b0a89b'], SETT_SQUARE = ['#e9dab8', '#dfcea9', '#f0e3c6', '#d8c6a2', '#ebdcbd', '#e2d1ac'], SETT_BAND = ['#b78f6b', '#c19b76', '#af8560'], SETT_RING = ['#8f8a84', '#9d978f', '#857f78', '#a39d94'];
+const SETT_STREET = ['#aba698', '#b8b0a0', '#9d978d', '#c4b9a9', '#afa798', '#a49d90', '#b6ad9e'], SETT_SQUARE = ['#eadbbd', '#dfcfb1', '#efe4cf', '#d8c8ac', '#ecdec3', '#e2d5b8'], SETT_BAND = ['#ae9276', '#bb9d80', '#ab8b70'], SETT_RING = ['#9a9589', '#a9a295', '#928c82', '#aea89c'];
 const GROUT = '#7f786c', GROUT_SQUARE = '#c9b78f';
 function stoneBuf() { return {pos: [], colr: [], nor: []}; }
 function stone(buf, P, colour, shade) {

@@ -1448,3 +1448,9 @@ A `START` does not prohibit parallel edits. Avoid stepping on each other's uncom
 - **Not verified**: a real phone, the welcome-back page after a real day away (logic only), balance of the rewards over weeks.
 - **Not built**: bigger visible rewards from wishes (the chest upgrades are the same five plus the beehive).
 
+
+### 2026-11-12 · ChatGPT · START+IMPLEMENTED (Toy Town Magic Pass 1)
+- **Base**: master 0b3072b (after Claude's merged #254 and headline refresh). Separate branch feat/toy-town-magic-pass-1; no edits to Claude's story, wishes, residents, gameplay or simulation modules.
+- **Visuals**: cohesive muted palette; warm daylight & atmosphere, filmic renderer and softer PCF shadows; subtler animated water/foam and fewer synthetic flying leaves/petals; an additive scene layer adds grounded soft contact shadows, carefully spaced entrance planters, cafe seating and dock supplies. Low/TV mode omits the added detail layer.
+- **UI**: quieter translucent paper, legible compact work board, gentler first-minute guide, visible keyboard focus and reduced-motion transitions.
+- **Validation needed**: real Chromium desktop/mobile, visual comparison at dusk/day/rain/winter, WebGL draw/triangle budgets, phone/Safari. Do not claim those checks until run. Preserve the current merge/coordination protocol.

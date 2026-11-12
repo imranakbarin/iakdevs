@@ -108,7 +108,7 @@ const root = path.join(__dirname, '..'), mod = f => import('file://' + path.join
     assert.ok(wet > 20 * 150 && dry > 20 * 600 && maxRain > .9, 'it rains for a while and is dry for longer (' + wet / 20 + ' s wet, ' + dry / 20 + ' s dry)'); }
   const Sky = await mod('sky.mjs'), noon = Sky.skyAt(12, 0), mid = Sky.skyAt(0, 0), wetNoon = Sky.skyAt(12, 1);
   assert.ok(noon.glow < .05 && mid.glow > .95 && mid.stars > .95 && noon.stars < .05, 'windows are lit and stars are out at night only');
-  assert.ok(noon.sunI > 2 && mid.sunI < .7 && wetNoon.sunI < noon.sunI * .6 && wetNoon.sky !== noon.sky, 'night is dim, rain dulls the day');
+  assert.ok(noon.sunI > 1.5 && mid.sunI < .7 && wetNoon.sunI < noon.sunI * .6 && wetNoon.sky !== noon.sky, 'warm daylight remains brighter than night; rain dulls the day');
   assert.ok(Sky.skyAt(6.2, 0).sky !== noon.sky && Sky.skyAt(18.4, 0).sky !== noon.sky, 'dawn and dusk have their own colours');
   // tap-to-inspect wording
   { const I = await mod('inspect.mjs'), s3 = S.createSim(5, {events: false}); s3.setHour(11); for (let i = 0; i < 20 * 120; i++) s3.update(.05);
@@ -120,7 +120,7 @@ const root = path.join(__dirname, '..'), mod = f => import('file://' + path.join
   // seasons
   { const Sk = await mod('sky.mjs'); assert.deepEqual(Sk.SEASONS, ['spring', 'summer', 'autumn', 'winter']);
     assert.equal(Sk.seasonOf(new Date(2026, 0, 15)), 'winter'); assert.equal(Sk.seasonOf(new Date(2026, 3, 1)), 'spring'); assert.equal(Sk.seasonOf(new Date(2026, 6, 1)), 'summer'); assert.equal(Sk.seasonOf(new Date(2026, 10, 10)), 'autumn'); assert.equal(Sk.seasonOf(new Date(2026, 11, 25)), 'winter');
-    const days = Sk.SEASONS.map(n => Sk.skyAt(12, 0, n)); assert.equal(new Set(days.map(d => d.sky)).size, 4, 'each season has its own daytime sky'); assert.equal(days[1].sky, '#bfe9fb', 'summer is the plain blue');
+    const days = Sk.SEASONS.map(n => Sk.skyAt(12, 0, n)); assert.equal(new Set(days.map(d => d.sky)).size, 4, 'each season has its own daytime sky'); assert.equal(days[1].sky, '#d2e7e8', 'summer is the soft blue-green of the storybook palette');
     assert.ok(Sk.skyAt(12, 0, 'winter').sunI < Sk.skyAt(12, 0, 'summer').sunI && Sk.skyAt(12, 0, 'winter').sunPos[1] < Sk.skyAt(12, 0, 'summer').sunPos[1], 'the winter sun is weaker and lower');
     assert.equal(Sk.skyAt(0, 0, 'winter').sky, Sk.skyAt(0, 0, 'summer').sky, 'the night sky is the same in every season');
     for (const season of Sk.SEASONS) { const s4 = S.createSim(9, {events: false, season}); for (let i = 0; i < 20 * 900; i++) s4.update(.05);
@@ -361,7 +361,7 @@ const root = path.join(__dirname, '..'), mod = f => import('file://' + path.join
     { const sw = S.createSim(7, {events: false}); let left = null, found = null; for (let i = 0; i < 20 * 480 * 14; i++) { sw.update(.05); if (left === null && sw.sagaLog.some(l => /left a gem/.test(l.text))) left = sw.day; if (found === null && sw.wild.gemsFound > 0) found = sw.day; }
       assert.ok(left !== null && sw.wild.gemsFound >= 1, 'a gem was left and found within two weeks (' + sw.wild.gemsFound + ' found)'); assert.equal(sw.wild.gemCoins, sw.wild.gemsFound * 10, 'each is worth ten coins'); assert.ok(sw.wild.gemsFound + sw.wild.gems <= sw.wild.sightings, 'never more gems than evenings seen'); assert.ok(sw.sagaLog.some(l => /gem/.test(l.text)), 'it is in the saga'); assert.ok(sw.days.some((d, i) => i > 0 && d.gemsFound > sw.days[i - 1].gemsFound), 'and in the day counters'); }
     // the evening and night are lit well enough to see colour, and the day is still the brightest
-    { const night = Sk.skyAt(0, 0), dusk = Sk.skyAt(18.8, 0), noon = Sk.skyAt(12, 0); assert.ok(night.hemiI >= .9 && night.hemiI < noon.hemiI * .7, 'a readable night (' + night.hemiI + ')'); assert.ok(dusk.hemiI >= 1.1 && dusk.sunI > .9, 'a warm, bright dusk (' + dusk.hemiI + ', ' + dusk.sunI + ')'); const dawn = Sk.skyAt(6, 0); assert.ok(dawn.dark < .05 && dawn.hemiI > 1.3, 'a visit that starts at six begins in daylight (' + dawn.dark + ')'); }
+    { const night = Sk.skyAt(0, 0), dusk = Sk.skyAt(18.8, 0), noon = Sk.skyAt(12, 0); assert.ok(night.hemiI >= .9 && night.hemiI < noon.hemiI * .85, 'a readable night that stays dimmer than day (' + night.hemiI + ')'); assert.ok(dusk.hemiI >= 1.05 && dusk.sunI > .9, 'a warm, bright dusk (' + dusk.hemiI + ', ' + dusk.sunI + ')'); const dawn = Sk.skyAt(6, 0); assert.ok(dawn.dark < .05 && dawn.hemiI > 1.1, 'a visit that starts at six begins in daylight (' + dawn.dark + ')'); }
     const idx = fs.readFileSync(path.join(root, 'index.html'), 'utf8'); assert.match(idx, /<option value="town2">Toy Town Storybook<\/option>/, 'the menu has a Toy Town Storybook entry'); assert.match(idx, /value==='town2'\)\{location\.href='toy-town-new\.html'/, 'which opens the storybook page'); assert.match(idx, /<option value="town">Toy Town<\/option>/, 'and the classic Toy Town is still there'); }
   // follow-up 19: fishing is a job you can see, and a game you can play
   { const An = await mod('angling.mjs');

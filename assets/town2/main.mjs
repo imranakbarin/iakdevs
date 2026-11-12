@@ -24,6 +24,7 @@ import {setGait} from './limbs.mjs';
 import {COOP, PLOTS} from './garden.mjs';
 import {PETS} from './wildlife.mjs';
 import {createFestival} from './festscene.mjs';
+import {buildTownCharm} from './charm.mjs';
 import {newBoat, stepBoat, sightings, MOOR} from './sail.mjs';
 import {buildDrops, buildUpgrades} from './wild3d.mjs';
 import {buildRain as buildRain2, buildPuddles as buildPuddles2, buildSplashes, buildFallingThings} from './weather3d.mjs';
@@ -39,8 +40,10 @@ const lite = q.get('lite') === '1' || (q.get('lite') !== '0' && /SMART-?TV|Smart
 const renderer = (() => { try { return new THREE.WebGLRenderer({canvas, antialias: !lite, powerPreference: lite ? 'default' : 'high-performance'}); } catch (e) { try { return new THREE.WebGLRenderer({canvas, antialias: false}); } catch (e2) { throw new Error('WebGL could not start (' + (e2 && e2.message || e2) + ')'); } } })();
 const phone = Math.min(innerWidth, innerHeight) < 700;
 renderer.setPixelRatio(lite ? litePR : Math.min(devicePixelRatio || 1, phone ? 1.5 : 2));
-renderer.shadowMap.enabled = !lite; renderer.shadowMap.type = THREE.PCFShadowMap;
-const scene = new THREE.Scene(); scene.background = new THREE.Color('#bfe9fb'); scene.fog = new THREE.Fog('#bfe9fb', 85, 210);
+renderer.shadowMap.enabled = !lite; renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.18;
+const scene = new THREE.Scene(); scene.background = new THREE.Color('#d2e7e8'); scene.fog = new THREE.Fog('#d2e7e8', 85, 210);
 const camera = new THREE.PerspectiveCamera(30, 1, .5, 400);
 scene.add(new THREE.HemisphereLight('#ffffff', '#b8d8a0', 1.55));
 const sun = new THREE.DirectionalLight('#fff4dc', 2.1); sun.position.set(-14, 22, 10); sun.castShadow = !lite;
@@ -51,7 +54,10 @@ scene.add(sun, sun.target);
 function dayFromQuery() { const d = (q.get('day') || '').toLowerCase().slice(0, 3), i = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'].indexOf(d); return i >= 0 ? i : /^[0-6]$/.test(q.get('day') || '') ? +q.get('day') : (new Date().getDay() + 6) % 7; }
 const season = SEASONS.includes(q.get('season')) ? q.get('season') : seasonOf(), sagaStore = (() => { try { return localStorage; } catch (e) { return null; } })(), savedSaga = q.get('fresh') === '1' || !sagaStore ? null : loadSaga(sagaStore), sim = createSim(7, {season, weekday: dayFromQuery(), saga: savedSaga, wishSeed: Math.floor(Date.now() / 864e5)}), built = buildTown(sim.graph, season);
 const sound = createSound();
-scene.add(built.ground, built.sea, built.shallows, built.town, built.glow, built.lampGlow); for (const m of Object.values(built.moving)) scene.add(m.group);
+scene.add(built.ground, built.sea, built.shallows, built.town, built.glow, built.lampGlow);
+// The magic pass is additive; all original buildings, paths, residents and interactions remain intact.
+const charm = buildTownCharm(built.material, season, lite); scene.add(charm);
+for (const m of Object.values(built.moving)) scene.add(m.group);
 const tufts = buildTufts(sim.graph); scene.add(tufts);
 const clouds = buildClouds(); scene.add(clouds);
 const sky = buildSky(); scene.add(sky);
@@ -420,7 +426,7 @@ function weatherLight() {
   { const o = L.night > .5 && !lite ? (L.night - .5) * 2 * (1 - clamp(0, sim.weather.rain * 1.4, 1)) * .6 : 0; moonPath.visible = o > .02; if (o > .02) { const dx = L.sunPos[0], dz = L.sunPos[2], d = Math.hypot(dx, dz) || 1; moonPath.material.opacity = o * (.85 + .15 * Math.sin(time * 1.3)); moonPath.rotation.y = Math.atan2(dx, dz) + Math.PI; moonPath.position.set(dx / d * 40, ISLAND.sea + .03, dz / d * 40); } }
   sky.visible = L.stars > .02; sky.userData.stars.material.opacity = L.stars; sky.userData.moon.material.opacity = L.stars * .95;
   { const r = sim.weather.rain; { let n = 0; if (r > .25) sim.residents.forEach((q, i) => { const g = people.get(q.id); if (g.visible && q.state === 'walking') umbrellas.userData.set(n++, g.position.x, g.position.y, g.position.z, g.rotation.y, BROLLY[i % BROLLY.length]); }); umbrellas.userData.show(n); } rain.position.set(view.x, 0, view.z); rain.userData.update(time, season === 'winter' || r < .02 ? 0 : r, windNow); splashes.userData.update(time, season === 'winter' || r < .02 ? 0 : r, view.x, view.z, lastDt);
-    const day = 1 - L.night, amount = season === 'winter' ? Math.max(.25, r) : season === 'summer' ? (L.night > .5 ? .7 * (1 - r) : 0) : (season === 'autumn' ? .5 : .4) * day * (1 - r * .7);
+    const day = 1 - L.night, amount = season === 'winter' ? Math.max(.23, r) : season === 'summer' ? (L.night > .5 ? .45 * (1 - r) : 0) : (season === 'autumn' ? .2 : .16) * day * (1 - r * .7);
     fall.position.set(view.x, 0, view.z); fall.userData.update(time, amount, windNow);
     sound.update({wild: {...wild.soundState(), bang: fest.bang()}, dark: L.night, rain: r, season, hour: sim.hour, trainMoving: Math.abs(sim.train.v) > .1, trainAt: sim.train.at, zoom: 1 - clamp(0, (view.dist - 7) / 50, 1)}, 0.0001 + lastDt); }
   // the street lamps, one by one as the lamplighter reaches them (faint in daylight, bright after dark), and the puddles
