@@ -1,4 +1,5 @@
 // New Toy Town: the long story. Pure. Ages, birthdays (a "year" is a week of days), weddings between close friends, and babies.
+import {cleanChest} from './chest.mjs';
 export const YEAR_DAYS = 7;
 export const AGES = {crumb: 52, pott: 47, bell: 38, pip: 26, tilly: 34, embers: 45, moss: 79, sprocket: 58, hay: 55, chalk: 33, sparky: 29, salt: 67, wick: 61, ada: 15, lew: 14, dot: 8, dash: 9, ivy: 36, rudy: 13, nell: 31, otto: 49, bea: 41, finn: 44, june: 59, ted: 40, gill: 42, apple: 46, mint: 35};
 export const BABY_NAMES = ['Pebble', 'Poppy', 'Biscuit', 'Clover', 'Mossy', 'Button', 'Tiny Tim', 'Daisy-May'];
@@ -20,6 +21,6 @@ export const canHaveBaby = (kids, totalBabies, marriedDays) => marriedDays >= 2 
 export const SAGA_KEY = 'toytown-new-saga';
 export function loadSaga(storage) {
   try { const o = JSON.parse(storage.getItem(SAGA_KEY)); if (!o || typeof o !== 'object') return null; const ages = {}; for (const [k, v] of Object.entries(o.ages || {})) if (typeof v === 'number' && v >= 0 && v < 120) ages[k] = v;
-    const marriages = (Array.isArray(o.marriages) ? o.marriages : []).filter(m => Array.isArray(m) && m.length === 2 && m.every(x => typeof x === 'string')), babies = (Array.isArray(o.babies) ? o.babies : []).filter(b => b && typeof b.name === 'string' && Array.isArray(b.parents)).map(b => ({name: String(b.name).slice(0, 20), parents: b.parents.filter(x => typeof x === 'string')})).slice(0, 8); const effects = {}; for (const [k, v] of Object.entries(o.effects || {})) if (typeof v === 'string' && k.length < 20 && v.length < 20) effects[k] = v; return {ages, marriages, babies, effects}; } catch (e) { return null; }
+    const marriages = (Array.isArray(o.marriages) ? o.marriages : []).filter(m => Array.isArray(m) && m.length === 2 && m.every(x => typeof x === 'string')), babies = (Array.isArray(o.babies) ? o.babies : []).filter(b => b && typeof b.name === 'string' && Array.isArray(b.parents)).map(b => ({name: String(b.name).slice(0, 20), parents: b.parents.filter(x => typeof x === 'string')})).slice(0, 8); const effects = {}; for (const [k, v] of Object.entries(o.effects || {})) if (typeof v === 'string' && k.length < 20 && v.length < 20) effects[k] = v; return {ages, marriages, babies, effects, chest: cleanChest(o.chest)}; } catch (e) { return null; }
 }
 export function saveSaga(storage, state) { try { storage.setItem(SAGA_KEY, JSON.stringify(state)); return true; } catch (e) { return false; } }

@@ -30,5 +30,6 @@ export function natureReport(d) {
   if (w.gems) dwarfs.push('A gem is waiting on the beach to be picked up.');
   for (const l of (w.log || []).slice(-4).reverse()) dwarfs.push('Day ' + (l.day + 1) + ': ' + d.nameOf(l.who) + ' saw the lanterns.');
   const kinds = Object.entries(d.plots || {}).map(([k, n]) => n + ' ' + ({roses: 'rose garden', tulips: 'tulip bed', lavender: 'lavender garden', sunflowers: 'sunflower patch', herbs: 'herb garden', meadow: 'wildflower meadow', allotment: 'allotment', greenhouse: 'greenhouse', coop: 'hen yard'}[k] || k) + (n > 1 && k !== 'greenhouse' && k !== 'coop' ? 's' : ''));
-  return [{title: 'Dwarf watch', lines: dwarfs}, {title: 'Pets and hens', lines: (d.pets || []).map(p => p.name + ': ' + p.blurb)}, {title: 'Gardens', lines: [kinds.join(', ') + '.']}];
+  const sea = d.sea ? [d.sea.trips ? 'Trips in the harbour boat: ' + d.sea.trips + '.' : 'You have not taken the harbour boat out yet: tap it at the pier.', 'Dolphins seen leaping: ' + d.sea.dolphins + '. Whale spouts seen: ' + d.sea.whales + '.', 'Landings on Dwarf Rock: ' + d.sea.islet + (d.sea.dwarfs ? ' (met the dwarfs ' + d.sea.dwarfs + ' time' + (d.sea.dwarfs > 1 ? 's' : '') + ')' : '') + '.'] : [];
+  return [{title: 'Dwarf watch', lines: dwarfs}, ...(sea.length ? [{title: 'Sea log', lines: sea}] : []), {title: 'Pets and hens', lines: (d.pets || []).map(p => p.name + ': ' + p.blurb)}, {title: 'Gardens', lines: [kinds.join(', ') + '.']}];
 }

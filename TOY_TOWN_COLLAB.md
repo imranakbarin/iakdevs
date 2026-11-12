@@ -1296,3 +1296,13 @@ A `START` does not prohibit parallel edits. Avoid stepping on each other's uncom
 - **Side effects**: the gem test now looks for the saga line because gems are found the moment somebody is at the hut; gems now wait overnight (found from 07:00).
 - **Not verified**: a real phone; whether the timing bar is easy enough (zone is 28 percent of the bar, the marker sweeps in about a second and a half).
 - **Still to come from the owner's "do all"**: the boat to Dwarf Rock, the Lantern Festival, the dwarf treasure map and the town chest (one release each).
+
+### 2026-11-12 · Claude · DONE (new storybook town, follow-up 19b: the harbour boat)
+- **Request (owner)**: "do all": the boat out to Dwarf Rock. **Built**: `sail.mjs` (pure), the sea log in `sim.sea`/`sailEvent`, a Take the boat out button on the boat's card, tap-to-steer and arrow keys, a foam trail, the Sea log on the Nature page. The mooring moved a little (to open water off the pier end, `MOOR`).
+- **Tests**: logic (the mooring is open water; land, pier, rock and map edge are blocked; the boat reaches the landing from three sides, the open sea in four directions and never runs aground; each pod leap, spout and landing counts once; the first landing of a day brings the gem) and browser (select the boat, take it out, tap the sea, it moves, the panel, bring it back; screenshot `new-town-sailing.png`).
+- **Not verified**: a real phone or TV (steering is by tapping the sea or the arrow keys; a TV remote has arrow keys but no tap); how it feels to steer (speed 3.2 units a second, the turn is gentle).
+
+### 2026-11-12 · Claude · DONE (new storybook town, follow-up 19c: the town chest)
+- **Request (owner)**: "do all": coins finally matter. **Built**: `chest.mjs` (pure), `sim.buy` / `chestState` / saga persistence (a half-minute save so earned coins are kept), `buildUpgrades` in `wild3d.mjs` (bunting, pier lights, fountain on the best free lawn, second boat, lighthouse with a beam), a Chest tab. `loadSaga` now returns a cleaned `chest`.
+- **Tests**: logic (prices, affordability, owned, damaged saves, buying, the announcement, a save and load round trip, earnings adding up across visits) and browser (the tab offers upgrades, buying one puts it in the scene). Screenshots by hand: all five at night.
+- **Not verified**: a real phone; the prices (15 to 60 coins against about 10 to 30 earned a day) are a guess; the lighthouse beam is only seen from some angles.
