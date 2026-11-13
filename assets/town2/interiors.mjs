@@ -161,11 +161,15 @@ function liveDetails(id) {
   const g=new THREE.Group(), parts={};
   if(id==='bakery'){
     parts.ember=liveProp(b=>b.box(.76,.57,.07,'#e8a063',{x:-1.82,y:.55,z:-.925,r:.08}));
+    // Three trays share their geometry: up to nine loaves for only three draw calls.
     parts.stock=[];
-    for(let i=0;i<9;i++){
-      const x=i<6?-.5+i*.43:1.92+(i-6)*.38, y=i<6?.97:.48+(i-6)*.55;
-      const z=i<6?.52+(i%2)*.25:-1.34;
-      const p=liveProp(b=>loaf(b,x,y,z));p.visible=false;parts.stock.push(p);g.add(p);
+    for(let tray=0;tray<3;tray++){
+      const p=liveProp(b=>{for(let j=0;j<3;j++){
+        const i=tray*3+j;
+        const x=i<6?-.5+i*.43:1.92+(i-6)*.38, y=i<6?.97:.48+(i-6)*.55;
+        const z=i<6?.52+(i%2)*.25:-1.34;
+        loaf(b,x,y,z);
+      }});p.visible=false;parts.stock.push(p);g.add(p);
     }
     g.add(parts.ember);
   } else if(id==='cafe'){
