@@ -28,7 +28,9 @@ function plant(bag, x, z, blooms, seed, season) {
 }
 
 // The café now has a little place for a conversation, rather than an unoccupied shopfront.
+export const CAFE_SEATS = [];   // where a resident can sit: one bench either side of each table, facing it (read by actors.mjs)
 function cafeTable(bag, x, z, facing, blooms) {
+  for (const side of [-1, 1]) { const lx = side * .47; CAFE_SEATS.push({x: x + lx * Math.cos(facing), z: z - lx * Math.sin(facing), yaw: Math.atan2(-side * Math.cos(facing), side * Math.sin(facing)), table: [x, z]}); }
   bag.push(x, heightAt(x, z) + .02, z, facing);
   bag.cyl(.022, .022, .3, '#8b755f', {y: .025, seg: 7});
   bag.cyl(.25, .25, .035, '#f0dfbd', {y: .32, seg: 18});
@@ -69,6 +71,7 @@ function makeShadows() {
 }
 
 export function buildTownCharm(material, season = 'summer', lite = false) {
+  CAFE_SEATS.length = 0;
   const root = new THREE.Group();
   if (lite) return root;
   const bag = new Bag(), blooms = BLOOMS[season] || BLOOMS.summer;

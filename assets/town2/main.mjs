@@ -3,7 +3,7 @@ import * as THREE from 'three';
 import {PALETTE as P, ISLAND, CAST, VEHICLES, BUILDINGS, PADDOCK, POND, PIER, VENDORS, heightAt, rand} from './def.mjs';
 import {along} from './graph.mjs';
 import {createSim} from './sim.mjs';
-import {buildTown, buildResident, buildVehicle, buildClouds, buildTrain, buildBoat, buildAnimal, buildSky, buildUmbrella, buildRain, buildFall, buildPuddles, buildCargo, buildPassengers, buildMarketGoods, buildSignals, buildTufts, buildSkyDome, buildRod, buildUmbrellas, buildFlames, buildDebris, buildSeasonDecor, buildTownEffects, U} from './build.mjs';
+import {Bag, buildTown, buildVehicle, buildClouds, buildTrain, buildBoat, buildSky, buildUmbrella, buildRain, buildFall, buildPuddles, buildCargo, buildPassengers, buildMarketGoods, buildSignals, buildTufts, buildSkyDome, buildRod, buildUmbrellas, buildFlames, buildDebris, buildSeasonDecor, buildTownEffects, U} from './build.mjs';
 import {skyAt, seasonOf, SEASONS, mix} from './sky.mjs';
 import {createSound} from './sound.mjs';
 import {createSmoke} from './smoke.mjs';
@@ -24,7 +24,11 @@ import {setGait} from './limbs.mjs';
 import {COOP, PLOTS} from './garden.mjs';
 import {PETS} from './wildlife.mjs';
 import {createFestival} from './festscene.mjs';
-import {buildTownCharm} from './charm.mjs';
+import {buildTownCharm, CAFE_SEATS} from './charm.mjs';
+import {createActors} from './actors.mjs';
+import {setDetail} from './shapes.mjs';
+import {buildHorse, buildCow, buildSheep, buildDuck} from './animals.mjs';
+import {newGrazer, stepGrazer, grazerWant, newDuck, stepDuck, duckWant, createBeast, poseBeast, placeBeast} from './fauna.mjs';
 import {newBoat, stepBoat, sightings, MOOR} from './sail.mjs';
 import {buildDrops, buildUpgrades} from './wild3d.mjs';
 import {buildRain as buildRain2, buildPuddles as buildPuddles2, buildSplashes, buildFallingThings} from './weather3d.mjs';
@@ -36,6 +40,7 @@ import {describeResident, describeBuilding, describeVehicle, describeAnimal, des
 const canvas = document.getElementById('town'), q = new URLSearchParams(location.search);
 // Lite mode: a TV or other weak browser (or ?lite=1) gets the lowest picture tier, no shadows, no antialiasing, a smaller render size, about 30 frames a second and none of the extra flowers and hedges; ?lite=0 turns it off.
 const lite = q.get('lite') === '1' || (q.get('lite') !== '0' && /SMART-?TV|SmartTV|Tizen|Web0S|webOS|VIDAA|HbbTV|BRAVIA|Android ?TV|AFTM|AFTB|AFTS|CrKey|NetCast|Roku|Hisense|Viera|PHILIPSTV|Opera TV|Fire ?TV|GoogleTV/i.test(navigator.userAgent || '')), litePR = Math.min(1, 1280 / Math.max(innerWidth, 1));
+setDetail(lite); Bag.segCap = lite ? 8 : 99;   // (fewer segments on every figure, and every ball, in the light version)
 // Some browsers (Edge on a machine without a good GPU, for one) refuse a context with antialiasing or the high-performance hint: try plainer options before giving up.
 const renderer = (() => { try { return new THREE.WebGLRenderer({canvas, antialias: !lite, powerPreference: lite ? 'default' : 'high-performance'}); } catch (e) { try { return new THREE.WebGLRenderer({canvas, antialias: false}); } catch (e2) { throw new Error('WebGL could not start (' + (e2 && e2.message || e2) + ')'); } } })();
 const phone = Math.min(innerWidth, innerHeight) < 700;
@@ -69,17 +74,19 @@ const moonPath = (() => { const c = document.createElement('canvas'); c.width = 
   const t = new THREE.CanvasTexture(c), m = new THREE.Mesh(new THREE.PlaneGeometry(7, 46).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({map: t, transparent: true, opacity: 0, depthWrite: false, blending: THREE.AdditiveBlending, fog: false})); m.renderOrder = 1; m.visible = false; return m; })(); scene.add(moonPath);
 const hemi = scene.children.find(o => o.isHemisphereLight), seaMat = built.sea.material, tmp = new THREE.Color();
 if (q.get('h')) sim.setHour(+q.get('h'));
-const people = new Map(), cars = new Map(), rodSeen = new Map(), rodTug = new Map();
+const cars = new Map(), rodSeen = new Map(), rodTug = new Map();
 const marketDef = BUILDINGS.find(b => b.id === 'market'), rods = new Map(), BROLLY = ['red', 'yellow', 'pink', 'blue', 'purple', 'orange', 'teal'];
 const seasonDecor = buildSeasonDecor(season, sim.graph, built.material); scene.add(seasonDecor); let townFx = null, fxKey = '', upg = null, upgKey = '';
 const umbrellas = buildUmbrellas(); scene.add(umbrellas); const flames = buildFlames(), debris = buildDebris(); scene.add(flames, debris); const fireSmoke = createSmoke(16, 3.2), fireSmokeMesh = new THREE.InstancedMesh(new THREE.SphereGeometry(1, 8, 6), new THREE.MeshLambertMaterial({color: '#4a4a52', transparent: true, opacity: .75, depthWrite: false}), 16); fireSmokeMesh.frustumCulled = false; fireSmokeMesh.visible = false; scene.add(fireSmokeMesh); const fireM = new THREE.Matrix4();
-sim.residents.forEach((r, i) => { const g = buildResident(r.def, i, built.material); if (r.id === 'finn' || r.id === 'salt') { const rod = buildRod(); g.add(rod); rods.set(r.id, rod); } scene.add(g); people.set(r.id, g); });
+for (const id of ['finn', 'salt']) rods.set(id, buildRod());
+const actors = createActors({scene, sim, season, rods, marketDef, seats: () => CAFE_SEATS, lite}), people = actors.people;
 const rain = buildRain2(); scene.add(rain);
 const fall = buildFallingThings(season) || buildFall(season); scene.add(fall);
 const puddles = buildPuddles2(sim.graph); if (season !== 'winter') scene.add(puddles);   // (in winter the rain is snow)
 const splashes = buildSplashes(puddles.userData.spots); if (season !== 'winter') scene.add(splashes);
 const lampDrawn = sim.lamps.map(() => -1);
-sim.vehicles.forEach(v => { const g = buildVehicle(v.def, built.material); scene.add(g); cars.set(v.id, g); });
+const beasts = new Map();
+sim.vehicles.forEach(v => { const g = v.def.kind === 'horsecart' ? buildHorse({cart: true, z: .3, scale: 1}) : buildVehicle(v.def, built.material); if (v.def.kind === 'horsecart') beasts.set(v.id, createBeast(g, 3)); scene.add(g); cars.set(v.id, g); });
 
 // Things that live on their own: the train, the boat at the jetty, the farm animals and the ducks on the pond.
 const trainCars = buildTrain(built.material), trainGait = newGait(); for (const c of trainCars) scene.add(c);
@@ -90,12 +97,12 @@ const signals = buildSignals(sim.graph); scene.add(signals);
 const smokeMesh = new THREE.InstancedMesh(new THREE.SphereGeometry(1, 8, 6), new THREE.MeshLambertMaterial({color: '#f4f4f4', transparent: true, opacity: .8, depthWrite: false}), 14), smoke = createSmoke(14), smokeM = new THREE.Matrix4(); smokeMesh.frustumCulled = false; scene.add(smokeMesh);
 const cargoMesh = buildCargo(), passMesh = buildPassengers(); scene.add(cargoMesh, passMesh);
 const platformInfo = {}; for (const st of sim.train.stations) { const d = sim.graph.doors['platform:' + st.id], q = along(loop, sim.graph.loopS(d.x, d.z)); platformInfo[st.id] = {x: d.x, z: d.z, tx: q.tx, tz: q.tz}; }
-const v3b = new THREE.Vector3();
+const v3b = new THREE.Vector3(), v3c = new THREE.Vector3();
 function updateFreight() {
   let n = 0, onTrain = 0, atStation = {};
   for (const c of sim.cargo) {
     if (n >= 48) break;
-    if (c.state === 'carried') { const g = people.get(c.holder); if (!g || !g.visible) continue; const a = g.rotation.y; cargoMesh.userData.set(n++, g.position.x + Math.sin(a) * .12, g.position.y + .36, g.position.z + Math.cos(a) * .12, c.kind, a); }
+    if (c.state === 'carried') { const g = people.get(c.holder), p = g && g.visible ? actors.parcelAnchor(c.holder, v3b) : null; if (!p) continue; cargoMesh.userData.set(n++, p.x, p.y, p.z, c.kind, g.rotation.y); }
     else if (c.state === 'station') { const pf = platformInfo[c.at]; if (!pf) continue; const i = atStation[c.at] = (atStation[c.at] || 0) + 1, k = i - 1, x = pf.x + pf.tx * (-1.2 + (k % 5) * .4), z = pf.z + pf.tz * (-1.2 + (k % 5) * .4); cargoMesh.userData.set(n++, x, heightAt(x, z) + .23 + Math.floor(k / 5) * .125, z, c.kind); }
     else if (c.state === 'train') { const i = onTrain++, w = trainCars[3]; w.localToWorld(v3b.set(i % 2 ? .1 : -.1, .3 + Math.floor(i / 6) * .13, -.27 + (Math.floor(i / 2) % 3) * .27)); cargoMesh.userData.set(n++, v3b.x, v3b.y, v3b.z, c.kind, w.rotation.y); }
   }
@@ -105,22 +112,24 @@ function updateFreight() {
 }
 const boat = buildBoat(built.material); boat.position.set(MOOR.x, -.02, MOOR.z); boat.rotation.y = MOOR.hd; scene.add(boat);
 const critters = [];
-for (let k = 0; k < 6; k++) { const kind = k < 3 ? 'cow' : 'sheep', g = buildAnimal(kind, built.material); scene.add(g); critters.push({g, k, x: PADDOCK.x0 + .6 + rand(k + 5) * (PADDOCK.x1 - PADDOCK.x0 - 1.2), z: PADDOCK.z0 + .6 + rand(k + 9) * (PADDOCK.z1 - PADDOCK.z0 - 1.2), tx: 0, tz: 0, wait: rand(k + 30) * 4, hd: rand(k) * 6, bounds: PADDOCK, step: kind === 'cow' ? .1 : .13}); }
-for (let k = 0; k < 3; k++) { const g = buildAnimal('duck', built.material); scene.add(g); critters.push({g, k: 10 + k, x: POND.x + (rand(k + 40) - .5) * 1.4, z: POND.z + (rand(k + 50) - .5) * .8, tx: 0, tz: 0, wait: rand(k + 60) * 3, hd: rand(k + 70) * 6, bounds: {x0: POND.x - 1.1, x1: POND.x + 1.1, z0: POND.z - .65, z1: POND.z + .65}, step: .12, water: true}); }
+const COWS = ['holstein', 'brown', 'dark'], GRAZE_LINES = {graze: 'Grazing, head down in the grass', look: 'Looking up to see who is about', walk: 'Wandering to a fresh patch of grass', lie: 'Lying down, chewing the cud'};
+for (let k = 0; k < 6; k++) {
+  const kind = k < 3 ? 'cow' : 'sheep', g = kind === 'cow' ? buildCow(COWS[k]) : buildSheep(k - 3); scene.add(g);
+  const st = newGrazer(PADDOCK.x0 + .6 + rand(k + 5) * (PADDOCK.x1 - PADDOCK.x0 - 1.2), PADDOCK.z0 + .6 + rand(k + 9) * (PADDOCK.z1 - PADDOCK.z0 - 1.2), k + 5);
+  critters.push({g, k, kind, st, beast: createBeast(g, k), describe: () => ({title: kind === 'cow' ? 'A cow' : 'A sheep', lines: [GRAZE_LINES[st.mode] || 'In the paddock']})});
+}
+for (let k = 0; k < 3; k++) {
+  const g = buildDuck(k !== 1); scene.add(g); const st = newDuck(POND.x + (rand(k + 40) - .5) * 1.4, POND.z + (rand(k + 50) - .5) * .8, k + 40);
+  critters.push({g, k: 10 + k, kind: 'duck', st, beast: createBeast(g, k + 10), describe: () => ({title: k === 1 ? 'A duck' : 'A drake', lines: [{swim: 'Paddling on the pond', dabble: 'Tipping up to dabble for weed', preen: 'Preening its feathers', flap: 'Flapping its wings', idle: 'Floating in the sun'}[st.mode] || 'On the pond']})});
+}
 const fest = createFestival({scene});
 const wild = createWildlife({scene, sim, people, material: built.material, season, lite}); critters.push(...wild.pick.map(a => ({g: a.g, wild: true, describe: a.describe})));
 critters.push({g: boat, wild: true, boat: true, describe: () => ({title: 'The harbour boat', lines: sailing ? ['You are at the helm', 'Tap the sea to steer, or use the arrow keys'] : ['Tied up just off the end of the pier', 'You can take it out to sea']})});
 function moveCritters(dt) {
   for (const c of critters) {
-    if (c.wild) continue;
-    if (c.wait > 0) c.wait -= dt;
-    else {
-      const dx = c.tx - c.x, dz = c.tz - c.z, d = Math.hypot(dx, dz);
-      if (d < .08 || !c.tx) { const B = c.bounds; c.tx = B.x0 + .25 + Math.random() * (B.x1 - B.x0 - .5); c.tz = B.z0 + .25 + Math.random() * (B.z1 - B.z0 - .5); c.wait = Math.random() * 4; }
-      else { c.x += dx / d * c.step * dt; c.z += dz / d * c.step * dt; const want = Math.atan2(dx, dz); let df = want - c.hd; df = Math.atan2(Math.sin(df), Math.cos(df)); c.hd += df * Math.min(1, dt * 3); }
-    }
-    const y = heightAt(c.x, c.z) + (c.water ? .08 + Math.sin(time * 1.6 + c.k) * .012 : 0);
-    c.g.position.set(c.x, y, c.z); c.g.rotation.y = c.hd;
+    if (c.wild) continue; const st = c.st, bt = c.beast;
+    if (c.kind === 'duck') { stepDuck(st, dt, {cx: POND.x, cz: POND.z, rx: 1.1, rz: .65, rnd: Math.random, speed: .12}); poseBeast(bt, dt, st.x, st.z, duckWant(st)); placeBeast(bt, st.x, heightAt(st.x, st.z) + .07 + Math.sin(time * 1.6 + c.k) * .008, st.z, st.hd); }
+    else { stepGrazer(st, dt, {bounds: PADDOCK, hour: sim.hour, rnd: Math.random, speed: c.kind === 'cow' ? .1 : .13, creep: c.kind === 'cow' ? .045 : .05}); poseBeast(bt, dt, st.x, st.z, grazerWant(st)); placeBeast(bt, st.x, heightAt(st.x, st.z), st.z, st.hd); }
   }
 }
 
@@ -425,7 +434,7 @@ function weatherLight() {
   const gm = built.glow.material; gm.opacity = L.glow; built.glow.visible = L.glow > .02;
   { const o = L.night > .5 && !lite ? (L.night - .5) * 2 * (1 - clamp(0, sim.weather.rain * 1.4, 1)) * .6 : 0; moonPath.visible = o > .02; if (o > .02) { const dx = L.sunPos[0], dz = L.sunPos[2], d = Math.hypot(dx, dz) || 1; moonPath.material.opacity = o * (.85 + .15 * Math.sin(time * 1.3)); moonPath.rotation.y = Math.atan2(dx, dz) + Math.PI; moonPath.position.set(dx / d * 40, ISLAND.sea + .03, dz / d * 40); } }
   sky.visible = L.stars > .02; sky.userData.stars.material.opacity = L.stars; sky.userData.moon.material.opacity = L.stars * .95;
-  { const r = sim.weather.rain; { let n = 0; if (r > .25) sim.residents.forEach((q, i) => { const g = people.get(q.id); if (g.visible && q.state === 'walking') umbrellas.userData.set(n++, g.position.x, g.position.y, g.position.z, g.rotation.y, BROLLY[i % BROLLY.length]); }); umbrellas.userData.show(n); } rain.position.set(view.x, 0, view.z); rain.userData.update(time, season === 'winter' || r < .02 ? 0 : r, windNow); splashes.userData.update(time, season === 'winter' || r < .02 ? 0 : r, view.x, view.z, lastDt);
+  { const r = sim.weather.rain; { let n = 0; if (r > .25) sim.residents.forEach((q, i) => { if (n < 40 && actors.umbrellaUp(q.id)) { const h = actors.handWorld(q.id, 'R', v3c), ry = people.get(q.id).rotation.y; if (h) umbrellas.userData.set(n++, h.x + Math.sin(ry) * .03, h.y - .09, h.z + Math.cos(ry) * .03, ry, BROLLY[i % BROLLY.length]); } }); umbrellas.userData.show(n); } rain.position.set(view.x, 0, view.z); rain.userData.update(time, season === 'winter' || r < .02 ? 0 : r, windNow); splashes.userData.update(time, season === 'winter' || r < .02 ? 0 : r, view.x, view.z, lastDt);
     const day = 1 - L.night, amount = season === 'winter' ? Math.max(.23, r) : season === 'summer' ? (L.night > .5 ? .45 * (1 - r) : 0) : (season === 'autumn' ? .2 : .16) * day * (1 - r * .7);
     fall.position.set(view.x, 0, view.z); fall.userData.update(time, amount, windNow);
     sound.update({wild: {...wild.soundState(), bang: fest.bang()}, dark: L.night, rain: r, season, hour: sim.hour, trainMoving: Math.abs(sim.train.v) > .1, trainAt: sim.train.at, zoom: 1 - clamp(0, (view.dist - 7) / 50, 1)}, 0.0001 + lastDt); }
@@ -439,24 +448,20 @@ let lastDt = 0;
 function sync(dt) {
   time += dt; lastDt = dt; marketGoods.visible = sim.market.open; U.time.value = time; windNow = wind(time); U.wind.value.set(windNow.x, windNow.z);
   sim.train.stations.forEach((st, i) => signals.userData.set(i, sim.signalFor(st.id) === 'red'));
-  for (const r of sim.residents) {
-    const g = people.get(r.id); g.visible = r.state === 'walking' || r.onPlatform; if (!g.visible) continue;
-    const gt = g.userData.gait || (g.userData.gait = newGait()); stepGait(gt, dt, r.x, r.z, {k: 17, vref: .5, v0: .05}); setGait(g.userData.limbMesh, gt); g.rotation.order = 'YXZ';
-    const y = heightAt(r.x, r.z);
-    const standing = r.state !== 'walking', chat = !standing && r.pause > 0 && r.look;   // (standing: waiting on a platform, a step up from the ground)
-    const onPier = r.at === 'pier' && r.state === 'inside', stall = r.at === 'market' && r.state === 'inside' && sim.market.open && VENDORS.includes(r.id);
-    if (stall) { const m = marketDef, lx = [-1.12, 0, 1.12][VENDORS.indexOf(r.id)] ?? 0, lz = -.25, c = Math.cos(m.ry), sn = Math.sin(m.ry), sc = m.scale || 1; r.tx = Math.sin(m.ry); r.tz = Math.cos(m.ry); g.position.set(m.x + (lx * c + lz * sn) * sc, heightAt(m.x, m.z) + .1, m.z + (-lx * sn + lz * c) * sc); g.rotation.set(0, m.ry, 0); }
-    else g.position.set(r.x, onPier ? .24 : y + (standing ? .19 : .02 + (chat ? Math.sin(time * 2.2 + r.speed * 9) * .004 + .004 : Math.abs(Math.sin(gt.phase)) * .03 * gt.amp)), r.z); g.rotation.set(standing || chat ? 0 : .05 * gt.amp, chat ? Math.atan2(r.look.x - r.x, r.look.z - r.z) : Math.atan2(r.tx, r.tz) + (standing ? 0 : Math.sin(gt.phase) * .05 * gt.amp), chat || standing ? 0 : Math.sin(gt.phase) * .035 * gt.amp);   // (a step is a bob, a lean forward and a little sway side to side)
-    if (onPier) g.rotation.y = Math.PI / 2;   // facing out to sea
-    const rod = rods.get(r.id); if (rod) { rod.visible = onPier; if (onPier) { const U_ = rod.userData, ca = (r.caught || 0) !== (rodSeen.get(r.id) ?? (r.caught || 0)); if (ca) rodTug.set(r.id, time); rodSeen.set(r.id, r.caught || 0); const k = time - (rodTug.get(r.id) ?? -9), tug = k < 1.2 ? Math.sin(k * 14) * (1 - k / 1.2) : 0;   // a catch makes the float duck and the ripples spread
-        U_.bob.position.y = U_.bobAt[1] + Math.sin(time * 2.3 + r.speed * 9) * .012 - Math.max(0, tug) * .08; U_.ring.scale.setScalar(1 + (k < 1.2 ? k * 2.2 : 0) + .15 * Math.sin(time * 2.3)); U_.ring.material.opacity = k < 1.2 ? .9 * (1 - k / 1.2) + .15 : .3; } }
-  }
-  { const near = view.dist < 27; if (near !== shadowsNear) { shadowsNear = near; for (const g of people.values()) g.traverse(o => { if (o.isMesh) o.castShadow = near; }); for (const g of cars.values()) g.traverse(o => { if (o.isMesh) o.castShadow = near; }); } }   // (far away the little shadows are not worth a draw each)
+  actors.update(dt, time, {rain: sim.weather.rain, season, hour: sim.hour});
+  for (const [id, rod] of rods) { const r = sim.residents.find(x => x.id === id); if (!rod.visible) continue;   // the float bobs, a catch makes it duck and the ripples spread
+    const U_ = rod.userData, ca = (r.caught || 0) !== (rodSeen.get(r.id) ?? (r.caught || 0)); if (ca) rodTug.set(r.id, time); rodSeen.set(r.id, r.caught || 0); const k = time - (rodTug.get(r.id) ?? -9), tug = k < 1.2 ? Math.sin(k * 14) * (1 - k / 1.2) : 0;
+    U_.bob.position.y = U_.bobAt[1] + Math.sin(time * 2.3 + r.speed * 9) * .012 - Math.max(0, tug) * .08; U_.ring.scale.setScalar(1 + (k < 1.2 ? k * 2.2 : 0) + .15 * Math.sin(time * 2.3)); U_.ring.material.opacity = k < 1.2 ? .9 * (1 - k / 1.2) + .15 : .3; }
+  { const near = view.dist < 27; if (near !== shadowsNear) { shadowsNear = near; actors.setShadows(near); for (const g of cars.values()) g.traverse(o => { if (o.isMesh) o.castShadow = near; }); } }   // (far away the little shadows are not worth a draw each)
   for (const v of sim.vehicles) {
     const g = cars.get(v.id); g.visible = v.state !== 'parked'; if (!g.visible) continue;
     const y = heightAt(v.x, v.z), ahead = heightAt(v.x + v.tx * .3, v.z + v.tz * .3);
-    if (g.userData.limbMesh) { const gt = g.userData.gait || (g.userData.gait = newGait()); stepGait(gt, dt, v.x, v.z, {k: 11.5, vref: .5, v0: .04}); setGait(g.userData.limbMesh, gt, v.v > .05 ? 0 : .25); }
-    g.position.set(v.x, y + .035 + (g.userData.limbMesh ? Math.abs(Math.sin(g.userData.gait.phase)) * .006 * g.userData.gait.amp : v.v > .05 ? Math.abs(Math.sin(time * 14 + v.s)) * .008 : 0), v.z); g.rotation.set(-Math.atan2(ahead - y, .3), Math.atan2(v.tx, v.tz), 0, 'YXZ');
+    const bt = beasts.get(v.id);
+    if (bt) {   // the cart horse: its gait follows the real speed (a walk, a trot on the way home), its head and tail move, the wheels turn with the ground
+      const waiting = v.v < .05, long = waiting && v.wait > 2, want = waiting ? (Math.floor(time / 7 + v.s) % 3 === 0 ? {paw: long ? 1 : 0, look: 1} : {look: Math.floor(time / 5) % 2}) : {};
+      poseBeast(bt, dt, v.x, v.z, want, {v0: .04}); g.position.set(v.x, y + .02 + bt.pose.bob * g.userData.scale, v.z); g.rotation.set(-Math.atan2(ahead - y, .3) + bt.pose.pitch, Math.atan2(v.tx, v.tz), bt.pose.roll, 'YXZ'); continue;
+    }
+    g.position.set(v.x, y + .035 + (v.v > .05 ? Math.abs(Math.sin(time * 14 + v.s)) * .008 : 0), v.z); g.rotation.set(-Math.atan2(ahead - y, .3), Math.atan2(v.tx, v.tz), 0, 'YXZ');
   }
   trainCars.forEach((c, k) => { const q = along(loop, sim.train.s - k * sim.train.gap), y = heightAt(q.x, q.z) + .06; c.position.set(q.x, y, q.z); c.rotation.y = Math.atan2(q.tx, q.tz); c.updateMatrixWorld(true); });   // the cars follow the head round the loop
   { stepGait(trainGait, dt, trainCars[0].position.x, trainCars[0].position.z, {k: 10.5, vref: .8, v0: .03}); for (const c of trainCars) setGait(c.userData.limbMesh, trainGait); }   // (the wheels and rods turn with the distance the train covers)
@@ -555,7 +560,7 @@ window.ToyTownNew = {
   setWeather(kind, seconds = 600) { sim.weather.force(kind, seconds); },
   critterList: () => critters, coop: COOP, plots: PLOT_COUNT,
   trainCars, moving: built.moving,
-  gait: id => { const g = people.get(id) || cars.get(id); const t = g && g.userData.gait; return t ? {phase: t.phase, amp: t.amp, walk: t.walk, speed: t.speed} : null; },
+  gait: id => actors.gaitOf(id), actors, car: id => cars.get(id), beast: id => beasts.get(id), folk: id => ({mix: actors.modeOf(id), wear: people.has(id) ? actors.wearOf(id) : null}),
   wild: {update: wild.update, hens: wild.hens, pets: wild.pets, dwarfs: wild.dwarfs, islet: wild.islet, meadow: wild.meadow, gardens: wild.gardens, borders: wild.borders, out: () => wild.dwarfsOut({day: sim.day, hour: sim.hour}), forceDwarfs: (n, u) => wild.forceDwarfs(n, u), pick: wild.pick},
   sail: {start: () => startSailing(), stop: () => stopSailing(), boat: () => sailing, tapSea(x, z) { if (sailing) sailing.target = {x, z}; }, sim: () => sim.sea}, fest, festival: () => sim.festival, chest: {state: () => sim.chestState(), buy: id => sim.buy(id), upg: () => upg}, fishGame, angle: k => sim.angle(k), openFishing() { Object.assign(fishGame, {phase: 'idle', bite: null, msg: '', last: null}); openPaper('fishing'); },
   fxState: () => ({flames: flames.visible, debris: debris.count, flood: +flood.toFixed(2), decor: seasonDecor.children.length, townFx: townFx ? townFx.children.length : 0}), photo: o => { photoRaw = null; photoStyle = (o && o.style) || 'postcard'; grabPhoto(); if (o && o.caption) photoCaption = o.caption; const c = composePhoto(), url = c.toDataURL('image/jpeg', .92), d = c.getContext('2d').getImageData(0, Math.round(c.height * .82), c.width, Math.round(c.height * .17)).data; let dark = 0; for (let i = 0; i < d.length; i += 4) if (d[i] < 120) dark++; return {w: c.width, h: c.height, rawW: photoRaw.width, rawH: photoRaw.height, url: url.slice(0, 40), len: url.length, dark}; }, paperText: () => (paperEl ? paperEl.textContent : ''), openPaper, closePaper, seasonDecor: () => seasonDecor.children.length, rodsOut: () => [...rods.values()].filter(r => r.visible).length, highlight: () => ({pin: pin.visible, ring: ring.visible, mode: settings.highlight}), settings, applySettings, setQuality, tier: () => tier, gov, tufts, U, freeze(on = true) { frozen = on; }

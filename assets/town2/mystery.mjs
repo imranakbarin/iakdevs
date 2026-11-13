@@ -5,7 +5,7 @@ export const CASES = [
   {id: 'stamps', place: 'post', title: 'The rare stamps are gone from the post office!', item: 'the rare stamps'}
 ];
 export const HIDEOUTS = ['school', 'garage', 'barn', 'bakery', 'fire', 'police'];
-export const HAT_WORDS = {chef: "a chef's hat", bun: 'a hair bun', helmet: 'a helmet', cap: 'a cap', bow: 'a bow', fire: 'a fire helmet', bonnet: 'a bonnet', flat: 'a flat cap', bobble: 'a bobble hat'};
+export const HAT_WORDS = {chef: "a chef's hat", bun: 'a hair bun', helmet: 'a helmet', cap: 'a cap', bow: 'a bow', fire: 'a fire helmet', bonnet: 'a bonnet', flat: 'a flat cap', bobble: 'a bobble hat', straw: 'a straw hat', captain: "a captain's cap", beanie: 'a woolly hat', sun: 'a sun hat', shako: 'a band leader\'s tall red hat'};
 export const COAT_WORDS = {cream: 'cream', pink: 'pink', blue: 'blue', red: 'red', purple: 'purple', orange: 'orange', green: 'green', teal: 'teal', brown: 'brown', yellow: 'yellow', sky: 'sky-blue', white: 'white'};
 const art = w => (/^[aeiou]/i.test(w) ? 'an ' : 'a ') + w;
 export const MAX_WRONG = 2, GAP = 600;
