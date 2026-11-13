@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generated_at": "2026-11-13T17:49:11.607Z",
+  "generated_at": "2026-11-13T23:38:31.848Z",
   "status": "ok",
   "successful_sources": [
     "BBC News",
@@ -16,6 +16,62 @@
   ],
   "stories": [
     {
+      "title": "Dr. King’s Lost Draft of ‘I Have a Dream’ Emerges from a Desk Drawer",
+      "url": "https://www.goodnewsnetwork.org/dr-kings-lost-draft-of-i-have-a-dream-emerges-from-a-desk-drawer/",
+      "source": "Good News Network",
+      "category": "Good news",
+      "tone": "light",
+      "published_at": "2026-11-13T19:30:02.000Z"
+    },
+    {
+      "title": "SpaceX to attempt double catch of huge Starship rocket",
+      "url": "https://www.bbc.co.uk/news/articles/ckregdgnl0xpo?at_medium=RSS&at_campaign=rss",
+      "source": "BBC Science",
+      "category": "Science",
+      "tone": "light",
+      "published_at": "2026-11-13T20:12:02.000Z"
+    },
+    {
+      "title": "Timothée Chalamet and Zendaya prank Rylan Clark for Children in Need",
+      "url": "https://www.bbc.co.uk/news/articles/cqly4lnxn031o?at_medium=RSS&at_campaign=rss",
+      "source": "BBC Culture",
+      "category": "Culture",
+      "tone": "light",
+      "published_at": "2026-11-13T22:17:14.000Z"
+    },
+    {
+      "title": "France hold nerve to edge past South Africa in thriller",
+      "url": "https://www.bbc.co.uk/sport/rugby-union/articles/cqm2j810r2m2o?at_medium=RSS&at_campaign=rss",
+      "source": "BBC Sport",
+      "category": "Sport",
+      "tone": "light",
+      "published_at": "2026-11-13T23:03:36.000Z"
+    },
+    {
+      "title": "FAA orders third nationwide ground stop in its history",
+      "url": "https://arstechnica.com/tech-policy/2026/11/faa-orders-third-nationwide-ground-stop-in-its-history/",
+      "source": "Ars Technica",
+      "category": "Technology",
+      "tone": "light",
+      "published_at": "2026-11-13T23:17:38.000Z"
+    },
+    {
+      "title": "Are board games making a comeback this Christmas?",
+      "url": "https://www.bbc.co.uk/news/videos/ckp80l667rdjo?at_medium=RSS&at_campaign=rss",
+      "source": "BBC Business",
+      "category": "Business",
+      "tone": "light",
+      "published_at": "2026-11-13T18:00:40.000Z"
+    },
+    {
+      "title": "Tanker collides with cruise ship on Mississippi in New Orleans",
+      "url": "https://www.dw.com/en/tanker-collides-with-cruise-ship-on-mississippi-in-new-orleans/a-79945080?maca=en-rss-en-world-4025-xml-mrss",
+      "source": "DW",
+      "category": "World",
+      "tone": "light",
+      "published_at": "2026-11-13T21:31:00.000Z"
+    },
+    {
       "title": "Infant Goes from 110 Seizures a Day to Seizure-Free with Experimental Treatment",
       "url": "https://www.goodnewsnetwork.org/infant-goes-from-110-seizures-a-day-to-seizure-free-after-rare-treatment/",
       "source": "Good News Network",
@@ -30,62 +86,6 @@
       "category": "Science",
       "tone": "light",
       "published_at": "2026-11-13T16:39:33.000Z"
-    },
-    {
-      "title": "Police investigating David Walliams over reports alleging serious sexual offences",
-      "url": "https://www.bbc.co.uk/news/articles/cwx2emg4xe72o?at_medium=RSS&at_campaign=rss",
-      "source": "BBC Culture",
-      "category": "Culture",
-      "tone": "light",
-      "published_at": "2026-11-13T16:53:50.000Z"
-    },
-    {
-      "title": "Vunipola exploring life after rugby with coaching role",
-      "url": "https://www.bbc.co.uk/sport/rugby-union/articles/cj7526lz35x9o?at_medium=RSS&at_campaign=rss",
-      "source": "BBC Sport",
-      "category": "Sport",
-      "tone": "light",
-      "published_at": "2026-11-13T15:59:06.000Z"
-    },
-    {
-      "title": "Microsoft outage 'stark reminder' of how much we rely on tech",
-      "url": "https://www.bbc.co.uk/news/articles/cxzd9171m51qo?at_medium=RSS&at_campaign=rss",
-      "source": "BBC Technology",
-      "category": "Technology",
-      "tone": "light",
-      "published_at": "2026-11-13T17:38:19.000Z"
-    },
-    {
-      "title": "What are people emergency stockpiling?",
-      "url": "https://www.bbc.co.uk/news/videos/c6zxvg79rr9yo?at_medium=RSS&at_campaign=rss",
-      "source": "BBC Business",
-      "category": "Business",
-      "tone": "light",
-      "published_at": "2026-11-13T16:31:22.000Z"
-    },
-    {
-      "title": "The dangers of revising Europe's security architecture",
-      "url": "https://www.dw.com/en/the-dangers-of-revising-europe-s-security-architecture/a-79943049?maca=en-rss-en-world-4025-xml-mrss",
-      "source": "DW",
-      "category": "World",
-      "tone": "light",
-      "published_at": "2026-11-13T17:30:00.000Z"
-    },
-    {
-      "title": "WWII Tryst at the Center of 80+Year Mystery That’s Now United Two Families",
-      "url": "https://www.goodnewsnetwork.org/canadian-family-finally-identifies-grandfathers-long-lost-wwii-baby-in-england-after-80-years/",
-      "source": "Good News Network",
-      "category": "Good news",
-      "tone": "light",
-      "published_at": "2026-11-13T12:30:36.000Z"
-    },
-    {
-      "title": "Climate action discussed at youth COP meeting",
-      "url": "https://www.bbc.co.uk/news/articles/ckx28ly7y387o?at_medium=RSS&at_campaign=rss",
-      "source": "BBC Science",
-      "category": "Science",
-      "tone": "light",
-      "published_at": "2026-11-13T14:39:06.000Z"
     }
   ]
 }
