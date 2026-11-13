@@ -47,8 +47,8 @@ export function applyPose(rig, p) { for (let i = 0; i < p.names.length; i++) { r
 
 /* ---------------- people ---------------- */
 export const BIPED = {
-  names: ['pelvis', 'chest', 'head', 'armLu', 'armLl', 'armRu', 'armRl', 'legLu', 'legLl', 'footL', 'legRu', 'legRl', 'footR', 'coat'],
-  parents: [null, 'pelvis', 'chest', 'chest', 'armLu', 'chest', 'armRu', 'pelvis', 'legLu', 'legLl', 'pelvis', 'legRu', 'legRl', 'pelvis']
+  names: ['pelvis', 'chest', 'head', 'armLu', 'armLl', 'armRu', 'armRl', 'legLu', 'legLl', 'footL', 'legRu', 'legRl', 'footR', 'coat', 'pBag', 'pCup', 'pTool'],   // (the last three are props in the right hand: a bag, a cup, and the role's tool; scale 0 when not in use)
+  parents: [null, 'pelvis', 'chest', 'chest', 'armLu', 'chest', 'armRu', 'pelvis', 'legLu', 'legLl', 'pelvis', 'legRu', 'legRl', 'pelvis', 'armRl', 'armRl', 'armRl']
 };
 // the walking and running legs: amplitude and duty for a walk and a run (a run has a longer, airborne stride)
 export const PERSON_GAIT = {A: .44, duty: .62, A2: .72, duty2: .4, K: .95, K2: 1.5};
@@ -75,6 +75,8 @@ function standPose(p, t, seed) {
   p.bob = 0; p.roll = 0; p.pitch = 0;
 }
 // the gestures: partial targets for the bones they use, each blended in by its own weight (S.mix)
+// how far a seated figure's cup is raised to the lips (0..1) at time t
+export const sipAt = (t, seed) => smooth((((t + seed * 4) % 8) - 5.2) / .5) * (1 - smooth((((t + seed * 4) % 8) - 6.6) / .5));
 const gesture = {
   wave: (t, S) => ({armRu: [-.2, 0, -1.95], armRl: [-.15, 0, .75 + .5 * Math.sin(t * 10)], head: [-.05, .12, .1], chest: [-.02, .1, -.05]}),
   talk: (t, S) => { const a = Math.sin(t * 5.3 + S.seed), b = Math.sin(t * 3.1 + S.seed * 2); return {armRu: [-.6, 0, -.22], armRl: [-1.0 + .35 * a, 0, .1 * b], armLu: [-.25 + .1 * b, 0, .12], armLl: [-.6 + .2 * b, 0, 0], head: [.04 + .06 * Math.max(0, a), .1 * b, 0]}; },
@@ -85,16 +87,31 @@ const gesture = {
   vend: (t, S) => { const a = Math.sin(t * 1.2 + S.seed), call = Math.max(0, Math.sin(t * .45 + S.seed * 3)) ** 4; return {armLu: [-.55, 0, .12], armLl: [-1.05, 0, 0], armRu: [-.8 - 1.0 * call, 0, -.3 - .3 * call], armRl: [-.5 + .3 * a - .4 * call, 0, 0], head: [-.02, .35 * Math.sin(t * .6 + S.seed), 0], chest: [0, .08 * a, 0]}; },
   wait: (t, S) => { const ph = (t + S.seed * 3) % 12, watch = smooth((ph - 7) / .6) * (1 - smooth((ph - 10) / .6)), look = smooth((ph - 2) / .8) * (1 - smooth((ph - 5) / .8));
     return {armLu: [-.1 - .5 * watch, 0, .3 * (1 - watch)], armLl: [-.45 - 1.4 * watch, 0, 0], armRu: [-.05, 0, -.3], armRl: [-.5, 0, 0], head: [.28 * watch + .02, .6 * look * (S.seed > 1.5 ? -1 : 1), 0], chest: [0, .2 * look * (S.seed > 1.5 ? -1 : 1), 0]}; },
-  sit: (t, S) => { const sip = smooth((((t + S.seed * 4) % 8) - 5.2) / .5) * (1 - smooth((((t + S.seed * 4) % 8) - 6.6) / .5)); return {legLu: [-1.5, 0, .05], legLl: [1.5, 0, 0], footL: [0, 0, 0], legRu: [-1.5, 0, -.05], legRl: [1.5, 0, 0], footR: [0, 0, 0], pelvis: [0, 0, 0],
+  sit: (t, S) => { const sip = sipAt(t, S.seed), tilt = S.sitTilt ?? .3, th = -(Math.PI / 2 - tilt);   // thighs run forward and down to where the feet meet the ground, shins stand upright
+    return {legLu: [th, 0, .05], legLl: [-th, 0, 0], footL: [0, 0, 0], legRu: [th, 0, -.05], legRl: [-th, 0, 0], footR: [0, 0, 0], pelvis: [0, 0, 0],
     armRu: [-.6, 0, -.18], armRl: [-1.15 - .8 * sip, 0, 0], armLu: [-.55, 0, .18], armLl: [-1.2, 0, 0], head: [.06 - .12 * sip, .25 * Math.sin(t * .4 + S.seed), 0]}; },
   lamp: (t, S) => { const k = S.lift || 0; return {armRu: [-.55 - 1.7 * k, 0, -.2], armRl: [-1.0 + .6 * k, 0, 0], armLu: [-.1, 0, .1], head: [-.2 * k, 0, 0]}; },
   umbrella: (t, S) => ({armRu: [-1.05, 0, -.38], armRl: [-1.3, 0, 0], armLu: [-.1, 0, .1], head: [.04, 0, 0]}),
   point: (t, S) => ({armRu: [-1.45, 0, -.2], armRl: [-.15, 0, 0], head: [0, .1, 0]}),
   hood: (t, S) => ({armLu: [-.35, 0, .02], armLl: [-.9, 0, 0], armRu: [-.35, 0, -.02], armRl: [-.9, 0, 0]}),   // hands tucked in against the cold
+  browse: (t, S) => { const a = Math.sin(t * 1.3 + S.seed), b = Math.max(0, Math.sin(t * .7 + S.seed * 2)); return {chest: [.2, .15 * a, 0], head: [.28 + .06 * a, .35 * a, 0], armRu: [-.8 - .5 * b, 0, -.15], armRl: [-.5 - .3 * b, 0, 0], armLu: [.1, 0, .45], armLl: [-1.3, 0, 0]}; },   // leaning over the goods, one hand on the hip and the other reaching
+  receive: (t, S) => ({chest: [.1, 0, 0], head: [.15, 0, 0], armLu: [-.95, 0, -.1], armLl: [-.55, 0, 0], armRu: [-.95, 0, .1], armRl: [-.55, 0, 0]}),
+  give: (t, S) => ({chest: [.08, 0, 0], head: [.06, .1, 0], armRu: [-1.25, 0, -.1], armRl: [-.25, 0, 0], armLu: [-.2, 0, .1], armLl: [-.5, 0, 0]}),
+  knock: (t, S) => ({chest: [.06, 0, 0], head: [.04, 0, 0], armRu: [-1.35, 0, -.15], armRl: [-1.15 + .4 * Math.sin(t * 15), 0, 0], armLu: [-.1, 0, .1], armLl: [-.4, 0, 0]}),
+  enter: (t, S) => ({chest: [.14, 0, 0], head: [.05, 0, 0], armLu: [-1.2, 0, -.1], armLl: [-.15, 0, 0], armRu: [-1.2, 0, .1], armRl: [-.15, 0, 0]}),
+  tinker: (t, S) => { const h = Math.sin(t * 9 + S.seed); return {chest: [.55, .1 * Math.sin(t * .6), 0], head: [.1, 0, 0], armRu: [-.7 + .45 * h, 0, -.2], armRl: [-.7 - .4 * h, 0, 0], armLu: [-.9, 0, .2], armLl: [-.5, 0, 0], legLu: [-.25, 0, .05], legRu: [-.25, 0, -.05], legLl: [.3, 0, 0], legRl: [.3, 0, 0]}; },
+  display: (t, S) => { const a = Math.sin(t * 1.1 + S.seed); return {chest: [.22, .2 * a, 0], head: [.2, .2 * a, 0], armRu: [-.9, 0, -.35 - .3 * Math.max(0, a)], armRl: [-.6, 0, 0], armLu: [-.7, 0, .25], armLl: [-.8, 0, 0]}; },
+  scatter: (t, S) => { const k = Math.sin(t * 3.2 + S.seed); return {chest: [.1, -.3 * k, 0], armLu: [-.4 + .6 * k, 0, .55 + .3 * k], armLl: [-.5 + .3 * k, 0, 0], head: [.15, 0, 0]}; },
+  tend: (t, S) => ({chest: [.12, 0, 0], head: [.05, 0, 0], armRu: [-1.05 + .1 * Math.sin(t * 2), 0, -.2], armRl: [-.25, 0, 0], armLu: [-.2, 0, .12], armLl: [-.4, 0, 0]}),
+  flag: (t, S) => ({armRu: [-2.4, 0, -.15], armRl: [-.5 + .3 * Math.sin(t * 6), 0, 0], armLu: [-.15, 0, .2], armLl: [-.4, 0, 0], head: [-.12, 0, 0]}),
+  cheer: (t, S) => { const k = Math.sin(t * 8 + S.seed); return {armLu: [-.3, 0, 1.9 + .25 * k], armLl: [-.3, 0, 0], armRu: [-.3, 0, -1.9 - .25 * k], armRl: [-.3, 0, 0], head: [-.15, 0, 0]}; },
+  wipe: (t, S) => { const k = Math.sin(t * 5 + S.seed); return {chest: [.35, .15 * k, 0], head: [.25, 0, 0], armRu: [-1.0 + .3 * k, 0, -.2 - .3 * k], armRl: [-.5, 0, 0], armLu: [-.4, 0, .15], armLl: [-.4, 0, 0]}; },
+  serve: (t, S) => ({chest: [.16, 0, 0], head: [.1, 0, 0], armLu: [-.95, 0, -.12], armLl: [-.85, 0, 0], armRu: [-.95, 0, .12], armRl: [-.85, 0, 0]}),
+  guard: (t, S) => ({armLu: [.05, 0, .2], armLl: [-.2, 0, 0], armRu: [-.2, 0, -.15], armRl: [-.7, 0, 0], head: [0, .5 * Math.sin(t * .35 + S.seed), 0]}),
   sweep: (t, S) => ({armRu: [-.75, 0, -.12], armRl: [-.7, 0, 0], armLu: [-.65, 0, .12], armLl: [-.8, 0, 0], chest: [.12, .25 * Math.sin(t * 3), 0]})
 };
 export const GESTURES = Object.keys(gesture);
-const ORDER = ['hood', 'sit', 'wait', 'vend', 'fish', 'basket', 'carry', 'sweep', 'lamp', 'umbrella', 'point', 'listen', 'talk', 'wave'];   // later ones win
+const ORDER = ['hood', 'sit', 'wait', 'guard', 'vend', 'fish', 'basket', 'carry', 'sweep', 'display', 'tinker', 'wipe', 'serve', 'scatter', 'tend', 'browse', 'receive', 'give', 'lamp', 'umbrella', 'point', 'cheer', 'flag', 'knock', 'enter', 'listen', 'talk', 'wave'];   // later ones win
 // S: {gait, mix, t, seed, look: {yaw, pitch}, cast, lift}
 export function bipedPose(p, S) {
   clear(p); const g = S.gait;
@@ -105,6 +122,12 @@ export function bipedPose(p, S) {
   // the head follows what the figure is looking at (a person met, a lamp, a train), the body helping a little
   const look = S.look, hi = p.index.head * 3, ci = p.index.chest * 3; if (look) { p.rot[hi + 1] += look.yaw * .7; p.rot[ci + 1] += look.yaw * .3; p.rot[hi] += look.pitch || 0; }
   return p;
+}
+
+// The three props in the right hand (rig bones pBag, pCup, pTool) show when asked for and keep their upright orientation whatever the arm does: counter-rotate by the arm's own bend.
+export function applyProps(rig, pose, want = {}, tilt = {}) {
+  const i = pose.index, rx = pose.rot[i.armRu * 3] + pose.rot[i.armRl * 3];
+  for (const k of ['pBag', 'pCup', 'pTool']) { const on = want[k] ? 1 : 0; rig.scale(k, on || .0001); rig.set(k, -rx + (tilt[k] || 0), 0, 0); }
 }
 
 /* ---------------- four-legged animals ---------------- */
@@ -130,7 +153,7 @@ const flick = (t, seed, every = 5) => { const x = (t / every + seed) % 1; return
 // S: {gait, gaitName, mix, t, seed, sp}
 export function quadPose(p, S) {
   clear(p); const g = S.gait, sp = QUAD[S.sp], t = S.t, seed = S.seed, G = QUAD_GAITS[S.gaitName || 'walk'], A = (S.gaitName || 'walk') === 'walk' ? sp.A : sp.Atrot, mix = S.mix, mv = g.w;
-  const gr = smooth(mix.graze || 0), sn = smooth(mix.sniff || 0), si = smooth(mix.sit || 0), li = smooth(mix.lie || 0), sc = smooth(mix.scratch || 0), lk = smooth(mix.look || 0), pw = smooth(mix.paw || 0), gr2 = smooth(mix.groom || 0);
+  const gr = smooth(mix.graze || 0), sn = smooth(mix.sniff || 0), si = smooth(mix.sit || 0), li = smooth(mix.lie || 0), sc = smooth(mix.scratch || 0), lk = smooth(mix.look || 0), pw = smooth(mix.paw || 0), pl = smooth(mix.play || 0), gr2 = smooth(mix.groom || 0);
   const legs = ['fL', 'fR', 'hL', 'hR'];
   for (let k = 0; k < 4; k++) {
     const hind = k > 1; cycle(g.u + G.off[k], G.duty, A, cyc); const th = cyc.f, lift = cyc.lift, nm = legs[k];
@@ -153,6 +176,7 @@ export function quadPose(p, S) {
   if (si > 0) { const sp0 = sp.sitPitch || -.7; p.pitch = lerp(p.pitch, sp0, si); p.drop = -(sp.sitDrop || .04) * si; blend(p, {hLu: [-1.35, 0, 0], hLl: [1.45, 0, 0], hRu: [-1.35, 0, 0], hRl: [1.45, 0, 0], fLu: [-sp0, 0, 0], fLl: [0, 0, 0], fRu: [-sp0, 0, 0], fRl: [0, 0, 0], neck: [-sp0 * .9, 0, 0], head: [.05, 0, 0]}, si); }
   if (li > 0) { p.drop = lerp(p.drop, -(sp.leg * .6), li); p.pitch = lerp(p.pitch, 0, li); blend(p, {fLu: [-1.3, 0, .1], fLl: [2.5, 0, 0], fRu: [-1.3, 0, -.1], fRl: [2.5, 0, 0], hLu: [-1.5, 0, .25], hLl: [2.6, 0, 0], hRu: [-1.5, 0, -.25], hRl: [2.6, 0, 0], neck: [(sp.neckRest + .3), 0, 0], head: [.4 + .02 * Math.sin(t * 1.6), 0, 0]}, li); R(p, 'tail1', .1, .6 * li, 0); }
   if (sc > 0) { p.pitch = lerp(p.pitch, sp.sitPitch || -.7, sc); p.drop = -(sp.sitDrop || .04) * sc; blend(p, {hRu: [-1.35, 0, 0], hRl: [1.45, 0, 0], hLu: [-1.9 + .0, 0, .5], hLl: [1.0 + .7 * Math.sin(t * 17), 0, 0], fLu: [.4, 0, 0], fRu: [.4, 0, 0], neck: [.15, 0, .0], head: [.3, 0, .35]}, sc); }
+  if (pl > 0) { const bounce = Math.sin(t * 10 + seed); p.pitch = lerp(p.pitch, .34 + .1 * bounce, pl); p.bob += .012 * Math.max(0, bounce) * pl; blend(p, {fLu: [-.55, 0, 0], fLl: [1.3, 0, 0], fRu: [-.55, 0, 0], fRl: [1.3, 0, 0], neck: [-.45, .2 * Math.sin(t * 3), 0], head: [-.1, 0, 0], tail1: [-.3, .9 * Math.sin(t * 16), 0]}, pl); }
   if (gr2 > 0) { blend(p, {neck: [.55 + .1 * Math.sin(t * 6), 0, .5], head: [.45 + .1 * Math.sin(t * 6 + 1), 0, .3]}, gr2); }
   return p;
 }

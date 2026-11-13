@@ -29,6 +29,7 @@ on:
       - 'tests/toy-town-new.test.cjs'
       - 'tests/toy-town-new-visual.cjs'
       - 'tests/toy-town-characters.cjs'
+      - 'tests/toy-town-living.cjs'
       - '.github/workflows/toy-town-visual.yml'
 
 permissions:
@@ -74,6 +75,9 @@ jobs:
       - name: Check residents, horse and wildlife (real WebGL)
         if: matrix.shard == 1
         run: node tests/toy-town-characters.cjs
+      - name: "Check the living town (activities, doors, trains, animals) in real WebGL"
+        if: matrix.shard == 1
+        run: node tests/toy-town-living.cjs
       - name: Keep rendered screenshots
         if: always()
         uses: actions/upload-artifact@v4

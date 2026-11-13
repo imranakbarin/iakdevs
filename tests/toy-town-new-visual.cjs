@@ -211,11 +211,11 @@ const shot2 = (pg, name) => pg.screenshot({path: path.join(out, `new-town-${name
       assert.equal(await mp0Tier(browser, port, errors), 'medium', 'a phone starts in the middle tier'); }
     console.log('NEW TOWN night', JSON.stringify(night), 'rain', JSON.stringify(wet));
     assert.ok(night.glow && night.calls <= 135 && night.sky !== 'bfe9fb', 'at night the windows glow and the sky is dark (' + night.calls + ' calls)');
-    assert.ok(wet.rain > .5 && wet.calls <= 135 && wet.triangles <= 800000, 'in the rain it still draws within budget (' + wet.calls + ' calls, rain ' + wet.rain + ')');
+    assert.ok(wet.rain > .5 && wet.calls <= 135 && wet.triangles <= 850000, 'in the rain it still draws within budget (' + wet.calls + ' calls, rain ' + wet.rain + ')');
     console.log('NEW TOWN', JSON.stringify(info));
     assert.deepEqual(errors, [], 'no page errors');
     assert.ok(info.calls > 5 && info.calls <= 100, 'the whole town draws in a handful of calls (' + info.calls + ')');
-    assert.ok(info.triangles > 100000 && info.triangles <= 800000, 'and within its triangle budget (' + info.triangles + ')');
+    assert.ok(info.triangles > 100000 && info.triangles <= 850000, 'and within its triangle budget (' + info.triangles + ')');
     assert.ok(info.residentsOut >= 1, 'residents are out and about');
     assert.ok(after.some((s, i) => s !== before[i]), 'vehicles are moving');
     console.log('Toy Town NEW visual PASS: ' + info.calls + ' draw calls, ' + info.triangles + ' triangles, ' + info.residentsOut + ' residents out');

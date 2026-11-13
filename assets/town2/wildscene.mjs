@@ -5,11 +5,13 @@ import {ISLAND, BUILDINGS, heightAt, rand} from './def.mjs';
 import {buildDolphin, buildWhale, buildDrops, buildButterflies, buildMeadow, buildGardens, buildBorders, buildIslet, buildDwarf} from './wild3d.mjs';
 import {PETS, HENS, DOLPHINS, WHALES, ISLET, DWARFS, ground, makeWalker, wanderStep, followStep, doorstep, dolphinPose, whalePose, dwarfsOut, dwarfWindow, dwarfPose} from './wildlife.mjs';
 import {PLOTS, COOP, clearance, inGarden} from './garden.mjs';
+import {outsideRect} from './activities.mjs';
+import {PADDOCK} from './def.mjs';
 import {buildDog, buildCat, buildHen, buildChick} from './animals.mjs';
 import {createBeast, poseBeast, placeBeast, petWant, henWant} from './fauna.mjs';
 
 const TAU = Math.PI * 2, clamp = (a, v, b) => Math.max(a, Math.min(b, v));
-export function createWildlife({scene, sim, people, material, season, lite = false}) {
+export function createWildlife({scene, sim, people, folk = null, material, season, lite = false}) {
   const gr = ground(), gardens = buildGardens(season, material), borders = lite ? new THREE.Group() : buildBorders(sim.graph, season, material), islet = buildIslet(material), meadow = buildMeadow(season, lite ? 1 : 800);
   scene.add(gardens, borders, islet, meadow);
   let seed = 100; const rnd = () => rand(seed++);
@@ -22,6 +24,9 @@ export function createWildlife({scene, sim, people, material, season, lite = fal
   const henFree = (x, z) => Math.hypot(x - COOP.x, z - COOP.z) < COOP.r * .8 && Math.hypot(x - house.x, z - house.z) > .5 && Math.hypot(x - COOP.x - COOP.r * .4 * 0, z - COOP.z - COOP.r * .4) > .2;
   const farmDoor = doorstep('farm'), farmYard = (() => { let best = {x: farmDoor.x, z: farmDoor.z, c: -1}; for (let r = 1.2; r <= 2.8; r += .2) for (let k = 0; k < 24; k++) { const x = farmDoor.x + Math.cos(k / 24 * TAU) * r, z = farmDoor.z + Math.sin(k / 24 * TAU) * r, c = clearance(x, z) - Math.hypot(x - farmDoor.x, z - farmDoor.z) * .12 - (inGarden(x, z, .6) ? 9 : 0); if (c > best.c) best = {x, z, c}; } return {cx: best.x, cz: best.z, r: Math.max(.7, Math.min(1.3, best.c + .5))}; })();
   const YARDS = [{cx: COOP.x, cz: COOP.z, r: COOP.r * .8, free: henFree}, {...farmYard, free: (x, z) => Math.hypot(x - farmYard.cx, z - farmYard.cz) < farmYard.r && clearance(x, z) > .18 && !inGarden(x, z, .2)}];
+  // where the farmer stands to feed the hens and to look over the cows (actors.mjs reads this)
+  const farm = (() => { const bd = doorstep('barn'), dx = bd.x - farmYard.cx, dz = bd.z - farmYard.cz, d = Math.hypot(dx, dz) || 1, k = Math.min(farmYard.r * .8, d * .5), hens = {x: farmYard.cx + dx / d * k, z: farmYard.cz + dz / d * k}, f = outsideRect(PADDOCK, bd, .55), pc = {x: (PADDOCK.x0 + PADDOCK.x1) / 2, z: (PADDOCK.z0 + PADDOCK.z1) / 2};
+    return {hens, hensFace: {x: farmYard.cx - hens.x, z: farmYard.cz - hens.z}, fence: {x: f.x, z: f.z, yaw: Math.atan2(pc.x - f.x, pc.z - f.z)}}; })();
   const hens = HENS.map((h, k) => {
     const yard = YARDS[k % 2], g = holder(buildHen(h.kind, h.coat)), w = makeWalker(yard.cx + (rand(k + 5) - .5) * yard.r, yard.cz + (rand(k + 9) - .3) * yard.r * .8, k * 3 + 400);
     const a = {kind: h.kind, def: h, g, w, k, yard, describe: () => ({title: h.name + (h.kind === 'hen' ? ' the hen' : ''), lines: [h.kind === 'hen' ? 'Scratching and pecking about the yard' : 'Struts about the yard and crows at dawn', w.anim === 'peck' ? 'Busy pecking' : 'Out for a stroll', hensIn() ? 'Roosting in the henhouse for the night' : 'Lays eggs for the bakery and the café'].filter(Boolean)})};
@@ -59,13 +64,16 @@ export function createWildlife({scene, sim, people, material, season, lite = fal
   }
   function updateHen(a, dt, ctx) {
     const w = a.w, y = a.yard; a.g.visible = !hensIn() && ctx.dist < 110 && lifeOn && !(lite && a.kind === 'chick'); if (hensIn()) return;   // (the light version for TVs leaves the chicks out: every animal is a draw call)
+    const fd = ctx.feeder && y === YARDS[1] ? ctx.feeder : null;   // the farmer is scattering feed: the farmyard hens hurry over and peck round his feet
+    if (fd && Math.hypot(w.x - fd.x, w.z - fd.z) > .3 + (a.k % 4) * .09) { moveToward(w, dt, {x: fd.x + Math.sin(a.k * 2.1) * .28, z: fd.z + Math.cos(a.k * 2.1) * .28}, a.kind === 'chick' ? .34 : .42); w.wait = 0; w.has = false; return; }
+    if (fd) { w.anim = 'peck'; return; }
     wanderStep(w, dt, rnd, {cx: y.cx, cz: y.cz, radius: y.r, free: y.free, speed: a.kind === 'rooster' ? .26 : a.kind === 'chick' ? .24 : .22, pause: a.kind === 'chick' ? [.4, 2.5] : [1, 4.5], idles: ['peck', 'peck', 'peck', 'idle']});
   }
   // a pet or hen: its movement comes from wildlife.mjs; how it carries itself (walk, trot, bound, sit, scratch, peck, preen...) comes from its state and fauna.mjs
   let curHour = 12;
   const poseOn = (a, time, dt) => {
     const w = a.w, g = a.g, bt = a.bt || (a.bt = createBeast(g, a.k + 1));
-    const want = a.kind === 'dog' || a.kind === 'cat' ? petWant(a.kind, w.anim, a.k, time, curHour) : henWant(a.kind === 'chick' ? 'hen' : a.kind, w.anim, a.k, time, curHour);
+    const om = a.kind === 'dog' && folk ? folk.modeOf(a.def.owner) : null, busy = !!om && ((om.cheer || 0) > .5 || (om.talk || 0) > .5 || (om.wave || 0) > .5 || (om.listen || 0) > .5), want = a.kind === 'dog' || a.kind === 'cat' ? petWant(a.kind, w.anim, a.k, time, curHour, busy) : henWant(a.kind === 'chick' ? 'hen' : a.kind, w.anim, a.k, time, curHour);
     poseBeast(bt, dt, w.x, w.z, want, {v0: .03}); placeBeast(bt, w.x, heightAt(w.x, w.z), w.z, w.hd);
   };
 
@@ -135,5 +143,5 @@ export function createWildlife({scene, sim, people, material, season, lite = fal
   // what the sound should know: who is out and what they are doing (see sound.mjs, wildDue)
   const soundState = () => ({hens: lifeOn && hens.some(a => a.g.visible), dogRun: lifeOn && pets.some(a => a.kind === 'dog' && (a.w.anim === 'run' || a.w.anim === 'walk')), cats: lifeOn && pets.some(a => a.kind === 'cat' && a.w.anim !== 'sleep'), leap: dolphins.some(a => a.p && a.p.leap > .05), spout: whales[0].g.visible && whaleSpout > .2, dwarfs: dwarfs.filter(a => a.g.visible).length});
   let whaleSpout = 0;
-  return {soundState, pick, update, hens, pets, dwarfs, meadow, gardens, borders, islet, forceDwarfs(n, u = .3) { forced = n ? {n, u} : null; }, setQuality(p) { flowersBase = p.flowers; meadow.userData.show(p.flowers); fliesMax = p.flies; lifeOn = p.life !== 0; }, dwarfsOut: ctx => dwarfsOut(ctx.day, ctx.hour)};
+  return {farm, soundState, pick, update, hens, pets, dwarfs, meadow, gardens, borders, islet, forceDwarfs(n, u = .3) { forced = n ? {n, u} : null; }, setQuality(p) { flowersBase = p.flowers; meadow.userData.show(p.flowers); fliesMax = p.flies; lifeOn = p.life !== 0; }, dwarfsOut: ctx => dwarfsOut(ctx.day, ctx.hour)};
 }
