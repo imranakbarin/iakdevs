@@ -141,22 +141,25 @@ function moveCritters(dt) {
 const CLOSEST = 3.2;   // how close the camera may come (close enough to see a face and a hand)
 const view = {x: 0, z: .4, yaw: 0, dist: 44, tx: 0, tz: .4, tyaw: 0, tdist: 44};
 const TILT = .66, clamp = (a, v, b) => Math.max(a, Math.min(b, v));
-const roomBar = document.getElementById('roomBar'), roomTitle = document.getElementById('roomTitle'), roomNote = document.getElementById('roomNote');
+const roomBar = document.getElementById('roomBar'), roomTitle = document.getElementById('roomTitle'), roomNote = document.getElementById('roomNote'), roomVeil = document.getElementById('roomVeil');
 let savedWorldView = null, roomMessageAt = -10;
+const roomContext = () => ({hour:sim.hour,weekday:sim.weekday,rain:sim.weather.rain,season,
+  pantry:sim.eco?.pantry,marketOpen:sim.market.open,delivered:sim.freightStats.delivered,
+  trainAt:sim.train.at,residents:sim.residents});
+function doorTransition(){
+  if(!roomVeil)return;roomVeil.classList.remove('play');void roomVeil.offsetWidth;roomVeil.classList.add('play');
+}
 const sceneForRender = () => gallery.scene || scene;
 function refreshRoomLabel() {
   const id = gallery.id; if (!id || !roomBar) return;
   roomTitle.textContent = ROOMS[id].title;
-  const state = id === 'station' ? (sim.train.at ? 'Train at ' + sim.train.at : 'The railway is running')
-    : id === 'bakery' ? (sim.eco && sim.eco.pantry ? 'Pantry: ' + Math.floor(sim.eco.pantry.eggs) + ' eggs, ' + Math.floor(sim.eco.pantry.milk) + ' milk' : 'Freshly baked today')
-    : id === 'cafe' ? (sim.market.open ? 'The town is open for business' : 'A quiet hour for tea')
-    : sim.weekday < 5 && sim.hour >= 8 && sim.hour < 16 ? 'Lessons in progress' : 'The classroom is resting';
-  roomNote.textContent = ROOMS[id].subtitle + ' · ' + state;
+  roomNote.textContent = gallery.stats().status || ROOMS[id].subtitle;
 }
 function enterRoom(id) {
   if (!supportsInterior(id) || sailing) return false;
   if (!gallery.id) savedWorldView = {...view};
   if (!gallery.open(id)) return false;
+  gallery.update(0,roomContext()); doorTransition();
   select(null); closePaper(); follow = null;
   document.documentElement.classList.add('room-open');
   if (roomBar) roomBar.hidden = false;
@@ -165,7 +168,7 @@ function enterRoom(id) {
 }
 function leaveRoom() {
   if (!gallery.id) return;
-  gallery.close(); document.documentElement.classList.remove('room-open');
+  doorTransition(); gallery.close(); document.documentElement.classList.remove('room-open');
   if (roomBar) roomBar.hidden = true;
   if (savedWorldView) Object.assign(view,savedWorldView);
   savedWorldView = null; follow = null; placeCamera(); renderer.render(scene,camera);
@@ -530,7 +533,7 @@ function sync(dt) {
   if ((jobsAt -= dt) <= 0) { jobsAt = .5; refreshJobs(); }
   fishTick(); sailTick(dt); trackSelection(dt); placeCamera(); weatherLight();
   districtLife.update({flowers: sim.eco.flowers, delivered: sim.freightStats.delivered, marketOpen: sim.market.open});
-  gallery.update(dt,{hour:sim.hour,rain:sim.weather.rain,delivered:sim.freightStats.delivered,marketOpen:sim.market.open});
+  gallery.update(dt,roomContext());
   if (gallery.id && time-roomMessageAt > 2) {roomMessageAt=time;refreshRoomLabel();}
   news(); caption();
 }

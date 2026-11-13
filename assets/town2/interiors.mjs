@@ -4,6 +4,7 @@ import * as THREE from 'three';
 import {Bag} from './build.mjs';
 import {CAST} from './def.mjs';
 import {buildPerson} from './people.mjs';
+import {planRoom} from './roomlife.mjs';
 
 export const ROOMS = Object.freeze({
   bakery: {title: 'The Bakery', subtitle: 'Bread, flour and a warm oven', people: ['crumb', 'moss']},
@@ -78,9 +79,9 @@ function bakery(b) {
   for(let i=0;i<3;i++) brick(b,-2.5+i*.7,1.86,-1.18,.58,'#dfad82');
   b.box(3.55,.73,.76,'#ad8266',{x:.65,y:.12,z:.68,r:.06});
   b.box(3.65,.09,.9,C.trim,{x:.65,y:.84,z:.68,r:.035});
-  for(let k=0;k<6;k++) loaf(b,-.5+k*.45,.97,.52+(k%2)*.25);
+  // The display case is populated by actual pantry supply in the living-room layer.
   b.box(1.25,1.7,.4,C.wood,{x:2.31,y:.08,z:-1.58});
-  for(let k=0;k<3;k++){b.box(1.2,.07,.48,C.trim,{x:2.3,y:.41+k*.55,z:-1.42});for(let v=0;v<3;v++) loaf(b,1.92+v*.38,.48+k*.55,-1.34);}
+  for(let k=0;k<3;k++)b.box(1.2,.07,.48,C.trim,{x:2.3,y:.41+k*.55,z:-1.42});
   for(let i=0;i<3;i++){b.box(.29,.42,.26,'#e0c3a0',{x:1.98+i*.4,y:.09,z:1.78});b.box(.19,.12,.18,'#fff2dd',{x:1.98+i*.4,y:.52,z:1.78});}
   vessel(b,1.65,1.02,.85);
   plant(b,-2.52,1.55);
@@ -97,7 +98,7 @@ function cafe(b) {
     const x=-1.7+k*2.05, z=.72+k*.38;
     b.cyl(.058,.062,.75,C.wood,{x,y:.06,z});
     b.cyl(.58,.58,.065,'#f4e5c9',{x,y:.78,z,seg:18});
-    cup(b,x-.19,.86,z+.12);cup(b,x+.16,.86,z-.12);
+    // Guests' teacups appear only while the simulation places residents inside.
     for(let s of [-1,1]){b.box(.37,.10,.34,'#9a7358',{x:x+s*.82,y:.3,z});b.box(.08,.53,.32,C.wood,{x:x+s*1.01,y:.38,z});}
   }
   plant(b,-2.57,1.7);
@@ -150,6 +151,45 @@ function resident(defId,x,z,yaw,scale=1.85) {
   g.position.set(x,.08,z);g.rotation.y=yaw;g.scale.multiplyScalar(scale);g.visible=true;
   return g;
 }
+// A handful of meaningful scene props live in their own tiny meshes.
+// They change only in response to simulation snapshots, not randomly generated stories.
+function liveProp(fn) {
+  const b=new Bag();fn(b);
+  const m=b.mesh(mat());m.castShadow=false;m.receiveShadow=false;return m;
+}
+function liveDetails(id) {
+  const g=new THREE.Group(), parts={};
+  if(id==='bakery'){
+    parts.ember=liveProp(b=>b.box(.76,.57,.07,'#e8a063',{x:-1.82,y:.55,z:-.925,r:.08}));
+    // Three trays share their geometry: up to nine loaves for only three draw calls.
+    parts.stock=[];
+    for(let tray=0;tray<3;tray++){
+      const p=liveProp(b=>{for(let j=0;j<3;j++){
+        const i=tray*3+j;
+        const x=i<6?-.5+i*.43:1.92+(i-6)*.38, y=i<6?.97:.48+(i-6)*.55;
+        const z=i<6?.52+(i%2)*.25:-1.34;
+        loaf(b,x,y,z);
+      }});p.visible=false;parts.stock.push(p);g.add(p);
+    }
+    g.add(parts.ember);
+  } else if(id==='cafe'){
+    parts.tea=liveProp(b=>{cup(b,-1.89,.86,.84);cup(b,-1.55,.86,.66);cup(b,.18,.86,1.28);cup(b,.52,.86,1.11);});
+    parts.tea.visible=false;g.add(parts.tea);
+  } else if(id==='school'){
+    parts.lesson=liveProp(b=>{
+      for(let i=0;i<6;i++)b.box(.23,.025,.017,'#e8e5cf',{x:-.48+i*.21,y:1.76+Math.sin(i)*.13,z:-2.14,rz:.09});
+      b.box(.5,.024,.018,'#e8e5cf',{x:.12,y:1.56,z:-2.14});
+    });
+    parts.lesson.visible=false;g.add(parts.lesson);
+  } else if(id==='station'){
+    parts.arrival=liveProp(b=>{
+      b.box(.73,.18,.036,'#d5c49c',{x:1.55,y:1.88,z:-2.16,r:.015});
+      b.sph(.08,'#76a589',{x:2.03,y:1.91,z:-2.08,seg:10});
+    });
+    parts.arrival.visible=false;g.add(parts.arrival);
+  }
+  return {group:g,parts};
+}
 function makeRoom(id) {
   const s=new THREE.Scene();
   s.background=new THREE.Color('#d4c4a9');
@@ -157,14 +197,14 @@ function makeRoom(id) {
   sun.position.set(-5,9,8);s.add(ambient,sun);
   const b=new Bag();roomShell(b,id);BUILD[id](b);
   const mesh=b.mesh(mat());mesh.receiveShadow=true;s.add(mesh);
-  const accents=new THREE.Group();
+  const accents=new THREE.Group(), live=liveDetails(id);
   const who=ROOMS[id].people;
   const actorA=resident(who[0],id==='bakery'?-.12:id==='station'?1.4:-1.7,id==='school'?-1.75:id==='station'?-1.05:-.95,0);
   const actorB=resident(who[1],id==='cafe'?.45:1.1,id==='school'?.6:1.2,Math.PI*.82,id==='school'?1.5:1.72);
   if(actorA)accents.add(actorA);if(actorB)accents.add(actorB);
-  s.add(accents);
+  s.add(accents,live.group);
   const glow=new THREE.PointLight('#ffbe79',.9,6,2);glow.position.set(id==='bakery'?-1.8:1.6,1.2,-1.35);s.add(glow);
-  return {id,scene:s,actorA,actorB,glow,ambient,age:0};
+  return {id,scene:s,actorA,actorB,glow,ambient,sun,live,age:0,plan:null};
 }
 export function createInteriorGallery() {
   const cache=new Map();let active=null;
@@ -172,29 +212,42 @@ export function createInteriorGallery() {
     open(id){if(!supportsInterior(id))return false;if(!cache.has(id))cache.set(id,makeRoom(id));active=cache.get(id);return true;},
     close(){active=null;}, get id(){return active?.id||null;},
     get scene(){return active?.scene||null;},
-    update(dt,{hour=12,rain=0,delivered=0,marketOpen=true}={}){
+    update(dt,world={}){
       if(!active)return;
+      const state=planRoom(active.id,world);active.plan=state;
       active.age+=Math.min(.05,Math.max(0,dt));
-      const t=active.age,night=hour<6||hour>19.2;
-      active.ambient.intensity=night?1.08:1.6;
-      active.glow.intensity=night?2.0:rain>.6?1.4:.75;
+      const t=active.age,{parts}=active.live;
+      active.scene.background.set(state.sky);
+      active.ambient.intensity=state.ambient;active.glow.intensity=state.lamp;
+      active.sun.intensity=state.night?0.25:state.weatherRain>.4?1.15:2.05;
+      if(parts.ember)parts.ember.visible=state.oven;
+      if(parts.stock)parts.stock.forEach((m,i)=>m.visible=i<state.bread);
+      if(parts.tea)parts.tea.visible=state.tea;
+      if(parts.lesson)parts.lesson.visible=state.lesson;
+      if(parts.arrival)parts.arrival.visible=state.board;
+      // Interior figures represent the same residents in the world, not permanent duplicates.
+      if(active.actorA)active.actorA.visible=state.staffHere;
+      if(active.actorB)active.actorB.visible=state.visitorHere;
       const poses=[active.actorA,active.actorB];
-      poses.forEach((g,i)=>{if(!g)return;const rig=g.userData.rig;rig.reset();
+      poses.forEach((g,i)=>{
+        if(!g||!g.visible)return;
+        const rig=g.userData.rig;rig.reset();
         const a=t*(i?1.6:2.3)+i*1.8;
-        rig.set('head',.06+Math.sin(a*.45)*.07,Math.sin(a*.34)*.11,0);
-        rig.set('armRu',-.55-.18*Math.sin(a),0,-.08);
-        rig.set('armRl',-.45+.12*Math.cos(a),0,0);
-        rig.set('armLu',-.22+.12*Math.cos(a*.5),0,.08);
-        if(active.id==='school'&&i===0)rig.set('armRu',-1.18+.2*Math.sin(a),0,-.3);
-        if(active.id==='station'&&i===0)rig.set('armRu',-1.15+.15*Math.sin(a),0,-.2);
-        if(active.id==='bakery'&&i===0)rig.set('chest',.18+.11*Math.sin(a),0,0);
-        if(active.id==='cafe'&&i===0)rig.set('armLu',-.9+.1*Math.sin(a),0,.12);
+        rig.set('head',.05+Math.sin(a*.45)*.06,Math.sin(a*.34)*.09,0);
+        rig.set('armRu',-.28-.15*Math.sin(a),0,-.08);
+        rig.set('armRl',-.30+.1*Math.cos(a),0,0);
+        rig.set('armLu',-.18+.10*Math.cos(a*.5),0,.08);
+        if(active.id==='school'&&state.lesson&&i===0)rig.set('armRu',-1.18+.2*Math.sin(a),0,-.3);
+        if(active.id==='station'&&state.board&&i===0)rig.set('armRu',-1.0+.1*Math.sin(a),0,-.2);
+        if(active.id==='bakery'&&state.oven&&i===0)rig.set('chest',.12+.07*Math.sin(a),0,0);
+        if(active.id==='cafe'&&state.tea&&i===0)rig.set('armLu',-.8+.1*Math.sin(a),0,.1);
         rig.update();
       });
-      // The active delivery count is real simulation data; never infer inventory or sales from it.
-      active.scene.userData.deliveries=delivered;
-      active.scene.userData.marketOpen=marketOpen;
+      active.scene.userData.deliveries=world.delivered||0;
+      active.scene.userData.marketOpen=!!world.marketOpen;
     },
-    stats(){return {id:active?.id||null,hasScene:!!active,actorCount:active?[active.actorA,active.actorB].filter(Boolean).length:0};}
+    stats(){return {id:active?.id||null,hasScene:!!active,actorCount:active?[active.actorA,active.actorB].filter(Boolean).length:0,
+      status:active?.plan?.status||'',staffVisible:!!active?.actorA?.visible,visitorVisible:!!active?.actorB?.visible,
+      props:active?.plan?{oven:active.plan.oven,bread:active.plan.bread,tea:active.plan.tea,lesson:active.plan.lesson,arrival:active.plan.board}:null};}
   };
 }

@@ -36,7 +36,8 @@ const shot2 = (pg, name) => pg.screenshot({path: path.join(out, `new-town-${name
         proofs[id] = await page.evaluate(id => {ToyTownNew.explore(id);ToyTownNew.advance(.2);return {
           ...ToyTownNew.interior(),calls:ToyTownNew.renderer.info.render.calls,triangles:ToyTownNew.renderer.info.render.triangles,
           title:document.getElementById('roomTitle').textContent};},id);
-        assert.ok(proofs[id].id===id && proofs[id].hasScene && proofs[id].actorCount===2 && proofs[id].calls < 12 && proofs[id].triangles < 120000,'interior drawn cleanly under budget ('+JSON.stringify(proofs[id])+')');
+        assert.ok(proofs[id].id===id && proofs[id].hasScene && proofs[id].actorCount===2 && proofs[id].calls < 14 && proofs[id].triangles < 125000,'interior drawn cleanly under budget ('+JSON.stringify(proofs[id])+')');
+        assert.ok(typeof proofs[id].status==='string'&&proofs[id].status.length>8&&proofs[id].props,'interiors describe real town activity ('+JSON.stringify(proofs[id])+')');
         await shot2(page,'inside-'+id);
       }
       const next = await page.evaluate(() => {document.getElementById('roomNext').click();return ToyTownNew.interior().id;});

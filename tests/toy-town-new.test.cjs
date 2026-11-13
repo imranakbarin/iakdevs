@@ -553,6 +553,24 @@ const root = path.join(__dirname, '..'), mod = f => import('file://' + path.join
       assert.ok(tooClose / steps < .01 && worst > .2, 'the animals do not stand on each other (closest ' + worst.toFixed(2) + ', ' + (100 * tooClose / steps).toFixed(2) + '% of the time under .3)');
       const spot = {x: B.x1 + .5, z: B.z1 / 2}; herd[0].mode = 'lie'; herd[0].left = 200; for (let t = 0; t < 60; t += .2) herd.forEach((s, i) => F.stepGrazer(s, .2, {bounds: B, hour: 12, rnd, speed: .1, creep: .045, others: herd, minD: .46, attract: i < 2 ? spot : null})); assert.ok(Math.hypot(herd[0].x - B.x1, herd[0].z - B.z1 / 2) < 1.0 && herd[0].mode === 'look', 'a cow, even one lying down, gets up and comes over to look at the farmer (' + herd[0].mode + ')');
       assert.deepEqual(F.petWant('dog', 'sit', 1, 3, 12, true), {play: 1}, 'a dog whose owner is chatting wants to play'); const p = Po.newPose(Po.quadSkeleton().names); Po.quadPose(p, {gait: {...Po.newGait(), u: .2, w: 0, t: 1}, gaitName: 'walk', mix: {play: 1}, t: 1, seed: .3, sp: 'dog'}); assert.ok(p.pitch > .2, 'the play bow tips the front down'); } }
+  // The interior director uses live town facts rather than invented room activity.
+  { const R=await mod('roomlife.mjs');
+    assert.equal(R.ROOM_IDS.length,4);
+    const people=[{id:'crumb',state:'inside',at:'bakery'},{id:'june',state:'inside',at:'cafe'},{id:'pott',state:'inside',at:'cafe'}];
+    const b=R.planRoom('bakery',{hour:11,pantry:{eggs:8,milk:10},residents:people});
+    assert.ok(b.staffHere&&b.oven&&b.bread>0,'real bakery stock illuminates the oven and fills shelves');
+    const empty=R.planRoom('bakery',{hour:22,pantry:{eggs:0,milk:0}});
+    assert.ok(!empty.oven&&!empty.bread&&!empty.staffHere,'the oven and inventory settle at night');
+    const tea=R.planRoom('cafe',{hour:11,residents:people});
+    assert.ok(tea.tea&&tea.visitors===1&&tea.staffHere,'real café presence serves cups');
+    assert.equal(R.planRoom('cafe',{hour:12,residents:[]}).tea,false,'no imaginary customers');
+    assert.ok(R.planRoom('school',{hour:10,weekday:2}).lesson,'schoolwork follows a weekday');
+    assert.equal(R.planRoom('school',{hour:10,weekday:6}).lesson,false,'weekends are quiet');
+    assert.equal(R.planRoom('station',{hour:11,trainAt:null}).board,false);
+    assert.equal(R.planRoom('station',{hour:11,trainAt:'central'}).board,true,'arrival lamp follows the real train');
+    assert.equal(R.planRoom('station',{hour:22}).night,true,'room light responds to the time');
+    assert.equal(R.planRoom('unknown'),null);
+  }
   // the page and its modules exist and the old town redirects to it on request
   for (const f of ['def.mjs', 'curve.mjs', 'graph.mjs', 'sim.mjs', 'build.mjs', 'main.mjs', 'rig.mjs', 'pose.mjs', 'folk.mjs', 'faces.mjs', 'people.mjs', 'animals.mjs', 'fauna.mjs', 'actors.mjs', 'shapes.mjs', 'activities.mjs']) assert.ok(fs.existsSync(path.join(root, 'assets/town2', f)), f + ' exists');
   const page = fs.readFileSync(path.join(root, 'toy-town-new.html'), 'utf8'); assert.match(page, /assets\/town2\/main\.mjs/);
