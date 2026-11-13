@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generated_at": "2026-11-13T01:54:02.564Z",
+  "generated_at": "2026-11-13T09:39:31.157Z",
   "status": "ok",
   "successful_sources": [
     "BBC News",
@@ -16,6 +16,62 @@
   ],
   "stories": [
     {
+      "title": "Good News in History, November 13",
+      "url": "https://www.goodnewsnetwork.org/events061113/",
+      "source": "Good News Network",
+      "category": "Good news",
+      "tone": "light",
+      "published_at": "2026-11-13T08:00:00.000Z"
+    },
+    {
+      "title": "National Trust takes back land for nature restoration",
+      "url": "https://www.bbc.co.uk/news/articles/cqvg257kl440o?at_medium=RSS&at_campaign=rss",
+      "source": "BBC Science",
+      "category": "Science",
+      "tone": "light",
+      "published_at": "2026-11-13T07:04:09.000Z"
+    },
+    {
+      "title": "Blink-182 to make Download debut as 2027 festival headliners",
+      "url": "https://www.bbc.co.uk/news/articles/cm62pd078kk7o?at_medium=RSS&at_campaign=rss",
+      "source": "BBC Culture",
+      "category": "Culture",
+      "tone": "light",
+      "published_at": "2026-11-13T07:49:40.000Z"
+    },
+    {
+      "title": "England thrashed by Australia in first ODI",
+      "url": "https://www.bbc.co.uk/sport/cricket/articles/c6rrg52pvjpko?at_medium=RSS&at_campaign=rss",
+      "source": "BBC Sport",
+      "category": "Sport",
+      "tone": "light",
+      "published_at": "2026-11-13T09:31:34.000Z"
+    },
+    {
+      "title": "GPs, police and pharmacies among UK services affected by Microsoft outage",
+      "url": "https://www.bbc.co.uk/news/articles/c6vg2ljjpj32o?at_medium=RSS&at_campaign=rss",
+      "source": "BBC Technology",
+      "category": "Technology",
+      "tone": "light",
+      "published_at": "2026-11-13T09:37:33.000Z"
+    },
+    {
+      "title": "Politicians back focus on cost of living",
+      "url": "https://www.bbc.co.uk/news/articles/cqj9mjl8jy4no?at_medium=RSS&at_campaign=rss",
+      "source": "BBC Business",
+      "category": "Business",
+      "tone": "light",
+      "published_at": "2026-11-13T06:23:37.000Z"
+    },
+    {
+      "title": "After suffering its worst election result, what's next for the ANC — and for South Africa?",
+      "url": "https://www.dw.com/en/after-suffering-its-worst-election-result-what-s-next-for-the-anc-and-for-south-africa/a-79929902?maca=en-rss-en-world-4025-xml-mrss",
+      "source": "DW",
+      "category": "World",
+      "tone": "light",
+      "published_at": "2026-11-13T08:33:00.000Z"
+    },
+    {
       "title": "China Switches on World’s Biggest Example of New, Cheap Green Energy Storage",
       "url": "https://www.goodnewsnetwork.org/worlds-largest-liquid-air-renewable-energy-storage-system-switches-on/",
       "source": "Good News Network",
@@ -24,68 +80,12 @@
       "published_at": "2026-11-12T19:30:02.000Z"
     },
     {
-      "title": "How many sewage spills have happened in your part of Scotland?",
-      "url": "https://www.bbc.co.uk/news/articles/c0re545l8jdo?at_medium=RSS&at_campaign=rss",
-      "source": "BBC Science",
-      "category": "Science",
-      "tone": "light",
-      "published_at": "2026-11-12T22:48:55.000Z"
-    },
-    {
-      "title": "Duran Duran drummer quits band due to tinnitus",
-      "url": "https://www.bbc.co.uk/news/articles/crwy499k504do?at_medium=RSS&at_campaign=rss",
-      "source": "BBC Culture",
-      "category": "Culture",
-      "tone": "light",
-      "published_at": "2026-11-12T19:00:15.000Z"
-    },
-    {
-      "title": "Pegula saves match point to beat Noskova & reach WTA Finals last four",
-      "url": "https://www.bbc.co.uk/sport/tennis/articles/c57429mgdkjdo?at_medium=RSS&at_campaign=rss",
-      "source": "BBC Sport",
-      "category": "Sport",
-      "tone": "light",
-      "published_at": "2026-11-13T01:23:06.000Z"
-    },
-    {
-      "title": "Microsoft struggling to restore service as global outage affects Outlook and Teams",
-      "url": "https://www.bbc.co.uk/news/articles/c5gm3g9ldz8xo?at_medium=RSS&at_campaign=rss",
-      "source": "BBC Technology",
-      "category": "Technology",
-      "tone": "light",
-      "published_at": "2026-11-13T01:39:32.000Z"
-    },
-    {
-      "title": "'My window faces a brick wall': What's your rent in NYC?",
-      "url": "https://www.bbc.co.uk/news/videos/c6wy9j9v7nl7o?at_medium=RSS&at_campaign=rss",
-      "source": "BBC Business",
-      "category": "Business",
-      "tone": "light",
-      "published_at": "2026-11-13T01:30:31.000Z"
-    },
-    {
-      "title": "Australian footballers will not be charged after hotel incident, police say",
-      "url": "https://www.bbc.co.uk/news/articles/ckregjwr7njqo?at_medium=RSS&at_campaign=rss",
-      "source": "BBC News",
-      "category": "World",
-      "tone": "light",
-      "published_at": "2026-11-13T01:03:59.000Z"
-    },
-    {
-      "title": "100-Year-Old ‘Store Mom’ Surprised With Her First Birthday Party",
-      "url": "https://www.goodnewsnetwork.org/100-year-old-store-mom-first-birthday-party/",
-      "source": "Good News Network",
-      "category": "Good news",
-      "tone": "light",
-      "published_at": "2026-11-12T14:07:08.000Z"
-    },
-    {
-      "title": "I Am Artemis Katie Spicer",
-      "url": "https://www.nasa.gov/missions/artemis/i-am-artemis-katie-spicer/",
+      "title": "APOD: 2026 November 13 – NGC 206 and the Star Clouds of Andromeda",
+      "url": "https://science.nasa.gov/image-article/apod-2026-november-13-ngc-206-and-the-star-clouds-of-andromeda/",
       "source": "NASA",
       "category": "Science",
       "tone": "light",
-      "published_at": "2026-11-12T20:10:02.000Z"
+      "published_at": "2026-11-13T05:05:00.000Z"
     }
   ]
 }
