@@ -28,6 +28,7 @@ on:
       - 'toy-town-new.html'
       - 'tests/toy-town-new.test.cjs'
       - 'tests/toy-town-new-visual.cjs'
+      - 'tests/toy-town-characters.cjs'
       - '.github/workflows/toy-town-visual.yml'
 
 permissions:
@@ -70,6 +71,9 @@ jobs:
       - name: Render the new storybook town (real WebGL)
         if: matrix.shard == 0
         run: node tests/toy-town-new-visual.cjs
+      - name: Check residents, horse and wildlife (real WebGL)
+        if: matrix.shard == 1
+        run: node tests/toy-town-characters.cjs
       - name: Keep rendered screenshots
         if: always()
         uses: actions/upload-artifact@v4

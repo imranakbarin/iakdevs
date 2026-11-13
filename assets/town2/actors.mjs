@@ -14,13 +14,15 @@ function lowestSole(U) { const rig = U.rig, hw = U.dims.hw; let y = 1; for (cons
 export {lowestSole};
 
 // seats: [{x, z, yaw, table}] provided by the town's café (charm.mjs), each a bench beside a table
+// the swinging length of a leg: hip to ankle (the shoe is flat on the ground, so the ground contact moves as this radius swings)
+const effLeg = D => D.legLen - D.ankleY - .004;
 export function createActors({scene, sim, season, rods, marketDef, seats = () => [], lite = false}) {
   const people = new Map(), A = new Map();   // people: id -> the stable group the rest of the town knows
   const pose = newPose(BIPED.names), slotOf = new Map();
   sim.residents.forEach((r, i) => {
     const w = new THREE.Group(); w.visible = false; scene.add(w); w.userData = {variants: {}, cur: null, wear: null, rig: null, def: r.def, dims: dimsOf(identityOf(r.def)), identity: identityOf(r.def)};
     people.set(r.id, w);
-    A.set(r.id, {id: r.id, r, w, gait: newGait(), mix: {}, yaw: 0, x: r.x, z: r.z, vis: false, seed: (i * 2.399) % 6.283, t: i * 3.1, chatT: 0, lift: 0, cast: 0, castAt: 0, catchUp: false, seatedBefore: false, lastYaw: 0, stride: personStride(w.userData.dims.legLen), stride2: personStride(w.userData.dims.legLen, 1)});
+    A.set(r.id, {id: r.id, r, w, gait: newGait(), mix: {}, yaw: 0, x: r.x, z: r.z, vis: false, seed: (i * 2.399) % 6.283, t: i * 3.1, chatT: 0, lift: 0, cast: 0, castAt: 0, catchUp: false, seatedBefore: false, lastYaw: 0, stride: personStride(effLeg(w.userData.dims)), stride2: personStride(effLeg(w.userData.dims), 1)});
     if (rods.has(r.id)) w.add(rods.get(r.id));
   });
   let shadowsOn = true;
