@@ -37,24 +37,25 @@ function depthMaterial(bones) {
   return m;
 }
 
-const _t = new THREE.Matrix4(), _r = new THREE.Matrix4(), _e = new THREE.Euler(0, 0, 0, 'YXZ'), _l = new THREE.Matrix4(), _p = new THREE.Matrix4();
+const _sv = new THREE.Vector3(), _t = new THREE.Matrix4(), _r = new THREE.Matrix4(), _e = new THREE.Euler(0, 0, 0, 'YXZ'), _l = new THREE.Matrix4(), _p = new THREE.Matrix4();
 export class Rig {
   // names: bone names (a parent always comes before its children); parents: parent name or null for each
   constructor(names, parents) {
     this.names = names; this.n = names.length; this.index = {}; names.forEach((nm, i) => { this.index[nm] = i; });
     this.parent = parents.map(p => p == null ? -1 : this.index[p]);
-    this.pivot = names.map(() => [0, 0, 0]); this.rot = names.map(() => [0, 0, 0]); this.pos = names.map(() => [0, 0, 0]);
+    this.pivot = names.map(() => [0, 0, 0]); this.rot = names.map(() => [0, 0, 0]); this.pos = names.map(() => [0, 0, 0]); this.scl = names.map(() => 1);   // (scale 0 hides a bone's pieces: a held prop that is not in use)
     this.mats = Array.from({length: MAXB}, () => new THREE.Matrix4()); this.world = names.map(() => new THREE.Matrix4());
   }
   at(name, x, y, z) { this.pivot[this.index[name]] = [x, y, z]; return this; }
   set(name, x = 0, y = 0, z = 0) { const r = this.rot[this.index[name]]; r[0] = x; r[1] = y; r[2] = z; return this; }
   move(name, x = 0, y = 0, z = 0) { const r = this.pos[this.index[name]]; r[0] = x; r[1] = y; r[2] = z; return this; }
+  scale(name, k) { this.scl[this.index[name]] = k; return this; }
   reset() { for (const r of this.rot) r[0] = r[1] = r[2] = 0; for (const r of this.pos) r[0] = r[1] = r[2] = 0; return this; }
   // matrices for the shader: parent * T(pivot + pos) * R * T(-pivot)
   update() {
     for (let i = 0; i < this.n; i++) {
       const pv = this.pivot[i], ps = this.pos[i], r = this.rot[i];
-      _t.makeTranslation(pv[0] + ps[0], pv[1] + ps[1], pv[2] + ps[2]); _r.makeRotationFromEuler(_e.set(r[0], r[1], r[2], 'YXZ')); _l.makeTranslation(-pv[0], -pv[1], -pv[2]);
+      _t.makeTranslation(pv[0] + ps[0], pv[1] + ps[1], pv[2] + ps[2]); _r.makeRotationFromEuler(_e.set(r[0], r[1], r[2], 'YXZ')); if (this.scl[i] !== 1) _r.scale(_sv.setScalar(this.scl[i])); _l.makeTranslation(-pv[0], -pv[1], -pv[2]);
       const m = this.world[i].copy(_t).multiply(_r).multiply(_l); if (this.parent[i] >= 0) m.premultiply(this.world[this.parent[i]]);
       this.mats[i].copy(m);
     }

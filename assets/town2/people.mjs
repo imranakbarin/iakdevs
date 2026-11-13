@@ -97,6 +97,24 @@ const belt = (c, col, buckle) => { const {b, D} = c; c.on('pelvis', () => { b.cy
 const holster = (c) => { const {b, D} = c; c.on('pelvis', () => { b.box(.02, .075, .016, '#1c1c1f', {x: D.hw * 1.5, y: D.legLen - .03, z: .0, r: .004}); b.cyl(.008, .008, .09, '#d8d2c0', {x: -D.hw * 1.5, y: D.legLen - .035, z: .0, seg: 5}); }); };
 const shoulderPads = (c, col, trim) => { const {b, D} = c; c.on('chest', () => { for (const s of [-1, 1]) { b.box(.034, .008, .03, trim, {x: s * (D.sw + .004), y: D.shY + .012, z: 0, rz: -s * .15, r: 0}); b.sph(.007, col, {x: s * (D.sw + .004), y: D.shY + .018, seg: 4}); } }); };
 
+
+/* ---------------- props in the hand ---------------- */
+// Held in the right hand and part of the figure's mesh (no extra draw calls): a shopping bag (pBag), a cup (pCup) and the role's tool (pTool). Each is built hanging from the hand, shown by a
+// bone scale of 1 and hidden by ~0, and counter-rotated by actors.mjs so it stays upright whatever the arm does.
+const TOOLS = {
+  baker(c) { const {b, D} = c, x = D.xR, y = D.wristY; rod(b, [x, y + .12, .02], [x, 0.012, .045], .0065, .0065, '#8a6a46', 5); b.box(.058, .036, .024, '#d6b256', {x, y: .018, z: .052, rx: -.25, r: 0}); },   // a broom
+  stationmaster(c) { const {b, D} = c, x = D.xR, y = D.wristY; rod(b, [x, y - .03, .01], [x, y + .21, .01], .005, .005, '#6b4a2f', 5); b.box(.001 + .004, .05, .07, '#c8372b', {x: x + .004, y: y + .18, z: .045, r: 0}); b.box(.004, .02, .07, '#fff9ef', {x: x + .004, y: y + .205, z: .045, r: 0}); },   // a signal flag
+  cafe(c) { const {b, D} = c, x = D.xR + .075, y = D.wristY - .005; b.cyl(.062, .062, .008, '#b8b2a6', {x, y, z: .05, seg: 10}); for (const [dx, dz] of [[-.025, .02], [.03, .0]]) { b.cyl(.014, .011, .02, '#fffdf8', {x: x + dx, y: y + .008, z: .05 + dz, seg: 7}); b.cyl(.012, .012, .004, '#8a5a3a', {x: x + dx, y: y + .028, z: .05 + dz, seg: 7}); } b.cyl(.016, .02, .03, '#d9a05a', {x: x - .005, y: y + .02, z: .07, seg: 7}); },   // a tray with a teapot and cups
+  mechanic(c) { const {b, D} = c, x = D.xR, y = D.wristY; rod(b, [x, y - .05, .012], [x, y + .03, .012], .006, .006, '#6b4a2f', 5); b.box(.024, .02, .014, '#9aa0a6', {x, y: y + .04, z: .012, r: 0}); },   // a hammer
+  toyshop(c) { const {b, D} = c, x = D.xR, y = D.wristY; b.sph(.022, '#c28a50', {x, y: y + .02, z: .02, seg: 7}); b.sph(.016, '#c28a50', {x, y: y + .052, z: .022, seg: 7}); for (const s of [-1, 1]) { b.sph(.008, '#c28a50', {x: x + s * .014, y: y + .066, z: .022, seg: 5}); b.sph(.008, '#c28a50', {x: x + s * .02, y: y + .025, z: .03, seg: 5}); } b.box(.024, .004, .004, '#d9506a', {x, y: y + .046, z: .036, r: 0}); }   // a teddy
+};
+function buildProps(c, role) {
+  const {b, D, on} = c, x = D.xR, y = D.wristY;
+  on('pBag', () => { b.box(.05, .07, .032, '#d3a870', {x: x - .006, y: y - .095, z: .012, r: 0}); b.box(.052, .012, .034, '#b88a52', {x: x - .006, y: y - .028, z: .012, r: 0}); b.sph(.017, '#d65f50', {x: x - .016, y: y - .02, z: .012, seg: 6}); b.sph(.014, '#7fb55a', {x: x + .006, y: y - .016, z: .018, seg: 6}); b.cone(.012, .04, '#e0b050', {x: x - .004, y: y - .01, z: .0, rx: .2, seg: 5}); });
+  on('pCup', () => { b.cyl(.0155, .012, .026, '#fffdf8', {x: x - .004, y: y - .006, z: .02, seg: 7}); b.cyl(.013, .013, .004, '#8a5a3a', {x: x - .004, y: y + .018, z: .02, seg: 7}); b.torus(.009, .0025, '#fffdf8', {x: x + .012, y: y + .006, z: .02, ry: Math.PI / 2, seg: 5}); });
+  if (TOOLS[role]) on('pTool', () => TOOLS[role](c));
+}
+
 /* ---------------- role costumes ---------------- */
 // Each returns a spec for a MILD day; `wear()` below turns it into the rain and winter versions. c.def.coat is kept as the main garment colour (the mystery clues name it).
 const ROLE = {
@@ -174,6 +192,8 @@ export function buildPerson(def, wear = 'base') {
   rig.at('legLu', D.hw, D.legLen - .004, 0).at('legLl', D.hw * .97, D.kneeY, 0).at('footL', D.hw * .93, D.ankleY, 0).at('legRu', -D.hw, D.legLen - .004, 0).at('legRl', -D.hw * .97, D.kneeY, 0).at('footR', -D.hw * .93, D.ankleY, 0);
   dressBody(c, S);
   for (const a of S.acc) a();
+  if (!DETAIL.lite) buildProps(c, I.role);
+  { const hand = [D.xR, D.wristY - .012, .004]; for (const k of ['pBag', 'pCup', 'pTool']) rig.at(k, ...hand).scale(k, .0001); }
   if (S.scarf) scarf(c, S.scarf);
   c.on('head', () => { buildFace(c); if (S.hat) { const fn = HATS[S.hat.kind]; if (fn) fn(c, S.hat.col, S.hat.band || S.hat.pom); } });
   const mesh = rigMesh(b, rig); const g = new THREE.Group(); g.add(mesh);

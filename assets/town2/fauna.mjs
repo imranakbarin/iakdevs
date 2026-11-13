@@ -19,22 +19,34 @@ const pickWeighted = (list, r) => { let tot = 0; for (const [, w] of list) tot +
 export const newGrazer = (x, z, seed) => ({x, z, hd: rand(seed) * TAU, mode: 'graze', left: 2 + rand(seed + 1) * 6, tx: x, tz: z, seed, speed: 0});
 // c: {bounds: {x0, x1, z0, z1}, hour, rnd, speed (walking), creep (grazing)}
 export function stepGrazer(s, dt, c) {
-  s.left -= dt; const night = c.hour >= 21.5 || c.hour < 5.5, B = c.bounds, m = .3;
+  s.left -= dt; const night = c.hour >= 21.5 || c.hour < 5.5, B = c.bounds, m = .3, others = c.others || [], minD = c.minD ?? .42;
   const inside = (x, z) => x > B.x0 + m && x < B.x1 - m && z > B.z0 + m && z < B.z1 - m;
+  const nearest = (x, z) => { let d = 9; for (const o of others) if (o !== s) d = Math.min(d, Math.hypot(o.x - x, o.z - z)); return d; };
   const go = mode => { s.mode = mode; s.left = mode === 'graze' ? 5 + c.rnd() * 14 : mode === 'look' ? 2 + c.rnd() * 4 : mode === 'lie' ? 25 + c.rnd() * 40 : 12; };
-  const target = () => { for (let k = 0; k < 8; k++) { const x = B.x0 + m + c.rnd() * (B.x1 - B.x0 - 2 * m), z = B.z0 + m + c.rnd() * (B.z1 - B.z0 - 2 * m); if (Math.hypot(x - s.x, z - s.z) > .5) { s.tx = x; s.tz = z; return; } } s.tx = (B.x0 + B.x1) / 2; s.tz = (B.z0 + B.z1) / 2; };
+  // a new patch of grass: of a few tries, the one with the most room round it
+  const target = () => { let best = null, bd = -1; for (let k = 0; k < 10; k++) { const x = B.x0 + m + c.rnd() * (B.x1 - B.x0 - 2 * m), z = B.z0 + m + c.rnd() * (B.z1 - B.z0 - 2 * m), d = Math.min(nearest(x, z), 3) + (Math.hypot(x - s.x, z - s.z) > .5 ? .3 : 0); if (d > bd) { bd = d; best = [x, z]; } } s.tx = best[0]; s.tz = best[1]; };
   s.speed = 0;
-  if (s.mode === 'lie') { if (s.left <= 0 && !night) go('look'); return s; }
+  if (c.attract && s.mode !== 'lie' && !night) {   // somebody is at the fence: a curious animal ambles over and watches them
+    const tx = clamp(B.x0 + m, c.attract.x, B.x1 - m), tz = clamp(B.z0 + m, c.attract.z, B.z1 - m), off = (s.seed % 3 - 1) * .5, gx = tx + (Math.abs(c.attract.z - tz) > Math.abs(c.attract.x - tx) ? off : 0), gz = tz + (Math.abs(c.attract.z - tz) > Math.abs(c.attract.x - tx) ? 0 : off), dx = gx - s.x, dz = gz - s.z, d = Math.hypot(dx, dz);
+    if (d > .12) { s.mode = 'walk'; const st = Math.min(d, c.speed * dt); s.x += dx / d * st; s.z += dz / d * st; s.speed = c.speed; s.hd = turnToward(s.hd, Math.atan2(dx, dz), dt, 2.2, 3); } else { s.mode = 'look'; s.left = 2; s.hd = turnToward(s.hd, Math.atan2(c.attract.x - s.x, c.attract.z - s.z), dt, 2, 3); }
+    return separate(s, others, minD, dt, B, m);
+  }
+  if (s.mode === 'lie') { if (s.left <= 0 && !night) go('look'); return separate(s, others, minD, dt, B, m); }
   if (night && s.mode !== 'walk') { go('lie'); return s; }
   if (s.mode === 'walk') {
     const dx = s.tx - s.x, dz = s.tz - s.z, d = Math.hypot(dx, dz);
     if (d < .08 || s.left <= 0) go('graze'); else { const st = Math.min(d, c.speed * dt); s.x += dx / d * st; s.z += dz / d * st; s.speed = c.speed; s.hd = turnToward(s.hd, Math.atan2(dx, dz), dt, 2.2, 3); }
   } else if (s.mode === 'graze') {
     const nx = s.x + Math.sin(s.hd) * c.creep * dt, nz = s.z + Math.cos(s.hd) * c.creep * dt;
-    if (inside(nx, nz)) { s.x = nx; s.z = nz; s.speed = c.creep; } else { go('walk'); target(); }
+    if (inside(nx, nz) && nearest(nx, nz) > minD * .9) { s.x = nx; s.z = nz; s.speed = c.creep; } else { go('walk'); target(); }   // (crowded or at the fence: wander off to somewhere roomier)
     if (s.left <= 0) { const nx2 = pickWeighted([['walk', 3], ['look', 2], ['graze', 3], ['lie', night || c.hour > 12 && c.hour < 16 ? 2 : .5]], c.rnd()); go(nx2); if (nx2 === 'walk') target(); }
   } else if (s.mode === 'look') { if (s.left <= 0) { const n = pickWeighted([['graze', 5], ['walk', 2]], c.rnd()); go(n); if (n === 'walk') target(); } }
-  return s;
+  return separate(s, others, minD, dt, B, m);
+}
+// animals never stand on each other: anyone closer than minD is eased apart (and kept inside the fence)
+export function separate(s, others, minD, dt, B, m = .3) {
+  for (const o of others) { if (o === s) continue; const dx = s.x - o.x, dz = s.z - o.z, d = Math.hypot(dx, dz); if (d < minD) { const k = Math.min(1, dt * 2.5) * (minD - d) * (d > 1e-4 ? 1 / d : 0), ux = d > 1e-4 ? dx : 1, uz = d > 1e-4 ? dz : 0; s.x += ux * k * .5; s.z += uz * k * .5; if (d < 1e-4) s.x += minD * .3 * dt; } }
+  s.x = clamp(B.x0 + m * .6, s.x, B.x1 - m * .6); s.z = clamp(B.z0 + m * .6, s.z, B.z1 - m * .6); return s;
 }
 export const grazerWant = s => s.mode === 'graze' ? {graze: 1} : s.mode === 'look' ? {look: 1} : s.mode === 'lie' ? {lie: 1} : {};
 
@@ -55,9 +67,10 @@ export const duckWant = s => ({swim: 1, ...(s.mode === 'dabble' ? {dabble: 1} : 
 
 // pets and hens keep their movement in wildlife.mjs (wanderStep, followStep); this picks how they carry themselves in each of their states, changing sub-state every few seconds
 const slot = (k, time, period) => rand(Math.floor(time / period + k * .37) * 17 + k * 131);
-export function petWant(kind, anim, k, time, hour = 12) {
+export function petWant(kind, anim, k, time, hour = 12, ownerBusy = false) {
   const r = slot(k, time, 5);
   if (kind === 'dog') {
+    if (ownerBusy && (anim === 'sit' || anim === 'idle')) return {play: 1};   // the owner is chatting or playing: bows and bounces, wanting a game
     if (anim === 'sleep') return {lie: 1};
     if (anim === 'sit') return r < .14 ? {scratch: 1} : r < .5 ? {look: 1} : {sit: 1};
     if (anim === 'idle' || anim === 'groom') return r < .25 ? {sniff: 1} : r < .6 ? {look: 1} : {};

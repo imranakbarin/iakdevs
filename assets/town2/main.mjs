@@ -79,7 +79,7 @@ const marketDef = BUILDINGS.find(b => b.id === 'market'), rods = new Map(), BROL
 const seasonDecor = buildSeasonDecor(season, sim.graph, built.material); scene.add(seasonDecor); let townFx = null, fxKey = '', upg = null, upgKey = '';
 const umbrellas = buildUmbrellas(); scene.add(umbrellas); const flames = buildFlames(), debris = buildDebris(); scene.add(flames, debris); const fireSmoke = createSmoke(16, 3.2), fireSmokeMesh = new THREE.InstancedMesh(new THREE.SphereGeometry(1, 8, 6), new THREE.MeshLambertMaterial({color: '#4a4a52', transparent: true, opacity: .75, depthWrite: false}), 16); fireSmokeMesh.frustumCulled = false; fireSmokeMesh.visible = false; scene.add(fireSmokeMesh); const fireM = new THREE.Matrix4();
 for (const id of ['finn', 'salt']) rods.set(id, buildRod());
-const actors = createActors({scene, sim, season, rods, marketDef, seats: () => CAFE_SEATS, lite}), people = actors.people;
+const actors = createActors({scene, sim, season, rods, marketDef, seats: () => CAFE_SEATS, lite, platform: id => platformInfo[id], farm: () => wild.farm, trainDoor: () => (sim.train.at ? trainCars[1].position : null)}), people = actors.people;
 const rain = buildRain2(); scene.add(rain);
 const fall = buildFallingThings(season) || buildFall(season); scene.add(fall);
 const puddles = buildPuddles2(sim.graph); if (season !== 'winter') scene.add(puddles);   // (in winter the rain is snow)
@@ -112,28 +112,29 @@ function updateFreight() {
 }
 const boat = buildBoat(built.material); boat.position.set(MOOR.x, -.02, MOOR.z); boat.rotation.y = MOOR.hd; scene.add(boat);
 const critters = [];
-const COWS = ['holstein', 'brown', 'dark'], GRAZE_LINES = {graze: 'Grazing, head down in the grass', look: 'Looking up to see who is about', walk: 'Wandering to a fresh patch of grass', lie: 'Lying down, chewing the cud'};
+const grazerStates = [], COWS = ['holstein', 'brown', 'dark'], GRAZE_LINES = {graze: 'Grazing, head down in the grass', look: 'Looking up to see who is about', walk: 'Wandering to a fresh patch of grass', lie: 'Lying down, chewing the cud'};
 for (let k = 0; k < 6; k++) {
   const kind = k < 3 ? 'cow' : 'sheep', g = kind === 'cow' ? buildCow(COWS[k]) : buildSheep(k - 3); scene.add(g);
   const st = newGrazer(PADDOCK.x0 + .6 + rand(k + 5) * (PADDOCK.x1 - PADDOCK.x0 - 1.2), PADDOCK.z0 + .6 + rand(k + 9) * (PADDOCK.z1 - PADDOCK.z0 - 1.2), k + 5);
-  critters.push({g, k, kind, st, beast: createBeast(g, k), describe: () => ({title: kind === 'cow' ? 'A cow' : 'A sheep', lines: [GRAZE_LINES[st.mode] || 'In the paddock']})});
+  grazerStates.push(st); critters.push({g, k, kind, st, beast: createBeast(g, k), describe: () => ({title: kind === 'cow' ? 'A cow' : 'A sheep', lines: [GRAZE_LINES[st.mode] || 'In the paddock']})});
 }
 for (let k = 0; k < 3; k++) {
   const g = buildDuck(k !== 1); scene.add(g); const st = newDuck(POND.x + (rand(k + 40) - .5) * 1.4, POND.z + (rand(k + 50) - .5) * .8, k + 40);
   critters.push({g, k: 10 + k, kind: 'duck', st, beast: createBeast(g, k + 10), describe: () => ({title: k === 1 ? 'A duck' : 'A drake', lines: [{swim: 'Paddling on the pond', dabble: 'Tipping up to dabble for weed', preen: 'Preening its feathers', flap: 'Flapping its wings', idle: 'Floating in the sun'}[st.mode] || 'On the pond']})});
 }
 const fest = createFestival({scene});
-const wild = createWildlife({scene, sim, people, material: built.material, season, lite}); critters.push(...wild.pick.map(a => ({g: a.g, wild: true, describe: a.describe})));
+const wild = createWildlife({scene, sim, people, folk: actors, material: built.material, season, lite}); critters.push(...wild.pick.map(a => ({g: a.g, wild: true, describe: a.describe})));
 critters.push({g: boat, wild: true, boat: true, describe: () => ({title: 'The harbour boat', lines: sailing ? ['You are at the helm', 'Tap the sea to steer, or use the arrow keys'] : ['Tied up just off the end of the pier', 'You can take it out to sea']})});
 function moveCritters(dt) {
   for (const c of critters) {
     if (c.wild) continue; const st = c.st, bt = c.beast;
     if (c.kind === 'duck') { stepDuck(st, dt, {cx: POND.x, cz: POND.z, rx: 1.1, rz: .65, rnd: Math.random, speed: .12}); poseBeast(bt, dt, st.x, st.z, duckWant(st)); placeBeast(bt, st.x, heightAt(st.x, st.z) + .07 + Math.sin(time * 1.6 + c.k) * .008, st.z, st.hd); }
-    else { stepGrazer(st, dt, {bounds: PADDOCK, hour: sim.hour, rnd: Math.random, speed: c.kind === 'cow' ? .1 : .13, creep: c.kind === 'cow' ? .045 : .05}); poseBeast(bt, dt, st.x, st.z, grazerWant(st)); placeBeast(bt, st.x, heightAt(st.x, st.z), st.z, st.hd); }
+    else { stepGrazer(st, dt, {bounds: PADDOCK, hour: sim.hour, rnd: Math.random, speed: c.kind === 'cow' ? .1 : .13, creep: c.kind === 'cow' ? .045 : .05, others: grazerStates, minD: c.kind === 'cow' ? .46 : .38, attract: c.kind === 'cow' && c.k < 2 ? actors.focus().visitor : null}); poseBeast(bt, dt, st.x, st.z, grazerWant(st)); placeBeast(bt, st.x, heightAt(st.x, st.z), st.z, st.hd); }
   }
 }
 
 /* ---- camera: look down at a point on the ground from a fixed tilt; drag to pan, pinch or wheel to zoom, twist to turn ---- */
+const CLOSEST = 3.2;   // how close the camera may come (close enough to see a face and a hand)
 const view = {x: 0, z: .4, yaw: 0, dist: 44, tx: 0, tz: .4, tyaw: 0, tdist: 44};
 const TILT = .66, clamp = (a, v, b) => Math.max(a, Math.min(b, v));
 function fit() { const a = innerWidth / innerHeight; view.tdist = view.dist = clamp(34, a > 1.5 ? 43 : 43 * 1.5 / a, 92); }
@@ -154,7 +155,7 @@ canvas.addEventListener('pointermove', e => {
     view.tx = clamp(-22, view.tx - (dx * cs + dy * sn * 1.5) * k, 22); view.tz = clamp(-17, view.tz - (-dx * sn + dy * cs * 1.5) * k, 17);
   } else if (pointers.size === 2) {
     const [a, b] = [...pointers.values()], d = Math.hypot(a.x - b.x, a.y - b.y), ang = Math.atan2(b.y - a.y, b.x - a.x);
-    if (gesture) { view.tdist = clamp(7, view.tdist * gesture.d / d, 96); let da = ang - gesture.ang; da = Math.atan2(Math.sin(da), Math.cos(da)); view.tyaw -= da; }
+    if (gesture) { view.tdist = clamp(CLOSEST, view.tdist * gesture.d / d, 96); let da = ang - gesture.ang; da = Math.atan2(Math.sin(da), Math.cos(da)); view.tyaw -= da; }
     gesture = {d, ang};
   }
 });
@@ -162,9 +163,9 @@ for (const t of ['pointerup', 'pointercancel']) canvas.addEventListener(t, e => 
   const p = pointers.get(e.pointerId); pointers.delete(e.pointerId); gesture = null;
   if (t === 'pointerup' && p && !p.multi && p.moved < 10 && performance.now() - p.t0 < 600 && p.button !== 2) tap(e.clientX, e.clientY);
 });
-canvas.addEventListener('wheel', e => { e.preventDefault(); view.tdist = clamp(7, view.tdist * Math.exp(e.deltaY * .0012), 96); }, {passive: false});
+canvas.addEventListener('wheel', e => { e.preventDefault(); view.tdist = clamp(CLOSEST, view.tdist * Math.exp(e.deltaY * .0012), 96); }, {passive: false});
 canvas.addEventListener('contextmenu', e => e.preventDefault());
-addEventListener('keydown', e => { const k = e.key.toLowerCase(); if (k === 'q') view.tyaw += .3; if (k === 'e') view.tyaw -= .3; if (k === '+' || k === '=') view.tdist = clamp(7, view.tdist * .85, 96); if (k === '-') view.tdist = clamp(7, view.tdist / .85, 96); if (k === '0') { view.tx = 0; view.tz = .4; view.tyaw = 0; fit(); } });
+addEventListener('keydown', e => { const k = e.key.toLowerCase(); if (k === 'q') view.tyaw += .3; if (k === 'e') view.tyaw -= .3; if (k === '+' || k === '=') view.tdist = clamp(CLOSEST, view.tdist * .85, 96); if (k === '-') view.tdist = clamp(7, view.tdist / .85, 96); if (k === '0') { view.tx = 0; view.tz = .4; view.tyaw = 0; fit(); } });
 addEventListener('resize', () => { resize(); });
 
 /* ---- tap to inspect: a resident, vehicle, animal, the train or a building: a ring, a card, and the camera follows what moves ---- */
@@ -186,7 +187,7 @@ function posOf(o) {
   return null;
 }
 function describe(o) {
-  if (o.kind === 'resident') return describeResident(sim, sim.residents.find(r => r.id === o.id));
+  if (o.kind === 'resident') { const d = describeResident(sim, sim.residents.find(r => r.id === o.id)), act = actors.activityOf(o.id); return act ? {...d, lines: [act, ...d.lines.slice(1)]} : d; }
   if (o.kind === 'vehicle') return describeVehicle(sim, sim.vehicles.find(v => v.id === o.id));
   if (o.kind === 'animal') { const c = critters[o.id]; return c.describe ? c.describe() : describeAnimal(critterKind(c)); }
   if (o.kind === 'train') return describeTrain(sim);
@@ -477,7 +478,7 @@ function sync(dt) {
   { trainCars[0].localToWorld(v3b.set(0, .68, .48)); const moving = Math.abs(sim.train.v) > .1;   // the engine's smoke: more when it is working
     smoke.update(dt, {x: v3b.x, y: v3b.y, z: v3b.z, vx: windNow.x * .14, vz: windNow.z * .14}, moving ? 5 : 1.2);
     smoke.puffs.forEach((p, i) => { const z = smoke.size(p); smokeM.makeScale(z, z, z).setPosition(p.x, p.y, p.z); smokeMesh.setMatrixAt(i, smokeM); }); smokeMesh.instanceMatrix.needsUpdate = true; }
-  fest.update(dt, time, {weekday: sim.weekday, hour: sim.hour}); wild.update(dt, time, {hour: sim.hour, day: sim.day, rain: sim.weather.rain, night: nightNow, dist: view.dist, festival: !!sim.festival, eco: sim.eco}); moveCritters(dt); if (!sailing) { boat.position.y = -.02 + Math.sin(time * 1.3) * .022; boat.rotation.z = Math.sin(time * 1.1) * .03; }
+  fest.update(dt, time, {weekday: sim.weekday, hour: sim.hour}); wild.update(dt, time, {feeder: actors.focus().feeder, visitor: actors.focus().visitor, hour: sim.hour, day: sim.day, rain: sim.weather.rain, night: nightNow, dist: view.dist, festival: !!sim.festival, eco: sim.eco}); moveCritters(dt); if (!sailing) { boat.position.y = -.02 + Math.sin(time * 1.3) * .022; boat.rotation.z = Math.sin(time * 1.1) * .03; }
   built.moving.top.inner.rotation.y = time * 2.2; built.moving.sails.inner.rotation.z = -time * .55;
   if (time - goalAt > 1) { goalAt = time; renderGoal(); }
   built.moving.minute.inner.rotation.z = -(sim.hour % 1) * Math.PI * 2; built.moving.hour.inner.rotation.z = -(sim.hour % 12) / 12 * Math.PI * 2; if (built.moving.stMinute) { built.moving.stMinute.inner.rotation.z = built.moving.minute.inner.rotation.z; built.moving.stHour.inner.rotation.z = built.moving.hour.inner.rotation.z; }   // (the tower clock tells the town's own time, the same hour the timetable and the paper use)

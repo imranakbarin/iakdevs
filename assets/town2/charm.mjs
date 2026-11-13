@@ -28,6 +28,8 @@ function plant(bag, x, z, blooms, seed, season) {
 }
 
 // The café now has a little place for a conversation, rather than an unoccupied shopfront.
+export const SEAT_Y = .135;
+export const SEAT_TOP = .02 + SEAT_Y + .0225;   // where a seated resident's weight rests, above the ground (the bench top)
 export const CAFE_SEATS = [];   // where a resident can sit: one bench either side of each table, facing it (read by actors.mjs)
 function cafeTable(bag, x, z, facing, blooms) {
   for (const side of [-1, 1]) { const lx = side * .47; CAFE_SEATS.push({x: x + lx * Math.cos(facing), z: z - lx * Math.sin(facing), yaw: Math.atan2(-side * Math.cos(facing), side * Math.sin(facing)), table: [x, z]}); }
@@ -37,9 +39,9 @@ function cafeTable(bag, x, z, facing, blooms) {
   bag.cyl(.036, .032, .055, '#f8f1df', {x: -.05, y: .355, z: .03, seg: 9});
   bag.sph(.023, blooms[0], {x: .11, y: .375, z: -.025, seg: 8});
   for (const side of [-1, 1]) {
-    bag.box(.2, .045, .19, '#ae8462', {x: side * .47, y: .16, r: .02});
-    bag.box(.045, .24, .16, '#c09b75', {x: side * .61, y: .16, r: .02});
-    for (const dz of [-.07, .07]) bag.box(.023, .16, .023, '#8f7059', {x: side * .48, y: .03, z: dz});
+    bag.box(.2, .045, .19, '#ae8462', {x: side * .47, y: SEAT_Y - .0225, r: .02});   // (a low bench: a seated resident's feet reach the ground)
+    bag.box(.045, .24, .16, '#c09b75', {x: side * .61, y: SEAT_Y - .0225, r: .02});
+    for (const dz of [-.07, .07]) bag.box(.023, SEAT_Y - .05, .023, '#8f7059', {x: side * .48, y: .03, z: dz});
   }
   bag.pop();
 }
