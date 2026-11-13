@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generated_at": "2026-11-12T20:53:08.814Z",
+  "generated_at": "2026-11-13T01:54:02.564Z",
   "status": "ok",
   "successful_sources": [
     "BBC News",
@@ -24,52 +24,52 @@
       "published_at": "2026-11-12T19:30:02.000Z"
     },
     {
-      "title": "I Am Artemis Katie Spicer",
-      "url": "https://www.nasa.gov/missions/artemis/i-am-artemis-katie-spicer/",
-      "source": "NASA",
+      "title": "How many sewage spills have happened in your part of Scotland?",
+      "url": "https://www.bbc.co.uk/news/articles/c0re545l8jdo?at_medium=RSS&at_campaign=rss",
+      "source": "BBC Science",
       "category": "Science",
       "tone": "light",
-      "published_at": "2026-11-12T20:10:02.000Z"
+      "published_at": "2026-11-12T22:48:55.000Z"
     },
     {
-      "title": "How much art does your council own and is it locked away or on display?",
-      "url": "https://www.bbc.co.uk/news/articles/crgqwgzxeexno?at_medium=RSS&at_campaign=rss",
+      "title": "Duran Duran drummer quits band due to tinnitus",
+      "url": "https://www.bbc.co.uk/news/articles/crwy499k504do?at_medium=RSS&at_campaign=rss",
       "source": "BBC Culture",
       "category": "Culture",
       "tone": "light",
-      "published_at": "2026-11-12T14:43:38.000Z"
+      "published_at": "2026-11-12T19:00:15.000Z"
     },
     {
-      "title": "Arsenal dig in for draw at Barcelona to extend unbeaten start",
-      "url": "https://www.bbc.co.uk/sport/football/videos/crlye55q790yo?at_medium=RSS&at_campaign=rss",
+      "title": "Pegula saves match point to beat Noskova & reach WTA Finals last four",
+      "url": "https://www.bbc.co.uk/sport/tennis/articles/c57429mgdkjdo?at_medium=RSS&at_campaign=rss",
       "source": "BBC Sport",
       "category": "Sport",
       "tone": "light",
-      "published_at": "2026-11-12T20:09:07.000Z"
+      "published_at": "2026-11-13T01:23:06.000Z"
     },
     {
-      "title": "The Elder Scrolls' most obscure adventure gets a 4K PC makeover",
-      "url": "https://arstechnica.com/gaming/2026/11/the-elder-scrolls-most-obscure-adventure-gets-a-4k-pc-makeover/",
-      "source": "Ars Technica",
+      "title": "Microsoft struggling to restore service as global outage affects Outlook and Teams",
+      "url": "https://www.bbc.co.uk/news/articles/c5gm3g9ldz8xo?at_medium=RSS&at_campaign=rss",
+      "source": "BBC Technology",
       "category": "Technology",
       "tone": "light",
-      "published_at": "2026-11-12T19:49:11.000Z"
+      "published_at": "2026-11-13T01:39:32.000Z"
     },
     {
-      "title": "Jensen Huang has resigned, what's next for Nvidia?",
-      "url": "https://www.bbc.co.uk/news/videos/c6wy9l859r94o?at_medium=RSS&at_campaign=rss",
+      "title": "'My window faces a brick wall': What's your rent in NYC?",
+      "url": "https://www.bbc.co.uk/news/videos/c6wy9j9v7nl7o?at_medium=RSS&at_campaign=rss",
       "source": "BBC Business",
       "category": "Business",
       "tone": "light",
-      "published_at": "2026-11-12T20:21:03.000Z"
+      "published_at": "2026-11-13T01:30:31.000Z"
     },
     {
-      "title": "US envoys head to meet Zelensky after talks with Putin in Moscow",
-      "url": "https://www.bbc.co.uk/news/articles/cwrkgmymk55zo?at_medium=RSS&at_campaign=rss",
+      "title": "Australian footballers will not be charged after hotel incident, police say",
+      "url": "https://www.bbc.co.uk/news/articles/ckregjwr7njqo?at_medium=RSS&at_campaign=rss",
       "source": "BBC News",
       "category": "World",
       "tone": "light",
-      "published_at": "2026-11-12T20:37:36.000Z"
+      "published_at": "2026-11-13T01:03:59.000Z"
     },
     {
       "title": "100-Year-Old ‘Store Mom’ Surprised With Her First Birthday Party",
@@ -80,12 +80,12 @@
       "published_at": "2026-11-12T14:07:08.000Z"
     },
     {
-      "title": "BBC Inside Science",
-      "url": "https://www.bbc.co.uk/sounds/play/live:bbc_world_service?at_medium=RSS&at_campaign=rss",
-      "source": "BBC Science",
+      "title": "I Am Artemis Katie Spicer",
+      "url": "https://www.nasa.gov/missions/artemis/i-am-artemis-katie-spicer/",
+      "source": "NASA",
       "category": "Science",
       "tone": "light",
-      "published_at": "2026-11-12T17:00:00.000Z"
+      "published_at": "2026-11-12T20:10:02.000Z"
     }
   ]
 }
