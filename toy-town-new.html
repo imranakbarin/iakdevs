@@ -102,6 +102,12 @@ html.ui-off #set,html.ui-off #panel,html.ui-off #paperBtn,html.ui-off #photoBtn,
 html.room-open #chip,html.room-open #stack,html.room-open #story,html.room-open #goal,html.room-open #guideTip,html.room-open #hint,html.room-open #card,html.room-open #panel,html.room-open #paper,html.room-open #paperBtn,html.room-open #photoBtn,html.room-open #set,html.room-open #snd{display:none!important}
 @media(max-width:560px){#roomBar{top:calc(8px + env(safe-area-inset-top,0px));padding:8px 10px;gap:6px}#roomTitle{font-size:13px}#roomNote{font-size:11px;flex:1 1 100%}}
 @media(prefers-reduced-motion:reduce){#roomBar{transition:none}}
+/* A brief warm doorway iris masks the otherwise immediate scene swap; interaction remains instant. */
+#roomVeil{position:fixed;inset:0;pointer-events:none;z-index:7;opacity:0;background:radial-gradient(ellipse at 50% 51%,rgba(239,222,190,.96) 0%,rgba(132,108,89,.93) 100%)}
+#roomVeil.play{animation:roomDoorway .55s ease-out both}
+@keyframes roomDoorway{0%{opacity:0}20%{opacity:.94}52%{opacity:.78}100%{opacity:0}}
+@media(prefers-reduced-motion:reduce){#roomVeil.play{animation:none}}
+
 #dbg{position:fixed;left:calc(8px + env(safe-area-inset-left,0px));bottom:calc(8px + env(safe-area-inset-bottom,0px));padding:3px 8px;border-radius:8px;background:rgba(0,0,0,.6);color:#fff;font:600 11px/1.3 ui-monospace,Menlo,Consolas,monospace;pointer-events:none;z-index:9}
 html.ui-off #stack,html.ui-off #jobs,html.ui-off #toast,html.ui-off #snd,html.ui-off #chip,html.ui-off #hint,html.ui-off #story,html.ui-off #card{display:none}
 </style>
@@ -179,6 +185,7 @@ html.ui-off #stack,html.ui-off #jobs,html.ui-off #toast,html.ui-off #snd,html.ui
 <div id="panel" role="group" aria-label="Pace and balance"><b>Speed of the day</b><div class="seg" data-key="speed"><button data-v="0.5">½×</button><button data-v="1">1×</button><button data-v="2">2×</button><button data-v="4">4×</button></div><b>How much work for the train</b><div class="seg" data-key="busy"><button data-v="quiet">Quiet</button><button data-v="normal">Normal</button><button data-v="busy">Busy</button></div><b>Highlight what I tap</b><div class="seg" data-key="highlight"><button data-v="pin">Pin</button><button data-v="ring">Ring</button><button data-v="off">None</button></div><b>Picture quality</b><div class="seg" data-key="quality"><button data-v="auto">Auto</button><button data-v="low">Low</button><button data-v="medium">Med</button><button data-v="high">High</button></div><b>Emergencies (fires, storms, lost children)</b><div class="seg" data-key="events"><button data-v="true">On</button><button data-v="false">Off</button></div><b>Stories from today's news</b><div class="seg" data-key="news"><button data-v="true">On</button><button data-v="false">Off</button></div></div>
 <div id="grade" aria-hidden="true"></div>
 <div id="story" aria-live="polite"></div>
+<div id="roomVeil" aria-hidden="true"></div>
 <section id="roomBar" role="group" aria-label="Inside a miniature building" hidden><b id="roomTitle"></b><span id="roomNote"></span><button id="roomNext" title="Explore the next building">Next room</button><button id="roomExit">Back to town</button></section>
 <div id="card" aria-live="polite"><button aria-label="Close">×</button><b></b><div></div><button id="send" hidden>Send a parcel from here…</button><button id="journalBtn" hidden>Journal</button><button id="fishBtn" hidden>Fish with them 🎣</button><button id="sailBtn" hidden>Take the boat out ⛵</button><button id="insideBtn" hidden>Step inside ✨</button></div>
 <div id="stack"><div id="jobs" title="Tap to open or close"></div><div id="track" aria-live="polite"></div></div>

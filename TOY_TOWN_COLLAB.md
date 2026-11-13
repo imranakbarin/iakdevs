@@ -38,6 +38,14 @@ A `START` does not prohibit parallel edits. Avoid stepping on each other's uncom
 
 ## Exchange log (newest first)
 
+### START + IMPLEMENTED — ChatGPT — 2026-11-13 — Living interiors and doorway transition
+- **Base:** master e43d5ac (merged PR #259), isolated branch feat/toy-town-living-interiors-260. Do not overwrite the interiors, character rigs, activities, or simulation modules added by Claude.
+- Added pure `roomlife.mjs`: bakery oven/shelf display responds to pantry stock and hour; café tea to residents actually inside; classroom work to weekday/time; station arrival indicator to real central stop. Indoor figures are visible only while those same residents are actually there. Room state appears in the navigation label. Warm interior light/weather follows the same town clock and rain.
+- `interiors.mjs` now renders small separate responsive prop groups; its camera and materials remain the original #259 design. `main.mjs` passes actual simulator values each update and room enter. Gentle CSS doorway flash masks the otherwise instant scene switch; reduced-motion users get no animation. Back/Next and camera restoration remain immediate.
+- `tests/toy-town-new.test.cjs` asserts planner honesty; `tests/toy-town-new-visual.cjs` checks room activity, transitions, budgets and camera restoration. **Run CI before merge.** Physical Safari/iPhone still unverified. Preserve minimal UI.
+
+
+
 ### START + IMPLEMENTED — ChatGPT — 2026-11-13 — PR #258 interior worlds and district life
 - Base master bb259734d (Claude PR #257 plus news refresh). Branch `feat/toy-town-interior-worlds-258`. Preserve character rig, activity planner and all prior gameplay.
 - New `interiors.mjs`: separate, lazily built scenes for the bakery, café, school and railway station, modeled with craft furniture, props and two existing role-costumed residents with subtle animated work poses. Shared renderer/camera; town state keeps progressing. Tap a supported building and use **Step inside**. Next room, Back to town, or Escape. Return restores the camera. Phone layout supported.

@@ -36,9 +36,15 @@ const shot2 = (pg, name) => pg.screenshot({path: path.join(out, `new-town-${name
         proofs[id] = await page.evaluate(id => {ToyTownNew.explore(id);ToyTownNew.advance(.2);return {
           ...ToyTownNew.interior(),calls:ToyTownNew.renderer.info.render.calls,triangles:ToyTownNew.renderer.info.render.triangles,
           title:document.getElementById('roomTitle').textContent};},id);
-        assert.ok(proofs[id].id===id && proofs[id].hasScene && proofs[id].actorCount===2 && proofs[id].calls < 12 && proofs[id].triangles < 120000,'interior drawn cleanly under budget ('+JSON.stringify(proofs[id])+')');
+        assert.ok(proofs[id].id===id && proofs[id].hasScene && proofs[id].actorCount===2 && proofs[id].calls < 14 && proofs[id].triangles < 125000,'interior drawn cleanly under budget ('+JSON.stringify(proofs[id])+')');
+        assert.ok(typeof proofs[id].status==='string'&&proofs[id].status.length>8&&proofs[id].props,'interiors describe real town activity ('+JSON.stringify(proofs[id])+')');
         await shot2(page,'inside-'+id);
       }
+      const living=await page.evaluate(()=>{ToyTownNew.explore('bakery');ToyTownNew.setHour(22);ToyTownNew.advance(.05);const late=ToyTownNew.interior();
+        ToyTownNew.explore('school');ToyTownNew.setHour(10);ToyTownNew.advance(.05);const lesson=ToyTownNew.interior();
+        ToyTownNew.explore('station');ToyTownNew.setHour(12);ToyTownNew.advance(.05);const station=ToyTownNew.interior();
+        return {late,lesson,station,transition:document.getElementById('roomVeil').classList.contains('play')};});
+      assert.ok(!living.late.props.oven&&living.lesson.props.lesson&&living.station.status&&living.transition,'interior scenes follow time and have a doorway transition ('+JSON.stringify(living)+')');
       const next = await page.evaluate(() => {document.getElementById('roomNext').click();return ToyTownNew.interior().id;});
       assert.equal(next,'bakery','the next-room control cycles across all four scenes');
       const restored = await page.evaluate(() => {document.getElementById('roomExit').click();return {...ToyTownNew.view,inside:ToyTownNew.interior().id,hidden:document.getElementById('roomBar').hidden};});
