@@ -31,7 +31,8 @@ export function createActors({scene, sim, season, rods, marketDef, seats = () =>
     A.set(r.id, {id: r.id, r, w, role: w.userData.identity.role, gait: newGait(), mix: {}, yaw: 0, x: r.x, z: r.z, vis: false, seed: (i * 2.399) % 6.283, t: i * 3.1, chatT: 0, lift: 0, cast: 0, castAt: 0, catchUp: false, wasPlan: false, plan: null, planKind: null, stayKey: null, stayT: 0, seatT: 0, wasSeat: false, phase: null, doorT: 0, prevState: r.state, prevWalking: false, hasBag: false, props: {}, tilt: {}, stride: personStride(effLeg(w.userData.dims)), stride2: personStride(effLeg(w.userData.dims), 1)});
     if (rods.has(r.id)) w.add(rods.get(r.id));
   });
-  const focusNow = {feeder: null, visitor: null};
+  const focusNow = {feeder: null, visitor: null}, stats = {};   // stats: how many times each kind of thing has happened (for tests)
+  const count = k => { stats[k] = (stats[k] || 0) + 1; };
   let shadowsOn = true;
   function ensure(a, wear) {
     const w = a.w, U = w.userData;
@@ -82,6 +83,7 @@ export function createActors({scene, sim, season, rods, marketDef, seats = () =>
       } else if (a.role === 'cafe' && r.at === 'cafe' && r.state === 'inside') {
         for (const o of seatOcc) { const sp = servicePlan(r, ctxBase, all[slotOf.get(o.id)], o.seatT); if (sp) { a.plan = {...sp, walkModes: {serve: 1}}; break; } }
       } else a.plan = planFor(r, a.role, E, ctxBase, a.stayT);
+      const kind = a.plan ? a.plan.kind : null; if (kind !== a.planKind) { if (kind) count(kind); a.planKind = kind; }
     }
     // the market: a vendor hands over the goods while a shopper is paying
     const paying = new Set(); for (const a of A.values()) if (a.plan && a.plan.kind === 'shop' && a.plan.phase === 'pay') paying.add(a.plan.stall);
@@ -92,9 +94,9 @@ export function createActors({scene, sim, season, rods, marketDef, seats = () =>
       const bld = r.state === 'inside' ? building(r.at) : null, shopDoor = bld && bld.door > 0;
       // arrivals and departures that need a moment on stage: the knock at a door, boarding a train
       if (a.vis) {
-        if (r.state === 'inside' && !plan && a.prevWalking && !r.onPlatform && shopDoor) { a.phase = 'door'; a.doorT = 0; }
+        if (r.state === 'inside' && !plan && a.prevWalking && !r.onPlatform && shopDoor) { a.phase = 'door'; a.doorT = 0; count('door'); }
         else if (r.state === 'inside' && !plan && a.wasPlan && !r.onPlatform && shopDoor) a.phase = 'return';
-        else if (r.state === 'riding' && a.prevState !== 'riding' && trainDoor()) { a.phase = 'board'; a.doorT = 0; }
+        else if (r.state === 'riding' && a.prevState !== 'riding' && trainDoor()) { a.phase = 'board'; a.doorT = 0; count('board'); }
       }
       if (a.phase === 'door') { a.doorT += dt; if (a.doorT > DOOR_T) a.phase = null; }
       if (a.phase && (walking || (plan && a.phase !== 'board'))) a.phase = null;
@@ -103,7 +105,7 @@ export function createActors({scene, sim, season, rods, marketDef, seats = () =>
       if (!vis) { a.vis = false; a.mix = {}; a.catchUp = false; a.phase = null; if (r.state !== 'inside') a.hasBag = false; continue; }
       const justShown = !a.vis; a.vis = true; a.t += dt;
       if (justShown) { ensure(a, wearFor(env.season, env.rain)); a.x = r.x; a.z = r.z; a.gait.px = null; a.yaw = Math.atan2(r.tx, r.tz); a.mix = {}; a.catchUp = false;
-        if (prevState === 'riding' && trainDoor()) { const td = trainDoor(); a.x = td.x + Math.sin(a.seed * 7) * .24; a.z = td.z + Math.cos(a.seed * 5) * .24; a.catchUp = true; } }
+        if (prevState === 'riding' && trainDoor()) { const td = trainDoor(); a.x = td.x + Math.sin(a.seed * 7) * .24; a.z = td.z + Math.cos(a.seed * 5) * .24; a.catchUp = true; count('alight'); } }
       const U = w.userData, D = U.dims, rig = U.rig, role = a.role;
       const onPier = onPierR, stall = r.at === 'market' && r.state === 'inside' && sim.market.open && VENDORS.includes(r.id);
       // where the figure is drawn, and how it gets there
@@ -173,5 +175,5 @@ export function createActors({scene, sim, season, rods, marketDef, seats = () =>
   }
   const gaitOf = id => { const a = A.get(id); return a ? {phase: a.gait.u * TAU, amp: a.gait.w, walk: a.gait.w, speed: a.gait.speed, run: a.gait.run} : null; };
   const modeOf = id => { const a = A.get(id); return a ? {...a.mix} : null; };
-  return {people, actors: A, update, stage, focus: () => focusNow, activityOf: id => { const a = A.get(id); if (!a || !a.vis) return null; if (a.plan) return a.plan.text; if (a.phase === 'door') return 'Arriving at the door'; if (a.phase === 'board') return 'Boarding the train'; return null; }, handWorld, parcelAnchor, gaitOf, modeOf, wearOf: id => A.get(id).w.userData.wear, setShadows(on) { shadowsOn = on; for (const a of A.values()) for (const v of Object.values(a.w.userData.variants)) v.userData.mesh.castShadow = on; }, umbrellaUp: id => { const a = A.get(id); return !!(a && a.w.visible && (a.mix.umbrella || 0) > .5); }};
+  return {people, actors: A, update, stage, stats: () => ({...stats}), tableware: () => ware.count, focus: () => focusNow, activityOf: id => { const a = A.get(id); if (!a || !a.vis) return null; if (a.plan) return a.plan.text; if (a.phase === 'door') return 'Arriving at the door'; if (a.phase === 'board') return 'Boarding the train'; return null; }, handWorld, parcelAnchor, gaitOf, modeOf, wearOf: id => A.get(id).w.userData.wear, setShadows(on) { shadowsOn = on; for (const a of A.values()) for (const v of Object.values(a.w.userData.variants)) v.userData.mesh.castShadow = on; }, umbrellaUp: id => { const a = A.get(id); return !!(a && a.w.visible && (a.mix.umbrella || 0) > .5); }};
 }
