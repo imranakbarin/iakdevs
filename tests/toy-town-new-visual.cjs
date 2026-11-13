@@ -23,6 +23,20 @@ const shot2 = (pg, name) => pg.screenshot({path: path.join(out, `new-town-${name
     await page.evaluate(() => { ToyTownNew.freeze(); ToyTownNew.advance(45); });
     const views = [['wide', 0, .4, 46, 0], ['square', 0, .3, 14, .5], ['high-street', 7.4, -.6, 13, .2], ['cottage-lane', -7.6, -.4, 13, -.3], ['station', -1, 11.5, 11, 0], ['windmill', 2.6, -9.2, 10, .7], ['harbour', 15, 2.3, 12, .6], ['behind', 0, .4, 46, 2.4]];
     for (const [name, x, z, d, yaw] of views) { await page.evaluate(([x, z, d, y]) => ToyTownNew.look(x, z, d, y), [x, z, d, yaw]); await page.screenshot({path: path.join(out, `new-town-${name}.png`)}); }
+    // The island overview is deliberately decluttered. Focal district details return
+    // when the camera goes into the neighbourhood; no controls are added.
+    const composition=await page.evaluate(()=>{
+      ToyTownNew.look(0,.4,46,0);ToyTownNew.advance(.05,true);
+      const wide=ToyTownNew.districts(),tufts=ToyTownNew.tufts.userData.total;
+      ToyTownNew.look(0,.4,12,0);ToyTownNew.advance(.05,true);
+      const close=ToyTownNew.districts();
+      ToyTownNew.look(0,.4,46,0);ToyTownNew.advance(.05,true);
+      return {wide,close,tufts,restored:ToyTownNew.districts()};
+    });
+    assert.ok(!composition.wide.detailsVisible&&composition.close.detailsVisible&&!composition.restored.detailsVisible,
+      'landmark details should appear at close zoom, not crowd the overview ('+JSON.stringify(composition)+')');
+    assert.ok(composition.tufts<=1200&&composition.tufts>500,
+      'grass density is deliberately restrained without removing living greenery ('+composition.tufts+')');
     await page.evaluate(() => ToyTownNew.look(0, .4, 46, 0));
     // Four real WebGL interiors, exposed through the building card. The world camera must be restored.
     { const original = await page.evaluate(() => ({...ToyTownNew.view}));

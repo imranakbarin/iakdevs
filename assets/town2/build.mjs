@@ -356,7 +356,7 @@ function terrain(graph) {
   const m = new THREE.Mesh(g, new THREE.MeshLambertMaterial({vertexColors: true})); m.receiveShadow = true; return m;
 }
 // Tufts of grass scattered over the lawns: one instanced mesh that sways in the wind. `show(n)` shows the first n (the picture quality decides how many).
-export function buildTufts(graph, max = 2400) {
+export function buildTufts(graph, max = 1200) {
   const blade = (rot, lean) => new THREE.ConeGeometry(.022, .11, 4).translate(0, .055, 0).rotateZ(lean).rotateY(rot), geo = mergeGeometries([blade(0, .12), blade(2.1, -.1), blade(4.2, .16)].map(g => g.toNonIndexed()), false);
   const mat = new THREE.MeshLambertMaterial({color: '#ffffff'});
   mat.onBeforeCompile = sh => {
@@ -393,8 +393,9 @@ function disc(parts, x, z, r0, r1, colour, lift, seg = 40) {
   const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); g.setAttribute('normal', new THREE.Float32BufferAttribute(nor, 3)); g.setAttribute('color', new THREE.Float32BufferAttribute(colr, 3)); parts.push(g);
 }
 // Laid stone: a road or square paved with setts. Each stone is its own little quad in its own shade (a darker "grout" road/disc lies under them), laid in courses with the joints staggered like brickwork.
-const SETT_STREET = ['#aba698', '#b8b0a0', '#9d978d', '#c4b9a9', '#afa798', '#a49d90', '#b6ad9e'], SETT_SQUARE = ['#eadbbd', '#dfcfb1', '#efe4cf', '#d8c8ac', '#ecdec3', '#e2d5b8'], SETT_BAND = ['#ae9276', '#bb9d80', '#ab8b70'], SETT_RING = ['#9a9589', '#a9a295', '#928c82', '#aea89c'];
-const GROUT = '#7f786c', GROUT_SQUARE = '#c9b78f';
+// Deliberately quiet masonry: near-neutral tones keep the roads readable without patterned confetti.
+const SETT_STREET = ['#aba79f', '#b2aca2', '#a9a49c'], SETT_SQUARE = ['#e8dbc7', '#e4d6c0'], SETT_BAND = ['#d3c1aa'], SETT_RING = ['#9b998f', '#a5a298', '#a09d94'];
+const GROUT = '#89867f', GROUT_SQUARE = '#e8dac4';
 function stoneBuf() { return {pos: [], colr: [], nor: []}; }
 function stone(buf, P, colour, shade) {
   const c = col(colour).clone().offsetHSL(0, 0, shade);
@@ -408,7 +409,7 @@ function flushStones(parts, buf) {
   const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(buf.pos, 3)); g.setAttribute('normal', new THREE.Float32BufferAttribute(buf.nor, 3)); g.setAttribute('color', new THREE.Float32BufferAttribute(buf.colr, 3)); parts.push(g);
 }
 // Courses of setts across a road: `from`/`to` are offsets from the centre line, s0..s1 the stretch along it.
-function settRibbon(parts, L, from, to, s0, s1, pal, seed, {len = .19, row = .115, gap = .016, lift = .033} = {}) {
+function settRibbon(parts, L, from, to, s0, s1, pal, seed, {len = .29, row = .19, gap = .012, lift = .033} = {}) {
   const buf = stoneBuf(), rows = Math.max(1, Math.round((s1 - s0) / row)), rh = (s1 - s0) / rows;
   const at = (s, off) => { const q = along(L, s), [lx, lz] = leftOf(q.tx, q.tz), x = q.x + lx * off, z = q.z + lz * off; return [x, heightAt(x, z) + lift, z]; };
   const cols = Math.max(1, Math.round((to - from) / len)), cw = (to - from) / cols;
@@ -416,18 +417,18 @@ function settRibbon(parts, L, from, to, s0, s1, pal, seed, {len = .19, row = .11
     const sa = s0 + r * rh + gap / 2, sb = s0 + (r + 1) * rh - gap / 2;
     for (let k = r % 2 ? -1 : 0; k <= cols; k++) {   // odd courses start half a stone in
       let a = from + (k + (r % 2 ? .5 : 0)) * cw, b = a + cw; a = Math.max(a, from); b = Math.min(b, to); if (b - a < gap * 2) continue;
-      stone(buf, [at(sa, a + gap / 2), at(sa, b - gap / 2), at(sb, b - gap / 2), at(sb, a + gap / 2)], pal[Math.floor(rand(seed + r * 31 + k * 7) * pal.length)], (rand(seed + r * 13 + k * 5 + 3) - .5) * .05);
+      stone(buf, [at(sa, a + gap / 2), at(sa, b - gap / 2), at(sb, b - gap / 2), at(sb, a + gap / 2)], pal[Math.floor(rand(seed + r * 31 + k * 7) * pal.length)], (rand(seed + r * 13 + k * 5 + 3) - .5) * .018);
     }
   }
   flushStones(parts, buf);
 }
 // Rings of setts round a centre (the square and the ring road): each ring is a course, the joints staggered. `pick(r, ring)` may choose a palette per ring.
-function settDisc(parts, cx, cz, r0, r1, pick, seed, {len = .2, row = .115, gap = .016, lift = .02} = {}) {
+function settDisc(parts, cx, cz, r0, r1, pick, seed, {len = .29, row = .18, gap = .012, lift = .02} = {}) {
   const buf = stoneBuf(), rings = Math.max(1, Math.round((r1 - r0) / row)), rh = (r1 - r0) / rings;
   const at = (r, t) => { const x = cx + Math.cos(t) * r, z = cz + Math.sin(t) * r; return [x, heightAt(x, z) + lift, z]; };
   for (let i = 0; i < rings; i++) {
     const ra = r0 + i * rh + gap / 2, rb = r0 + (i + 1) * rh - gap / 2, rm = (ra + rb) / 2, n = Math.max(6, Math.round(TAU * rm / len)), dt = TAU / n, pal = pick(rm, i);
-    for (let k = 0; k < n; k++) { const t0 = (k + (i % 2 ? .5 : 0)) * dt, ga = gap / rm / 2; stone(buf, [at(ra, t0 + ga), at(rb, t0 + ga), at(rb, t0 + dt - ga), at(ra, t0 + dt - ga)], pal[Math.floor(rand(seed + i * 17 + k * 3) * pal.length)], (rand(seed + i * 11 + k * 7 + 1) - .5) * .05); }
+    for (let k = 0; k < n; k++) { const t0 = (k + (i % 2 ? .5 : 0)) * dt, ga = gap / rm / 2; stone(buf, [at(ra, t0 + ga), at(rb, t0 + ga), at(rb, t0 + dt - ga), at(ra, t0 + dt - ga)], pal[Math.floor(rand(seed + i * 17 + k * 3) * pal.length)], (rand(seed + i * 11 + k * 7 + 1) - .5) * .018); }
   }
   flushStones(parts, buf);
 }
@@ -435,7 +436,11 @@ function roads(bag, graph) {
   const w = ROAD.width / 2, parts = bag.parts, R = SQUARE.ring;
   // the square: paving out to the shopfronts, the ring road, the green in the middle
   for (let r = 0; r < 6.1; r += .4) disc(parts, SQUARE.x, SQUARE.z, r, Math.min(6.1, r + .4), GROUT_SQUARE, .012, 64);   // (in thin rings, so the paving follows the lie of the ground)
-  settDisc(parts, SQUARE.x, SQUARE.z, R + w + .1, 6.1, (r, i) => (r > 3.9 && r < 4.15) || (r > 5.2 && r < 5.45) ? SETT_BAND : SETT_SQUARE, 101, {lift: .022});   // sand-coloured setts in rings round the tower, two darker bands
+  // The pedestrian square is one restful paved field with two slim concentric edges.
+  // No dense stone mosaic: the clock tower and citizens, not thousands of joints, are the focus.
+  for(let r=R+w+.1;r<6.1;r+=.35) disc(parts,SQUARE.x,SQUARE.z,r,Math.min(6.1,r+.35),'#eadfcf',.025,64);
+  disc(parts,SQUARE.x,SQUARE.z,3.99,4.035,'#d6c7b1',.031,64);
+  disc(parts,SQUARE.x,SQUARE.z,5.36,5.405,'#d6c7b1',.031,64);
   disc(parts, SQUARE.x, SQUARE.z, R - w, R + w, GROUT, .03, 64);
   settDisc(parts, SQUARE.x, SQUARE.z, R - w, R + w, () => SETT_RING, 202, {lift: .034});   // the ring road in grey setts
   disc(parts, SQUARE.x, SQUARE.z, R - w - .1, R - w, 'kerb', .045, 64); disc(parts, SQUARE.x, SQUARE.z, R + w, R + w + .1, 'kerb', .045, 64);
@@ -450,7 +455,7 @@ function roads(bag, graph) {
     ribbon(parts, L, w, w + .1, 'kerb', .044, a, b); ribbon(parts, L, -w - .1, -w, 'kerb', .044, a, b);
     ribbon(parts, L, ROAD.pave - .15, ROAD.pave + .17, '#ead9b8', .02, a + .3, b - .3); ribbon(parts, L, -ROAD.pave - .17, -ROAD.pave + .15, '#ead9b8', .02, a + .3, b - .3);
     if (e.kind === 'spoke') {   // a zebra crossing where the street meets the square
-      const z0 = along(L, m + .75), [lx, lz] = leftOf(z0.tx, z0.tz); for (let k = -2; k <= 2; k++) { const cx = z0.x + lx * k * .17, cz = z0.z + lz * k * .17, y = heightAt(cx, cz) + .037, hw = .055, hl = .2, pts = [[-hw, -hl], [hw, -hl], [hw, hl], [-hw, hl]].map(([a2, b2]) => [cx + lx * a2 + z0.tx * b2, y, cz + lz * a2 + z0.tz * b2]); const c = col('white'), pos = [], colr = [], nor = []; for (const v of [pts[0], pts[1], pts[2], pts[0], pts[2], pts[3]]) { pos.push(...v); colr.push(c.r, c.g, c.b); nor.push(0, 1, 0); } const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); g.setAttribute('normal', new THREE.Float32BufferAttribute(nor, 3)); g.setAttribute('color', new THREE.Float32BufferAttribute(colr, 3)); parts.push(g); }
+      const z0 = along(L, m + .75), [lx, lz] = leftOf(z0.tx, z0.tz); for (let k = -1; k <= 1; k++) { const cx = z0.x + lx * k * .23, cz = z0.z + lz * k * .17, y = heightAt(cx, cz) + .037, hw = .055, hl = .2, pts = [[-hw, -hl], [hw, -hl], [hw, hl], [-hw, hl]].map(([a2, b2]) => [cx + lx * a2 + z0.tx * b2, y, cz + lz * a2 + z0.tz * b2]); const c = col('white'), pos = [], colr = [], nor = []; for (const v of [pts[0], pts[1], pts[2], pts[0], pts[2], pts[3]]) { pos.push(...v); colr.push(c.r, c.g, c.b); nor.push(0, 1, 0); } const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); g.setAttribute('normal', new THREE.Float32BufferAttribute(nor, 3)); g.setAttribute('color', new THREE.Float32BufferAttribute(colr, 3)); parts.push(g); }
     }
   }
   // a round patch where each spoke meets the outer ring, so the junction has no seams
@@ -500,22 +505,21 @@ function scenery(bag, graph) {
   const loopPts = graph.loop.pts.filter((_, k) => k % 6 === 0);
   const nearBuilding = (x, z) => Math.min(...BUILDINGS.map(b => Math.hypot(b.x - x, b.z - z) - b.w * .5 + .8), loopPts.some(p => Math.hypot(p[0] - x, p[1] - z) < 1.3) ? 0 : 9, x > PADDOCK.x0 - .8 && x < PADDOCK.x1 + .8 && z > PADDOCK.z0 - .8 && z < PADDOCK.z1 + .8 ? 0 : 9, Math.hypot((x - POND.x) / 1.4, z - POND.z) < 2 ? 0 : 9, x > PIER.x0 - 1.5 && Math.abs(z - PIER.z) < 1.2 ? 0 : 9);
   TREES.forEach(([x, z, kind, s], i) => { if (nearRoad(x, z) > .9 && nearBuilding(x, z) > 1.5 && !inGarden(x, z, .25)) onGround(x, z, b => tree(b, kind, i + 1), rand(i) * TAU, s * .9); });
-  // lamp posts and benches round the square, bunting strung between the lamps
-  const lamps = []; for (let k = 0; k < 8; k++) { const a = (k + .5) / 8 * TAU, x = Math.cos(a) * 3.35, z = Math.sin(a) * 3.35; if (k % 2 === 0) continue; lamps.push([x, z]); }
-  for (let k = 0; k < 8; k++) lamps[k] = [LAMPS[k].x, LAMPS[k].z];   // the bunting hangs between the eight lamps round the square
-  for (const l of LAMPS) onGround(l.x, l.z, b => lamp(b, 0, 0));   // every lamp post: round the square and along each street
-  const flags = ['red', 'yellow', 'sky', 'pink', 'green', 'orange', 'purple', 'white'];
-  for (let k = 0; k < 8; k++) { const [x0, z0] = lamps[k], [x1, z1] = lamps[(k + 1) % 8], n = 9, ry = Math.atan2(x1 - x0, z1 - z0); for (let m = 1; m < n; m++) { const f = m / n, x = x0 + (x1 - x0) * f, z = z0 + (z1 - z0) * f, y = 1.08 - Math.sin(f * Math.PI) * .22; bag.cone(.075, .14, flags[(m + k) % 8], {x, y: y - .14, z, ry: ry + Math.PI / 2, rx: Math.PI, sz: .25, seg: 3}); } bag.tube([[x0, 1.1, z0], [(x0 + x1) / 2, .86, (z0 + z1) / 2], [x1, 1.1, z1]], .008, 'white'); }
-  for (let k = 0; k < 4; k++) { const a = k / 4 * TAU + Math.PI / 4, x = Math.cos(a) * 1.52, z = Math.sin(a) * 1.52; onGround(x, z, b => bench(b, 0, 0, -a + Math.PI / 2)); }
-  // a signpost on the green, a pillar box, tubs by the crossings
-  onGround(1.25, .45, b => { b.cyl(.03, .04, .95, 'white', {seg: 8}); [['red', .3, 0], ['blue', .52, 1.6], ['yellow', .72, 3.2], ['green', .5, 4.7]].forEach(([c, y, a]) => { b.push(0, y, 0, a); b.box(.42, .1, .03, c, {x: .24, r: .02}); b.cone(.07, .1, c, {x: .47, y: .0, rz: -Math.PI / 2, seg: 4}); b.pop(); }); b.sph(.05, 'gold', {y: .98, seg: 8}); });
+  // The square stays legible: town lamps follow the simulation, two benches frame the clock.
+  // Festival bunting remains a meaningful earned upgrade instead of permanent noise.
+  for (const l of LAMPS) onGround(l.x, l.z, b => lamp(b, 0, 0));
+  for (const a of [Math.PI / 4, Math.PI * 5 / 4]) {
+    const x = Math.cos(a) * 1.58, z = Math.sin(a) * 1.58;
+    onGround(x, z, b => bench(b, 0, 0, -a + Math.PI / 2));
+  }
   // hedges and flowers along the lanes, wild flowers in the meadows
-  for (const e of graph.edges) if (e.kind === 'spoke') for (let s = 1.6; s < e.line.length - 1.0; s += .7) for (const side of [-1, 1]) {
+  // One structured hedge rhythm per lane, alternating sides, instead of a continuous double wall.
+  for (const e of graph.edges) if (e.kind === 'spoke') for (let s = 2.0; s < e.line.length - 1.2; s += 1.9) for (const side of [(Math.round(s / 1.9) % 2) ? 1 : -1]) {
     const q = along(e.line, s), [lx, lz] = leftOf(q.tx, q.tz), x = q.x + lx * side * 1.18, z = q.z + lz * side * 1.18;
     if (nearBuilding(x, z) < 1.2 || Math.hypot(x, z) < 6.3 || shore(x, z) > .88) continue;
     const k = Math.round(s * 7 + side * 3); bag.sph(.28, k % 3 ? 'leaf' : 'leafLight', {x, y: heightAt(x, z) + .14, z, sx: 1.5, sy: .85, seg: 7}); if (k % 4 === 0) bag.sph(.05, ['pink', 'white', 'yellow'][k % 3], {x: x + .05, y: heightAt(x, z) + .34, z, seg: 6});
   }
-  for (let k = 0; k < 480; k++) { const x = (rand(k * 3 + 1) - .5) * 39, z = (rand(k * 3 + 2) - .5) * 32; if (shore(x, z) > .88 || nearRoad(x, z) < 1.0 || nearBuilding(x, z) < 1.2 || Math.hypot(x, z) < 6.2) continue; const y = heightAt(x, z); bag.sph(.045, ['white', 'yellow', 'pink', 'red', 'purple'][k % 5], {x, y: y + .08, z, seg: 6}); bag.cyl(.008, .008, .08, 'leaf', {x, y, z, seg: 4}); }
+  for (let k = 0; k < 120; k++) { const x = (rand(k * 3 + 1) - .5) * 39, z = (rand(k * 3 + 2) - .5) * 32; if (shore(x, z) > .88 || nearRoad(x, z) < 1.0 || nearBuilding(x, z) < 1.2 || Math.hypot(x, z) < 7.2) continue; const y = heightAt(x, z); bag.sph(.038, ['white', 'yellow', 'pink'][k % 3], {x, y: y + .08, z, seg: 6}); bag.cyl(.008, .008, .08, 'leaf', {x, y, z, seg: 4}); }
   // bus stop signs, on the pavement by the doorstep of each stop
   for (const id of new Set(Object.values(BUS_LINES).flat())) { const d0 = graph.doors[id], d = graph.attach(d0.x, d0.z), e = graph.edge(d.edge), q = along(e.line, d.s), [lx, lz] = leftOf(q.tx, q.tz), side = e.kind === 'ring' ? 1 : d.side, x = q.x + lx * side * (ROAD.pave + .3), z = q.z + lz * side * (ROAD.pave + .3); onGround(x, z, b => { b.cyl(.02, .025, .78, 'slate', {seg: 6}); b.cyl(.13, .13, .03, 'red', {y: .78, rx: Math.PI / 2, seg: 16}); b.cyl(.09, .09, .035, 'white', {y: .795, rx: Math.PI / 2, seg: 16, centre: false}); }, Math.atan2(q.tx, q.tz)); }
 }
