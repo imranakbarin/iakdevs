@@ -250,6 +250,21 @@ Every resident, horse and animal is ONE merged, bone-skinned mesh (one draw call
 - **Budgets.** One draw call per visible figure; a resident is 4-6k triangles (3.5-4.5k in the light version, which drops fine trim, simplifies faces and caps ball segments).
 - **Test hooks.** `actors` (`stage(id, {x, z, yaw, wear, modes, walk, run, u})` is a photo studio; `update`, `gaitOf`, `modeOf`, `wearOf`), `car(id)`, `beast(id)`; `tests/toy-town-characters.cjs` is the real-browser check (every resident in all three wears, foot contact and slip over a stride, café seating, rain wear, the horse's walk/trot/wheels, animals grounded, phone/winter/night views).
 
+## 4k. The living town (activities)
+
+`activities.mjs` (pure, tested in Node) says, from the simulation's state and the clock, what a resident who is "inside" a place should be seen doing out of doors; `actors.mjs` carries it out. Nothing loops on its own: every plan is a function of (resident state, hour, weather, seconds since the stay began).
+
+- **Café**: a customer takes a bench opposite someone already sitting if there is one, so friends chat across a table (talk/listen alternate); the keeper (Mrs Pott) brings a tray out a few seconds after somebody settles, sets the cups down (a small instanced "tableware" mesh) and goes back in; a seated resident sips from a cup in the hand. Benches are low and the thighs slope down to where the feet meet the ground (a child's feet dangle).
+- **Market**: when it is open a visitor picks a stall (stable for the visit, varying over days), approaches, browses, receives the goods from the vendor (who hands them over) and walks off holding a bag until they next go indoors.
+- **School**: at break (hours 9.4-10.1, 11.5-12.4, 14.3-15, fair weather) the two children play tag in the yard at a run while the teacher watches; Pepper the puppy play-bows when its owner is playing or chatting.
+- **Farm**: Farmer Hay scatters feed (the farmyard hens and chicks hurry over and peck round him) then leans on the paddock fence (two cows amble over and watch him). The six paddock animals keep apart (separation + choosing roomy patches).
+- **Work**: the baker sweeps his step, the toy shop keeper arranges her window, the mechanic hammers at the garage (a part of each half minute, in fair weather); the stationmaster waits on the platform and raises the signal flag when the train is standing.
+- **Doors**: a resident arriving at a door pauses to knock (homes, and the postie) or push the door (shops) before going in.
+- **Trains**: passengers waiting on a platform step aboard when the train takes them and appear stepping off it when it arrives.
+- **Props**: a shopping bag, a cup and the role's tool (broom, flag, tray, hammer, teddy) are part of each figure's mesh on bones `pBag pCup pTool` (scale ~0 when unused, counter-rotated to stay upright), so there are no extra draw calls.
+- **Camera**: the closest zoom is 3.2 (was 7). The card of a selected resident starts with what they are doing.
+- **Test hooks**: `play(seconds)` (simulation and animation in .1 s frames), `actors.stats()`, `actors.focus()`, `actors.tableware()`; `tests/toy-town-living.cjs` films a simulated day (frames in `visual-artifacts/living/`, desktop and phone).
+
 ## 5. Art rules
 
 - Fat, rounded, slightly wonky. No sharp corners: `bag.box` is a rounded box; roofs overhang.

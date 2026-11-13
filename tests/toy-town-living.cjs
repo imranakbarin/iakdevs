@@ -47,7 +47,8 @@ const HELPERS = async () => {
     await page.evaluate(() => { ToyTownNew.freeze(); ToyTownNew.sim.setEvents(false); ToyTownNew.setHour(6); ToyTownNew.setWeather('clear', 99999); window.__seen = {tableware: 0, bag: 0, pepper: 0, hensNear: 0, cowNear: 0}; });
     const filmed = {}, seen = {};
     const OPTIONAL = ['tinker', 'window'];   // (the mechanic and the toy shop keeper only work outside on some days)
-    for (let sec = 0; sec < 560 && Object.keys(WANT).filter(k => !OPTIONAL.includes(k)).some(k => !filmed[k]); sec++) {
+    const incomplete = async () => Object.keys(WANT).filter(k => !OPTIONAL.includes(k)).some(k => !filmed[k]) || await page.evaluate(() => { const s = ToyTownNew.actors.stats(); return !(s.alight >= 1 && s.service >= 1 && s.board >= 1 && s.play >= 1 && s.shop >= 1 && s.work >= 1 && s.cafe >= 1); });
+    for (let sec = 0; sec < 1100 && await incomplete(); sec++) {
       await page.evaluate(() => { ToyTownNew.play(1); const A = ToyTownNew.actors, W = ToyTownNew.wild, S = window.__seen; S.tableware = Math.max(S.tableware, A.tableware()); for (const a of A.actors.values()) { if (!a.vis) continue; const rig = a.w.userData.rig; if (a.hasBag && a.props.pBag && rig.scl[rig.index.pBag] === 1) S.bag++; if (a.plan && a.plan.kind === 'feed') { S.hensNear = Math.max(S.hensNear, W.hens.filter(h => h.g.visible && Math.hypot(h.w.x - a.x, h.w.z - a.z) < 1.1).length); } if (a.plan && a.plan.kind === 'tend') for (const c of ToyTownNew.critterList()) if (c.kind === 'cow' && Math.hypot(c.g.position.x - a.x, c.g.position.z - a.z) < 1.25) S.cowNear++; } const pep = W.pets.find(p => p.def.id === 'pepper'); if (pep && pep.bt && (pep.bt.mix.play || 0) > .6) S.pepper++; });
       for (const [name, cond] of Object.entries(WANT)) if (!filmed[name]) { const r = await film(page, 'd-' + name, cond.toString(), 6, .35, name === 'board' ? 4 : 3.6); if (r) { filmed[name] = r; } }
     }
