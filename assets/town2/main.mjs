@@ -25,6 +25,8 @@ import {COOP, PLOTS} from './garden.mjs';
 import {PETS} from './wildlife.mjs';
 import {createFestival} from './festscene.mjs';
 import {buildTownCharm, CAFE_SEATS} from './charm.mjs';
+import {createInteriorGallery, ROOMS, roomIds, supportsInterior} from './interiors.mjs';
+import {buildDistrictLife} from './districts.mjs';
 import {createActors} from './actors.mjs';
 import {setDetail} from './shapes.mjs';
 import {buildHorse, buildCow, buildSheep, buildDuck} from './animals.mjs';
@@ -62,6 +64,8 @@ const sound = createSound();
 scene.add(built.ground, built.sea, built.shallows, built.town, built.glow, built.lampGlow);
 // The magic pass is additive; all original buildings, paths, residents and interactions remain intact.
 const charm = buildTownCharm(built.material, season, lite); scene.add(charm);
+const districtLife = buildDistrictLife(season, lite); scene.add(districtLife.group);
+const gallery = createInteriorGallery();
 for (const m of Object.values(built.moving)) scene.add(m.group);
 const tufts = buildTufts(sim.graph); scene.add(tufts);
 const clouds = buildClouds(); scene.add(clouds);
@@ -137,6 +141,42 @@ function moveCritters(dt) {
 const CLOSEST = 3.2;   // how close the camera may come (close enough to see a face and a hand)
 const view = {x: 0, z: .4, yaw: 0, dist: 44, tx: 0, tz: .4, tyaw: 0, tdist: 44};
 const TILT = .66, clamp = (a, v, b) => Math.max(a, Math.min(b, v));
+const roomBar = document.getElementById('roomBar'), roomTitle = document.getElementById('roomTitle'), roomNote = document.getElementById('roomNote');
+let savedWorldView = null, roomMessageAt = -10;
+const sceneForRender = () => gallery.scene || scene;
+function refreshRoomLabel() {
+  const id = gallery.id; if (!id || !roomBar) return;
+  roomTitle.textContent = ROOMS[id].title;
+  const state = id === 'station' ? (sim.train.at ? 'Train at ' + sim.train.at : 'The railway is running')
+    : id === 'bakery' ? (sim.eco && sim.eco.pantry ? 'Pantry: ' + Math.floor(sim.eco.pantry.eggs) + ' eggs, ' + Math.floor(sim.eco.pantry.milk) + ' milk' : 'Freshly baked today')
+    : id === 'cafe' ? (sim.market.open ? 'The town is open for business' : 'A quiet hour for tea')
+    : sim.weekday < 5 && sim.hour >= 8 && sim.hour < 16 ? 'Lessons in progress' : 'The classroom is resting';
+  roomNote.textContent = ROOMS[id].subtitle + ' · ' + state;
+}
+function enterRoom(id) {
+  if (!supportsInterior(id) || sailing) return false;
+  if (!gallery.id) savedWorldView = {...view};
+  if (!gallery.open(id)) return false;
+  select(null); closePaper(); follow = null;
+  document.documentElement.classList.add('room-open');
+  if (roomBar) roomBar.hidden = false;
+  Object.assign(view, {x:0,z:0,yaw:0,dist:phone?16:12.5,tx:0,tz:0,tyaw:0,tdist:phone?16:12.5});
+  refreshRoomLabel(); roomMessageAt = -10; placeCamera(); renderer.render(sceneForRender(),camera); return true;
+}
+function leaveRoom() {
+  if (!gallery.id) return;
+  gallery.close(); document.documentElement.classList.remove('room-open');
+  if (roomBar) roomBar.hidden = true;
+  if (savedWorldView) Object.assign(view,savedWorldView);
+  savedWorldView = null; follow = null; placeCamera(); renderer.render(scene,camera);
+}
+if (roomBar) {
+  const exit = document.getElementById('roomExit'), next = document.getElementById('roomNext');
+  if (exit) exit.addEventListener('click',leaveRoom);
+  if (next) next.addEventListener('click',()=>{const index=roomIds.indexOf(gallery.id);enterRoom(roomIds[(index+1)%roomIds.length]);});
+}
+addEventListener('keydown',e=>{if(e.key==='Escape'&&gallery.id){leaveRoom();e.preventDefault();}});
+
 function fit() { const a = innerWidth / innerHeight; view.tdist = view.dist = clamp(34, a > 1.5 ? 43 : 43 * 1.5 / a, 92); }
 function resize() { renderer.setSize(innerWidth, innerHeight, false); camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix(); }
 function placeCamera() {
@@ -169,7 +209,7 @@ addEventListener('keydown', e => { const k = e.key.toLowerCase(); if (k === 'q')
 addEventListener('resize', () => { resize(); });
 
 /* ---- tap to inspect: a resident, vehicle, animal, the train or a building: a ring, a card, and the camera follows what moves ---- */
-const cardEl = document.getElementById('card'), ring = new THREE.Mesh(new THREE.TorusGeometry(.3, .035, 8, 28).rotateX(Math.PI / 2), new THREE.MeshBasicMaterial({color: '#ffd54a', transparent: true, opacity: .95, depthTest: false}));
+const cardEl = document.getElementById('card'), insideBtn = document.getElementById('insideBtn'), ring = new THREE.Mesh(new THREE.TorusGeometry(.3, .035, 8, 28).rotateX(Math.PI / 2), new THREE.MeshBasicMaterial({color: '#ffd54a', transparent: true, opacity: .95, depthTest: false}));
 ring.renderOrder = 4; ring.visible = false; scene.add(ring);
 // The default highlight is a small bobbing pin above what you tapped (the ring on the ground is still there as an option, or none at all).
 const pin = new THREE.Group(); { const m = new THREE.MeshBasicMaterial({color: '#ffd54a'}), tip = new THREE.Mesh(new THREE.ConeGeometry(.1, .24, 12).rotateX(Math.PI), m), top = new THREE.Mesh(new THREE.SphereGeometry(.085, 12, 8), new THREE.MeshBasicMaterial({color: '#ffffff'})); tip.position.y = .12; top.position.y = .3; pin.add(tip, top); pin.visible = false; pin.traverse(o => { o.renderOrder = 4; }); scene.add(pin); }
@@ -197,8 +237,8 @@ function select(o) {
   if (o && o.kind === 'resident') { sim.note('tap', o.id); guideStep('tap'); }
   sel = o; follow = o && o.kind !== 'building' ? o : null; cardAt = 0; cardText = '';
   const h = document.getElementById('hint'); if (h && o) h.style.opacity = '0'; if (o) sound.blip();
-  if (!o) { ring.visible = false; pin.visible = false; if (paperMode === 'journal') closePaper(); if (cardEl) cardEl.classList.remove('on'); if (sendBtn) sendBtn.hidden = true; return; }
-  ring.scale.setScalar(RING[o.kind]); refreshCard(); if (sendBtn) sendBtn.hidden = !(o.kind === 'building' && BUILDINGS.find(b => b.id === o.id).door > 0); if (journalBtn) { journalBtn.hidden = o.kind !== 'resident'; if (paperMode === 'journal' && o.kind === 'resident') renderPaper(); }
+  if (!o) { ring.visible = false; pin.visible = false; if (paperMode === 'journal') closePaper(); if (cardEl) cardEl.classList.remove('on'); if (sendBtn) sendBtn.hidden = true; if (insideBtn) insideBtn.hidden = true; return; }
+  ring.scale.setScalar(RING[o.kind]); if (insideBtn) insideBtn.hidden = !(o.kind === 'building' && supportsInterior(o.id)); refreshCard(); if (sendBtn) sendBtn.hidden = !(o.kind === 'building' && BUILDINGS.find(b => b.id === o.id).door > 0); if (journalBtn) { journalBtn.hidden = o.kind !== 'resident'; if (paperMode === 'journal' && o.kind === 'resident') renderPaper(); }
 }
 function refreshCard() {
   if (!sel || !cardEl) return; if (fishBtn) fishBtn.hidden = !(sel.kind === 'resident' && isFishing(sel.id)); if (sailBtn) sailBtn.hidden = !(sel.kind === 'animal' && critters[sel.id] && critters[sel.id].boat && !sailing); const d = describe(sel), p = posOf(sel), gone = !p && sel.kind === 'resident';
@@ -224,6 +264,7 @@ function pick(cx, cy) {
 const sailBtn = cardEl && cardEl.querySelector('#sailBtn'), fishBtn = cardEl && cardEl.querySelector('#fishBtn'), sendBtn = cardEl && cardEl.querySelector('#send'), toastEl = document.getElementById('toast'); let assigning = null, toastAt = 0;
 function toast(text, secs = 4) { if (!toastEl) return; toastEl.textContent = text; toastEl.classList.add('on'); toastAt = secs; }
 function tap(cx, cy) {
+  if (gallery.id) return; // never pick invisible residents while inside a room
   if (sailing) { const r = canvas.getBoundingClientRect(); camera.updateMatrixWorld(); ray.setFromCamera({x: ((cx - r.left) / r.width) * 2 - 1, y: -((cy - r.top) / r.height) * 2 + 1}, camera); const wp = new THREE.Plane(new THREE.Vector3(0, 1, 0), -ISLAND.sea), hit = ray.ray.intersectPlane(wp, new THREE.Vector3()); if (hit) sailing.target = {x: hit.x, z: hit.z}; return; }
   const o = pick(cx, cy);
   if (assigning) {
@@ -235,6 +276,7 @@ function tap(cx, cy) {
   select(o && sel && o.kind === sel.kind && o.id === sel.id && o.kind === 'building' ? null : o);
   if (o && o.kind === 'building' && sim.hunt.active) { const r = sim.huntTap(o.id); if (r.kind === 'next') { toast('A mark! Clue ' + (r.step + 1) + ' of ' + r.of + ': ' + r.clue.text, 7); sound.blip(); if (paperMode === 'nature') renderPaper(); } else if (r.kind === 'done') { toast('The dwarfs\' treasure! ' + r.reward + ' coins for the town chest.', 6); sound.blip(); if (paperMode === 'nature') renderPaper(); } else if (r.kind === 'wrong') toast('Not the place the riddle means.', 2); }
 }
+if (insideBtn) insideBtn.addEventListener('click', () => { if (sel && sel.kind === 'building') enterRoom(sel.id); });
 if (sendBtn) sendBtn.addEventListener('click', () => { if (sel && sel.kind === 'building') { assigning = sel.id; toast('Now tap the building the parcel should go to (or tap anywhere else to cancel).', 8); } });
 addEventListener('keydown', e => { if (e.key === 'Escape' && assigning) { assigning = null; toast('No parcel sent.', 2); } });
 // Tracking a parcel you sent: where it is now, and a note when it arrives.
@@ -249,7 +291,7 @@ function refreshTrack() {
 }
 // Photo mode: a picture of what you are looking at, in a frame with a caption, to save or share.
 let photoRaw = null, photoStyle = 'postcard', photoCaption = '';
-function grabPhoto() { renderer.render(scene, camera); const c = document.createElement('canvas'); c.width = canvas.width; c.height = canvas.height; c.getContext('2d').drawImage(canvas, 0, 0); photoRaw = c; photoCaption = (sim.story.current && sim.story.current.title) || sim.paper('today').headline; }
+function grabPhoto() { renderer.render(sceneForRender(), camera); const c = document.createElement('canvas'); c.width = canvas.width; c.height = canvas.height; c.getContext('2d').drawImage(canvas, 0, 0); photoRaw = c; photoCaption = (sim.story.current && sim.story.current.title) || sim.paper('today').headline; }
 function composePhoto() {
   const w = photoRaw.width, h = photoRaw.height, st = photoStyle, pad = st === 'plain' ? 0 : Math.round(w * .035), bottom = st === 'polaroid' ? Math.round(w * .15) : st === 'postcard' ? Math.round(w * .08) : 0, out = document.createElement('canvas'); out.width = w + pad * 2; out.height = h + pad + Math.max(pad, bottom);
   const g = out.getContext('2d'); g.fillStyle = st === 'polaroid' ? '#ffffff' : '#fff6e2'; g.fillRect(0, 0, out.width, out.height); g.drawImage(photoRaw, pad, pad);
@@ -486,7 +528,11 @@ function sync(dt) {
   const k = Math.min(1, dt * 6); view.x += (view.tx - view.x) * k; view.z += (view.tz - view.z) * k; view.yaw += (view.tyaw - view.yaw) * k; view.dist += (view.tdist - view.dist) * k;
   if (toastAt > 0 && (toastAt -= dt) <= 0 && toastEl) toastEl.classList.remove('on');
   if ((jobsAt -= dt) <= 0) { jobsAt = .5; refreshJobs(); }
-  fishTick(); sailTick(dt); trackSelection(dt); placeCamera(); weatherLight(); news(); caption();
+  fishTick(); sailTick(dt); trackSelection(dt); placeCamera(); weatherLight();
+  districtLife.update({flowers: sim.eco.flowers, delivered: sim.freightStats.delivered, marketOpen: sim.market.open});
+  gallery.update(dt,{hour:sim.hour,rain:sim.weather.rain,delivered:sim.freightStats.delivered,marketOpen:sim.market.open});
+  if (gallery.id && time-roomMessageAt > 2) {roomMessageAt=time;refreshRoomLabel();}
+  news(); caption();
 }
 // A phone pass: if frames run slow (under ~24 fps for two seconds) the render resolution steps down, and creeps back up when there is room.
 const maxPR = lite ? litePR : Math.min(devicePixelRatio || 1, phone ? 1.5 : 2); let slow = 0, fast = 0, spent = 0, frames = 0;
@@ -521,7 +567,7 @@ function frame(t) {
   const dt = Math.min(.05, last ? (t - last) / 1000 : 0); last = t;
   if (frozen || document.hidden) return;
   const n = stepsFor(dt, settings.speed); for (let i = 0; i < n; i++) sim.update(dt * settings.speed / n);
-  sync(dt); renderer.render(scene, camera); tune(dt); if (window.__dbg) window.__dbg(dt);
+  sync(dt); renderer.render(sceneForRender(), camera); tune(dt); if (window.__dbg) window.__dbg(dt);
 }
 resize(); fit(); placeCamera(); requestAnimationFrame(frame);
 const hint = document.getElementById('hint'); if (hint) setTimeout(() => { hint.style.opacity = '0'; }, 6000);
@@ -552,11 +598,12 @@ document.addEventListener('visibilitychange', () => sound.pause(document.hidden)
 window.ToyTownNew = {
   lite,
   sim, scene, camera, renderer, view, season, sound,
-  hour: () => sim.hour, setHour(h) { sim.setHour(h); sync(0); renderer.render(scene, camera); },
+  hour: () => sim.hour, setHour(h) { sim.setHour(h); sync(0); renderer.render(sceneForRender(), camera); },
+  explore: enterRoom, exitInterior: leaveRoom, interior: () => gallery.stats(), interiorRooms: roomIds, districts: () => districtLife.stats(),
   info: () => ({market: sim.market.open, marketVisits: sim.market.visits, delivered: sim.freightStats.delivered, cargoNow: sim.cargo.length, riders: sim.riders.length, trainLaps: sim.train.laps, trainStops: sim.train.stopsMade, lampsLit: sim.lamps.filter(l => l.on).length, wet: +sim.weather.wet.toFixed(2), season, pixelRatio: renderer.getPixelRatio(), story: sim.story.current && sim.story.current.id, rain: +sim.weather.rain.toFixed(2), calls: renderer.info.render.calls, triangles: renderer.info.render.triangles, residentsOut: sim.residents.filter(r => r.state === 'walking').length, clock: sim.clock}),
-  look(x, z, dist, yaw = 0) { Object.assign(view, {x, z, dist, yaw, tx: x, tz: z, tdist: dist, tyaw: yaw}); placeCamera(); renderer.render(scene, camera); },
-  play(seconds, quick = true) { for (let t = 0; t < seconds - 1e-9; t += .1) { sim.update(.1); sync(.1); } if (!quick) renderer.render(scene, camera); },   // (the town for real: the simulation and the animation in .1 s frames, for tests)
-  advance(seconds, quick) { for (let t = 0; t < seconds; t += .05) sim.update(.05); sync(0); if (!quick) renderer.render(scene, camera); },   // (quick: no picture; a test that steps in a loop should not queue hundreds of frames for the software renderer)
+  look(x, z, dist, yaw = 0) { Object.assign(view, {x, z, dist, yaw, tx: x, tz: z, tdist: dist, tyaw: yaw}); placeCamera(); renderer.render(sceneForRender(), camera); },
+  play(seconds, quick = true) { for (let t = 0; t < seconds - 1e-9; t += .1) { sim.update(.1); sync(.1); } if (!quick) renderer.render(sceneForRender(), camera); },   // (the town for real: the simulation and the animation in .1 s frames, for tests)
+  advance(seconds, quick) { for (let t = 0; t < seconds; t += .05) sim.update(.05); sync(0); if (!quick) renderer.render(sceneForRender(), camera); },   // (quick: no picture; a test that steps in a loop should not queue hundreds of frames for the software renderer)
   trainPos: () => trainCars[0].position, selected: () => sel, tapAt: (cx, cy) => tap(cx, cy), select, sendParcel: (a, b) => sim.sendParcel(a, b), jobsText: () => jobsText, trackText: () => (trackEl ? trackEl.textContent : ''), trackState: () => ({tracked, trackAt, el: !!trackEl}),
   project(x, z, y = .4) { const r = canvas.getBoundingClientRect(); camera.updateMatrixWorld(); v3.set(x, heightAt(x, z) + y, z).project(camera); return [(v3.x * .5 + .5) * r.width + r.left, (-v3.y * .5 + .5) * r.height + r.top]; },
   setWeather(kind, seconds = 600) { sim.weather.force(kind, seconds); },
