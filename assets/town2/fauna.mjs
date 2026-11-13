@@ -26,9 +26,9 @@ export function stepGrazer(s, dt, c) {
   // a new patch of grass: of a few tries, the one with the most room round it
   const target = () => { let best = null, bd = -1; for (let k = 0; k < 10; k++) { const x = B.x0 + m + c.rnd() * (B.x1 - B.x0 - 2 * m), z = B.z0 + m + c.rnd() * (B.z1 - B.z0 - 2 * m), d = Math.min(nearest(x, z), 3) + (Math.hypot(x - s.x, z - s.z) > .5 ? .3 : 0); if (d > bd) { bd = d; best = [x, z]; } } s.tx = best[0]; s.tz = best[1]; };
   s.speed = 0;
-  if (c.attract && s.mode !== 'lie' && !night) {   // somebody is at the fence: a curious animal ambles over and watches them
+  if (c.attract && !night) {   // somebody is at the fence: a curious animal gets up if need be, ambles over and watches them
     const tx = clamp(B.x0 + m, c.attract.x, B.x1 - m), tz = clamp(B.z0 + m, c.attract.z, B.z1 - m), off = (s.seed % 3 - 1) * .5, gx = tx + (Math.abs(c.attract.z - tz) > Math.abs(c.attract.x - tx) ? off : 0), gz = tz + (Math.abs(c.attract.z - tz) > Math.abs(c.attract.x - tx) ? 0 : off), dx = gx - s.x, dz = gz - s.z, d = Math.hypot(dx, dz);
-    if (d > .12) { s.mode = 'walk'; const st = Math.min(d, c.speed * dt); s.x += dx / d * st; s.z += dz / d * st; s.speed = c.speed; s.hd = turnToward(s.hd, Math.atan2(dx, dz), dt, 2.2, 3); } else { s.mode = 'look'; s.left = 2; s.hd = turnToward(s.hd, Math.atan2(c.attract.x - s.x, c.attract.z - s.z), dt, 2, 3); }
+    if (d > .12) { s.mode = 'walk'; const st = Math.min(d, c.speed * 1.6 * dt); s.x += dx / d * st; s.z += dz / d * st; s.speed = c.speed; s.hd = turnToward(s.hd, Math.atan2(dx, dz), dt, 2.2, 3); } else { s.mode = 'look'; s.left = 2; s.hd = turnToward(s.hd, Math.atan2(c.attract.x - s.x, c.attract.z - s.z), dt, 2, 3); }
     return separate(s, others, minD, dt, B, m);
   }
   if (s.mode === 'lie') { if (s.left <= 0 && !night) go('look'); return separate(s, others, minD, dt, B, m); }
