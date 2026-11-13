@@ -82,7 +82,7 @@ export function createActors({scene, sim, season, rods, marketDef, seats = () =>
         a.plan = {kind: 'cafe', x: s.x, z: s.z, yaw: s.yaw, speed: .5, modes, props: {}, sit: true, text: partner ? 'Chatting over tea at the café' : 'Sitting outside the café with a cup of tea'};
       } else if (a.role === 'cafe' && r.at === 'cafe' && r.state === 'inside') {
         for (const o of seatOcc) { const sp = servicePlan(r, ctxBase, all[slotOf.get(o.id)], o.seatT); if (sp) { a.plan = {...sp, walkModes: {serve: 1}}; break; } }
-      } else a.plan = planFor(r, a.role, E, ctxBase, a.stayT);
+      } else a.plan = lite ? null : planFor(r, a.role, E, ctxBase, a.stayT);   // (the light version for TVs only shows residents walking: every figure is a draw call)
       const kind = a.plan ? a.plan.kind : null; if (kind !== a.planKind) { if (kind) count(kind); a.planKind = kind; }
     }
     // the market: a vendor hands over the goods while a shopper is paying
@@ -93,7 +93,7 @@ export function createActors({scene, sim, season, rods, marketDef, seats = () =>
       const r = a.r, w = a.w, plan = a.plan, walking = r.state === 'walking', onPierR = r.at === 'pier' && r.state === 'inside';
       const bld = r.state === 'inside' ? building(r.at) : null, shopDoor = bld && bld.door > 0;
       // arrivals and departures that need a moment on stage: the knock at a door, boarding a train
-      if (a.vis) {
+      if (a.vis && !lite) {
         if (r.state === 'inside' && !plan && a.prevWalking && !r.onPlatform && shopDoor) { a.phase = 'door'; a.doorT = 0; count('door'); }
         else if (r.state === 'inside' && !plan && a.wasPlan && !r.onPlatform && shopDoor) a.phase = 'return';
         else if (r.state === 'riding' && a.prevState !== 'riding' && trainDoor()) { a.phase = 'board'; a.doorT = 0; count('board'); }

@@ -38,7 +38,9 @@ export function stepGrazer(s, dt, c) {
     if (d < .08 || s.left <= 0) go('graze'); else { const st = Math.min(d, c.speed * dt); s.x += dx / d * st; s.z += dz / d * st; s.speed = c.speed; s.hd = turnToward(s.hd, Math.atan2(dx, dz), dt, 2.2, 3); }
   } else if (s.mode === 'graze') {
     const nx = s.x + Math.sin(s.hd) * c.creep * dt, nz = s.z + Math.cos(s.hd) * c.creep * dt;
-    if (inside(nx, nz) && nearest(nx, nz) > minD * .9) { s.x = nx; s.z = nz; s.speed = c.creep; } else { go('walk'); target(); }   // (crowded or at the fence: wander off to somewhere roomier)
+    if (!inside(nx, nz)) { go('walk'); target(); }   // (at the fence: wander off along it)
+    else if (nearest(nx, nz) > minD * .9) { s.x = nx; s.z = nz; s.speed = c.creep; }
+    else s.left = Math.min(s.left, 2.5);   // (crowded: stop creeping and soon wander to somewhere roomier; the others' spacing eases them apart)
     if (s.left <= 0) { const nx2 = pickWeighted([['walk', 3], ['look', 2], ['graze', 3], ['lie', night || c.hour > 12 && c.hour < 16 ? 2 : .5]], c.rnd()); go(nx2); if (nx2 === 'walk') target(); }
   } else if (s.mode === 'look') { if (s.left <= 0) { const n = pickWeighted([['graze', 5], ['walk', 2]], c.rnd()); go(n); if (n === 'walk') target(); } }
   return separate(s, others, minD, dt, B, m);
