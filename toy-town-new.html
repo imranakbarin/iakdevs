@@ -44,6 +44,8 @@ html.ui-off #goal,html.ui-off #guideTip{display:none}
 #set{position:fixed;right:calc(12px + env(safe-area-inset-right,0px));top:calc(54px + env(safe-area-inset-top,0px));width:34px;height:34px;border:0;border-radius:50%;background:var(--paper);font-size:17px;line-height:1;cursor:pointer;padding:0}
 #panel,#paper{position:fixed;right:calc(12px + env(safe-area-inset-right,0px));top:calc(180px + env(safe-area-inset-top,0px));width:min(290px,calc(100vw - 24px));padding:10px 12px 12px;border-radius:14px;background:var(--paper);font:400 13px/1.35 Nunito,system-ui,sans-serif;color:#3c4654;opacity:0;pointer-events:none;transition:opacity .2s}
 #panel.on,#paper.on{opacity:1;pointer-events:auto}
+/* Keep the enlarged building card clear of the settings sheet on a phone. */
+#panel.on ~ #card{display:none}
 #panel,#paper{z-index:5}
 #panel{max-height:calc(100vh - 190px);overflow:auto}
 #paperBtn,#photoBtn{position:fixed;right:calc(12px + env(safe-area-inset-right,0px));top:calc(96px + env(safe-area-inset-top,0px));width:34px;height:34px;border:0;border-radius:50%;background:var(--paper);font-size:17px;line-height:1;cursor:pointer;padding:0}
