@@ -24,6 +24,26 @@ const shot2 = (pg, name) => pg.screenshot({path: path.join(out, `new-town-${name
     const views = [['wide', 0, .4, 46, 0], ['square', 0, .3, 14, .5], ['high-street', 7.4, -.6, 13, .2], ['cottage-lane', -7.6, -.4, 13, -.3], ['station', -1, 11.5, 11, 0], ['windmill', 2.6, -9.2, 10, .7], ['harbour', 15, 2.3, 12, .6], ['behind', 0, .4, 46, 2.4]];
     for (const [name, x, z, d, yaw] of views) { await page.evaluate(([x, z, d, y]) => ToyTownNew.look(x, z, d, y), [x, z, d, yaw]); await page.screenshot({path: path.join(out, `new-town-${name}.png`)}); }
     await page.evaluate(() => ToyTownNew.look(0, .4, 46, 0));
+    // Four real WebGL interiors, exposed through the building card. The world camera must be restored.
+    { const original = await page.evaluate(() => ({...ToyTownNew.view}));
+      const opened = await page.evaluate(() => {ToyTownNew.select({kind:'building',id:'bakery'});
+        const shown = !document.getElementById('insideBtn').hidden;
+        document.getElementById('insideBtn').click();
+        return {shown,info:ToyTownNew.interior(),bar:!document.getElementById('roomBar').hidden};});
+      assert.ok(opened.shown && opened.bar && opened.info.id === 'bakery' && opened.info.actorCount === 2,'a selected bakery opens a populated cutaway ('+JSON.stringify(opened)+')');
+      const proofs = {};
+      for (const id of ['bakery','cafe','school','station']) {
+        proofs[id] = await page.evaluate(id => {ToyTownNew.explore(id);ToyTownNew.advance(.2);return {
+          ...ToyTownNew.interior(),calls:ToyTownNew.renderer.info.render.calls,triangles:ToyTownNew.renderer.info.render.triangles,
+          title:document.getElementById('roomTitle').textContent};},id);
+        assert.ok(proofs[id].id===id && proofs[id].hasScene && proofs[id].actorCount===2 && proofs[id].calls < 12 && proofs[id].triangles < 120000,'interior drawn cleanly under budget ('+JSON.stringify(proofs[id])+')');
+        await shot2(page,'inside-'+id);
+      }
+      const next = await page.evaluate(() => {document.getElementById('roomNext').click();return ToyTownNew.interior().id;});
+      assert.equal(next,'bakery','the next-room control cycles across all four scenes');
+      const restored = await page.evaluate(() => {document.getElementById('roomExit').click();return {...ToyTownNew.view,inside:ToyTownNew.interior().id,hidden:document.getElementById('roomBar').hidden};});
+      assert.ok(!restored.inside && restored.hidden && ['x','z','dist','yaw','tx','tz','tdist','tyaw'].every(k=>Math.abs(restored[k]-original[k])<1e-6),'returning from the cutaway restores the same town viewpoint');
+    }
     { const h = await page.evaluate(() => { ToyTownNew.setHour(15.5); ToyTownNew.advance(.05); const m = ToyTownNew.moving; return {hour: ToyTownNew.sim.hour, min: m.minute.inner.rotation.z, hr: m.hour.inner.rotation.z, smin: m.stMinute.inner.rotation.z, shr: m.stHour.inner.rotation.z}; });
       const tm = (-h.min / (Math.PI * 2) + 1) % 1, th = (-h.hr / (Math.PI * 2) * 12 + 12) % 12; assert.ok(Math.abs(tm - (h.hour % 1)) < .02 && Math.abs(th - (h.hour % 12)) < .1 && h.smin === h.min && h.shr === h.hr, 'the tower clock and the station clock show the town hour (' + JSON.stringify(h) + ')'); }
     { const r = await page.evaluate(async () => { ToyTownNew.setHour(10.5); for (let i = 0; i < 60 && !ToyTownNew.sim.story.current; i++) ToyTownNew.advance(5, true); ToyTownNew.advance(8, true); const el = document.getElementById('story'); if (!ToyTownNew.sim.story.current || ToyTownNew.sim.story.current.id === 'incident') return {none: true}; ToyTownNew.select(null); el.click(); return {sel: ToyTownNew.selected(), on: el.classList.contains('on')}; });
@@ -86,6 +106,12 @@ const shot2 = (pg, name) => pg.screenshot({path: path.join(out, `new-town-${name
     { const {devices} = require('playwright'), ctx = await browser.newContext({...devices['iPhone 13']}), mp = await ctx.newPage(); mp.on('pageerror', e => errors.push('phone: ' + e.message));
       if (process.env.THREE_LOCAL) await mp.route('https://cdn.jsdelivr.net/npm/three@0.187.0/**', r => r.fulfill({path: path.join(process.env.THREE_LOCAL, r.request().url().split('three@0.187.0/')[1]), contentType: 'text/javascript'}));
       await mp.goto(`http://127.0.0.1:${port}/toy-town-new.html?news=0`); await mp.waitForFunction(() => !!window.ToyTownNew, null, {timeout: 60000});
+      // Cutaway fits a narrow screen and can be closed by a finger.
+      { const room = await mp.evaluate(() => {ToyTownNew.explore('cafe');ToyTownNew.advance(.1);const r=document.getElementById('roomBar').getBoundingClientRect();
+          return {id:ToyTownNew.interior().id,left:r.left,right:r.right,w:innerWidth,top:r.top,visible:!document.getElementById('roomBar').hidden};});
+        assert.ok(room.id==='cafe' && room.visible && room.left>=-1 && room.right<=room.w+1 && room.top>=0,'interior navigation fits an iPhone viewport ('+JSON.stringify(room)+')');
+        await shot2(mp,'inside-cafe-phone');await mp.click('#roomExit');
+        assert.equal(await mp.evaluate(()=>ToyTownNew.interior().id),null,'a finger returns from the interior'); }
       await mp.evaluate(() => { ToyTownNew.freeze(); ToyTownNew.setHour(10); ToyTownNew.advance(30); const a = ToyTownNew.sim.graph.doors.cafe, b = ToyTownNew.sim.graph.doors.bakery; ToyTownNew.look((a.x + b.x) / 2, (a.z + b.z) / 2, 27, .2); });
       const proj = id => mp.evaluate(id => { const d = ToyTownNew.sim.graph.doors[id]; return ToyTownNew.project(d.x, d.z, .5); }, id);
       for (const id of ['cafe', 'bakery']) { const [px, py] = await proj(id); assert.ok(px > 0 && px < 390 && py > 0 && py < 664, id + ' is on the phone screen (' + px + ',' + py + ')'); }
