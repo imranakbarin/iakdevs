@@ -492,7 +492,7 @@ function weatherLight() {
 }
 let lastDt = 0;
 function sync(dt) {
-  time += dt; lastDt = dt; marketGoods.visible = sim.market.open; U.time.value = time; windNow = wind(time); U.wind.value.set(windNow.x, windNow.z);
+  time += dt; lastDt = dt; marketGoods.visible = sim.market.open; U.time.value = time; windNow = wind(time); { const breeze = sim.weather.rain > .55 ? .85 : .55; U.wind.value.set(windNow.x*breeze, windNow.z*breeze); }
   sim.train.stations.forEach((st, i) => signals.userData.set(i, sim.signalFor(st.id) === 'red'));
   actors.update(dt, time, {rain: sim.weather.rain, season, hour: sim.hour});
   for (const [id, rod] of rods) { const r = sim.residents.find(x => x.id === id); if (!rod.visible) continue;   // the float bobs, a catch makes it duck and the ripples spread
@@ -527,12 +527,12 @@ function sync(dt) {
   built.moving.top.inner.rotation.y = time * 2.2; built.moving.sails.inner.rotation.z = -time * .55;
   if (time - goalAt > 1) { goalAt = time; renderGoal(); }
   built.moving.minute.inner.rotation.z = -(sim.hour % 1) * Math.PI * 2; built.moving.hour.inner.rotation.z = -(sim.hour % 12) / 12 * Math.PI * 2; if (built.moving.stMinute) { built.moving.stMinute.inner.rotation.z = built.moving.minute.inner.rotation.z; built.moving.stHour.inner.rotation.z = built.moving.hour.inner.rotation.z; }   // (the tower clock tells the town's own time, the same hour the timetable and the paper use)
-  clouds.rotation.y = time * .012;
+  clouds.rotation.y = time * .005;   // a slow-moving sky, not another constantly rotating object
   const k = Math.min(1, dt * 6); view.x += (view.tx - view.x) * k; view.z += (view.tz - view.z) * k; view.yaw += (view.tyaw - view.yaw) * k; view.dist += (view.tdist - view.dist) * k;
   if (toastAt > 0 && (toastAt -= dt) <= 0 && toastEl) toastEl.classList.remove('on');
   if ((jobsAt -= dt) <= 0) { jobsAt = .5; refreshJobs(); }
   fishTick(); sailTick(dt); trackSelection(dt); placeCamera(); weatherLight();
-  districtLife.update({flowers: sim.eco.flowers, delivered: sim.freightStats.delivered, marketOpen: sim.market.open});
+  districtLife.update({flowers: sim.eco.flowers, delivered: sim.freightStats.delivered, marketOpen: sim.market.open, dist: view.dist});
   gallery.update(dt,roomContext());
   if (gallery.id && time-roomMessageAt > 2) {roomMessageAt=time;refreshRoomLabel();}
   news(); caption();

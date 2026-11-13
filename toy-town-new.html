@@ -107,6 +107,15 @@ html.room-open #chip,html.room-open #stack,html.room-open #story,html.room-open 
 #roomVeil.play{animation:roomDoorway .55s ease-out both}
 @keyframes roomDoorway{0%{opacity:0}20%{opacity:.94}52%{opacity:.78}100%{opacity:0}}
 @media(prefers-reduced-motion:reduce){#roomVeil.play{animation:none}}
+/* Quiet overview: navigation recedes so the miniature town owns the canvas. */
+#chip{background:rgba(250,248,242,.78);border-radius:12px;padding:5px 10px;font-size:12px}
+#goal{background:rgba(250,248,242,.73);font-weight:600}
+#jobs{background:rgba(250,248,242,.65);font-size:10px}
+#hint{background:rgba(250,248,242,.60);font-size:11px;opacity:.72}
+#snd,#set,#paperBtn,#photoBtn{background:rgba(250,248,242,.76);opacity:.76}
+#snd:hover,#set:hover,#paperBtn:hover,#photoBtn:hover,#snd:focus-visible,#set:focus-visible,#paperBtn:focus-visible,#photoBtn:focus-visible{opacity:1}
+@media(pointer:coarse){#snd,#set,#paperBtn,#photoBtn{opacity:.9}}
+
 
 #dbg{position:fixed;left:calc(8px + env(safe-area-inset-left,0px));bottom:calc(8px + env(safe-area-inset-bottom,0px));padding:3px 8px;border-radius:8px;background:rgba(0,0,0,.6);color:#fff;font:600 11px/1.3 ui-monospace,Menlo,Consolas,monospace;pointer-events:none;z-index:9}
 html.ui-off #stack,html.ui-off #jobs,html.ui-off #toast,html.ui-off #snd,html.ui-off #chip,html.ui-off #hint,html.ui-off #story,html.ui-off #card{display:none}

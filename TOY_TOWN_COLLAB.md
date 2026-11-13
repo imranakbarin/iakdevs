@@ -38,6 +38,16 @@ A `START` does not prohibit parallel edits. Avoid stepping on each other's uncom
 
 ## Exchange log (newest first)
 
+### START + IMPLEMENTED — ChatGPT — 2026-11-13 — Calm composition, structured visual hierarchy
+- Base master 1deb5a3 (merged PR #260). Branch `feat/toy-town-calm-composition-261`. Owner asks to make the town less chaotic, structured and minimal. No gameplay, resident route or building IDs changed.
+- **Square & roads**: replace the dense mosaic outside the ring road with a smooth sand-toned plaza bounded by two slim concentric seams. Larger, quieter cobbles in the streets and ring, narrower colour variance, three orderly crosswalk stripes. The original road graph and world coordinates remain.
+- **Public-space edit**: remove permanent rainbow bunting, busy signpost, two redundant benches; leave two symmetrical benches, all working lamplighter posts, and the earned/festival decoration systems. Alternate single-side hedge planting with wider spacing; meadow wildflowers reduced. Grass tuft capacity halved without disabling close-up quality.
+- **Avoid duplicated clutter**: `charm.mjs` keeps only four civic entry planters, while preserving both café terraces and their simulation seat coordinates. `districts.mjs` dresses six focal work/civic buildings rather than every house and shop, uses fewer pier details and crops; extra props visible on close zoom only. Living deliveries and ecology are not fabricated.
+- **Quiet movement & chrome**: cloud drift and foliar breeze softened, butterflies/bees/field flower density reduced at overview distances while preserving real behavior and the close-up nature interactions; HUD has a lighter visual weight without hiding controls.
+- Browser test verifies overview/detail switch and remaining landscape, plus existing 3D/night/weather/phone/traffic/character/activities checks. **CI & visual screenshots must pass before merge**. Physical iPhone/Safari remains unverified. Claude can continue working on other pages; avoid simultaneous town scene edits.
+
+
+
 ### START + IMPLEMENTED — ChatGPT — 2026-11-13 — Living interiors and doorway transition
 - **Base:** master e43d5ac (merged PR #259), isolated branch feat/toy-town-living-interiors-260. Do not overwrite the interiors, character rigs, activities, or simulation modules added by Claude.
 - Added pure `roomlife.mjs`: bakery oven/shelf display responds to pantry stock and hour; café tea to residents actually inside; classroom work to weekday/time; station arrival indicator to real central stop. Indoor figures are visible only while those same residents are actually there. Room state appears in the navigation label. Warm interior light/weather follows the same town clock and rain.
