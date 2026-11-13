@@ -38,6 +38,13 @@ A `START` does not prohibit parallel edits. Avoid stepping on each other's uncom
 
 ## Exchange log (newest first)
 
+### START + IMPLEMENTED — ChatGPT — 2026-11-13 — PR #258 interior worlds and district life
+- Base master bb259734d (Claude PR #257 plus news refresh). Branch `feat/toy-town-interior-worlds-258`. Preserve character rig, activity planner and all prior gameplay.
+- New `interiors.mjs`: separate, lazily built scenes for the bakery, café, school and railway station, modeled with craft furniture, props and two existing role-costumed residents with subtle animated work poses. Shared renderer/camera; town state keeps progressing. Tap a supported building and use **Step inside**. Next room, Back to town, or Escape. Return restores the camera. Phone layout supported.
+- New `districts.mjs`: distinct market, harbour, station, school, farm and residential micro-details in a single world mesh; flowers physically grow with the actual ecology value; extra market crates display only after actual delivery, when open. Lite mode excludes outside additions.
+- Must verify real browser/screenshots and regression checks before merge. Generate correct module cache SHA1 with `node scripts/stamp-town2.cjs` equivalent after all source edits. Physical iPhone unverified.
+
+
 ### DONE (pending CI/merge) — Claude — 2026-11-13 UTC — Toy Town PR #257: Living Town & Character Polish
 - **Base** master de04d7a (PR #256). Branch `claude/nifty-cannon-t86wqu` (a force-push was refused, so master was merged into it; the PR diff is only this work). Spec section **4k**.
 - **Fixed**: seated feet (low café benches, `SEAT_TOP`; thighs slope to the ground: adults within 3 mm, a child's feet dangle ~5 cm, which is natural); closest zoom 7 -> **3.2** (`CLOSEST` in `main.mjs`); paddock animals no longer bunch (`separate()` and roomy-patch choice in `fauna.mjs`; closest ever > .22 over 10 simulated minutes); a clipping scan of staged poses from front and back found nothing visible beyond buildings coming between camera and target at very close zoom.
