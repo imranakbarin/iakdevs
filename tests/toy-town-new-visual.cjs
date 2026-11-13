@@ -43,8 +43,8 @@ const shot2 = (pg, name) => pg.screenshot({path: path.join(out, `new-town-${name
       const living=await page.evaluate(()=>{ToyTownNew.explore('bakery');ToyTownNew.setHour(22);ToyTownNew.advance(.05);const late=ToyTownNew.interior();
         ToyTownNew.explore('school');ToyTownNew.setHour(10);ToyTownNew.advance(.05);const lesson=ToyTownNew.interior();
         ToyTownNew.explore('station');ToyTownNew.setHour(12);ToyTownNew.advance(.05);const station=ToyTownNew.interior();
-        return {late,lesson,station,transition:document.getElementById('roomVeil').classList.contains('play')};});
-      assert.ok(!living.late.props.oven&&living.lesson.props.lesson&&living.station.status&&living.transition,'interior scenes follow time and have a doorway transition ('+JSON.stringify(living)+')');
+        return {late,lesson,station,weekday:ToyTownNew.sim.weekday,transition:document.getElementById('roomVeil').classList.contains('play')};});
+      assert.ok(!living.late.props.oven&&living.lesson.props.lesson===(living.weekday<5)&&living.station.status&&living.transition,'interior scenes follow time and have a doorway transition ('+JSON.stringify(living)+')');
       const next = await page.evaluate(() => {document.getElementById('roomNext').click();return ToyTownNew.interior().id;});
       assert.equal(next,'bakery','the next-room control cycles across all four scenes');
       const restored = await page.evaluate(() => {document.getElementById('roomExit').click();return {...ToyTownNew.view,inside:ToyTownNew.interior().id,hidden:document.getElementById('roomBar').hidden};});
