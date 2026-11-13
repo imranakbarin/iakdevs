@@ -76,7 +76,7 @@ jobs:
         if: matrix.shard == 1
         run: node tests/toy-town-characters.cjs
       - name: Check the living town: activities, doors, trains, animals (real WebGL)
-        if: matrix.shard == 0
+        if: matrix.shard == 1
         run: node tests/toy-town-living.cjs
       - name: Keep rendered screenshots
         if: always()
