@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generated_at": "2026-11-14T19:14:58.873Z",
+  "generated_at": "2026-11-14T23:06:12.796Z",
   "status": "ok",
   "successful_sources": [
     "BBC News",
@@ -24,12 +24,12 @@
       "published_at": "2026-11-14T18:56:02.000Z"
     },
     {
-      "title": "Second catch attempt for SpaceX Starship rocket",
+      "title": "SpaceX successfully catches top of huge Starship rocket for first time",
       "url": "https://www.bbc.co.uk/news/articles/ckregdgnl0xpo?at_medium=RSS&at_campaign=rss",
       "source": "BBC Science",
       "category": "Science",
       "tone": "light",
-      "published_at": "2026-11-14T14:18:41.000Z"
+      "published_at": "2026-11-14T22:15:52.000Z"
     },
     {
       "title": "Philippines wins first Eurovision Song Contest Asia",
@@ -40,12 +40,12 @@
       "published_at": "2026-11-14T18:17:58.000Z"
     },
     {
-      "title": "Bompastor's risks pay off as Chelsea go top of WSL",
-      "url": "https://www.bbc.co.uk/sport/football/articles/cmvg25w18q9qo?at_medium=RSS&at_campaign=rss",
+      "title": "Liverpool put three past Brighton to end winless run",
+      "url": "https://www.bbc.co.uk/sport/football/videos/c6p3ewwezqy2o?at_medium=RSS&at_campaign=rss",
       "source": "BBC Sport",
       "category": "Sport",
       "tone": "light",
-      "published_at": "2026-11-14T18:55:34.000Z"
+      "published_at": "2026-11-14T23:00:29.000Z"
     },
     {
       "title": "Italy fines Meta €805m over accessing users' photos",
@@ -64,12 +64,12 @@
       "published_at": "2026-11-14T08:13:40.000Z"
     },
     {
-      "title": "Watch: Cruise ship overturns after collision with tanker in New Orleans",
-      "url": "https://www.bbc.co.uk/news/videos/ck4gn4y77m40o?at_medium=RSS&at_campaign=rss",
-      "source": "BBC News",
+      "title": "Nigeria's upcoming election marred by rising AI disinformation",
+      "url": "https://www.dw.com/en/nigeria-s-upcoming-election-marred-by-rising-ai-disinformation/a-79946897?maca=en-rss-en-world-4025-xml-mrss",
+      "source": "DW",
       "category": "World",
       "tone": "light",
-      "published_at": "2026-11-14T19:14:33.000Z"
+      "published_at": "2026-11-14T21:05:00.000Z"
     },
     {
       "title": "Two of the ‘Last Wild Ecosystems’ Untouched by Humans Are Declared New Sanctuaries",
@@ -80,12 +80,12 @@
       "published_at": "2026-11-14T16:16:07.000Z"
     },
     {
-      "title": "Outbursts from a Massive Star",
-      "url": "https://www.nasa.gov/image-article/outbursts-from-a-massive-star/",
-      "source": "NASA",
+      "title": "'Can you believe it?': SpaceX catches part of its Starship rocket on return to Earth",
+      "url": "https://www.bbc.co.uk/news/videos/cwlym2gy3y3eo?at_medium=RSS&at_campaign=rss",
+      "source": "BBC Science",
       "category": "Science",
       "tone": "light",
-      "published_at": "2026-11-13T16:39:33.000Z"
+      "published_at": "2026-11-14T22:09:40.000Z"
     }
   ]
 }
