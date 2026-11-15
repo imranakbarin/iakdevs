@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generated_at": "2026-11-15T11:06:40.364Z",
+  "generated_at": "2026-11-15T17:47:25.948Z",
   "status": "ok",
   "successful_sources": [
     "BBC News",
@@ -16,12 +16,12 @@
   ],
   "stories": [
     {
-      "title": "Good News in History, November 15",
-      "url": "https://www.goodnewsnetwork.org/events061115/",
+      "title": "San Francisco Gets its Largest-Ever Gift: $100M for Public Parks From Airbnb Founder",
+      "url": "https://www.goodnewsnetwork.org/san-francisco-gets-100m-gift-for-public-parks-from-airbnb-ceo/",
       "source": "Good News Network",
       "category": "Good news",
       "tone": "light",
-      "published_at": "2026-11-15T08:00:00.000Z"
+      "published_at": "2026-11-15T15:36:21.000Z"
     },
     {
       "title": "How to spot November's planetary parade in the pre-dawn sky",
@@ -40,44 +40,44 @@
       "published_at": "2026-11-15T07:11:12.000Z"
     },
     {
-      "title": "Dominant Australia defeat New Zealand in Men's World Cup final",
-      "url": "https://www.bbc.co.uk/sport/rugby-league/articles/cm9q8l51pgeqo?at_medium=RSS&at_campaign=rss",
+      "title": "'They reign supreme!' - Australia beat NZ to lift World Cup again",
+      "url": "https://www.bbc.co.uk/sport/rugby-league/videos/cw07492d8gv3o?at_medium=RSS&at_campaign=rss",
       "source": "BBC Sport",
       "category": "Sport",
       "tone": "light",
-      "published_at": "2026-11-15T10:51:11.000Z"
+      "published_at": "2026-11-15T16:29:23.000Z"
     },
     {
-      "title": "SpaceX returned its Starship rocket on Saturday—but there's a catch",
-      "url": "https://arstechnica.com/space/2026/11/with-starship-catch-spacex-still-shows-it-can-dazzle-the-world/",
-      "source": "Ars Technica",
+      "title": "Suspected China spy linked to Nvidia's ex-boss left in 2025, Megaspeed says",
+      "url": "https://www.bbc.co.uk/news/articles/cmdx1vpprk9vo?at_medium=RSS&at_campaign=rss",
+      "source": "BBC Technology",
       "category": "Technology",
       "tone": "light",
-      "published_at": "2026-11-15T00:40:59.000Z"
+      "published_at": "2026-11-15T14:56:21.000Z"
     },
     {
-      "title": "Beauty advent calendars can cost hundreds but are they value for money?",
-      "url": "https://www.bbc.co.uk/news/articles/cqn83l442724o?at_medium=RSS&at_campaign=rss",
+      "title": "Minister backs legal right to job support for young people",
+      "url": "https://www.bbc.co.uk/news/articles/cqr7gn1zmlj1o?at_medium=RSS&at_campaign=rss",
       "source": "BBC Business",
       "category": "Business",
       "tone": "light",
-      "published_at": "2026-11-15T00:01:07.000Z"
+      "published_at": "2026-11-15T13:06:15.000Z"
     },
     {
-      "title": "Pope Leo speaks of community 'suffering' on visit to remote Andes town",
-      "url": "https://www.bbc.co.uk/news/articles/cr4gnz0lv2vlo?at_medium=RSS&at_campaign=rss",
+      "title": "Czechs rally against plan to switch funding of public media",
+      "url": "https://www.bbc.co.uk/news/articles/cm8e0knr7604o?at_medium=RSS&at_campaign=rss",
       "source": "BBC News",
       "category": "World",
       "tone": "light",
-      "published_at": "2026-11-15T09:57:25.000Z"
+      "published_at": "2026-11-15T17:23:40.000Z"
     },
     {
-      "title": "Couple with Autism and ADHD Find Passion Cleaning Filthy Street Signs",
-      "url": "https://www.goodnewsnetwork.org/couple-with-autism-and-adhd-find-passion-cleaning-filthy-street-signs/",
+      "title": "Good News in History, November 15",
+      "url": "https://www.goodnewsnetwork.org/events061115/",
       "source": "Good News Network",
       "category": "Good news",
       "tone": "light",
-      "published_at": "2026-11-14T18:56:02.000Z"
+      "published_at": "2026-11-15T08:00:00.000Z"
     },
     {
       "title": "SpaceX catches part of its Starship rocket on return to Earth",
