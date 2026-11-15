@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generated_at": "2026-11-15T17:47:25.948Z",
+  "generated_at": "2026-11-15T22:54:59.940Z",
   "status": "ok",
   "successful_sources": [
     "BBC News",
@@ -16,12 +16,12 @@
   ],
   "stories": [
     {
-      "title": "San Francisco Gets its Largest-Ever Gift: $100M for Public Parks From Airbnb Founder",
-      "url": "https://www.goodnewsnetwork.org/san-francisco-gets-100m-gift-for-public-parks-from-airbnb-ceo/",
+      "title": "They Became Pen Pals as Teens, Now 32 Years Later They’re Happily Married",
+      "url": "https://www.goodnewsnetwork.org/they-became-pen-pals-as-teens-now-32-years-later-theyre-happily-married/",
       "source": "Good News Network",
       "category": "Good news",
       "tone": "light",
-      "published_at": "2026-11-15T15:36:21.000Z"
+      "published_at": "2026-11-15T22:29:05.000Z"
     },
     {
       "title": "How to spot November's planetary parade in the pre-dawn sky",
@@ -32,20 +32,20 @@
       "published_at": "2026-11-15T10:49:57.000Z"
     },
     {
-      "title": "'It's like you're in one of his paintings' Kyffin Williams' art brought to life",
-      "url": "https://www.bbc.co.uk/news/articles/cwp9g9ey10dko?at_medium=RSS&at_campaign=rss",
+      "title": "Charlotte Church closes wellness retreat after five 'beautiful' years",
+      "url": "https://www.bbc.co.uk/news/articles/c65y13z1d8eyo?at_medium=RSS&at_campaign=rss",
       "source": "BBC Culture",
       "category": "Culture",
       "tone": "light",
-      "published_at": "2026-11-15T07:11:12.000Z"
+      "published_at": "2026-11-15T18:09:07.000Z"
     },
     {
-      "title": "'They reign supreme!' - Australia beat NZ to lift World Cup again",
-      "url": "https://www.bbc.co.uk/sport/rugby-league/videos/cw07492d8gv3o?at_medium=RSS&at_campaign=rss",
+      "title": "Watch: Scrum V after Wales' historic win against the All Blacks",
+      "url": "https://www.bbc.co.uk/iplayer/live/bbcone?at_medium=RSS&at_campaign=rss",
       "source": "BBC Sport",
       "category": "Sport",
       "tone": "light",
-      "published_at": "2026-11-15T16:29:23.000Z"
+      "published_at": "2026-11-15T23:05:40.000Z"
     },
     {
       "title": "Suspected China spy linked to Nvidia's ex-boss left in 2025, Megaspeed says",
@@ -53,15 +53,15 @@
       "source": "BBC Technology",
       "category": "Technology",
       "tone": "light",
-      "published_at": "2026-11-15T14:56:21.000Z"
+      "published_at": "2026-11-15T22:24:20.000Z"
     },
     {
-      "title": "Minister backs legal right to job support for young people",
-      "url": "https://www.bbc.co.uk/news/articles/cqr7gn1zmlj1o?at_medium=RSS&at_campaign=rss",
+      "title": "Cut national insurance for under-25s to create jobs, Milburn report to say",
+      "url": "https://www.bbc.co.uk/news/articles/c6p9dzmj514ko?at_medium=RSS&at_campaign=rss",
       "source": "BBC Business",
       "category": "Business",
       "tone": "light",
-      "published_at": "2026-11-15T13:06:15.000Z"
+      "published_at": "2026-11-15T22:30:03.000Z"
     },
     {
       "title": "Czechs rally against plan to switch funding of public media",
@@ -69,15 +69,15 @@
       "source": "BBC News",
       "category": "World",
       "tone": "light",
-      "published_at": "2026-11-15T17:23:40.000Z"
+      "published_at": "2026-11-15T21:03:40.000Z"
     },
     {
-      "title": "Good News in History, November 15",
-      "url": "https://www.goodnewsnetwork.org/events061115/",
+      "title": "World-First Bone Marrow Transplant Successfully Treats Non-Malignant Disease",
+      "url": "https://www.goodnewsnetwork.org/world-first-bone-marrow-transplant-successfully-treats-non-malignant-disease/",
       "source": "Good News Network",
       "category": "Good news",
       "tone": "light",
-      "published_at": "2026-11-15T08:00:00.000Z"
+      "published_at": "2026-11-15T20:32:08.000Z"
     },
     {
       "title": "SpaceX catches part of its Starship rocket on return to Earth",
