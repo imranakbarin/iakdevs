@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generated_at": "2026-11-15T02:45:10.124Z",
+  "generated_at": "2026-11-15T11:06:40.364Z",
   "status": "ok",
   "successful_sources": [
     "BBC News",
@@ -16,6 +16,62 @@
   ],
   "stories": [
     {
+      "title": "Good News in History, November 15",
+      "url": "https://www.goodnewsnetwork.org/events061115/",
+      "source": "Good News Network",
+      "category": "Good news",
+      "tone": "light",
+      "published_at": "2026-11-15T08:00:00.000Z"
+    },
+    {
+      "title": "How to spot November's planetary parade in the pre-dawn sky",
+      "url": "https://www.bbc.co.uk/weather/articles/cke8rr37lrryo?at_medium=RSS&at_campaign=rss",
+      "source": "BBC Science",
+      "category": "Science",
+      "tone": "light",
+      "published_at": "2026-11-15T10:49:57.000Z"
+    },
+    {
+      "title": "'It's like you're in one of his paintings' Kyffin Williams' art brought to life",
+      "url": "https://www.bbc.co.uk/news/articles/cwp9g9ey10dko?at_medium=RSS&at_campaign=rss",
+      "source": "BBC Culture",
+      "category": "Culture",
+      "tone": "light",
+      "published_at": "2026-11-15T07:11:12.000Z"
+    },
+    {
+      "title": "Dominant Australia defeat New Zealand in Men's World Cup final",
+      "url": "https://www.bbc.co.uk/sport/rugby-league/articles/cm9q8l51pgeqo?at_medium=RSS&at_campaign=rss",
+      "source": "BBC Sport",
+      "category": "Sport",
+      "tone": "light",
+      "published_at": "2026-11-15T10:51:11.000Z"
+    },
+    {
+      "title": "SpaceX returned its Starship rocket on Saturday—but there's a catch",
+      "url": "https://arstechnica.com/space/2026/11/with-starship-catch-spacex-still-shows-it-can-dazzle-the-world/",
+      "source": "Ars Technica",
+      "category": "Technology",
+      "tone": "light",
+      "published_at": "2026-11-15T00:40:59.000Z"
+    },
+    {
+      "title": "Beauty advent calendars can cost hundreds but are they value for money?",
+      "url": "https://www.bbc.co.uk/news/articles/cqn83l442724o?at_medium=RSS&at_campaign=rss",
+      "source": "BBC Business",
+      "category": "Business",
+      "tone": "light",
+      "published_at": "2026-11-15T00:01:07.000Z"
+    },
+    {
+      "title": "Pope Leo speaks of community 'suffering' on visit to remote Andes town",
+      "url": "https://www.bbc.co.uk/news/articles/cr4gnz0lv2vlo?at_medium=RSS&at_campaign=rss",
+      "source": "BBC News",
+      "category": "World",
+      "tone": "light",
+      "published_at": "2026-11-15T09:57:25.000Z"
+    },
+    {
       "title": "Couple with Autism and ADHD Find Passion Cleaning Filthy Street Signs",
       "url": "https://www.goodnewsnetwork.org/couple-with-autism-and-adhd-find-passion-cleaning-filthy-street-signs/",
       "source": "Good News Network",
@@ -30,62 +86,6 @@
       "category": "Science",
       "tone": "light",
       "published_at": "2026-11-14T23:15:10.000Z"
-    },
-    {
-      "title": "Holly Humberstone: People can't connect to a pop star who's 'too polished'",
-      "url": "https://www.bbc.co.uk/news/articles/cw77p7yj42k5o?at_medium=RSS&at_campaign=rss",
-      "source": "BBC Culture",
-      "category": "Culture",
-      "tone": "light",
-      "published_at": "2026-11-15T00:07:29.000Z"
-    },
-    {
-      "title": "Fiji 'did Ireland a favour' before South Africa game",
-      "url": "https://www.bbc.co.uk/sport/rugby-union/articles/c9e85d7mm0myo?at_medium=RSS&at_campaign=rss",
-      "source": "BBC Sport",
-      "category": "Sport",
-      "tone": "light",
-      "published_at": "2026-11-15T00:29:26.000Z"
-    },
-    {
-      "title": "With Starship catch, SpaceX still shows it can dazzle the world",
-      "url": "https://arstechnica.com/space/2026/11/with-starship-catch-spacex-still-shows-it-can-dazzle-the-world/",
-      "source": "Ars Technica",
-      "category": "Technology",
-      "tone": "light",
-      "published_at": "2026-11-15T00:40:59.000Z"
-    },
-    {
-      "title": "Beauty advent calendars can cost hundreds - but are they value for money?",
-      "url": "https://www.bbc.co.uk/news/articles/cqn83l442724o?at_medium=RSS&at_campaign=rss",
-      "source": "BBC Business",
-      "category": "Business",
-      "tone": "light",
-      "published_at": "2026-11-15T00:01:07.000Z"
-    },
-    {
-      "title": "My mother told me I would die if I sought treatment for Ebola - I am proof you can survive",
-      "url": "https://www.bbc.co.uk/news/articles/cmvg2e2q28w1o?at_medium=RSS&at_campaign=rss",
-      "source": "BBC News",
-      "category": "World",
-      "tone": "light",
-      "published_at": "2026-11-15T00:06:55.000Z"
-    },
-    {
-      "title": "Two of the ‘Last Wild Ecosystems’ Untouched by Humans Are Declared New Sanctuaries",
-      "url": "https://www.goodnewsnetwork.org/two-of-last-wild-ecosystems-untouched-by-humans-declared-new-sanctuaries/",
-      "source": "Good News Network",
-      "category": "Good news",
-      "tone": "light",
-      "published_at": "2026-11-14T16:16:07.000Z"
-    },
-    {
-      "title": "SpaceX successfully catches top of huge Starship rocket for first time",
-      "url": "https://www.bbc.co.uk/news/articles/ckregdgnl0xpo?at_medium=RSS&at_campaign=rss",
-      "source": "BBC Science",
-      "category": "Science",
-      "tone": "light",
-      "published_at": "2026-11-14T22:15:52.000Z"
     }
   ]
 }
