@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generated_at": "2026-11-14T23:06:12.796Z",
+  "generated_at": "2026-11-15T02:45:10.124Z",
   "status": "ok",
   "successful_sources": [
     "BBC News",
@@ -24,52 +24,52 @@
       "published_at": "2026-11-14T18:56:02.000Z"
     },
     {
-      "title": "SpaceX successfully catches top of huge Starship rocket for first time",
-      "url": "https://www.bbc.co.uk/news/articles/ckregdgnl0xpo?at_medium=RSS&at_campaign=rss",
+      "title": "SpaceX catches part of its Starship rocket on return to Earth",
+      "url": "https://www.bbc.co.uk/news/videos/cw23j8pkk421o?at_medium=RSS&at_campaign=rss",
       "source": "BBC Science",
       "category": "Science",
       "tone": "light",
-      "published_at": "2026-11-14T22:15:52.000Z"
+      "published_at": "2026-11-14T23:15:10.000Z"
     },
     {
-      "title": "Philippines wins first Eurovision Song Contest Asia",
-      "url": "https://www.bbc.co.uk/news/articles/cqrlgnx9dx6eo?at_medium=RSS&at_campaign=rss",
+      "title": "Holly Humberstone: People can't connect to a pop star who's 'too polished'",
+      "url": "https://www.bbc.co.uk/news/articles/cw77p7yj42k5o?at_medium=RSS&at_campaign=rss",
       "source": "BBC Culture",
       "category": "Culture",
       "tone": "light",
-      "published_at": "2026-11-14T18:17:58.000Z"
+      "published_at": "2026-11-15T00:07:29.000Z"
     },
     {
-      "title": "Liverpool put three past Brighton to end winless run",
-      "url": "https://www.bbc.co.uk/sport/football/videos/c6p3ewwezqy2o?at_medium=RSS&at_campaign=rss",
+      "title": "Fiji 'did Ireland a favour' before South Africa game",
+      "url": "https://www.bbc.co.uk/sport/rugby-union/articles/c9e85d7mm0myo?at_medium=RSS&at_campaign=rss",
       "source": "BBC Sport",
       "category": "Sport",
       "tone": "light",
-      "published_at": "2026-11-14T23:00:29.000Z"
+      "published_at": "2026-11-15T00:29:26.000Z"
     },
     {
-      "title": "Italy fines Meta €805m over accessing users' photos",
-      "url": "https://www.bbc.co.uk/news/articles/cwn83gxemk35o?at_medium=RSS&at_campaign=rss",
-      "source": "BBC Technology",
+      "title": "With Starship catch, SpaceX still shows it can dazzle the world",
+      "url": "https://arstechnica.com/space/2026/11/with-starship-catch-spacex-still-shows-it-can-dazzle-the-world/",
+      "source": "Ars Technica",
       "category": "Technology",
       "tone": "light",
-      "published_at": "2026-11-14T18:28:06.000Z"
+      "published_at": "2026-11-15T00:40:59.000Z"
     },
     {
-      "title": "Football kit giveaway aims to boost participation",
-      "url": "https://www.bbc.co.uk/news/articles/ck20v651473qo?at_medium=RSS&at_campaign=rss",
+      "title": "Beauty advent calendars can cost hundreds - but are they value for money?",
+      "url": "https://www.bbc.co.uk/news/articles/cqn83l442724o?at_medium=RSS&at_campaign=rss",
       "source": "BBC Business",
       "category": "Business",
       "tone": "light",
-      "published_at": "2026-11-14T08:13:40.000Z"
+      "published_at": "2026-11-15T00:01:07.000Z"
     },
     {
-      "title": "Nigeria's upcoming election marred by rising AI disinformation",
-      "url": "https://www.dw.com/en/nigeria-s-upcoming-election-marred-by-rising-ai-disinformation/a-79946897?maca=en-rss-en-world-4025-xml-mrss",
-      "source": "DW",
+      "title": "My mother told me I would die if I sought treatment for Ebola - I am proof you can survive",
+      "url": "https://www.bbc.co.uk/news/articles/cmvg2e2q28w1o?at_medium=RSS&at_campaign=rss",
+      "source": "BBC News",
       "category": "World",
       "tone": "light",
-      "published_at": "2026-11-14T21:05:00.000Z"
+      "published_at": "2026-11-15T00:06:55.000Z"
     },
     {
       "title": "Two of the ‘Last Wild Ecosystems’ Untouched by Humans Are Declared New Sanctuaries",
@@ -80,12 +80,12 @@
       "published_at": "2026-11-14T16:16:07.000Z"
     },
     {
-      "title": "'Can you believe it?': SpaceX catches part of its Starship rocket on return to Earth",
-      "url": "https://www.bbc.co.uk/news/videos/cwlym2gy3y3eo?at_medium=RSS&at_campaign=rss",
+      "title": "SpaceX successfully catches top of huge Starship rocket for first time",
+      "url": "https://www.bbc.co.uk/news/articles/ckregdgnl0xpo?at_medium=RSS&at_campaign=rss",
       "source": "BBC Science",
       "category": "Science",
       "tone": "light",
-      "published_at": "2026-11-14T22:09:40.000Z"
+      "published_at": "2026-11-14T22:15:52.000Z"
     }
   ]
 }
