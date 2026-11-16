@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generated_at": "2026-11-15T22:54:59.940Z",
+  "generated_at": "2026-11-16T02:48:28.962Z",
   "status": "ok",
   "successful_sources": [
     "BBC News",
@@ -40,12 +40,12 @@
       "published_at": "2026-11-15T18:09:07.000Z"
     },
     {
-      "title": "Watch: Scrum V after Wales' historic win against the All Blacks",
-      "url": "https://www.bbc.co.uk/iplayer/live/bbcone?at_medium=RSS&at_campaign=rss",
+      "title": "Much still to do on F1 diversity - Hamilton",
+      "url": "https://www.bbc.co.uk/sport/formula1/articles/c52e8kpnje42o?at_medium=RSS&at_campaign=rss",
       "source": "BBC Sport",
       "category": "Sport",
       "tone": "light",
-      "published_at": "2026-11-15T23:05:40.000Z"
+      "published_at": "2026-11-16T00:04:45.000Z"
     },
     {
       "title": "Suspected China spy linked to Nvidia's ex-boss left in 2025, Megaspeed says",
@@ -53,23 +53,23 @@
       "source": "BBC Technology",
       "category": "Technology",
       "tone": "light",
-      "published_at": "2026-11-15T22:24:20.000Z"
+      "published_at": "2026-11-16T01:47:57.000Z"
     },
     {
-      "title": "Cut national insurance for under-25s to create jobs, Milburn report to say",
-      "url": "https://www.bbc.co.uk/news/articles/c6p9dzmj514ko?at_medium=RSS&at_campaign=rss",
+      "title": "Black Friday and tax return scams - don't fall for these",
+      "url": "https://www.bbc.co.uk/news/articles/cm4gnlz2p61ko?at_medium=RSS&at_campaign=rss",
       "source": "BBC Business",
       "category": "Business",
       "tone": "light",
-      "published_at": "2026-11-15T22:30:03.000Z"
+      "published_at": "2026-11-16T00:50:39.000Z"
     },
     {
-      "title": "Czechs rally against plan to switch funding of public media",
-      "url": "https://www.bbc.co.uk/news/articles/cm8e0knr7604o?at_medium=RSS&at_campaign=rss",
+      "title": "Steering failure preceded New Orleans cruise ship collision, says NTSB",
+      "url": "https://www.bbc.co.uk/news/articles/c65y131w1534o?at_medium=RSS&at_campaign=rss",
       "source": "BBC News",
       "category": "World",
       "tone": "light",
-      "published_at": "2026-11-15T21:03:40.000Z"
+      "published_at": "2026-11-15T22:57:27.000Z"
     },
     {
       "title": "World-First Bone Marrow Transplant Successfully Treats Non-Malignant Disease",
