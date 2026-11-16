@@ -174,7 +174,7 @@ export const LAMPS = (() => {
   for (let k = 0; k < 8; k++) { const a = (k + .25) / 8 * TAU; out.push({x: Math.cos(a) * 3.2, z: Math.sin(a) * 3.2, spot: [Math.cos(a) * (SQUARE.ring + ROAD.pave), Math.sin(a) * (SQUARE.ring + ROAD.pave)], where: 'the square'}); }
   for (const r of ROADS) {
     if (r.kind === 'ring') continue; const len = roadLength(r.id); let side = 1;
-    for (let s = 2.6; s < len - .8; s += 3.1) {
+    for (let s = 2.6; s < len - .8; s += 2.3) {
       const p = onRoad(r.id, s), nx = p.tz, nz = -p.tx, at = sd => [p.x + nx * sd * .86, p.z + nz * sd * .86];
       const free = sd => { const [x, z] = at(sd); return BUILDINGS.every(b => Math.hypot(b.x - x, b.z - z) > b.w * .5 + .6 && Math.hypot(b.x + Math.sin(b.ry) * b.door - x, b.z + Math.cos(b.ry) * b.door - z) > .8); }, pick = free(side) ? side : free(-side) ? -side : 0;
       if (pick) { const [x, z] = at(pick); out.push({x, z, spot: [p.x + nx * pick * ROAD.pave, p.z + nz * pick * ROAD.pave], where: r.name}); }
