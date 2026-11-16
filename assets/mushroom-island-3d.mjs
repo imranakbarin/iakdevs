@@ -79,7 +79,7 @@ function makeIsland(){
   const m=add(root,cliff,[mat.rock,mat.grass,mat.soil],0,-.87,0);
   m.castShadow=true;
   // A thin grassy bevel sits inside the cliff rim; avoid a separately floating terrain sheet.
-  const disk=add(root,new THREE.CircleGeometry(8.94,96),mat.grass,0,.147,0,1,1,.719);
+  const disk=add(root,new THREE.CircleGeometry(8.94,96),mat.grass,0,.147,0,1,.719,1);
   disk.rotation.x=-Math.PI/2;disk.castShadow=false;
   const sea=add(scene,new THREE.PlaneGeometry(170,170),material('#87c9d2',.32),0,-1.94,0);
   sea.rotation.x=-Math.PI/2;sea.castShadow=false;sea.receiveShadow=false;
@@ -264,7 +264,7 @@ function makePip(){
 }
 const pip=makePip();
 let angle=.65,clock=0,view='3d',alive=!reduced.matches,raf=0,last=0;
-let azimuth=.63,elevation=.46,distance=23;
+let azimuth=.63,elevation=.46,distance=isPhone()?43:23;
 const target=new THREE.Vector3(0,0,0);
 function placeCamera(){
   const c=Math.cos(elevation),s=Math.sin(elevation);
@@ -334,7 +334,7 @@ canvas.addEventListener('pointermove',e=>{
   }else if(pointers.size===2){
     const [a,b]=[...pointers.values()];
     const d=Math.hypot(a.x-b.x,a.y-b.y);
-    if(pinch!==null)distance=THREE.MathUtils.clamp(distance*pinch/Math.max(1,d),12,34);
+    if(pinch!==null)distance=THREE.MathUtils.clamp(distance*pinch/Math.max(1,d),12,58);
     pinch=d;dragged=true;
   }
   if(!alive)render();
@@ -351,7 +351,7 @@ function inspect(e){
 }
 canvas.addEventListener('pointerup',e=>{if(!dragged&&pointers.size===1)inspect(e);pointers.delete(e.pointerId);pinch=null;});
 canvas.addEventListener('pointercancel',e=>{pointers.delete(e.pointerId);pinch=null;});
-canvas.addEventListener('wheel',e=>{e.preventDefault();distance=THREE.MathUtils.clamp(distance*(e.deltaY>0?1.08:.92),12,34);if(!alive)render();},{passive:false});
+canvas.addEventListener('wheel',e=>{e.preventDefault();distance=THREE.MathUtils.clamp(distance*(e.deltaY>0?1.08:.92),12,58);if(!alive)render();},{passive:false});
 canvas.addEventListener('webglcontextlost',e=>{e.preventDefault();choose('2d');toggle.hidden=true;},{passive:false});
 toggle?.addEventListener('click',()=>choose(view==='3d'?'2d':'3d'));
 window.addEventListener('resize',()=>{if(view==='3d'){resize();render();}},{passive:true});
@@ -366,8 +366,8 @@ window.PipIsland3D={
   mode:()=>view,
   choose,
   stats:()=>({meshes,mode:view,position:[...pip.actor.position.toArray()],distance,azimuth,elevation,renderCalls:renderer.info.render.calls}),
-  focus(name){const g=root.children.find(o=>o.userData.poi?.title===name);if(g){target.copy(g.position);distance=THREE.MathUtils.clamp(distance,12,28);render();return true;}return false;},
-  reset(){target.set(0,0,0);azimuth=.63;elevation=.46;distance=23;render();}
+  focus(name){const g=root.children.find(o=>o.userData.poi?.title===name);if(g){target.copy(g.position);distance=THREE.MathUtils.clamp(distance,12,40);render();return true;}return false;},
+  reset(){target.set(0,0,0);azimuth=.63;elevation=.46;distance=isPhone()?43:23;render();}
 };
 // The original animation boots before this module. Pause it only after a 3D frame succeeds.
 resize();
