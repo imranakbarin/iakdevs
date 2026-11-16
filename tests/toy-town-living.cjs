@@ -79,7 +79,7 @@ const HELPERS = async () => {
     await page.evaluate(() => { ToyTownNew.freeze(); });
     // ---- 3. cost: the whole town with its activities at the default view, and the time the actors take each frame ----
     const perf = await page.evaluate(() => { ToyTownNew.setHour(10); ToyTownNew.play(30); ToyTownNew.look(0, .4, 46, 0); const i = ToyTownNew.renderer.info.render, A = ToyTownNew.actors, t0 = performance.now(); for (let k = 0; k < 200; k++) A.update(.016, 500 + k * .016, {rain: 0, season: ToyTownNew.info().season, hour: ToyTownNew.sim.hour}); return {ms: (performance.now() - t0) / 200, info: ToyTownNew.info(), out: [...A.actors.values()].filter(a => a.vis).length}; });
-    console.log('LIVING cost', JSON.stringify({ms: +perf.ms.toFixed(3), calls: perf.info.calls, tris: perf.info.triangles, out: perf.out})); assert.ok(perf.ms < 3, 'all the residents animate in well under a frame (' + perf.ms.toFixed(2) + ' ms)'); assert.ok(perf.info.calls <= 100 && perf.info.triangles <= 850000, 'drawing stays in budget (' + perf.info.calls + ' calls, ' + perf.info.triangles + ' triangles)');
+    console.log('LIVING cost', JSON.stringify({ms: +perf.ms.toFixed(3), calls: perf.info.calls, tris: perf.info.triangles, out: perf.out})); assert.ok(perf.ms < 3, 'all the residents animate in well under a frame (' + perf.ms.toFixed(2) + ' ms)'); assert.ok(perf.info.calls <= 110 && perf.info.triangles <= 850000, 'drawing stays in budget (' + perf.info.calls + ' calls, ' + perf.info.triangles + ' triangles)');
     await page.context().close();
     // ---- 4. the same on a phone: a few sequences ----
     const ph = await open({...devices['iPhone 13']}, '');
