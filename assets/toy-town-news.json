@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generated_at": "2026-11-16T02:48:28.962Z",
+  "generated_at": "2026-11-16T11:35:42.352Z",
   "status": "ok",
   "successful_sources": [
     "BBC News",
@@ -16,36 +16,36 @@
   ],
   "stories": [
     {
-      "title": "They Became Pen Pals as Teens, Now 32 Years Later They’re Happily Married",
-      "url": "https://www.goodnewsnetwork.org/they-became-pen-pals-as-teens-now-32-years-later-theyre-happily-married/",
+      "title": "Good News in History, November 16",
+      "url": "https://www.goodnewsnetwork.org/events061116/",
       "source": "Good News Network",
       "category": "Good news",
       "tone": "light",
-      "published_at": "2026-11-15T22:29:05.000Z"
+      "published_at": "2026-11-16T08:00:00.000Z"
     },
     {
-      "title": "How to spot November's planetary parade in the pre-dawn sky",
-      "url": "https://www.bbc.co.uk/weather/articles/cke8rr37lrryo?at_medium=RSS&at_campaign=rss",
+      "title": "Yellow weather warnings issued for snow as temperatures plummet",
+      "url": "https://www.bbc.co.uk/weather/articles/c6y97j2xq531o?at_medium=RSS&at_campaign=rss",
       "source": "BBC Science",
       "category": "Science",
       "tone": "light",
-      "published_at": "2026-11-15T10:49:57.000Z"
+      "published_at": "2026-11-16T10:02:04.000Z"
     },
     {
-      "title": "Charlotte Church closes wellness retreat after five 'beautiful' years",
-      "url": "https://www.bbc.co.uk/news/articles/c65y13z1d8eyo?at_medium=RSS&at_campaign=rss",
+      "title": "Tourette's film I Swear wins three Scottish Baftas",
+      "url": "https://www.bbc.co.uk/news/articles/crgqx11wkzy8o?at_medium=RSS&at_campaign=rss",
       "source": "BBC Culture",
       "category": "Culture",
       "tone": "light",
-      "published_at": "2026-11-15T18:09:07.000Z"
+      "published_at": "2026-11-16T07:40:48.000Z"
     },
     {
-      "title": "Much still to do on F1 diversity - Hamilton",
-      "url": "https://www.bbc.co.uk/sport/formula1/articles/c52e8kpnje42o?at_medium=RSS&at_campaign=rss",
+      "title": "Camara to race again for Haas in Las Vegas",
+      "url": "https://www.bbc.co.uk/sport/formula1/articles/c804w7nxr61zo?at_medium=RSS&at_campaign=rss",
       "source": "BBC Sport",
       "category": "Sport",
       "tone": "light",
-      "published_at": "2026-11-16T00:04:45.000Z"
+      "published_at": "2026-11-16T08:35:56.000Z"
     },
     {
       "title": "Suspected China spy linked to Nvidia's ex-boss left in 2025, Megaspeed says",
@@ -56,36 +56,36 @@
       "published_at": "2026-11-16T01:47:57.000Z"
     },
     {
-      "title": "Black Friday and tax return scams - don't fall for these",
-      "url": "https://www.bbc.co.uk/news/articles/cm4gnlz2p61ko?at_medium=RSS&at_campaign=rss",
+      "title": "Create more jobs for under-25s by cutting National Insurance, key report urges",
+      "url": "https://www.bbc.co.uk/news/articles/c6p9dzmj514ko?at_medium=RSS&at_campaign=rss",
       "source": "BBC Business",
       "category": "Business",
       "tone": "light",
-      "published_at": "2026-11-16T00:50:39.000Z"
+      "published_at": "2026-11-16T10:51:45.000Z"
     },
     {
-      "title": "Steering failure preceded New Orleans cruise ship collision, says NTSB",
-      "url": "https://www.bbc.co.uk/news/articles/c65y131w1534o?at_medium=RSS&at_campaign=rss",
+      "title": "Five EU countries expected to announce migrant deportation centre in Rwanda",
+      "url": "https://www.bbc.co.uk/news/articles/cw987343352go?at_medium=RSS&at_campaign=rss",
       "source": "BBC News",
       "category": "World",
       "tone": "light",
-      "published_at": "2026-11-15T22:57:27.000Z"
+      "published_at": "2026-11-16T11:17:34.000Z"
     },
     {
-      "title": "World-First Bone Marrow Transplant Successfully Treats Non-Malignant Disease",
-      "url": "https://www.goodnewsnetwork.org/world-first-bone-marrow-transplant-successfully-treats-non-malignant-disease/",
+      "title": "They Became Pen Pals as Teens, Now 32 Years Later They’re Happily Married",
+      "url": "https://www.goodnewsnetwork.org/they-became-pen-pals-as-teens-now-32-years-later-theyre-happily-married/",
       "source": "Good News Network",
       "category": "Good news",
       "tone": "light",
-      "published_at": "2026-11-15T20:32:08.000Z"
+      "published_at": "2026-11-15T22:29:05.000Z"
     },
     {
-      "title": "SpaceX catches part of its Starship rocket on return to Earth",
-      "url": "https://www.bbc.co.uk/news/videos/cw23j8pkk421o?at_medium=RSS&at_campaign=rss",
-      "source": "BBC Science",
+      "title": "APOD: 2026 November 16 – NGC 7129: Star Formation with Jets from Webb",
+      "url": "https://science.nasa.gov/image-article/apod-2026-november-16-ngc-7129-star-formation-with-jets-from-webb/",
+      "source": "NASA",
       "category": "Science",
       "tone": "light",
-      "published_at": "2026-11-14T23:15:10.000Z"
+      "published_at": "2026-11-16T05:05:00.000Z"
     }
   ]
 }
