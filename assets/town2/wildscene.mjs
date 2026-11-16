@@ -133,10 +133,10 @@ export function createWildlife({scene, sim, people, folk = null, material, seaso
     islet.userData.innerMat.opacity = clamp(0, (ctx.night * .5 + (out ? .35 : 0) + .04) * (.82 + .18 * Math.sin(time * 6.3) * Math.sin(time * 2.7 + 1)), .95);
     gem.visible = sim.wild.gems > 0; if (gem.visible) { gem.position.set(gemSpot.x + .35, heightAt(gemSpot.x, gemSpot.z) + .14 + Math.sin(time * 2.2) * .03, gemSpot.z + .25); gem.rotation.y = time * 1.6; }
     if (ctx.eco) { ecoNow = ctx.eco; const sea = ctx.eco.sea, pod = sea > .7 ? 3 : sea > .45 ? 2 : 1; dolphins.forEach(a => { a.g.visible = a.i < pod; });   // the richer the sea, the bigger the pod
-      meadow.userData.show(Math.round(flowersBase * (.2 + .8 * ctx.eco.flowers)));
-      const nb = ctx.night < .3 && ctx.rain < .3 && lifeOn ? Math.round(ctx.eco.bees * 18) : 0; for (let i = 0; i < nb; i++) { const p = flowerPlots[i % flowerPlots.length], tt = time * 1.3 + i * 2.1; bees.setMatrixAt(i, bm.compose(bp.set(p.x + Math.sin(tt) * p.r * .7, heightAt(p.x, p.z) + .22 + Math.sin(tt * 3 + i) * .07, p.z + Math.cos(tt * 1.3) * p.r * .6), bq, bs)); } bees.count = nb; bees.instanceMatrix.needsUpdate = true; }
+      meadow.userData.show(Math.round(flowersBase * (ctx.dist > 26 ? .3 : .7) * (.2 + .8 * ctx.eco.flowers)));
+      const nb = ctx.night < .3 && ctx.rain < .3 && lifeOn ? Math.min(ctx.dist > 25 ? 3 : 9, Math.round(ctx.eco.bees * 12)) : 0; for (let i = 0; i < nb; i++) { const p = flowerPlots[i % flowerPlots.length], tt = time * 1.3 + i * 2.1; bees.setMatrixAt(i, bm.compose(bp.set(p.x + Math.sin(tt) * p.r * .7, heightAt(p.x, p.z) + .22 + Math.sin(tt * 3 + i) * .07, p.z + Math.cos(tt * 1.3) * p.r * .6), bq, bs)); } bees.count = nb; bees.instanceMatrix.needsUpdate = true; }
     // butterflies: by day, in the warm seasons, when it is dry
-    const want = ctx.night < .3 && ctx.rain < .2 ? ({spring: 8, summer: 14, autumn: 5, winter: 0}[season] || 0) : 0, n = Math.min(want, fliesMax);
+    const want = ctx.night < .3 && ctx.rain < .2 ? ({spring: 5, summer: 7, autumn: 3, winter: 0}[season] || 0) : 0, n = Math.min(ctx.dist > 26 ? 2 : want, want, fliesMax);
     for (let i = 0; i < n; i++) { const p = flowerPlots[i % flowerPlots.length], tt = time * .5 + i * 1.7, x = p.x + Math.sin(tt) * p.r * .85 + Math.sin(tt * 3.1 + i) * .08, z = p.z + Math.sin(tt * 2) * p.r * .55 + Math.cos(tt * 2.3 + i) * .08, dx = Math.cos(tt) * p.r * .85, dz = Math.cos(tt * 2) * p.r * 1.1; flies.userData.set(i, x, heightAt(x, z) + .3 + Math.sin(tt * 4 + i) * .06 + (i % 3) * .08, z, Math.atan2(dx, dz), time * 14 + i * 2); }
     flies.userData.show(n);
   }

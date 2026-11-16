@@ -75,14 +75,36 @@ jobs:
       - name: Check residents, horse and wildlife (real WebGL)
         if: matrix.shard == 1
         run: node tests/toy-town-characters.cjs
-      - name: "Check the living town (activities, doors, trains, animals) in real WebGL"
-        if: matrix.shard == 1
-        run: node tests/toy-town-living.cjs
       - name: Keep rendered screenshots
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: toy-town-visual-${{ github.run_number }}-${{ matrix.shard }}
+          path: visual-artifacts/
+          if-no-files-found: ignore
+          retention-days: 14
+
+  # The living-town film runs for several simulated hours. Run it separately so
+  # the regular visual shard does not hit the combined 15-minute job timeout.
+  living-town:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install Chromium for Playwright
+        run: |
+          npm install --no-save --no-package-lock playwright@1.58.2
+          npx playwright install --with-deps chromium
+      - name: Check the living town (activities, doors, trains, animals)
+        run: node tests/toy-town-living.cjs
+      - name: Keep living-town screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: toy-town-living-${{ github.run_number }}
           path: visual-artifacts/
           if-no-files-found: ignore
           retention-days: 14

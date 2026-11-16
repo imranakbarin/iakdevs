@@ -80,8 +80,9 @@ export function buildTownCharm(material, season = 'summer', lite = false) {
   for (let i = 0; i < BUILDINGS.length; i++) {
     const h = BUILDINGS[i];
     // The taller landmarks already have extensive decoration. Keep footpaths clear.
-    if (!h.door || (i % 3 !== 0 && !['bakery', 'cafe', 'post', 'toys'].includes(h.id))) continue;
-    for (const side of [-1, 1]) {
+    // One entrance accent at each landmark; cottages keep their own gardens.
+    if (!h.door || !['bakery', 'cafe', 'post', 'toys'].includes(h.id)) continue;
+    for (const side of [1]) {
       const x = h.x + Math.sin(h.ry) * (h.door + .02) + Math.cos(h.ry) * side * Math.max(.29, Math.min(.47, h.w * .3));
       const z = h.z + Math.cos(h.ry) * (h.door + .02) - Math.sin(h.ry) * side * Math.max(.29, Math.min(.47, h.w * .3));
       if (shore(x, z) > .88 || nearAnother(h, x, z)) continue;
@@ -100,9 +101,6 @@ export function buildTownCharm(material, season = 'summer', lite = false) {
   const x = PIER.x1 - .38, z = PIER.z, y = .23;
   bag.push(x, y, z);
   bag.box(.23, .13, .18, '#ac8464', {z: .12, r: .018});
-  bag.box(.18, .09, .16, '#d2b28c', {x: -.28, z: -.13, r: .018});
-  bag.cyl(.09, .09, .12, '#9a7659', {x: -.1, z: -.15, seg: 10});
-  bag.torus(.105, .017, '#d7c6a2', {x: -.1, y: .16, z: -.15, rx: Math.PI / 2});
   bag.pop();
   const detail = bag.mesh(material);
   detail.receiveShadow = true; detail.castShadow = false;
