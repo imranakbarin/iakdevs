@@ -30,9 +30,13 @@ export function outsideRect(R, pt, pad = .5) {
 const WORK = {
   baker: {period: 34, out: 24, spot: () => front(building('bakery'), .7, .75), face: b => b.ry + Math.PI / 2 + Math.PI, modes: {sweep: 1}, props: {pTool: 1}, tilt: {pTool: -.55}, text: 'Sweeping the step outside the bakery'},
   toyshop: {period: 30, out: 20, spot: () => front(building('toys'), .65, -.7), face: b => b.ry + Math.PI, modes: {display: 1}, props: {pTool: 1}, text: "Arranging the toy shop's window"},
+  police: {period: 40, out: 28, spot: () => front(building('police'), .6, .55), face: b => b.ry + Math.PI * .5, modes: {guard: 1}, props: {}, text: 'Keeping an eye on the square'},
+  fire: {period: 36, out: 22, spot: () => front(building('fire'), .7, -.8), face: b => b.ry + Math.PI, modes: {wipe: 1}, props: {}, text: 'Polishing the brass at the fire station'},
+  // the miller carries sacks of flour out to the step and goes back for the next one (a walk out, a set-down, a walk back)
+  miller: {period: 40, out: 30, move: (b, cyc) => { const a = front(b, .45, .25), z = front(b, 1.35, .7), k = (cyc % 6) / 6, out = k < .42, back = k >= .5 && k < .92, f = out ? k / .42 : back ? 1 - (k - .5) / .42 : k < .5 ? 1 : 0, p = {x: a.x + (z.x - a.x) * f, z: a.z + (z.z - a.z) * f}, dir = out ? 1 : -1; return {p, yaw: Math.atan2((z.x - a.x) * dir, (z.z - a.z) * dir), laden: out || (k >= .92), moving: out || back}; }, text: 'Carrying sacks of flour out of the mill'},
   mechanic: {period: 32, out: 22, spot: () => front(building('garage'), .9, 1.0), face: b => b.ry + Math.PI * .6, modes: {tinker: 1}, props: {pTool: 1}, tilt: {pTool: .2}, text: 'Tinkering with something at the garage'}
 };
-const WORK_AT = {baker: 'bakery', toyshop: 'toys', mechanic: 'garage'};
+const WORK_AT = {baker: 'bakery', toyshop: 'toys', mechanic: 'garage', police: 'police', fire: 'fire', miller: 'mill'};
 
 // ctx: {market (the market building), platform(id) -> {x, z, tx, tz}, farm: {hens: {x, z}, cows: {x, z}, fence: {x, z, yaw}}, trainAt (station id or null), seat: {x, z, yaw, partner, seatT}}
 export function planFor(r, role, env, ctx, t = 0) {
@@ -60,7 +64,9 @@ export function planFor(r, role, env, ctx, t = 0) {
   const W = WORK[role];
   if (W && WORK_AT[role] === r.at && ctx.buildings !== false && fair) {
     const cyc = t % W.period; if (cyc > W.out) return null;
-    const b = building(r.at), p = W.spot(); return {kind: 'work', x: p.x, z: p.z, yaw: W.face(b), modes: W.modes, props: W.props, tilt: W.tilt || {}, speed: .6, text: W.text};
+    const b = building(r.at);
+    if (W.move) { const m = W.move(b, cyc); return {kind: 'work', x: m.p.x, z: m.p.z, yaw: m.yaw, modes: m.laden ? {basket: 1} : {}, walkModes: m.laden ? {basket: 1} : {}, props: m.laden ? {pTool: 1} : {}, tilt: {}, speed: .6, fast: m.moving, text: W.text}; }
+    const p = W.spot(); return {kind: 'work', x: p.x, z: p.z, yaw: W.face(b), modes: W.modes, props: W.props, tilt: W.tilt || {}, speed: .6, text: W.text};
   }
   // the stationmaster on the platform: the flag goes up when the train is due or standing
   if (role === 'stationmaster' && r.at === 'station' && ctx.platform) {

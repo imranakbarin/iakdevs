@@ -44,13 +44,13 @@ const shot2 = (pg, name) => pg.screenshot({path: path.join(out, `new-town-${name
         const shown = !document.getElementById('insideBtn').hidden;
         document.getElementById('insideBtn').click();
         return {shown,info:ToyTownNew.interior(),bar:!document.getElementById('roomBar').hidden};});
-      assert.ok(opened.shown && opened.bar && opened.info.id === 'bakery' && opened.info.actorCount === 2,'a selected bakery opens a populated cutaway ('+JSON.stringify(opened)+')');
+      assert.ok(opened.shown && opened.bar && opened.info.id === 'bakery' && opened.info.actorCount === (opened.info.staffVisible ? 1 : 0) + opened.info.visitors.length,'a selected bakery opens a cutaway with exactly the residents who are there ('+JSON.stringify(opened)+')');
       const proofs = {};
       for (const id of ['bakery','cafe','school','station']) {
         proofs[id] = await page.evaluate(id => {ToyTownNew.explore(id);ToyTownNew.advance(.2);return {
           ...ToyTownNew.interior(),calls:ToyTownNew.renderer.info.render.calls,triangles:ToyTownNew.renderer.info.render.triangles,
           title:document.getElementById('roomTitle').textContent};},id);
-        assert.ok(proofs[id].id===id && proofs[id].hasScene && proofs[id].actorCount===2 && proofs[id].calls < 14 && proofs[id].triangles < 125000,'interior drawn cleanly under budget ('+JSON.stringify(proofs[id])+')');
+        assert.ok(proofs[id].id===id && proofs[id].hasScene && proofs[id].actorCount===(proofs[id].staffVisible?1:0)+proofs[id].visitors.length && proofs[id].visitors.length<=2 && proofs[id].calls < 14 && proofs[id].triangles < 125000,'interior drawn cleanly under budget ('+JSON.stringify(proofs[id])+')');
         assert.ok(typeof proofs[id].status==='string'&&proofs[id].status.length>8&&proofs[id].props,'interiors describe real town activity ('+JSON.stringify(proofs[id])+')');
         await shot2(page,'inside-'+id);
       }

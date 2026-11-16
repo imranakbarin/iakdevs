@@ -61,6 +61,8 @@ export function createActors({scene, sim, season, rods, marketDef, seats = () =>
     let n = 0; for (const a of A.values()) { const slot = slotOf.get(a.id); if (slot === undefined || !a.wasSeat || a.seatT < SERVED_AT || !a.plan || n >= 8) continue; const s = all[slot], k = .3, x = s.x + (s.table[0] - s.x) * k, z = s.z + (s.table[1] - s.z) * k; ware.setMatrixAt(n++, WM.makeTranslation(x, heightAt(s.table[0], s.table[1]) + .02 + .32 + .035 + .02, z)); }
     ware.count = n; ware.visible = n > 0; ware.instanceMatrix.needsUpdate = true;
   }
+  // the nearest friend walking beside this walker, going the same way (or null)
+  function companion(a) { const r = a.r; let best = null, bd = .62; for (const o of A.values()) { if (o === a || !o.vis || o.r.state !== 'walking') continue; const d = Math.hypot(o.x - a.x, o.z - a.z); if (d >= bd || (r.friends && r.friends[o.id] || 0) < 1 || r.tx * o.r.tx + r.tz * o.r.tz < .7) continue; best = o; bd = d; } return best; }
   const DOOR_T = 1.15, PRIVATE = /^(c\d+|mushroom|hut|farm|barn|mill)$/;
   const modesOfPlan = (plan, arrived) => arrived ? plan.modes : (plan.walkModes || {});
   function update(dt, time, env) {
@@ -94,14 +96,14 @@ export function createActors({scene, sim, season, rods, marketDef, seats = () =>
       const bld = r.state === 'inside' ? building(r.at) : null, shopDoor = bld && bld.door > 0;
       // arrivals and departures that need a moment on stage: the knock at a door, boarding a train
       if (a.vis && !lite) {
-        if (r.state === 'inside' && !plan && a.prevWalking && !r.onPlatform && shopDoor) { a.phase = 'door'; a.doorT = 0; count('door'); }
+        if (r.state === 'inside' && !plan && a.prevWalking && !r.onPlatform && shopDoor) { a.phase = 'door'; a.doorT = 0; a.doorKind = a.prevCarrying && !r.carrying ? 'handover' : null; count('door'); if (a.doorKind) count('handover'); }   // (a parcel just delivered: it is handed over at the door)
         else if (r.state === 'inside' && !plan && a.wasPlan && !r.onPlatform && shopDoor) a.phase = 'return';
         else if (r.state === 'riding' && a.prevState !== 'riding' && trainDoor()) { a.phase = 'board'; a.doorT = 0; count('board'); }
       }
       if (a.phase === 'door') { a.doorT += dt; if (a.doorT > DOOR_T) a.phase = null; }
       if (a.phase && (walking || (plan && a.phase !== 'board'))) a.phase = null;
       const vis = walking || r.onPlatform || !!plan || !!a.phase; w.visible = vis; const prevState = a.prevState;
-      a.prevWalking = walking; a.prevState = r.state; a.wasPlan = !!plan;
+      a.prevWalking = walking; a.prevState = r.state; a.wasPlan = !!plan; a.prevCarrying = !!r.carrying;
       if (!vis) { a.vis = false; a.mix = {}; a.catchUp = false; a.phase = null; if (r.state !== 'inside') a.hasBag = false; continue; }
       const justShown = !a.vis; a.vis = true; a.t += dt;
       if (justShown) { ensure(a, wearFor(env.season, env.rain)); a.x = r.x; a.z = r.z; a.gait.px = null; a.yaw = Math.atan2(r.tx, r.tz); a.mix = {}; a.catchUp = false;
@@ -138,7 +140,7 @@ export function createActors({scene, sim, season, rods, marketDef, seats = () =>
       let look = null, lift = 0, cast = 0, props = {}, tilt = {};
       if (plan) { Object.assign(want, modesOfPlan(plan, arrived || plan.fast)); props = {...plan.props}; tilt = plan.tilt || {}; if (plan.feeder && arrived) feeder = plan.feeder; if (plan.visitor && arrived) visitor = plan.visitor; if (plan.kind === 'shop' && plan.phase === 'done') a.hasBag = true;
         if (plan.sit && arrived) { if (sipAt(a.t, a.seed) > .35) props.pCup = 1; } }
-      else if (a.phase === 'door') want[PRIVATE.test(r.at) || role === 'post' ? 'knock' : 'enter'] = 1;
+      else if (a.phase === 'door') { if (a.doorKind === 'handover') { want.give = 1; props.pBag = 1; } else want[PRIVATE.test(r.at) || role === 'post' ? 'knock' : 'enter'] = 1; }
       else if (stall) { want.vend = 1; const idx = VENDORS.indexOf(r.id); if (paying.has(idx)) { want.give = 1; props.pBag = 1; } }
       else if (onPier) { want.fish = 1; const k = ((time + a.seed * 4) % 16) / 1.3; cast = k < 1 ? k : 0; if (r.caught && a.caught !== r.caught) { a.caught = r.caught; a.castAt = time; } }
       else if (standing) want[r.at === 'market' ? 'basket' : 'wait'] = 1;
@@ -148,6 +150,8 @@ export function createActors({scene, sim, season, rods, marketDef, seats = () =>
           if (lamp) { want.lamp = 1; lift = 1; } else { if (a.chatT < .6) want.wave = 1; else if (Math.sin(a.t * .9 + a.seed + (r.id < (r.look.id || '') ? 0 : 3)) > 0) want.talk = 1; else want.listen = 1; }
         } else {
           a.chatT = 0; if (hold) want[hold] = 1; if (r.carrying && !r.def.lamplighter) want.carry = 1;
+          // a friend walking the same way alongside: they turn to each other and chat as they go
+          const pal = companion(a); if (pal) { if (pal.id !== a.palId) { a.palId = pal.id; count('stroll'); } look = {yaw: clamp(-.8, wrap(Math.atan2(pal.x - a.x, pal.z - a.z) - a.yaw), .8), pitch: 0}; if (!hold && !r.carrying) want[Math.sin(a.t * .8 + a.seed + (r.id < pal.id ? 0 : 3)) > 0 ? 'talk' : 'listen'] = .6; } else a.palId = null;
           if (a.hasBag && !hold && !r.carrying) { want.basket = 1; props.pBag = 1; }
           else if (env.rain > .25 && !hold && !r.carrying) want.umbrella = 1; else if (U.wear === 'winter' && !hold && !r.carrying) want.hood = 1;
           if (U.identity.age === 'child' && !hold && env.rain < .3 && r.mood && r.mood.score > .75 && !r.carrying && gt.w > .5 && gt.run < .3) want.cheer = Math.sin(a.t * .4 + a.seed) > .7 ? 1 : 0;
@@ -175,5 +179,6 @@ export function createActors({scene, sim, season, rods, marketDef, seats = () =>
   }
   const gaitOf = id => { const a = A.get(id); return a ? {phase: a.gait.u * TAU, amp: a.gait.w, walk: a.gait.w, speed: a.gait.speed, run: a.gait.run} : null; };
   const modeOf = id => { const a = A.get(id); return a ? {...a.mix} : null; };
-  return {people, actors: A, update, stage, stats: () => ({...stats}), tableware: () => ware.count, focus: () => focusNow, activityOf: id => { const a = A.get(id); if (!a || !a.vis) return null; if (a.plan) return a.plan.text; if (a.phase === 'door') return 'Arriving at the door'; if (a.phase === 'board') return 'Boarding the train'; return null; }, handWorld, parcelAnchor, gaitOf, modeOf, wearOf: id => A.get(id).w.userData.wear, setShadows(on) { shadowsOn = on; for (const a of A.values()) for (const v of Object.values(a.w.userData.variants)) v.userData.mesh.castShadow = on; }, umbrellaUp: id => { const a = A.get(id); return !!(a && a.w.visible && (a.mix.umbrella || 0) > .5); }};
+  return {people, actors: A, update, stage, isOutdoors: id => { const a = A.get(id); return !!(a && a.vis && a.r.state === 'inside'); },   // (the sim has them inside a building but the town is showing them out of doors: then they are not in that building's room)
+ stats: () => ({...stats}), tableware: () => ware.count, focus: () => focusNow, activityOf: id => { const a = A.get(id); if (!a || !a.vis) return null; if (a.plan) return a.plan.text; if (a.phase === 'door') return 'Arriving at the door'; if (a.phase === 'board') return 'Boarding the train'; return null; }, handWorld, parcelAnchor, gaitOf, modeOf, wearOf: id => A.get(id).w.userData.wear, setShadows(on) { shadowsOn = on; for (const a of A.values()) for (const v of Object.values(a.w.userData.variants)) v.userData.mesh.castShadow = on; }, umbrellaUp: id => { const a = A.get(id); return !!(a && a.w.visible && (a.mix.umbrella || 0) > .5); }};
 }
