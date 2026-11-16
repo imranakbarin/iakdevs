@@ -482,7 +482,8 @@ function weatherLight() {
   sky.visible = L.stars > .02; sky.userData.stars.material.opacity = L.stars; sky.userData.moon.material.opacity = L.stars * .95;
   { const r = sim.weather.rain; { let n = 0; if (r > .25) sim.residents.forEach((q, i) => { if (n < 40 && actors.umbrellaUp(q.id)) { const h = actors.handWorld(q.id, 'R', v3c), ry = people.get(q.id).rotation.y; if (h) umbrellas.userData.set(n++, h.x + Math.sin(ry) * .03, h.y - .09, h.z + Math.cos(ry) * .03, ry, BROLLY[i % BROLLY.length]); } }); umbrellas.userData.show(n); } rain.position.set(view.x, 0, view.z); rain.userData.update(time, season === 'winter' || r < .02 ? 0 : r, windNow); splashes.userData.update(time, season === 'winter' || r < .02 ? 0 : r, view.x, view.z, lastDt);
     const day = 1 - L.night, amount = season === 'winter' ? Math.max(.23, r) : season === 'summer' ? (L.night > .5 ? .45 * (1 - r) : 0) : (season === 'autumn' ? .2 : .16) * day * (1 - r * .7);
-    fall.position.set(view.x, 0, view.z); fall.userData.update(time, amount, windNow);
+    const near = season === 'winter' || season === 'summer' ? 1 : 1 - clamp(0, (view.dist - 16) / 14, 1);   // leaves and petals are for looking closely: none at the overview, where they read as confetti
+    fall.position.set(view.x, 0, view.z); fall.userData.update(time, amount * near, windNow);
     sound.update({wild: {...wild.soundState(), bang: fest.bang()}, dark: L.night, rain: r, season, hour: sim.hour, trainMoving: Math.abs(sim.train.v) > .1, trainAt: sim.train.at, zoom: 1 - clamp(0, (view.dist - 7) / 50, 1)}, 0.0001 + lastDt); }
   // the street lamps, one by one as the lamplighter reaches them (faint in daylight, bright after dark), and the puddles
   built.lampGlow.material.opacity = .4 + .55 * L.night;

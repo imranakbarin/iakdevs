@@ -90,8 +90,8 @@ function snow() {
 
 /* ---- leaves (autumn) and petals (spring): flat quads that tumble as they fall ---- */
 function leaves(season) {
-  const N = season === 'spring' ? 150 : 220, X = 34, Z = 26, Y = 12, autumn = season === 'autumn', cols = autumn ? ['#e58a2c', '#d9532b', '#e8b83a', '#b5551f', '#c98a2b'] : ['#ffc6dc', '#ffffff', '#f7a8c8', '#ffd9e8'];
-  const mesh = new THREE.InstancedMesh(new THREE.PlaneGeometry(autumn ? .3 : .13, autumn ? .22 : .1), new THREE.MeshBasicMaterial({color: '#ffffff', side: THREE.DoubleSide, transparent: true, opacity: .95, depthWrite: false, fog: false}), N), c = new THREE.Color();
+  const N = season === 'spring' ? 110 : 130, X = 22, Z = 17, Y = 9, autumn = season === 'autumn', cols = autumn ? ['#d49a4a', '#c8703a', '#d9b25a', '#b0602f'] : ['#f4cfdd', '#ffffff', '#efb9d0', '#f9dde8'];
+  const mesh = new THREE.InstancedMesh(new THREE.PlaneGeometry(autumn ? .2 : .1, autumn ? .15 : .08), new THREE.MeshBasicMaterial({color: '#ffffff', side: THREE.DoubleSide, transparent: true, opacity: .95, depthWrite: false, fog: false}), N), c = new THREE.Color();
   for (let k = 0; k < N; k++) mesh.setColorAt(k, c.set(cols[k % cols.length]));
   const seeds = Array.from({length: N}, (_, k) => [(rand(k * 4 + 1) - .5) * X, rand(k * 4 + 2) * Y, (rand(k * 4 + 3) - .5) * Z, rand(k * 4 + 4) * TAU, .5 + rand(k + 31)]), m = new THREE.Matrix4(), q = new THREE.Quaternion(), e = new THREE.Euler(), p = new THREE.Vector3(), s = new THREE.Vector3(1, 1, 1);
   mesh.frustumCulled = false; mesh.visible = false;

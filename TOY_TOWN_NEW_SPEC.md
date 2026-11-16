@@ -274,6 +274,18 @@ Every resident, horse and animal is ONE merged, bone-skinned mesh (one draw call
 - **Friends walking together**: two walking residents who are friends (`r.friends`), going the same way within ~.6, turn their heads to each other and talk/listen as they go.
 - **Budget**: each resident shown out of doors is one draw call; the default-view budget in the tests is 110 calls (was 100). The light (TV) version shows no activities and stays at 60.
 
+## 4m. A calm overview (colour lanes, quiet details)
+
+At the default zoom the whole island is on screen, so anything small and bright and repeated reads as noise. The overview is now designed as a plan: streets, gardens, landmarks.
+
+- **Colour lanes** (`def.mjs`): the cottages share roofs by neighbourhood instead of each having its own colour: the west lane blue, the south street teal, the east side terracotta; walls come from one short soft set per lane (cream, white, pale blue, pink, yellow). Doors and shutters follow the roof. Hay Farm and the landmarks keep their own colours. (It was six wall hues by five roof hues over 14 cottages.)
+- **Quiet chimneys** (`build.mjs smoke()`): three small warm-grey puffs instead of a tall stack of white spheres (which read as a tiny person standing on every roof).
+- **Leaves and petals only up close** (`weather3d.mjs`, `main.mjs`): fewer, smaller, muted, over a smaller volume; their amount fades to zero between camera distances 16 and 30, so the overview has no confetti over the sea. Snow and summer fireflies are unchanged.
+- **Autumn** : the hedges stay olive (only trees turn warm), four leaf piles instead of eight, in softer tones.
+- **Fewer lamps** (`def.mjs LAMPS`): one every 3.1 units along the streets (was 2.3); the lamplighter has fewer to tend.
+- **Fewer shore marks** (`wild3d.mjs`): 90 beach spots instead of 150.
+- No simulation, route, building id or gameplay changes; the extra detail layers keep their own distance rules.
+
 ## 5. Art rules
 
 - Fat, rounded, slightly wonky. No sharp corners: `bag.box` is a rounded box; roofs overhang.
