@@ -242,13 +242,13 @@ export function buildBorders(graph, season, material) {
       const q = along(e.line, s), nx = q.tz, nz = -q.tx, o = 1.3, a = [q.x + nx * o, q.z + nz * o], c = [q.x - nx * o, q.z - nz * o], out = shore(a[0], a[1]) > shore(c[0], c[1]) ? a : c;
       if (junctions.some(j => Math.hypot(j[0] - out[0], j[1] - out[1]) < 1.9) || !hedgeOk(out[0], out[1]) || shore(out[0], out[1]) > .82) continue;
       const k = Math.round(s * 5), y = heightAt(out[0], out[1]);
-      b.sph(.22, k % 3 ? 'leaf' : 'leafLight', {x: out[0], y: y + .14, z: out[1], sx: 1.5, sy: .85, ry: Math.atan2(-q.tz, q.tx), seg: 8, sway: .3});
+      b.sph(.22, season === 'autumn' ? (k % 3 ? '#8f9a58' : '#a6a865') : k % 3 ? 'leaf' : 'leafLight', {x: out[0], y: y + .14, z: out[1], sx: 1.5, sy: .85, ry: Math.atan2(-q.tz, q.tx), seg: 8, sway: .3});
       if (season !== 'winter' && k % 4 === 0) b.sph(.045, ['pink', 'white', 'yellow', 'red'][(k >> 2) % 4], {x: out[0] + .05, y: y + .3, z: out[1], seg: 5, sway: .5});
       if (season === 'winter') b.sph(.15, '#ffffff', {x: out[0], y: y + .25, z: out[1], sx: 1.3, sy: .32, ry: Math.atan2(-q.tz, q.tx), seg: 7});
     }
   }
   // the shore: rocks, reeds, driftwood and tufts of sea thrift
-  for (let k = 0; k < 150; k++) {
+  for (let k = 0; k < 90; k++) {
     const a = rand(k * 3 + 1) * TAU, m = .9 + rand(k * 3 + 2) * .07, x = Math.cos(a) * ISLAND.rx * m, z = Math.sin(a) * ISLAND.rz * m, sh = shore(x, z);
     if (sh < .88 || sh > .985 || (x > PIER.x0 - 1.3 && Math.abs(z - PIER.z) < 2.6) || BUILDINGS.some(q => Math.hypot(q.x - x, q.z - z) < q.w * .5 + .9)) continue;
     const y = heightAt(x, z), t = k % 6;

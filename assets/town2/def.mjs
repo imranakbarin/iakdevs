@@ -158,6 +158,12 @@ export const BUILDINGS = [
     ['c14', 'Violet Cottage', 'sky', 'purple', [[outer(NW), 1], [outer(W), -1], ...both(spokes(NW), -1)]], ['c15', 'Willow Cottage', 'lime', 'red', [...both(spokes(NE), 1), [outer(NE), 1], [outer(N), -1]]]
   ];
   for (const [id, name, colour, roof, prefs] of houses) put(id, 'cottage', name, prefs, cot(colour, roof));
+  // Colour discipline: neighbours share a roof so the cottages read as lanes, not as a rainbow. West lane blue roofs, the south street teal, the east side terracotta;
+  // walls come from one short soft set per lane (the shutters and doors follow the roof). Hay Farm keeps its own colours.
+  const LANES = [[a => Math.abs(a) > 2.2, 'blue', ['cream', 'sky', 'white', 'cream', 'pink']], [a => a > 1.05 && a <= 2.2, 'teal', ['cream', 'white', 'pink']], [a => true, 'red', ['cream', 'yellow', 'white', 'cream']]];
+  let n = 0; for (const b of BUILDINGS) if (b.type === 'cottage' && b.id !== 'farm') {
+    const a = Math.atan2(b.z, b.x), lane = LANES.find(l => l[0](a)); b.roof = lane[1]; b.colour = lane[2][n++ % lane[2].length];
+  }
 }
 { const mill = BUILDINGS.find(b => b.id === 'mill'); if (mill) { HILL.x = mill.x; HILL.z = mill.z + .4; } }   // Windmill Hill rises under the windmill
 
