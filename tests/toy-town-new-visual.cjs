@@ -44,13 +44,13 @@ const shot2 = (pg, name) => pg.screenshot({path: path.join(out, `new-town-${name
         const shown = !document.getElementById('insideBtn').hidden;
         document.getElementById('insideBtn').click();
         return {shown,info:ToyTownNew.interior(),bar:!document.getElementById('roomBar').hidden};});
-      assert.ok(opened.shown && opened.bar && opened.info.id === 'bakery' && opened.info.actorCount === 2,'a selected bakery opens a populated cutaway ('+JSON.stringify(opened)+')');
+      assert.ok(opened.shown && opened.bar && opened.info.id === 'bakery' && opened.info.actorCount === (opened.info.staffVisible ? 1 : 0) + opened.info.visitors.length,'a selected bakery opens a cutaway with exactly the residents who are there ('+JSON.stringify(opened)+')');
       const proofs = {};
       for (const id of ['bakery','cafe','school','station']) {
         proofs[id] = await page.evaluate(id => {ToyTownNew.explore(id);ToyTownNew.advance(.2);return {
           ...ToyTownNew.interior(),calls:ToyTownNew.renderer.info.render.calls,triangles:ToyTownNew.renderer.info.render.triangles,
           title:document.getElementById('roomTitle').textContent};},id);
-        assert.ok(proofs[id].id===id && proofs[id].hasScene && proofs[id].actorCount===2 && proofs[id].calls < 14 && proofs[id].triangles < 125000,'interior drawn cleanly under budget ('+JSON.stringify(proofs[id])+')');
+        assert.ok(proofs[id].id===id && proofs[id].hasScene && proofs[id].actorCount===(proofs[id].staffVisible?1:0)+proofs[id].visitors.length && proofs[id].visitors.length<=2 && proofs[id].calls < 14 && proofs[id].triangles < 125000,'interior drawn cleanly under budget ('+JSON.stringify(proofs[id])+')');
         assert.ok(typeof proofs[id].status==='string'&&proofs[id].status.length>8&&proofs[id].props,'interiors describe real town activity ('+JSON.stringify(proofs[id])+')');
         await shot2(page,'inside-'+id);
       }
@@ -255,7 +255,7 @@ const shot2 = (pg, name) => pg.screenshot({path: path.join(out, `new-town-${name
     assert.ok(wet.rain > .5 && wet.calls <= 135 && wet.triangles <= 850000, 'in the rain it still draws within budget (' + wet.calls + ' calls, rain ' + wet.rain + ')');
     console.log('NEW TOWN', JSON.stringify(info));
     assert.deepEqual(errors, [], 'no page errors');
-    assert.ok(info.calls > 5 && info.calls <= 100, 'the whole town draws in a handful of calls (' + info.calls + ')');
+    assert.ok(info.calls > 5 && info.calls <= 110, 'the whole town draws in a handful of calls (' + info.calls + '; one per resident out of doors)');
     assert.ok(info.triangles > 100000 && info.triangles <= 850000, 'and within its triangle budget (' + info.triangles + ')');
     assert.ok(info.residentsOut >= 1, 'residents are out and about');
     assert.ok(after.some((s, i) => s !== before[i]), 'vehicles are moving');

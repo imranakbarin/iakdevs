@@ -145,7 +145,7 @@ const roomBar = document.getElementById('roomBar'), roomTitle = document.getElem
 let savedWorldView = null, roomMessageAt = -10;
 const roomContext = () => ({hour:sim.hour,weekday:sim.weekday,rain:sim.weather.rain,season,
   pantry:sim.eco?.pantry,marketOpen:sim.market.open,delivered:sim.freightStats.delivered,
-  trainAt:sim.train.at,residents:sim.residents});
+  trainAt:sim.train.at,residents:sim.residents.map(r => actors.isOutdoors(r.id) ? {...r, state: 'outdoors'} : r)});   // (one place at a time: somebody shown outside is not also in the room)
 function doorTransition(){
   if(!roomVeil)return;roomVeil.classList.remove('play');void roomVeil.offsetWidth;roomVeil.classList.add('play');
 }
@@ -533,7 +533,7 @@ function sync(dt) {
   if ((jobsAt -= dt) <= 0) { jobsAt = .5; refreshJobs(); }
   fishTick(); sailTick(dt); trackSelection(dt); placeCamera(); weatherLight();
   districtLife.update({flowers: sim.eco.flowers, delivered: sim.freightStats.delivered, marketOpen: sim.market.open, dist: view.dist});
-  gallery.update(dt,roomContext());
+  if (gallery.id) gallery.update(dt,roomContext());
   if (gallery.id && time-roomMessageAt > 2) {roomMessageAt=time;refreshRoomLabel();}
   news(); caption();
 }

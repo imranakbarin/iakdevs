@@ -50,12 +50,17 @@ const HELPERS = async () => {
     const incomplete = async () => Object.keys(WANT).filter(k => !OPTIONAL.includes(k)).some(k => !filmed[k]) || await page.evaluate(() => { const s = ToyTownNew.actors.stats(); return !(s.alight >= 1 && s.service >= 1 && s.board >= 1 && s.play >= 1 && s.shop >= 1 && s.work >= 1 && s.cafe >= 1); });
     for (let sec = 0; sec < 1100 && await incomplete(); sec++) {
       await page.evaluate(() => { ToyTownNew.play(1); const A = ToyTownNew.actors, W = ToyTownNew.wild, S = window.__seen; S.tableware = Math.max(S.tableware, A.tableware()); for (const a of A.actors.values()) { if (!a.vis) continue; const rig = a.w.userData.rig; if (a.hasBag && a.props.pBag && rig.scl[rig.index.pBag] === 1) S.bag++; if (a.plan && a.plan.kind === 'feed') { S.hensNear = Math.max(S.hensNear, W.hens.filter(h => h.g.visible && Math.hypot(h.w.x - a.x, h.w.z - a.z) < 1.1).length); } if (a.plan && a.plan.kind === 'tend') for (const c of ToyTownNew.critterList()) if (c.kind === 'cow' && Math.hypot(c.g.position.x - a.x, c.g.position.z - a.z) < 1.25) S.cowNear++; } const pep = W.pets.find(p => p.def.id === 'pepper'); if (pep && pep.bt && (pep.bt.mix.play || 0) > .6) S.pepper++; });
+      await page.evaluate(() => {   // one place at a time: somebody the town shows outdoors is not also drawn in that building's room
+        const A = ToyTownNew.actors, c = A.actors.get('crumb'); if (!window.__bk && c.vis && c.r.state === 'inside' && c.r.at === 'bakery') { ToyTownNew.explore('bakery'); ToyTownNew.advance(.05); window.__bk = {staff: ToyTownNew.interior().staffVisible, out: A.isOutdoors('crumb')}; ToyTownNew.exitInterior(); }
+        const seated = [...A.actors.values()].find(a => a.plan && a.plan.kind === 'cafe'); if (!window.__cf && seated) { ToyTownNew.explore('cafe'); ToyTownNew.advance(.05); const st = ToyTownNew.interior(); window.__cf = {id: seated.id, inRoom: st.visitors.includes(seated.id), visitors: st.visitors}; ToyTownNew.exitInterior(); } });
       for (const [name, cond] of Object.entries(WANT)) if (!filmed[name]) { const r = await film(page, 'd-' + name, cond.toString(), 6, .35, name === 'board' ? 4 : 3.6); if (r) { filmed[name] = r; } }
     }
-    const stats = await page.evaluate(() => ({stats: ToyTownNew.actors.stats(), seen: window.__seen}));
+    const stats = await page.evaluate(() => ({stats: ToyTownNew.actors.stats(), seen: window.__seen, bakery: window.__bk, cafe: window.__cf}));
     console.log('LIVING day', JSON.stringify(stats)); console.log('filmed', Object.keys(filmed).join(', '));
     for (const k of ['feed', 'tend', 'work', 'cafe', 'shop', 'play', 'door', 'board', 'alight']) assert.ok(stats.stats[k] >= 1, 'in a day the town sees ' + k + ' (' + JSON.stringify(stats.stats) + ')');
     assert.ok(stats.stats.service >= 1, 'the café keeper brings tea out (' + JSON.stringify(stats.stats) + ')'); assert.ok(stats.seen.tableware >= 1, 'the cups stay on the table after the tea is brought'); assert.ok(stats.seen.bag >= 1, 'a shopper walks off holding the shopping');
+    assert.ok(stats.bakery && stats.bakery.out && stats.bakery.staff === false, 'the baker sweeping his step is not also drawn behind the counter (' + JSON.stringify(stats.bakery) + ')');
+    assert.ok(stats.cafe && stats.cafe.inRoom === false, 'a guest sitting on the terrace is not also drawn inside the café (' + JSON.stringify(stats.cafe) + ')');
     assert.ok(stats.seen.hensNear >= 2, 'hens hurry over to the farmer scattering feed (' + stats.seen.hensNear + ')'); assert.ok(stats.seen.cowNear >= 1, 'a cow ambles over to the farmer at the fence');
     for (const k of Object.keys(WANT).filter(k => !OPTIONAL.includes(k))) assert.ok(filmed[k], 'filmed ' + k);
     // every film moved: the figure's pose or position changed over the sequence (not a frozen picture)
@@ -74,7 +79,7 @@ const HELPERS = async () => {
     await page.evaluate(() => { ToyTownNew.freeze(); });
     // ---- 3. cost: the whole town with its activities at the default view, and the time the actors take each frame ----
     const perf = await page.evaluate(() => { ToyTownNew.setHour(10); ToyTownNew.play(30); ToyTownNew.look(0, .4, 46, 0); const i = ToyTownNew.renderer.info.render, A = ToyTownNew.actors, t0 = performance.now(); for (let k = 0; k < 200; k++) A.update(.016, 500 + k * .016, {rain: 0, season: ToyTownNew.info().season, hour: ToyTownNew.sim.hour}); return {ms: (performance.now() - t0) / 200, info: ToyTownNew.info(), out: [...A.actors.values()].filter(a => a.vis).length}; });
-    console.log('LIVING cost', JSON.stringify({ms: +perf.ms.toFixed(3), calls: perf.info.calls, tris: perf.info.triangles, out: perf.out})); assert.ok(perf.ms < 3, 'all the residents animate in well under a frame (' + perf.ms.toFixed(2) + ' ms)'); assert.ok(perf.info.calls <= 100 && perf.info.triangles <= 850000, 'drawing stays in budget (' + perf.info.calls + ' calls, ' + perf.info.triangles + ' triangles)');
+    console.log('LIVING cost', JSON.stringify({ms: +perf.ms.toFixed(3), calls: perf.info.calls, tris: perf.info.triangles, out: perf.out})); assert.ok(perf.ms < 3, 'all the residents animate in well under a frame (' + perf.ms.toFixed(2) + ' ms)'); assert.ok(perf.info.calls <= 110 && perf.info.triangles <= 850000, 'drawing stays in budget (' + perf.info.calls + ' calls, ' + perf.info.triangles + ' triangles)');
     await page.context().close();
     // ---- 4. the same on a phone: a few sequences ----
     const ph = await open({...devices['iPhone 13']}, '');

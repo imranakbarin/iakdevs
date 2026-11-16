@@ -265,6 +265,15 @@ Every resident, horse and animal is ONE merged, bone-skinned mesh (one draw call
 - **Camera**: the closest zoom is 3.2 (was 7). The card of a selected resident starts with what they are doing.
 - **Test hooks**: `play(seconds)` (simulation and animation in .1 s frames), `actors.stats()`, `actors.focus()`, `actors.tableware()`; `tests/toy-town-living.cjs` films a simulated day (frames in `visual-artifacts/living/`, desktop and phone).
 
+## 4l. One place at a time, honest rooms, more street life
+
+- **One place at a time**: `actors.isOutdoors(id)` is true when the simulation has a resident inside a building but the town is showing them out of doors (a terrace seat, sweeping the step, the platform). `main.mjs` passes such residents to the rooms as `state: 'outdoors'`, so `roomlife.mjs`/`interiors.mjs` never draw them inside as well.
+- **Honest rooms**: the room's keeper appears when really there (as before); visitors are now the residents the simulation really has in that building (up to two, built when first needed), posed with `pose.mjs`: in the café they sit on the middle table's chairs facing each other and chat; at the bakery the first browses the counter; at the station they wait. (Previously a fixed person, e.g. Granny Moss, stood in for any visitor.) `interior().visitors` lists who is shown.
+- **More work out of doors** (`activities.mjs`): the constable keeps watch by the kiosk, the fire chief polishes the brass at the fire station, the miller carries flour sacks out to the step and walks back empty-handed (a sack prop on his `pTool`).
+- **Parcel handover**: a resident who arrives at a door having just completed a delivery (the simulation clears `carrying` on arrival) hands it over (`give` with the parcel) instead of knocking.
+- **Friends walking together**: two walking residents who are friends (`r.friends`), going the same way within ~.6, turn their heads to each other and talk/listen as they go.
+- **Budget**: each resident shown out of doors is one draw call; the default-view budget in the tests is 110 calls (was 100). The light (TV) version shows no activities and stays at 60.
+
 ## 5. Art rules
 
 - Fat, rounded, slightly wonky. No sharp corners: `bag.box` is a rounded box; roofs overhang.

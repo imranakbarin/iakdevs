@@ -4,7 +4,8 @@ import * as THREE from 'three';
 import {Bag} from './build.mjs';
 import {CAST} from './def.mjs';
 import {buildPerson} from './people.mjs';
-import {planRoom} from './roomlife.mjs';
+import {planRoom, ROOM_STAFF} from './roomlife.mjs';
+import {bipedPose, applyPose, newPose, BIPED, newGait} from './pose.mjs';
 
 export const ROOMS = Object.freeze({
   bakery: {title: 'The Bakery', subtitle: 'Bread, flour and a warm oven', people: ['crumb', 'moss']},
@@ -200,12 +201,16 @@ function makeRoom(id) {
   const accents=new THREE.Group(), live=liveDetails(id);
   const who=ROOMS[id].people;
   const actorA=resident(who[0],id==='bakery'?-.12:id==='station'?1.4:-1.7,id==='school'?-1.75:id==='station'?-1.05:-.95,0);
-  const actorB=resident(who[1],id==='cafe'?.45:1.1,id==='school'?.6:1.2,Math.PI*.82,id==='school'?1.5:1.72);
-  if(actorA)accents.add(actorA);if(actorB)accents.add(actorB);
+  if(actorA)accents.add(actorA);
+  // Visitors are whoever is really in this building now (built when first needed), in up to two places in the room.
+  const bx=id==='cafe'?.45:1.1,bz=id==='school'?.6:1.2,vs=id==='school'?1.5:1.72;
+  // in the café they take the two chairs at the middle table, facing each other; elsewhere they stand at the counter or wait
+  const slots=id==='cafe'?[{x:-.47,z:1.1,yaw:Math.PI/2,sit:true},{x:1.17,z:1.1,yaw:-Math.PI/2,sit:true}]:[{x:bx,z:bz,yaw:Math.PI*.82},{x:bx-.62,z:bz+.18,yaw:Math.PI*.9}];
   s.add(accents,live.group);
   const glow=new THREE.PointLight('#ffbe79',.9,6,2);glow.position.set(id==='bakery'?-1.8:1.6,1.2,-1.35);s.add(glow);
-  return {id,scene:s,actorA,actorB,glow,ambient,sun,live,age:0,plan:null};
+  return {id,scene:s,actorA,accents,slots,visitorScale:vs,visitors:new Map(),shown:[],glow,ambient,sun,live,age:0,plan:null};
 }
+const vpose=newPose(BIPED.names),vgait=newGait(),visitorPose={mix:{}};
 export function createInteriorGallery() {
   const cache=new Map();let active=null;
   return {
@@ -227,8 +232,17 @@ export function createInteriorGallery() {
       if(parts.arrival)parts.arrival.visible=state.board;
       // Interior figures represent the same residents in the world, not permanent duplicates.
       if(active.actorA)active.actorA.visible=state.staffHere;
-      if(active.actorB)active.actorB.visible=state.visitorHere;
-      const poses=[active.actorA,active.actorB];
+      // the real visitors: the residents the simulation has inside this building and the town is not showing outdoors
+      const staff=ROOM_STAFF[active.id], ids=(world.residents||[]).filter(r=>r&&r.at===active.id&&r.state==='inside'&&r.id!==staff).map(r=>r.id).sort().slice(0,active.slots.length);
+      for(const [vid,g] of active.visitors)g.visible=ids.includes(vid);
+      ids.forEach((vid,k)=>{let g=active.visitors.get(vid);if(!g){g=resident(vid,0,0,0,active.visitorScale);if(!g)return;active.visitors.set(vid,g);active.accents.add(g);}
+        const sl=active.slots[k];g.rotation.y=sl.yaw;g.visible=true;
+        const mode=active.id==='cafe'?(Math.sin(t*.7+k*2)>0?'talk':'listen'):active.id==='bakery'?(k===0?'browse':'wait'):active.id==='station'?'wait':'listen';
+        const D=g.userData.dims,hip=(.40-.08)/active.visitorScale+.012,sit=sl.sit?{sitDrop:D.legLen-hip,sitTilt:Math.asin(Math.min(.95,Math.max(0,(hip-D.kneeY)/(D.legLen-D.kneeY))))}:{};   // (seated on the café chairs: hips on the seat, feet to the floor)
+        visitorPose.mix=sl.sit?{sit:1,[mode]:1}:{[mode]:1};bipedPose(vpose,{gait:vgait,mix:visitorPose.mix,t:t+k*3,seed:k*1.3+1,...sit});applyPose(g.userData.rig,vpose);g.userData.rig.update();
+        g.position.set(sl.x,.08+vpose.drop*active.visitorScale,sl.z);});
+      active.shown=ids;
+      const poses=[active.actorA];
       poses.forEach((g,i)=>{
         if(!g||!g.visible)return;
         const rig=g.userData.rig;rig.reset();
@@ -246,8 +260,8 @@ export function createInteriorGallery() {
       active.scene.userData.deliveries=world.delivered||0;
       active.scene.userData.marketOpen=!!world.marketOpen;
     },
-    stats(){return {id:active?.id||null,hasScene:!!active,actorCount:active?[active.actorA,active.actorB].filter(Boolean).length:0,
-      status:active?.plan?.status||'',staffVisible:!!active?.actorA?.visible,visitorVisible:!!active?.actorB?.visible,
+    stats(){return {id:active?.id||null,hasScene:!!active,actorCount:active?(active.actorA&&active.actorA.visible?1:0)+active.shown.length:0,visitors:active?[...active.shown]:[],
+      status:active?.plan?.status||'',staffVisible:!!active?.actorA?.visible,visitorVisible:!!(active&&active.shown.length),
       props:active?.plan?{oven:active.plan.oven,bread:active.plan.bread,tea:active.plan.tea,lesson:active.plan.lesson,arrival:active.plan.board}:null};}
   };
 }
