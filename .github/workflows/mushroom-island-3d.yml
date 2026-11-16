@@ -1,0 +1,49 @@
+name: Mushroom Island 3D checks
+on:
+  push:
+    paths:
+      - 'mushroom-island.html'
+      - 'assets/mushroom-island-3d.mjs'
+      - 'tests/mushroom-island-3d.test.cjs'
+      - 'tests/mushroom-island-3d-visual.cjs'
+      - '.github/workflows/mushroom-island-3d.yml'
+  pull_request:
+    paths:
+      - 'mushroom-island.html'
+      - 'assets/mushroom-island-3d.mjs'
+      - 'tests/mushroom-island-3d.test.cjs'
+      - 'tests/mushroom-island-3d-visual.cjs'
+      - '.github/workflows/mushroom-island-3d.yml'
+jobs:
+  static-check:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 7
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Check scene geometry and 2D fallback
+        run: node tests/mushroom-island-3d.test.cjs
+  real-webgl:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install Chromium and local Three.js
+        run: |
+          npm install --no-save --no-package-lock playwright@1.58.2 three@0.187.0
+          npx playwright install --with-deps chromium
+      - name: Validate desktop, phone, orbit, zoom and fallback
+        run: node tests/mushroom-island-3d-visual.cjs
+      - name: Keep rendered previews
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pip-island-3d-preview
+          path: visual-artifacts/pip-island-*.png
+          if-no-files-found: ignore
+          retention-days: 14

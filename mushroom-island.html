@@ -3,16 +3,38 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta name="theme-color" content="#95c8e8">
-<title>Mushroom Island · The Living Kingdom</title>
+<meta name="theme-color" content="#a8d6d7">
+<title>Mushroom Island · Pip's 3D World</title>
 <style>
-html,body{width:100%;height:100%;margin:0;overflow:hidden;background:#91bed7}
-canvas{width:100%;height:100%;height:100dvh;display:block;touch-action:pan-y}
+html,body{width:100%;height:100%;margin:0;overflow:hidden;background:#a8d6d7;color:#3f4e4f;font-family:system-ui,-apple-system,"Segoe UI",sans-serif}
+#island,#island3d{position:absolute;inset:0;width:100%;height:100%;height:100dvh;display:block;box-sizing:border-box}
+#island{touch-action:pan-y}
+#island3d{display:none;touch-action:none;outline:none;cursor:grab}
+#island3d:active{cursor:grabbing}
+#islandView{position:fixed;top:calc(16px + env(safe-area-inset-top,0px));right:calc(16px + env(safe-area-inset-right,0px));border:1px solid rgba(85,111,112,.18);border-radius:999px;background:rgba(253,251,239,.87);color:#455b59;padding:10px 17px;font:600 13px system-ui,sans-serif;min-height:44px;cursor:pointer;z-index:3;box-shadow:0 2px 14px #3b656124}
+#islandView:focus-visible{outline:3px solid #6f958a;outline-offset:3px}
+#islandHint{position:fixed;bottom:calc(18px + env(safe-area-inset-bottom,0px));left:50%;transform:translateX(-50%);z-index:2;border-radius:999px;background:rgba(253,251,239,.75);padding:7px 13px;text-align:center;pointer-events:none;font-size:12px;max-width:85vw;color:#536966}
+#islandStatus{position:fixed;bottom:calc(64px + env(safe-area-inset-bottom,0px));left:50%;transform:translateX(-50%);z-index:3;border-radius:13px;background:rgba(253,251,239,.91);padding:10px 14px;text-align:center;max-width:min(84vw,380px);font-size:13px;box-shadow:0 4px 20px #345b5726}
+[hidden]{display:none!important}
+@media(max-width:560px){#islandHint{font-size:11px;bottom:calc(12px + env(safe-area-inset-bottom,0px));white-space:nowrap}#islandView{top:calc(9px + env(safe-area-inset-top,0px));right:calc(9px + env(safe-area-inset-right,0px))}}
+@media(prefers-reduced-motion:reduce){#islandView{transition:none}}
 </style>
 </head>
 <body>
-<canvas id="island" role="img" aria-label="An original mushroom kingdom comes alive as Pip runs, leaps, flips, bounces and glides automatically across a grassy foreground trail."></canvas>
+<canvas id="island" role="img" aria-label="Original illustrated Mushroom Island, with Pip running along the foreground."></canvas>
+<canvas id="island3d" tabindex="0" aria-label="Explorable 3D Mushroom Island with Pip, a castle, bridges, mushroom cottages, a waterfall and gardens. Drag to orbit; pinch or scroll to zoom."></canvas>
+<button id="islandView" type="button" hidden>2D art</button>
+<div id="islandHint" hidden>Drag to explore · pinch or scroll to zoom · tap a landmark</div>
+<div id="islandStatus" role="status" aria-live="polite" hidden></div>
 <script src="assets/mushroom-life.js?v=1"></script>
 <script src="assets/mushroom-cinematic.js?v=13"></script>
+<script type="module">
+  import('./assets/mushroom-island-3d.mjs?v=1').catch(error=>{
+    console.warn('Mushroom Island 3D is unavailable; keeping the illustrated 2D experience.',error);
+    const c=document.getElementById('island3d');if(c)c.style.display='none';
+    const a=document.getElementById('island');if(a)a.style.display='block';
+    document.getElementById('islandView').hidden=true;
+  });
+</script>
 </body>
 </html>
