@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generated_at": "2026-11-16T22:14:50.180Z",
+  "generated_at": "2026-11-17T04:36:27.645Z",
   "status": "ok",
   "successful_sources": [
     "BBC News",
@@ -24,12 +24,12 @@
       "published_at": "2026-11-16T19:30:28.000Z"
     },
     {
-      "title": "NASA Receives 16th Consecutive ‘Clean’ Financial Audit Opinion",
-      "url": "https://www.nasa.gov/news-release/nasa-receives-16th-consecutive-clean-financial-audit-opinion/",
+      "title": "Perseverance Update: The Ghostly Rocks of ‘Idubi’ — Bright Remnants of Aqueous Systems from Long Ago",
+      "url": "https://science.nasa.gov/blog/perseverance-update-the-ghostly-rocks-of-idubi-bright-remnants-of-aqueous-systems-from-long-ago/",
       "source": "NASA",
       "category": "Science",
       "tone": "light",
-      "published_at": "2026-11-16T20:30:40.000Z"
+      "published_at": "2026-11-16T23:12:45.000Z"
     },
     {
       "title": "Robert Pattinson to replace Daniel Craig as James Bond",
@@ -37,39 +37,39 @@
       "source": "BBC Culture",
       "category": "Culture",
       "tone": "light",
-      "published_at": "2026-11-16T19:43:58.000Z"
+      "published_at": "2026-11-17T02:11:57.000Z"
     },
     {
-      "title": "Portugal boss responds to criticism from Ronaldo's mum",
-      "url": "https://www.bbc.co.uk/sport/football/articles/ck87984g3x1po?at_medium=RSS&at_campaign=rss",
+      "title": "Key areas for Wales to build on historic win",
+      "url": "https://www.bbc.co.uk/sport/rugby-union/articles/c6vg202j9dj0o?at_medium=RSS&at_campaign=rss",
       "source": "BBC Sport",
       "category": "Sport",
       "tone": "light",
-      "published_at": "2026-11-16T21:08:06.000Z"
+      "published_at": "2026-11-17T04:29:45.000Z"
     },
     {
-      "title": "Three small failures combined to take down Microsoft 365",
-      "url": "https://arstechnica.com/gadgets/2026/11/microsoft-details-how-three-problems-combined-for-a-global-outage/",
-      "source": "Ars Technica",
+      "title": "New Zealand tricks and annual leave - the lengths fans are going to for GTA 6",
+      "url": "https://www.bbc.co.uk/news/articles/cm4gn9xnn1ppo?at_medium=RSS&at_campaign=rss",
+      "source": "BBC Technology",
       "category": "Technology",
       "tone": "light",
-      "published_at": "2026-11-16T21:56:39.000Z"
+      "published_at": "2026-11-17T01:04:45.000Z"
     },
     {
-      "title": "'Parents are offering to pay kids' wages': Salon owner",
-      "url": "https://www.bbc.co.uk/news/videos/c60rkn7vdjxxo?at_medium=RSS&at_campaign=rss",
+      "title": "Customers report service outages at major US banks",
+      "url": "https://www.bbc.co.uk/news/articles/cj752wvqneq6o?at_medium=RSS&at_campaign=rss",
       "source": "BBC Business",
       "category": "Business",
       "tone": "light",
-      "published_at": "2026-11-16T18:05:17.000Z"
+      "published_at": "2026-11-17T00:18:01.000Z"
     },
     {
-      "title": "Houthi rebel advance in Yemen may further destabilise global economy",
-      "url": "https://www.bbc.co.uk/news/articles/cmy97qperq9eo?at_medium=RSS&at_campaign=rss",
+      "title": "Five EU countries announce migrant deportation centre in Rwanda",
+      "url": "https://www.bbc.co.uk/news/articles/cw987343352go?at_medium=RSS&at_campaign=rss",
       "source": "BBC News",
       "category": "World",
       "tone": "light",
-      "published_at": "2026-11-16T21:40:07.000Z"
+      "published_at": "2026-11-16T23:20:45.000Z"
     },
     {
       "title": "30% Drop in Levels of Forever Chemicals in England’s Rivers, 49% in Fish – ‘Brilliant to See’",
