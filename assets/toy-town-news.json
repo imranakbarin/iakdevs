@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generated_at": "2026-11-17T14:33:51.986Z",
+  "generated_at": "2026-11-17T22:57:19.935Z",
   "status": "ok",
   "successful_sources": [
     "BBC News",
@@ -16,44 +16,44 @@
   ],
   "stories": [
     {
-      "title": "Largest Electric Bus Fleet in New York to Serve Bronx Neighborhood Elevated Asthma Rates",
-      "url": "https://www.goodnewsnetwork.org/largest-electric-bus-fleet-in-new-york-to-serve-bronx-neighborhood-riddled-with-asthma/",
+      "title": "West Coast’s First Ever Sea Turtle Hatchlings Released into the Pacific (LOOK)",
+      "url": "https://www.goodnewsnetwork.org/west-coasts-first-ever-sea-turtle-hatchlings-released-into-the-pacific-look/",
       "source": "Good News Network",
       "category": "Good news",
       "tone": "light",
-      "published_at": "2026-11-17T14:00:28.000Z"
+      "published_at": "2026-11-17T19:30:43.000Z"
     },
     {
-      "title": "Giant lunar sculpture has visitors over the moon",
-      "url": "https://www.bbc.co.uk/news/articles/cm79213ngx45o?at_medium=RSS&at_campaign=rss",
-      "source": "BBC Science",
+      "title": "NASA Launches Nuclear Power Systems Student Contest",
+      "url": "https://science.nasa.gov/centers-and-facilities/glenn/nasa-launches-nuclear-power-systems-student-contest/",
+      "source": "NASA",
       "category": "Science",
       "tone": "light",
-      "published_at": "2026-11-17T12:04:38.000Z"
+      "published_at": "2026-11-17T22:02:48.000Z"
     },
     {
-      "title": "Batman to James Bond: The clues about what to expect from Robert Pattinson's 007",
-      "url": "https://www.bbc.co.uk/news/articles/c8x2r6gyy2pzo?at_medium=RSS&at_campaign=rss",
+      "title": "'Real life ghost story' inspires new TV drama in Welsh countryside",
+      "url": "https://www.bbc.co.uk/news/articles/c6y4j73319dmo?at_medium=RSS&at_campaign=rss",
       "source": "BBC Culture",
       "category": "Culture",
       "tone": "light",
-      "published_at": "2026-11-17T13:15:38.000Z"
+      "published_at": "2026-11-17T22:08:39.000Z"
     },
     {
-      "title": "Rooney says he considered taking his own life at Man Utd",
-      "url": "https://www.bbc.co.uk/sport/football/articles/cx1l0n3v003eo?at_medium=RSS&at_campaign=rss",
+      "title": "Ruthless Zverev through to ATP Finals knockout stage",
+      "url": "https://www.bbc.co.uk/sport/tennis/articles/c6x2eveyyxp0o?at_medium=RSS&at_campaign=rss",
       "source": "BBC Sport",
       "category": "Sport",
       "tone": "light",
-      "published_at": "2026-11-17T14:09:19.000Z"
+      "published_at": "2026-11-17T22:30:24.000Z"
     },
     {
-      "title": "How new US chip restrictions on South East Asia will hit China",
-      "url": "https://www.bbc.co.uk/news/articles/cwq6e2qgvmlgo?at_medium=RSS&at_campaign=rss",
-      "source": "BBC Technology",
+      "title": "Yet another satellite company is jockeying for a rocket—but this one makes sense",
+      "url": "https://arstechnica.com/space/2026/11/yet-another-satellite-company-is-jockeying-for-a-rocket-but-this-one-makes-sense/",
+      "source": "Ars Technica",
       "category": "Technology",
       "tone": "light",
-      "published_at": "2026-11-17T14:25:45.000Z"
+      "published_at": "2026-11-17T22:44:46.000Z"
     },
     {
       "title": "Speed camera fault may have allowed drivers to escape fines",
@@ -61,31 +61,31 @@
       "source": "BBC Business",
       "category": "Business",
       "tone": "light",
-      "published_at": "2026-11-17T13:03:30.000Z"
+      "published_at": "2026-11-17T20:04:54.000Z"
     },
     {
-      "title": "EU, ASEAN pursue deeper trade ties, but hurdles remain as businesses struggle with informal barriers",
-      "url": "https://www.dw.com/en/eu-asean-pursue-deeper-trade-ties-but-hurdles-remain-as-businesses-struggle-with-informal-barriers/a-79971350?maca=en-rss-en-world-4025-xml-mrss",
-      "source": "DW",
+      "title": "US loses measles elimination status after 26 years amid record case numbers",
+      "url": "https://www.bbc.co.uk/news/articles/c977p71jx0xxo?at_medium=RSS&at_campaign=rss",
+      "source": "BBC News",
       "category": "World",
       "tone": "light",
-      "published_at": "2026-11-17T14:24:00.000Z"
+      "published_at": "2026-11-17T21:04:00.000Z"
     },
     {
-      "title": "A Waterfall of Fog and Lots of Lighting, These Images Won the UK’s Weather Photography Awards",
-      "url": "https://www.goodnewsnetwork.org/a-waterfall-of-fog-and-almighty-storms-these-images-won-the-uks-weather-photography-awards/",
+      "title": "Algeria Returns Kindness Shown by Kansans Who Welcomed its World Cup Team with the Trip of a Lifetime",
+      "url": "https://www.goodnewsnetwork.org/algeria-returns-kindness-shown-by-kansans-who-welcomed-its-world-cup-team-with-the-trip-of-a-lifetime/",
       "source": "Good News Network",
       "category": "Good news",
       "tone": "light",
-      "published_at": "2026-11-17T12:30:18.000Z"
+      "published_at": "2026-11-17T16:30:41.000Z"
     },
     {
-      "title": "APOD: 2026 November 17 – Milky Way versus Aurora",
-      "url": "https://science.nasa.gov/image-article/apod-2026-november-17-milky-way-versus-aurora/",
-      "source": "NASA",
+      "title": "Campaigners take claim 'regulatory gap' risks poultry farms polluting rivers to High Court",
+      "url": "https://www.bbc.co.uk/news/articles/cm894x41jw54o?at_medium=RSS&at_campaign=rss",
+      "source": "BBC Science",
       "category": "Science",
       "tone": "light",
-      "published_at": "2026-11-17T05:05:00.000Z"
+      "published_at": "2026-11-17T21:00:51.000Z"
     }
   ]
 }
