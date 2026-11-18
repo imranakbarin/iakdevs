@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generated_at": "2026-11-17T22:57:19.935Z",
+  "generated_at": "2026-11-18T04:29:08.317Z",
   "status": "ok",
   "successful_sources": [
     "BBC News",
@@ -24,12 +24,12 @@
       "published_at": "2026-11-17T19:30:43.000Z"
     },
     {
-      "title": "NASA Launches Nuclear Power Systems Student Contest",
-      "url": "https://science.nasa.gov/centers-and-facilities/glenn/nasa-launches-nuclear-power-systems-student-contest/",
-      "source": "NASA",
+      "title": "Pakistan's solar revolution has been so successful the national grid is crumbling",
+      "url": "https://www.bbc.co.uk/news/articles/ckvg2n2q3103o?at_medium=RSS&at_campaign=rss",
+      "source": "BBC Science",
       "category": "Science",
       "tone": "light",
-      "published_at": "2026-11-17T22:02:48.000Z"
+      "published_at": "2026-11-17T23:34:56.000Z"
     },
     {
       "title": "'Real life ghost story' inspires new TV drama in Welsh countryside",
@@ -40,28 +40,28 @@
       "published_at": "2026-11-17T22:08:39.000Z"
     },
     {
-      "title": "Ruthless Zverev through to ATP Finals knockout stage",
-      "url": "https://www.bbc.co.uk/sport/tennis/articles/c6x2eveyyxp0o?at_medium=RSS&at_campaign=rss",
+      "title": "Cricket Australia sets up 'safe space' for players to share sandpapergate experiences",
+      "url": "https://www.bbc.co.uk/sport/cricket/articles/c58j48elrwvyo?at_medium=RSS&at_campaign=rss",
       "source": "BBC Sport",
       "category": "Sport",
       "tone": "light",
-      "published_at": "2026-11-17T22:30:24.000Z"
+      "published_at": "2026-11-18T03:52:56.000Z"
     },
     {
-      "title": "Yet another satellite company is jockeying for a rocket—but this one makes sense",
-      "url": "https://arstechnica.com/space/2026/11/yet-another-satellite-company-is-jockeying-for-a-rocket-but-this-one-makes-sense/",
-      "source": "Ars Technica",
+      "title": "Waymo pulls driverless taxis from all US freeways",
+      "url": "https://www.bbc.co.uk/news/articles/cmy86pp336qlo?at_medium=RSS&at_campaign=rss",
+      "source": "BBC Technology",
       "category": "Technology",
       "tone": "light",
-      "published_at": "2026-11-17T22:44:46.000Z"
+      "published_at": "2026-11-18T03:07:22.000Z"
     },
     {
-      "title": "Speed camera fault may have allowed drivers to escape fines",
-      "url": "https://www.bbc.co.uk/news/articles/c5y4j7z373kzo?at_medium=RSS&at_campaign=rss",
+      "title": "Jeff Bezos says he was 'heavily involved' in casting Robert Pattinson as new 007",
+      "url": "https://www.bbc.co.uk/news/articles/cm5y1eejk292o?at_medium=RSS&at_campaign=rss",
       "source": "BBC Business",
       "category": "Business",
       "tone": "light",
-      "published_at": "2026-11-17T20:04:54.000Z"
+      "published_at": "2026-11-18T04:00:54.000Z"
     },
     {
       "title": "US loses measles elimination status after 26 years amid record case numbers",
@@ -80,12 +80,12 @@
       "published_at": "2026-11-17T16:30:41.000Z"
     },
     {
-      "title": "Campaigners take claim 'regulatory gap' risks poultry farms polluting rivers to High Court",
-      "url": "https://www.bbc.co.uk/news/articles/cm894x41jw54o?at_medium=RSS&at_campaign=rss",
-      "source": "BBC Science",
+      "title": "NASA Launches Nuclear Power Systems Student Contest",
+      "url": "https://science.nasa.gov/centers-and-facilities/glenn/nasa-launches-nuclear-power-systems-student-contest/",
+      "source": "NASA",
       "category": "Science",
       "tone": "light",
-      "published_at": "2026-11-17T21:00:51.000Z"
+      "published_at": "2026-11-17T22:02:48.000Z"
     }
   ]
 }
