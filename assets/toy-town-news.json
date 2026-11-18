@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generated_at": "2026-11-18T14:10:17.285Z",
+  "generated_at": "2026-11-18T22:03:34.545Z",
   "status": "ok",
   "successful_sources": [
     "BBC News",
@@ -16,12 +16,68 @@
   ],
   "stories": [
     {
-      "title": "This Blue Whale Population Grew 1,000% Since the End of Antarctic Whaling",
-      "url": "https://www.goodnewsnetwork.org/this-blue-whale-population-grew-1000-since-the-end-of-whaling/",
+      "title": "Students Fighting to Save Poached Plant Species That Only Exists in Near Their Campus",
+      "url": "https://www.goodnewsnetwork.org/students-fighting-to-save-poached-plant-species-that-only-exists-near-their-campus/",
       "source": "Good News Network",
       "category": "Good news",
       "tone": "light",
-      "published_at": "2026-11-18T14:00:45.000Z"
+      "published_at": "2026-11-18T19:30:50.000Z"
+    },
+    {
+      "title": "MAF EAP – Holidays – How to manage the BAH HUMBUG that tries to sneak in",
+      "url": "https://www.nasa.gov/centers-and-facilities/michoud/maf-eap/maf-eap-holidays-how-to-manage-the-bah-humbug-that-tries-to-sneak-in/",
+      "source": "NASA",
+      "category": "Science",
+      "tone": "light",
+      "published_at": "2026-11-18T18:58:27.000Z"
+    },
+    {
+      "title": "Julio Iglesias facing court investigation over alleged sexual offences",
+      "url": "https://www.bbc.co.uk/news/articles/c6x284pnn4e2o?at_medium=RSS&at_campaign=rss",
+      "source": "BBC Culture",
+      "category": "Culture",
+      "tone": "light",
+      "published_at": "2026-11-18T16:33:16.000Z"
+    },
+    {
+      "title": "Ukrainian FA to blame for failed drugs test - Mudryk",
+      "url": "https://www.bbc.co.uk/sport/football/articles/cr930l71z5ejo?at_medium=RSS&at_campaign=rss",
+      "source": "BBC Sport",
+      "category": "Sport",
+      "tone": "light",
+      "published_at": "2026-11-18T21:22:18.000Z"
+    },
+    {
+      "title": "Netflix CEO admits app may bury stuff you want to watch under stuff you don’t",
+      "url": "https://arstechnica.com/gadgets/2026/11/netflix-ceo-admits-app-may-bury-stuff-you-want-to-watch-under-stuff-you-dont/",
+      "source": "Ars Technica",
+      "category": "Technology",
+      "tone": "light",
+      "published_at": "2026-11-18T21:29:24.000Z"
+    },
+    {
+      "title": "How high is UK inflation and how will you be affected?",
+      "url": "https://www.bbc.co.uk/news/videos/cxp80q5pv4q5o?at_medium=RSS&at_campaign=rss",
+      "source": "BBC Business",
+      "category": "Business",
+      "tone": "light",
+      "published_at": "2026-11-18T19:37:27.000Z"
+    },
+    {
+      "title": "Democrats nominate Hakeem Jeffries to be US Speaker of the House",
+      "url": "https://www.bbc.co.uk/news/articles/cmy49873dn95o?at_medium=RSS&at_campaign=rss",
+      "source": "BBC News",
+      "category": "World",
+      "tone": "light",
+      "published_at": "2026-11-18T21:13:06.000Z"
+    },
+    {
+      "title": "Siblings Build 430-Step ‘Sky Ladder’ for Their Mother Who Refuses to Live in the City",
+      "url": "https://www.goodnewsnetwork.org/siblings-build-430-step-sky-ladder-for-their-mother-who-refuses-to-live-in-the-city/",
+      "source": "Good News Network",
+      "category": "Good news",
+      "tone": "light",
+      "published_at": "2026-11-18T16:30:42.000Z"
     },
     {
       "title": "William and Kate honour Earthshot Prize winners in Mumbai",
@@ -30,62 +86,6 @@
       "category": "Science",
       "tone": "light",
       "published_at": "2026-11-18T11:18:04.000Z"
-    },
-    {
-      "title": "Joanna Page says male actor made 'awful' and 'inappropriate' comments to her on set",
-      "url": "https://www.bbc.co.uk/news/articles/cqj3kelenm0do?at_medium=RSS&at_campaign=rss",
-      "source": "BBC Culture",
-      "category": "Culture",
-      "tone": "light",
-      "published_at": "2026-11-18T11:00:05.000Z"
-    },
-    {
-      "title": "Ivan Toney loses bid to avoid Euro 2028 court clash",
-      "url": "https://www.bbc.co.uk/news/articles/ckm2m1899mqyo?at_medium=RSS&at_campaign=rss",
-      "source": "BBC Sport",
-      "category": "Sport",
-      "tone": "light",
-      "published_at": "2026-11-18T12:46:12.000Z"
-    },
-    {
-      "title": "Tesla will sell you a Cybercab for $30,000. Then charge $299 a month to use it",
-      "url": "https://arstechnica.com/cars/2026/11/tesla-will-sell-you-a-cybercab-for-30000-then-charge-299-a-month-to-use-it/",
-      "source": "Ars Technica",
-      "category": "Technology",
-      "tone": "light",
-      "published_at": "2026-11-18T14:01:45.000Z"
-    },
-    {
-      "title": "Typical energy bill forecast to go up by £443 a year from January as inflation rate rises again",
-      "url": "https://www.bbc.co.uk/news/articles/cmy498kdkx3xo?at_medium=RSS&at_campaign=rss",
-      "source": "BBC Business",
-      "category": "Business",
-      "tone": "light",
-      "published_at": "2026-11-18T13:17:06.000Z"
-    },
-    {
-      "title": "Who to watch in Spain's election race",
-      "url": "https://www.bbc.co.uk/news/articles/cxr5g4lyp94no?at_medium=RSS&at_campaign=rss",
-      "source": "BBC News",
-      "category": "World",
-      "tone": "light",
-      "published_at": "2026-11-18T11:44:25.000Z"
-    },
-    {
-      "title": "Good News in History, November 18",
-      "url": "https://www.goodnewsnetwork.org/events061118/",
-      "source": "Good News Network",
-      "category": "Good news",
-      "tone": "light",
-      "published_at": "2026-11-18T08:00:00.000Z"
-    },
-    {
-      "title": "APOD: 2026 November 18 – An M-class Solar Flare",
-      "url": "https://science.nasa.gov/image-article/apod-2026-november-18-an-m-class-solar-flare/",
-      "source": "NASA",
-      "category": "Science",
-      "tone": "light",
-      "published_at": "2026-11-18T05:05:00.000Z"
     }
   ]
 }
