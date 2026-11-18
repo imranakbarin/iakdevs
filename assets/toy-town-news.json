@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generated_at": "2026-11-18T04:29:08.317Z",
+  "generated_at": "2026-11-18T14:10:17.285Z",
   "status": "ok",
   "successful_sources": [
     "BBC News",
@@ -16,76 +16,76 @@
   ],
   "stories": [
     {
-      "title": "West Coast’s First Ever Sea Turtle Hatchlings Released into the Pacific (LOOK)",
-      "url": "https://www.goodnewsnetwork.org/west-coasts-first-ever-sea-turtle-hatchlings-released-into-the-pacific-look/",
+      "title": "This Blue Whale Population Grew 1,000% Since the End of Antarctic Whaling",
+      "url": "https://www.goodnewsnetwork.org/this-blue-whale-population-grew-1000-since-the-end-of-whaling/",
       "source": "Good News Network",
       "category": "Good news",
       "tone": "light",
-      "published_at": "2026-11-17T19:30:43.000Z"
+      "published_at": "2026-11-18T14:00:45.000Z"
     },
     {
-      "title": "Pakistan's solar revolution has been so successful the national grid is crumbling",
-      "url": "https://www.bbc.co.uk/news/articles/ckvg2n2q3103o?at_medium=RSS&at_campaign=rss",
+      "title": "William and Kate honour Earthshot Prize winners in Mumbai",
+      "url": "https://www.bbc.co.uk/news/videos/cmwy97rj83n1o?at_medium=RSS&at_campaign=rss",
       "source": "BBC Science",
       "category": "Science",
       "tone": "light",
-      "published_at": "2026-11-17T23:34:56.000Z"
+      "published_at": "2026-11-18T11:18:04.000Z"
     },
     {
-      "title": "'Real life ghost story' inspires new TV drama in Welsh countryside",
-      "url": "https://www.bbc.co.uk/news/articles/c6y4j73319dmo?at_medium=RSS&at_campaign=rss",
+      "title": "Joanna Page says male actor made 'awful' and 'inappropriate' comments to her on set",
+      "url": "https://www.bbc.co.uk/news/articles/cqj3kelenm0do?at_medium=RSS&at_campaign=rss",
       "source": "BBC Culture",
       "category": "Culture",
       "tone": "light",
-      "published_at": "2026-11-17T22:08:39.000Z"
+      "published_at": "2026-11-18T11:00:05.000Z"
     },
     {
-      "title": "Cricket Australia sets up 'safe space' for players to share sandpapergate experiences",
-      "url": "https://www.bbc.co.uk/sport/cricket/articles/c58j48elrwvyo?at_medium=RSS&at_campaign=rss",
+      "title": "Ivan Toney loses bid to avoid Euro 2028 court clash",
+      "url": "https://www.bbc.co.uk/news/articles/ckm2m1899mqyo?at_medium=RSS&at_campaign=rss",
       "source": "BBC Sport",
       "category": "Sport",
       "tone": "light",
-      "published_at": "2026-11-18T03:52:56.000Z"
+      "published_at": "2026-11-18T12:46:12.000Z"
     },
     {
-      "title": "Waymo pulls driverless taxis from all US freeways",
-      "url": "https://www.bbc.co.uk/news/articles/cmy86pp336qlo?at_medium=RSS&at_campaign=rss",
-      "source": "BBC Technology",
+      "title": "Tesla will sell you a Cybercab for $30,000. Then charge $299 a month to use it",
+      "url": "https://arstechnica.com/cars/2026/11/tesla-will-sell-you-a-cybercab-for-30000-then-charge-299-a-month-to-use-it/",
+      "source": "Ars Technica",
       "category": "Technology",
       "tone": "light",
-      "published_at": "2026-11-18T03:07:22.000Z"
+      "published_at": "2026-11-18T14:01:45.000Z"
     },
     {
-      "title": "Jeff Bezos says he was 'heavily involved' in casting Robert Pattinson as new 007",
-      "url": "https://www.bbc.co.uk/news/articles/cm5y1eejk292o?at_medium=RSS&at_campaign=rss",
+      "title": "Typical energy bill forecast to go up by £443 a year from January as inflation rate rises again",
+      "url": "https://www.bbc.co.uk/news/articles/cmy498kdkx3xo?at_medium=RSS&at_campaign=rss",
       "source": "BBC Business",
       "category": "Business",
       "tone": "light",
-      "published_at": "2026-11-18T04:00:54.000Z"
+      "published_at": "2026-11-18T13:17:06.000Z"
     },
     {
-      "title": "US loses measles elimination status after 26 years amid record case numbers",
-      "url": "https://www.bbc.co.uk/news/articles/c977p71jx0xxo?at_medium=RSS&at_campaign=rss",
+      "title": "Who to watch in Spain's election race",
+      "url": "https://www.bbc.co.uk/news/articles/cxr5g4lyp94no?at_medium=RSS&at_campaign=rss",
       "source": "BBC News",
       "category": "World",
       "tone": "light",
-      "published_at": "2026-11-17T21:04:00.000Z"
+      "published_at": "2026-11-18T11:44:25.000Z"
     },
     {
-      "title": "Algeria Returns Kindness Shown by Kansans Who Welcomed its World Cup Team with the Trip of a Lifetime",
-      "url": "https://www.goodnewsnetwork.org/algeria-returns-kindness-shown-by-kansans-who-welcomed-its-world-cup-team-with-the-trip-of-a-lifetime/",
+      "title": "Good News in History, November 18",
+      "url": "https://www.goodnewsnetwork.org/events061118/",
       "source": "Good News Network",
       "category": "Good news",
       "tone": "light",
-      "published_at": "2026-11-17T16:30:41.000Z"
+      "published_at": "2026-11-18T08:00:00.000Z"
     },
     {
-      "title": "NASA Launches Nuclear Power Systems Student Contest",
-      "url": "https://science.nasa.gov/centers-and-facilities/glenn/nasa-launches-nuclear-power-systems-student-contest/",
+      "title": "APOD: 2026 November 18 – An M-class Solar Flare",
+      "url": "https://science.nasa.gov/image-article/apod-2026-november-18-an-m-class-solar-flare/",
       "source": "NASA",
       "category": "Science",
       "tone": "light",
-      "published_at": "2026-11-17T22:02:48.000Z"
+      "published_at": "2026-11-18T05:05:00.000Z"
     }
   ]
 }
