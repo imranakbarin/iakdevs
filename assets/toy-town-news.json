@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generated_at": "2026-11-19T03:36:57.847Z",
+  "generated_at": "2026-11-19T13:22:48.857Z",
   "status": "ok",
   "successful_sources": [
     "BBC News",
@@ -16,76 +16,76 @@
   ],
   "stories": [
     {
-      "title": "Students Fighting to Save Poached Plant Species That Only Exists in Near Their Campus",
-      "url": "https://www.goodnewsnetwork.org/students-fighting-to-save-poached-plant-species-that-only-exists-near-their-campus/",
+      "title": "Over 100 Cave Bear Skeletons Found in ‘Sensational’ Discovery by Alpine Guide",
+      "url": "https://www.goodnewsnetwork.org/over-100-cave-bear-skeletons-found-in-sensational-discovery-by-alpine-guide/",
       "source": "Good News Network",
       "category": "Good news",
       "tone": "light",
-      "published_at": "2026-11-18T19:30:50.000Z"
+      "published_at": "2026-11-19T12:30:10.000Z"
     },
     {
-      "title": "NASA Sets Coverage for Northrop Grumman CRS-25 Launch, Prelaunch",
-      "url": "https://www.nasa.gov/news-release/nasa-sets-coverage-for-northrop-grumman-crs-25-launch-prelaunch/",
-      "source": "NASA",
-      "category": "Science",
-      "tone": "light",
-      "published_at": "2026-11-18T22:19:17.000Z"
-    },
-    {
-      "title": "Hunger Games fan, 13, to get artwork shown on cinema screens before film",
-      "url": "https://www.bbc.co.uk/news/articles/cm4gnxjy5zllo?at_medium=RSS&at_campaign=rss",
-      "source": "BBC Culture",
-      "category": "Culture",
-      "tone": "light",
-      "published_at": "2026-11-18T23:01:49.000Z"
-    },
-    {
-      "title": "Man Utd pursuing Como's Paz - Thursday's gossip",
-      "url": "https://www.bbc.co.uk/sport/football/articles/cxnv4q2qnvjvo?at_medium=RSS&at_campaign=rss",
-      "source": "BBC Sport",
-      "category": "Sport",
-      "tone": "light",
-      "published_at": "2026-11-18T22:34:05.000Z"
-    },
-    {
-      "title": "Elon Musk says record spending on US midterms was 'pretty foolish'",
-      "url": "https://www.bbc.co.uk/news/articles/cm9q8j2z3gg8o?at_medium=RSS&at_campaign=rss",
-      "source": "BBC Technology",
-      "category": "Technology",
-      "tone": "light",
-      "published_at": "2026-11-19T02:59:06.000Z"
-    },
-    {
-      "title": "Who are the investors ready to jump on Anthropic?",
-      "url": "https://www.bbc.co.uk/news/videos/c6y0x84xx22wo?at_medium=RSS&at_campaign=rss",
-      "source": "BBC Business",
-      "category": "Business",
-      "tone": "light",
-      "published_at": "2026-11-19T01:22:38.000Z"
-    },
-    {
-      "title": "Van Gogh painting sells for record $190.4m after row over its Nazi history",
-      "url": "https://www.bbc.co.uk/news/articles/c5dj1dkwzvzwo?at_medium=RSS&at_campaign=rss",
-      "source": "BBC News",
-      "category": "World",
-      "tone": "light",
-      "published_at": "2026-11-19T00:49:19.000Z"
-    },
-    {
-      "title": "Siblings Build 430-Step ‘Sky Ladder’ for Their Mother Who Refuses to Live in the City",
-      "url": "https://www.goodnewsnetwork.org/siblings-build-430-step-sky-ladder-for-their-mother-who-refuses-to-live-in-the-city/",
-      "source": "Good News Network",
-      "category": "Good news",
-      "tone": "light",
-      "published_at": "2026-11-18T16:30:42.000Z"
-    },
-    {
-      "title": "William and Kate honour Earthshot Prize winners in Mumbai",
-      "url": "https://www.bbc.co.uk/news/videos/cmwy97rj83n1o?at_medium=RSS&at_campaign=rss",
+      "title": "Survivors of Uganda's deadly landslide seek justice at the UN",
+      "url": "https://www.bbc.co.uk/news/articles/c920xgxp5785o?at_medium=RSS&at_campaign=rss",
       "source": "BBC Science",
       "category": "Science",
       "tone": "light",
-      "published_at": "2026-11-18T11:18:04.000Z"
+      "published_at": "2026-11-19T09:21:54.000Z"
+    },
+    {
+      "title": "Google rejects UK request for Russell Brand YouTube video to be removed, sources say",
+      "url": "https://www.bbc.co.uk/news/articles/cmgrenln8p29o?at_medium=RSS&at_campaign=rss",
+      "source": "BBC Culture",
+      "category": "Culture",
+      "tone": "light",
+      "published_at": "2026-11-19T13:09:01.000Z"
+    },
+    {
+      "title": "Woods to design new golf course in Northern Ireland",
+      "url": "https://www.bbc.co.uk/sport/golf/articles/ckr5g243jd8qo?at_medium=RSS&at_campaign=rss",
+      "source": "BBC Sport",
+      "category": "Sport",
+      "tone": "light",
+      "published_at": "2026-11-19T13:02:43.000Z"
+    },
+    {
+      "title": "UK joins in GTA 6 frenzy as game becomes available worldwide",
+      "url": "https://www.bbc.co.uk/news/articles/c6z74ep2n17zo?at_medium=RSS&at_campaign=rss",
+      "source": "BBC Technology",
+      "category": "Technology",
+      "tone": "light",
+      "published_at": "2026-11-19T12:26:39.000Z"
+    },
+    {
+      "title": "Viagogo may have broken law on hidden fees, watchdog provisionally finds",
+      "url": "https://www.bbc.co.uk/news/articles/cmvg2ex7j30lo?at_medium=RSS&at_campaign=rss",
+      "source": "BBC Business",
+      "category": "Business",
+      "tone": "light",
+      "published_at": "2026-11-19T12:02:29.000Z"
+    },
+    {
+      "title": "US consortium wins huge Kenya mining deal, beating Chinese rivals",
+      "url": "https://www.bbc.co.uk/news/articles/cm9q84gp0gr3o?at_medium=RSS&at_campaign=rss",
+      "source": "BBC News",
+      "category": "World",
+      "tone": "light",
+      "published_at": "2026-11-19T12:56:30.000Z"
+    },
+    {
+      "title": "Good News in History, November 19",
+      "url": "https://www.goodnewsnetwork.org/events061119/",
+      "source": "Good News Network",
+      "category": "Good news",
+      "tone": "light",
+      "published_at": "2026-11-19T08:00:00.000Z"
+    },
+    {
+      "title": "APOD: 2026 November 19 – The Horsehead and Flame Nebulas",
+      "url": "https://science.nasa.gov/image-article/apod-2026-november-19-the-horsehead-and-flame-nebulas/",
+      "source": "NASA",
+      "category": "Science",
+      "tone": "light",
+      "published_at": "2026-11-19T05:05:00.000Z"
     }
   ]
 }
