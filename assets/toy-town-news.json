@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generated_at": "2026-11-19T13:22:48.857Z",
+  "generated_at": "2026-11-19T22:13:46.282Z",
   "status": "ok",
   "successful_sources": [
     "BBC News",
@@ -16,76 +16,76 @@
   ],
   "stories": [
     {
-      "title": "Over 100 Cave Bear Skeletons Found in ‘Sensational’ Discovery by Alpine Guide",
-      "url": "https://www.goodnewsnetwork.org/over-100-cave-bear-skeletons-found-in-sensational-discovery-by-alpine-guide/",
+      "title": "She Checked on Her ‘Loud’ Upstairs Neighbor, Inspiring Strangers to Raise More Than $100,000",
+      "url": "https://www.goodnewsnetwork.org/loud-neighbor-parkinsons-gofundme/",
       "source": "Good News Network",
       "category": "Good news",
       "tone": "light",
-      "published_at": "2026-11-19T12:30:10.000Z"
+      "published_at": "2026-11-19T16:26:23.000Z"
     },
     {
-      "title": "Survivors of Uganda's deadly landslide seek justice at the UN",
-      "url": "https://www.bbc.co.uk/news/articles/c920xgxp5785o?at_medium=RSS&at_campaign=rss",
+      "title": "BBC Inside Science",
+      "url": "https://www.bbc.co.uk/sounds/play/w3ct978m?at_medium=RSS&at_campaign=rss",
       "source": "BBC Science",
       "category": "Science",
       "tone": "light",
-      "published_at": "2026-11-19T09:21:54.000Z"
+      "published_at": "2026-11-19T21:00:00.000Z"
     },
     {
-      "title": "Google rejects UK request for Russell Brand YouTube video to be removed, sources say",
-      "url": "https://www.bbc.co.uk/news/articles/cmgrenln8p29o?at_medium=RSS&at_campaign=rss",
+      "title": "Rob Brydon says he invented his own fake agent to negotiate fees",
+      "url": "https://www.bbc.co.uk/news/articles/ck20w02v79qgo?at_medium=RSS&at_campaign=rss",
       "source": "BBC Culture",
       "category": "Culture",
       "tone": "light",
-      "published_at": "2026-11-19T13:09:01.000Z"
+      "published_at": "2026-11-19T21:14:23.000Z"
     },
     {
-      "title": "Woods to design new golf course in Northern Ireland",
-      "url": "https://www.bbc.co.uk/sport/golf/articles/ckr5g243jd8qo?at_medium=RSS&at_campaign=rss",
+      "title": "Unbeaten Zverev hopes to be 'pain-free' after overcoming Fils",
+      "url": "https://www.bbc.co.uk/sport/tennis/articles/c64gne03ykjro?at_medium=RSS&at_campaign=rss",
       "source": "BBC Sport",
       "category": "Sport",
       "tone": "light",
-      "published_at": "2026-11-19T13:02:43.000Z"
+      "published_at": "2026-11-19T22:01:00.000Z"
     },
     {
-      "title": "UK joins in GTA 6 frenzy as game becomes available worldwide",
-      "url": "https://www.bbc.co.uk/news/articles/c6z74ep2n17zo?at_medium=RSS&at_campaign=rss",
+      "title": "Anthropic becomes one of world's most valuable public companies in stock market debut",
+      "url": "https://www.bbc.co.uk/news/articles/c3x29ggenz12o?at_medium=RSS&at_campaign=rss",
       "source": "BBC Technology",
       "category": "Technology",
       "tone": "light",
-      "published_at": "2026-11-19T12:26:39.000Z"
+      "published_at": "2026-11-19T21:38:42.000Z"
     },
     {
-      "title": "Viagogo may have broken law on hidden fees, watchdog provisionally finds",
-      "url": "https://www.bbc.co.uk/news/articles/cmvg2ex7j30lo?at_medium=RSS&at_campaign=rss",
+      "title": "More support for households reliant on heating oil",
+      "url": "https://www.bbc.co.uk/news/articles/cwm2mj7vezr3o?at_medium=RSS&at_campaign=rss",
       "source": "BBC Business",
       "category": "Business",
       "tone": "light",
-      "published_at": "2026-11-19T12:02:29.000Z"
+      "published_at": "2026-11-19T15:22:31.000Z"
     },
     {
-      "title": "US consortium wins huge Kenya mining deal, beating Chinese rivals",
-      "url": "https://www.bbc.co.uk/news/articles/cm9q84gp0gr3o?at_medium=RSS&at_campaign=rss",
-      "source": "BBC News",
+      "title": "'Humanitarian mission' for Kostiantynivka: Is it a trap?",
+      "url": "https://www.dw.com/en/humanitarian-mission-for-kostiantynivka-is-it-a-trap/a-79996772?maca=en-rss-en-world-4025-xml-mrss",
+      "source": "DW",
       "category": "World",
       "tone": "light",
-      "published_at": "2026-11-19T12:56:30.000Z"
+      "published_at": "2026-11-19T20:53:00.000Z"
     },
     {
-      "title": "Good News in History, November 19",
-      "url": "https://www.goodnewsnetwork.org/events061119/",
+      "title": "Empire State Building Lit Up with Gold Marks Historic Milestone of NASA’s Voyager 1 This Week",
+      "url": "https://www.goodnewsnetwork.org/empire-state-building-lit-up-with-gold-to-celebrate-nasa-spacecraft-passing-one-light-day-from-earth/",
       "source": "Good News Network",
       "category": "Good news",
       "tone": "light",
-      "published_at": "2026-11-19T08:00:00.000Z"
+      "published_at": "2026-11-19T14:00:49.000Z"
     },
     {
-      "title": "APOD: 2026 November 19 – The Horsehead and Flame Nebulas",
-      "url": "https://science.nasa.gov/image-article/apod-2026-november-19-the-horsehead-and-flame-nebulas/",
+      "title": "Challenge: Public Input on Life and the World in 2075",
+      "url": "https://www.nasa.gov/directorates/stmd/prizes-challenges-crowdsourcing-program/center-of-excellence-for-collaborative-innovation-coeci/challenge-public-input-on-life-and-the-world-in-2075/",
       "source": "NASA",
       "category": "Science",
       "tone": "light",
-      "published_at": "2026-11-19T05:05:00.000Z"
+      "published_at": "2026-11-19T19:34:20.000Z"
     }
   ]
 }
