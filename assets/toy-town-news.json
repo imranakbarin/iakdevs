@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generated_at": "2026-11-20T03:29:42.831Z",
+  "generated_at": "2026-11-20T13:03:09.177Z",
   "status": "ok",
   "successful_sources": [
     "BBC News",
@@ -16,44 +16,44 @@
   ],
   "stories": [
     {
-      "title": "She Checked on Her ‘Loud’ Upstairs Neighbor, Inspiring Strangers to Raise More Than $100,000",
-      "url": "https://www.goodnewsnetwork.org/loud-neighbor-parkinsons-gofundme/",
+      "title": "Every Tuesday, This Chef Cooks for 100 People in Need Using Random Food Bank Ingredients",
+      "url": "https://www.goodnewsnetwork.org/every-tuesday-this-chef-cooks-for-100-people-in-need-using-random-food-bank-ingredients/",
       "source": "Good News Network",
       "category": "Good news",
       "tone": "light",
-      "published_at": "2026-11-19T16:26:23.000Z"
+      "published_at": "2026-11-20T12:30:29.000Z"
     },
     {
-      "title": "More climate money for Africa? Europe says use what's already pledged",
-      "url": "https://www.bbc.co.uk/news/articles/c6074k5jjrzko?at_medium=RSS&at_campaign=rss",
+      "title": "What are heat pumps and how much do they cost?",
+      "url": "https://www.bbc.co.uk/news/articles/c8xgdv9e007o?at_medium=RSS&at_campaign=rss",
       "source": "BBC Science",
       "category": "Science",
       "tone": "light",
-      "published_at": "2026-11-20T00:54:50.000Z"
+      "published_at": "2026-11-20T10:24:52.000Z"
     },
     {
-      "title": "Rob Brydon says he invented his own fake agent to negotiate fees",
-      "url": "https://www.bbc.co.uk/news/articles/ck20w02v79qgo?at_medium=RSS&at_campaign=rss",
+      "title": "Percy Jackson returns as teen stars adapt to life in the limelight",
+      "url": "https://www.bbc.co.uk/news/articles/ckge37rdrp1eo?at_medium=RSS&at_campaign=rss",
       "source": "BBC Culture",
       "category": "Culture",
       "tone": "light",
-      "published_at": "2026-11-19T21:14:23.000Z"
+      "published_at": "2026-11-20T10:43:35.000Z"
     },
     {
-      "title": "Arsenal 'have ingredients' but Europe's elite on another level",
-      "url": "https://www.bbc.co.uk/sport/football/articles/cm4gnxz8dvx1o?at_medium=RSS&at_campaign=rss",
+      "title": "McDowall goes from farm hand to captain after Darge blow",
+      "url": "https://www.bbc.co.uk/sport/rugby-union/articles/c5n4ey83wk9ko?at_medium=RSS&at_campaign=rss",
       "source": "BBC Sport",
       "category": "Sport",
       "tone": "light",
-      "published_at": "2026-11-19T23:57:54.000Z"
+      "published_at": "2026-11-20T13:01:29.000Z"
     },
     {
-      "title": "GTA 6 breaks records as sales top $2bn - industry estimate",
-      "url": "https://www.bbc.co.uk/news/articles/c9zr5nyv5dj2o?at_medium=RSS&at_campaign=rss",
-      "source": "BBC Technology",
+      "title": "Only the Seminole tribe can offer online gambling in Florida—and they're furious at DraftKings",
+      "url": "https://arstechnica.com/tech-policy/2026/11/seminole-tribe-tries-to-stop-draftkings-illegal-gambling-in-florida/",
+      "source": "Ars Technica",
       "category": "Technology",
       "tone": "light",
-      "published_at": "2026-11-20T02:54:40.000Z"
+      "published_at": "2026-11-20T12:30:29.000Z"
     },
     {
       "title": "Airbnb's divisive new house rules come into force",
@@ -61,31 +61,31 @@
       "source": "BBC Business",
       "category": "Business",
       "tone": "light",
-      "published_at": "2026-11-20T00:12:28.000Z"
+      "published_at": "2026-11-20T09:55:20.000Z"
     },
     {
-      "title": "Why Canada is embracing AI data centres while the US pushes back",
-      "url": "https://www.bbc.co.uk/news/articles/cmx2q223z1jlo?at_medium=RSS&at_campaign=rss",
-      "source": "BBC News",
+      "title": "EU and UK hold a rare summit in bid to 'rebuild ties'",
+      "url": "https://www.dw.com/en/eu-and-uk-hold-a-rare-summit-in-bid-to-rebuild-ties/a-80001076?maca=en-rss-en-world-4025-xml-mrss",
+      "source": "DW",
       "category": "World",
       "tone": "light",
-      "published_at": "2026-11-20T00:13:24.000Z"
+      "published_at": "2026-11-20T11:30:00.000Z"
     },
     {
-      "title": "Empire State Building Lit Up with Gold Marks Historic Milestone of NASA’s Voyager 1 This Week",
-      "url": "https://www.goodnewsnetwork.org/empire-state-building-lit-up-with-gold-to-celebrate-nasa-spacecraft-passing-one-light-day-from-earth/",
+      "title": "Good News in History, November 20",
+      "url": "https://www.goodnewsnetwork.org/events061120/",
       "source": "Good News Network",
       "category": "Good news",
       "tone": "light",
-      "published_at": "2026-11-19T14:00:49.000Z"
+      "published_at": "2026-11-20T08:00:00.000Z"
     },
     {
-      "title": "Challenge: Public Input on Life and the World in 2075",
-      "url": "https://www.nasa.gov/directorates/stmd/prizes-challenges-crowdsourcing-program/center-of-excellence-for-collaborative-innovation-coeci/challenge-public-input-on-life-and-the-world-in-2075/",
+      "title": "APOD: 2026 November 20 – V-G-R",
+      "url": "https://science.nasa.gov/image-article/apod-2026-november-20-v-g-r/",
       "source": "NASA",
       "category": "Science",
       "tone": "light",
-      "published_at": "2026-11-19T19:34:20.000Z"
+      "published_at": "2026-11-20T05:05:00.000Z"
     }
   ]
 }
