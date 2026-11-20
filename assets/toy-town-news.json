@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generated_at": "2026-11-20T13:03:09.177Z",
+  "generated_at": "2026-11-20T21:13:53.850Z",
   "status": "ok",
   "successful_sources": [
     "BBC News",
@@ -16,12 +16,68 @@
   ],
   "stories": [
     {
-      "title": "Every Tuesday, This Chef Cooks for 100 People in Need Using Random Food Bank Ingredients",
-      "url": "https://www.goodnewsnetwork.org/every-tuesday-this-chef-cooks-for-100-people-in-need-using-random-food-bank-ingredients/",
+      "title": "Community Steps Up to Replace Teen Business Owner’s Stolen Landscaping Equipment",
+      "url": "https://www.goodnewsnetwork.org/community-steps-up-to-replace-teen-business-owners-stolen-landscaping-equipment/",
       "source": "Good News Network",
       "category": "Good news",
       "tone": "light",
-      "published_at": "2026-11-20T12:30:29.000Z"
+      "published_at": "2026-11-20T16:00:53.000Z"
+    },
+    {
+      "title": "New NASA Seed Funding Primes Small Businesses for Innovation",
+      "url": "https://www.nasa.gov/directorates/rtmd/new-nasa-seed-funding-primes-small-businesses-for-innovation/",
+      "source": "NASA",
+      "category": "Science",
+      "tone": "light",
+      "published_at": "2026-11-20T20:46:14.000Z"
+    },
+    {
+      "title": "Catherine Zeta-Jones' daughter says parents warned her about 'nepo baby' label",
+      "url": "https://www.bbc.co.uk/news/articles/cmgj35zvjyp9o?at_medium=RSS&at_campaign=rss",
+      "source": "BBC Culture",
+      "category": "Culture",
+      "tone": "light",
+      "published_at": "2026-11-20T15:55:02.000Z"
+    },
+    {
+      "title": "Osimhen keen on Man Utd move - Saturday's gossip",
+      "url": "https://www.bbc.co.uk/sport/football/articles/c60qj1924wyeo?at_medium=RSS&at_campaign=rss",
+      "source": "BBC Sport",
+      "category": "Sport",
+      "tone": "light",
+      "published_at": "2026-11-20T20:06:51.000Z"
+    },
+    {
+      "title": "Researcher plants 2m canaries into the AI supply chain. A privacy disaster surfaced.",
+      "url": "https://arstechnica.com/security/2026/11/a-leaky-ai-supply-chain-is-exposing-secret-user-data-at-an-alarming-rate/",
+      "source": "Ars Technica",
+      "category": "Technology",
+      "tone": "light",
+      "published_at": "2026-11-20T20:59:08.000Z"
+    },
+    {
+      "title": "Faisal Islam: This cost-cutting UK-EU deal doesn't mean lower prices will follow",
+      "url": "https://www.bbc.co.uk/news/articles/cm1wr029evnqo?at_medium=RSS&at_campaign=rss",
+      "source": "BBC Business",
+      "category": "Business",
+      "tone": "light",
+      "published_at": "2026-11-20T16:41:52.000Z"
+    },
+    {
+      "title": "Repression against Iranian lawyers increases",
+      "url": "https://www.dw.com/en/repression-against-iranian-lawyers-increases/a-80006742?maca=en-rss-en-world-4025-xml-mrss",
+      "source": "DW",
+      "category": "World",
+      "tone": "light",
+      "published_at": "2026-11-20T20:36:00.000Z"
+    },
+    {
+      "title": "Rhino Dung Paper Is How This Family Makes Money and Protects These Amazing Animals",
+      "url": "https://www.goodnewsnetwork.org/father-daughter-business-sells-paper-and-stationery-made-from-rhino-dung/",
+      "source": "Good News Network",
+      "category": "Good news",
+      "tone": "light",
+      "published_at": "2026-11-20T14:00:46.000Z"
     },
     {
       "title": "What are heat pumps and how much do they cost?",
@@ -30,62 +86,6 @@
       "category": "Science",
       "tone": "light",
       "published_at": "2026-11-20T10:24:52.000Z"
-    },
-    {
-      "title": "Percy Jackson returns as teen stars adapt to life in the limelight",
-      "url": "https://www.bbc.co.uk/news/articles/ckge37rdrp1eo?at_medium=RSS&at_campaign=rss",
-      "source": "BBC Culture",
-      "category": "Culture",
-      "tone": "light",
-      "published_at": "2026-11-20T10:43:35.000Z"
-    },
-    {
-      "title": "McDowall goes from farm hand to captain after Darge blow",
-      "url": "https://www.bbc.co.uk/sport/rugby-union/articles/c5n4ey83wk9ko?at_medium=RSS&at_campaign=rss",
-      "source": "BBC Sport",
-      "category": "Sport",
-      "tone": "light",
-      "published_at": "2026-11-20T13:01:29.000Z"
-    },
-    {
-      "title": "Only the Seminole tribe can offer online gambling in Florida—and they're furious at DraftKings",
-      "url": "https://arstechnica.com/tech-policy/2026/11/seminole-tribe-tries-to-stop-draftkings-illegal-gambling-in-florida/",
-      "source": "Ars Technica",
-      "category": "Technology",
-      "tone": "light",
-      "published_at": "2026-11-20T12:30:29.000Z"
-    },
-    {
-      "title": "Airbnb's divisive new house rules come into force",
-      "url": "https://www.bbc.co.uk/news/articles/cmx278n2genyo?at_medium=RSS&at_campaign=rss",
-      "source": "BBC Business",
-      "category": "Business",
-      "tone": "light",
-      "published_at": "2026-11-20T09:55:20.000Z"
-    },
-    {
-      "title": "EU and UK hold a rare summit in bid to 'rebuild ties'",
-      "url": "https://www.dw.com/en/eu-and-uk-hold-a-rare-summit-in-bid-to-rebuild-ties/a-80001076?maca=en-rss-en-world-4025-xml-mrss",
-      "source": "DW",
-      "category": "World",
-      "tone": "light",
-      "published_at": "2026-11-20T11:30:00.000Z"
-    },
-    {
-      "title": "Good News in History, November 20",
-      "url": "https://www.goodnewsnetwork.org/events061120/",
-      "source": "Good News Network",
-      "category": "Good news",
-      "tone": "light",
-      "published_at": "2026-11-20T08:00:00.000Z"
-    },
-    {
-      "title": "APOD: 2026 November 20 – V-G-R",
-      "url": "https://science.nasa.gov/image-article/apod-2026-november-20-v-g-r/",
-      "source": "NASA",
-      "category": "Science",
-      "tone": "light",
-      "published_at": "2026-11-20T05:05:00.000Z"
     }
   ]
 }
