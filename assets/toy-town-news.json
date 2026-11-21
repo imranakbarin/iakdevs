@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generated_at": "2026-11-20T21:13:53.850Z",
+  "generated_at": "2026-11-21T02:28:55.888Z",
   "status": "ok",
   "successful_sources": [
     "BBC News",
@@ -24,12 +24,12 @@
       "published_at": "2026-11-20T16:00:53.000Z"
     },
     {
-      "title": "New NASA Seed Funding Primes Small Businesses for Innovation",
-      "url": "https://www.nasa.gov/directorates/rtmd/new-nasa-seed-funding-primes-small-businesses-for-innovation/",
+      "title": "Curiosity Spots Drifting Twilight Clouds",
+      "url": "https://science.nasa.gov/photojournal/curiosity-spots-drifting-twilight-clouds/",
       "source": "NASA",
       "category": "Science",
       "tone": "light",
-      "published_at": "2026-11-20T20:46:14.000Z"
+      "published_at": "2026-11-20T22:27:05.000Z"
     },
     {
       "title": "Catherine Zeta-Jones' daughter says parents warned her about 'nepo baby' label",
@@ -40,36 +40,36 @@
       "published_at": "2026-11-20T15:55:02.000Z"
     },
     {
-      "title": "Osimhen keen on Man Utd move - Saturday's gossip",
-      "url": "https://www.bbc.co.uk/sport/football/articles/c60qj1924wyeo?at_medium=RSS&at_campaign=rss",
+      "title": "Drivers limited to 27 laps for tyres in Qatar",
+      "url": "https://www.bbc.co.uk/sport/formula1/articles/cwg7l0l313rno?at_medium=RSS&at_campaign=rss",
       "source": "BBC Sport",
       "category": "Sport",
       "tone": "light",
-      "published_at": "2026-11-20T20:06:51.000Z"
+      "published_at": "2026-11-21T01:16:54.000Z"
     },
     {
-      "title": "Researcher plants 2m canaries into the AI supply chain. A privacy disaster surfaced.",
-      "url": "https://arstechnica.com/security/2026/11/a-leaky-ai-supply-chain-is-exposing-secret-user-data-at-an-alarming-rate/",
-      "source": "Ars Technica",
+      "title": "Can AI really help spot Black Friday deals? We put it to the test",
+      "url": "https://www.bbc.co.uk/news/articles/cw8dv4jmnle2o?at_medium=RSS&at_campaign=rss",
+      "source": "BBC Technology",
       "category": "Technology",
       "tone": "light",
-      "published_at": "2026-11-20T20:59:08.000Z"
+      "published_at": "2026-11-21T00:06:11.000Z"
     },
     {
-      "title": "Faisal Islam: This cost-cutting UK-EU deal doesn't mean lower prices will follow",
-      "url": "https://www.bbc.co.uk/news/articles/cm1wr029evnqo?at_medium=RSS&at_campaign=rss",
+      "title": "UK to explore even closer ties with EU after agreeing deal, says Burnham",
+      "url": "https://www.bbc.co.uk/news/articles/c6jreyqgw4e9o?at_medium=RSS&at_campaign=rss",
       "source": "BBC Business",
       "category": "Business",
       "tone": "light",
-      "published_at": "2026-11-20T16:41:52.000Z"
+      "published_at": "2026-11-20T17:49:48.000Z"
     },
     {
-      "title": "Repression against Iranian lawyers increases",
-      "url": "https://www.dw.com/en/repression-against-iranian-lawyers-increases/a-80006742?maca=en-rss-en-world-4025-xml-mrss",
-      "source": "DW",
+      "title": "They were fined $811m for conning detained migrants, but the scams didn't stop",
+      "url": "https://www.bbc.co.uk/news/articles/cqgm0zlkgrm2o?at_medium=RSS&at_campaign=rss",
+      "source": "BBC News",
       "category": "World",
       "tone": "light",
-      "published_at": "2026-11-20T20:36:00.000Z"
+      "published_at": "2026-11-21T01:02:39.000Z"
     },
     {
       "title": "Rhino Dung Paper Is How This Family Makes Money and Protects These Amazing Animals",
