@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generated_at": "2026-11-21T02:28:55.888Z",
+  "generated_at": "2026-11-21T11:16:31.709Z",
   "status": "ok",
   "successful_sources": [
     "BBC News",
@@ -16,36 +16,36 @@
   ],
   "stories": [
     {
-      "title": "Community Steps Up to Replace Teen Business Owner’s Stolen Landscaping Equipment",
-      "url": "https://www.goodnewsnetwork.org/community-steps-up-to-replace-teen-business-owners-stolen-landscaping-equipment/",
+      "title": "Your Positive Weekly Horoscope: ‘Free Will Astrology’ by Rob Brezsny",
+      "url": "https://www.goodnewsnetwork.org/horoscope-from-rob-brezsnys-free-will-astrology-11-21-2026/",
       "source": "Good News Network",
       "category": "Good news",
       "tone": "light",
-      "published_at": "2026-11-20T16:00:53.000Z"
+      "published_at": "2026-11-21T11:00:55.000Z"
     },
     {
-      "title": "Curiosity Spots Drifting Twilight Clouds",
-      "url": "https://science.nasa.gov/photojournal/curiosity-spots-drifting-twilight-clouds/",
-      "source": "NASA",
+      "title": "Fight over fossil fuels leaves COP31 climate talks in deadlock",
+      "url": "https://www.bbc.co.uk/news/articles/c6ly5w40eg07o?at_medium=RSS&at_campaign=rss",
+      "source": "BBC Science",
       "category": "Science",
       "tone": "light",
-      "published_at": "2026-11-20T22:27:05.000Z"
+      "published_at": "2026-11-21T09:52:11.000Z"
     },
     {
-      "title": "Catherine Zeta-Jones' daughter says parents warned her about 'nepo baby' label",
-      "url": "https://www.bbc.co.uk/news/articles/cmgj35zvjyp9o?at_medium=RSS&at_campaign=rss",
+      "title": "TRNSMT: What's the future for Scotland's largest music festival?",
+      "url": "https://www.bbc.co.uk/news/articles/cv702en03nw4o?at_medium=RSS&at_campaign=rss",
       "source": "BBC Culture",
       "category": "Culture",
       "tone": "light",
-      "published_at": "2026-11-20T15:55:02.000Z"
+      "published_at": "2026-11-21T09:27:12.000Z"
     },
     {
-      "title": "Drivers limited to 27 laps for tyres in Qatar",
-      "url": "https://www.bbc.co.uk/sport/formula1/articles/cwg7l0l313rno?at_medium=RSS&at_campaign=rss",
+      "title": "Two SPFL postponements due to frozen pitch as further inspections planned",
+      "url": "https://www.bbc.co.uk/sport/football/articles/ckn80vgexz13o?at_medium=RSS&at_campaign=rss",
       "source": "BBC Sport",
       "category": "Sport",
       "tone": "light",
-      "published_at": "2026-11-21T01:16:54.000Z"
+      "published_at": "2026-11-21T10:45:11.000Z"
     },
     {
       "title": "Can AI really help spot Black Friday deals? We put it to the test",
@@ -64,28 +64,28 @@
       "published_at": "2026-11-20T17:49:48.000Z"
     },
     {
-      "title": "They were fined $811m for conning detained migrants, but the scams didn't stop",
-      "url": "https://www.bbc.co.uk/news/articles/cqgm0zlkgrm2o?at_medium=RSS&at_campaign=rss",
-      "source": "BBC News",
+      "title": "Anthropic researcher uses AI to solve math's greatest riddle",
+      "url": "https://www.dw.com/en/anthropic-researcher-uses-ai-to-solve-math-s-greatest-riddle/a-80008428?maca=en-rss-en-world-4025-xml-mrss",
+      "source": "DW",
       "category": "World",
       "tone": "light",
-      "published_at": "2026-11-21T01:02:39.000Z"
+      "published_at": "2026-11-21T10:29:00.000Z"
     },
     {
-      "title": "Rhino Dung Paper Is How This Family Makes Money and Protects These Amazing Animals",
-      "url": "https://www.goodnewsnetwork.org/father-daughter-business-sells-paper-and-stationery-made-from-rhino-dung/",
+      "title": "Good News in History, November 21",
+      "url": "https://www.goodnewsnetwork.org/events061121/",
       "source": "Good News Network",
       "category": "Good news",
       "tone": "light",
-      "published_at": "2026-11-20T14:00:46.000Z"
+      "published_at": "2026-11-21T08:00:00.000Z"
     },
     {
-      "title": "What are heat pumps and how much do they cost?",
-      "url": "https://www.bbc.co.uk/news/articles/c8xgdv9e007o?at_medium=RSS&at_campaign=rss",
-      "source": "BBC Science",
+      "title": "APOD: 2026 November 21 – Voyager’s Neptune",
+      "url": "https://science.nasa.gov/image-article/apod-2026-november-21-voyagers-neptune/",
+      "source": "NASA",
       "category": "Science",
       "tone": "light",
-      "published_at": "2026-11-20T10:24:52.000Z"
+      "published_at": "2026-11-21T05:05:00.000Z"
     }
   ]
 }
