@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generated_at": "2026-11-21T11:16:31.709Z",
+  "generated_at": "2026-11-21T18:05:47.515Z",
   "status": "ok",
   "successful_sources": [
     "BBC News",
@@ -16,12 +16,12 @@
   ],
   "stories": [
     {
-      "title": "Your Positive Weekly Horoscope: ‘Free Will Astrology’ by Rob Brezsny",
-      "url": "https://www.goodnewsnetwork.org/horoscope-from-rob-brezsnys-free-will-astrology-11-21-2026/",
+      "title": "Breath of a Whale Captured by Drone Allows Full Genome Sequencing Without Intrusion",
+      "url": "https://www.goodnewsnetwork.org/breath-of-whale-captured-via-drone-to-complete-genome-sequence/",
       "source": "Good News Network",
       "category": "Good news",
       "tone": "light",
-      "published_at": "2026-11-21T11:00:55.000Z"
+      "published_at": "2026-11-21T17:30:30.000Z"
     },
     {
       "title": "Fight over fossil fuels leaves COP31 climate talks in deadlock",
@@ -29,7 +29,7 @@
       "source": "BBC Science",
       "category": "Science",
       "tone": "light",
-      "published_at": "2026-11-21T09:52:11.000Z"
+      "published_at": "2026-11-21T14:54:24.000Z"
     },
     {
       "title": "TRNSMT: What's the future for Scotland's largest music festival?",
@@ -40,44 +40,44 @@
       "published_at": "2026-11-21T09:27:12.000Z"
     },
     {
-      "title": "Two SPFL postponements due to frozen pitch as further inspections planned",
-      "url": "https://www.bbc.co.uk/sport/football/articles/ckn80vgexz13o?at_medium=RSS&at_campaign=rss",
+      "title": "Fifpro criticises Bayern Munich for Musiala comments",
+      "url": "https://www.bbc.co.uk/sport/football/articles/c9x2evr1rg85o?at_medium=RSS&at_campaign=rss",
       "source": "BBC Sport",
       "category": "Sport",
       "tone": "light",
-      "published_at": "2026-11-21T10:45:11.000Z"
+      "published_at": "2026-11-21T17:43:44.000Z"
     },
     {
-      "title": "Can AI really help spot Black Friday deals? We put it to the test",
-      "url": "https://www.bbc.co.uk/news/articles/cw8dv4jmnle2o?at_medium=RSS&at_campaign=rss",
-      "source": "BBC Technology",
+      "title": "“Race realism” isn’t realistic—and it isn’t good science",
+      "url": "https://arstechnica.com/science/2026/11/race-realism-isnt-realistic-and-it-isnt-good-science/",
+      "source": "Ars Technica",
       "category": "Technology",
       "tone": "light",
-      "published_at": "2026-11-21T00:06:11.000Z"
+      "published_at": "2026-11-21T12:01:13.000Z"
     },
     {
-      "title": "UK to explore even closer ties with EU after agreeing deal, says Burnham",
-      "url": "https://www.bbc.co.uk/news/articles/c6jreyqgw4e9o?at_medium=RSS&at_campaign=rss",
+      "title": "Sessions offer advice on rising energy costs",
+      "url": "https://www.bbc.co.uk/news/articles/cmy49l3x893jo?at_medium=RSS&at_campaign=rss",
       "source": "BBC Business",
       "category": "Business",
       "tone": "light",
-      "published_at": "2026-11-20T17:49:48.000Z"
+      "published_at": "2026-11-21T12:09:49.000Z"
     },
     {
-      "title": "Anthropic researcher uses AI to solve math's greatest riddle",
-      "url": "https://www.dw.com/en/anthropic-researcher-uses-ai-to-solve-math-s-greatest-riddle/a-80008428?maca=en-rss-en-world-4025-xml-mrss",
+      "title": "Russian helicopter suspected of violating Finnish airspace",
+      "url": "https://www.dw.com/en/russian-helicopter-suspected-of-violating-finnish-airspace/a-80010133?maca=en-rss-en-world-4025-xml-mrss",
       "source": "DW",
       "category": "World",
       "tone": "light",
-      "published_at": "2026-11-21T10:29:00.000Z"
+      "published_at": "2026-11-21T17:08:00.000Z"
     },
     {
-      "title": "Good News in History, November 21",
-      "url": "https://www.goodnewsnetwork.org/events061121/",
+      "title": "Pub Owner Spends Thousands on Stunning Holiday Display–All to Cheer Up Depressed Locals",
+      "url": "https://www.goodnewsnetwork.org/pub-owner-spends-thousands-on-stunning-holiday-display-all-to-cheer-up-depressed-locals/",
       "source": "Good News Network",
       "category": "Good news",
       "tone": "light",
-      "published_at": "2026-11-21T08:00:00.000Z"
+      "published_at": "2026-11-21T15:53:53.000Z"
     },
     {
       "title": "APOD: 2026 November 21 – Voyager’s Neptune",
