@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generated_at": "2026-11-21T18:05:47.515Z",
+  "generated_at": "2026-11-21T23:26:02.962Z",
   "status": "ok",
   "successful_sources": [
     "BBC News",
@@ -24,12 +24,12 @@
       "published_at": "2026-11-21T17:30:30.000Z"
     },
     {
-      "title": "Fight over fossil fuels leaves COP31 climate talks in deadlock",
-      "url": "https://www.bbc.co.uk/news/articles/c6ly5w40eg07o?at_medium=RSS&at_campaign=rss",
+      "title": "Will COP31 end with a new global climate deal?",
+      "url": "https://www.bbc.co.uk/news/videos/cqn0dwrewrwxo?at_medium=RSS&at_campaign=rss",
       "source": "BBC Science",
       "category": "Science",
       "tone": "light",
-      "published_at": "2026-11-21T14:54:24.000Z"
+      "published_at": "2026-11-21T22:44:52.000Z"
     },
     {
       "title": "TRNSMT: What's the future for Scotland's largest music festival?",
@@ -40,20 +40,20 @@
       "published_at": "2026-11-21T09:27:12.000Z"
     },
     {
-      "title": "Fifpro criticises Bayern Munich for Musiala comments",
-      "url": "https://www.bbc.co.uk/sport/football/articles/c9x2evr1rg85o?at_medium=RSS&at_campaign=rss",
+      "title": "France thrash Argentina to reach Nations Championship final",
+      "url": "https://www.bbc.co.uk/sport/rugby-union/videos/cm879py9n9xwo?at_medium=RSS&at_campaign=rss",
       "source": "BBC Sport",
       "category": "Sport",
       "tone": "light",
-      "published_at": "2026-11-21T17:43:44.000Z"
+      "published_at": "2026-11-21T23:22:40.000Z"
     },
     {
-      "title": "“Race realism” isn’t realistic—and it isn’t good science",
-      "url": "https://arstechnica.com/science/2026/11/race-realism-isnt-realistic-and-it-isnt-good-science/",
+      "title": "Review: Godzilla Minus Zero joins the list of truly stellar sequels",
+      "url": "https://arstechnica.com/culture/2026/11/review-godzilla-minus-zero-is-everything-we-could-want-in-a-sequel/",
       "source": "Ars Technica",
       "category": "Technology",
       "tone": "light",
-      "published_at": "2026-11-21T12:01:13.000Z"
+      "published_at": "2026-11-21T22:12:41.000Z"
     },
     {
       "title": "Sessions offer advice on rising energy costs",
@@ -64,12 +64,12 @@
       "published_at": "2026-11-21T12:09:49.000Z"
     },
     {
-      "title": "Russian helicopter suspected of violating Finnish airspace",
-      "url": "https://www.dw.com/en/russian-helicopter-suspected-of-violating-finnish-airspace/a-80010133?maca=en-rss-en-world-4025-xml-mrss",
-      "source": "DW",
+      "title": "Lock of former US President George Washington's hair sells for $4,000",
+      "url": "https://www.bbc.co.uk/news/articles/cwe9k23dpz0do?at_medium=RSS&at_campaign=rss",
+      "source": "BBC News",
       "category": "World",
       "tone": "light",
-      "published_at": "2026-11-21T17:08:00.000Z"
+      "published_at": "2026-11-21T22:01:19.000Z"
     },
     {
       "title": "Pub Owner Spends Thousands on Stunning Holiday Display–All to Cheer Up Depressed Locals",
