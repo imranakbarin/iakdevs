@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generated_at": "2026-11-21T23:26:02.962Z",
+  "generated_at": "2026-11-22T06:59:41.506Z",
   "status": "ok",
   "successful_sources": [
     "BBC News",
@@ -24,28 +24,28 @@
       "published_at": "2026-11-21T17:30:30.000Z"
     },
     {
-      "title": "Will COP31 end with a new global climate deal?",
-      "url": "https://www.bbc.co.uk/news/videos/cqn0dwrewrwxo?at_medium=RSS&at_campaign=rss",
+      "title": "Record-breaking sightings of rare moth in Essex",
+      "url": "https://www.bbc.co.uk/news/articles/c6jrey28gvqxo?at_medium=RSS&at_campaign=rss",
       "source": "BBC Science",
       "category": "Science",
       "tone": "light",
-      "published_at": "2026-11-21T22:44:52.000Z"
+      "published_at": "2026-11-22T06:38:26.000Z"
     },
     {
-      "title": "TRNSMT: What's the future for Scotland's largest music festival?",
-      "url": "https://www.bbc.co.uk/news/articles/cv702en03nw4o?at_medium=RSS&at_campaign=rss",
+      "title": "BBC apologises for 'any offence caused' by Strictly noise disruption",
+      "url": "https://www.bbc.co.uk/news/articles/cm8e0p5dexy6o?at_medium=RSS&at_campaign=rss",
       "source": "BBC Culture",
       "category": "Culture",
       "tone": "light",
-      "published_at": "2026-11-21T09:27:12.000Z"
+      "published_at": "2026-11-22T04:39:13.000Z"
     },
     {
-      "title": "France thrash Argentina to reach Nations Championship final",
-      "url": "https://www.bbc.co.uk/sport/rugby-union/videos/cm879py9n9xwo?at_medium=RSS&at_campaign=rss",
+      "title": "Verstappen wins extraordinary race as Ferraris collide",
+      "url": "https://www.bbc.co.uk/sport/formula1/articles/cqx2ex25pvn9o?at_medium=RSS&at_campaign=rss",
       "source": "BBC Sport",
       "category": "Sport",
       "tone": "light",
-      "published_at": "2026-11-21T23:22:40.000Z"
+      "published_at": "2026-11-22T06:27:06.000Z"
     },
     {
       "title": "Review: Godzilla Minus Zero joins the list of truly stellar sequels",
@@ -64,12 +64,12 @@
       "published_at": "2026-11-21T12:09:49.000Z"
     },
     {
-      "title": "Lock of former US President George Washington's hair sells for $4,000",
-      "url": "https://www.bbc.co.uk/news/articles/cwe9k23dpz0do?at_medium=RSS&at_campaign=rss",
-      "source": "BBC News",
+      "title": "Dozens missing as deadly fire hits Indonesian candy factory",
+      "url": "https://www.dw.com/en/dozens-missing-as-deadly-fire-hits-indonesian-candy-factory/a-80012342?maca=en-rss-en-world-4025-xml-mrss",
+      "source": "DW",
       "category": "World",
       "tone": "light",
-      "published_at": "2026-11-21T22:01:19.000Z"
+      "published_at": "2026-11-22T06:14:00.000Z"
     },
     {
       "title": "Pub Owner Spends Thousands on Stunning Holiday Display–All to Cheer Up Depressed Locals",
@@ -80,12 +80,12 @@
       "published_at": "2026-11-21T15:53:53.000Z"
     },
     {
-      "title": "APOD: 2026 November 21 – Voyager’s Neptune",
-      "url": "https://science.nasa.gov/image-article/apod-2026-november-21-voyagers-neptune/",
+      "title": "APOD: 2026 November 22 – Swirls and Colors on Jupiter from Juno",
+      "url": "https://science.nasa.gov/image-article/apod-2026-november-22-swirls-and-colors-on-jupiter-from-juno/",
       "source": "NASA",
       "category": "Science",
       "tone": "light",
-      "published_at": "2026-11-21T05:05:00.000Z"
+      "published_at": "2026-11-22T05:05:00.000Z"
     }
   ]
 }
