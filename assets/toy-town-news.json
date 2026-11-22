@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generated_at": "2026-11-22T15:26:03.931Z",
+  "generated_at": "2026-11-22T21:52:42.424Z",
   "status": "ok",
   "successful_sources": [
     "BBC News",
@@ -24,12 +24,12 @@
       "published_at": "2026-11-22T14:58:57.000Z"
     },
     {
-      "title": "Mysterious Mercury gets a visitor - after spacecraft's eight-year epic voyage",
-      "url": "https://www.bbc.co.uk/news/articles/c39w9l4v1p9ro?at_medium=RSS&at_campaign=rss",
-      "source": "BBC Science",
+      "title": "65 Years of Human Spaceflight at NASA Johnson",
+      "url": "https://www.nasa.gov/centers-and-facilities/johnson/65-years-of-human-spaceflight-at-nasa-johnson/",
+      "source": "NASA",
       "category": "Science",
       "tone": "light",
-      "published_at": "2026-11-22T10:44:12.000Z"
+      "published_at": "2026-11-22T19:13:25.000Z"
     },
     {
       "title": "Miley Cyrus marries Maxx Morando in California ceremony",
@@ -37,15 +37,15 @@
       "source": "BBC Culture",
       "category": "Culture",
       "tone": "light",
-      "published_at": "2026-11-22T08:46:28.000Z"
+      "published_at": "2026-11-22T21:22:40.000Z"
     },
     {
-      "title": "Liu Wenwei suspended amid match-fixing investigation",
-      "url": "https://www.bbc.co.uk/sport/snooker/articles/c9p83k06160xo?at_medium=RSS&at_campaign=rss",
+      "title": "Fifa to confirm UK bid to host 2035 Women's World Cup",
+      "url": "https://www.bbc.co.uk/sport/football/articles/cx30g83716lzo?at_medium=RSS&at_campaign=rss",
       "source": "BBC Sport",
       "category": "Sport",
       "tone": "light",
-      "published_at": "2026-11-22T15:17:49.000Z"
+      "published_at": "2026-11-22T21:44:37.000Z"
     },
     {
       "title": "GLP-1 drugs could have a surprisingly large environmental payoff",
@@ -64,12 +64,12 @@
       "published_at": "2026-11-22T13:50:21.000Z"
     },
     {
-      "title": "China, ASEAN countries struggle over South China Sea code of conduct",
-      "url": "https://www.dw.com/en/china-asean-countries-struggle-over-south-china-sea-code-of-conduct/a-80009799?maca=en-rss-en-world-4025-xml-mrss",
-      "source": "DW",
+      "title": "Democrats win largest House majority since 1992 after flipping North Carolina seat",
+      "url": "https://www.bbc.co.uk/news/articles/c6vg29g7dlyno?at_medium=RSS&at_campaign=rss",
+      "source": "BBC News",
       "category": "World",
       "tone": "light",
-      "published_at": "2026-11-22T08:45:00.000Z"
+      "published_at": "2026-11-22T20:26:24.000Z"
     },
     {
       "title": "Good News in History, November 22",
@@ -80,12 +80,12 @@
       "published_at": "2026-11-22T08:00:00.000Z"
     },
     {
-      "title": "APOD: 2026 November 22 – Swirls and Colors on Jupiter from Juno",
-      "url": "https://science.nasa.gov/image-article/apod-2026-november-22-swirls-and-colors-on-jupiter-from-juno/",
-      "source": "NASA",
+      "title": "What's next after no deal at COP31 climate summit?",
+      "url": "https://www.bbc.co.uk/news/videos/cx987g7q019go?at_medium=RSS&at_campaign=rss",
+      "source": "BBC Science",
       "category": "Science",
       "tone": "light",
-      "published_at": "2026-11-22T05:05:00.000Z"
+      "published_at": "2026-11-22T18:28:48.000Z"
     }
   ]
 }
