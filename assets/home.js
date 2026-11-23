@@ -29,6 +29,7 @@ const Home = (() => {
       {mode: 'pip', hero: true, tag: 'Today’s world', title: 'Pip Run', text: 'An original platformer. Watch the AI plan its runs, set it challenges, or play.',
         progress: [best && best.day === today() ? `Your best today: ${best.m} m` : 'Today’s world is waiting for your run',
           (seen.length ? `${Math.min(seen.length, PIP_FINDS)} of ${PIP_FINDS} sights found` : `${PIP_FINDS} sights to find along the way`) + (landmarks ? ` · ${landmarks} of ${PIP_BOOK} landmarks in the journey book` : '')], preview: 'pip'},
+      {mode: 'circuit', title: 'Twin Circuit · 2 players', text: 'A shared puzzle with two colors, timed rounds and real-time friend invites.', progress: ['Make a connection together'], preview: 'circuit'},
       {mode: 'art', title: 'World art', text: 'Seven folk traditions as endless living paintings.',
         progress: [wonders && wonders.n ? `${wonders.n} of ${wonders.total} wonders seen` : 'Kites, flocks and rainbows drift by: collect the wonders'], preview: 'art'},
       {mode: 'road', title: 'Road trip', text: 'A drive through five landscapes and every weather. Tap to pull over.',
@@ -41,6 +42,7 @@ const Home = (() => {
     ];
   }
   const PREVIEW = {
+    circuit: '<svg class="img" viewBox="0 0 160 100" preserveAspectRatio="xMidYMid slice" aria-hidden="true"><rect width="160" height="100" fill="#132733"/><circle cx="25" cy="50" r="40" fill="#d5af5d" opacity=".12"/><circle cx="140" cy="40" r="45" fill="#70dedb" opacity=".12"/><g transform="translate(38 8)"><rect x="0" y="0" width="80" height="80" rx="9" fill="#24394b" stroke="#5d7280" stroke-width="1.5"/><path d="M0 26.7H80M0 53.3H80M26.7 0V80M53.3 0V80" stroke="#152633" stroke-width="2"/><g stroke-linecap="round" stroke-width="5" fill="none"><path d="M0 40H13.3V13.3H40V40H66.7V66.7H80" stroke="#f5c979"/><path d="M13.3 66.7H40V40H66.7V13.3" stroke="#78d8d7"/></g><g fill="#fff5c7"><circle cx="13.3" cy="13.3" r="4"/><circle cx="66.7" cy="66.7" r="4"/></g></g><text x="16" y="88" fill="#f6cc83" font-size="16">✦</text><text x="133" y="27" fill="#80dcd9" font-size="16">✦</text></svg>',
     pip: '<div class="img pan" style="background-image:url(assets/mushroom-cinematic-kingdom.webp)"></div><div class="pip-run-sprite"></div>',
     art: '<div class="img pan art-a"></div><div class="img pan art-b" style="opacity:0"></div>',
     road: '<div class="img" style="background-image:url(assets/road-painted-mountains.webp);background-position:50% 0;height:58%"></div><div class="ground"></div><div class="road"></div><div class="lane"></div><img class="car" alt="" src="assets/road-painted-car.webp">',
