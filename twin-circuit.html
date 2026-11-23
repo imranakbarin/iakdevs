@@ -1,0 +1,215 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#111d29">
+<meta name="description" content="Twin Circuit — a cooperative, two-player puzzle game. Create a room, invite one friend and connect the sparks together.">
+<title>Twin Circuit · A puzzle for two</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#101b28;--panel:#172635;--ink:#f7f5ea;--muted:#a8b9c6;--line:#ffffff18;--sun:#ffce78;--moon:#77d9d7;--good:#d6f7cc;color-scheme:dark;font-family:"DM Sans",system-ui,sans-serif}
+*{box-sizing:border-box}
+html{min-height:100%;background:var(--bg)}
+body{margin:0;min-height:100vh;min-height:100dvh;color:var(--ink);background:radial-gradient(ellipse 50% 50% at 10% 15%,#28404499,transparent 85%),radial-gradient(ellipse 50% 55% at 93% 70%,#3b394a7a,transparent 80%),#101b28;overflow-x:hidden}
+body:before{content:"";position:fixed;inset:0;pointer-events:none;background-image:radial-gradient(#fff6 0.75px,transparent 0.75px);background-size:27px 27px;mask-image:linear-gradient(#0008,transparent 85%);opacity:.22}
+button,input{font:inherit}
+button{cursor:pointer}
+button:focus-visible,input:focus-visible,a:focus-visible{outline:3px solid var(--moon);outline-offset:4px}
+button:disabled{opacity:.42;cursor:not-allowed}
+[hidden]{display:none!important}
+a{color:inherit;text-decoration:none}
+.mast{max-width:1160px;margin:auto;padding:27px clamp(20px,4vw,56px);display:flex;align-items:center;justify-content:space-between;gap:15px}
+.brand{display:flex;align-items:center;gap:11px;font:700 17px "Outfit",sans-serif;letter-spacing:.015em}
+.mark{width:34px;height:34px;border-radius:12px;display:grid;place-items:center;background:linear-gradient(135deg,#facc80,#7adcd6);color:#132332;box-shadow:0 6px 24px #0005;font-size:25px}
+.top-actions{display:flex;align-items:center;gap:12px}
+.top-actions a,.top-actions button{border:1px solid #ffffff24;border-radius:999px;padding:9px 15px;color:#d8e4e8;background:#ffffff08;font-size:12px;font-weight:700}
+.shell{max-width:1160px;padding:18px clamp(20px,4vw,56px) 65px;margin:auto}
+.eyebrow{font-weight:800;font-size:11px;letter-spacing:.21em;text-transform:uppercase;color:#b9d4d4;display:flex;align-items:center;gap:10px}
+.eyebrow:before{content:"";width:25px;height:1px;background:#6abdbb}
+h1,h2,h3,p{margin-top:0}
+h1,h2,h3{font-family:"Outfit",system-ui,sans-serif}
+h1{font-weight:700;font-size:clamp(49px,7vw,86px);line-height:.98;letter-spacing:-.065em;max-width:780px;margin:22px 0}
+h1 span{background:linear-gradient(105deg,#ffdba0,#88e8e2);background-clip:text;-webkit-background-clip:text;color:transparent}
+.lede{max-width:555px;color:#c3d0d9;font-size:clamp(15px,1.6vw,18px);line-height:1.66}
+.setup-grid{margin-top:36px;display:grid;grid-template-columns:minmax(0,1fr) minmax(260px,.8fr);gap:20px}
+.panel{background:linear-gradient(150deg,#233549df,#172431ed);border:1px solid #ffffff20;border-radius:25px;padding:clamp(23px,3vw,36px);box-shadow:0 25px 55px #07131b6b}
+.panel h2{font-size:29px;letter-spacing:-.035em;margin:8px 0 12px}
+.panel p{color:var(--muted);line-height:1.65;font-size:14px}
+.mode-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:28px}
+.mode{border:1px solid #ffffff2b;background:#ffffff09;text-align:left;color:#f5f5ee;border-radius:17px;padding:20px 17px;min-height:155px;transition:transform .2s,border-color .2s,background .2s}
+.mode:hover{transform:translateY(-3px);background:#ffffff12;border-color:#f4ce92}
+.mode .emoji{font-size:27px;display:block;margin-bottom:16px}
+.mode strong{font:700 17px "Outfit",sans-serif;display:block;margin-bottom:4px}
+.mode small{color:#aec3cf;line-height:1.45;display:block}
+.join{margin-top:24px;padding-top:18px;border-top:1px solid var(--line)}
+.join label{font-size:12px;color:#b4c5cf;font-weight:700;letter-spacing:.06em}
+.join-row{display:flex;gap:8px;margin-top:9px}
+.join input{min-width:0;width:100%;border:1px solid #ffffff2e;border-radius:12px;background:#0d1a27;color:#fff;min-height:47px;padding:0 14px;font-weight:800;text-transform:uppercase;letter-spacing:.18em}
+.primary{border:0;border-radius:13px;background:linear-gradient(130deg,#ffcf85,#f4b96c);color:#222739;min-height:47px;padding:0 22px;font-size:13px;font-weight:800;white-space:nowrap;box-shadow:0 7px 19px #f5b96824}
+.primary:hover:not(:disabled){filter:brightness(1.08)}
+.secondary{border:1px solid #ffffff30;border-radius:12px;background:#ffffff12;color:var(--ink);min-height:43px;padding:0 17px;font-weight:700;font-size:13px}
+.secondary:hover:not(:disabled){background:#ffffff20}
+.description{position:relative;overflow:hidden}
+.description:before{content:"";position:absolute;width:230px;height:230px;border-radius:50%;background:radial-gradient(circle,#77d9d722,transparent 65%);top:-100px;right:-100px;pointer-events:none}
+.note-tag{display:inline-block;background:#e1bc8a22;color:#ffd99c;padding:8px 12px;border-radius:99px;font-size:10px;font-weight:800;letter-spacing:.14em}
+.how{margin:27px 0 0;padding:0;list-style:none;display:grid;gap:17px}
+.how li{display:flex;gap:13px;align-items:flex-start;color:#cfdae0;font-size:14px;line-height:1.55}
+.how i{flex:none;font-style:normal;font:800 12px "Outfit",sans-serif;color:#ffd39a;border:1px solid #ffd39a77;width:29px;height:29px;border-radius:50%;display:grid;place-items:center}
+.palette{display:flex;gap:11px;margin-top:28px}
+.palette div{height:9px;border-radius:20px}
+.palette div:first-child{width:36%;background:#ffd494}
+.palette div:nth-child(2){width:42%;background:#83deda}
+.palette div:last-child{width:22%;background:#4d6577}
+#invite{margin-top:20px;border-radius:17px;background:#0d1f2a;padding:20px;border:1px solid #77d9d755}
+#invite h3{font-size:19px;margin:0 0 7px}
+.code{font:800 clamp(23px,5vw,31px)/1.5 "Outfit",sans-serif;letter-spacing:.16em;color:#ffdb9e;margin:6px 0 14px;user-select:all}
+.invite-actions{display:flex;flex-wrap:wrap;gap:8px}
+.status{font-size:13px;color:#b1cbd3;margin-top:13px;line-height:1.5}
+#setupError{color:#ffc0a9;margin-top:12px;font-size:13px}
+#arena{margin-top:0}
+.arena-header{display:flex;justify-content:space-between;align-items:flex-end;gap:16px;margin:10px 0 24px}
+.arena-header h1{font-size:clamp(38px,5vw,58px);margin:11px 0 2px}
+.arena-header p{color:#adbecb;font-size:14px;margin:0}
+.room-pill{border:1px solid #ffffff24;color:#d5e8e7;border-radius:999px;padding:9px 14px;font-size:12px;white-space:nowrap;font-weight:700}
+.scorebar{display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);gap:16px;align-items:center;margin-bottom:20px}
+.player{border-radius:17px;border:1px solid #ffffff1a;background:#ffffff08;padding:15px 19px;display:flex;align-items:center;gap:11px}
+.player .orb{height:26px;width:26px;border-radius:10px;background:var(--sun);box-shadow:0 0 22px #ffc67954;flex:none}
+.player.moon .orb{background:var(--moon);box-shadow:0 0 22px #77d9d74d}
+.player .who{font-family:"Outfit",sans-serif;font-weight:700;font-size:17px}
+.player small{display:block;color:#a5bcc9;font-size:11px;margin-top:3px}
+.player .stat{margin-left:auto;font:800 21px "Outfit",sans-serif;font-variant-numeric:tabular-nums}
+.vs{font:600 13px "Outfit";color:#8195a5}
+.game-grid{display:grid;grid-template-columns:minmax(0,1fr) 260px;gap:24px;align-items:start}
+.stage{padding:clamp(16px,3vw,28px);border:1px solid #ffffff25;border-radius:27px;background:linear-gradient(150deg,#192c3c,#111f2a);box-shadow:0 30px 70px #060d19a0;position:relative;overflow:hidden}
+.stage:before{content:"";inset:0;position:absolute;pointer-events:none;background:radial-gradient(circle at 50% 55%,#93d7d80e,transparent 68%)}
+.hud{display:flex;align-items:center;justify-content:space-between;gap:14px;margin-bottom:17px;position:relative}
+.hud .timer{font:700 37px/1 "Outfit",sans-serif;font-variant-numeric:tabular-nums;letter-spacing:-.04em}
+.hud .timer.danger{color:#ffab9f}
+.hud small{display:block;color:#aabfca;font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;margin-bottom:7px}
+.hud .round{font:700 23px "Outfit",sans-serif}
+.progress{height:5px;background:#ffffff15;border-radius:10px;margin-bottom:22px;overflow:hidden;position:relative}
+.progress .fill{width:100%;height:100%;background:linear-gradient(90deg,var(--moon),var(--sun));transition:width .35s linear}
+.board-layout{display:flex;align-items:center;justify-content:center;gap:10px;position:relative}
+.edge-label{color:#bad4da;display:flex;flex-direction:column;align-items:center;gap:7px;font-size:10px;letter-spacing:.12em;font-weight:800;min-width:38px;text-transform:uppercase}
+.edge-label .symbol{font-size:clamp(28px,4vw,43px);filter:drop-shadow(0 0 15px #ffdba050);line-height:1}
+.edge-label.exit .symbol{filter:drop-shadow(0 0 15px #77d9d766)}
+#board{--size:5;display:grid;grid-template-columns:repeat(var(--size),minmax(0,1fr));gap:clamp(4px,.75vw,8px);width:min(100%,530px);aspect-ratio:1;user-select:none;touch-action:manipulation}
+.tile{aspect-ratio:1;padding:0;border:1px solid #ffffff0d;border-radius:clamp(8px,1.3vw,14px);position:relative;display:grid;place-items:center;background:linear-gradient(150deg,#284057,#1c3141);color:var(--sun);box-shadow:inset 0 2px 0 #ffffff10,0 3px 0 #0d1c27;transition:transform .16s,background .2s,box-shadow .2s}
+.tile[data-owner="1"]{color:var(--moon);background:linear-gradient(145deg,#24424b,#1c333b)}
+.tile:not(:disabled):hover{transform:translateY(-2px) scale(1.025);box-shadow:inset 0 2px 0 #ffffff22,0 7px 13px #0004}
+.tile:active:not(:disabled){transform:scale(.96)}
+.tile svg{width:100%;height:100%;overflow:visible}
+.pipe{stroke:currentColor;stroke-width:16;stroke-linecap:round;fill:none;opacity:.78;filter:drop-shadow(0 0 2px currentColor)}
+.junction{fill:#fdf7ea;opacity:.85}
+.tile.lit{background:linear-gradient(145deg,#43645b,#254650);box-shadow:inset 0 2px 0 #dfffd33c,0 0 18px #aaf5c51e}
+.tile.lit .pipe{opacity:1;filter:drop-shadow(0 0 6px currentColor)}
+.tile.hint{outline:3px solid #f8f4d0;outline-offset:-4px;animation:hintGlow .65s ease-in-out infinite alternate}
+@keyframes hintGlow{to{filter:brightness(1.6)}}
+.tile .gem{font-size:38px;font-weight:bold;paint-order:stroke;stroke:#132533;stroke-width:4px;fill:#f6f0b5}
+.tile .gem.done{fill:#ffffff;filter:drop-shadow(0 0 10px #fff5b8)}
+.tile .owner-mark{position:absolute;top:6px;right:7px;width:5px;height:5px;border-radius:50%;background:currentColor;opacity:.65}
+.board-caption{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:19px;font-size:12px;color:#b7cbd4;position:relative}
+.board-caption b{color:#fff1ca}
+.side{display:grid;gap:15px}
+.side-card{border:1px solid #ffffff1d;background:#ffffff07;border-radius:20px;padding:22px}
+.side-card h2{font-size:21px;margin:0 0 10px;letter-spacing:-.025em}
+.side-card p{font-size:13px;line-height:1.6;color:#bed0d8}
+.side-card .counter{font:800 42px "Outfit",sans-serif;color:#ffdaa5;margin:10px 0 2px}
+.label-mini{color:#9db3c0;font-size:10px;font-weight:800;letter-spacing:.17em;text-transform:uppercase}
+.hint-btn{width:100%;margin-top:15px}
+.actions{display:flex;flex-wrap:wrap;gap:9px}
+.actions button{flex:1}
+#finish{position:absolute;inset:0;z-index:4;background:#0a1521df;backdrop-filter:blur(8px);display:grid;place-items:center;padding:20px;text-align:center}
+.finish-box{max-width:420px}
+.finish-icon{font-size:60px;margin-bottom:12px}
+#finish h2{font-size:clamp(34px,6vw,50px);letter-spacing:-.045em;margin:8px 0}
+#finish p{color:#c4d2d8;line-height:1.6}
+#finish .big-score{font:800 35px "Outfit";color:#ffdaa0;margin:15px 0}
+#finish button{margin:8px 4px}
+#toast{position:fixed;z-index:10;left:50%;bottom:25px;transform:translateX(-50%);background:#f4e6c7;color:#1c2a33;padding:12px 20px;border-radius:99px;font-size:13px;font-weight:800;box-shadow:0 14px 40px #0006;pointer-events:none;max-width:calc(100vw - 30px);text-align:center}
+.footnote{text-align:center;font-size:12px;color:#8ba2ad;margin-top:37px}
+@media(max-width:900px){.game-grid{grid-template-columns:minmax(0,1fr)}.side{display:grid;grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:700px){.setup-grid{grid-template-columns:1fr}.arena-header{align-items:flex-start}.scorebar{gap:6px}.player{padding:10px;gap:7px}.player .who{font-size:13px}.player small{font-size:10px}.player .stat{font-size:17px}.player .orb{width:17px;height:17px;border-radius:6px}.stage{padding:12px;border-radius:17px}.board-layout{gap:3px}.edge-label{min-width:22px;font-size:8px}.edge-label .symbol{font-size:23px}.board-caption{font-size:10px;flex-wrap:wrap}.side-card{padding:16px}.hud .timer{font-size:30px}.shell{padding-top:4px}.mast{padding-top:16px;padding-bottom:12px}.top-actions a,.top-actions button{padding:8px 10px}}
+@media(max-width:430px){.mode-grid{gap:8px}.mode{padding:15px 11px}.mode strong{font-size:15px}.mode small{font-size:11px}.mode .emoji{font-size:22px}.side{grid-template-columns:1fr}.scorebar{grid-template-columns:1fr 13px 1fr}.player .stat{display:none}.edge-label{min-width:17px}.edge-label .symbol{font-size:18px}#board{gap:4px}.tile{border-radius:6px}}
+@media(prefers-reduced-motion:reduce){*,*:before,*:after{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+<header class="mast">
+  <div class="brand"><span class="mark" aria-hidden="true">⌁</span> Twin Circuit</div>
+  <div class="top-actions"><button id="sound" type="button" aria-label="Turn sound on" aria-pressed="false">♪ Off</button><a href="index.html#today">← Worlds</a></div>
+</header>
+<main class="shell">
+  <section id="setup">
+    <div class="eyebrow">One shared spark · Two minds</div>
+    <h1>Two players.<br><span>One brilliant escape.</span></h1>
+    <p class="lede">A tiny, competitive-feeling co-op puzzle. You control the golden circuits. Your partner controls the teal. Turn your pieces, find the hidden connections and light both stars before the clock runs out.</p>
+    <div class="setup-grid">
+      <div class="panel">
+        <span class="note-tag">EXACTLY 2 PLAYERS</span>
+        <h2>Choose how you play</h2>
+        <p>One screen for a quick challenge, or two devices with a private invite code.</p>
+        <div class="mode-grid">
+          <button type="button" id="local" class="mode"><span class="emoji" aria-hidden="true">✦ ✦</span><strong>Side by side</strong><small>Play together on one screen. No account needed.</small></button>
+          <button type="button" id="host" class="mode"><span class="emoji" aria-hidden="true">◉ ⤳ ◉</span><strong>Invite a friend</strong><small>Create a room to play live on two devices.</small></button>
+        </div>
+        <div class="join">
+          <label for="joinCode">HAVE A ROOM CODE?</label>
+          <div class="join-row"><input id="joinCode" type="text" maxlength="8" autocomplete="off" spellcheck="false" placeholder="ENTER CODE" aria-label="Invitation room code"><button id="join" class="primary" type="button">Join</button></div>
+        </div>
+        <div id="setupError" role="alert" hidden></div>
+        <div id="invite" hidden>
+          <h3>Invite one other player</h3>
+          <p>Your room code is</p>
+          <div id="roomCode" class="code"></div>
+          <div class="invite-actions"><button id="copy" class="primary" type="button">Copy invite link</button><button id="cancel" class="secondary" type="button">Cancel room</button></div>
+          <div id="lobbyStatus" class="status" role="status">Connecting…</div>
+        </div>
+      </div>
+      <div class="panel description">
+        <div class="eyebrow">How it works</div>
+        <h2>Better when you're in sync.</h2>
+        <ol class="how">
+          <li><i>01</i><span><strong>Split the board.</strong> Each player can turn only their own color of circuit tiles.</span></li>
+          <li><i>02</i><span><strong>Connect the current.</strong> Carry the spark from the left edge, through both stars, to the right edge.</span></li>
+          <li><i>03</i><span><strong>Beat the countdown.</strong> Faster solves, fewer rotations and good teamwork add to your shared score.</span></li>
+          <li><i>04</i><span><strong>One more?</strong> Every round makes the circuit trickier. Chase a new best together.</span></li>
+        </ol>
+        <div class="palette" aria-hidden="true"><div></div><div></div><div></div></div>
+      </div>
+    </div>
+  </section>
+  <section id="arena" hidden>
+    <div class="arena-header">
+      <div><div class="eyebrow">A puzzle made for two</div><h1>Find the connection.</h1><p id="matchStatus" role="status">The circuit is ready.</p></div>
+      <div id="roomBadge" class="room-pill">SIDE BY SIDE</div>
+    </div>
+    <div class="scorebar">
+      <div class="player"><div class="orb"></div><div><div class="who">Golden</div><small id="goldStatus">Player 1</small></div><span class="stat" id="goldMoves">0</span></div>
+      <div class="vs">×</div>
+      <div class="player moon"><div class="orb"></div><div><div class="who">Teal</div><small id="tealStatus">Player 2</small></div><span class="stat" id="tealMoves">0</span></div>
+    </div>
+    <div class="game-grid">
+      <div class="stage">
+        <div class="hud"><div><small>Time remaining</small><span id="timer" class="timer">2:35</span></div><div style="text-align:right"><small>Puzzle round</small><span id="round" class="round">01</span></div></div>
+        <div class="progress"><div id="timeFill" class="fill"></div></div>
+        <div class="board-layout"><div class="edge-label"><span class="symbol" aria-hidden="true">☀</span><span>Start</span></div><div id="board" role="group" aria-label="Rotating circuit puzzle"></div><div class="edge-label exit"><span class="symbol" aria-hidden="true">◇</span><span>Exit</span></div></div>
+        <div class="board-caption"><span id="stars">✦ 0 / 2 stars charged</span><span id="steps">Turn your color to guide the spark</span></div>
+        <div id="finish" hidden>
+          <div class="finish-box"><div id="finishIcon" class="finish-icon">✷</div><div class="eyebrow" style="justify-content:center">Circuit complete</div><h2 id="finishTitle">You did it!</h2><p id="finishText"></p><div class="big-score" id="finishScore"></div><button id="next" type="button" class="primary">Next puzzle →</button><button id="again" type="button" class="secondary">Replay level</button></div>
+        </div>
+      </div>
+      <div class="side">
+        <div class="side-card"><span class="label-mini">Team points</span><div class="counter" id="score">0</div><p id="streak">Find your rhythm. Every solved circuit builds your streak.</p><div class="label-mini">Best on this device</div><div id="best" style="font:700 19px Outfit;margin-top:5px">—</div></div>
+        <div class="side-card"><h2>Need a spark?</h2><p>Each player gets one hint per round. It shows one tile to focus on, not the answer.</p><button id="hint" class="secondary hint-btn" type="button">✧ Reveal my next tile</button><p id="hintStatus" style="margin:10px 0 0;font-size:12px"></p><div class="actions" style="margin-top:18px"><button id="exit" class="secondary" type="button">Leave game</button></div></div>
+      </div>
+    </div>
+  </section>
+  <p class="footnote">Twin Circuit is part of Infinite World Scrolls · No accounts, ads or tracking inside the game.</p>
+</main>
+<div id="toast" role="status" aria-live="polite" hidden></div>
+<script type="module" src="./assets/twin-circuit/main.mjs?v=1"></script>
+</body>
+</html>
