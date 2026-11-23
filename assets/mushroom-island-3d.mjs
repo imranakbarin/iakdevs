@@ -20,26 +20,26 @@ try {
 }
 renderer.outputColorSpace = THREE.SRGBColorSpace;
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
-renderer.toneMappingExposure = 1.24;
+renderer.toneMappingExposure = 1.13;
 renderer.shadowMap.enabled = !isPhone();
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 const scene = new THREE.Scene();
-scene.background = new THREE.Color('#b9e1e1');
-scene.fog = new THREE.Fog('#b9e1e1', 35, 85);
+scene.background = new THREE.Color('#c3e2e2');
+scene.fog = new THREE.Fog('#c3e2e2', 34, 75);
 const camera = new THREE.PerspectiveCamera(38, 1, .12, 150);
-const ambient = new THREE.HemisphereLight('#fff7e2', '#7399a0', 2.2);
+const ambient = new THREE.HemisphereLight('#fff2da', '#75908a', 2.0);
 scene.add(ambient);
-const sun = new THREE.DirectionalLight('#fff1cf', 2.6);
-sun.position.set(-10, 17, 11); sun.castShadow = !isPhone();
+const sun = new THREE.DirectionalLight('#fff0d3', 2.8);
+sun.position.set(-11, 21, 13); sun.castShadow = !isPhone();
 sun.shadow.mapSize.set(1024, 1024);
 Object.assign(sun.shadow.camera, {left:-13,right:13,top:13,bottom:-13,near:1,far:48});
 sun.shadow.bias=-.0005; sun.shadow.normalBias=.035;
 scene.add(sun);
 
 const colors = {
-  grass:'#8dbd85', grassEdge:'#6b9b71', soil:'#a98d87', rock:'#81758d',
-  sea:'#78b9c7', path:'#ead9bb', trunk:'#a78677', leaf:'#628f79',
-  cream:'#f7e8d5', mint:'#65b8a4', flower:'#e99eaf',
+  grass:'#93ba86', grassEdge:'#6e9679', soil:'#ac8875', rock:'#807c84',
+  sea:'#81bfc4', path:'#e9d8bc', trunk:'#94735e', leaf:'#638e78',
+  cream:'#f4e4cf', mint:'#71b3a4', flower:'#d987a7',
   cocoa:'#584c62', lavender:'#9988bf', gold:'#f2d096'
 };
 const material=(color,roughness=.86)=>new THREE.MeshStandardMaterial({color,roughness,metalness:0});
@@ -54,7 +54,12 @@ let meshes=0;
 function add(g,geometry,m,x=0,y=0,z=0,sx=1,sy=1,sz=1) {
   const o=new THREE.Mesh(geometry,m);
   o.position.set(x,y,z);o.scale.set(sx,sy,sz);
-  o.castShadow=true;o.receiveShadow=true;g.add(o);meshes++;
+  // Small stems, pebbles, face details and blossoms do not need a shadow-map
+  // draw call. Reserve costly soft shadows for meaningful architectural shapes.
+  if (!geometry.boundingSphere) geometry.computeBoundingSphere();
+  const projectedSize=(geometry.boundingSphere?.radius||0)*Math.max(sx,sy,sz);
+  o.castShadow=projectedSize>.72;o.receiveShadow=projectedSize>.4;
+  g.add(o);meshes++;
   return o;
 }
 const ball=(g,m,x,y,z,sx,sy=sx,sz=sx)=>add(g,sphere,m,x,y,z,sx,sy,sz);
@@ -81,6 +86,7 @@ function makeIsland(){
   // A thin grassy bevel sits inside the cliff rim; avoid a separately floating terrain sheet.
   const disk=add(root,new THREE.CircleGeometry(8.94,96),mat.grass,0,.147,0,1,.719,1);
   disk.rotation.x=-Math.PI/2;disk.castShadow=false;
+  disk.material=paintedGrass();
   const sea=add(scene,new THREE.PlaneGeometry(170,170),material('#87c9d2',.32),0,-1.94,0);
   sea.rotation.x=-Math.PI/2;sea.castShadow=false;sea.receiveShadow=false;
   const foam=add(root,new THREE.TorusGeometry(9.01,.048,6,96),waterMat,0,-1.79,0);
@@ -124,6 +130,9 @@ function castle(){
     block(g,mat.cream,x,1.19,.96,.037,.46,.04);
   }
   for(let i=-3;i<=3;i++)block(g,mat.cream,i*.39,1.87,.02,.25,.33,.35);
+  // A pitched shingle roof pulls the flat original façade into a storybook silhouette.
+  const roof=add(g,new THREE.ConeGeometry(1.76,.84,4,1),material('#b48fa7'),0,2.26,0,1.12,1,.72);
+  roof.rotation.y=Math.PI/4;
   const steps=block(g,mat.path,0,.18,1.22,1.65,.16,.78);
   steps.castShadow=false;
   label(g,'Pip Castle','The hilltop castle overlooks the island and its winding paths.');
@@ -135,12 +144,20 @@ const mushroomTints=['#e7899b','#ddab80','#b79bc9','#ea9f91'];
 function mushroom(x,z,size,i){
   const g=groupAt(x,ground(x,z),z);
   const cream=mat.cream,capM=material(mushroomTints[i%4]);
+  const foundation=column(g,material('#e6d6c5'),0,.055,0,.72*size,.11*size);
+  foundation.castShadow=false;
   column(g,cream,0,.7*size,0,.58*size,1.4*size,.47*size);
   const dome=new THREE.SphereGeometry(1,24,16,0,Math.PI*2,0,Math.PI/2);
   add(g,dome,capM,0,1.4*size,0,1.12*size,.86*size,1.02*size);
   const edge=column(g,material('#efdfc9'),0,1.41*size,0,1.14*size,.11*size);
   edge.castShadow=false;
+  // Warm under-cap gills give the roof a real rim and cast a soft shadow.
+  const gills=add(g,new THREE.TorusGeometry(1.01*size,.045*size,6,36),material('#d4a5a3'),0,1.36*size,0,1,1,.91);
+  gills.rotation.x=Math.PI/2;gills.castShadow=false;
   block(g,material('#73657c'),0,.53*size,.47*size,.42*size,.82*size,.10*size);
+  const arch=add(g,new THREE.TorusGeometry(.218*size,.037*size,6,20,Math.PI),material('#c79b87'),0,.95*size,.528*size);
+  arch.castShadow=false;
+  block(g,material('#c9ad91'),0,.13*size,.80*size,.66*size,.095*size,.5*size);
   ball(g,mat.gold,.12*size,.54*size,.53*size,.038*size);
   for(const side of [-1,1]){
     ball(g,material('#f9f1d8'),side*.4*size,.92*size,.34*size,.18*size,.2*size,.08*size);
@@ -164,6 +181,7 @@ mushroom(4.52,2.45,.73,3);
 function tree(x,z,s,leaf=mat.leaf){
   const g=groupAt(x,ground(x,z),z);
   column(g,mat.trunk,0,.58*s,0,.17*s,1.14*s,.13*s);
+  // Slightly varied canopy clusters keep a natural silhouette, not a single blob.
   ball(g,leaf,0,1.41*s,0,.64*s,.79*s,.62*s);
   ball(g,leaf,-.33*s,1.16*s,.12*s,.39*s,.42*s,.38*s);
   ball(g,leaf,.3*s,1.25*s,-.06*s,.37*s,.49*s,.38*s);
@@ -172,19 +190,41 @@ function tree(x,z,s,leaf=mat.leaf){
 tree(-5.6,2.3,1.1);tree(-4.6,3.75,.77);tree(-2.2,4.0,.85);
 tree(.1,-3.65,.72);tree(.55,3.7,.68);
 const rose=material('#b66e91'),mint=material('#83b59a'),stone=material('#b5a59b');
-function flower(x,z,i){
-  const g=groupAt(x,ground(x,z),z);column(g,mat.leaf,0,.18,0,.025,.34,.02);
-  for(let k=0;k<5;k++){const a=2*Math.PI*k/5;ball(g,i%3?mat.cream:rose,Math.cos(a)*.12,.39,Math.sin(a)*.12,.105,.063,.105);}
-  ball(g,mat.gold,0,.4,0,.085,.07,.085);
+// Three garden beds share four instanced meshes instead of 150+ tiny draw calls.
+// This preserves blossoms at close zoom but keeps the overview beautifully calm.
+function makeFlowerBeds(){
+  const stems=[],creamPetals=[],rosePetals=[],cores=[];
+  const beds=[[1.1,-1.75],[1.05,2.62],[5.48,1.23]];
+  let n=0;
+  for(const [bx,bz] of beds){
+    for(let j=0;j<8;j++,n++){
+      const a=j*2.399,rr=.18+Math.sqrt(j/8)*.53,x=bx+Math.cos(a)*rr,z=bz+Math.sin(a)*rr;
+      const y=ground(x,z),h=.27+.12*hash(n+345);
+      stems.push([x,y+h*.55,z,.035,h*.55,.035]);
+      const pet=n%3===0?rosePetals:creamPetals;
+      for(let k=0;k<5;k++){
+        const p=k*Math.PI*2/5;
+        pet.push([x+Math.cos(p)*.12,y+h,z+Math.sin(p)*.12,.095,.055,.09]);
+      }
+      cores.push([x,y+h+.025,z,.077,.055,.077]);
+    }
+  }
+  const make=(poses,m)=>{
+    const inst=new THREE.InstancedMesh(sphere,m,poses.length),dummy=new THREE.Object3D();
+    for(let i=0;i<poses.length;i++){
+      const [x,y,z,sx,sy,sz]=poses[i];dummy.position.set(x,y,z);dummy.scale.set(sx,sy,sz);dummy.updateMatrix();
+      inst.setMatrixAt(i,dummy.matrix);
+    }
+    inst.instanceMatrix.needsUpdate=true;inst.castShadow=false;inst.receiveShadow=false;root.add(inst);meshes++;
+  };
+  make(stems,mat.leaf);make(creamPetals,mat.cream);make(rosePetals,rose);make(cores,mat.gold);
 }
-for(let i=0;i<22;i++){const angle=i*2.399,rad=.35+Math.sqrt(i/22)*1.75;
-  flower(-.62+Math.cos(angle)*rad,1.65+Math.sin(angle)*rad,i);
-}
+makeFlowerBeds();
 // Bridge crosses a visible shallow winding stream and connects the two halves.
 function bridge(){
   const streamPoints=[[-.3,-4],[-.7,-2.0],[-.55,.0],[-.9,1.8],[-1.7,4.5]];
   const curve=new THREE.CatmullRomCurve3(streamPoints.map(([x,z])=>new THREE.Vector3(x,.20,z)));
-  const water=add(root,new THREE.TubeGeometry(curve,36,.29,8,false),waterMat);
+  const water=add(root,new THREE.TubeGeometry(curve,36,.28,8,false),waterMat);
   water.castShadow=false;
   const g=groupAt(-.67,.12,.55),wood=material('#a98170'),rail=material('#d6b899');
   for(let i=0;i<12;i++){
@@ -260,12 +300,174 @@ function makePip(){
     ball(leg,boot,.01,-.49,.09,.18,.11,.27);
     limbs[s<0?'leftArm':'rightArm']=arm;limbs[s<0?'leftLeg':'rightLeg']=leg;
   }
+  actor.userData.poi={title:'Pip',desc:'The little explorer follows the island trail. Watch the footfalls and turn the camera to meet him.'};
+  const scarf=material('#e6b4a8');ball(torso,scarf,0,1.3,.07,.29,.10,.25);
+  const tail=block(torso,scarf,-.18,1.12,.21,.14,.25,.06);tail.rotation.z=-.14;
+  const shadow=add(actor,new THREE.CircleGeometry(.34,20),new THREE.MeshBasicMaterial({color:'#4b665b',transparent:true,opacity:.20,depthWrite:false}),0,.012,0);
+  shadow.rotation.x=-Math.PI/2;shadow.castShadow=false;shadow.receiveShadow=false;
+  actor.scale.setScalar(1.19);
   return {actor,torso,head,limbs};
 }
+
+// V2 art direction: quiet but richly modeled layers, not a scattered-prop pass.
+// The entire island stays one composition. Repeated objects are instanced and
+// the canvas grass texture is deterministic for reproducible visual QA.
+function paintedGrass(){
+  const c=document.createElement('canvas');c.width=c.height=512;
+  const q=c.getContext('2d');q.fillStyle='#f8f4de';q.fillRect(0,0,512,512);
+  for(let i=0;i<390;i++){
+    const x=hash(i+301)*512,y=hash(i+1271)*512,r=1+hash(i+423)*5;
+    q.fillStyle=i%5===0?'rgba(72,101,67,.12)':i%3===0?'rgba(230,210,151,.12)':'rgba(93,117,81,.065)';
+    q.beginPath();q.ellipse(x,y,r,r*.28,hash(i+712)*6.28,0,Math.PI*2);q.fill();
+  }
+  const t=new THREE.CanvasTexture(c);t.colorSpace=THREE.SRGBColorSpace;
+  t.anisotropy=Math.min(4,renderer.capabilities.getMaxAnisotropy());
+  const m=mat.grass.clone();m.map=t;m.roughness=.98;return m;
+}
+const finishing={waves:[],leaves:[],crest:null};
+function band(y0,y1,color){
+  const N=96,positions=[],norm=(r,a)=>{const scallop=1+.028*Math.sin(a*7)+.018*Math.sin(a*13+1.3);
+    return [r*Math.cos(a)*scallop,r*Math.sin(a)*scallop*.72];};
+  for(let i=0;i<N;i++){
+    const a=i/N*Math.PI*2,b=(i+1)/N*Math.PI*2;
+    const ra=9-(.13-y0)*.6+.035,rb=9-(.13-y1)*.6+.035;
+    const p=norm(ra,a),q=norm(ra,b),r=norm(rb,a),s=norm(rb,b);
+    positions.push(p[0],y0,p[1],r[0],y1,r[1],q[0],y0,q[1],
+      q[0],y0,q[1],r[0],y1,r[1],s[0],y1,s[1]);
+  }
+  const geo=new THREE.BufferGeometry();geo.setAttribute('position',new THREE.Float32BufferAttribute(positions,3));geo.computeVertexNormals();
+  const m=add(root,geo,new THREE.MeshStandardMaterial({color,roughness:1,side:THREE.DoubleSide}));m.castShadow=false;return m;
+}
+function instanceBoxes(g,m,poses){
+  const inst=new THREE.InstancedMesh(box,m,poses.length),obj=new THREE.Object3D();
+  poses.forEach(([x,y,z,sx,sy,sz,rz=0],i)=>{
+    obj.position.set(x,y,z);obj.scale.set(sx,sy,sz);obj.rotation.set(0,rz,0);
+    obj.updateMatrix();inst.setMatrixAt(i,obj.matrix);
+  });
+  inst.instanceMatrix.needsUpdate=true;inst.receiveShadow=true;inst.castShadow=false;
+  g.add(inst);meshes++;return inst;
+}
+function trimIsland(){
+  band(-.20,-.31,'#ad9487');band(-.78,-.88,'#a08c86');
+  band(-1.29,-1.36,'#927d83');
+  const shore=material('#e9debf'),rock=material('#ad9890');
+  // One island-scale rim of understated grass above the rock strata.
+  const rim=add(root,new THREE.TorusGeometry(8.82,.095,7,96),material('#759e7c'),0,.126,0,1,1,.72);
+  rim.rotation.x=Math.PI/2;rim.castShadow=false;
+  // The sea reads as a shallow coast, not an infinite flat blue rectangle.
+  for(const radius of [9.38,10.04,10.85]){
+    const ring=add(scene,new THREE.TorusGeometry(radius,.024,4,96),
+      new THREE.MeshBasicMaterial({color:'#f6f7de',transparent:true,opacity:radius>10?.12:.20,depthWrite:false}),0,-1.903,0);
+    ring.rotation.x=Math.PI/2;ring.scale.y=.72;ring.castShadow=false;finishing.waves.push(ring);
+  }
+  // Every shoreline stone belongs to one of three clusters, away from the trail.
+  for(const [cx,cz,rot] of [[-7.6,1.6,.1],[7.85,-.7,-.3],[3.0,-5.9,.2]]){
+    for(let j=0;j<5;j++){
+      const x=cx+(j-2)*.22,z=cz+Math.sin(j*2.2+rot)*.18;
+      const b=ball(root,j%3===0?rock:mat.rock,x,ground(x,z)+.11,z,.23+j*.013,.12+(j%3)*.04,.21);
+      b.rotation.y=rot+j*.27;
+    }
+  }
+  // Original castle remains the landmark; architecture now has real depth,
+  // arched doors, window framing, lintels and a coherent violet shingle roof.
+  const castleGroup=root.children.find(g=>g.userData.poi?.title==='Pip Castle');
+  if(castleGroup){
+    const g=castleGroup,wood=material('#80637e'),warm=material('#ebc993'),ivory=material('#eedfce');
+    const tower=material('#bca0b6');
+    for(let k=0;k<4;k++){
+      const y=.37+k*.31;
+      block(g,material(k%2?'#e2d5ca':'#f6e9d9'),-1.45,y,0,.08,.035,1.8);
+      block(g,material(k%2?'#e2d5ca':'#f6e9d9'),1.45,y,0,.08,.035,1.8);
+    }
+    const arch=add(g,new THREE.TorusGeometry(.31,.065,8,24,Math.PI),ivory,0,1.04,1.012);arch.castShadow=false;
+    for(const z of [1.035,1.045]){
+      for(const x of [-.15,.15])block(g,wood,x,.55,z,.045,.77,.025);
+    }
+    ball(g,warm,.20,.55,1.08,.055,.055,.055);
+    for(const x of [-.76,.76]){
+      block(g,ivory,x,1.19,.97,.37,.065,.09);
+      block(g,ivory,x,1.19,.97,.055,.50,.09);
+      ball(g,warm,x,1.19,1.025,.04,.04,.022);
+    }
+    for(const x of [-1.55,1.55]){
+      for(let k=0;k<6;k++){
+        const a=k*Math.PI/3;
+        block(g,tower,x+Math.cos(a)*.48,1.65,.15+Math.sin(a)*.48,.21,.11,.19);
+      }
+      const ring=add(g,new THREE.TorusGeometry(.47,.045,5,28),ivory,x,2.12,.15);
+      ring.rotation.x=Math.PI/2;ring.castShadow=false;
+    }
+    // Entrance staircase steps gently down toward the bridge.
+    for(let k=0;k<3;k++){
+      const p=block(g,ivory,0,.16-k*.041,1.36+k*.24,1.45+k*.25,.10, .42);
+      p.castShadow=false;
+    }
+    const flag=add(g,new THREE.ConeGeometry(.13,.3,5),material('#d7a7ac'),0,3.0,0);
+    flag.castShadow=false;
+  }
+  // Tiny townhouse details are coherent across all four mushrooms.
+  for(const g of root.children.filter(n=>/Cottage|Teahouse|Library|Mushroom/.test(n.userData.poi?.title||''))){
+    const size=g.userData.poi.title==='Rosecap Cottage'?1.04:g.userData.poi.title==='The Teahouse'?.88:g.userData.poi.title==='Little Library'?.94:.73;
+    const wood=material('#bf9786'),paint=material('#e6c8af'),lit=material('#f5e2b7');
+    for(const side of [-1,1]){
+      const sx=side*.39*size;
+      const win=block(g,lit,sx,.95*size,.44*size,.34*size,.31*size,.035*size);win.castShadow=false;
+      block(g,wood,sx,.95*size,.466*size,.04*size,.33*size,.035*size);
+      block(g,wood,sx,.95*size,.47*size,.37*size,.035*size,.03*size);
+      block(g,paint,sx,.72*size,.52*size,.45*size,.09*size,.15*size);
+    }
+    const welcome=ball(g,mat.gold,0,.07*size,.99*size,.35*size,.03*size,.22*size);
+    welcome.castShadow=false;
+    // One small leaf-like canopy flourish per home; not a field of floating props.
+    const leaf=ball(g,material('#79a487'),.74*size,.33*size,.13*size,.24*size,.19*size,.26*size);
+    leaf.rotation.z=.3;
+  }
+  // Connect destinations with stone stepping terraces instead of isolated scenery.
+  const paving=[];
+  for(const [x0,z0,dx,dz,count] of [[-2.65,.05,.18,.10,10],[1.15,-2.2,.13,.04,7],[1.5,1.23,.13,.09,7]]){
+    for(let k=0;k<count;k++){
+      const x=x0+k*dx,z=z0+k*dz;
+      paving.push([x,ground(x,z)+.064,z,.32,.046,.22,(k%2)*.09]);
+    }
+  }
+  instanceBoxes(root,mat.path,paving);
+  // Stone banks define the stream without duplicating the bridge geometry.
+  const bank=material('#b8a391');
+  for(const [x,z,s] of [[-.47,-2.9,.7],[-1.04,-2.3,.8],[-1.12,1.7,.76],[-1.5,2.65,.95]]){
+    ball(root,bank,x,ground(x,z)+.1,z,.25*s,.11*s,.45*s);
+  }
+  // Add root-shadowed wooded layers at the edges rather than everywhere.
+  const canopy=material('#92b4a0'),dark=material('#658574');
+  for(const [x,z,scale] of [[-6.15,2.0,.87],[-5.6,3.75,.68],[-2.8,4.25,.56]]){
+    const g=groupAt(x,ground(x,z),z);
+    column(g,mat.trunk,0,.5*scale,0,.13*scale,1*scale);
+    ball(g,dark,0,1.25*scale,0,.58*scale,.63*scale,.53*scale);
+    ball(g,canopy,-.27*scale,1.42*scale,.10*scale,.38*scale,.38*scale,.39*scale);
+    ball(g,mat.leaf,.32*scale,1.12*scale,-.08*scale,.36*scale,.40*scale,.37*scale);
+  }
+  // Moonwater waterfall gets two narrow translucent streams and foam at impact.
+  const falls=root.children.find(g=>g.userData.poi?.title==='Moonwater Falls');
+  if(falls){
+    const pale=material('#c9e5e0');
+    for(const [x,z] of [[-.09,.53],[.20,.55]]){
+      const fall=block(falls,waterMat,x,-.64,z,.13,1.3,.035);
+      fall.castShadow=false;fall.receiveShadow=false;
+      ball(falls,pale,x,-1.30,z,.16,.08,.18);
+    }
+  }
+}
+function animateArt(t){
+  // Low-amplitude water rhythm. Never spins the island or creates fake weather.
+  for(let i=0;i<finishing.waves.length;i++){
+    finishing.waves[i].material.opacity=.12+.035*(1+Math.sin(t*.52+i*2.1));
+  }
+}
+trimIsland();
+
 const pip=makePip();
 let angle=.65,clock=0,view='3d',alive=!reduced.matches,raf=0,last=0;
-let azimuth=.63,elevation=.46,distance=isPhone()?43:23;
-const target=new THREE.Vector3(0,0,0);
+let azimuth=.58,elevation=.60,distance=isPhone()?43:25;
+const target=new THREE.Vector3(0,.22,0);
 function placeCamera(){
   const c=Math.cos(elevation),s=Math.sin(elevation);
   camera.position.set(target.x+distance*c*Math.sin(azimuth),target.y+distance*s,target.z+distance*c*Math.cos(azimuth));
@@ -283,19 +485,20 @@ function update(dt){
   if(!alive)return;
   clock+=dt;angle+=dt*.29;
   const x=7.15*Math.cos(angle),z=4.2*Math.sin(angle);
-  pip.actor.position.set(x,ground(x,z)+.055, z);
+  pip.actor.position.set(x,ground(x,z)-.045, z);
   pip.actor.rotation.y=Math.atan2(-7.15*Math.sin(angle),4.2*Math.cos(angle));
   const gait=Math.sin(clock*10.6);
   pip.limbs.leftLeg.rotation.x=.6*gait;
   pip.limbs.rightLeg.rotation.x=-.6*gait;
   pip.limbs.leftArm.rotation.x=-.47*gait;
   pip.limbs.rightArm.rotation.x=.47*gait;
-  pip.torso.position.y=Math.abs(gait)*.026;
+  pip.torso.position.y=Math.abs(gait)*.018;
   pip.head.rotation.z=Math.sin(clock*2)*.045;
   // Gentle natural lighting, not a flashing full day/night cycle.
   const warmth=.5+.5*Math.sin(clock*.08);
   sun.intensity=2.3+.35*warmth;
-  sea.material.color.setHSL(.52,.28,.64+.015*Math.sin(clock*.38));
+  sea.material.color.setHSL(.52,.27,.67+.008*Math.sin(clock*.28));
+  animateArt(clock);
 }
 function render(){placeCamera();renderer.render(scene,camera);}
 function frame(now){
@@ -345,7 +548,9 @@ function inspect(e){
   const hits=ray.intersectObjects(root.children,true);
   for(const h of hits){let o=h.object;while(o&&o!==root){if(o.userData.poi){
     status.textContent=o.userData.poi.title+' — '+o.userData.poi.desc;
-    status.hidden=false;return;
+    status.hidden=false;
+    // Tapping a real landmark gives a meaningful close-up rather than just text.
+    target.copy(o.position);target.y+=.85;distance=Math.min(distance,isPhone()?26:17);render();return;
   }o=o.parent;}}
   status.hidden=true;
 }
@@ -365,13 +570,13 @@ window.PipIsland3D={
   ready:true,
   mode:()=>view,
   choose,
-  stats:()=>({meshes,mode:view,position:[...pip.actor.position.toArray()],distance,azimuth,elevation,renderCalls:renderer.info.render.calls}),
-  focus(name){const g=root.children.find(o=>o.userData.poi?.title===name);if(g){target.copy(g.position);distance=THREE.MathUtils.clamp(distance,12,40);render();return true;}return false;},
-  reset(){target.set(0,0,0);azimuth=.63;elevation=.46;distance=isPhone()?43:23;render();}
+  stats:()=>({meshes,mode:view,position:[...pip.actor.position.toArray()],distance,azimuth,elevation,renderCalls:renderer.info.render.calls,materialCount:new Set(root.children.flatMap(x=>x.children||[]).map(x=>x.material).filter(Boolean)).size}),
+  focus(name){const g=root.children.find(o=>o.userData.poi?.title===name);if(g){target.copy(g.position);target.y+=.85;distance=Math.min(distance,isPhone()?26:17);render();return true;}return false;},
+  reset(){target.set(0,.22,0);azimuth=.58;elevation=.60;distance=isPhone()?43:25;render();}
 };
 // The original animation boots before this module. Pause it only after a 3D frame succeeds.
 resize();
-pip.actor.position.set(7.15*Math.cos(angle),ground(7.15*Math.cos(angle),4.2*Math.sin(angle))+.055,4.2*Math.sin(angle));
+pip.actor.position.set(7.15*Math.cos(angle),ground(7.15*Math.cos(angle),4.2*Math.sin(angle))-.045,4.2*Math.sin(angle));
 render();
 toggle.hidden=false;
 choose('3d');
