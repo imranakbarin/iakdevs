@@ -54,7 +54,12 @@ let meshes=0;
 function add(g,geometry,m,x=0,y=0,z=0,sx=1,sy=1,sz=1) {
   const o=new THREE.Mesh(geometry,m);
   o.position.set(x,y,z);o.scale.set(sx,sy,sz);
-  o.castShadow=true;o.receiveShadow=true;g.add(o);meshes++;
+  // Small stems, pebbles, face details and blossoms do not need a shadow-map
+  // draw call. Reserve costly soft shadows for meaningful architectural shapes.
+  if (!geometry.boundingSphere) geometry.computeBoundingSphere();
+  const projectedSize=(geometry.boundingSphere?.radius||0)*Math.max(sx,sy,sz);
+  o.castShadow=projectedSize>.72;o.receiveShadow=projectedSize>.4;
+  g.add(o);meshes++;
   return o;
 }
 const ball=(g,m,x,y,z,sx,sy=sx,sz=sx)=>add(g,sphere,m,x,y,z,sx,sy,sz);
@@ -185,14 +190,36 @@ function tree(x,z,s,leaf=mat.leaf){
 tree(-5.6,2.3,1.1);tree(-4.6,3.75,.77);tree(-2.2,4.0,.85);
 tree(.1,-3.65,.72);tree(.55,3.7,.68);
 const rose=material('#b66e91'),mint=material('#83b59a'),stone=material('#b5a59b');
-function flower(x,z,i){
-  const g=groupAt(x,ground(x,z),z);column(g,mat.leaf,0,.18,0,.025,.34,.02);
-  for(let k=0;k<5;k++){const a=2*Math.PI*k/5;ball(g,i%3?mat.cream:rose,Math.cos(a)*.12,.39,Math.sin(a)*.12,.105,.063,.105);}
-  ball(g,mat.gold,0,.4,0,.085,.07,.085);
+// Three garden beds share four instanced meshes instead of 150+ tiny draw calls.
+// This preserves blossoms at close zoom but keeps the overview beautifully calm.
+function makeFlowerBeds(){
+  const stems=[],creamPetals=[],rosePetals=[],cores=[];
+  const beds=[[1.1,-1.75],[1.05,2.62],[5.48,1.23]];
+  let n=0;
+  for(const [bx,bz] of beds){
+    for(let j=0;j<8;j++,n++){
+      const a=j*2.399,rr=.18+Math.sqrt(j/8)*.53,x=bx+Math.cos(a)*rr,z=bz+Math.sin(a)*rr;
+      const y=ground(x,z),h=.27+.12*hash(n+345);
+      stems.push([x,y+h*.55,z,.035,h*.55,.035]);
+      const pet=n%3===0?rosePetals:creamPetals;
+      for(let k=0;k<5;k++){
+        const p=k*Math.PI*2/5;
+        pet.push([x+Math.cos(p)*.12,y+h,z+Math.sin(p)*.12,.095,.055,.09]);
+      }
+      cores.push([x,y+h+.025,z,.077,.055,.077]);
+    }
+  }
+  const make=(poses,m)=>{
+    const inst=new THREE.InstancedMesh(sphere,m,poses.length),dummy=new THREE.Object3D();
+    for(let i=0;i<poses.length;i++){
+      const [x,y,z,sx,sy,sz]=poses[i];dummy.position.set(x,y,z);dummy.scale.set(sx,sy,sz);dummy.updateMatrix();
+      inst.setMatrixAt(i,dummy.matrix);
+    }
+    inst.instanceMatrix.needsUpdate=true;inst.castShadow=false;inst.receiveShadow=false;root.add(inst);meshes++;
+  };
+  make(stems,mat.leaf);make(creamPetals,mat.cream);make(rosePetals,rose);make(cores,mat.gold);
 }
-for(let i=0;i<22;i++){const angle=i*2.399,rad=.35+Math.sqrt(i/22)*1.75;
-  flower(-.62+Math.cos(angle)*rad,1.65+Math.sin(angle)*rad,i);
-}
+makeFlowerBeds();
 // Bridge crosses a visible shallow winding stream and connects the two halves.
 function bridge(){
   const streamPoints=[[-.3,-4],[-.7,-2.0],[-.55,.0],[-.9,1.8],[-1.7,4.5]];
