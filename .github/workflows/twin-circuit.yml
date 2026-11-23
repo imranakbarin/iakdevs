@@ -1,0 +1,40 @@
+name: Twin Circuit checks
+on:
+  push:
+    paths:
+      - 'twin-circuit.html'
+      - 'assets/twin-circuit/**'
+      - 'assets/home.js'
+      - 'index.html'
+      - 'tests/twin-circuit.test.cjs'
+      - '.github/workflows/twin-circuit.yml'
+  pull_request:
+    paths:
+      - 'twin-circuit.html'
+      - 'assets/twin-circuit/**'
+      - 'assets/home.js'
+      - 'index.html'
+      - 'tests/twin-circuit.test.cjs'
+      - '.github/workflows/twin-circuit.yml'
+
+jobs:
+  logic:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Validate JavaScript
+        run: |
+          node --check assets/twin-circuit/engine.mjs
+          node --check assets/twin-circuit/main.mjs
+          node --check assets/home.js
+          node --check tests/twin-circuit.test.cjs
+      - name: Twin Circuit puzzles
+        run: node tests/twin-circuit.test.cjs
+      - name: Today hub regression
+        run: node tests/home.test.cjs
+      - name: Integration smoke checks
+        run: |
+          node -e "const fs=require('fs'),a=require('assert');let h=fs.readFileSync('twin-circuit.html','utf8'),m=fs.readFileSync('index.html','utf8');a.match(h,/twin-circuit\/main.mjs/);a.match(m,/value=\"circuit\"/);a.match(m,/location.href='twin-circuit.html'/);console.log('Navigation and game boot references verified')"
