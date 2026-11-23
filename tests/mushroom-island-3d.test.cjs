@@ -11,7 +11,7 @@ cp.execFileSync(process.execPath,['--check',path.join(root,'assets/mushroom-isla
 for(const token of ['id="island"','id="island3d"','id="islandView"','id="islandStatus"','mushroom-cinematic.js','mushroom-life.js',".catch(error=>"]){
   assert.ok(html.includes(token),'Fallback or control missing: '+token);
 }
-for(const token of ['THREE.WebGLRenderer','THREE.PerspectiveCamera','new THREE.CylinderGeometry','new THREE.SphereGeometry','makePip','castle()','bridge()','waterfall()','mushroom(','pointermove','wheel','webglcontextlost','window.PipIsland3D']){
+for(const token of ['THREE.WebGLRenderer','THREE.PerspectiveCamera','new THREE.CylinderGeometry','new THREE.SphereGeometry','makePip','castle()','bridge()','waterfall()','mushroom(','paintedGrass','trimIsland','instanceBoxes','animateArt','pointermove','wheel','webglcontextlost','window.PipIsland3D']){
   assert.ok(source.includes(token),'3D scene feature missing: '+token);
 }
 assert.ok(!source.includes('window.PipIsland3D={ready:false'), '3D view never reports ready');

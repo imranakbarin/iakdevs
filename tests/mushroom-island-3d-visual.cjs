@@ -15,8 +15,13 @@ const localThree=p=>p.route('https://cdn.jsdelivr.net/npm/three@0.187.0/**',r=>r
   const initial=await page.evaluate(()=>PipIsland3D.stats());
   assert.ok(initial.mode==='3d'&&initial.meshes>100&&initial.renderCalls>40,'actual WebGL world '+JSON.stringify(initial));
   await page.screenshot({path:path.join(out,'pip-island-desktop-3d.png')});
-  assert.ok(await page.evaluate(()=>PipIsland3D.focus('Pip Castle')),'castle is focusable');
-  await page.screenshot({path:path.join(out,'pip-island-castle-3d.png')});
+  assert.ok(initial.meshes>=310&&initial.renderCalls<550,'V2 should add richly layered geometry without an unbounded draw-call budget '+JSON.stringify(initial));
+  // Every snapshot below is from the actual WebGL canvas, never an inspiration image.
+  for(const [landmark,shot] of [['Pip Castle','pip-island-castle-3d.png'],['The Teahouse','pip-island-village-3d.png'],['The Willow Bridge','pip-island-bridge-3d.png'],['Moonwater Falls','pip-island-waterfall-3d.png'],['Pip','pip-island-pip-3d.png']]){
+    await page.evaluate(()=>PipIsland3D.reset());
+    assert.ok(await page.evaluate(name=>PipIsland3D.focus(name),landmark),'missing landmark '+landmark);
+    await page.screenshot({path:path.join(out,shot)});
+  }
   await page.evaluate(()=>PipIsland3D.reset());
   const rect=await page.locator('#island3d').boundingBox();
   await page.mouse.move(rect.x+rect.width*.4,rect.y+rect.height*.5);await page.mouse.down();
@@ -33,7 +38,10 @@ const localThree=p=>p.route('https://cdn.jsdelivr.net/npm/three@0.187.0/**',r=>r
   await phone.waitForFunction(()=>window.PipIsland3D?.ready,null,{timeout:60000});
   const mobile=await phone.evaluate(()=>PipIsland3D.stats());
   assert.ok(mobile.distance>=40,'portrait starts at island-wide zoom '+JSON.stringify(mobile));
+  assert.ok(mobile.renderCalls<550,'phone should stay under a measured draw-call budget '+JSON.stringify(mobile));
   await phone.screenshot({path:path.join(out,'pip-island-phone-3d.png')});
+  await phone.evaluate(()=>PipIsland3D.focus('The Teahouse'));
+  await phone.screenshot({path:path.join(out,'pip-island-phone-village-3d.png')});
   const reduced=await browser.newPage({viewport:{width:500,height:800},reducedMotion:'reduce'});
   await localThree(reduced);await reduced.goto('http://127.0.0.1:'+port+'/mushroom-island.html');
   await reduced.waitForFunction(()=>window.PipIsland3D?.ready,null,{timeout:60000});

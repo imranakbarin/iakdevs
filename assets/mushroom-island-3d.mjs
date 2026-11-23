@@ -521,7 +521,9 @@ function inspect(e){
   const hits=ray.intersectObjects(root.children,true);
   for(const h of hits){let o=h.object;while(o&&o!==root){if(o.userData.poi){
     status.textContent=o.userData.poi.title+' — '+o.userData.poi.desc;
-    status.hidden=false;return;
+    status.hidden=false;
+    // Tapping a real landmark gives a meaningful close-up rather than just text.
+    target.copy(o.position);target.y+=.85;distance=Math.min(distance,isPhone()?26:17);render();return;
   }o=o.parent;}}
   status.hidden=true;
 }
@@ -541,8 +543,8 @@ window.PipIsland3D={
   ready:true,
   mode:()=>view,
   choose,
-  stats:()=>({meshes,mode:view,position:[...pip.actor.position.toArray()],distance,azimuth,elevation,renderCalls:renderer.info.render.calls}),
-  focus(name){const g=root.children.find(o=>o.userData.poi?.title===name);if(g){target.copy(g.position);distance=THREE.MathUtils.clamp(distance,12,40);render();return true;}return false;},
+  stats:()=>({meshes,mode:view,position:[...pip.actor.position.toArray()],distance,azimuth,elevation,renderCalls:renderer.info.render.calls,materialCount:new Set(root.children.flatMap(x=>x.children||[]).map(x=>x.material).filter(Boolean)).size}),
+  focus(name){const g=root.children.find(o=>o.userData.poi?.title===name);if(g){target.copy(g.position);target.y+=.85;distance=Math.min(distance,isPhone()?26:17);render();return true;}return false;},
   reset(){target.set(0,.22,0);azimuth=.58;elevation=.60;distance=isPhone()?43:25;render();}
 };
 // The original animation boots before this module. Pause it only after a 3D frame succeeds.
