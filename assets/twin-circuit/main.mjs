@@ -319,6 +319,7 @@ function loadPeerLibrary() {
   });
 }
 function wireConnection(link, hostSide) {
+  let roomDenied = false;
   link.on('open', () => {
     if (hostSide) {
       connection = link;
@@ -335,6 +336,7 @@ function wireConnection(link, hostSide) {
     } else {
       mode = 'guest'; role = 1;
       $('lobbyStatus').textContent = 'Connected. Synchronizing puzzle…';
+      if (puzzle) { boardSignature = ''; showArena(); render(); }
     }
   });
   link.on('data', message => {
@@ -345,14 +347,17 @@ function wireConnection(link, hostSide) {
       else if (message.type === 'next') advance(false);
       else if (message.type === 'again') advance(true);
     } else if (message.type === 'state') takeSnapshot(message.state);
-    else if (message.type === 'full') showError('That room already has two players. Ask for a new invite.');
+    else if (message.type === 'full') {
+      roomDenied = true;
+      showError('That room already has two players. Ask for a new invite.');
+    }
   });
   link.on('close', () => {
     if (hostSide && connection === link) {
       connection = null;
       if (phase === 'playing') { pausedRemaining = remaining(); phase = 'paused'; render(); }
       toast('Your partner left. Waiting for reconnection.');
-    } else if (!hostSide) {
+    } else if (!hostSide && !roomDenied) {
       if (phase === 'playing') { pausedRemaining = remaining(); phase = 'paused'; render(); }
       if (!$('arena').hidden) toast('Connection ended. Rejoin with the same code.');
       else showError('The room was closed or unavailable. Check the code and try again.');
@@ -407,7 +412,7 @@ $('join').addEventListener('click', async () => {
       connection = peer.connect('twin-circuit-' + room.toLowerCase(), {reliable: true, serialization: 'json'});
       wireConnection(connection, false);
       setTimeout(() => {
-        if (mode === 'joining' && !$('arena').hidden === false) showError('No room answered. Check the code and try again.');
+        if (mode === 'joining') showError('No room answered. Check the code and try again.');
       }, 11000);
     });
     peer.on('error', error => showError('Could not connect: ' + (error.message || 'room unavailable')));
