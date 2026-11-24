@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generated_at": "2026-11-23T13:01:53.551Z",
+  "generated_at": "2026-11-24T00:59:01.007Z",
   "status": "ok",
   "successful_sources": [
     "BBC News",
@@ -16,76 +16,76 @@
   ],
   "stories": [
     {
-      "title": "How a T-Shirt Startup’s Manifesto Got People Everywhere Rethinking Their Lives",
-      "url": "https://www.goodnewsnetwork.org/how-a-t-shirt-startups-manifesto-got-people-everywhere-rethinking-their-lives/",
+      "title": "Determined Volunteer Rescues Lost Toddler in the Desert: ‘She may not be our child, but she could be’",
+      "url": "https://www.goodnewsnetwork.org/determined-volunteer-rescues-lost-toddler-in-the-desert-she-may-not-be-our-child-but-she-could-be/",
       "source": "Good News Network",
       "category": "Good news",
       "tone": "light",
-      "published_at": "2026-11-23T12:40:07.000Z"
+      "published_at": "2026-11-23T18:00:29.000Z"
     },
     {
-      "title": "Five takeaways from the failed climate talks COP31",
-      "url": "https://www.bbc.co.uk/news/articles/cm75237wlp3lo?at_medium=RSS&at_campaign=rss",
-      "source": "BBC Science",
-      "category": "Science",
-      "tone": "light",
-      "published_at": "2026-11-23T06:33:50.000Z"
-    },
-    {
-      "title": "Police investigate unknown substance that caused Manchester's Co-op Live evacuation",
-      "url": "https://www.bbc.co.uk/news/articles/c9e851dn8516o?at_medium=RSS&at_campaign=rss",
-      "source": "BBC Culture",
-      "category": "Culture",
-      "tone": "light",
-      "published_at": "2026-11-23T12:42:21.000Z"
-    },
-    {
-      "title": "Bellamy an influence as Williams leads Swansea",
-      "url": "https://www.bbc.co.uk/sport/football/articles/c6rmgkvpex0wo?at_medium=RSS&at_campaign=rss",
-      "source": "BBC Sport",
-      "category": "Sport",
-      "tone": "light",
-      "published_at": "2026-11-23T12:21:28.000Z"
-    },
-    {
-      "title": "Tri-screen portable monitors aren’t for the faint of heart",
-      "url": "https://arstechnica.com/gadgets/2026/11/a-triple-screen-portable-monitor-means-more-pixels-and-more-bulk/",
-      "source": "Ars Technica",
-      "category": "Technology",
-      "tone": "light",
-      "published_at": "2026-11-23T12:15:16.000Z"
-    },
-    {
-      "title": "South East Water reports loss after supply issues",
-      "url": "https://www.bbc.co.uk/news/articles/c6n90j1qxel8o?at_medium=RSS&at_campaign=rss",
-      "source": "BBC Business",
-      "category": "Business",
-      "tone": "light",
-      "published_at": "2026-11-23T10:19:46.000Z"
-    },
-    {
-      "title": "Presidential villa suffers water and power cuts, Nigerian leader says",
-      "url": "https://www.bbc.co.uk/news/articles/cv1j65xjjk65o?at_medium=RSS&at_campaign=rss",
-      "source": "BBC News",
-      "category": "World",
-      "tone": "light",
-      "published_at": "2026-11-23T12:33:44.000Z"
-    },
-    {
-      "title": "First of 3 Consecutive Supermoons to Begin Tonight – Look to the East for the Beaver Moon",
-      "url": "https://www.goodnewsnetwork.org/first-of-3-consecutive-supermoons-to-begin-tonight-look-to-the-east-for-the-beaver-moon/",
-      "source": "Good News Network",
-      "category": "Good news",
-      "tone": "light",
-      "published_at": "2026-11-23T12:30:42.000Z"
-    },
-    {
-      "title": "APOD: 2026 November 23 – The Emergence of Dark Nebula Lynds 1251",
-      "url": "https://science.nasa.gov/image-article/apod-2026-november-23-the-emergence-of-dark-nebula-lynds-1251/",
+      "title": "NASA Awards Contract for NOAA’s Near Earth Orbit Network Program",
+      "url": "https://www.nasa.gov/news-release/nasa-awards-contract-for-noaas-near-earth-orbit-network-program/",
       "source": "NASA",
       "category": "Science",
       "tone": "light",
-      "published_at": "2026-11-23T05:05:00.000Z"
+      "published_at": "2026-11-23T21:10:03.000Z"
+    },
+    {
+      "title": "King Charles and Elton John pay tribute to Australian music legend Molly Meldrum",
+      "url": "https://www.bbc.co.uk/news/articles/c3qj57rkd2k1o?at_medium=RSS&at_campaign=rss",
+      "source": "BBC Culture",
+      "category": "Culture",
+      "tone": "light",
+      "published_at": "2026-11-24T00:23:25.000Z"
+    },
+    {
+      "title": "Who has made Troy's Premier League team of the week?",
+      "url": "https://www.bbc.co.uk/sport/football/articles/c34gn2p5d0zwo?at_medium=RSS&at_campaign=rss",
+      "source": "BBC Sport",
+      "category": "Sport",
+      "tone": "light",
+      "published_at": "2026-11-23T23:26:35.000Z"
+    },
+    {
+      "title": "Nvidia value climbs by almost $1tn and tech stocks rally after Jensen Huang returns",
+      "url": "https://www.bbc.co.uk/news/articles/cq62pn6j42jko?at_medium=RSS&at_campaign=rss",
+      "source": "BBC Technology",
+      "category": "Technology",
+      "tone": "light",
+      "published_at": "2026-11-23T21:23:42.000Z"
+    },
+    {
+      "title": "I pay £250 a month for someone else to do my life admin - it's worth it",
+      "url": "https://www.bbc.co.uk/news/articles/c6zjr3g13zkno?at_medium=RSS&at_campaign=rss",
+      "source": "BBC Business",
+      "category": "Business",
+      "tone": "light",
+      "published_at": "2026-11-24T00:01:04.000Z"
+    },
+    {
+      "title": "Iranian authorities flog singer who performed without hijab, lawyers say",
+      "url": "https://www.bbc.co.uk/news/articles/cq1j6585l5g6o?at_medium=RSS&at_campaign=rss",
+      "source": "BBC News",
+      "category": "World",
+      "tone": "light",
+      "published_at": "2026-11-23T18:04:20.000Z"
+    },
+    {
+      "title": "One-of-a-Kind Refuge to 200,000 Walrus Protected Forever in Alaska",
+      "url": "https://www.goodnewsnetwork.org/one-of-a-kind-refuge-to-200000-walrus-protected-forever-in-alaska/",
+      "source": "Good News Network",
+      "category": "Good news",
+      "tone": "light",
+      "published_at": "2026-11-23T16:04:07.000Z"
+    },
+    {
+      "title": "What failure of COP31 reveals about a divided world",
+      "url": "https://www.bbc.co.uk/news/articles/cky970n83rvjo?at_medium=RSS&at_campaign=rss",
+      "source": "BBC Science",
+      "category": "Science",
+      "tone": "light",
+      "published_at": "2026-11-23T17:24:25.000Z"
     }
   ]
 }
