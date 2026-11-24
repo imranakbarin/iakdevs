@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generated_at": "2026-11-24T11:03:29.527Z",
+  "generated_at": "2026-11-24T21:20:31.944Z",
   "status": "ok",
   "successful_sources": [
     "BBC News",
@@ -16,76 +16,76 @@
   ],
   "stories": [
     {
-      "title": "Good News in History, November 24",
-      "url": "https://www.goodnewsnetwork.org/events061124/",
+      "title": "Major Success Sees Viral Infections Fall 68% in Brazil After Releasing Wolbachia-Infected Mosquitoes",
+      "url": "https://www.goodnewsnetwork.org/major-success-sees-viral-infections-fall-68-in-brazil-after-releasing-wolbachia-infected-mosquitoes/",
       "source": "Good News Network",
       "category": "Good news",
       "tone": "light",
-      "published_at": "2026-11-24T08:00:00.000Z"
+      "published_at": "2026-11-24T20:29:57.000Z"
     },
     {
-      "title": "'Urgent action' needed to protect lake",
-      "url": "https://www.bbc.co.uk/news/articles/cr78271e5j91o?at_medium=RSS&at_campaign=rss",
-      "source": "BBC Science",
-      "category": "Science",
-      "tone": "light",
-      "published_at": "2026-11-24T09:10:43.000Z"
-    },
-    {
-      "title": "First Children's Booker prize reveals shortlist - and its child judges",
-      "url": "https://www.bbc.co.uk/news/articles/c65y18gl23gko?at_medium=RSS&at_campaign=rss",
-      "source": "BBC Culture",
-      "category": "Culture",
-      "tone": "light",
-      "published_at": "2026-11-24T07:29:37.000Z"
-    },
-    {
-      "title": "49ers win in Mexico and Bills stay top - NFL week 11",
-      "url": "https://www.bbc.co.uk/sport/american-football/articles/c3zxv0nyxl8ro?at_medium=RSS&at_campaign=rss",
-      "source": "BBC Sport",
-      "category": "Sport",
-      "tone": "light",
-      "published_at": "2026-11-24T09:51:32.000Z"
-    },
-    {
-      "title": "Helpful but awkward: My week with Meta's Muse ahead of its UK launch",
-      "url": "https://www.bbc.co.uk/news/articles/c9gkld2l38y6o?at_medium=RSS&at_campaign=rss",
-      "source": "BBC Technology",
-      "category": "Technology",
-      "tone": "light",
-      "published_at": "2026-11-24T09:33:00.000Z"
-    },
-    {
-      "title": "The shake-up facing renters as a new kind of landlord emerges",
-      "url": "https://www.bbc.co.uk/news/articles/c6n90g2l82d1o?at_medium=RSS&at_campaign=rss",
-      "source": "BBC Business",
-      "category": "Business",
-      "tone": "light",
-      "published_at": "2026-11-24T00:28:48.000Z"
-    },
-    {
-      "title": "What happens if a nuclear weapon explodes in space?",
-      "url": "https://www.dw.com/en/what-happens-if-a-nuclear-weapon-explodes-in-space/a-80025827?maca=en-rss-en-world-4025-xml-mrss",
-      "source": "DW",
-      "category": "World",
-      "tone": "light",
-      "published_at": "2026-11-24T08:34:00.000Z"
-    },
-    {
-      "title": "Determined Volunteer Rescues Lost Toddler in the Desert: ‘She may not be our child, but she could be’",
-      "url": "https://www.goodnewsnetwork.org/determined-volunteer-rescues-lost-toddler-in-the-desert-she-may-not-be-our-child-but-she-could-be/",
-      "source": "Good News Network",
-      "category": "Good news",
-      "tone": "light",
-      "published_at": "2026-11-23T18:00:29.000Z"
-    },
-    {
-      "title": "APOD: 2026 November 24 – Galaxies Battle in the NGC 7771 Group",
-      "url": "https://science.nasa.gov/image-article/apod-2026-november-24-galaxies-battle-in-the-ngc-7771-group/",
+      "title": "NASA+ Content Coming to Big Screen at Greenbelt, Maryland Cinema",
+      "url": "https://www.nasa.gov/nasa/nasa-content-coming-to-big-screen-at-greenbelt-maryland-cinema/",
       "source": "NASA",
       "category": "Science",
       "tone": "light",
-      "published_at": "2026-11-24T05:05:00.000Z"
+      "published_at": "2026-11-24T21:14:36.000Z"
+    },
+    {
+      "title": "Irish reality star dances her way to final of Dancing with the Stars",
+      "url": "https://www.bbc.co.uk/news/articles/cw9879841ev7o?at_medium=RSS&at_campaign=rss",
+      "source": "BBC Culture",
+      "category": "Culture",
+      "tone": "light",
+      "published_at": "2026-11-24T16:06:10.000Z"
+    },
+    {
+      "title": "Man Utd target Collins - Wednesday's gossip",
+      "url": "https://www.bbc.co.uk/sport/football/articles/cm15en5je9eko?at_medium=RSS&at_campaign=rss",
+      "source": "BBC Sport",
+      "category": "Sport",
+      "tone": "light",
+      "published_at": "2026-11-24T20:51:44.000Z"
+    },
+    {
+      "title": "US attorney general dodges questions about Nvidia investigation",
+      "url": "https://www.bbc.co.uk/news/articles/crpdw1qx7jgxo?at_medium=RSS&at_campaign=rss",
+      "source": "BBC Technology",
+      "category": "Technology",
+      "tone": "light",
+      "published_at": "2026-11-24T21:19:42.000Z"
+    },
+    {
+      "title": "Will I get the £100 energy payment and when will I receive it?",
+      "url": "https://www.bbc.co.uk/news/articles/c35yn8x748e9o?at_medium=RSS&at_campaign=rss",
+      "source": "BBC Business",
+      "category": "Business",
+      "tone": "light",
+      "published_at": "2026-11-24T20:16:24.000Z"
+    },
+    {
+      "title": "Indian government has 'lost the plot', says 'cockroach' leader barred from UK flight",
+      "url": "https://www.bbc.co.uk/news/articles/cm5y1ezx2gqyo?at_medium=RSS&at_campaign=rss",
+      "source": "BBC News",
+      "category": "World",
+      "tone": "light",
+      "published_at": "2026-11-24T18:07:46.000Z"
+    },
+    {
+      "title": "Retired Teacher Turns Retired Musical Instruments into Bird Feeders (LOOK)",
+      "url": "https://www.goodnewsnetwork.org/retired-teacher-turns-retired-musical-instruments-into-bird-feeders-look/",
+      "source": "Good News Network",
+      "category": "Good news",
+      "tone": "light",
+      "published_at": "2026-11-24T16:30:36.000Z"
+    },
+    {
+      "title": "Badger cull ruled out by Welsh government after speculation",
+      "url": "https://www.bbc.co.uk/news/articles/cm930yjy97xyo?at_medium=RSS&at_campaign=rss",
+      "source": "BBC Science",
+      "category": "Science",
+      "tone": "light",
+      "published_at": "2026-11-24T16:47:05.000Z"
     }
   ]
 }
