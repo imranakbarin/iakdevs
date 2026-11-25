@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generated_at": "2026-11-25T04:56:09.552Z",
+  "generated_at": "2026-11-25T15:43:23.204Z",
   "status": "ok",
   "successful_sources": [
     "BBC News",
@@ -16,76 +16,76 @@
   ],
   "stories": [
     {
-      "title": "Major Success Sees Viral Infections Fall 68% in Brazil After Releasing Wolbachia-Infected Mosquitoes",
-      "url": "https://www.goodnewsnetwork.org/major-success-sees-viral-infections-fall-68-in-brazil-after-releasing-wolbachia-infected-mosquitoes/",
+      "title": "‘Autos for Love’ Owners Delight in Giving Away Cars to Needy Neighbors",
+      "url": "https://www.goodnewsnetwork.org/texas-auto-shop-couple-is-hungry-to-keep-giving-cars-away-to-neighbors-in-need/",
       "source": "Good News Network",
       "category": "Good news",
       "tone": "light",
-      "published_at": "2026-11-24T20:29:57.000Z"
+      "published_at": "2026-11-25T14:00:36.000Z"
     },
     {
-      "title": "China's Shenzhou-24 carries Pakistan's first astronaut into space",
-      "url": "https://www.bbc.co.uk/news/articles/c6x2e0j3kx28o?at_medium=RSS&at_campaign=rss",
+      "title": "Canadian astronaut welcomes baby girl from space station",
+      "url": "https://www.bbc.co.uk/news/articles/ckx283y8wwwgo?at_medium=RSS&at_campaign=rss",
       "source": "BBC Science",
       "category": "Science",
       "tone": "light",
-      "published_at": "2026-11-25T04:46:23.000Z"
+      "published_at": "2026-11-25T15:41:39.000Z"
     },
     {
-      "title": "Substance released at concert could be linked to robberies, police say",
-      "url": "https://www.bbc.co.uk/news/articles/cqrmgvnzwrm3o?at_medium=RSS&at_campaign=rss",
+      "title": "Hundreds complain about I'm A Celebrity after Mariella Frostrup called AJ Odudu 'aggressive'",
+      "url": "https://www.bbc.co.uk/news/articles/c6ly5v11q194o?at_medium=RSS&at_campaign=rss",
       "source": "BBC Culture",
       "category": "Culture",
       "tone": "light",
-      "published_at": "2026-11-24T22:01:30.000Z"
+      "published_at": "2026-11-25T11:57:31.000Z"
     },
     {
-      "title": "Rangers 'dug it out' despite naivety & complacency - McInnes",
-      "url": "https://www.bbc.co.uk/sport/football/articles/cw808pyyxgzjo?at_medium=RSS&at_campaign=rss",
+      "title": "Why four-time MVP Rodgers may have played last NFL game",
+      "url": "https://www.bbc.co.uk/sport/american-football/articles/c64gn8ryp7jno?at_medium=RSS&at_campaign=rss",
       "source": "BBC Sport",
       "category": "Sport",
       "tone": "light",
-      "published_at": "2026-11-25T01:20:53.000Z"
+      "published_at": "2026-11-25T14:37:16.000Z"
     },
     {
-      "title": "US attorney general dodges questions about Nvidia investigation",
-      "url": "https://www.bbc.co.uk/news/articles/crpdw1qx7jgxo?at_medium=RSS&at_campaign=rss",
-      "source": "BBC Technology",
+      "title": "Army detonates tons of lead azide as local residents brace for toxic plume",
+      "url": "https://arstechnica.com/health/2026/11/army-detonates-tons-of-lead-azide-as-local-residents-brace-for-toxic-plume/",
+      "source": "Ars Technica",
       "category": "Technology",
       "tone": "light",
-      "published_at": "2026-11-25T03:44:07.000Z"
+      "published_at": "2026-11-25T15:35:17.000Z"
     },
     {
-      "title": "The rising cost of putting food on the table in India",
-      "url": "https://www.bbc.co.uk/news/articles/cmy0xj41kl50o?at_medium=RSS&at_campaign=rss",
+      "title": "US announces new tariffs on host of countries including China",
+      "url": "https://www.bbc.co.uk/news/articles/c893r9ke5p97o?at_medium=RSS&at_campaign=rss",
       "source": "BBC Business",
       "category": "Business",
       "tone": "light",
-      "published_at": "2026-11-25T01:02:13.000Z"
+      "published_at": "2026-11-25T14:52:22.000Z"
     },
     {
-      "title": "Moment Chinese space mission lifts off with first Pakistan astronaut aboard",
-      "url": "https://www.bbc.co.uk/news/videos/cmz74l0yzzvyo?at_medium=RSS&at_campaign=rss",
-      "source": "BBC News",
+      "title": "Nigeria's upcoming election marred by rising AI disinformation",
+      "url": "https://www.dw.com/en/nigeria-s-upcoming-election-marred-by-rising-ai-disinformation/a-79946897?maca=en-rss-en-world-4025-xml-mrss",
+      "source": "DW",
       "category": "World",
       "tone": "light",
-      "published_at": "2026-11-25T03:28:37.000Z"
+      "published_at": "2026-11-25T15:28:00.000Z"
     },
     {
-      "title": "Retired Teacher Turns Retired Musical Instruments into Bird Feeders (LOOK)",
-      "url": "https://www.goodnewsnetwork.org/retired-teacher-turns-retired-musical-instruments-into-bird-feeders-look/",
+      "title": "Land Returned to Native American Ownership 400 Years After the First Thanksgiving",
+      "url": "https://www.goodnewsnetwork.org/land-returned-indigenous-care-first-encounter-beach/",
       "source": "Good News Network",
       "category": "Good news",
       "tone": "light",
-      "published_at": "2026-11-24T16:30:36.000Z"
+      "published_at": "2026-11-25T12:59:08.000Z"
     },
     {
-      "title": "NASA+ Content Coming to Big Screen at Greenbelt, Maryland Cinema",
-      "url": "https://www.nasa.gov/nasa/nasa-content-coming-to-big-screen-at-greenbelt-maryland-cinema/",
+      "title": "NASA’s Hubble Views Ocean of Stars in Groundwork for Roman",
+      "url": "https://science.nasa.gov/missions/hubble/nasas-hubble-views-ocean-of-stars-in-groundwork-for-roman/",
       "source": "NASA",
       "category": "Science",
       "tone": "light",
-      "published_at": "2026-11-24T21:14:36.000Z"
+      "published_at": "2026-11-25T14:56:54.000Z"
     }
   ]
 }
