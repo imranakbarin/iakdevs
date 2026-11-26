@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generated_at": "2026-11-25T15:43:23.204Z",
+  "generated_at": "2026-11-26T00:29:17.531Z",
   "status": "ok",
   "successful_sources": [
     "BBC News",
@@ -16,76 +16,76 @@
   ],
   "stories": [
     {
-      "title": "‘Autos for Love’ Owners Delight in Giving Away Cars to Needy Neighbors",
-      "url": "https://www.goodnewsnetwork.org/texas-auto-shop-couple-is-hungry-to-keep-giving-cars-away-to-neighbors-in-need/",
+      "title": "Detectives Recover 13th Century Sculpture Stolen by Notorious ‘Gentleman Thief’ Erik the Belgian",
+      "url": "https://www.goodnewsnetwork.org/detectives-recover-13th-century-sculpture-stolen-by-notorious-gentleman-thief-erik-the-belgian/",
       "source": "Good News Network",
       "category": "Good news",
       "tone": "light",
-      "published_at": "2026-11-25T14:00:36.000Z"
+      "published_at": "2026-11-25T19:30:55.000Z"
     },
     {
-      "title": "Canadian astronaut welcomes baby girl from space station",
-      "url": "https://www.bbc.co.uk/news/articles/ckx283y8wwwgo?at_medium=RSS&at_campaign=rss",
+      "title": "What UK season changes mean for you",
+      "url": "https://www.bbc.co.uk/weather/videos/c804wd3wwqpyo?at_medium=RSS&at_campaign=rss",
       "source": "BBC Science",
       "category": "Science",
       "tone": "light",
-      "published_at": "2026-11-25T15:41:39.000Z"
+      "published_at": "2026-11-26T00:14:16.000Z"
     },
     {
-      "title": "Hundreds complain about I'm A Celebrity after Mariella Frostrup called AJ Odudu 'aggressive'",
-      "url": "https://www.bbc.co.uk/news/articles/c6ly5v11q194o?at_medium=RSS&at_campaign=rss",
+      "title": "BBC launches partnership with Met Office for weather coverage",
+      "url": "https://www.bbc.co.uk/news/articles/ckjrel5vdj9zo?at_medium=RSS&at_campaign=rss",
       "source": "BBC Culture",
       "category": "Culture",
       "tone": "light",
-      "published_at": "2026-11-25T11:57:31.000Z"
+      "published_at": "2026-11-26T00:12:37.000Z"
     },
     {
-      "title": "Why four-time MVP Rodgers may have played last NFL game",
-      "url": "https://www.bbc.co.uk/sport/american-football/articles/c64gn8ryp7jno?at_medium=RSS&at_campaign=rss",
+      "title": "Match of the Day: Champions League goals, highlights & analysis",
+      "url": "https://www.bbc.co.uk/iplayer/episode/m0034rj1/uefa-champions-league-match-of-the-day-matchday-5?at_medium=RSS&at_campaign=rss",
       "source": "BBC Sport",
       "category": "Sport",
       "tone": "light",
-      "published_at": "2026-11-25T14:37:16.000Z"
+      "published_at": "2026-11-26T00:02:25.000Z"
     },
     {
-      "title": "Army detonates tons of lead azide as local residents brace for toxic plume",
-      "url": "https://arstechnica.com/health/2026/11/army-detonates-tons-of-lead-azide-as-local-residents-brace-for-toxic-plume/",
+      "title": "European spacecraft finds chaotic scene after asteroid deflection experiment",
+      "url": "https://arstechnica.com/space/2026/11/europes-hera-mission-returns-to-the-chaotic-scene-of-a-cosmic-smashup/",
       "source": "Ars Technica",
       "category": "Technology",
       "tone": "light",
-      "published_at": "2026-11-25T15:35:17.000Z"
+      "published_at": "2026-11-25T22:36:45.000Z"
     },
     {
-      "title": "US announces new tariffs on host of countries including China",
-      "url": "https://www.bbc.co.uk/news/articles/c893r9ke5p97o?at_medium=RSS&at_campaign=rss",
+      "title": "US approves SpaceX plan to send a million data satellites to space",
+      "url": "https://www.bbc.co.uk/news/articles/cwp836l8n1jgo?at_medium=RSS&at_campaign=rss",
       "source": "BBC Business",
       "category": "Business",
       "tone": "light",
-      "published_at": "2026-11-25T14:52:22.000Z"
+      "published_at": "2026-11-26T00:07:51.000Z"
     },
     {
-      "title": "Nigeria's upcoming election marred by rising AI disinformation",
-      "url": "https://www.dw.com/en/nigeria-s-upcoming-election-marred-by-rising-ai-disinformation/a-79946897?maca=en-rss-en-world-4025-xml-mrss",
-      "source": "DW",
+      "title": "Israeli judges recommend dropping most serious charges against Netanyahu",
+      "url": "https://www.bbc.co.uk/news/articles/cxj05mv723r2o?at_medium=RSS&at_campaign=rss",
+      "source": "BBC News",
       "category": "World",
       "tone": "light",
-      "published_at": "2026-11-25T15:28:00.000Z"
+      "published_at": "2026-11-25T19:47:39.000Z"
     },
     {
-      "title": "Land Returned to Native American Ownership 400 Years After the First Thanksgiving",
-      "url": "https://www.goodnewsnetwork.org/land-returned-indigenous-care-first-encounter-beach/",
+      "title": "Roman Glass Among the Silk Road Treasures Unearthed in Nomadic Noble’s Tomb",
+      "url": "https://www.goodnewsnetwork.org/roman-glass-among-the-silk-road-treasures-unearthed-in-nomadic-nobles-tomb/",
       "source": "Good News Network",
       "category": "Good news",
       "tone": "light",
-      "published_at": "2026-11-25T12:59:08.000Z"
+      "published_at": "2026-11-25T16:30:05.000Z"
     },
     {
-      "title": "NASA’s Hubble Views Ocean of Stars in Groundwork for Roman",
-      "url": "https://science.nasa.gov/missions/hubble/nasas-hubble-views-ocean-of-stars-in-groundwork-for-roman/",
+      "title": "NASA Enhances Supplier Program, Announces Mentor-Protégé Agreement",
+      "url": "https://www.nasa.gov/organizations/osbp/nasa-enhances-supplier-program-announces-mentor-protege-agreement/",
       "source": "NASA",
       "category": "Science",
       "tone": "light",
-      "published_at": "2026-11-25T14:56:54.000Z"
+      "published_at": "2026-11-25T19:06:56.000Z"
     }
   ]
 }
