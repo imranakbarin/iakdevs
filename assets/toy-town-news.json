@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generated_at": "2026-11-26T00:29:17.531Z",
+  "generated_at": "2026-11-26T09:38:41.016Z",
   "status": "ok",
   "successful_sources": [
     "BBC News",
@@ -11,10 +11,65 @@
     "Ars Technica",
     "BBC Science",
     "BBC Culture",
-    "Good News Network",
-    "NASA"
+    "Good News Network"
   ],
   "stories": [
+    {
+      "title": "Good News in History, November 26",
+      "url": "https://www.goodnewsnetwork.org/events061125-2/",
+      "source": "Good News Network",
+      "category": "Good news",
+      "tone": "light",
+      "published_at": "2026-11-26T08:00:00.000Z"
+    },
+    {
+      "title": "Whitehouse calls on PM to help save lake fish",
+      "url": "https://www.bbc.co.uk/news/articles/c6808pxrzy5po?at_medium=RSS&at_campaign=rss",
+      "source": "BBC Science",
+      "category": "Science",
+      "tone": "light",
+      "published_at": "2026-11-26T06:05:36.000Z"
+    },
+    {
+      "title": "BBC Radio 1's Big Weekend 2027 heads to Brighton",
+      "url": "https://www.bbc.co.uk/news/articles/cr1ewjpgd2llo?at_medium=RSS&at_campaign=rss",
+      "source": "BBC Culture",
+      "category": "Culture",
+      "tone": "light",
+      "published_at": "2026-11-26T09:16:32.000Z"
+    },
+    {
+      "title": "Bearman to continue with Haas in 2027",
+      "url": "https://www.bbc.co.uk/sport/formula1/articles/cqx2wxyk7343o?at_medium=RSS&at_campaign=rss",
+      "source": "BBC Sport",
+      "category": "Sport",
+      "tone": "light",
+      "published_at": "2026-11-26T09:30:22.000Z"
+    },
+    {
+      "title": "Musk's plan to send a million SpaceX data satellites into space approved",
+      "url": "https://www.bbc.co.uk/news/articles/cwp836l8n1jgo?at_medium=RSS&at_campaign=rss",
+      "source": "BBC Technology",
+      "category": "Technology",
+      "tone": "light",
+      "published_at": "2026-11-26T09:27:44.000Z"
+    },
+    {
+      "title": "UK signs £8bn deal to ensure submarines are 'warfighting ready'",
+      "url": "https://www.bbc.co.uk/news/articles/cq39gz99l1pyo?at_medium=RSS&at_campaign=rss",
+      "source": "BBC Business",
+      "category": "Business",
+      "tone": "light",
+      "published_at": "2026-11-26T09:23:46.000Z"
+    },
+    {
+      "title": "Two screenings of Pakistani TV show cancelled in India after backlash",
+      "url": "https://www.bbc.co.uk/news/articles/cky97x7delz9o?at_medium=RSS&at_campaign=rss",
+      "source": "BBC News",
+      "category": "World",
+      "tone": "light",
+      "published_at": "2026-11-26T08:30:12.000Z"
+    },
     {
       "title": "Detectives Recover 13th Century Sculpture Stolen by Notorious ‘Gentleman Thief’ Erik the Belgian",
       "url": "https://www.goodnewsnetwork.org/detectives-recover-13th-century-sculpture-stolen-by-notorious-gentleman-thief-erik-the-belgian/",
@@ -30,62 +85,6 @@
       "category": "Science",
       "tone": "light",
       "published_at": "2026-11-26T00:14:16.000Z"
-    },
-    {
-      "title": "BBC launches partnership with Met Office for weather coverage",
-      "url": "https://www.bbc.co.uk/news/articles/ckjrel5vdj9zo?at_medium=RSS&at_campaign=rss",
-      "source": "BBC Culture",
-      "category": "Culture",
-      "tone": "light",
-      "published_at": "2026-11-26T00:12:37.000Z"
-    },
-    {
-      "title": "Match of the Day: Champions League goals, highlights & analysis",
-      "url": "https://www.bbc.co.uk/iplayer/episode/m0034rj1/uefa-champions-league-match-of-the-day-matchday-5?at_medium=RSS&at_campaign=rss",
-      "source": "BBC Sport",
-      "category": "Sport",
-      "tone": "light",
-      "published_at": "2026-11-26T00:02:25.000Z"
-    },
-    {
-      "title": "European spacecraft finds chaotic scene after asteroid deflection experiment",
-      "url": "https://arstechnica.com/space/2026/11/europes-hera-mission-returns-to-the-chaotic-scene-of-a-cosmic-smashup/",
-      "source": "Ars Technica",
-      "category": "Technology",
-      "tone": "light",
-      "published_at": "2026-11-25T22:36:45.000Z"
-    },
-    {
-      "title": "US approves SpaceX plan to send a million data satellites to space",
-      "url": "https://www.bbc.co.uk/news/articles/cwp836l8n1jgo?at_medium=RSS&at_campaign=rss",
-      "source": "BBC Business",
-      "category": "Business",
-      "tone": "light",
-      "published_at": "2026-11-26T00:07:51.000Z"
-    },
-    {
-      "title": "Israeli judges recommend dropping most serious charges against Netanyahu",
-      "url": "https://www.bbc.co.uk/news/articles/cxj05mv723r2o?at_medium=RSS&at_campaign=rss",
-      "source": "BBC News",
-      "category": "World",
-      "tone": "light",
-      "published_at": "2026-11-25T19:47:39.000Z"
-    },
-    {
-      "title": "Roman Glass Among the Silk Road Treasures Unearthed in Nomadic Noble’s Tomb",
-      "url": "https://www.goodnewsnetwork.org/roman-glass-among-the-silk-road-treasures-unearthed-in-nomadic-nobles-tomb/",
-      "source": "Good News Network",
-      "category": "Good news",
-      "tone": "light",
-      "published_at": "2026-11-25T16:30:05.000Z"
-    },
-    {
-      "title": "NASA Enhances Supplier Program, Announces Mentor-Protégé Agreement",
-      "url": "https://www.nasa.gov/organizations/osbp/nasa-enhances-supplier-program-announces-mentor-protege-agreement/",
-      "source": "NASA",
-      "category": "Science",
-      "tone": "light",
-      "published_at": "2026-11-25T19:06:56.000Z"
     }
   ]
 }
