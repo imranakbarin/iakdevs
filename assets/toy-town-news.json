@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generated_at": "2026-11-26T19:41:24.609Z",
+  "generated_at": "2026-11-27T02:55:04.568Z",
   "status": "ok",
   "successful_sources": [
     "BBC News",
@@ -16,20 +16,20 @@
   ],
   "stories": [
     {
-      "title": "Texans Work for Free on Farms That Aren’t Theirs to Send Others’ Kids to College",
-      "url": "https://www.goodnewsnetwork.org/texans-work-for-free-on-farms-that-arent-theirs-to-send-others-kids-to-college/",
+      "title": "Town Rewards a Woman Whose Thanksgiving Meal Feeds Thousands with a New Car",
+      "url": "https://www.goodnewsnetwork.org/town-rewards-a-woman-whose-thanksgiving-meal-feeds-thousands-with-a-new-car/",
       "source": "Good News Network",
       "category": "Good news",
       "tone": "light",
-      "published_at": "2026-11-26T12:30:16.000Z"
+      "published_at": "2026-11-26T16:30:18.000Z"
     },
     {
-      "title": "Watch: Roofs torn off and streets under water as severe weather hits US",
-      "url": "https://www.bbc.co.uk/news/videos/cq808d704m22o?at_medium=RSS&at_campaign=rss",
+      "title": "Inside the control room feeding your weather app",
+      "url": "https://www.bbc.co.uk/weather/videos/c6y0xq8y757ko?at_medium=RSS&at_campaign=rss",
       "source": "BBC Science",
       "category": "Science",
       "tone": "light",
-      "published_at": "2026-11-26T19:26:16.000Z"
+      "published_at": "2026-11-27T00:09:30.000Z"
     },
     {
       "title": "Government's antisemitism adviser launches investigation into BBC",
@@ -40,44 +40,44 @@
       "published_at": "2026-11-26T12:02:58.000Z"
     },
     {
-      "title": "Referee being 'drunk' claims are 'entirely unfounded'",
-      "url": "https://www.bbc.co.uk/sport/football/articles/c6x289w0vpr1o?at_medium=RSS&at_campaign=rss",
+      "title": "Australia's sandpapergate probe to also include 2017-18 Ashes",
+      "url": "https://www.bbc.co.uk/sport/cricket/articles/cxdd1335nyj0o?at_medium=RSS&at_campaign=rss",
       "source": "BBC Sport",
       "category": "Sport",
       "tone": "light",
-      "published_at": "2026-11-26T19:19:49.000Z"
+      "published_at": "2026-11-27T00:43:03.000Z"
     },
     {
-      "title": "Ford unveils the GT41 as it hopes to win Le Mans again",
-      "url": "https://arstechnica.com/cars/2026/11/ford-unveils-the-gt41-as-it-hopes-to-win-le-mans-again/",
-      "source": "Ars Technica",
+      "title": "Asia made a big AI bet on Nvidia. What happens now?",
+      "url": "https://www.bbc.co.uk/news/articles/cqevr4lnd1nxo?at_medium=RSS&at_campaign=rss",
+      "source": "BBC Technology",
       "category": "Technology",
       "tone": "light",
-      "published_at": "2026-11-26T18:00:29.000Z"
+      "published_at": "2026-11-26T23:08:12.000Z"
     },
     {
-      "title": "When will Poundland shops close? Five key questions answered",
-      "url": "https://www.bbc.co.uk/news/articles/c6z9d3pv93glo?at_medium=RSS&at_campaign=rss",
+      "title": "I spend £200 a month on fancy meals by myself - would you dine solo?",
+      "url": "https://www.bbc.co.uk/news/articles/cw8dv11dp2yeo?at_medium=RSS&at_campaign=rss",
       "source": "BBC Business",
       "category": "Business",
       "tone": "light",
-      "published_at": "2026-11-26T17:21:21.000Z"
+      "published_at": "2026-11-27T00:54:45.000Z"
     },
     {
-      "title": "Saudi pop music is thriving — but for the right reasons?",
-      "url": "https://www.dw.com/en/saudi-pop-music-is-thriving-but-for-the-right-reasons/a-80036013?maca=en-rss-en-world-4025-xml-mrss",
-      "source": "DW",
+      "title": "New Zealand's ruling coalition falls short of parliamentary majority by one seat",
+      "url": "https://www.bbc.co.uk/news/articles/c670278qk879o?at_medium=RSS&at_campaign=rss",
+      "source": "BBC News",
       "category": "World",
       "tone": "light",
-      "published_at": "2026-11-26T17:37:00.000Z"
+      "published_at": "2026-11-27T02:22:37.000Z"
     },
     {
-      "title": "This Year, The Perfect Thanksgiving Film Features Two Icons, One Friendship and Endless Joy",
-      "url": "https://www.goodnewsnetwork.org/mission-joy-perfect-friendship-film-key-to-happiness/",
+      "title": "For This NYC Restaurant Owner, Thanksgiving Comes Every Wednesday",
+      "url": "https://www.goodnewsnetwork.org/for-this-nyc-restaurant-owner-thanksgiving-comes-every-wednesday/",
       "source": "Good News Network",
       "category": "Good news",
       "tone": "light",
-      "published_at": "2026-11-26T11:00:41.000Z"
+      "published_at": "2026-11-26T16:15:31.000Z"
     },
     {
       "title": "APOD: 2026 November 26 – Eye in the Sky: The Milky Way over Lençóis",
