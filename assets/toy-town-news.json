@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generated_at": "2026-11-27T12:38:14.404Z",
+  "generated_at": "2026-11-27T22:03:24.891Z",
   "status": "ok",
   "successful_sources": [
     "BBC News",
@@ -16,76 +16,76 @@
   ],
   "stories": [
     {
-      "title": "Good News in History, November 27",
-      "url": "https://www.goodnewsnetwork.org/events061127/",
-      "source": "Good News Network",
-      "category": "Good news",
-      "tone": "light",
-      "published_at": "2026-11-27T08:00:00.000Z"
-    },
-    {
-      "title": "Floating nature islands installed in parks as Glasgow Games legacy",
-      "url": "https://www.bbc.co.uk/news/articles/cwe9kxdm1k4lo?at_medium=RSS&at_campaign=rss",
+      "title": "Capsized tanker carrying 7,000 tonnes of diesel to be towed away from Ibiza",
+      "url": "https://www.bbc.co.uk/news/articles/cvrlgz6g0ekgo?at_medium=RSS&at_campaign=rss",
       "source": "BBC Science",
       "category": "Science",
       "tone": "light",
-      "published_at": "2026-11-27T06:19:13.000Z"
+      "published_at": "2026-11-27T20:34:45.000Z"
     },
     {
-      "title": "Government's antisemitism adviser launches investigation into BBC",
-      "url": "https://www.bbc.co.uk/news/articles/cw782ml8ndgyo?at_medium=RSS&at_campaign=rss",
+      "title": "Alun Wyn Jones urges men to talk about hair loss after transplant",
+      "url": "https://www.bbc.co.uk/news/articles/c5742dygzn31o?at_medium=RSS&at_campaign=rss",
       "source": "BBC Culture",
       "category": "Culture",
       "tone": "light",
-      "published_at": "2026-11-26T12:02:58.000Z"
+      "published_at": "2026-11-27T20:03:11.000Z"
     },
     {
-      "title": "Eight-time champion Marquez to retire from MotoGP",
-      "url": "https://www.bbc.co.uk/sport/motorsport/articles/c539gd3r3mk2o?at_medium=RSS&at_campaign=rss",
+      "title": "Gibbs-White stars, Fofana struggles - player ratings for Forest v Chelsea",
+      "url": "https://www.bbc.co.uk/sport/football/articles/cmwy85xxjgxvo?at_medium=RSS&at_campaign=rss",
       "source": "BBC Sport",
       "category": "Sport",
       "tone": "light",
-      "published_at": "2026-11-27T12:28:16.000Z"
+      "published_at": "2026-11-27T21:59:48.000Z"
     },
     {
-      "title": "Books, bikes, and The Burbs: These are Ars staff’s holiday gift picks for 2026",
-      "url": "https://arstechnica.com/shopping/2026/11/books-bikes-and-the-burbs-these-are-ars-staffs-holiday-gift-picks-for-2026/",
+      "title": "The best Black Friday deals Ars could find",
+      "url": "https://arstechnica.com/shopping/2026/11/the-best-black-friday-deals-ars-could-find/",
       "source": "Ars Technica",
       "category": "Technology",
       "tone": "light",
-      "published_at": "2026-11-27T11:30:04.000Z"
+      "published_at": "2026-11-27T17:05:37.000Z"
     },
     {
-      "title": "My self-care ritual is a meal at a fancy restaurant - on my own",
-      "url": "https://www.bbc.co.uk/news/articles/cw8dv11dp2yeo?at_medium=RSS&at_campaign=rss",
+      "title": "Will new energy fixes cost more in January?",
+      "url": "https://www.bbc.co.uk/news/videos/cwjd7y4jk581o?at_medium=RSS&at_campaign=rss",
       "source": "BBC Business",
       "category": "Business",
       "tone": "light",
-      "published_at": "2026-11-27T10:10:36.000Z"
+      "published_at": "2026-11-27T16:05:32.000Z"
     },
     {
-      "title": "Indian workers fill Germany's labor gaps but face hurdles and risks",
-      "url": "https://www.dw.com/en/indian-workers-fill-germany-s-labor-gaps-but-face-hurdles-and-risks/a-80072882?maca=en-rss-en-world-4025-xml-mrss",
-      "source": "DW",
+      "title": "Spanish PM and rivals rally supporters in final pitch for votes",
+      "url": "https://www.bbc.co.uk/news/articles/c8wy5p4gdnwvo?at_medium=RSS&at_campaign=rss",
+      "source": "BBC News",
       "category": "World",
       "tone": "light",
-      "published_at": "2026-11-27T11:06:00.000Z"
+      "published_at": "2026-11-27T21:55:53.000Z"
     },
     {
-      "title": "Town Rewards a Woman Whose Thanksgiving Meal Feeds Thousands with a New Car",
-      "url": "https://www.goodnewsnetwork.org/town-rewards-a-woman-whose-thanksgiving-meal-feeds-thousands-with-a-new-car/",
-      "source": "Good News Network",
-      "category": "Good news",
-      "tone": "light",
-      "published_at": "2026-11-26T16:30:18.000Z"
-    },
-    {
-      "title": "APOD: 2026 November 27 – The Moon Watchers",
-      "url": "https://science.nasa.gov/image-article/apod-2026-november-27-the-moon-watchers/",
+      "title": "Artemis III Astronaut Andre Douglas Visits VAB",
+      "url": "https://www.nasa.gov/image-article/artemis-iii-astronaut-andre-douglas-visits-vab/",
       "source": "NASA",
       "category": "Science",
       "tone": "light",
-      "published_at": "2026-11-27T05:05:00.000Z"
+      "published_at": "2026-11-27T15:01:00.000Z"
+    },
+    {
+      "title": "Rare panto programmes owned by 'Freddie Mercury of his time' sell at auction",
+      "url": "https://www.bbc.co.uk/news/articles/c5vg2990y1pno?at_medium=RSS&at_campaign=rss",
+      "source": "BBC Culture",
+      "category": "Culture",
+      "tone": "light",
+      "published_at": "2026-11-27T18:37:54.000Z"
+    },
+    {
+      "title": "Celtic defend head of security amid Green Brigade row",
+      "url": "https://www.bbc.co.uk/sport/football/articles/ck1ewjw1qqn7o?at_medium=RSS&at_campaign=rss",
+      "source": "BBC Sport",
+      "category": "Sport",
+      "tone": "light",
+      "published_at": "2026-11-27T21:50:01.000Z"
     }
   ]
 }
