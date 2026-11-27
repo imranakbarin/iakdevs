@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generated_at": "2026-11-27T02:55:04.568Z",
+  "generated_at": "2026-11-27T12:38:14.404Z",
   "status": "ok",
   "successful_sources": [
     "BBC News",
@@ -16,20 +16,20 @@
   ],
   "stories": [
     {
-      "title": "Town Rewards a Woman Whose Thanksgiving Meal Feeds Thousands with a New Car",
-      "url": "https://www.goodnewsnetwork.org/town-rewards-a-woman-whose-thanksgiving-meal-feeds-thousands-with-a-new-car/",
+      "title": "Good News in History, November 27",
+      "url": "https://www.goodnewsnetwork.org/events061127/",
       "source": "Good News Network",
       "category": "Good news",
       "tone": "light",
-      "published_at": "2026-11-26T16:30:18.000Z"
+      "published_at": "2026-11-27T08:00:00.000Z"
     },
     {
-      "title": "Inside the control room feeding your weather app",
-      "url": "https://www.bbc.co.uk/weather/videos/c6y0xq8y757ko?at_medium=RSS&at_campaign=rss",
+      "title": "Floating nature islands installed in parks as Glasgow Games legacy",
+      "url": "https://www.bbc.co.uk/news/articles/cwe9kxdm1k4lo?at_medium=RSS&at_campaign=rss",
       "source": "BBC Science",
       "category": "Science",
       "tone": "light",
-      "published_at": "2026-11-27T00:09:30.000Z"
+      "published_at": "2026-11-27T06:19:13.000Z"
     },
     {
       "title": "Government's antisemitism adviser launches investigation into BBC",
@@ -40,52 +40,52 @@
       "published_at": "2026-11-26T12:02:58.000Z"
     },
     {
-      "title": "Australia's sandpapergate probe to also include 2017-18 Ashes",
-      "url": "https://www.bbc.co.uk/sport/cricket/articles/cxdd1335nyj0o?at_medium=RSS&at_campaign=rss",
+      "title": "Eight-time champion Marquez to retire from MotoGP",
+      "url": "https://www.bbc.co.uk/sport/motorsport/articles/c539gd3r3mk2o?at_medium=RSS&at_campaign=rss",
       "source": "BBC Sport",
       "category": "Sport",
       "tone": "light",
-      "published_at": "2026-11-27T00:43:03.000Z"
+      "published_at": "2026-11-27T12:28:16.000Z"
     },
     {
-      "title": "Asia made a big AI bet on Nvidia. What happens now?",
-      "url": "https://www.bbc.co.uk/news/articles/cqevr4lnd1nxo?at_medium=RSS&at_campaign=rss",
-      "source": "BBC Technology",
+      "title": "Books, bikes, and The Burbs: These are Ars staff’s holiday gift picks for 2026",
+      "url": "https://arstechnica.com/shopping/2026/11/books-bikes-and-the-burbs-these-are-ars-staffs-holiday-gift-picks-for-2026/",
+      "source": "Ars Technica",
       "category": "Technology",
       "tone": "light",
-      "published_at": "2026-11-26T23:08:12.000Z"
+      "published_at": "2026-11-27T11:30:04.000Z"
     },
     {
-      "title": "I spend £200 a month on fancy meals by myself - would you dine solo?",
+      "title": "My self-care ritual is a meal at a fancy restaurant - on my own",
       "url": "https://www.bbc.co.uk/news/articles/cw8dv11dp2yeo?at_medium=RSS&at_campaign=rss",
       "source": "BBC Business",
       "category": "Business",
       "tone": "light",
-      "published_at": "2026-11-27T00:54:45.000Z"
+      "published_at": "2026-11-27T10:10:36.000Z"
     },
     {
-      "title": "New Zealand's ruling coalition falls short of parliamentary majority by one seat",
-      "url": "https://www.bbc.co.uk/news/articles/c670278qk879o?at_medium=RSS&at_campaign=rss",
-      "source": "BBC News",
+      "title": "Indian workers fill Germany's labor gaps but face hurdles and risks",
+      "url": "https://www.dw.com/en/indian-workers-fill-germany-s-labor-gaps-but-face-hurdles-and-risks/a-80072882?maca=en-rss-en-world-4025-xml-mrss",
+      "source": "DW",
       "category": "World",
       "tone": "light",
-      "published_at": "2026-11-27T02:22:37.000Z"
+      "published_at": "2026-11-27T11:06:00.000Z"
     },
     {
-      "title": "For This NYC Restaurant Owner, Thanksgiving Comes Every Wednesday",
-      "url": "https://www.goodnewsnetwork.org/for-this-nyc-restaurant-owner-thanksgiving-comes-every-wednesday/",
+      "title": "Town Rewards a Woman Whose Thanksgiving Meal Feeds Thousands with a New Car",
+      "url": "https://www.goodnewsnetwork.org/town-rewards-a-woman-whose-thanksgiving-meal-feeds-thousands-with-a-new-car/",
       "source": "Good News Network",
       "category": "Good news",
       "tone": "light",
-      "published_at": "2026-11-26T16:15:31.000Z"
+      "published_at": "2026-11-26T16:30:18.000Z"
     },
     {
-      "title": "APOD: 2026 November 26 – Eye in the Sky: The Milky Way over Lençóis",
-      "url": "https://science.nasa.gov/image-article/apod-2026-november-26-eye-in-the-sky-the-milky-way-over-lencois/",
+      "title": "APOD: 2026 November 27 – The Moon Watchers",
+      "url": "https://science.nasa.gov/image-article/apod-2026-november-27-the-moon-watchers/",
       "source": "NASA",
       "category": "Science",
       "tone": "light",
-      "published_at": "2026-11-26T05:05:00.000Z"
+      "published_at": "2026-11-27T05:05:00.000Z"
     }
   ]
 }
