@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generated_at": "2026-11-28T03:57:53.829Z",
+  "generated_at": "2026-11-28T13:10:07.108Z",
   "status": "ok",
   "successful_sources": [
     "BBC News",
@@ -16,76 +16,76 @@
   ],
   "stories": [
     {
-      "title": "2 of the World’s Largest Rice Producers Ban Toxic Pesticide Linked to Suicide",
-      "url": "https://www.goodnewsnetwork.org/2-of-the-worlds-largest-rice-producers-ban-toxic-pesticide-linked-to-suicide/",
-      "source": "Good News Network",
-      "category": "Good news",
-      "tone": "light",
-      "published_at": "2026-11-27T20:00:43.000Z"
-    },
-    {
-      "title": "Capsized tanker carrying 7,000 tonnes of diesel to be towed away from Ibiza",
-      "url": "https://www.bbc.co.uk/news/articles/cvrlgz6g0ekgo?at_medium=RSS&at_campaign=rss",
+      "title": "First hippo born at safari park in more than 40 years",
+      "url": "https://www.bbc.co.uk/news/videos/cm0qjlv9lelzo?at_medium=RSS&at_campaign=rss",
       "source": "BBC Science",
       "category": "Science",
       "tone": "light",
-      "published_at": "2026-11-27T20:34:45.000Z"
+      "published_at": "2026-11-28T07:57:30.000Z"
     },
     {
-      "title": "The little Welsh town that transformed a Strictly star's career",
-      "url": "https://www.bbc.co.uk/news/articles/cx7v2r8nr00mo?at_medium=RSS&at_campaign=rss",
+      "title": "Babydoll singer lands longest-running UK number one by Welsh artist in 56 years",
+      "url": "https://www.bbc.co.uk/news/articles/c920x6071g10o?at_medium=RSS&at_campaign=rss",
       "source": "BBC Culture",
       "category": "Culture",
       "tone": "light",
-      "published_at": "2026-11-27T22:03:22.000Z"
+      "published_at": "2026-11-28T12:30:41.000Z"
     },
     {
-      "title": "Farrell senses 'shift' as Ireland finish 2026 strongly",
-      "url": "https://www.bbc.co.uk/sport/rugby-union/articles/c6879ezd5r5qo?at_medium=RSS&at_campaign=rss",
+      "title": "Work in progress but Liverpool find belief again with Iraola",
+      "url": "https://www.bbc.co.uk/sport/football/articles/cmn4k7vdqx4vo?at_medium=RSS&at_campaign=rss",
       "source": "BBC Sport",
       "category": "Sport",
       "tone": "light",
-      "published_at": "2026-11-28T00:05:10.000Z"
+      "published_at": "2026-11-28T12:36:26.000Z"
     },
     {
-      "title": "How gamers are using AI and leaked files to clone Grand Theft Auto 6",
-      "url": "https://www.bbc.co.uk/news/articles/c64gn8pe5eeqo?at_medium=RSS&at_campaign=rss",
+      "title": "Pensions and benefits services still down after 'cyber incident'",
+      "url": "https://www.bbc.co.uk/news/articles/cm1wrgqyq4d8o?at_medium=RSS&at_campaign=rss",
       "source": "BBC Technology",
       "category": "Technology",
       "tone": "light",
-      "published_at": "2026-11-28T01:30:50.000Z"
+      "published_at": "2026-11-28T13:02:10.000Z"
     },
     {
-      "title": "Will new energy fixes cost more in January?",
-      "url": "https://www.bbc.co.uk/news/videos/cwjd7y4jk581o?at_medium=RSS&at_campaign=rss",
+      "title": "Christmas market 'absolutely vital' for businesses",
+      "url": "https://www.bbc.co.uk/news/videos/cx1l0evzj54qo?at_medium=RSS&at_campaign=rss",
       "source": "BBC Business",
       "category": "Business",
       "tone": "light",
-      "published_at": "2026-11-27T16:05:32.000Z"
+      "published_at": "2026-11-28T12:09:09.000Z"
     },
     {
-      "title": "Nigeria's 'ultimate hard man' who become an online meme",
-      "url": "https://www.bbc.co.uk/news/articles/cm3vg3lkrk03o?at_medium=RSS&at_campaign=rss",
+      "title": "Argentina's bid to stop Falklands oil drilling rejected",
+      "url": "https://www.bbc.co.uk/news/articles/c84gnq3qq9rno?at_medium=RSS&at_campaign=rss",
       "source": "BBC News",
       "category": "World",
       "tone": "light",
-      "published_at": "2026-11-28T01:20:35.000Z"
+      "published_at": "2026-11-28T13:02:39.000Z"
     },
     {
-      "title": "Asphalt Artworks Are Making People Drive More Safely, New Studies Find",
-      "url": "https://www.goodnewsnetwork.org/asphalt-artworks-seems-to-make-people-drive-more-safely-new-studies-find/",
-      "source": "Good News Network",
-      "category": "Good news",
-      "tone": "light",
-      "published_at": "2026-11-27T19:40:42.000Z"
-    },
-    {
-      "title": "Artemis III Astronaut Andre Douglas Visits VAB",
-      "url": "https://www.nasa.gov/image-article/artemis-iii-astronaut-andre-douglas-visits-vab/",
+      "title": "APOD: 2026 November 28 – Apollo 17 VIP Site Anaglyph",
+      "url": "https://science.nasa.gov/image-article/apod-2026-november-28-apollo-17-vip-site-anaglyph/",
       "source": "NASA",
       "category": "Science",
       "tone": "light",
-      "published_at": "2026-11-27T15:01:00.000Z"
+      "published_at": "2026-11-28T05:05:00.000Z"
+    },
+    {
+      "title": "Jake Bugg reflects on 'vulnerable' new album he almost didn't release",
+      "url": "https://www.bbc.co.uk/news/articles/cqlymzvgvzyro?at_medium=RSS&at_campaign=rss",
+      "source": "BBC Culture",
+      "category": "Culture",
+      "tone": "light",
+      "published_at": "2026-11-28T07:44:01.000Z"
+    },
+    {
+      "title": "Will 2024 version of Palmer ever re-emerge for Chelsea?",
+      "url": "https://www.bbc.co.uk/sport/football/articles/cwzd9yj44190o?at_medium=RSS&at_campaign=rss",
+      "source": "BBC Sport",
+      "category": "Sport",
+      "tone": "light",
+      "published_at": "2026-11-28T11:53:00.000Z"
     }
   ]
 }
